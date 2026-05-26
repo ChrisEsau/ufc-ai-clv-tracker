@@ -191,4 +191,51 @@ else:
         movement[movement_cols],
         use_container_width=True,
     )
+    
+# ------------------------------------------------------------
+# Line History Chart
+# ------------------------------------------------------------
 
+st.header("Line History Chart")
+
+if snapshots.empty:
+    st.warning("No snapshot history found.")
+else:
+    chart_df = snapshots.copy()
+
+    chart_df["snapshot_timestamp"] = pd.to_datetime(
+        chart_df["snapshot_timestamp"],
+        utc=True,
+        errors="coerce",
+    )
+
+    fighters = sorted(chart_df["fighter_name"].dropna().unique())
+
+    selected_fighters = st.multiselect(
+        "Select fighters to chart",
+        fighters,
+        default=fighters[:2],
+    )
+
+    chart_metric = st.selectbox(
+        "Chart metric",
+        [
+            "american_odds",
+            "implied_prob",
+        ],
+    )
+
+    filtered_chart_df = chart_df[
+        chart_df["fighter_name"].isin(selected_fighters)
+    ].copy()
+
+    if filtered_chart_df.empty:
+        st.info("Select at least one fighter.")
+    else:
+        st.line_chart(
+            filtered_chart_df,
+            x="snapshot_timestamp",
+            y=chart_metric,
+            color="fighter_name",
+            use_container_width=True,
+        )
