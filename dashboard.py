@@ -23,6 +23,7 @@ def load_parquet(path):
 clv = load_parquet("ufc_clv_results.parquet")
 closing = load_parquet("ufc_closing_lines.parquet")
 snapshots = load_parquet("ufc_market_snapshots.parquet")
+movement = load_parquet("ufc_line_movement.parquet")
 
 # ------------------------------------------------------------
 # Summary metrics
@@ -164,3 +165,30 @@ else:
         latest[latest_cols],
         use_container_width=True,
     )
+    st.header("Line Movement / Steam")
+
+if movement.empty:
+    st.warning("No line movement data found.")
+else:
+    movement_cols = [
+        "event_name",
+        "fighter_name",
+        "opponent_name",
+        "sportsbook",
+        "market_type",
+        "opening_odds",
+        "latest_odds",
+        "opening_implied_prob",
+        "latest_implied_prob",
+        "implied_prob_movement",
+        "is_steam_move",
+        "steam_direction",
+    ]
+
+    movement_cols = [c for c in movement_cols if c in movement.columns]
+
+    st.dataframe(
+        movement[movement_cols],
+        use_container_width=True,
+    )
+
