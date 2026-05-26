@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import requests
 
 st.set_page_config(
     page_title="UFC Betting Board",
@@ -135,3 +136,63 @@ st.dataframe(
     ),
     use_container_width=True,
 )
+# ------------------------------------------------------------
+# GitHub Workflow Controls
+# ------------------------------------------------------------
+
+st.sidebar.header("Workflow Controls")
+
+GITHUB_OWNER = "ChrisEsau"
+GITHUB_REPO = "ufc-ai-clv-tracker"
+
+# IMPORTANT:
+# Put your GitHub Personal Access Token here temporarily
+# Later move to Streamlit secrets
+GITHUB_TOKEN = "PASTE_GITHUB_TOKEN_HERE"
+
+headers = {
+    "Accept": "application/vnd.github+json",
+    "Authorization": f"Bearer {GITHUB_TOKEN}",
+}
+
+def trigger_workflow(workflow_file):
+
+    url = (
+        f"https://api.github.com/repos/"
+        f"{GITHUB_OWNER}/{GITHUB_REPO}/actions/workflows/"
+        f"{workflow_file}/dispatches"
+    )
+
+    response = requests.post(
+        url,
+        headers=headers,
+        json={"ref": "main"},
+    )
+
+    return response.status_code
+
+# ------------------------------------------------------------
+# Buttons
+# ------------------------------------------------------------
+
+if st.sidebar.button("Run Live Predictions"):
+
+    status = trigger_workflow(
+        "run-live-prediction.yml"
+    )
+
+    if status == 204:
+        st.sidebar.success("Live prediction workflow started.")
+    else:
+        st.sidebar.error(f"Workflow failed: {status}")
+
+if st.sidebar.button("Run CLV Tracker"):
+
+    status = trigger_workflow(
+        "run-clv-tracker.yml"
+    )
+
+    if status == 204:
+        st.sidebar.success("CLV workflow started.")
+    else:
+        st.sidebar.error(f"Workflow failed: {status}")
