@@ -311,131 +311,18 @@ display(
 )
 
 # ============================================================
-# SECTION 7 — SCRAPE UPCOMING UFCSTATS CARD
+# SECTION 7 — LOAD CACHED LIVE CARD
 # ============================================================
 
-UFCSTATS_UPCOMING_URL = "http://ufcstats.com/statistics/events/upcoming"
+LIVE_CARD_BASE_OUTPUT = f"{BASE_PATH}/ufc_live_card.parquet"
 
-
-def fetch_soup(url, sleep_seconds=1.0):
-    """Fetch a UFCStats page and return BeautifulSoup."""
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/120.0 Safari/537.36"
-        )
-    }
-    response = requests.get(url, headers=headers, timeout=30)
-    response.raise_for_status()
-    time.sleep(sleep_seconds)
-    return BeautifulSoup(response.text, "html.parser")
-
-
-soup = fetch_soup(UFCSTATS_UPCOMING_URL)
-
-event_links = []
-
-for a in soup.find_all("a", href=True):
-    href = a["href"]
-    text = a.get_text(strip=True)
-
-    if "event-details" in href:
-        event_links.append({
-            "name": text,
-            "url": href,
-        })
-
-event_links = list({e["url"]: e for e in event_links}.values())
-
-print("Upcoming event links found:", len(event_links))
-
-if len(event_links) == 0:
-    raise ValueError("No upcoming UFCStats event links found.")
-
-next_event = event_links[0]
-next_event_url = next_event["url"]
-
-print("Next event:")
-print(next_event)
-
-event_soup = fetch_soup(next_event_url)
-
-event_name_tag = event_soup.find(
-    "span",
-    class_="b-content__title-highlight",
+ufcstats_card_df = pd.read_parquet(
+    LIVE_CARD_BASE_OUTPUT
 )
 
-event_name = (
-    event_name_tag.get_text(strip=True)
-    if event_name_tag
-    else next_event["name"]
-)
-
-event_date_raw = None
-event_location = None
-
-date_loc_items = event_soup.find_all(
-    "li",
-    class_="b-list__box-list-item",
-)
-
-for item in date_loc_items:
-    text = " ".join(item.get_text(" ", strip=True).split())
-
-    if "Date:" in text:
-        event_date_raw = text.replace("Date:", "").strip()
-
-    if "Location:" in text:
-        event_location = text.replace("Location:", "").strip()
-
-fight_rows = []
-
-fight_table_rows = event_soup.find_all(
-    "tr",
-    class_="b-fight-details__table-row b-fight-details__table-row__hover js-fight-details-click",
-)
-
-print("Fight rows found:", len(fight_table_rows))
-
-for row in fight_table_rows:
-    fighter_links = row.find_all(
-        "a",
-        class_="b-link b-link_style_black",
-    )
-
-    fighters = []
-
-    for link in fighter_links:
-        fighter_name = link.get_text(strip=True)
-        fighter_url = link.get("href")
-
-        if fighter_name and fighter_url and "fighter-details" in fighter_url:
-            fighters.append({
-                "name": fighter_name,
-                "url": fighter_url,
-                "fighter_id": fighter_url.rstrip("/").split("/")[-1],
-            })
-
-    if len(fighters) >= 2:
-        fight_rows.append({
-            "event_name": event_name,
-            "event_date_raw": event_date_raw,
-            "event_location": event_location,
-            "red_fighter": fighters[0]["name"],
-            "blue_fighter": fighters[1]["name"],
-            "red_fighter_url": fighters[0]["url"],
-            "blue_fighter_url": fighters[1]["url"],
-            "red_fighter_id": fighters[0]["fighter_id"],
-            "blue_fighter_id": fighters[1]["fighter_id"],
-        })
-
-ufcstats_card_df = pd.DataFrame(fight_rows)
-
-print("Event:", event_name)
-print("Date:", event_date_raw)
-print("Location:", event_location)
-print("Fights scraped:", len(ufcstats_card_df))
+print("Loaded cached UFC live card:")
+print(LIVE_CARD_BASE_OUTPUT)
+print("Fights loaded:", len(ufcstats_card_df))
 
 display(ufcstats_card_df)
 
