@@ -34,10 +34,15 @@ jobs:
         run: |
           python run_clv_tracker.py
 
-      - name: Commit updated files
+      - name: Commit updated parquet files
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add .
+
+          git add *.parquet
+
           git commit -m "Automated CLV update" || echo "No changes to commit"
+
+          git pull --rebase origin main
+
           git push
