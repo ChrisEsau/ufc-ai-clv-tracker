@@ -25,7 +25,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pandas numpy pyarrow
+          pip install pandas numpy pyarrow joblib
 
       - name: Build current fighter features
         run: |
