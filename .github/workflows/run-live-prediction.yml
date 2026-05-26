@@ -81,7 +81,15 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add .
+          git add \
+            ufc_live_action_board.csv \
+            ufc_live_action_board.parquet \
+            ufc_live_card.parquet \
+            ufc_live_card_with_odds.csv \
+            ufc_live_feature_audit.csv \
+            ufc_live_match_audit.csv \
+            ufc_live_odds_audit.csv \
+            ufc_live_watchlist.csv
 
           git commit -m "Automated live prediction update" || echo "No changes to commit"
 
