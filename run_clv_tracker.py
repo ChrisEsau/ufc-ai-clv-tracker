@@ -256,7 +256,13 @@ def main():
     clv_df.to_csv(
         "ufc_clv_results.csv",
         index=False,
-    )    
+    )
+    
+    line_movement_df.to_csv(
+        "ufc_line_movement.csv",
+        index=False,
+    )
+    
     print("UFC CLV tracker completed.")
     
 if __name__ == "__main__":
