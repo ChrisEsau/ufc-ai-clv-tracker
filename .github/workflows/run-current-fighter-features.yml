@@ -1,0 +1,43 @@
+name: Build Current Fighter Features
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-current-features:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Sync with latest repo
+        run: |
+          git pull --rebase origin main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install pandas numpy pyarrow
+
+      - name: Build current fighter features
+        run: |
+          python run_current_fighter_features.py
+
+      - name: Commit current fighter feature store
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add ufc_current_fighter_features.parquet
+
+          git commit -m "Update current fighter feature store" || echo "No changes to commit"
+
+          git push
