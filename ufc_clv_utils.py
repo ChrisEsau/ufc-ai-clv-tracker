@@ -195,9 +195,8 @@ def build_moneyline_market_snapshot_from_matched_card(
 
     return market_snapshot_df
 
-
 # ============================================================
-# APPEND MARKET SNAPSHOTS (DEDUPED)
+# APPEND MARKET SNAPSHOTS — DEDUPED + PARQUET SAFE
 # ============================================================
 
 def append_market_snapshots(
@@ -205,30 +204,35 @@ def append_market_snapshots(
     output_path,
 ):
     """
-    Append market snapshots while preventing duplicate
-    unchanged market rows.
-    """
+    Append market snapshots while preventing duplicate unchanged
+    market rows.
 
-    snapshot_cols = [
-        "fight_id",
-        "fighter_id",
-        "sportsbook",
-        "market_type",
-        "american_odds",
-        "implied_prob",
-    ]
+    Also normalizes timestamp columns to strings before writing
+    parquet so GitHub Actions / pyarrow does not fail from mixed
+    datetime/string dtypes.
+    """
 
     new_df = market_snapshot_df.copy()
 
     # --------------------------------------------------------
-    # No existing file yet
+    # Normalize timestamp columns before any parquet write
+    # --------------------------------------------------------
+
+    for col in ["snapshot_timestamp", "commence_time"]:
+        if col in new_df.columns:
+            new_df[col] = new_df[col].astype(str)
+
+    # --------------------------------------------------------
+    # If no existing file, create it
     # --------------------------------------------------------
 
     if not os.path.exists(output_path):
         new_df.to_parquet(
             output_path,
-            index=False
+            index=False,
         )
+
+        print(f"New snapshot rows appended: {len(new_df)}")
 
         return new_df
 
@@ -238,21 +242,25 @@ def append_market_snapshots(
 
     old_df = pd.read_parquet(output_path)
 
-    if old_df.empty:
-        combined_df = new_df.copy()
+    for col in ["snapshot_timestamp", "commence_time"]:
+        if col in old_df.columns:
+            old_df[col] = old_df[col].astype(str)
 
-        combined_df.to_parquet(
+    if old_df.empty:
+        new_df.to_parquet(
             output_path,
-            index=False
+            index=False,
         )
 
-        return combined_df
+        print(f"New snapshot rows appended: {len(new_df)}")
+
+        return new_df
 
     # --------------------------------------------------------
-    # Keep only latest snapshot per market
+    # Compare newest existing line vs new line
     # --------------------------------------------------------
 
-    old_df["snapshot_timestamp"] = pd.to_datetime(
+    old_df["_snapshot_dt"] = pd.to_datetime(
         old_df["snapshot_timestamp"],
         utc=True,
         errors="coerce",
@@ -260,7 +268,7 @@ def append_market_snapshots(
 
     latest_existing = (
         old_df
-        .sort_values("snapshot_timestamp")
+        .sort_values("_snapshot_dt")
         .groupby([
             "fight_id",
             "fighter_id",
@@ -268,11 +276,8 @@ def append_market_snapshots(
             "market_type",
         ])
         .tail(1)
+        .drop(columns=["_snapshot_dt"])
     )
-
-    # --------------------------------------------------------
-    # Merge latest vs new
-    # --------------------------------------------------------
 
     compare_cols = [
         "fight_id",
@@ -283,7 +288,9 @@ def append_market_snapshots(
 
     merged = new_df.merge(
         latest_existing[
-            compare_cols + [
+            compare_cols
+            +
+            [
                 "american_odds",
                 "implied_prob",
             ]
@@ -292,10 +299,6 @@ def append_market_snapshots(
         on=compare_cols,
         suffixes=("", "_old"),
     )
-
-    # --------------------------------------------------------
-    # Keep only changed rows
-    # --------------------------------------------------------
 
     changed_mask = (
         (merged["american_odds"] != merged["american_odds_old"])
@@ -311,17 +314,25 @@ def append_market_snapshots(
     ].copy()
 
     # --------------------------------------------------------
-    # Append only changed rows
+    # If nothing changed, do not rewrite parquet
     # --------------------------------------------------------
 
     if changed_rows.empty:
         print("New snapshot rows appended: 0")
         return old_df
 
+    # --------------------------------------------------------
+    # Append only changed rows
+    # --------------------------------------------------------
+
     combined_df = pd.concat(
         [old_df, changed_rows],
         ignore_index=True,
     )
+
+    for col in ["snapshot_timestamp", "commence_time"]:
+        if col in combined_df.columns:
+            combined_df[col] = combined_df[col].astype(str)
 
     combined_df.to_parquet(
         output_path,
@@ -331,3 +342,4 @@ def append_market_snapshots(
     print(f"New snapshot rows appended: {len(changed_rows)}")
 
     return combined_df
+    
