@@ -144,11 +144,7 @@ st.sidebar.header("Workflow Controls")
 
 GITHUB_OWNER = "ChrisEsau"
 GITHUB_REPO = "ufc-ai-clv-tracker"
-
-# IMPORTANT:
-# Put your GitHub Personal Access Token here temporarily
-# Later move to Streamlit secrets
-GITHUB_TOKEN = "PASTE_GITHUB_TOKEN_HERE"
+GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]
 
 headers = {
     "Accept": "application/vnd.github+json",
