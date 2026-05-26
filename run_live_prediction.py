@@ -158,7 +158,9 @@ print("All required shared helpers are available.")
 # SECTION 4 — LOAD ROLLING FEATURE DATABASE
 # ============================================================
 
-rolling_df = pd.read_csv(ROLLING_FEATURES_PATH)
+rolling_df = pd.read_parquet(
+    "UFC_enhanced_rolling_features_EWM.parquet"
+)
 
 rolling_df["date"] = pd.to_datetime(
     rolling_df["date"],
