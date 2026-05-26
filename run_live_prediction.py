@@ -65,6 +65,7 @@ LIVE_BETTING_CARD_OUTPUT = paths.live_betting_card_output
 LIVE_FEATURE_AUDIT_OUTPUT = f"{BASE_PATH}/ufc_live_feature_audit.csv"
 LIVE_MATCH_AUDIT_OUTPUT = f"{BASE_PATH}/ufc_live_match_audit.csv"
 LIVE_ODDS_AUDIT_OUTPUT = f"{BASE_PATH}/ufc_live_odds_audit.csv"
+ACTION_BOARD_PARQUET_OUTPUT = f"{BASE_PATH}/ufc_live_action_board.parquet"
 WATCHLIST_OUTPUT = paths.watchlist_output
 ACTION_BOARD_OUTPUT = paths.action_board_output
 CLV_LOG_PATH = paths.clv_log_path
@@ -1319,7 +1320,7 @@ print(ACTION_BOARD_OUTPUT)
 display(action_board_df)
 
 # Save parquet mirror for dashboard / automation
-ACTION_BOARD_PARQUET_OUTPUT = f"{BASE_PATH}/ufc_live_action_board.parquet"
+
 action_board_df.to_parquet(ACTION_BOARD_PARQUET_OUTPUT, index=False)
 
 # Update official bets ledger if CLV helpers are available
