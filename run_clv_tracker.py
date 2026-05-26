@@ -238,30 +238,139 @@ def main():
 
     else:
         print("No official bets log found. Skipping CLV update.")
-        
+        # --------------------------------------------------------
+    # Line movement analytics
     # --------------------------------------------------------
-    # CSV display exports
-    # --------------------------------------------------------
 
-    market_snapshot_df.to_csv(
-        "ufc_latest_market_snapshot.csv",
-        index=False,
+    market_snapshot_history_df = pd.read_parquet(
+        MARKET_SNAPSHOT_PATH
+    ).copy()
+
+    market_snapshot_history_df["snapshot_timestamp"] = pd.to_datetime(
+        market_snapshot_history_df["snapshot_timestamp"],
+        utc=True,
+        errors="coerce",
     )
 
-    closing_lines_df.to_csv(
-        "ufc_closing_lines.csv",
-        index=False,
+    market_snapshot_history_df = market_snapshot_history_df.sort_values(
+        "snapshot_timestamp"
     )
 
-    clv_df.to_csv(
-        "ufc_clv_results.csv",
-        index=False,
+    opening_lines_df = (
+        market_snapshot_history_df
+        .groupby([
+            "fight_id",
+            "fighter_id",
+            "sportsbook",
+            "market_type",
+        ])
+        .head(1)
+        .copy()
     )
+
+    latest_lines_df = (
+        market_snapshot_history_df
+        .groupby([
+            "fight_id",
+            "fighter_id",
+            "sportsbook",
+            "market_type",
+        ])
+        .tail(1)
+        .copy()
+    )
+
+    opening_lines_df = opening_lines_df.rename(columns={
+        "american_odds": "opening_odds",
+        "implied_prob": "opening_implied_prob",
+        "snapshot_timestamp": "opening_timestamp",
+        "fighter_name": "fighter_name",
+        "opponent_name": "opponent_name",
+    })
+
+    latest_lines_df = latest_lines_df.rename(columns={
+        "american_odds": "latest_odds",
+        "implied_prob": "latest_implied_prob",
+        "snapshot_timestamp": "latest_timestamp",
+    })
+
+    line_movement_df = opening_lines_df.merge(
+        latest_lines_df[
+            [
+                "fight_id",
+                "fighter_id",
+                "sportsbook",
+                "market_type",
+                "latest_timestamp",
+                "latest_odds",
+                "latest_implied_prob",
+            ]
+        ],
+        how="inner",
+        on=[
+            "fight_id",
+            "fighter_id",
+            "sportsbook",
+            "market_type",
+        ],
+    )
+
+    line_movement_df["odds_movement"] = (
+        line_movement_df["latest_odds"]
+        -
+        line_movement_df["opening_odds"]
+    )
+
+    line_movement_df["implied_prob_movement"] = (
+        line_movement_df["latest_implied_prob"]
+        -
+        line_movement_df["opening_implied_prob"]
+    )
+
+    STEAM_THRESHOLD = 0.05
+
+    line_movement_df["is_steam_move"] = (
+        line_movement_df["implied_prob_movement"].abs()
+        >=
+        STEAM_THRESHOLD
+    )
+
+    line_movement_df["steam_direction"] = (
+        line_movement_df["implied_prob_movement"]
+        .apply(
+            lambda x:
+            "toward_fighter"
+            if x > 0
+            else (
+                "against_fighter"
+                if x < 0
+                else "neutral"
+            )
+        )
+    )
+
+    line_movement_df = line_movement_df[
+        [
+            "event_name",
+            "fight_id",
+            "fighter_id",
+            "fighter_name",
+            "opponent_name",
+            "sportsbook",
+            "market_type",
+            "opening_timestamp",
+            "latest_timestamp",
+            "opening_odds",
+            "latest_odds",
+            "opening_implied_prob",
+            "latest_implied_prob",
+            "odds_movement",
+            "implied_prob_movement",
+            "is_steam_move",
+            "steam_direction",
+        ]
+    ].copy()    
     
-    #line_movement_df.to_csv(
-    #    "ufc_line_movement.csv",
-    #    index=False,
-    #)
     
     print("UFC CLV tracker completed.")
     
