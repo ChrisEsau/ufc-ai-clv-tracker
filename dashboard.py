@@ -1,176 +1,137 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="UFC CLV Tracker", layout="wide")
+st.set_page_config(
+    page_title="UFC Betting Board",
+    layout="wide",
+)
 
-# -----------------------------
-# Styling
-# -----------------------------
-st.markdown("""
-<style>
-.stApp {
-    background: #0b111a;
-    color: #e6edf3;
-}
-section[data-testid="stSidebar"] {
-    background: #111827;
-}
-.card {
-    background: #151d2a;
-    padding: 22px;
-    border-radius: 14px;
-    border: 1px solid #243244;
-    box-shadow: 0 8px 24px rgba(0,0,0,.25);
-}
-.metric-title {
-    color: #9ca3af;
-    font-size: 14px;
-}
-.metric-value {
-    font-size: 32px;
-    font-weight: 800;
-    color: #22c55e;
-}
-.section-title {
-    font-size: 24px;
-    font-weight: 800;
-    margin-top: 20px;
-}
-[data-testid="stDataFrame"] {
-    background: #151d2a;
-    border-radius: 12px;
-}
-</style>
-""", unsafe_allow_html=True)
+st.title("UFC Betting Board")
 
-# -----------------------------
-# Load data
-# -----------------------------
 @st.cache_data
 def load_parquet(path):
     try:
         return pd.read_parquet(path)
-    except Exception:
+    except Exception as e:
+        st.error(f"Could not load {path}: {e}")
         return pd.DataFrame()
 
-clv = load_parquet("ufc_clv_results.parquet")
-closing = load_parquet("ufc_closing_lines.parquet")
-snapshots = load_parquet("ufc_market_snapshots.parquet")
-movement = load_parquet("ufc_line_movement.parquet")
+# ------------------------------------------------------------
+# Load data
+# ------------------------------------------------------------
 
-st.sidebar.title("UFC CLV Tracker")
-st.sidebar.caption("Track Closing Line Value in Real Time")
+action_board = load_parquet("ufc_live_action_board.parquet")
+card_with_odds = load_parquet("ufc_live_card_with_odds.parquet")
 
-event_filter = st.sidebar.selectbox(
-    "Event",
-    ["All Events"] + sorted(snapshots["event_name"].dropna().unique().tolist())
-    if not snapshots.empty and "event_name" in snapshots.columns else ["All Events"]
+# Fallback if card_with_odds parquet does not exist yet
+if card_with_odds.empty:
+    card_with_odds = load_parquet("ufc_live_card.parquet")
+
+# ------------------------------------------------------------
+# Event selector
+# ------------------------------------------------------------
+
+source_df = card_with_odds if not card_with_odds.empty else action_board
+
+events = (
+    sorted(source_df["event_name"].dropna().unique().tolist())
+    if not source_df.empty and "event_name" in source_df.columns
+    else []
 )
 
-steam_only = st.sidebar.toggle("Steam Moves Only", value=False)
+selected_event = st.selectbox(
+    "Select event",
+    events,
+)
 
-st.title("Dashboard Overview")
-st.caption("Data updates automatically from GitHub Actions.")
+# ------------------------------------------------------------
+# Build display table
+# ------------------------------------------------------------
 
-# -----------------------------
-# Metrics
-# -----------------------------
-total_bets = len(clv)
-beat_close_rate = clv["beat_closing_line"].mean() if not clv.empty and "beat_closing_line" in clv else 0
-avg_clv = clv["clv_diff"].mean() if not clv.empty and "clv_diff" in clv else 0
-steam_moves = movement["is_steam_move"].sum() if not movement.empty and "is_steam_move" in movement else 0
+event_card = card_with_odds[
+    card_with_odds["event_name"] == selected_event
+].copy()
 
-m1, m2, m3, m4 = st.columns(4)
+event_action = action_board[
+    action_board["event_name"] == selected_event
+].copy()
 
-with m1:
-    st.markdown(f'<div class="card"><div class="metric-title">Tracked Bets</div><div class="metric-value">{total_bets}</div></div>', unsafe_allow_html=True)
-with m2:
-    st.markdown(f'<div class="card"><div class="metric-title">Beat Close %</div><div class="metric-value">{beat_close_rate:.1%}</div></div>', unsafe_allow_html=True)
-with m3:
-    st.markdown(f'<div class="card"><div class="metric-title">Average CLV</div><div class="metric-value">{avg_clv:.2%}</div></div>', unsafe_allow_html=True)
-with m4:
-    st.markdown(f'<div class="card"><div class="metric-title">Steam Moves</div><div class="metric-value">{int(steam_moves)}</div></div>', unsafe_allow_html=True)
-
-# -----------------------------
-# Tables
-# -----------------------------
-left, right = st.columns(2)
-
-with left:
-    st.markdown('<div class="section-title">CLV Summary</div>', unsafe_allow_html=True)
-    if clv.empty:
-        st.warning("No CLV data.")
-    else:
-        clv = clv.rename(columns={"event_name_x": "event_name"})
-        cols = [
-            "event_name", "best_side", "bookmaker",
-            "bet_odds", "closing_odds", "clv_diff",
-            "beat_closing_line", "best_ev", "recommended_stake"
+# Merge action board recommendations onto full card
+display_df = event_card.merge(
+    event_action[
+        [
+            "fight_id",
+            "best_side",
+            "best_prob",
+            "best_edge",
+            "best_ev",
+            "best_american_odds",
+            "best_confidence",
+            "recommended_stake",
+            "watchlist_tier",
+            "watchlist_reason",
+            "is_official_bet",
+            "is_watchlist_bet",
         ]
-        st.dataframe(clv[[c for c in cols if c in clv.columns]], use_container_width=True)
+    ],
+    how="left",
+    on="fight_id",
+)
 
-with right:
-    st.markdown('<div class="section-title">Latest Closing Lines</div>', unsafe_allow_html=True)
-    if closing.empty:
-        st.warning("No closing line data.")
-    else:
-        cols = [
-            "fighter_name", "opponent_name", "sportsbook",
-            "closing_odds", "closing_implied_prob",
-            "closing_line_status"
-        ]
-        st.dataframe(closing[[c for c in cols if c in closing.columns]], use_container_width=True)
+display_df["recommended_action"] = "No Bet"
 
-left2, right2 = st.columns(2)
+display_df.loc[
+    display_df["is_watchlist_bet"] == True,
+    "recommended_action"
+] = "Watchlist"
 
-with left2:
-    st.markdown('<div class="section-title">Latest Market Snapshot</div>', unsafe_allow_html=True)
-    if snapshots.empty:
-        st.warning("No snapshot data.")
-    else:
-        snapshots["snapshot_timestamp"] = pd.to_datetime(snapshots["snapshot_timestamp"], utc=True, errors="coerce")
-        latest_time = snapshots["snapshot_timestamp"].max()
-        latest = snapshots[snapshots["snapshot_timestamp"] == latest_time].copy()
-        cols = ["fighter_name", "opponent_name", "sportsbook", "american_odds", "implied_prob", "snapshot_timestamp"]
-        st.dataframe(latest[[c for c in cols if c in latest.columns]], use_container_width=True)
+display_df.loc[
+    display_df["is_official_bet"] == True,
+    "recommended_action"
+] = "Official Bet"
 
-with right2:
-    st.markdown('<div class="section-title">Line Movement / Steam</div>', unsafe_allow_html=True)
-    if movement.empty:
-        st.warning("No movement data.")
-    else:
-        movement_view = movement.copy()
-        if steam_only and "is_steam_move" in movement_view.columns:
-            movement_view = movement_view[movement_view["is_steam_move"] == True]
-        cols = [
-            "fighter_name", "opponent_name", "opening_odds", "latest_odds",
-            "implied_prob_movement", "is_steam_move", "steam_direction"
-        ]
-        st.dataframe(movement_view[[c for c in cols if c in movement_view.columns]], use_container_width=True)
+# ------------------------------------------------------------
+# Format display columns
+# ------------------------------------------------------------
 
-# -----------------------------
-# Chart
-# -----------------------------
-st.markdown('<div class="section-title">Line History Chart</div>', unsafe_allow_html=True)
+display_cols = [
+    "red_fighter",
+    "blue_fighter",
 
-if snapshots.empty:
-    st.warning("No historical snapshot data.")
-else:
-    chart_df = snapshots.copy()
-    chart_df["snapshot_timestamp"] = pd.to_datetime(chart_df["snapshot_timestamp"], utc=True, errors="coerce")
+    "red_american_odds",
+    "blue_american_odds",
 
-    fighters = sorted(chart_df["fighter_name"].dropna().unique())
-    selected = st.multiselect("Select fighters", fighters, default=fighters[:2])
+    "red_model_prob",
+    "blue_model_prob",
 
-    metric = st.selectbox("Metric", ["implied_prob", "american_odds"])
+    "red_implied_prob",
+    "blue_implied_prob",
 
-    chart_df = chart_df[chart_df["fighter_name"].isin(selected)]
+    "best_side",
+    "best_american_odds",
+    "best_prob",
+    "best_edge",
+    "best_ev",
+    "best_confidence",
 
-    if not chart_df.empty:
-        st.line_chart(
-            chart_df,
-            x="snapshot_timestamp",
-            y=metric,
-            color="fighter_name",
-            use_container_width=True,
-        )
+    "recommended_action",
+    "recommended_stake",
+    "watchlist_tier",
+    "watchlist_reason",
+]
+
+display_cols = [
+    col for col in display_cols
+    if col in display_df.columns
+]
+
+st.header(f"Betting Board — {selected_event}")
+
+st.dataframe(
+    display_df[display_cols].sort_values(
+        "best_ev",
+        ascending=False,
+        na_position="last",
+    ),
+    use_container_width=True,
+)
