@@ -9,30 +9,36 @@ st.set_page_config(
 st.title("UFC CLV Dashboard")
 
 # ------------------------------------------------------------
-# Load data
+# Load parquet files safely
 # ------------------------------------------------------------
 
-clv = pd.read_parquet("ufc_clv_results.csv")
-closing = pd.read_parquet("ufc_closing_lines.csv")
-latest = pd.read_parquet("ufc_latest_market_snapshot.csv")
+@st.cache_data
+def load_parquet(path):
+    try:
+        return pd.read_parquet(path)
+    except Exception as e:
+        st.error(f"Could not load {path}: {e}")
+        return pd.DataFrame()
+
+clv = load_parquet("ufc_clv_results.parquet")
+closing = load_parquet("ufc_closing_lines.parquet")
+snapshots = load_parquet("ufc_market_snapshots.parquet")
 
 # ------------------------------------------------------------
-# Clean CLV columns
-# ------------------------------------------------------------
-
-clv = clv.rename(columns={
-    "event_name_x": "event_name",
-    "snapshot_run_id_x": "snapshot_run_id",
-})
-
-# ------------------------------------------------------------
-# Top Metrics
+# Summary metrics
 # ------------------------------------------------------------
 
 st.header("CLV Summary")
 
+col1, col2, col3, col4 = st.columns(4)
+
 total_bets = len(clv)
-bets_with_close = clv["closing_odds"].notna().sum()
+
+bets_with_close = (
+    clv["closing_odds"].notna().sum()
+    if "closing_odds" in clv.columns
+    else 0
+)
 
 beat_close_rate = (
     clv["beat_closing_line"].mean()
@@ -46,8 +52,6 @@ avg_clv = (
     else 0
 )
 
-col1, col2, col3, col4 = st.columns(4)
-
 col1.metric("Tracked Bets", total_bets)
 col2.metric("Bets With Close", bets_with_close)
 col3.metric("Beat Close %", f"{beat_close_rate:.1%}")
@@ -59,32 +63,37 @@ col4.metric("Average CLV", f"{avg_clv:.2%}")
 
 st.header("Official Bets / CLV")
 
-clv_display_cols = [
-    "bet_id",
-    "event_name",
-    "best_side",
-    "bookmaker",
-    "bet_odds",
-    "closing_odds",
-    "bet_implied_prob",
-    "closing_implied_prob",
-    "clv_diff",
-    "beat_closing_line",
-    "best_prob",
-    "best_ev",
-    "best_confidence",
-    "recommended_stake",
-]
+if clv.empty:
+    st.warning("No CLV results found.")
+else:
+    clv = clv.rename(columns={
+        "event_name_x": "event_name",
+        "snapshot_run_id_x": "snapshot_run_id",
+    })
 
-clv_display_cols = [
-    col for col in clv_display_cols
-    if col in clv.columns
-]
+    clv_cols = [
+        "bet_id",
+        "event_name",
+        "best_side",
+        "bookmaker",
+        "bet_odds",
+        "closing_odds",
+        "bet_implied_prob",
+        "closing_implied_prob",
+        "clv_diff",
+        "beat_closing_line",
+        "best_prob",
+        "best_ev",
+        "best_confidence",
+        "recommended_stake",
+    ]
 
-st.dataframe(
-    clv[clv_display_cols],
-    use_container_width=True,
-)
+    clv_cols = [c for c in clv_cols if c in clv.columns]
+
+    st.dataframe(
+        clv[clv_cols],
+        use_container_width=True,
+    )
 
 # ------------------------------------------------------------
 # Closing Lines
@@ -92,53 +101,66 @@ st.dataframe(
 
 st.header("Closing / Latest Pre-Fight Lines")
 
-closing_display_cols = [
-    "event_name",
-    "fighter_name",
-    "opponent_name",
-    "sportsbook",
-    "market_type",
-    "closing_odds",
-    "closing_implied_prob",
-    "closing_line_status",
-    "minutes_before_fight",
-    "commence_time",
-]
+if closing.empty:
+    st.warning("No closing lines found.")
+else:
+    closing_cols = [
+        "fighter_name",
+        "opponent_name",
+        "sportsbook",
+        "market_type",
+        "closing_odds",
+        "closing_implied_prob",
+        "closing_line_status",
+        "minutes_before_fight",
+        "commence_time",
+    ]
 
-closing_display_cols = [
-    col for col in closing_display_cols
-    if col in closing.columns
-]
+    closing_cols = [c for c in closing_cols if c in closing.columns]
 
-st.dataframe(
-    closing[closing_display_cols],
-    use_container_width=True,
-)
+    st.dataframe(
+        closing[closing_cols],
+        use_container_width=True,
+    )
 
 # ------------------------------------------------------------
-# Latest Market Snapshot
+# Latest Snapshot
 # ------------------------------------------------------------
 
 st.header("Latest Market Snapshot")
 
-latest_display_cols = [
-    "event_name",
-    "fighter_name",
-    "opponent_name",
-    "sportsbook",
-    "market_type",
-    "american_odds",
-    "implied_prob",
-    "snapshot_timestamp",
-    "commence_time",
-]
+if snapshots.empty:
+    st.warning("No market snapshots found.")
+else:
+    snapshots["snapshot_timestamp"] = pd.to_datetime(
+        snapshots["snapshot_timestamp"],
+        utc=True,
+        errors="coerce",
+    )
 
-latest_display_cols = [
-    col for col in latest_display_cols
-    if col in latest.columns
-]
+    latest_time = snapshots["snapshot_timestamp"].max()
 
-st.dataframe(
-    latest[latest_display_cols],
-    use_container_width=True,
-)
+    latest = snapshots[
+        snapshots["snapshot_timestamp"] == latest_time
+    ].copy()
+
+    st.caption(f"Latest snapshot: {latest_time}")
+
+    latest_cols = [
+        "event_name",
+        "fighter_name",
+        "opponent_name",
+        "sportsbook",
+        "market_type",
+        "american_odds",
+        "implied_prob",
+        "snapshot_timestamp",
+        "commence_time",
+    ]
+
+    latest_cols = [c for c in latest_cols if c in latest.columns]
+
+    st.dataframe(
+        latest[latest_cols],
+        use_container_width=True,
+    )
