@@ -16,7 +16,7 @@ MODEL_VERSION = "UFC_Model_v5_Experiment"
 # API KEYS
 # ------------------------------------------------------------
 
-Oimport os
+import os
 
 ODDS_API_KEY = os.getenv("ODDS_API_KEY")
 
