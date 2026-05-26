@@ -258,10 +258,10 @@ def main():
         index=False,
     )
     
-    line_movement_df.to_csv(
-        "ufc_line_movement.csv",
-        index=False,
-    )
+    #line_movement_df.to_csv(
+    #    "ufc_line_movement.csv",
+    #    index=False,
+    #)
     
     print("UFC CLV tracker completed.")
     
