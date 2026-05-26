@@ -371,7 +371,10 @@ def main():
         ]
     ].copy()    
     
-    
+    line_movement_df.to_parquet(
+    "ufc_line_movement.parquet",
+    index=False,
+    )
     print("UFC CLV tracker completed.")
     
 if __name__ == "__main__":
