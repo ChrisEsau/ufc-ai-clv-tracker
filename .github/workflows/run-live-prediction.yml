@@ -76,13 +76,15 @@ jobs:
       # Commit updated outputs
       # ------------------------------------------------------
 
-      - name: Commit updated files
+      - name: Commit updated parquet files
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
           git add *.parquet
 
-          git commit -m "Automated live prediction update" || echo "No changes to commit"
+          git commit -m "Automated CLV update" || echo "No changes to commit"
+
+          git pull --rebase origin main
 
           git push
