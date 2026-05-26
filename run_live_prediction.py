@@ -397,7 +397,7 @@ for _, fight in ufcstats_card_df.iterrows():
     })
 
 match_audit_df = pd.DataFrame(match_audit_rows)
-match_audit_df.to_csv(LIVE_MATCH_AUDIT_OUTPUT, index=False)
+match_audit_df.to_parquet(LIVE_MATCH_AUDIT_OUTPUT, index=False)
 
 display(match_audit_df)
 
@@ -581,7 +581,7 @@ for idx, row in X_live.iterrows():
     })
 
 feature_audit_df = pd.DataFrame(feature_audit_rows)
-feature_audit_df.to_csv(LIVE_FEATURE_AUDIT_OUTPUT, index=False)
+feature_audit_df.to_parquet(LIVE_FEATURE_AUDIT_OUTPUT, index=False)
 
 display(feature_audit_df.sort_values("zero_feature_pct", ascending=False))
 
@@ -750,7 +750,7 @@ odds_audit_df = live_df[
     [col for col in odds_audit_columns if col in live_df.columns]
 ].copy()
 
-odds_audit_df.to_csv(
+odds_audit_df.to_parquet(
     LIVE_ODDS_AUDIT_OUTPUT,
     index=False,
 )
@@ -868,7 +868,7 @@ live_df["blue_decimal_odds"] = live_df["blue_odds"].apply(american_to_decimal)
 live_df["red_implied_prob"] = live_df["red_odds"].apply(american_to_implied_prob)
 live_df["blue_implied_prob"] = live_df["blue_odds"].apply(american_to_implied_prob)
 
-live_df.to_csv(LIVE_CARD_OUTPUT, index=False)
+live_df.to_parquet(LIVE_CARD_OUTPUT, index=False)
 
 print("Saved live card with odds:")
 print(LIVE_CARD_OUTPUT)
@@ -1135,7 +1135,7 @@ watchlist_df = watchlist_df[watchlist_display_cols].sort_values(
     ascending=[True, False]
 )
 
-watchlist_df.to_csv(WATCHLIST_OUTPUT, index=False)
+watchlist_df.to_parquet(WATCHLIST_OUTPUT, index=False)
 
 print("Watchlist bets:", len(watchlist_df))
 print("Saved watchlist:")
@@ -1309,7 +1309,7 @@ action_board_df = action_board_df[
     ascending=[False, True, False]
 )
 
-action_board_df.to_csv(
+action_board_df.to_parquet(
     ACTION_BOARD_OUTPUT,
     index=False
 )
