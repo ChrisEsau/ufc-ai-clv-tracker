@@ -1209,8 +1209,6 @@ live_df["blue_market_implied_prob"] = live_df["blue_implied_prob"]
 # SECTION 18 — FINAL ACTION BOARD
 # ============================================================
 
-ACTION_BOARD_OUTPUT = f"{BASE_PATH}/ufc_live_action_board.csv"
-
 live_df["snapshot_run_id"] = SNAPSHOT_RUN_ID
 
 action_board_df = live_df[
