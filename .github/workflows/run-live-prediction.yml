@@ -55,7 +55,7 @@ jobs:
           pip install requests
           pip install pyarrow
           pip install joblib
-          pip install scikit-learn
+          pip install scikit-learn==1.6.1
           pip install xgboost
           pip install beautifulsoup4
           pip install lxml
