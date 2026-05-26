@@ -239,7 +239,24 @@ def main():
     else:
         print("No official bets log found. Skipping CLV update.")
         
-        
+    # --------------------------------------------------------
+    # CSV display exports
+    # --------------------------------------------------------
+
+    market_snapshot_df.to_csv(
+        "ufc_latest_market_snapshot.csv",
+        index=False,
+    )
+
+    closing_lines_df.to_csv(
+        "ufc_closing_lines.csv",
+        index=False,
+    )
+
+    clv_df.to_csv(
+        "ufc_clv_results.csv",
+        index=False,
+    )    
     print("UFC CLV tracker completed.")
     
 if __name__ == "__main__":
