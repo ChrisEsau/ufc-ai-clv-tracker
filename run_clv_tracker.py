@@ -5,7 +5,8 @@ from datetime import datetime, timezone
 
 import pandas as pd
 
-PROJECT_ROOT = "/content/drive/MyDrive/UFC_AI"
+PROJECT_ROOT = "."
+BASE_PATH = "."
 
 if PROJECT_ROOT not in sys.path:
     sys.path.append(PROJECT_ROOT)
