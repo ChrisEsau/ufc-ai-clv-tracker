@@ -12,9 +12,9 @@ st.title("UFC CLV Dashboard")
 # Load data
 # ------------------------------------------------------------
 
-clv = pd.read_csv("ufc_clv_results.csv")
-closing = pd.read_csv("ufc_closing_lines.csv")
-latest = pd.read_csv("ufc_latest_market_snapshot.csv")
+clv = pd.read_parquet("ufc_clv_results.csv")
+closing = pd.read_parquet("ufc_closing_lines.csv")
+latest = pd.read_parquet("ufc_latest_market_snapshot.csv")
 
 # ------------------------------------------------------------
 # Clean CLV columns
