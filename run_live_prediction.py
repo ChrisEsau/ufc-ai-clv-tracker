@@ -1041,8 +1041,6 @@ display(live_df[[
 # SECTION 17 — WATCHLIST / NEAR-MISS ENGINE
 # ============================================================
 
-WATCHLIST_OUTPUT = f"{BASE_PATH}/ufc_live_watchlist.csv"
-
 # Count failed production filters
 filter_cols = [
     "passes_data_quality_filter",
