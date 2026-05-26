@@ -1,0 +1,15 @@
+metric,value
+raw_accuracy,0.6125635439360929
+raw_log_loss,0.6594657312212425
+raw_roc_auc,0.6457944053384552
+best_raw_threshold,0.48
+calibrated_accuracy,0.6143790849673203
+calibrated_log_loss,0.6527319466965671
+calibrated_roc_auc,0.6521689716258757
+best_calibrated_threshold,0.51
+actual_red_win_rate_percent,50.0
+raw_red_pick_rate_percent,55.773420479302835
+calibrated_red_pick_rate_percent,56.10021786492375
+train_fights,13626.0
+test_fights,2754.0
+feature_count,124.0
