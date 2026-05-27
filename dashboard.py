@@ -757,6 +757,79 @@ with st.expander("Raw Betting Board Data"):
         board,
         use_container_width=True,
     )
+
+# --------------------------------------------------------
+# BUILD MOVEMENT DATAFRAME
+# --------------------------------------------------------
+
+movement_df = first_rows[
+    [
+        "fight_id",
+        "red_fighter",
+        "blue_fighter",
+        "red_american_odds",
+        "blue_american_odds",
+        "red_implied_prob",
+        "blue_implied_prob",
+    ]
+].rename(
+    columns={
+        "red_american_odds": "opening_red_odds",
+        "blue_american_odds": "opening_blue_odds",
+        "red_implied_prob": "opening_red_implied",
+        "blue_implied_prob": "opening_blue_implied",
+    }
+).merge(
+    latest_rows[
+        [
+            "fight_id",
+            "red_american_odds",
+            "blue_american_odds",
+            "red_implied_prob",
+            "blue_implied_prob",
+            "snapshot_timestamp",
+        ]
+    ].rename(
+        columns={
+            "red_american_odds": "current_red_odds",
+            "blue_american_odds": "current_blue_odds",
+            "red_implied_prob": "current_red_implied",
+            "blue_implied_prob": "current_blue_implied",
+            "snapshot_timestamp": "latest_snapshot",
+        }
+    ),
+    on="fight_id",
+    how="left",
+)
+
+movement_df["red_implied_move"] = (
+    movement_df["current_red_implied"]
+    - movement_df["opening_red_implied"]
+)
+
+movement_df["blue_implied_move"] = (
+    movement_df["current_blue_implied"]
+    - movement_df["opening_blue_implied"]
+)
+
+movement_df["largest_abs_move"] = movement_df[
+    [
+        "red_implied_move",
+        "blue_implied_move",
+    ]
+].abs().max(axis=1)
+
+snapshot_counts = (
+    snapshots.groupby("fight_id")
+    .size()
+    .reset_index(name="snapshot_count")
+)
+
+movement_df = movement_df.merge(
+    snapshot_counts,
+    on="fight_id",
+    how="left",
+)
 # --------------------------------------------------------
 # CARD-STYLE MARKET MOVERS
 # --------------------------------------------------------
