@@ -1,4 +1,4 @@
-import streamlit as st
+ import streamlit as st
 import pandas as pd
 import requests
 
@@ -321,3 +321,107 @@ st.dataframe(red_counts)
 
 st.write("Blue Fighter Match Types")
 st.dataframe(blue_counts)
+
+# ============================================================
+# MARKET UPDATE VIEWER
+# ============================================================
+
+st.header("Market Update Review")
+
+market_odds = load_parquet("ufc_market_odds.parquet")
+market_audit = load_parquet("ufc_market_match_audit.parquet")
+market_snapshots = load_parquet("ufc_market_snapshots.parquet")
+
+# ------------------------------------------------------------
+# Summary metrics
+# ------------------------------------------------------------
+
+col1, col2, col3, col4 = st.columns(4)
+
+col1.metric("Market Rows", len(market_odds))
+col2.metric("Audit Rows", len(market_audit))
+col3.metric("Snapshot Rows", len(market_snapshots))
+
+low_confidence_count = (
+    (market_audit["odds_match_type"] != "matched").sum()
+    if not market_audit.empty and "odds_match_type" in market_audit.columns
+    else 0
+)
+
+col4.metric("Low Confidence Matches", low_confidence_count)
+
+# ------------------------------------------------------------
+# Market Match Audit
+# ------------------------------------------------------------
+
+st.subheader("Market Match Audit")
+
+audit_cols = [
+    "event_name",
+    "red_fighter",
+    "blue_fighter",
+    "matched_fighter_1",
+    "matched_fighter_2",
+    "odds_match_score",
+    "odds_match_type",
+]
+
+audit_cols = [c for c in audit_cols if c in market_audit.columns]
+
+st.dataframe(
+    market_audit[audit_cols].sort_values(
+        "odds_match_score",
+        ascending=True,
+    ),
+    use_container_width=True,
+)
+
+# ------------------------------------------------------------
+# Latest Market Odds
+# ------------------------------------------------------------
+
+st.subheader("Latest Market Odds")
+
+market_cols = [
+    "event_name",
+    "red_fighter",
+    "blue_fighter",
+    "bookmaker",
+    "red_american_odds",
+    "blue_american_odds",
+    "red_implied_prob",
+    "blue_implied_prob",
+    "odds_match_score",
+    "odds_match_type",
+    "snapshot_timestamp",
+]
+
+market_cols = [c for c in market_cols if c in market_odds.columns]
+
+st.dataframe(
+    market_odds[market_cols],
+    use_container_width=True,
+)
+
+# ------------------------------------------------------------
+# Market Snapshot History
+# ------------------------------------------------------------
+
+st.subheader("Market Snapshot History")
+
+snapshot_cols = [
+    "event_name",
+    "red_fighter",
+    "blue_fighter",
+    "bookmaker",
+    "red_american_odds",
+    "blue_american_odds",
+    "snapshot_timestamp",
+]
+
+snapshot_cols = [c for c in snapshot_cols if c in market_snapshots.columns]
+
+st.dataframe(
+    market_snapshots[snapshot_cols].tail(100),
+    use_container_width=True,
+)
