@@ -346,8 +346,9 @@ for col in [
     if col in display.columns:
         display[f"{col}_display"] = display[col].apply(pct)
 
-if "best_ev" in display.columns:
-    display["best_ev_display"] = display["best_ev_pct"].apply(
+ev_col = "best_ev_pct" if "best_ev_pct" in display.columns else "best_ev"
+
+display["best_ev_display"] = display[ev_col].apply(
     lambda x: f"{x:.1f}%"
     if pd.notna(x)
     else ""
