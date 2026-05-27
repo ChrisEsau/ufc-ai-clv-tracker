@@ -4,18 +4,9 @@ import streamlit as st
 
 
 def render_sidebar():
-    st.sidebar.markdown(
-        """
-        <div class="side-logo">
-            <div class="ufc-badge">UFC</div>
-            <div>
-                <div class="side-title">BETTING</div>
-                <div class="side-title">INTELLIGENCE</div>
-                <div class="side-title-red">PLATFORM</div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    st.sidebar.image(
+        "assets/ufc_betting_logo.png",
+        width=240,
     )
 
     st.sidebar.markdown(
