@@ -138,9 +138,11 @@ for _, pred in predictions_df.iterrows():
             best_score = score
             best_match = odds
 
+    MIN_ODDS_MATCH_SCORE = 90
+
     match_type = (
         "matched"
-        if best_score >= 0.90
+        if best_score >= MIN_ODDS_MATCH_SCORE
         else "low_confidence"
     )
 
