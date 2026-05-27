@@ -893,7 +893,23 @@ else:
 
     with m4:
         render_metric("Latest Snapshot", str(latest_snapshot)[:16])
+    
+    mover_display = movement_df.copy()
 
+    mover_display["fight"] = (
+        mover_display["red_fighter"]
+        + " vs "
+        + mover_display["blue_fighter"]
+    )
+    
+    mover_display["red_move_display"] = (
+        mover_display["red_implied_move"] * 100
+    ).map(lambda x: f"{x:+.1f}%")
+    
+    mover_display["blue_move_display"] = (
+        mover_display["blue_implied_move"] * 100
+    ).map(lambda x: f"{x:+.1f}%")
+    
     # --------------------------------------------------------
     # STYLED MARKET MOVERS TABLE
     # --------------------------------------------------------
