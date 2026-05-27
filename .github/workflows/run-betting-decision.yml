@@ -1,0 +1,48 @@
+name: Run Betting Decision
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/15 * * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  run-betting-decision:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Sync latest repo
+        run: |
+          git pull --rebase origin main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install pandas numpy pyarrow requests joblib
+
+      - name: Run betting decision engine
+        run: |
+          python run_betting_decision.py
+
+      - name: Commit betting outputs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add \
+            ufc_betting_board.parquet \
+            ufc_live_watchlist.parquet \
+            ufc_official_bets.parquet
+
+          git commit -m "Update betting decision outputs" || echo "No changes to commit"
+
+          git push
