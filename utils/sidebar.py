@@ -23,6 +23,8 @@ def render_sidebar():
         unsafe_allow_html=True,
     )
 
+    st.sidebar.image("assets/icons/model_lab.png", width=180)
+
     workflow_items = [
         ("Betting Board", "assets/icons/betting_board.png"),
         ("Line Movement / CLV", "assets/icons/line_movement.png"),
