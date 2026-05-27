@@ -3,6 +3,11 @@ from st_click_detector import click_detector
 import base64
 import streamlit as st
 
+
+def image_to_base64(path):
+    with open(path, "rb") as f:
+        return base64.b64encode(f.read()).decode()
+
 def render_sidebar():
 
     # =========================================================
