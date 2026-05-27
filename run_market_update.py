@@ -231,6 +231,25 @@ print("Market odds saved:")
 print(MARKET_ODDS_OUTPUT)
 
 # ============================================================
+# CLEAN MARKET SNAPSHOT ROWS
+# ============================================================
+
+market_df = market_df.dropna(
+    subset=[
+        "fight_id",
+        "red_fighter",
+        "blue_fighter",
+        "red_american_odds",
+        "blue_american_odds",
+        "bookmaker",
+    ]
+).copy()
+
+market_df = market_df[
+    market_df["odds_match_type"] == "matched"
+].copy()
+
+# ============================================================
 # APPEND SNAPSHOT HISTORY
 # ============================================================
 
