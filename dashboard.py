@@ -1154,7 +1154,7 @@ else:
         mover_display["fight"].dropna().tolist()
     )
 
-    control1, control2, control3 = st.columns([2.2, 1.2, 1])
+    control1, control2, control3 = st.columns([2.5, 1.3, 1])
     
     with control1:
         selected_movement_fight = st.selectbox(
@@ -1174,8 +1174,17 @@ else:
         )
     
     with control3:
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.button("View American Odds")
+        time_window = st.selectbox(
+            "Time Window",
+            [
+                "All",
+                "1H",
+                "6H",
+                "24H",
+            ],
+            index=0,
+            key="movement_time_window",
+        )
     
     selected_movement_row = mover_display[
         mover_display["fight"] == selected_movement_fight
@@ -1190,7 +1199,19 @@ else:
     fight_history = fight_history.sort_values(
         "snapshot_timestamp"
     )
+    
+    if time_window != "All":
+    hours = {
+        "1H": 1,
+        "6H": 6,
+        "24H": 24,
+    }[time_window]
 
+    cutoff_time = fight_history["snapshot_timestamp"].max() - pd.Timedelta(hours=hours)
+
+    fight_history = fight_history[
+        fight_history["snapshot_timestamp"] >= cutoff_time
+    ].copy()
     if chart_metric == "American Odds":
         chart_df = fight_history[
             [
