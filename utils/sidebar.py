@@ -4,6 +4,7 @@ import streamlit as st
 
 
 def render_sidebar():
+    
     st.sidebar.image(
         "assets/ufc_betting_logo.png",
         width=240,
