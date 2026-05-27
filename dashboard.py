@@ -14,6 +14,7 @@ from tabs.betting_board import render_betting_board
 from tabs.line_movement import render_line_movement
 from tabs.model_lab import render_model_lab
 from tabs.data_maintenance import render_data_maintenance
+from utils.sidebar import render_sidebar
 
 # ============================================================
 # PAGE CONFIG
@@ -26,75 +27,7 @@ st.caption(
     "Model probability, market movement, EV, CLV, and betting decision intelligence."
 )
 
-# ============================================================
-# SIDEBAR
-# ============================================================
-
-st.sidebar.title("UFC Intelligence")
-st.sidebar.caption("Betting Board Control Plane")
-
-if st.sidebar.button("Clear cache / reload"):
-    st.cache_data.clear()
-    st.rerun()
-
-# ------------------------------------------------------------
-# Optional workflow controls
-# ------------------------------------------------------------
-
-st.sidebar.markdown("---")
-st.sidebar.subheader("Workflow Controls")
-
-GITHUB_OWNER = "ChrisEsau"
-GITHUB_REPO = "ufc-ai-clv-tracker"
-
-
-def trigger_workflow(workflow_file):
-    try:
-        github_token = st.secrets["GITHUB_TOKEN"]
-    except Exception:
-        return None, "Missing Streamlit secret: GITHUB_TOKEN"
-
-    url = (
-        f"https://api.github.com/repos/"
-        f"{GITHUB_OWNER}/{GITHUB_REPO}/actions/workflows/"
-        f"{workflow_file}/dispatches"
-    )
-
-    headers = {
-        "Accept": "application/vnd.github+json",
-        "Authorization": f"Bearer {github_token}",
-    }
-
-    response = requests.post(
-        url,
-        headers=headers,
-        json={"ref": "main"},
-        timeout=20,
-    )
-
-    return response.status_code, response.text
-
-
-if st.sidebar.button("Run Model Predictions"):
-    status, msg = trigger_workflow("run-model-predictions.yml")
-    if status == 204:
-        st.sidebar.success("Model prediction workflow started.")
-    else:
-        st.sidebar.error(f"Workflow failed: {status} {msg}")
-
-if st.sidebar.button("Run Market Update"):
-    status, msg = trigger_workflow("run-market-update.yml")
-    if status == 204:
-        st.sidebar.success("Market update workflow started.")
-    else:
-        st.sidebar.error(f"Workflow failed: {status} {msg}")
-
-if st.sidebar.button("Run Betting Decision"):
-    status, msg = trigger_workflow("run-betting-decision.yml")
-    if status == 204:
-        st.sidebar.success("Betting decision workflow started.")
-    else:
-        st.sidebar.error(f"Workflow failed: {status} {msg}")
+page = render_sidebar()
 
 tab1, tab2, tab3, tab4 = st.tabs(
     [
