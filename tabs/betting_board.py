@@ -237,10 +237,7 @@ def render_betting_board():
     # STATUS BREAKDOWN
     # ============================================================
     
-    st.markdown(
-        '<div class="section-header">Status Breakdown</div>',
-        unsafe_allow_html=True,
-    )
+    render_section_header("Status Breakdown")
     
     if "bet_status" in filtered.columns:
     
@@ -264,7 +261,7 @@ def render_betting_board():
     # FILTER DIAGNOSTICS
     # ============================================================
     
-    st.markdown('<div class="section-header">Filter Diagnostics</div>', unsafe_allow_html=True)
+    render_section_header("Filter Diagnostics")
     
     diagnostic_cols = [
         "red_fighter",
@@ -297,7 +294,7 @@ def render_betting_board():
     # SELECTED FIGHT DETAIL
     # ============================================================
     
-    st.markdown('<div class="section-header">Selected Fight Detail</div>', unsafe_allow_html=True)
+    render_section_header("Selected Fight Detail")
     
     fight_options = (
         display["fight"].dropna().tolist()
@@ -347,11 +344,8 @@ def render_betting_board():
     # ============================================================
     # SELECTED FIGHT LINE MOVEMENT
     # ============================================================
-    
-    st.markdown(
-        '<div class="section-header">Selected Fight Line Movement</div>',
-        unsafe_allow_html=True,
-    )
+
+    render_section_header("Selected Fight Line Movement")
     
     snapshots = load_parquet("ufc_market_snapshots.parquet")
     
