@@ -18,17 +18,46 @@ def render_sidebar():
     if "page" not in st.session_state:
         st.session_state.page = "Betting Board"
     
-    if st.sidebar.button("🎯  Betting Board", use_container_width=True):
-        st.session_state.page = "Betting Board"
     
-    if st.sidebar.button("📈  Line Movement / CLV", use_container_width=True):
-        st.session_state.page = "Line Movement / CLV"
+    def nav_button(label, icon_svg):
+        active = st.session_state.page == label
+        active_class = "active-workflow" if active else ""
     
-    if st.sidebar.button("🧪  Model Lab", use_container_width=True):
-        st.session_state.page = "Model Lab"
+        if st.sidebar.button(label, key=f"nav_{label}", use_container_width=True):
+            st.session_state.page = label
+            st.rerun()
     
-    if st.sidebar.button("🗄️  Data Maintenance", use_container_width=True):
-        st.session_state.page = "Data Maintenance"
+        st.sidebar.markdown(
+            f"""
+            <div class="workflow-icon-row {active_class}">
+                <span class="workflow-icon">{icon_svg}</span>
+                <span>{label}</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    
+    
+    target_svg = """
+    <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10h-2a8 8 0 1 1-8-8V2zm1 3v6h6v2h-8V5h2zm-1 5a2 2 0 1 0 0 4a2 2 0 0 0 0-4z"/></svg>
+    """
+    
+    chart_svg = """
+    <svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 19h18v2H3V3h2v14h16v2H3zm4-3l4-4l3 3l6-7l1.5 1.3l-7.4 8.6l-3.1-3.1L8.4 17L7 16z"/></svg>
+    """
+    
+    flask_svg = """
+    <svg viewBox="0 0 24 24"><path fill="currentColor" d="M9 2h6v2h-1v5.1l5.7 9.9A2 2 0 0 1 18 22H6a2 2 0 0 1-1.7-3L10 9.1V4H9V2zm3 8l-5.8 10h11.6L12 10z"/></svg>
+    """
+    
+    database_svg = """
+    <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 3C7 3 3 4.8 3 7v10c0 2.2 4 4 9 4s9-1.8 9-4V7c0-2.2-4-4-9-4zm0 2c4.2 0 7 1.2 7 2s-2.8 2-7 2s-7-1.2-7-2s2.8-2 7-2zm0 14c-4.2 0-7-1.2-7-2v-2.1c1.6 1.3 4.3 2.1 7 2.1s5.4-.8 7-2.1V17c0 .8-2.8 2-7 2zm0-4c-4.2 0-7-1.2-7-2v-2.1c1.6 1.3 4.3 2.1 7 2.1s5.4-.8 7-2.1V13c0 .8-2.8 2-7 2z"/></svg>
+    """
+    
+    nav_button("Betting Board", target_svg)
+    nav_button("Line Movement / CLV", chart_svg)
+    nav_button("Model Lab", flask_svg)
+    nav_button("Data Maintenance", database_svg)
     
     page = st.session_state.page
     
