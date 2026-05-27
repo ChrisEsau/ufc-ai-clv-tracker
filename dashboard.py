@@ -277,3 +277,128 @@ st.dataframe(
     market_snapshots[snapshot_cols].tail(100),
     use_container_width=True,
 )
+
+# ============================================================
+# BETTING BOARD VIEWER
+# ============================================================
+
+st.header("Betting Board Review")
+
+betting_board = load_parquet("ufc_betting_board.parquet")
+
+if betting_board.empty:
+    st.warning("No betting board found.")
+else:
+    # --------------------------------------------------------
+    # Summary cards
+    # --------------------------------------------------------
+
+    total_fights = len(betting_board)
+    official_bets = betting_board["is_official_bet"].sum()
+    watchlist = betting_board["is_watchlist_bet"].sum()
+
+    best_ev = betting_board["best_ev"].max()
+    avg_ev = betting_board["best_ev"].mean()
+
+    col1, col2, col3, col4, col5 = st.columns(5)
+
+    col1.metric("Fights", total_fights)
+    col2.metric("Official Bets", int(official_bets))
+    col3.metric("Watchlist", int(watchlist))
+    col4.metric("Best EV", f"{best_ev:.2%}")
+    col5.metric("Avg EV", f"{avg_ev:.2%}")
+
+    # --------------------------------------------------------
+    # Main board
+    # --------------------------------------------------------
+
+    st.subheader("Main Betting Board")
+
+    display_cols = [
+        "event_name",
+        "red_fighter",
+        "blue_fighter",
+        "bet_status",
+        "best_side",
+        "best_american_odds",
+        "best_prob",
+        "best_implied_prob",
+        "best_edge",
+        "best_ev",
+        "best_confidence",
+        "recommended_stake",
+        "failed_filters",
+        "odds_match_score",
+        "odds_match_type",
+    ]
+
+    display_cols = [c for c in display_cols if c in betting_board.columns]
+
+    st.dataframe(
+        betting_board[display_cols].sort_values(
+            ["bet_status", "best_ev"],
+            ascending=[True, False],
+        ),
+        use_container_width=True,
+    )
+
+    # --------------------------------------------------------
+    # Failed filter diagnostics
+    # --------------------------------------------------------
+
+    st.subheader("Filter Diagnostics")
+
+    filter_cols = [
+        "passes_model_quality_filter",
+        "passes_feature_validation_filter",
+        "passes_odds_match_filter",
+        "passes_edge_filter",
+        "passes_confidence_filter",
+        "passes_odds_range_filter",
+        "passes_positive_ev_filter",
+        "passes_all_bet_filters",
+    ]
+
+    filter_cols = [c for c in filter_cols if c in betting_board.columns]
+
+    diagnostic_cols = [
+        "red_fighter",
+        "blue_fighter",
+        "bet_status",
+        "failed_filters",
+    ] + filter_cols
+
+    st.dataframe(
+        betting_board[diagnostic_cols],
+        use_container_width=True,
+    )
+
+    # --------------------------------------------------------
+    # Official bets
+    # --------------------------------------------------------
+
+    st.subheader("Official Bets")
+
+    official = betting_board[
+        betting_board["is_official_bet"] == True
+    ]
+
+    st.dataframe(
+        official[display_cols],
+        use_container_width=True,
+    )
+
+    # --------------------------------------------------------
+    # Watchlist
+    # --------------------------------------------------------
+
+    st.subheader("Watchlist")
+
+    watch = betting_board[
+        betting_board["is_watchlist_bet"] == True
+    ]
+
+    st.dataframe(
+        watch[display_cols],
+        use_container_width=True,
+    )
