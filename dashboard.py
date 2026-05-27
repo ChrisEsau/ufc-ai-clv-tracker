@@ -1201,17 +1201,18 @@ else:
     )
     
     if time_window != "All":
-    hours = {
-        "1H": 1,
-        "6H": 6,
-        "24H": 24,
-    }[time_window]
-
-    cutoff_time = fight_history["snapshot_timestamp"].max() - pd.Timedelta(hours=hours)
-
-    fight_history = fight_history[
-        fight_history["snapshot_timestamp"] >= cutoff_time
-    ].copy()
+        hours = {
+            "1H": 1,
+            "6H": 6,
+            "24H": 24,
+        }[time_window]
+    
+        cutoff_time = fight_history["snapshot_timestamp"].max() - pd.Timedelta(hours=hours)
+    
+        fight_history = fight_history[
+            fight_history["snapshot_timestamp"] >= cutoff_time
+        ].copy()
+    
     if chart_metric == "American Odds":
         chart_df = fight_history[
             [
