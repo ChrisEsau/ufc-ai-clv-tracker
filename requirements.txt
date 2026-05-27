@@ -3,4 +3,3 @@ pandas
 pyarrow
 numpy
 plotly
-st-click-detector
