@@ -24,10 +24,10 @@ def render_sidebar():
     )
     
     workflow_items = [
-        ("Betting Board", "assets/icons/betting_board.png"),
-        ("Line Movement / CLV", "assets/icons/line_movement.png"),
-        ("Model Lab", "assets/icons/model_lab.png"),
-        ("Data Maintenance", "assets/icons/data_maintenance.png"),
+        ("Betting Board", "assets/icons/betting_board.png", width=180),
+        ("Line Movement / CLV", "assets/icons/line_movement.png", width=180),
+        ("Model Lab", "assets/icons/model_lab.png", width=180),
+        ("Data Maintenance", "assets/icons/data_maintenance.png", width=180),
     ]
     
     if "page" not in st.session_state:
