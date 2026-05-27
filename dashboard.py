@@ -347,7 +347,11 @@ for col in [
         display[f"{col}_display"] = display[col].apply(pct)
 
 if "best_ev" in display.columns:
-    display["best_ev_display"] = display["best_ev"].apply(lambda x: f"{x:.1f}%" if pd.notna(x) else "")
+    display["best_ev_display"] = display["best_ev_pct"].apply(
+    lambda x: f"{x:.1f}%"
+    if pd.notna(x)
+    else ""
+)
 
 if "best_confidence" in display.columns:
     display["best_confidence_display"] = display["best_confidence"].apply(lambda x: f"{x:.1f}%" if pd.notna(x) else "")
