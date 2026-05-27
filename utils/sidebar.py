@@ -3,6 +3,10 @@ import streamlit as st
 
 def render_sidebar():
 
+    # =========================================================
+    # LOGO
+    # =========================================================
+
     st.sidebar.image(
         "assets/ufc_betting_logo.png",
         width=190,
@@ -10,39 +14,88 @@ def render_sidebar():
 
     st.sidebar.markdown("---")
 
+    # =========================================================
+    # WORKFLOW NAVIGATION
+    # =========================================================
+
     st.sidebar.markdown(
         '<div class="sidebar-section">WORKFLOW</div>',
         unsafe_allow_html=True,
     )
 
-    workflow_items = [
-        ("Betting Board", "assets/icons/betting_board.png"),
-        ("Line Movement / CLV", "assets/icons/line_movement.png"),
-        ("Model Lab", "assets/icons/model_lab.png"),
-        ("Data Maintenance", "assets/icons/data_maintenance.png"),
-    ]
-
     if "page" not in st.session_state:
         st.session_state.page = "Betting Board"
 
-    for label, image_path in workflow_items:
-        st.sidebar.image(image_path, use_container_width=True)
+    if st.sidebar.button("🎯  Betting Board", use_container_width=True):
+        st.session_state.page = "Betting Board"
+        st.rerun()
 
-        if st.sidebar.button(
-            f"Open {label}",
-            key=f"workflow_{label}",
-            use_container_width=True,
-        ):
-            st.session_state.page = label
-            st.rerun()
+    if st.sidebar.button("📈  Line Movement / CLV", use_container_width=True):
+        st.session_state.page = "Line Movement / CLV"
+        st.rerun()
+
+    if st.sidebar.button("🧪  Model Lab", use_container_width=True):
+        st.session_state.page = "Model Lab"
+        st.rerun()
+
+    if st.sidebar.button("🛠️  Data Maintenance", use_container_width=True):
+        st.session_state.page = "Data Maintenance"
+        st.rerun()
 
     page = st.session_state.page
 
     st.sidebar.markdown("---")
 
-    if st.sidebar.button("🔄 Refresh Data", use_container_width=True):
+    # =========================================================
+    # QUICK ACTIONS
+    # =========================================================
+
+    st.sidebar.markdown(
+        '<div class="sidebar-section">QUICK ACTIONS</div>',
+        unsafe_allow_html=True,
+    )
+
+    if st.sidebar.button("🔄  Refresh Data", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
+
+    if st.sidebar.button("▶  Run Pipeline", use_container_width=True):
+        st.sidebar.info("Pipeline trigger placeholder")
+
+    if st.sidebar.button("⬇  Export Board", use_container_width=True):
+        st.sidebar.info("Export placeholder")
+
+    st.sidebar.markdown("---")
+
+    # =========================================================
+    # FILTER PRESETS
+    # =========================================================
+
+    st.sidebar.markdown(
+        '<div class="sidebar-section">FILTER PRESETS</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.sidebar.selectbox(
+        "Select Preset",
+        [
+            "Default",
+            "Official Bets Only",
+            "Watchlist",
+            "High EV",
+            "Data Issues",
+        ],
+        label_visibility="collapsed",
+    )
+
+    st.sidebar.markdown(
+        """
+        <div class="sidebar-version">
+            v1.0.0
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     return page
 
