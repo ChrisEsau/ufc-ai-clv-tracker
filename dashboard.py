@@ -12,8 +12,8 @@ import plotly.graph_objects as go
 from utils.theme import apply_theme
 from tabs.betting_board import render_betting_board
 from tabs.line_movement import render_line_movement
-#from tabs.model_lab import render_model_lab
-#from tabs.data_maintenance import render_data_maintenance
+from tabs.model_lab import render_model_lab
+from tabs.data_maintenance import render_data_maintenance
 
 # ============================================================
 # PAGE CONFIG
@@ -112,8 +112,8 @@ with tab1:
 with tab2:
     render_line_movement()
 
-#with tab3:
-#    render_model_lab()
+with tab3:
+    render_model_lab()
 
-#with tab4:
-#    render_data_maintenance()
+with tab4:
+    render_data_maintenance()
