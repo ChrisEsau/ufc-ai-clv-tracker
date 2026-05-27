@@ -15,12 +15,22 @@ def render_sidebar():
         unsafe_allow_html=True,
     )
     
-    nav_items = {
-        "Betting Board": "🎯",
-        "Line Movement / CLV": "📈",
-        "Model Lab": "🧪",
-        "Data Maintenance": "🗄️",
-    }
+    if "page" not in st.session_state:
+        st.session_state.page = "Betting Board"
+    
+    if st.sidebar.button("🎯  Betting Board", use_container_width=True):
+        st.session_state.page = "Betting Board"
+    
+    if st.sidebar.button("📈  Line Movement / CLV", use_container_width=True):
+        st.session_state.page = "Line Movement / CLV"
+    
+    if st.sidebar.button("🧪  Model Lab", use_container_width=True):
+        st.session_state.page = "Model Lab"
+    
+    if st.sidebar.button("🗄️  Data Maintenance", use_container_width=True):
+        st.session_state.page = "Data Maintenance"
+    
+    page = st.session_state.page
     
     if "page" not in st.session_state:
         st.session_state.page = "Betting Board"
