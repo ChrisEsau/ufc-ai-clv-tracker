@@ -188,33 +188,45 @@ def apply_theme():
             color: #60A5FA;
             border: 1px solid rgba(59,130,246,0.45);
         }
-        .workflow-icon-row {
+        
+        .workflow-link {
             display: flex;
             align-items: center;
             gap: 12px;
             padding: 12px 14px;
             border-radius: 12px;
-            color: #CBD5E1;
+            color: #CBD5E1 !important;
+            text-decoration: none !important;
             font-weight: 800;
+            font-size: 15px;
             margin-bottom: 8px;
-            pointer-events: none;
-        }
-        section[data-testid="stSidebar"] .stButton button {
-            opacity: 0;
-            height: 0;
-            padding: 0;
-            margin: 0;
-            border: none;
-        }
-        .workflow-icon-row svg {
-            width: 21px;
-            height: 21px;
+            border: 1px solid transparent;
+            transition: all 0.18s ease;
         }
         
-        .active-workflow {
-            background: linear-gradient(135deg, rgba(239,68,68,0.9), rgba(127,29,29,0.8));
-            color: #FFFFFF;
+        .workflow-link:hover {
+            background: rgba(148, 163, 184, 0.08);
+            color: #FFFFFF !important;
+            border-color: rgba(148, 163, 184, 0.15);
+        }
+        
+        .workflow-link.active-workflow {
+            background: linear-gradient(135deg, rgba(239,68,68,0.92), rgba(127,29,29,0.82));
+            color: #FFFFFF !important;
             border: 1px solid rgba(248,113,113,0.45);
+            box-shadow: 0 8px 22px rgba(239,68,68,0.20);
+        }
+        
+        .workflow-svg {
+            width: 21px;
+            height: 21px;
+            display: inline-flex;
+            align-items: center;
+        }
+        
+        .workflow-svg svg {
+            width: 21px;
+            height: 21px;
         }
         </style>
         """,
