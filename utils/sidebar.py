@@ -14,17 +14,30 @@ def render_sidebar():
         '<div class="sidebar-section">WORKFLOW</div>',
         unsafe_allow_html=True,
     )
-
-    page = st.sidebar.radio(
-        "",
-        [
-            "Betting Board",
-            "Line Movement / CLV",
-            "Model Lab",
-            "Data Maintenance",
-        ],
-        label_visibility="collapsed",
-    )
+    
+    nav_items = {
+        "Betting Board": "🎯",
+        "Line Movement / CLV": "📈",
+        "Model Lab": "🧪",
+        "Data Maintenance": "🗄️",
+    }
+    
+    if "page" not in st.session_state:
+        st.session_state.page = "Betting Board"
+    
+    for label, icon in nav_items.items():
+        active = st.session_state.page == label
+        css_class = "nav-card active-nav" if active else "nav-card"
+    
+        if st.sidebar.button(
+            f"{icon}  {label}",
+            key=f"nav_{label}",
+            use_container_width=True,
+        ):
+            st.session_state.page = label
+            st.rerun()
+    
+    page = st.session_state.page
 
     st.sidebar.markdown(
         '<div class="sidebar-section">QUICK ACTIONS</div>',
