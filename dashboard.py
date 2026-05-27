@@ -1204,15 +1204,31 @@ else:
     )
     
     fig.update_xaxes(
-        gridcolor="#334155",
+        gridcolor="rgba(148,163,184,0.15)",
         showline=True,
         linecolor="#475569",
+        tickfont=dict(
+            color="#E2E8F0",
+            size=12,
+        ),
+        title_font=dict(
+            color="#F8FAFC",
+            size=14,
+        ),
     )
     
     fig.update_yaxes(
-        gridcolor="#334155",
+        gridcolor="rgba(148,163,184,0.15)",
         showline=True,
         linecolor="#475569",
+        tickfont=dict(
+            color="#E2E8F0",
+            size=12,
+        ),
+        title_font=dict(
+            color="#F8FAFC",
+            size=14,
+        ),
         title="Implied Probability (%)",
     )
     
