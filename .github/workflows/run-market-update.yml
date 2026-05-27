@@ -1,0 +1,50 @@
+name: Run Market Update
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/15 * * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  run-market-update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Sync with latest repo
+        run: |
+          git pull --rebase origin main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install pandas numpy pyarrow requests joblib
+
+      - name: Run market update
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        run: |
+          python run_market_update.py
+
+      - name: Commit market outputs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add \
+            ufc_market_odds.parquet \
+            ufc_market_snapshots.parquet \
+            ufc_market_match_audit.parquet
+
+          git commit -m "Update market odds data" || echo "No changes to commit"
+
+          git push
