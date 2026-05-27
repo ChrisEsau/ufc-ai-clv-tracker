@@ -196,11 +196,16 @@ def apply_theme():
             border-radius: 12px;
             color: #CBD5E1;
             font-weight: 800;
-            margin-top: -46px;
             margin-bottom: 8px;
             pointer-events: none;
         }
-        
+        section[data-testid="stSidebar"] .stButton button {
+            opacity: 0;
+            height: 0;
+            padding: 0;
+            margin: 0;
+            border: none;
+        }
         .workflow-icon-row svg {
             width: 21px;
             height: 21px;
