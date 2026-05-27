@@ -70,13 +70,36 @@ fighter_features_df["fighter_norm"] = fighter_features_df["fighter_norm"].astype
 # MATCH HELPERS
 # ============================================================
 
+# ============================================================
+# MATCH HELPERS — ID ONLY / EXACT NAME FALLBACK
+# ============================================================
+
+GOOD_MATCH_TYPES = [
+    "id_match",
+    "exact_name_match",
+]
+
+
 def find_fighter_row(fighter_id, fighter_name, fighter_features_df):
+    """
+    Production-safe fighter matching.
+
+    Priority:
+    1. UFCStats fighter_id
+    2. Exact normalized name fallback
+    3. Missing
+
+    No fuzzy matching is allowed for production predictions.
+    """
+
     fighter_id = str(fighter_id).strip()
     fighter_norm = normalize_name(fighter_name)
 
-    if fighter_id:
+    if fighter_id and fighter_id.lower() not in ["nan", "none", ""]:
         id_match = fighter_features_df[
-            fighter_features_df["fighter_id"].astype(str) == fighter_id
+            fighter_features_df["fighter_id"].astype(str).str.strip()
+            ==
+            fighter_id
         ]
 
         if len(id_match) > 0:
@@ -89,21 +112,7 @@ def find_fighter_row(fighter_id, fighter_name, fighter_features_df):
     if len(exact_name_match) > 0:
         return exact_name_match.iloc[0], "exact_name_match"
 
-    temp = fighter_features_df.copy()
-
-    temp["name_score"] = temp["fighter_norm"].apply(
-        lambda x: token_set_score(x, fighter_norm)
-    )
-
-    temp = temp.sort_values("name_score", ascending=False)
-
-    best = temp.iloc[0]
-
-    if best["name_score"] >= 0.88:
-        return best, f"fuzzy_name_match_{round(best['name_score'], 3)}"
-
     return None, "missing"
-
 
 # ============================================================
 # MATCH AUDIT
