@@ -3,8 +3,14 @@ import pandas as pd
 import numpy as np
 
 from utils.data_loader import load_parquet
-from utils.ui_components import render_metric, money, american
 from utils.ui_components import render_metric, money, american, pct
+
+from utils.panels import (
+    render_section_header,
+    render_panel_open,
+    render_panel_close,
+    render_status_pill,
+)
 
 def render_betting_board():
     board = load_parquet("ufc_betting_board.parquet")
@@ -152,7 +158,7 @@ def render_betting_board():
     # MAIN ACTION BOARD
     # ============================================================
     
-    st.markdown('<div class="section-header">Primary Action Board</div>', unsafe_allow_html=True)
+    render_section_header("Primary Action Board")
     
     display = filtered.copy()
     
