@@ -757,289 +757,244 @@ with st.expander("Raw Betting Board Data"):
         board,
         use_container_width=True,
     )
-# ============================================================
-# LINE MOVEMENT / CLV TAB FOUNDATION
-# ============================================================
+# --------------------------------------------------------
+# CARD-STYLE MARKET MOVERS
+# --------------------------------------------------------
 
-st.markdown(
-    '<div class="section-header">Line Movement / CLV</div>',
-    unsafe_allow_html=True,
+st.subheader("Largest Market Movers")
+
+mover_display = movement_df.copy()
+
+mover_display["fight"] = (
+    mover_display["red_fighter"]
+    + " vs "
+    + mover_display["blue_fighter"]
 )
 
-snapshots = load_parquet("ufc_market_snapshots.parquet")
+mover_display["red_move_display"] = (
+    mover_display["red_implied_move"] * 100
+).map(lambda x: f"{x:+.1f}%")
 
-if snapshots.empty:
-    st.info("No market snapshots found yet.")
-else:
-    snapshots["snapshot_timestamp"] = pd.to_datetime(
-        snapshots["snapshot_timestamp"],
-        utc=True,
-        errors="coerce",
-    )
+mover_display["blue_move_display"] = (
+    mover_display["blue_implied_move"] * 100
+).map(lambda x: f"{x:+.1f}%")
 
-    snapshots = snapshots.dropna(
-        subset=[
-            "fight_id",
-            "snapshot_timestamp",
-            "red_american_odds",
-            "blue_american_odds",
-        ]
-    ).copy()
+styled_df = mover_display.sort_values(
+    "largest_abs_move",
+    ascending=False,
+).copy()
 
-    # --------------------------------------------------------
-    # Summary cards
-    # --------------------------------------------------------
+def move_color(move):
+    if move > 0:
+        return "#22C55E"
+    if move < 0:
+        return "#EF4444"
+    return "#CBD5E1"
 
-    tracked_fights = snapshots["fight_id"].nunique()
-    total_snapshots = len(snapshots)
-    latest_snapshot = snapshots["snapshot_timestamp"].max()
+cards_html = """
+<div style="
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap:16px;
+    margin-bottom:30px;
+">
+"""
 
-    latest_rows = (
-        snapshots.sort_values("snapshot_timestamp")
-        .groupby("fight_id")
-        .tail(1)
-    )
+for _, row in styled_df.iterrows():
 
-    first_rows = (
-        snapshots.sort_values("snapshot_timestamp")
-        .groupby("fight_id")
-        .head(1)
-    )
+    red_move = row["red_implied_move"] * 100
+    blue_move = row["blue_implied_move"] * 100
 
-    movement_df = first_rows[
-        [
-            "fight_id",
-            "red_fighter",
-            "blue_fighter",
-            "red_american_odds",
-            "blue_american_odds",
-            "red_implied_prob",
-            "blue_implied_prob",
-        ]
-    ].rename(
-        columns={
-            "red_american_odds": "opening_red_odds",
-            "blue_american_odds": "opening_blue_odds",
-            "red_implied_prob": "opening_red_implied",
-            "blue_implied_prob": "opening_blue_implied",
-        }
-    ).merge(
-        latest_rows[
-            [
-                "fight_id",
-                "red_american_odds",
-                "blue_american_odds",
-                "red_implied_prob",
-                "blue_implied_prob",
-                "snapshot_timestamp",
-            ]
-        ].rename(
-            columns={
-                "red_american_odds": "current_red_odds",
-                "blue_american_odds": "current_blue_odds",
-                "red_implied_prob": "current_red_implied",
-                "blue_implied_prob": "current_blue_implied",
-                "snapshot_timestamp": "latest_snapshot",
-            }
-        ),
-        on="fight_id",
-        how="left",
-    )
+    red_color = move_color(red_move)
+    blue_color = move_color(blue_move)
 
-    movement_df["red_implied_move"] = (
-        movement_df["current_red_implied"]
-        - movement_df["opening_red_implied"]
-    )
+    larger_side = "Red" if abs(red_move) >= abs(blue_move) else "Blue"
+    larger_move = max(abs(red_move), abs(blue_move))
 
-    movement_df["blue_implied_move"] = (
-        movement_df["current_blue_implied"]
-        - movement_df["opening_blue_implied"]
-    )
+    badge_color = "#EF4444" if larger_side == "Red" else "#3B82F6"
 
-    movement_df["largest_abs_move"] = movement_df[
-        [
-            "red_implied_move",
-            "blue_implied_move",
-        ]
-    ].abs().max(axis=1)
-
-    snapshot_counts = (
-        snapshots.groupby("fight_id")
-        .size()
-        .reset_index(name="snapshot_count")
-    )
-
-    movement_df = movement_df.merge(
-        snapshot_counts,
-        on="fight_id",
-        how="left",
-    )
-
-    largest_move = (
-        movement_df["largest_abs_move"].max()
-        if not movement_df.empty
-        else 0
-    )
-
-    m1, m2, m3, m4 = st.columns(4)
-
-    with m1:
-        render_metric("Tracked Fights", tracked_fights)
-
-    with m2:
-        render_metric("Total Snapshots", total_snapshots)
-
-    with m3:
-        render_metric("Largest Move", f"{largest_move * 100:.1f}%")
-
-    with m4:
-        render_metric("Latest Snapshot", str(latest_snapshot)[:16])
-    
-    mover_display = movement_df.copy()
-    
-    mover_display["fight"] = (
-        mover_display["red_fighter"]
-        + " vs "
-        + mover_display["blue_fighter"]
-    )
-    
-    mover_display["red_move_display"] = (
-        mover_display["red_implied_move"] * 100
-    ).map(lambda x: f"{x:+.1f}%")
-    
-    mover_display["blue_move_display"] = (
-        mover_display["blue_implied_move"] * 100
-    ).map(lambda x: f"{x:+.1f}%")
-    
-    # --------------------------------------------------------
-    # STYLED MARKET MOVERS TABLE
-    # --------------------------------------------------------
-    
-    st.subheader("Largest Market Movers")
-    
-    styled_df = mover_display.sort_values(
-        "largest_abs_move",
-        ascending=False,
-    ).copy()
-    
-    def movement_color(val):
-        try:
-            num = float(str(val).replace("%", ""))
-            if num > 0:
-                return "#22C55E"
-            elif num < 0:
-                return "#EF4444"
-            return "#CBD5E1"
-        except:
-            return "#CBD5E1"
-    
-    table_html = """
+    cards_html += f"""
     <div style="
-        background: linear-gradient(180deg, #1E293B 0%, #172033 100%);
+        background: linear-gradient(180deg, #1E293B 0%, #141C2E 100%);
         border: 1px solid #334155;
         border-radius: 18px;
-        padding: 18px;
-        margin-bottom: 24px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.28);
+        padding: 18px 18px 16px 18px;
+        box-shadow: 0 14px 32px rgba(0,0,0,0.32);
     ">
-    <table style="
-        width:100%;
-        border-collapse:collapse;
-        font-size:14px;
-    ">
-    <thead>
-    <tr style="
-        color:#94A3B8;
-        text-transform:uppercase;
-        font-size:12px;
-        letter-spacing:0.05em;
-    ">
-    <th style="text-align:left;padding:14px;">Fight</th>
-    <th style="padding:14px;">Open</th>
-    <th style="padding:14px;">Current</th>
-    <th style="padding:14px;">Move</th>
-    <th style="padding:14px;">Snapshots</th>
-    <th style="padding:14px;">Latest</th>
-    </tr>
-    </thead>
-    <tbody>
-    """
-    
-    for _, row in styled_df.iterrows():
-    
-        red_move = row["red_move_display"]
-        move_color = movement_color(red_move)
-    
-        table_html += f"""
-        <tr style="
-            border-top:1px solid #334155;
-            transition: all 0.2s ease;
+        <div style="
+            display:flex;
+            justify-content:space-between;
+            align-items:flex-start;
+            margin-bottom:14px;
         ">
-            <td style="
-                padding:16px;
-                font-weight:700;
-                color:#F8FAFC;
-            ">
-                {row['fight']}
-            </td>
-    
-            <td style="
-                padding:16px;
-                color:#CBD5E1;
-                text-align:center;
-                font-weight:600;
-            ">
-                {row['opening_red_odds']}
-            </td>
-    
-            <td style="
-                padding:16px;
-                color:#FFFFFF;
-                text-align:center;
-                font-weight:700;
-            ">
-                {row['current_red_odds']}
-            </td>
-    
-            <td style="
-                padding:16px;
-                text-align:center;
-                font-weight:800;
-                color:{move_color};
-            ">
-                {red_move}
-            </td>
-    
-            <td style="
-                padding:16px;
-                text-align:center;
-                color:#CBD5E1;
-            ">
-                {row['snapshot_count']}
-            </td>
-    
-            <td style="
-                padding:16px;
-                text-align:center;
-                color:#94A3B8;
+            <div>
+                <div style="
+                    font-size:15px;
+                    font-weight:800;
+                    color:#F8FAFC;
+                    line-height:1.25;
+                ">
+                    {row['fight']}
+                </div>
+                <div style="
+                    font-size:12px;
+                    color:#94A3B8;
+                    margin-top:5px;
+                ">
+                    {row['snapshot_count']} snapshots · latest {str(row['latest_snapshot'])[:16]}
+                </div>
+            </div>
+
+            <div style="
+                background:{badge_color}33;
+                color:{badge_color};
+                border:1px solid {badge_color}66;
+                border-radius:999px;
+                padding:5px 9px;
                 font-size:12px;
+                font-weight:800;
             ">
-                {str(row['latest_snapshot'])[:16]}
-            </td>
-        </tr>
-        """
-    
-    table_html += """
-    </tbody>
-    </table>
+                {larger_side} {larger_move:.1f}%
+            </div>
+        </div>
+
+        <div style="
+            display:grid;
+            grid-template-columns: 1fr 1fr;
+            gap:12px;
+        ">
+            <div style="
+                background:#0F172A;
+                border:1px solid #334155;
+                border-radius:14px;
+                padding:14px;
+            ">
+                <div style="
+                    color:#94A3B8;
+                    font-size:11px;
+                    text-transform:uppercase;
+                    font-weight:700;
+                    letter-spacing:0.06em;
+                    margin-bottom:8px;
+                ">
+                    Red Side
+                </div>
+
+                <div style="
+                    color:#F8FAFC;
+                    font-weight:800;
+                    font-size:14px;
+                    margin-bottom:10px;
+                ">
+                    {row['red_fighter']}
+                </div>
+
+                <div style="
+                    display:flex;
+                    justify-content:space-between;
+                    color:#CBD5E1;
+                    font-size:13px;
+                    margin-bottom:6px;
+                ">
+                    <span>Open</span>
+                    <strong>{row['opening_red_odds']}</strong>
+                </div>
+
+                <div style="
+                    display:flex;
+                    justify-content:space-between;
+                    color:#CBD5E1;
+                    font-size:13px;
+                    margin-bottom:6px;
+                ">
+                    <span>Current</span>
+                    <strong>{row['current_red_odds']}</strong>
+                </div>
+
+                <div style="
+                    display:flex;
+                    justify-content:space-between;
+                    color:{red_color};
+                    font-size:14px;
+                    font-weight:900;
+                ">
+                    <span>Move</span>
+                    <span>{red_move:+.1f}%</span>
+                </div>
+            </div>
+
+            <div style="
+                background:#0F172A;
+                border:1px solid #334155;
+                border-radius:14px;
+                padding:14px;
+            ">
+                <div style="
+                    color:#94A3B8;
+                    font-size:11px;
+                    text-transform:uppercase;
+                    font-weight:700;
+                    letter-spacing:0.06em;
+                    margin-bottom:8px;
+                ">
+                    Blue Side
+                </div>
+
+                <div style="
+                    color:#F8FAFC;
+                    font-weight:800;
+                    font-size:14px;
+                    margin-bottom:10px;
+                ">
+                    {row['blue_fighter']}
+                </div>
+
+                <div style="
+                    display:flex;
+                    justify-content:space-between;
+                    color:#CBD5E1;
+                    font-size:13px;
+                    margin-bottom:6px;
+                ">
+                    <span>Open</span>
+                    <strong>{row['opening_blue_odds']}</strong>
+                </div>
+
+                <div style="
+                    display:flex;
+                    justify-content:space-between;
+                    color:#CBD5E1;
+                    font-size:13px;
+                    margin-bottom:6px;
+                ">
+                    <span>Current</span>
+                    <strong>{row['current_blue_odds']}</strong>
+                </div>
+
+                <div style="
+                    display:flex;
+                    justify-content:space-between;
+                    color:{blue_color};
+                    font-size:14px;
+                    font-weight:900;
+                ">
+                    <span>Move</span>
+                    <span>{blue_move:+.1f}%</span>
+                </div>
+            </div>
+        </div>
     </div>
     """
-    
 
+cards_html += """
+</div>
+"""
+
+import streamlit.components.v1 as components
 
 components.html(
-    table_html,
-    height=520,
+    cards_html,
+    height=720,
     scrolling=True,
 )
 # --------------------------------------------------------
