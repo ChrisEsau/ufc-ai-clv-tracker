@@ -1154,33 +1154,41 @@ else:
         mover_display["fight"].dropna().tolist()
     )
 
-    selected_movement_fight = st.selectbox(
-        "Select fight for line movement",
-        fight_options_movement,
-        key="movement_fight_selector",
-    )
-
+    control1, control2, control3 = st.columns([2.2, 1.2, 1])
+    
+    with control1:
+        selected_movement_fight = st.selectbox(
+            "Select Fight",
+            fight_options_movement,
+            key="movement_fight_selector",
+        )
+    
+    with control2:
+        chart_metric = st.selectbox(
+            "Chart Metric",
+            [
+                "American Odds",
+                "Implied Probability",
+            ],
+            key="movement_chart_metric",
+        )
+    
+    with control3:
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.button("View American Odds")
+    
     selected_movement_row = mover_display[
         mover_display["fight"] == selected_movement_fight
     ].iloc[0]
-
+    
     selected_movement_fight_id = selected_movement_row["fight_id"]
-
+    
     fight_history = snapshots[
         snapshots["fight_id"] == selected_movement_fight_id
     ].copy()
-
+    
     fight_history = fight_history.sort_values(
         "snapshot_timestamp"
-    )
-
-    chart_metric = st.selectbox(
-        "Chart metric",
-        [
-            "American Odds",
-            "Implied Probability",
-        ],
-        key="movement_chart_metric",
     )
 
     if chart_metric == "American Odds":
