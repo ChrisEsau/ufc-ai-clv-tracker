@@ -1166,57 +1166,57 @@ else:
 
     chart_df = chart_df.set_index("snapshot_timestamp")
 
-# Replace st.line_chart(...) with Plotly
-fig = go.Figure()
-
-fig.add_trace(go.Scatter(
-    x=chart_df.index,
-    y=chart_df[selected_movement_row["red_fighter"]],
-    mode="lines+markers",
-    name=f'{selected_movement_row["red_fighter"]} (Red)',
-    line=dict(color="#EF4444", width=3),
-    marker=dict(size=6),
-))
-
-fig.add_trace(go.Scatter(
-    x=chart_df.index,
-    y=chart_df[selected_movement_row["blue_fighter"]],
-    mode="lines+markers",
-    name=f'{selected_movement_row["blue_fighter"]} (Blue)',
-    line=dict(color="#3B82F6", width=3),
-    marker=dict(size=6),
-))
-
-fig.update_layout(
-    template="plotly_dark",
-    paper_bgcolor="#1E293B",
-    plot_bgcolor="#172033",
-    font=dict(color="#F8FAFC"),
-    margin=dict(l=40, r=20, t=30, b=40),
-    height=420,
-    legend=dict(
-        orientation="h",
-        yanchor="bottom",
-        y=1.02,
-        xanchor="center",
-        x=0.5,
-    ),
-)
-
-fig.update_xaxes(
-    gridcolor="#334155",
-    showline=True,
-    linecolor="#475569",
-)
-
-fig.update_yaxes(
-    gridcolor="#334155",
-    showline=True,
-    linecolor="#475569",
-    title="Implied Probability (%)",
-)
-
-st.plotly_chart(fig, use_container_width=True)
+    # Replace st.line_chart(...) with Plotly
+    fig = go.Figure()
+    
+    fig.add_trace(go.Scatter(
+        x=chart_df.index,
+        y=chart_df[selected_movement_row["red_fighter"]],
+        mode="lines+markers",
+        name=f'{selected_movement_row["red_fighter"]} (Red)',
+        line=dict(color="#EF4444", width=3),
+        marker=dict(size=6),
+    ))
+    
+    fig.add_trace(go.Scatter(
+        x=chart_df.index,
+        y=chart_df[selected_movement_row["blue_fighter"]],
+        mode="lines+markers",
+        name=f'{selected_movement_row["blue_fighter"]} (Blue)',
+        line=dict(color="#3B82F6", width=3),
+        marker=dict(size=6),
+    ))
+    
+    fig.update_layout(
+        template="plotly_dark",
+        paper_bgcolor="#1E293B",
+        plot_bgcolor="#172033",
+        font=dict(color="#F8FAFC"),
+        margin=dict(l=40, r=20, t=30, b=40),
+        height=420,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="center",
+            x=0.5,
+        ),
+    )
+    
+    fig.update_xaxes(
+        gridcolor="#334155",
+        showline=True,
+        linecolor="#475569",
+    )
+    
+    fig.update_yaxes(
+        gridcolor="#334155",
+        showline=True,
+        linecolor="#475569",
+        title="Implied Probability (%)",
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
 
     # --------------------------------------------------------
     # SNAPSHOT HISTORY TABLE
