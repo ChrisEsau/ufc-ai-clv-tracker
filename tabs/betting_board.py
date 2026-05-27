@@ -68,7 +68,18 @@ def render_betting_board():
         if "bet_status" in board.columns
         else []
     )
-       
+
+
+    selected_event = "All Events"
+
+    selected_statuses = (
+        board["bet_status"].dropna().unique().tolist()
+        if "bet_status" in board.columns
+        else []
+    )
+    
+    show_only_actionable = False
+
     filtered = board.copy()
     
     if selected_event != "All Events" and "event_name" in filtered.columns:
