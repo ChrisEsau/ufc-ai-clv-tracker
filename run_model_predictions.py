@@ -272,8 +272,24 @@ for col in X_live.columns:
 feature_audit_rows = []
 
 for idx, row in X_live.iterrows():
+
     zero_pct = (row == 0).mean() * 100
     nonzero_count = (row != 0).sum()
+
+    red_match = live_df.loc[idx, "red_feature_match"]
+    blue_match = live_df.loc[idx, "blue_feature_match"]
+
+    passes_match_quality = (
+        red_match in GOOD_MATCH_TYPES
+        and blue_match in GOOD_MATCH_TYPES
+    )
+
+    passes_feature_validation = (
+        len(missing_features) == 0
+        and nonzero_count >= 90
+        and zero_pct <= 35
+        and passes_match_quality
+    )
 
     feature_audit_rows.append({
         "prediction_run_id": PREDICTION_RUN_ID,
@@ -282,18 +298,15 @@ for idx, row in X_live.iterrows():
         "fight_id": live_df.loc[idx, "fight_id"],
         "red_fighter": live_df.loc[idx, "red_fighter"],
         "blue_fighter": live_df.loc[idx, "blue_fighter"],
-        "red_feature_match": live_df.loc[idx, "red_feature_match"],
-        "blue_feature_match": live_df.loc[idx, "blue_feature_match"],
+        "red_feature_match": red_match,
+        "blue_feature_match": blue_match,
         "feature_count_expected": len(feature_columns),
         "feature_count_actual": X_live.shape[1],
         "missing_feature_count": len(missing_features),
         "nonzero_feature_count": nonzero_count,
         "zero_feature_pct": zero_pct,
-        "passes_feature_validation": (
-            len(missing_features) == 0
-            and nonzero_count >= 90
-            and zero_pct <= 35
-        ),
+        "passes_match_quality": passes_match_quality,
+        "passes_feature_validation": passes_feature_validation,
     })
 
 feature_audit_df = pd.DataFrame(feature_audit_rows)
@@ -304,6 +317,7 @@ feature_audit_df.to_parquet(
 )
 
 print("Feature audit saved:", FEATURE_AUDIT_OUTPUT)
+print("X_live shape:", X_live.shape)
 
 # ============================================================
 # MODEL PREDICTIONS
