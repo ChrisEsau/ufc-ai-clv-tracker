@@ -632,3 +632,296 @@ with st.expander("Raw Betting Board Data"):
         board,
         use_container_width=True,
     )
+    # ============================================================
+# LINE MOVEMENT / CLV TAB FOUNDATION
+# ============================================================
+
+st.markdown(
+    '<div class="section-header">Line Movement / CLV</div>',
+    unsafe_allow_html=True,
+)
+
+snapshots = load_parquet("ufc_market_snapshots.parquet")
+
+if snapshots.empty:
+    st.info("No market snapshots found yet.")
+else:
+    snapshots["snapshot_timestamp"] = pd.to_datetime(
+        snapshots["snapshot_timestamp"],
+        utc=True,
+        errors="coerce",
+    )
+
+    snapshots = snapshots.dropna(
+        subset=[
+            "fight_id",
+            "snapshot_timestamp",
+            "red_american_odds",
+            "blue_american_odds",
+        ]
+    ).copy()
+
+    # --------------------------------------------------------
+    # Summary cards
+    # --------------------------------------------------------
+
+    tracked_fights = snapshots["fight_id"].nunique()
+    total_snapshots = len(snapshots)
+    latest_snapshot = snapshots["snapshot_timestamp"].max()
+
+    latest_rows = (
+        snapshots.sort_values("snapshot_timestamp")
+        .groupby("fight_id")
+        .tail(1)
+    )
+
+    first_rows = (
+        snapshots.sort_values("snapshot_timestamp")
+        .groupby("fight_id")
+        .head(1)
+    )
+
+    movement_df = first_rows[
+        [
+            "fight_id",
+            "red_fighter",
+            "blue_fighter",
+            "red_american_odds",
+            "blue_american_odds",
+            "red_implied_prob",
+            "blue_implied_prob",
+        ]
+    ].rename(
+        columns={
+            "red_american_odds": "opening_red_odds",
+            "blue_american_odds": "opening_blue_odds",
+            "red_implied_prob": "opening_red_implied",
+            "blue_implied_prob": "opening_blue_implied",
+        }
+    ).merge(
+        latest_rows[
+            [
+                "fight_id",
+                "red_american_odds",
+                "blue_american_odds",
+                "red_implied_prob",
+                "blue_implied_prob",
+                "snapshot_timestamp",
+            ]
+        ].rename(
+            columns={
+                "red_american_odds": "current_red_odds",
+                "blue_american_odds": "current_blue_odds",
+                "red_implied_prob": "current_red_implied",
+                "blue_implied_prob": "current_blue_implied",
+                "snapshot_timestamp": "latest_snapshot",
+            }
+        ),
+        on="fight_id",
+        how="left",
+    )
+
+    movement_df["red_implied_move"] = (
+        movement_df["current_red_implied"]
+        - movement_df["opening_red_implied"]
+    )
+
+    movement_df["blue_implied_move"] = (
+        movement_df["current_blue_implied"]
+        - movement_df["opening_blue_implied"]
+    )
+
+    movement_df["largest_abs_move"] = movement_df[
+        [
+            "red_implied_move",
+            "blue_implied_move",
+        ]
+    ].abs().max(axis=1)
+
+    snapshot_counts = (
+        snapshots.groupby("fight_id")
+        .size()
+        .reset_index(name="snapshot_count")
+    )
+
+    movement_df = movement_df.merge(
+        snapshot_counts,
+        on="fight_id",
+        how="left",
+    )
+
+    largest_move = (
+        movement_df["largest_abs_move"].max()
+        if not movement_df.empty
+        else 0
+    )
+
+    m1, m2, m3, m4 = st.columns(4)
+
+    with m1:
+        render_metric("Tracked Fights", tracked_fights)
+
+    with m2:
+        render_metric("Total Snapshots", total_snapshots)
+
+    with m3:
+        render_metric("Largest Move", f"{largest_move * 100:.1f}%")
+
+    with m4:
+        render_metric("Latest Snapshot", str(latest_snapshot)[:16])
+
+    # --------------------------------------------------------
+    # Largest movers table
+    # --------------------------------------------------------
+
+    st.subheader("Largest Market Movers")
+
+    mover_display = movement_df.copy()
+
+    mover_display["fight"] = (
+        mover_display["red_fighter"]
+        + " vs "
+        + mover_display["blue_fighter"]
+    )
+
+    mover_display["red_move_display"] = (
+        mover_display["red_implied_move"] * 100
+    ).map(lambda x: f"{x:+.1f}%")
+
+    mover_display["blue_move_display"] = (
+        mover_display["blue_implied_move"] * 100
+    ).map(lambda x: f"{x:+.1f}%")
+
+    mover_cols = [
+        "fight",
+        "opening_red_odds",
+        "current_red_odds",
+        "red_move_display",
+        "opening_blue_odds",
+        "current_blue_odds",
+        "blue_move_display",
+        "snapshot_count",
+        "latest_snapshot",
+    ]
+
+    mover_cols = [c for c in mover_cols if c in mover_display.columns]
+
+    st.dataframe(
+        mover_display.sort_values(
+            "largest_abs_move",
+            ascending=False,
+        )[mover_cols],
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    # --------------------------------------------------------
+    # Selected fight chart
+    # --------------------------------------------------------
+
+    st.subheader("Selected Fight Line Chart")
+
+    fight_options_movement = (
+        mover_display["fight"].dropna().tolist()
+    )
+
+    selected_movement_fight = st.selectbox(
+        "Select fight for line movement",
+        fight_options_movement,
+        key="movement_fight_selector",
+    )
+
+    selected_movement_row = mover_display[
+        mover_display["fight"] == selected_movement_fight
+    ].iloc[0]
+
+    selected_movement_fight_id = selected_movement_row["fight_id"]
+
+    fight_history = snapshots[
+        snapshots["fight_id"] == selected_movement_fight_id
+    ].copy()
+
+    fight_history = fight_history.sort_values(
+        "snapshot_timestamp"
+    )
+
+    chart_metric = st.selectbox(
+        "Chart metric",
+        [
+            "American Odds",
+            "Implied Probability",
+        ],
+        key="movement_chart_metric",
+    )
+
+    if chart_metric == "American Odds":
+        chart_df = fight_history[
+            [
+                "snapshot_timestamp",
+                "red_american_odds",
+                "blue_american_odds",
+            ]
+        ].rename(
+            columns={
+                "red_american_odds": selected_movement_row["red_fighter"],
+                "blue_american_odds": selected_movement_row["blue_fighter"],
+            }
+        )
+    else:
+        chart_df = fight_history[
+            [
+                "snapshot_timestamp",
+                "red_implied_prob",
+                "blue_implied_prob",
+            ]
+        ].rename(
+            columns={
+                "red_implied_prob": selected_movement_row["red_fighter"],
+                "blue_implied_prob": selected_movement_row["blue_fighter"],
+            }
+        )
+
+        chart_df[selected_movement_row["red_fighter"]] = (
+            chart_df[selected_movement_row["red_fighter"]] * 100
+        )
+
+        chart_df[selected_movement_row["blue_fighter"]] = (
+            chart_df[selected_movement_row["blue_fighter"]] * 100
+        )
+
+    chart_df = chart_df.set_index("snapshot_timestamp")
+
+    st.line_chart(
+        chart_df,
+        use_container_width=True,
+    )
+
+    # --------------------------------------------------------
+    # Raw selected fight snapshots
+    # --------------------------------------------------------
+
+    st.subheader("Selected Fight Snapshot History")
+
+    snapshot_cols = [
+        "snapshot_timestamp",
+        "bookmaker",
+        "red_fighter",
+        "blue_fighter",
+        "red_american_odds",
+        "blue_american_odds",
+        "red_implied_prob",
+        "blue_implied_prob",
+        "odds_match_score",
+        "odds_match_type",
+    ]
+
+    snapshot_cols = [
+        c for c in snapshot_cols
+        if c in fight_history.columns
+    ]
+
+    st.dataframe(
+        fight_history[snapshot_cols],
+        use_container_width=True,
+        hide_index=True,
+    )
