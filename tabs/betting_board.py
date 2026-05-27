@@ -53,12 +53,7 @@ def render_betting_board():
         if "event_name" in board.columns
         else []
     )
-    
-    selected_event = st.sidebar.selectbox(
-        "Event",
-        ["All Events"] + events,
-    )
-    
+       
     status_order = [
         "OFFICIAL BET",
         "WATCHLIST",
@@ -73,18 +68,7 @@ def render_betting_board():
         if "bet_status" in board.columns
         else []
     )
-    
-    selected_statuses = st.sidebar.multiselect(
-        "Status",
-        available_statuses,
-        default=available_statuses,
-    )
-    
-    show_only_actionable = st.sidebar.toggle(
-        "Show only Official / Watchlist",
-        value=False,
-    )
-    
+       
     filtered = board.copy()
     
     if selected_event != "All Events" and "event_name" in filtered.columns:
