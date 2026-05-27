@@ -212,3 +212,154 @@ else:
         fighters[review_cols].sort_values("fighter_name"),
         use_container_width=True,
     )
+# ============================================================
+# FEATURE AUDIT VIEWER
+# ============================================================
+
+import pandas as pd
+import streamlit as st
+
+st.header("Model Feature Audit")
+
+feature_audit = pd.read_parquet(
+    "ufc_live_feature_audit.parquet"
+)
+
+# ------------------------------------------------------------
+# Summary Metrics
+# ------------------------------------------------------------
+
+total_fights = len(feature_audit)
+
+failed_validation = (
+    ~feature_audit["passes_feature_validation"]
+).sum()
+
+failed_match_quality = (
+    ~feature_audit["passes_match_quality"]
+).sum()
+
+avg_zero_pct = feature_audit["zero_feature_pct"].mean()
+
+col1, col2, col3, col4 = st.columns(4)
+
+col1.metric(
+    "Total Fights",
+    total_fights
+)
+
+col2.metric(
+    "Failed Validation",
+    failed_validation
+)
+
+col3.metric(
+    "Failed Match Quality",
+    failed_match_quality
+)
+
+col4.metric(
+    "Avg Zero %",
+    f"{avg_zero_pct:.1f}%"
+)
+
+# ------------------------------------------------------------
+# Full Audit Table
+# ------------------------------------------------------------
+
+st.subheader("Full Feature Audit")
+
+display_cols = [
+    "event_name",
+    "red_fighter",
+    "blue_fighter",
+
+    "red_feature_match",
+    "blue_feature_match",
+
+    "feature_count_expected",
+    "feature_count_actual",
+
+    "missing_feature_count",
+    "nonzero_feature_count",
+    "zero_feature_pct",
+
+    "passes_match_quality",
+    "passes_feature_validation",
+]
+
+display_cols = [
+    c for c in display_cols
+    if c in feature_audit.columns
+]
+
+st.dataframe(
+    feature_audit[display_cols].sort_values(
+        [
+            "passes_feature_validation",
+            "zero_feature_pct"
+        ],
+        ascending=[True, False]
+    ),
+    use_container_width=True,
+)
+
+# ------------------------------------------------------------
+# Failed Validation Rows
+# ------------------------------------------------------------
+
+st.subheader("Failed Validation Rows")
+
+failed = feature_audit[
+    ~feature_audit["passes_feature_validation"]
+]
+
+st.dataframe(
+    failed[display_cols],
+    use_container_width=True,
+)
+
+# ------------------------------------------------------------
+# Missing Fighter Matches
+# ------------------------------------------------------------
+
+st.subheader("Missing Fighter Matches")
+
+missing_matches = feature_audit[
+    (
+        feature_audit["red_feature_match"] == "missing"
+    )
+    |
+    (
+        feature_audit["blue_feature_match"] == "missing"
+    )
+]
+
+st.dataframe(
+    missing_matches[display_cols],
+    use_container_width=True,
+)
+
+# ------------------------------------------------------------
+# Match Type Counts
+# ------------------------------------------------------------
+
+st.subheader("Match Type Counts")
+
+red_counts = (
+    feature_audit["red_feature_match"]
+    .value_counts()
+    .rename("count")
+)
+
+blue_counts = (
+    feature_audit["blue_feature_match"]
+    .value_counts()
+    .rename("count")
+)
+
+st.write("Red Fighter Match Types")
+st.dataframe(red_counts)
+
+st.write("Blue Fighter Match Types")
+st.dataframe(blue_counts)
