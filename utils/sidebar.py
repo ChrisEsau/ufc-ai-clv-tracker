@@ -9,7 +9,7 @@ def render_sidebar():
 
     st.sidebar.image(
         "assets/ufc_betting_logo.png",
-        width=190,
+        width=240,
     )
 
     st.sidebar.markdown("<br>", unsafe_allow_html=True)
