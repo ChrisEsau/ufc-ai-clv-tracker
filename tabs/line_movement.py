@@ -149,7 +149,7 @@ def render_line_movement():
         # CARD-STYLE MARKET MOVERS
         # --------------------------------------------------------
     
-        st.subheader("Largest Market Movers")
+        render_section_header("Largest Market Movers")
     
         mover_display = movement_df.copy()
     
@@ -346,7 +346,7 @@ def render_line_movement():
         # SELECTED FIGHT LINE CHART
         # --------------------------------------------------------
     
-        st.subheader("Selected Fight Line Chart")
+        render_section_header("Selected Fight Line Chart")
     
         fight_options_movement = (
             mover_display["fight"].dropna().tolist()
@@ -544,7 +544,7 @@ def render_line_movement():
         # SNAPSHOT HISTORY TABLE
         # --------------------------------------------------------
     
-        st.subheader("Selected Fight Snapshot History")
+        render_section_header("Snapshot History")
     
         snapshot_cols = [
             "snapshot_timestamp",
