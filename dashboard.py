@@ -1042,113 +1042,113 @@ components.html(
     height=520,
     scrolling=True,
 )
-    # --------------------------------------------------------
-    # Selected fight chart
-    # --------------------------------------------------------
+# --------------------------------------------------------
+# Selected fight chart
+# --------------------------------------------------------
 
-    st.subheader("Selected Fight Line Chart")
+st.subheader("Selected Fight Line Chart")
 
-    fight_options_movement = (
-        mover_display["fight"].dropna().tolist()
-    )
+fight_options_movement = (
+    mover_display["fight"].dropna().tolist()
+)
 
-    selected_movement_fight = st.selectbox(
-        "Select fight for line movement",
-        fight_options_movement,
-        key="movement_fight_selector",
-    )
+selected_movement_fight = st.selectbox(
+    "Select fight for line movement",
+    fight_options_movement,
+    key="movement_fight_selector",
+)
 
-    selected_movement_row = mover_display[
-        mover_display["fight"] == selected_movement_fight
-    ].iloc[0]
+selected_movement_row = mover_display[
+    mover_display["fight"] == selected_movement_fight
+].iloc[0]
 
-    selected_movement_fight_id = selected_movement_row["fight_id"]
+selected_movement_fight_id = selected_movement_row["fight_id"]
 
-    fight_history = snapshots[
-        snapshots["fight_id"] == selected_movement_fight_id
-    ].copy()
+fight_history = snapshots[
+    snapshots["fight_id"] == selected_movement_fight_id
+].copy()
 
-    fight_history = fight_history.sort_values(
-        "snapshot_timestamp"
-    )
+fight_history = fight_history.sort_values(
+    "snapshot_timestamp"
+)
 
-    chart_metric = st.selectbox(
-        "Chart metric",
+chart_metric = st.selectbox(
+    "Chart metric",
+    [
+        "American Odds",
+        "Implied Probability",
+    ],
+    key="movement_chart_metric",
+)
+
+if chart_metric == "American Odds":
+    chart_df = fight_history[
         [
-            "American Odds",
-            "Implied Probability",
-        ],
-        key="movement_chart_metric",
+            "snapshot_timestamp",
+            "red_american_odds",
+            "blue_american_odds",
+        ]
+    ].rename(
+        columns={
+            "red_american_odds": selected_movement_row["red_fighter"],
+            "blue_american_odds": selected_movement_row["blue_fighter"],
+        }
+    )
+else:
+    chart_df = fight_history[
+        [
+            "snapshot_timestamp",
+            "red_implied_prob",
+            "blue_implied_prob",
+        ]
+    ].rename(
+        columns={
+            "red_implied_prob": selected_movement_row["red_fighter"],
+            "blue_implied_prob": selected_movement_row["blue_fighter"],
+        }
     )
 
-    if chart_metric == "American Odds":
-        chart_df = fight_history[
-            [
-                "snapshot_timestamp",
-                "red_american_odds",
-                "blue_american_odds",
-            ]
-        ].rename(
-            columns={
-                "red_american_odds": selected_movement_row["red_fighter"],
-                "blue_american_odds": selected_movement_row["blue_fighter"],
-            }
-        )
-    else:
-        chart_df = fight_history[
-            [
-                "snapshot_timestamp",
-                "red_implied_prob",
-                "blue_implied_prob",
-            ]
-        ].rename(
-            columns={
-                "red_implied_prob": selected_movement_row["red_fighter"],
-                "blue_implied_prob": selected_movement_row["blue_fighter"],
-            }
-        )
-
-        chart_df[selected_movement_row["red_fighter"]] = (
-            chart_df[selected_movement_row["red_fighter"]] * 100
-        )
-
-        chart_df[selected_movement_row["blue_fighter"]] = (
-            chart_df[selected_movement_row["blue_fighter"]] * 100
-        )
-
-    chart_df = chart_df.set_index("snapshot_timestamp")
-
-    st.line_chart(
-        chart_df,
-        use_container_width=True,
+    chart_df[selected_movement_row["red_fighter"]] = (
+        chart_df[selected_movement_row["red_fighter"]] * 100
     )
 
-    # --------------------------------------------------------
-    # Raw selected fight snapshots
-    # --------------------------------------------------------
-
-    st.subheader("Selected Fight Snapshot History")
-
-    snapshot_cols = [
-        "snapshot_timestamp",
-        "bookmaker",
-        "red_fighter",
-        "blue_fighter",
-        "red_american_odds",
-        "blue_american_odds",
-        "red_implied_prob",
-        "blue_implied_prob",
-        "odds_match_score",
-        "odds_match_type",
-    ]
-
-    snapshot_cols = [
-        c for c in snapshot_cols
-        if c in fight_history.columns
-    ]
-
-    st.dataframe(
-        fight_history[snapshot_cols],
-        use_container_width=True,
-        hide_index=True,
+    chart_df[selected_movement_row["blue_fighter"]] = (
+        chart_df[selected_movement_row["blue_fighter"]] * 100
     )
+
+chart_df = chart_df.set_index("snapshot_timestamp")
+
+st.line_chart(
+    chart_df,
+    use_container_width=True,
+)
+
+# --------------------------------------------------------
+# Raw selected fight snapshots
+# --------------------------------------------------------
+
+st.subheader("Selected Fight Snapshot History")
+
+snapshot_cols = [
+    "snapshot_timestamp",
+    "bookmaker",
+    "red_fighter",
+    "blue_fighter",
+    "red_american_odds",
+    "blue_american_odds",
+    "red_implied_prob",
+    "blue_implied_prob",
+    "odds_match_score",
+    "odds_match_type",
+]
+
+snapshot_cols = [
+    c for c in snapshot_cols
+    if c in fight_history.columns
+]
+
+st.dataframe(
+    fight_history[snapshot_cols],
+    use_container_width=True,
+    hide_index=True,
+)
