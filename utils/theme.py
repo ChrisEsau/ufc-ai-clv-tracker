@@ -188,6 +188,29 @@ def apply_theme():
             color: #60A5FA;
             border: 1px solid rgba(59,130,246,0.45);
         }
+        .workflow-icon-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            color: #CBD5E1;
+            font-weight: 800;
+            margin-top: -46px;
+            margin-bottom: 8px;
+            pointer-events: none;
+        }
+        
+        .workflow-icon-row svg {
+            width: 21px;
+            height: 21px;
+        }
+        
+        .active-workflow {
+            background: linear-gradient(135deg, rgba(239,68,68,0.9), rgba(127,29,29,0.8));
+            color: #FFFFFF;
+            border: 1px solid rgba(248,113,113,0.45);
+        }
         </style>
         """,
         unsafe_allow_html=True,
