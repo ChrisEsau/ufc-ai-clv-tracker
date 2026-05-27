@@ -38,13 +38,6 @@ def pct(x):
         return ""
     return f"{x * 100:.1f}%"
 
-@st.cache_data
-def load_parquet(path):
-    try:
-        return pd.read_parquet(path)
-    except Exception:
-        return pd.DataFrame()
-
 def pct_already(x):
     if pd.isna(x):
         return ""
