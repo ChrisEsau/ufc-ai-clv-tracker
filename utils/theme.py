@@ -206,22 +206,7 @@ def apply_theme():
             border-color: rgba(148, 163, 184, 0.15);
             color: #FFFFFF;
         }
-        .workflow-row {
-            margin-bottom: 8px;
-        }
-        
-        .workflow-row-active {
-            background: linear-gradient(
-                135deg,
-                rgba(239,68,68,0.92),
-                rgba(127,29,29,0.82)
-            );
-            border: 1px solid rgba(248,113,113,0.45);
-            border-radius: 12px;
-            padding: 2px 4px;
-            margin-bottom: 8px;
-            box-shadow: 0 8px 22px rgba(239,68,68,0.20);
-        }
+
         
         section[data-testid="stSidebar"] .stButton button {
             background: transparent;
@@ -234,7 +219,31 @@ def apply_theme():
             padding-top: 12px;
             padding-bottom: 12px;
         }
+        .workflow-active-container {
+            background: linear-gradient(
+                135deg,
+                rgba(239,68,68,0.92),
+                rgba(127,29,29,0.82)
+            );
         
+            border-radius: 14px;
+        
+            padding: 6px;
+        
+            margin-bottom: 8px;
+        
+            border: 1px solid rgba(248,113,113,0.45);
+        
+            box-shadow: 0 8px 22px rgba(239,68,68,0.20);
+        }
+        
+        section[data-testid="stSidebar"] .stButton button {
+            opacity: 0;
+            height: 0;
+            padding: 0;
+            margin: 0;
+            border: none;
+        }
         section[data-testid="stSidebar"] .stButton button:hover {
             background: rgba(148,163,184,0.08);
             color: white;
