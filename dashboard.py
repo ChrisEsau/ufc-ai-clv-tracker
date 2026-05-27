@@ -192,6 +192,60 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+st.markdown(
+    """
+    <style>
+    /* Selectbox container */
+    div[data-baseweb="select"] > div {
+        background-color: #0F172A !important;
+        border: 1px solid #334155 !important;
+        border-radius: 10px !important;
+        color: #F8FAFC !important;
+        min-height: 42px !important;
+    }
+
+    /* Selected text */
+    div[data-baseweb="select"] span {
+        color: #F8FAFC !important;
+        font-weight: 600 !important;
+    }
+
+    /* Dropdown arrow */
+    div[data-baseweb="select"] svg {
+        color: #CBD5E1 !important;
+        fill: #CBD5E1 !important;
+    }
+
+    /* Input text area */
+    div[data-baseweb="select"] input {
+        color: #F8FAFC !important;
+    }
+
+    /* Selectbox label */
+    label[data-testid="stWidgetLabel"] {
+        color: #CBD5E1 !important;
+        font-weight: 700 !important;
+        font-size: 13px !important;
+    }
+
+    /* Dropdown menu */
+    ul[role="listbox"] {
+        background-color: #111827 !important;
+        border: 1px solid #334155 !important;
+    }
+
+    ul[role="listbox"] li {
+        background-color: #111827 !important;
+        color: #F8FAFC !important;
+    }
+
+    ul[role="listbox"] li:hover {
+        background-color: #1E293B !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 # ============================================================
 # HELPERS
 # ============================================================
