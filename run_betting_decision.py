@@ -186,6 +186,8 @@ df["best_ev"] = np.where(
     df["blue_ev"],
 )
 
+df["best_ev_pct"] = df["best_ev"]
+
 df["best_american_odds"] = np.where(
     df["red_is_best"],
     df["red_american_odds"],
