@@ -29,6 +29,15 @@ st.caption(
 
 page = render_sidebar()
 
+if page == "Betting Board":
+    render_betting_board()
+elif page == "Line Movement / CLV":
+    render_line_movement()
+elif page == "Model Lab":
+    render_model_lab()
+elif page == "Data Maintenance":
+    render_data_maintenance()
+
 tab1, tab2, tab3, tab4 = st.tabs(
     [
         "🎯 Betting Board",
