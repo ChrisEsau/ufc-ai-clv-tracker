@@ -32,7 +32,8 @@ def render_metric(label, value, subtext="", accent="neutral"):
         """,
         unsafe_allow_html=True,
     )
+    
 def pct(x):
     if pd.isna(x):
         return ""
-return f"{x * 100:.1f}%"
+    return f"{x * 100:.1f}%"
