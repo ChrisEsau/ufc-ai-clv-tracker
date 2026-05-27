@@ -138,13 +138,13 @@ for _, pred in predictions_df.iterrows():
             best_score = score
             best_match = odds
 
-    MIN_ODDS_MATCH_SCORE = 90
+        MIN_ODDS_MATCH_SCORE = 90
 
-    match_type = (
-        "matched"
-        if best_score >= MIN_ODDS_MATCH_SCORE
-        else "low_confidence"
-    )
+        match_type = (
+            "matched"
+            if best_score >= MIN_ODDS_MATCH_SCORE
+            else "low_confidence"
+        )
 
     market_audit_rows.append({
         "snapshot_run_id": SNAPSHOT_RUN_ID,
