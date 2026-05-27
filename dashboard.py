@@ -19,13 +19,12 @@ from tabs.data_maintenance import render_data_maintenance
 # PAGE CONFIG
 # ============================================================
 
-st.set_page_config(
-    page_title="UFC Betting Intelligence",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
 apply_theme()
+
+st.title("UFC Betting Intelligence Platform")
+st.caption(
+    "Model probability, market movement, EV, CLV, and betting decision intelligence."
+)
 
 # ============================================================
 # SIDEBAR
