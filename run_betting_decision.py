@@ -292,19 +292,82 @@ df["failed_filters"] = df.apply(
     axis=1,
 )
 
+# ------------------------------------------------------------
+# Hard invalid gates
+# These must pass before a fight can be actionable.
+# ------------------------------------------------------------
+
+df["passes_core_data_filters"] = (
+    df["passes_model_quality_filter"]
+    &
+    df["passes_feature_validation_filter"]
+    &
+    df["passes_odds_match_filter"]
+)
+
+# ------------------------------------------------------------
+# Official bet
+# ------------------------------------------------------------
+
 df["is_official_bet"] = df["passes_all_bet_filters"]
+
+# ------------------------------------------------------------
+# Watchlist
+# Only valid-data fights can be watchlist.
+# Near-miss only on betting thresholds, not data quality.
+# ------------------------------------------------------------
+
+betting_threshold_cols = [
+    "passes_edge_filter",
+    "passes_confidence_filter",
+    "passes_odds_range_filter",
+    "passes_positive_ev_filter",
+]
+
+df["failed_betting_threshold_count"] = (
+    len(betting_threshold_cols)
+    -
+    df[betting_threshold_cols].sum(axis=1)
+)
 
 df["is_watchlist_bet"] = (
     (~df["is_official_bet"])
     &
+    df["passes_core_data_filters"]
+    &
     (
-        (df["failed_filter_count"] <= 2)
+        (df["failed_betting_threshold_count"] <= 2)
         |
         (df["best_ev"] > 0.25)
     )
 )
 
+# ------------------------------------------------------------
+# Human-readable status
+# ------------------------------------------------------------
+
 df["bet_status"] = "NO BET"
+
+df.loc[
+    ~df["passes_model_quality_filter"],
+    "bet_status",
+] = "INVALID MODEL DATA"
+
+df.loc[
+    df["passes_model_quality_filter"]
+    &
+    ~df["passes_feature_validation_filter"],
+    "bet_status",
+] = "SPARSE FEATURES"
+
+df.loc[
+    df["passes_model_quality_filter"]
+    &
+    df["passes_feature_validation_filter"]
+    &
+    ~df["passes_odds_match_filter"],
+    "bet_status",
+] = "LOW ODDS MATCH"
 
 df.loc[
     df["is_watchlist_bet"],
