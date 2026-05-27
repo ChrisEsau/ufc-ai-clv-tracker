@@ -1194,12 +1194,15 @@ else:
         font=dict(color="#F8FAFC"),
         margin=dict(l=40, r=20, t=30, b=40),
         height=420,
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="center",
-            x=0.5,
+    legend=dict(
+        orientation="h",
+        yanchor="bottom",
+        y=1.02,
+        xanchor="center",
+        x=0.5,
+        font=dict(
+            color="#F8FAFC",
+            size=13,
         ),
     )
     
