@@ -401,22 +401,28 @@ st.dataframe(
 # STATUS BREAKDOWN
 # ============================================================
 
-st.markdown('<div class="section-header">Status Breakdown</div>', unsafe_allow_html=True)
-
-status_counts = (
-    filtered["bet_status"]
-    .value_counts()
-    .reset_index()
-    .rename(columns={"index": "status", "bet_status": "count"})
-    if "bet_status" in filtered.columns
-    else pd.DataFrame()
+st.markdown(
+    '<div class="section-header">Status Breakdown</div>',
+    unsafe_allow_html=True,
 )
 
-st.dataframe(
-    status_counts,
-    use_container_width=True,
-    hide_index=True,
-)
+if "bet_status" in filtered.columns:
+
+    status_counts = (
+        filtered["bet_status"]
+        .value_counts()
+        .rename_axis("status")
+        .reset_index(name="count")
+    )
+
+    st.dataframe(
+        status_counts,
+        use_container_width=True,
+        hide_index=True,
+    )
+
+else:
+    st.info("No bet_status column found.")
 
 # ============================================================
 # FILTER DIAGNOSTICS
