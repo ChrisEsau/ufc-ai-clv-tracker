@@ -26,10 +26,10 @@ def render_sidebar():
     page = st.sidebar.radio(
         "",
         [
-            "🎯 Betting Board",
-            "📈 Line Movement / CLV",
-            "🧠 Model Lab",
-            "🛠️ Data Maintenance",
+            "Betting Board",
+            "Line Movement / CLV",
+            "Model Lab",
+            "Data Maintenance",
         ],
         label_visibility="collapsed",
     )
