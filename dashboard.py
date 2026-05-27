@@ -894,134 +894,134 @@ else:
     with m4:
         render_metric("Latest Snapshot", str(latest_snapshot)[:16])
 
-# --------------------------------------------------------
-# STYLED MARKET MOVERS TABLE
-# --------------------------------------------------------
-
-st.subheader("Largest Market Movers")
-
-styled_df = mover_display.sort_values(
-    "largest_abs_move",
-    ascending=False,
-).copy()
-
-def movement_color(val):
-    try:
-        num = float(str(val).replace("%", ""))
-        if num > 0:
-            return "#22C55E"
-        elif num < 0:
-            return "#EF4444"
-        return "#CBD5E1"
-    except:
-        return "#CBD5E1"
-
-table_html = """
-<div style="
-    background: linear-gradient(180deg, #1E293B 0%, #172033 100%);
-    border: 1px solid #334155;
-    border-radius: 18px;
-    padding: 18px;
-    margin-bottom: 24px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.28);
-">
-<table style="
-    width:100%;
-    border-collapse:collapse;
-    font-size:14px;
-">
-<thead>
-<tr style="
-    color:#94A3B8;
-    text-transform:uppercase;
-    font-size:12px;
-    letter-spacing:0.05em;
-">
-<th style="text-align:left;padding:14px;">Fight</th>
-<th style="padding:14px;">Open</th>
-<th style="padding:14px;">Current</th>
-<th style="padding:14px;">Move</th>
-<th style="padding:14px;">Snapshots</th>
-<th style="padding:14px;">Latest</th>
-</tr>
-</thead>
-<tbody>
-"""
-
-for _, row in styled_df.iterrows():
-
-    red_move = row["red_move_display"]
-    move_color = movement_color(red_move)
-
-    table_html += f"""
-    <tr style="
-        border-top:1px solid #334155;
-        transition: all 0.2s ease;
+    # --------------------------------------------------------
+    # STYLED MARKET MOVERS TABLE
+    # --------------------------------------------------------
+    
+    st.subheader("Largest Market Movers")
+    
+    styled_df = mover_display.sort_values(
+        "largest_abs_move",
+        ascending=False,
+    ).copy()
+    
+    def movement_color(val):
+        try:
+            num = float(str(val).replace("%", ""))
+            if num > 0:
+                return "#22C55E"
+            elif num < 0:
+                return "#EF4444"
+            return "#CBD5E1"
+        except:
+            return "#CBD5E1"
+    
+    table_html = """
+    <div style="
+        background: linear-gradient(180deg, #1E293B 0%, #172033 100%);
+        border: 1px solid #334155;
+        border-radius: 18px;
+        padding: 18px;
+        margin-bottom: 24px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.28);
     ">
-        <td style="
-            padding:16px;
-            font-weight:700;
-            color:#F8FAFC;
-        ">
-            {row['fight']}
-        </td>
-
-        <td style="
-            padding:16px;
-            color:#CBD5E1;
-            text-align:center;
-            font-weight:600;
-        ">
-            {row['opening_red_odds']}
-        </td>
-
-        <td style="
-            padding:16px;
-            color:#FFFFFF;
-            text-align:center;
-            font-weight:700;
-        ">
-            {row['current_red_odds']}
-        </td>
-
-        <td style="
-            padding:16px;
-            text-align:center;
-            font-weight:800;
-            color:{move_color};
-        ">
-            {red_move}
-        </td>
-
-        <td style="
-            padding:16px;
-            text-align:center;
-            color:#CBD5E1;
-        ">
-            {row['snapshot_count']}
-        </td>
-
-        <td style="
-            padding:16px;
-            text-align:center;
-            color:#94A3B8;
-            font-size:12px;
-        ">
-            {str(row['latest_snapshot'])[:16]}
-        </td>
+    <table style="
+        width:100%;
+        border-collapse:collapse;
+        font-size:14px;
+    ">
+    <thead>
+    <tr style="
+        color:#94A3B8;
+        text-transform:uppercase;
+        font-size:12px;
+        letter-spacing:0.05em;
+    ">
+    <th style="text-align:left;padding:14px;">Fight</th>
+    <th style="padding:14px;">Open</th>
+    <th style="padding:14px;">Current</th>
+    <th style="padding:14px;">Move</th>
+    <th style="padding:14px;">Snapshots</th>
+    <th style="padding:14px;">Latest</th>
     </tr>
+    </thead>
+    <tbody>
     """
-
-table_html += """
-</tbody>
-</table>
-</div>
-"""
-
-st.markdown(
-    table_html,
-    unsafe_allow_html=True,
-)
+    
+    for _, row in styled_df.iterrows():
+    
+        red_move = row["red_move_display"]
+        move_color = movement_color(red_move)
+    
+        table_html += f"""
+        <tr style="
+            border-top:1px solid #334155;
+            transition: all 0.2s ease;
+        ">
+            <td style="
+                padding:16px;
+                font-weight:700;
+                color:#F8FAFC;
+            ">
+                {row['fight']}
+            </td>
+    
+            <td style="
+                padding:16px;
+                color:#CBD5E1;
+                text-align:center;
+                font-weight:600;
+            ">
+                {row['opening_red_odds']}
+            </td>
+    
+            <td style="
+                padding:16px;
+                color:#FFFFFF;
+                text-align:center;
+                font-weight:700;
+            ">
+                {row['current_red_odds']}
+            </td>
+    
+            <td style="
+                padding:16px;
+                text-align:center;
+                font-weight:800;
+                color:{move_color};
+            ">
+                {red_move}
+            </td>
+    
+            <td style="
+                padding:16px;
+                text-align:center;
+                color:#CBD5E1;
+            ">
+                {row['snapshot_count']}
+            </td>
+    
+            <td style="
+                padding:16px;
+                text-align:center;
+                color:#94A3B8;
+                font-size:12px;
+            ">
+                {str(row['latest_snapshot'])[:16]}
+            </td>
+        </tr>
+        """
+    
+    table_html += """
+    </tbody>
+    </table>
+    </div>
+    """
+    
+    st.markdown(
+        table_html,
+        unsafe_allow_html=True,
+    )
     # --------------------------------------------------------
     # Selected fight chart
     # --------------------------------------------------------
