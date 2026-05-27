@@ -134,6 +134,14 @@ df["blue_ev"] = df.apply(
     axis=1,
 )
 
+# ============================================================
+# EV DISPLAY COLUMNS
+# Stored as percentage-style values for dashboard readability
+# ============================================================
+
+df["red_ev_pct"] = df["red_ev"]
+df["blue_ev_pct"] = df["blue_ev"]
+
 df["red_is_best"] = df["red_ev"] >= df["blue_ev"]
 
 df["best_side"] = np.where(
