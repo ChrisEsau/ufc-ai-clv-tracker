@@ -1174,8 +1174,18 @@ else:
         y=chart_df[selected_movement_row["red_fighter"]],
         mode="lines+markers",
         name=f'{selected_movement_row["red_fighter"]} (Red)',
-        line=dict(color="#EF4444", width=3),
-        marker=dict(size=6),
+        line=dict(
+            color="#EF4444",
+            width=3,
+        ),
+        marker=dict(
+            size=7,
+            color="#EF4444",
+            line=dict(
+                color="#FFFFFF",
+                width=2,
+            ),
+        ),
     ))
     
     fig.add_trace(go.Scatter(
@@ -1183,8 +1193,18 @@ else:
         y=chart_df[selected_movement_row["blue_fighter"]],
         mode="lines+markers",
         name=f'{selected_movement_row["blue_fighter"]} (Blue)',
-        line=dict(color="#3B82F6", width=3),
-        marker=dict(size=6),
+        line=dict(
+            color="#3B82F6",
+            width=3,
+        ),
+        marker=dict(
+            size=7,
+            color="#3B82F6",
+            line=dict(
+                color="#FFFFFF",
+                width=2,
+            ),
+        ),
     ))
     
     fig.update_layout(
