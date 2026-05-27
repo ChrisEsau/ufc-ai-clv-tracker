@@ -18,11 +18,7 @@ def render_line_movement():
     # ============================================================
     # LINE MOVEMENT / CLV SECTION
     # ============================================================
-    
-    st.markdown(
-        '<div class="section-header">Line Movement / CLV</div>',
-        unsafe_allow_html=True,
-    )
+    render_section_header("Line Movement / CLV")
     
     snapshots = load_parquet("ufc_market_snapshots.parquet")
     
