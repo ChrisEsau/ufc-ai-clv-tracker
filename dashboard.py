@@ -1203,7 +1203,8 @@ else:
         font=dict(
             color="#F8FAFC",
             size=13,
-        ),
+            ),
+        )
     )
     
     fig.update_xaxes(
