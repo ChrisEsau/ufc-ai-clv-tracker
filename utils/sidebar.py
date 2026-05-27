@@ -17,61 +17,51 @@ def render_sidebar():
     # =========================================================
     # WORKFLOW
     # =========================================================
-
+    
     st.sidebar.markdown(
         '<div class="sidebar-section">WORKFLOW</div>',
         unsafe_allow_html=True,
     )
-
-    st.sidebar.image("assets/icons/model_lab.png", width=180)
-
+    
     workflow_items = [
         ("Betting Board", "assets/icons/betting_board.png"),
         ("Line Movement / CLV", "assets/icons/line_movement.png"),
         ("Model Lab", "assets/icons/model_lab.png"),
         ("Data Maintenance", "assets/icons/data_maintenance.png"),
     ]
-
+    
     if "page" not in st.session_state:
         st.session_state.page = "Betting Board"
-
+    
     for label, icon_path in workflow_items:
-
+    
         active = st.session_state.page == label
-
-        row_class = (
-            "workflow-row-active"
-            if active
-            else "workflow-row"
-        )
-
-        st.sidebar.markdown(
-            f'<div class="{row_class}">',
-            unsafe_allow_html=True,
-        )
-
-        cols = st.sidebar.columns([1, 5])
-
-        with cols[0]:
-            st.image(
-                icon_path,
-                width=20,
+    
+        if active:
+            st.sidebar.markdown(
+                '<div class="workflow-active-container">',
+                unsafe_allow_html=True,
             )
-
-        with cols[1]:
-            if st.button(
-                label,
-                key=f"workflow_{label}",
-                use_container_width=True,
-            ):
-                st.session_state.page = label
-                st.rerun()
-
-        st.sidebar.markdown(
-            '</div>',
-            unsafe_allow_html=True,
+    
+        if st.sidebar.button(
+            "",
+            key=f"workflow_{label}",
+            use_container_width=True,
+        ):
+            st.session_state.page = label
+            st.rerun()
+    
+        st.sidebar.image(
+            icon_path,
+            use_container_width=True,
         )
-
+    
+        if active:
+            st.sidebar.markdown(
+                '</div>',
+                unsafe_allow_html=True,
+            )
+    
     page = st.session_state.page
 
     st.sidebar.markdown("---")
