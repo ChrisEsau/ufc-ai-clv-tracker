@@ -7,6 +7,13 @@ import streamlit.components.v1 as components
 from utils.data_loader import load_parquet
 from utils.ui_components import render_metric
 
+from utils.panels import (
+    render_section_header,
+    render_panel_open,
+    render_panel_close,
+    render_status_pill,
+)
+
 def render_line_movement():
     # ============================================================
     # LINE MOVEMENT / CLV SECTION
