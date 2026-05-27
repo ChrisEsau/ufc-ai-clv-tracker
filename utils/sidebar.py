@@ -1,5 +1,7 @@
 import streamlit as st
-
+from st_click_detector import click_detector
+import base64
+import streamlit as st
 
 def render_sidebar():
 
