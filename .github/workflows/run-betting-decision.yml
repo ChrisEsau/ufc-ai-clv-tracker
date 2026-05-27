@@ -27,7 +27,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pandas numpy pyarrow requests joblib
+          pip install pandas numpy pyarrow requests joblib scikit-learn==1.6.1 xgboost
 
       - name: Run betting decision engine
         run: |
