@@ -16,7 +16,9 @@ def load_parquet(path):
     except Exception as e:
         st.error(f"Could not load {path}: {e}")
         return pd.DataFrame()
-
+if st.button("Clear cache and reload"):
+    st.cache_data.clear()
+    st.rerun()
 #
 # ------------------------------------------------------------
 # Buttons
