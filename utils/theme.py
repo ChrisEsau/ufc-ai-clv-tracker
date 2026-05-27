@@ -206,6 +206,39 @@ def apply_theme():
             border-color: rgba(148, 163, 184, 0.15);
             color: #FFFFFF;
         }
+        .workflow-row {
+            margin-bottom: 8px;
+        }
+        
+        .workflow-row-active {
+            background: linear-gradient(
+                135deg,
+                rgba(239,68,68,0.92),
+                rgba(127,29,29,0.82)
+            );
+            border: 1px solid rgba(248,113,113,0.45);
+            border-radius: 12px;
+            padding: 2px 4px;
+            margin-bottom: 8px;
+            box-shadow: 0 8px 22px rgba(239,68,68,0.20);
+        }
+        
+        section[data-testid="stSidebar"] .stButton button {
+            background: transparent;
+            border: none;
+            color: #E2E8F0;
+            font-weight: 700;
+            font-size: 15px;
+            text-align: left;
+            box-shadow: none;
+            padding-top: 12px;
+            padding-bottom: 12px;
+        }
+        
+        section[data-testid="stSidebar"] .stButton button:hover {
+            background: rgba(148,163,184,0.08);
+            color: white;
+        }
         </style>
         """,
         unsafe_allow_html=True,
