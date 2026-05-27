@@ -4,6 +4,7 @@ import numpy as np
 
 from utils.data_loader import load_parquet
 from utils.ui_components import render_metric, money, american
+from utils.ui_components import render_metric, money, american, pct
 
 def render_betting_board():
     board = load_parquet("ufc_betting_board.parquet")
