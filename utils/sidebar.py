@@ -2,58 +2,117 @@ import streamlit as st
 
 
 def render_sidebar():
+
+    # =========================================================
+    # LOGO
+    # =========================================================
+
     st.sidebar.image(
         "assets/ufc_betting_logo.png",
         width=190,
     )
+
+    st.sidebar.markdown("<br>", unsafe_allow_html=True)
+
+    # =========================================================
+    # WORKFLOW
+    # =========================================================
 
     st.sidebar.markdown(
         '<div class="sidebar-section">WORKFLOW</div>',
         unsafe_allow_html=True,
     )
 
+    workflow_items = [
+        ("Betting Board", "assets/icons/target.png"),
+        ("Line Movement / CLV", "assets/icons/chart.png"),
+        ("Model Lab", "assets/icons/flask.png"),
+        ("Data Maintenance", "assets/icons/database.png"),
+    ]
+
     if "page" not in st.session_state:
         st.session_state.page = "Betting Board"
 
-    nav_items = [
-        ("Betting Board", "🎯"),
-        ("Line Movement / CLV", "📈"),
-        ("Model Lab", "🧪"),
-        ("Data Maintenance", "🗄️"),
-    ]
+    for label, icon_path in workflow_items:
 
-    for label, icon in nav_items:
-        button_label = f"{icon}  {label}"
+        active = st.session_state.page == label
 
-        if st.sidebar.button(
-            button_label,
-            key=f"nav_{label}",
-            use_container_width=True,
-        ):
-            st.session_state.page = label
-            st.rerun()
+        row_class = (
+            "workflow-row-active"
+            if active
+            else "workflow-row"
+        )
+
+        st.sidebar.markdown(
+            f'<div class="{row_class}">',
+            unsafe_allow_html=True,
+        )
+
+        cols = st.sidebar.columns([1, 5])
+
+        with cols[0]:
+            st.image(
+                icon_path,
+                width=20,
+            )
+
+        with cols[1]:
+            if st.button(
+                label,
+                key=f"workflow_{label}",
+                use_container_width=True,
+            ):
+                st.session_state.page = label
+                st.rerun()
+
+        st.sidebar.markdown(
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
+    page = st.session_state.page
 
     st.sidebar.markdown("---")
+
+    # =========================================================
+    # QUICK ACTIONS
+    # =========================================================
 
     st.sidebar.markdown(
         '<div class="sidebar-section">QUICK ACTIONS</div>',
         unsafe_allow_html=True,
     )
 
-    if st.sidebar.button("▶  Run Pipeline", use_container_width=True):
+    if st.sidebar.button(
+        "▶  Run Pipeline",
+        use_container_width=True,
+    ):
         st.sidebar.info("Pipeline trigger placeholder")
 
-    if st.sidebar.button("🔄  Refresh Data", use_container_width=True):
+    if st.sidebar.button(
+        "🔄  Refresh Data",
+        use_container_width=True,
+    ):
         st.cache_data.clear()
         st.rerun()
 
-    if st.sidebar.button("⬇  Export Board", use_container_width=True):
+    if st.sidebar.button(
+        "⬇  Export Board",
+        use_container_width=True,
+    ):
         st.sidebar.info("Export placeholder")
 
-    if st.sidebar.button("🔔  Notification Log", use_container_width=True):
+    if st.sidebar.button(
+        "🔔  Notification Log",
+        use_container_width=True,
+    ):
         st.sidebar.info("Notification log placeholder")
 
     st.sidebar.markdown("---")
+
+    # =========================================================
+    # FILTER PRESETS
+    # =========================================================
 
     st.sidebar.markdown(
         '<div class="sidebar-section">FILTER PRESETS</div>',
@@ -81,4 +140,4 @@ def render_sidebar():
         unsafe_allow_html=True,
     )
 
-    return st.session_state.page
+    return page
