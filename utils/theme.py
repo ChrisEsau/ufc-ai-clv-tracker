@@ -188,37 +188,20 @@ def apply_theme():
             color: #60A5FA;
             border: 1px solid rgba(59,130,246,0.45);
         }
-        
-        section[data-testid="stSidebar"] .stButton button {
-            background: transparent;
-            border: 1px solid transparent;
-            color: #CBD5E1;
-            font-weight: 700;
-            font-size: 15px;
-            text-align: left;
-            border-radius: 12px;
-            padding: 10px 12px;
-            transition: all 0.18s ease;
-        }
-        
+              
         section[data-testid="stSidebar"] .stButton button:hover {
             background: rgba(148, 163, 184, 0.08);
             border-color: rgba(148, 163, 184, 0.15);
             color: #FFFFFF;
         }
-
         
         section[data-testid="stSidebar"] .stButton button {
-            background: transparent;
+            height: 42px;
+            opacity: 0.01;
+            margin-bottom: -42px;
             border: none;
-            color: #E2E8F0;
-            font-weight: 700;
-            font-size: 15px;
-            text-align: left;
-            box-shadow: none;
-            padding-top: 12px;
-            padding-bottom: 12px;
         }
+        
         .workflow-active-container {
             background: linear-gradient(
                 135deg,
