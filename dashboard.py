@@ -513,7 +513,116 @@ if fight_options:
         use_container_width=True,
         hide_index=True,
     )
+# ============================================================
+# SELECTED FIGHT LINE MOVEMENT
+# ============================================================
 
+st.markdown(
+    '<div class="section-header">Selected Fight Line Movement</div>',
+    unsafe_allow_html=True,
+)
+
+snapshots = load_parquet("ufc_market_snapshots.parquet")
+
+if snapshots.empty:
+    st.info("No market snapshot history found yet.")
+else:
+    if fight_options:
+        selected_row = display[display["fight"] == selected_fight].iloc[0]
+        selected_fight_id = selected_row["fight_id"]
+
+        fight_snapshots = snapshots[
+            snapshots["fight_id"] == selected_fight_id
+        ].copy()
+
+        if fight_snapshots.empty:
+            st.info("No snapshot history found for this fight yet.")
+        else:
+            fight_snapshots["snapshot_timestamp"] = pd.to_datetime(
+                fight_snapshots["snapshot_timestamp"],
+                utc=True,
+                errors="coerce",
+            )
+
+            fight_snapshots = fight_snapshots.sort_values(
+                "snapshot_timestamp"
+            )
+
+            chart_metric = st.selectbox(
+                "Line movement metric",
+                [
+                    "American Odds",
+                    "Implied Probability",
+                ],
+            )
+
+            if chart_metric == "American Odds":
+                chart_df = fight_snapshots[
+                    [
+                        "snapshot_timestamp",
+                        "red_american_odds",
+                        "blue_american_odds",
+                    ]
+                ].rename(
+                    columns={
+                        "red_american_odds": selected_row["red_fighter"],
+                        "blue_american_odds": selected_row["blue_fighter"],
+                    }
+                )
+            else:
+                chart_df = fight_snapshots[
+                    [
+                        "snapshot_timestamp",
+                        "red_implied_prob",
+                        "blue_implied_prob",
+                    ]
+                ].rename(
+                    columns={
+                        "red_implied_prob": selected_row["red_fighter"],
+                        "blue_implied_prob": selected_row["blue_fighter"],
+                    }
+                )
+
+                chart_df[selected_row["red_fighter"]] = (
+                    chart_df[selected_row["red_fighter"]] * 100
+                )
+
+                chart_df[selected_row["blue_fighter"]] = (
+                    chart_df[selected_row["blue_fighter"]] * 100
+                )
+
+            chart_df = chart_df.set_index("snapshot_timestamp")
+
+            st.line_chart(
+                chart_df,
+                use_container_width=True,
+            )
+
+            st.subheader("Snapshot History")
+
+            snapshot_display_cols = [
+                "snapshot_timestamp",
+                "bookmaker",
+                "red_fighter",
+                "blue_fighter",
+                "red_american_odds",
+                "blue_american_odds",
+                "red_implied_prob",
+                "blue_implied_prob",
+                "odds_match_score",
+                "odds_match_type",
+            ]
+
+            snapshot_display_cols = [
+                c for c in snapshot_display_cols
+                if c in fight_snapshots.columns
+            ]
+
+            st.dataframe(
+                fight_snapshots[snapshot_display_cols],
+                use_container_width=True,
+                hide_index=True,
+            )
 # ============================================================
 # RAW DEBUG VIEW
 # ============================================================
