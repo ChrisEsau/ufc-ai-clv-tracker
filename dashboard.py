@@ -165,53 +165,11 @@ def trigger_workflow(workflow_file):
         json={"ref": "main"},
     )
 
-    return response.status_code
-
+    return response.sta
 # ------------------------------------------------------------
 # Buttons
 # ------------------------------------------------------------
 
-if st.sidebar.button("Run Live Predictions"):
-
-    status = trigger_workflow(
-        "run-live-prediction.yml"
-    )
-
-    if status == 204:
-        st.sidebar.success("Live prediction workflow started.")
-    else:
-        st.sidebar.error(f"Workflow failed: {status}")
-
-if st.sidebar.button("Run CLV Tracker"):
-
-    status = trigger_workflow(
-        "run-clv-tracker.yml"
-    )
-
-    if status == 204:
-        st.sidebar.success("CLV workflow started.")
-    else:
-        st.sidebar.error(f"Workflow failed: {st.header("Current Fighter Feature Store Review")
-
-fighters = load_parquet("ufc_current_fighter_features.parquet")
-
-if fighters.empty:
-    st.warning("No current fighter features found.")
-else:
-    review_cols = [
-        "fighter_name",
-        "fighter_id",
-        "fighter_norm",
-        "latest_fight_date",
-        "feature_store_updated_at",
-    ]
-
-    review_cols = [c for c in review_cols if c in fighters.columns]
-
-    st.dataframe(
-        fighters[review_cols].sort_values("fighter_name"),
-        use_container_width=True,
-    )
 # ============================================================
 # FEATURE AUDIT VIEWER
 # ============================================================
