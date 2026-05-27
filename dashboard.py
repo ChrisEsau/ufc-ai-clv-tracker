@@ -894,51 +894,134 @@ else:
     with m4:
         render_metric("Latest Snapshot", str(latest_snapshot)[:16])
 
-    # --------------------------------------------------------
-    # Largest movers table
-    # --------------------------------------------------------
+# --------------------------------------------------------
+# STYLED MARKET MOVERS TABLE
+# --------------------------------------------------------
 
-    st.subheader("Largest Market Movers")
+st.subheader("Largest Market Movers")
 
-    mover_display = movement_df.copy()
+styled_df = mover_display.sort_values(
+    "largest_abs_move",
+    ascending=False,
+).copy()
 
-    mover_display["fight"] = (
-        mover_display["red_fighter"]
-        + " vs "
-        + mover_display["blue_fighter"]
-    )
+def movement_color(val):
+    try:
+        num = float(str(val).replace("%", ""))
+        if num > 0:
+            return "#22C55E"
+        elif num < 0:
+            return "#EF4444"
+        return "#CBD5E1"
+    except:
+        return "#CBD5E1"
 
-    mover_display["red_move_display"] = (
-        mover_display["red_implied_move"] * 100
-    ).map(lambda x: f"{x:+.1f}%")
+table_html = """
+<div style="
+    background: linear-gradient(180deg, #1E293B 0%, #172033 100%);
+    border: 1px solid #334155;
+    border-radius: 18px;
+    padding: 18px;
+    margin-bottom: 24px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.28);
+">
+<table style="
+    width:100%;
+    border-collapse:collapse;
+    font-size:14px;
+">
+<thead>
+<tr style="
+    color:#94A3B8;
+    text-transform:uppercase;
+    font-size:12px;
+    letter-spacing:0.05em;
+">
+<th style="text-align:left;padding:14px;">Fight</th>
+<th style="padding:14px;">Open</th>
+<th style="padding:14px;">Current</th>
+<th style="padding:14px;">Move</th>
+<th style="padding:14px;">Snapshots</th>
+<th style="padding:14px;">Latest</th>
+</tr>
+</thead>
+<tbody>
+"""
 
-    mover_display["blue_move_display"] = (
-        mover_display["blue_implied_move"] * 100
-    ).map(lambda x: f"{x:+.1f}%")
+for _, row in styled_df.iterrows():
 
-    mover_cols = [
-        "fight",
-        "opening_red_odds",
-        "current_red_odds",
-        "red_move_display",
-        "opening_blue_odds",
-        "current_blue_odds",
-        "blue_move_display",
-        "snapshot_count",
-        "latest_snapshot",
-    ]
+    red_move = row["red_move_display"]
+    move_color = movement_color(red_move)
 
-    mover_cols = [c for c in mover_cols if c in mover_display.columns]
+    table_html += f"""
+    <tr style="
+        border-top:1px solid #334155;
+        transition: all 0.2s ease;
+    ">
+        <td style="
+            padding:16px;
+            font-weight:700;
+            color:#F8FAFC;
+        ">
+            {row['fight']}
+        </td>
 
-    st.dataframe(
-        mover_display.sort_values(
-            "largest_abs_move",
-            ascending=False,
-        )[mover_cols],
-        use_container_width=True,
-        hide_index=True,
-    )
+        <td style="
+            padding:16px;
+            color:#CBD5E1;
+            text-align:center;
+            font-weight:600;
+        ">
+            {row['opening_red_odds']}
+        </td>
 
+        <td style="
+            padding:16px;
+            color:#FFFFFF;
+            text-align:center;
+            font-weight:700;
+        ">
+            {row['current_red_odds']}
+        </td>
+
+        <td style="
+            padding:16px;
+            text-align:center;
+            font-weight:800;
+            color:{move_color};
+        ">
+            {red_move}
+        </td>
+
+        <td style="
+            padding:16px;
+            text-align:center;
+            color:#CBD5E1;
+        ">
+            {row['snapshot_count']}
+        </td>
+
+        <td style="
+            padding:16px;
+            text-align:center;
+            color:#94A3B8;
+            font-size:12px;
+        ">
+            {str(row['latest_snapshot'])[:16]}
+        </td>
+    </tr>
+    """
+
+table_html += """
+</tbody>
+</table>
+</div>
+"""
+
+st.markdown(
+    table_html,
+    unsafe_allow_html=True,
+)
     # --------------------------------------------------------
     # Selected fight chart
     # --------------------------------------------------------
