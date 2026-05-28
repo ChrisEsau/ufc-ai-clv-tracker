@@ -6,7 +6,8 @@ import pandas as pd
 BASE_PATH = "."
 
 MASTER_PATH = f"{BASE_PATH}/ufc_master.parquet"
-MAPPED_PATH = f"{BASE_PATH}/ufc_staged_master_rows.parquet"
+#MAPPED_PATH = f"{BASE_PATH}/ufc_staged_master_rows.parquet"
+MAPPED_PATH = f"{BASE_PATH}/ufc_staged_master_rows_profiled.parquet"
 
 VALIDATION_OUTPUT = f"{BASE_PATH}/ufc_master_column_validation.parquet"
 
