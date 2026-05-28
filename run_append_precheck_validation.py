@@ -46,15 +46,27 @@ checks.append({
 # DUPLICATE CHECKS
 # ============================================================
 
-staged_fight_ids = staged["fight_id"].astype(str)
-master_fight_ids = master["fight_id"].astype(str)
+def clean_id_series(s):
+    return (
+        s.astype(str)
+        .str.strip()
+        .replace(["", "nan", "None", "NaN"], pd.NA)
+    )
+
+staged_fight_ids = clean_id_series(staged["fight_id"])
+master_fight_ids = clean_id_series(master["fight_id"])
+
+valid_staged_fight_ids = staged_fight_ids.dropna()
+valid_master_fight_ids = master_fight_ids.dropna()
 
 duplicate_in_staged = staged[
-    staged_fight_ids.duplicated(keep=False)
+    staged_fight_ids.notna()
+    & staged_fight_ids.duplicated(keep=False)
 ].copy()
 
 already_in_master = staged[
-    staged_fight_ids.isin(set(master_fight_ids))
+    staged_fight_ids.notna()
+    & staged_fight_ids.isin(set(valid_master_fight_ids))
 ].copy()
 
 duplicate_in_staged_count = len(duplicate_in_staged)
@@ -214,3 +226,9 @@ print()
 print("Saved:", PRECHECK_OUTPUT)
 print("Saved:", DUPLICATE_OUTPUT)
 print("Saved:", REQUIRED_FIELD_OUTPUT)
+print()
+print("========== FIGHT ID DEBUG ==========")
+print("Staged fight_id nulls:", int(staged_fight_ids.isna().sum()))
+print("Staged unique valid fight_ids:", int(valid_staged_fight_ids.nunique()))
+print("Master unique valid fight_ids:", int(valid_master_fight_ids.nunique()))
+print("Overlap count:", int(staged_fight_ids.isin(set(valid_master_fight_ids)).sum()))
