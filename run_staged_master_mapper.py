@@ -4,6 +4,18 @@ from datetime import datetime
 
 print("========== STAGED MASTER MAPPER ==========")
 
+def time_to_seconds(x):
+    if pd.isna(x):
+        return np.nan
+
+    x = str(x).strip()
+
+    if ":" not in x:
+        return np.nan
+
+    mins, secs = x.split(":")
+    return int(mins) * 60 + int(secs)
+    
 # =========================
 # LOAD DATA
 # =========================
@@ -40,6 +52,8 @@ mapped["finish_round"] = pd.to_numeric(
     staged["round"],
     errors="coerce"
 )
+
+mapped["match_time_sec"] = staged["time"].apply(time_to_seconds)
 
 mapped["referee"] = staged["referee"]
 
