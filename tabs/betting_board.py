@@ -301,6 +301,7 @@ def render_betting_board():
         selected_fight = st.selectbox(
             "Select fight",
             fight_options,
+            key="betting_board_selected_fight",
         )
     
         fight_detail = display[display["fight"] == selected_fight].copy()
