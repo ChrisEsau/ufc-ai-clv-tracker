@@ -153,7 +153,12 @@ def parse_totals_table(soup):
         clean_text(c.get_text(" ", strip=True))
         for c in row.select("td.b-fight-details__table-col")
     ]
-
+    
+    debug_print_table(
+        totals_table,
+        "TOTALS TABLE DEBUG"
+    )
+    
     if len(cols) < 10:
         return parsed
 
@@ -213,10 +218,6 @@ def parse_totals_table(soup):
     for i, value in enumerate(cols):
         parsed[f"raw_detail_col_{i}"] = value
         
-    debug_print_table(
-        totals_table,
-        "TOTALS TABLE DEBUG"
-    )
     return parsed
 
 
@@ -242,7 +243,12 @@ def parse_sig_str_breakdown_table(soup):
         clean_text(c.get_text(" ", strip=True))
         for c in row.select("td.b-fight-details__table-col")
     ]
-
+    
+    debug_print_table(
+        sig_table,
+        "SIG STR BREAKDOWN DEBUG"
+    )
+    
     if len(cols) < 9:
         return parsed
 
@@ -288,10 +294,6 @@ def parse_sig_str_breakdown_table(soup):
     parsed["b_ground_landed"] = b_land
     parsed["b_ground_atmpted"] = b_att
     
-    debug_print_table(
-        sig_table,
-        "SIG STR BREAKDOWN DEBUG"
-    )
     return parsed
 
 
