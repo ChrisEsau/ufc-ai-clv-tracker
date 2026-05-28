@@ -1,0 +1,25 @@
+name: Run Detail Column Inventory
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-detail-column-inventory:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install pandas pyarrow
+
+      - name: Run detail column inventory
+        run: |
+          python run_detail_column_inventory.py
