@@ -81,6 +81,14 @@ def parse_sig_str_breakdown_table(soup):
         "table.b-fight-details__table"
     )
 
+    print("========== SIG TABLE DEBUG ==========")
+    print("Tables found:", len(tables))
+    
+    for i, table in enumerate(tables):
+        preview = clean_text(table.get_text(" ", strip=True))
+        print(f"TABLE {i} PREVIEW:")
+        print(preview[:700])
+
     if len(tables) < 2:
         return parsed
 
