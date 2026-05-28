@@ -1,0 +1,42 @@
+name: Run Staged Mapping Audit
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  run-staged-mapping-audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Sync latest repo
+        run: git pull --rebase origin main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install pandas numpy pyarrow
+
+      - name: Run staged mapping audit
+        run: |
+          python run_staged_mapping_audit.py
+
+      - name: Commit staged mapping audit output
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add ufc_staged_mapping_audit.parquet
+
+          git commit -m "Update staged mapping audit artifact" || echo "No changes to commit"
+
+          git push
