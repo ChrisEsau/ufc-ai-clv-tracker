@@ -126,8 +126,8 @@ def parse_totals_table(soup):
     if not rows:
         return parsed
 
-    # Last row is TOTAL
-    row = rows[-1]
+    # First row is fight TOTAL
+    row = rows[0]
 
     cols = [
         clean_text(c.get_text(" ", strip=True))
@@ -211,8 +211,8 @@ def parse_sig_str_breakdown_table(soup):
     if not rows:
         return parsed
 
-    # Last row is TOTAL
-    row = rows[-1]
+    # First row is fight TOTAL
+    row = rows[0]
 
     cols = [
         clean_text(c.get_text(" ", strip=True))
