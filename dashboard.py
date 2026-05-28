@@ -38,23 +38,3 @@ elif page == "Model Lab":
 elif page == "Data Maintenance":
     render_data_maintenance()
 
-tab1, tab2, tab3, tab4 = st.tabs(
-    [
-        "🎯 Betting Board",
-        "📈 Line Movement / CLV",
-        "🧠 Model Lab",
-        "🛠️ Data Maintenance",
-    ]
-)
-
-with tab1:
-    render_betting_board()
-
-with tab2:
-    render_line_movement()
-
-with tab3:
-    render_model_lab()
-
-with tab4:
-    render_data_maintenance()
