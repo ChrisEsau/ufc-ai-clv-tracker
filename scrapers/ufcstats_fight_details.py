@@ -457,6 +457,12 @@ def scrape_fight_details(
     
     row["red_ctrl"] = red_ctrl
     row["blue_ctrl"] = blue_ctrl
-        
+    
+    sig_breakdown = parse_sig_str_breakdown_table(
+        soup
+    )
+
+    row.update(sig_breakdown)
+            
         
     return pd.DataFrame([row])
