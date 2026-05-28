@@ -23,6 +23,8 @@ def render_data_maintenance():
     feature_audit = load_parquet("ufc_live_feature_audit.parquet")
     match_audit = load_parquet("ufc_live_match_audit.parquet")
     market_audit = load_parquet("ufc_market_match_audit.parquet")
+    event_check = load_parquet("ufc_ufcstats_event_check.parquet")
+    missing_events = load_parquet("ufc_missing_events.parquet")
 
     # ========================================================
     # DATASET STATUS
@@ -78,7 +80,86 @@ def render_data_maintenance():
             use_container_width=True,
             hide_index=True,
         )
+    # ========================================================
+    # UFCSTATS EVENT CHECK
+    # ========================================================
 
+    render_section_header("UFCStats Event Check")
+
+    if event_check.empty:
+        st.warning("No UFCStats event check artifact found yet.")
+    else:
+        missing_count = len(missing_events)
+    
+        latest_ufcstats = (
+            event_check
+            .sort_values("ufcstats_event_date", ascending=False)
+            .iloc[0]
+            .get("ufcstats_event_name", "N/A")
+        )
+    
+        latest_local = (
+            dataset_status.iloc[0].get("latest_event_name", "N/A")
+            if not dataset_status.empty
+            else "N/A"
+        )
+    
+        status_text = "CURRENT" if missing_count == 0 else "OUTDATED"
+    
+        c1, c2, c3, c4 = st.columns(4)
+    
+        with c1:
+            render_metric(
+                "Dataset Status",
+                status_text,
+                accent="green" if missing_count == 0 else "red",
+            )
+    
+        with c2:
+            render_metric(
+                "Missing Events",
+                missing_count,
+                accent="green" if missing_count == 0 else "red",
+            )
+    
+        with c3:
+            render_metric(
+                "Latest Local",
+                latest_local,
+                accent="blue",
+            )
+    
+        with c4:
+            render_metric(
+                "Latest UFCStats",
+                latest_ufcstats,
+                accent="amber",
+            )
+    
+        if missing_count == 0:
+            st.success("Local dataset appears current with UFCStats completed events.")
+        else:
+            st.error(
+                f"{missing_count} completed UFCStats events are missing from the local dataset."
+            )
+    
+            display_cols = [
+                "ufcstats_event_name",
+                "ufcstats_event_date",
+                "status",
+                "ufcstats_event_url",
+            ]
+    
+            display_cols = [
+                c for c in display_cols
+                if c in missing_events.columns
+            ]
+    
+            st.dataframe(
+                missing_events[display_cols],
+                use_container_width=True,
+                hide_index=True,
+            )
     # ========================================================
     # EVENT STATUS
     # ========================================================
