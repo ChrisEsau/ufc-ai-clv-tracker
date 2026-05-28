@@ -1,0 +1,25 @@
+name: Run Master Column Inventory
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-master-column-inventory:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install pandas pyarrow
+
+      - name: Run master column inventory
+        run: |
+          python run_master_column_inventory.py
