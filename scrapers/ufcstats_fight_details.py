@@ -95,13 +95,14 @@ def parse_sig_str_breakdown_table(soup):
     sig_table = tables[1]
 
     rows = sig_table.select(
-        "tbody.b-fight-details__table-body tr.b-fight-details__table-row"
+        "tr.b-fight-details__table-row"
     )
-
+    
     if not rows:
         return parsed
-
-    row = rows[0]
+    
+    # Last row is TOTAL
+    row = rows[-1]
 
     cols = [
         clean_text(
