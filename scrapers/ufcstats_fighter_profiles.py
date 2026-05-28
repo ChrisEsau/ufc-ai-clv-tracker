@@ -6,21 +6,22 @@ from scrapers.selenium_core import fetch_html
 
 
 def clean_text(x):
+
     if x is None:
         return None
 
     x = (
-    str(x)
-    .replace("\n", " ")
-    .replace("\t", " ")
-    .replace("  ", " ")
-    .strip()
+        str(x)
+        .replace("\n", " ")
+        .replace("\t", " ")
+        .replace("  ", " ")
+        .strip()
     )
 
-if x in ["", "--", "---", "nan", "None"]:
-    return None
+    if x in ["", "--", "---", "nan", "None"]:
+        return None
 
-return x
+    return x
 
 
 def clean_percent(x):
