@@ -126,6 +126,22 @@ for col in required_fields:
 required_audit = pd.DataFrame(required_rows)
 required_audit.to_parquet(REQUIRED_FIELD_OUTPUT, index=False)
 
+failed_required = required_audit[
+    required_audit["status"] == "fail"
+]
+
+print()
+print("========== FAILED REQUIRED FIELDS ==========")
+
+if failed_required.empty:
+    print("None")
+else:
+    print(
+        failed_required[
+            ["column_name", "missing_count"]
+        ].to_string(index=False)
+    )
+
 required_failures = int((required_audit["status"] == "fail").sum())
 
 checks.append({
