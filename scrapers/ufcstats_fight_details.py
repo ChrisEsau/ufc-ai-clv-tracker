@@ -39,7 +39,27 @@ def parse_red_blue_pair(text):
 
     return parts[0], parts[1]
 
+def debug_print_table(table, table_name):
+    print()
+    print("=" * 20)
+    print(f"{table_name}")
+    print("=" * 20)
 
+    rows = table.select("tr")
+
+    for idx, row in enumerate(rows):
+
+        cols = [
+            clean_text(
+                c.get_text(" ", strip=True)
+            )
+            for c in row.select("th, td")
+        ]
+
+        print()
+        print(f"ROW {idx}")
+        print(cols)
+        
 def parse_two_stat_pairs(text):
     """
     Parses UFCStats paired values like:
