@@ -1,0 +1,52 @@
+name: Run Fighter Profile Enrichment
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  run-fighter-profile-enrichment:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Pull latest repo state
+        run: |
+          git pull --rebase origin main
+
+      - name: Install Google Chrome
+        run: |
+          sudo apt-get update -qq
+          wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo apt install -y ./google-chrome-stable_current_amd64.deb
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install pandas numpy pyarrow beautifulsoup4 selenium webdriver-manager lxml
+
+      - name: Run fighter profile enrichment
+        run: |
+          python run_fighter_profile_enrichment.py
+
+      - name: Commit fighter profile enrichment outputs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add ufc_staged_fighter_profiles.parquet
+          git add ufc_staged_master_rows_profiled.parquet
+          git add ufc_fighter_profile_scrape_audit.parquet
+
+          git commit -m "Update fighter profile enrichment artifacts" || echo "No changes to commit"
+
+          git pull --rebase origin main
+          git push
