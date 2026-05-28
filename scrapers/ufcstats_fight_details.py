@@ -67,6 +67,160 @@ def parse_red_blue_pair(text):
 
     return red_value, blue_value
 
+def parse_sig_str_breakdown_table(soup):
+    """
+    Parses the significant strike breakdown table.
+
+    Returns:
+    dict of parsed head/body/leg/dist/clinch/ground stats
+    """
+
+    parsed = {}
+
+    tables = soup.select(
+        "table.b-fight-details__table"
+    )
+
+    if len(tables) < 2:
+        return parsed
+
+    sig_table = tables[1]
+
+    rows = sig_table.select(
+        "tbody.b-fight-details__table-body tr.b-fight-details__table-row"
+    )
+
+    if not rows:
+        return parsed
+
+    row = rows[0]
+
+    cols = [
+        clean_text(
+            c.get_text(" ", strip=True)
+        )
+        for c in row.select(
+            "td.b-fight-details__table-col"
+        )
+    ]
+
+    if len(cols) < 10:
+        return parsed
+
+    try:
+
+        # HEAD
+        red_head, blue_head = parse_red_blue_pair(cols[3])
+
+        r_head_land, r_head_att = parse_stat_pair(
+            red_head
+        )
+
+        b_head_land, b_head_att = parse_stat_pair(
+            blue_head
+        )
+
+        parsed["r_head_landed"] = r_head_land
+        parsed["r_head_atmpted"] = r_head_att
+
+        parsed["b_head_landed"] = b_head_land
+        parsed["b_head_atmpted"] = b_head_att
+
+
+        # BODY
+        red_body, blue_body = parse_red_blue_pair(cols[4])
+
+        r_body_land, r_body_att = parse_stat_pair(
+            red_body
+        )
+
+        b_body_land, b_body_att = parse_stat_pair(
+            blue_body
+        )
+
+        parsed["r_body_landed"] = r_body_land
+        parsed["r_body_atmpted"] = r_body_att
+
+        parsed["b_body_landed"] = b_body_land
+        parsed["b_body_atmpted"] = b_body_att
+
+
+        # LEG
+        red_leg, blue_leg = parse_red_blue_pair(cols[5])
+
+        r_leg_land, r_leg_att = parse_stat_pair(
+            red_leg
+        )
+
+        b_leg_land, b_leg_att = parse_stat_pair(
+            blue_leg
+        )
+
+        parsed["r_leg_landed"] = r_leg_land
+        parsed["r_leg_atmpted"] = r_leg_att
+
+        parsed["b_leg_landed"] = b_leg_land
+        parsed["b_leg_atmpted"] = b_leg_att
+
+
+        # DISTANCE
+        red_dist, blue_dist = parse_red_blue_pair(cols[6])
+
+        r_dist_land, r_dist_att = parse_stat_pair(
+            red_dist
+        )
+
+        b_dist_land, b_dist_att = parse_stat_pair(
+            blue_dist
+        )
+
+        parsed["r_dist_landed"] = r_dist_land
+        parsed["r_dist_atmpted"] = r_dist_att
+
+        parsed["b_dist_landed"] = b_dist_land
+        parsed["b_dist_atmpted"] = b_dist_att
+
+
+        # CLINCH
+        red_clinch, blue_clinch = parse_red_blue_pair(cols[7])
+
+        r_clinch_land, r_clinch_att = parse_stat_pair(
+            red_clinch
+        )
+
+        b_clinch_land, b_clinch_att = parse_stat_pair(
+            blue_clinch
+        )
+
+        parsed["r_clinch_landed"] = r_clinch_land
+        parsed["r_clinch_atmpted"] = r_clinch_att
+
+        parsed["b_clinch_landed"] = b_clinch_land
+        parsed["b_clinch_atmpted"] = b_clinch_att
+
+
+        # GROUND
+        red_ground, blue_ground = parse_red_blue_pair(cols[8])
+
+        r_ground_land, r_ground_att = parse_stat_pair(
+            red_ground
+        )
+
+        b_ground_land, b_ground_att = parse_stat_pair(
+            blue_ground
+        )
+
+        parsed["r_ground_landed"] = r_ground_land
+        parsed["r_ground_atmpted"] = r_ground_att
+
+        parsed["b_ground_landed"] = b_ground_land
+        parsed["b_ground_atmpted"] = b_ground_att
+
+    except Exception:
+        return parsed
+
+    return parsed
+
 
 def scrape_fight_details(
     fight_url,
