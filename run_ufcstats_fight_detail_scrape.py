@@ -12,6 +12,16 @@ STAGED_FIGHTS_PATH = (
     f"{BASE_PATH}/ufc_staged_fight_rows.parquet"
 )
 
+staged["fight_url"] = staged["fight_url"].astype(str)
+
+staged = staged[
+    staged["fight_url"].notna()
+    & (staged["fight_url"].str.strip() != "")
+    & (staged["fight_url"].str.lower() != "nan")
+].copy()
+
+staged = staged.reset_index(drop=True)
+
 DETAIL_OUTPUT = (
     f"{BASE_PATH}/ufc_staged_fight_details.parquet"
 )
