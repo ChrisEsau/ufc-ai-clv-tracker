@@ -85,6 +85,17 @@ updated = pd.concat(
     ignore_index=True,
 )
 
+# Normalize object/date columns before parquet write
+for col in updated.columns:
+    if updated[col].dtype == "object":
+        updated[col] = updated[col].apply(
+            lambda x: x.isoformat() if hasattr(x, "isoformat") else x
+        )
+
+# Keep date format consistent with master convention
+if "date" in updated.columns:
+    updated["date"] = updated["date"].astype(str).str.replace("-", "/", regex=False)
+    
 updated.to_parquet(
     MASTER_PATH,
     index=False,
