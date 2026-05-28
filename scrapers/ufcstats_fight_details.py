@@ -104,7 +104,7 @@ def parse_sig_str_breakdown_table(soup):
         )
     ]
 
-    if len(cols) < 10:
+    if len(cols) < 9:
         return parsed
 
     try:
