@@ -212,7 +212,11 @@ def parse_totals_table(soup):
 
     for i, value in enumerate(cols):
         parsed[f"raw_detail_col_{i}"] = value
-
+        
+    debug_print_table(
+        totals_table,
+        "TOTALS TABLE DEBUG"
+    )
     return parsed
 
 
@@ -283,7 +287,11 @@ def parse_sig_str_breakdown_table(soup):
     parsed["r_ground_atmpted"] = r_att
     parsed["b_ground_landed"] = b_land
     parsed["b_ground_atmpted"] = b_att
-
+    
+    debug_print_table(
+        sig_table,
+        "SIG STR BREAKDOWN DEBUG"
+    )
     return parsed
 
 
