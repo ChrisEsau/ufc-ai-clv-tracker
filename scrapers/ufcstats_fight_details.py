@@ -167,11 +167,6 @@ def parse_totals_table(soup):
 
     totals_table = tables[0]
 
-    debug_print_table(
-        totals_table,
-        "TOTALS TABLE DEBUG",
-    )
-
     rows = totals_table.select(
         "tr.b-fight-details__table-row"
     )
@@ -313,11 +308,6 @@ def parse_sig_str_breakdown_table(soup):
         return parsed
 
     sig_table = tables[1]
-
-    debug_print_table(
-        sig_table,
-        "SIG STR BREAKDOWN DEBUG",
-    )
 
     rows = sig_table.select(
         "tr.b-fight-details__table-row"
