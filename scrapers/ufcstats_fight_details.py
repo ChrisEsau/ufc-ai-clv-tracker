@@ -186,4 +186,123 @@ def scrape_fight_details(
     for i, value in enumerate(cols):
         row[f"raw_detail_col_{i}"] = value
 
+
+    # ============================================================
+    # PARSED TOTAL STATS TABLE
+    # ============================================================
+    
+    # KD
+    red_kd, blue_kd = parse_red_blue_pair(
+        cols[1] if len(cols) > 1 else None
+    )
+    
+    row["red_kd"] = red_kd
+    row["blue_kd"] = blue_kd
+    
+    
+    # SIG STR
+    sig_red, sig_blue = parse_red_blue_pair(
+        cols[2] if len(cols) > 2 else None
+    )
+    
+    red_sig_landed, red_sig_attempted = parse_stat_pair(
+        sig_red
+    )
+    
+    blue_sig_landed, blue_sig_attempted = parse_stat_pair(
+        sig_blue
+    )
+    
+    row["red_sig_str_landed"] = red_sig_landed
+    row["red_sig_str_attempted"] = red_sig_attempted
+    
+    row["blue_sig_str_landed"] = blue_sig_landed
+    row["blue_sig_str_attempted"] = blue_sig_attempted
+    
+    
+    # SIG STR %
+    red_sig_pct, blue_sig_pct = parse_red_blue_pair(
+        cols[3] if len(cols) > 3 else None
+    )
+    
+    row["red_sig_str_pct"] = red_sig_pct
+    row["blue_sig_str_pct"] = blue_sig_pct
+    
+    
+    # TOTAL STR
+    tot_red, tot_blue = parse_red_blue_pair(
+        cols[4] if len(cols) > 4 else None
+    )
+    
+    red_total_landed, red_total_attempted = parse_stat_pair(
+        tot_red
+    )
+    
+    blue_total_landed, blue_total_attempted = parse_stat_pair(
+        tot_blue
+    )
+    
+    row["red_total_str_landed"] = red_total_landed
+    row["red_total_str_attempted"] = red_total_attempted
+    
+    row["blue_total_str_landed"] = blue_total_landed
+    row["blue_total_str_attempted"] = blue_total_attempted
+    
+    
+    # TD
+    td_red, td_blue = parse_red_blue_pair(
+        cols[5] if len(cols) > 5 else None
+    )
+    
+    red_td_landed, red_td_attempted = parse_stat_pair(
+        td_red
+    )
+    
+    blue_td_landed, blue_td_attempted = parse_stat_pair(
+        td_blue
+    )
+    
+    row["red_td_landed"] = red_td_landed
+    row["red_td_attempted"] = red_td_attempted
+    
+    row["blue_td_landed"] = blue_td_landed
+    row["blue_td_attempted"] = blue_td_attempted
+    
+    
+    # TD %
+    red_td_pct, blue_td_pct = parse_red_blue_pair(
+        cols[6] if len(cols) > 6 else None
+    )
+    
+    row["red_td_pct"] = red_td_pct
+    row["blue_td_pct"] = blue_td_pct
+    
+    
+    # SUB ATT
+    red_sub_att, blue_sub_att = parse_red_blue_pair(
+        cols[7] if len(cols) > 7 else None
+    )
+    
+    row["red_sub_att"] = red_sub_att
+    row["blue_sub_att"] = blue_sub_att
+    
+    
+    # REV
+    red_rev, blue_rev = parse_red_blue_pair(
+        cols[8] if len(cols) > 8 else None
+    )
+    
+    row["red_rev"] = red_rev
+    row["blue_rev"] = blue_rev
+    
+    
+    # CTRL
+    red_ctrl, blue_ctrl = parse_red_blue_pair(
+        cols[9] if len(cols) > 9 else None
+    )
+    
+    row["red_ctrl"] = red_ctrl
+    row["blue_ctrl"] = blue_ctrl
+        
+        
     return pd.DataFrame([row])
