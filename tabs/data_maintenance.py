@@ -4,6 +4,10 @@ from utils.dm_pipeline_status import render_pipeline_status
 from utils.dm_validation_gate import render_validation_gate
 from utils.dm_workflow_controls import render_workflow_controls
 
+from utils.dm_append_status import (
+    render_append_status,
+)
+
 
 def render_data_maintenance():
 
@@ -12,6 +16,10 @@ def render_data_maintenance():
     st.caption(
         "UFC ingestion control tower"
     )
+
+    render_append_status()
+
+    st.markdown("---")
 
     render_pipeline_status()
 
