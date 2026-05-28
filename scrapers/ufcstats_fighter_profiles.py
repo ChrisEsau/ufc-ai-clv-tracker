@@ -1,4 +1,5 @@
 import pandas as pd
+from datetime import datetime
 from bs4 import BeautifulSoup
 
 from scrapers.selenium_core import fetch_html
@@ -8,13 +9,18 @@ def clean_text(x):
     if x is None:
         return None
 
-    return (
-        str(x)
-        .replace("\n", " ")
-        .replace("\t", " ")
-        .replace("  ", " ")
-        .strip()
+    x = (
+    str(x)
+    .replace("\n", " ")
+    .replace("\t", " ")
+    .replace("  ", " ")
+    .strip()
     )
+
+if x in ["", "--", "---", "nan", "None"]:
+    return None
+
+return x
 
 
 def clean_percent(x):
@@ -80,7 +86,20 @@ def parse_record(record_text):
     except Exception:
         return None, None, None
 
+def normalize_dob(x):
 
+    x = clean_text(x)
+
+    if not x or x == "--":
+        return None
+
+    try:
+        dt = datetime.strptime(x, "%b %d, %Y")
+        return dt.strftime("%Y/%m/%d")
+
+    except Exception:
+        return x
+        
 def scrape_fighter_profile(fighter_url, fighter_id=None):
     html = fetch_html(fighter_url)
 
@@ -160,7 +179,7 @@ def scrape_fighter_profile(fighter_url, fighter_id=None):
             profile["stance"] = value
 
         elif label == "DOB":
-            profile["dob"] = value
+            profile["dob"] = normalize_dob(value)
 
         elif label == "SLpM":
             profile["splm"] = value
