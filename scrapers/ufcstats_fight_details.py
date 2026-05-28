@@ -488,8 +488,8 @@ def scrape_fight_details(
         cols[9] if len(cols) > 9 else None
     )
     
-    row["red_ctrl"] = red_ctrl
-    row["blue_ctrl"] = blue_ctrl
+    row["red_ctrl"] = time_to_seconds(red_ctrl)
+    row["blue_ctrl"] = time_to_seconds(blue_ctrl)
     
     sig_breakdown = parse_sig_str_breakdown_table(
         soup
