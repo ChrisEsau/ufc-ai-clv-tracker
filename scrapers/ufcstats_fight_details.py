@@ -106,45 +106,44 @@ def parse_method_details(soup):
     time_format = None
     referee = None
 
-    detail_items = soup.select(
-        "i.b-fight-details__text-item"
+    text = clean_text(
+        soup.get_text(" ", strip=True)
     )
 
-    for item in detail_items:
-
-        text = clean_text(
-            item.get_text(" ", strip=True)
+    if "Method:" in text:
+        method = (
+            text.split("Method:")[1]
+            .split("Round:")[0]
+            .strip()
         )
 
-        if text.startswith("Method:"):
+    if "Round:" in text:
+        round_num = (
+            text.split("Round:")[1]
+            .split("Time:")[0]
+            .strip()
+        )
 
-            method = clean_text(
-                text.replace("Method:", "")
-            )
+    if "Time:" in text:
+        fight_time = (
+            text.split("Time:")[1]
+            .split("Time format:")[0]
+            .strip()
+        )
 
-        elif text.startswith("Round:"):
+    if "Time format:" in text:
+        time_format = (
+            text.split("Time format:")[1]
+            .split("Referee:")[0]
+            .strip()
+        )
 
-            round_num = clean_text(
-                text.replace("Round:", "")
-            )
-
-        elif text.startswith("Time:"):
-
-            fight_time = clean_text(
-                text.replace("Time:", "")
-            )
-
-        elif text.startswith("Time format:"):
-
-            time_format = clean_text(
-                text.replace("Time format:", "")
-            )
-
-        elif text.startswith("Referee:"):
-
-            referee = clean_text(
-                text.replace("Referee:", "")
-            )
+    if "Referee:" in text:
+        referee = (
+            text.split("Referee:")[1]
+            .split("Details:")[0]
+            .strip()
+        )
 
     return (
         method,
