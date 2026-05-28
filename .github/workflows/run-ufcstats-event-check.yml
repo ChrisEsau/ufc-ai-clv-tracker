@@ -1,0 +1,43 @@
+name: Run UFCStats Event Check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  run-ufcstats-event-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Sync latest repo
+        run: git pull --rebase origin main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install pandas numpy pyarrow requests beautifulsoup4
+
+      - name: Run UFCStats event check
+        run: python run_ufcstats_event_check.py
+
+      - name: Commit event check outputs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add \
+            ufc_ufcstats_event_check.parquet \
+            ufc_missing_events.parquet
+
+          git commit -m "Update UFCStats event check artifacts" || echo "No changes to commit"
+
+          git push
