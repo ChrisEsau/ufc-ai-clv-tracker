@@ -38,8 +38,23 @@ def parse_stat_pair(text):
     attempted = clean_text(parts[1])
 
     return landed, attempted
+    
+def parse_two_stat_pairs(text):
+    text = clean_text(text)
 
-def parse_red_blue_pair(text):
+    if not text:
+        return None, None, None, None
+
+    parts = text.split()
+
+    # Expected: landed of attempted landed of attempted
+    # Example: 17 of 38 5 of 17
+    if len(parts) >= 6 and parts[1] == "of" and parts[4] == "of":
+        return parts[0], parts[2], parts[3], parts[5]
+
+    return None, None, None, None
+    
+def parse_two_stat_pairs(text):
     """
     Parses UFCStats paired values.
 
@@ -67,6 +82,15 @@ def parse_red_blue_pair(text):
 
     return red_value, blue_value
 
+def time_to_seconds(x):
+    x = clean_text(x)
+
+    if not x or ":" not in x:
+        return None
+
+    mins, secs = x.split(":")
+    return int(mins) * 60 + int(secs)  
+    
 def parse_sig_str_breakdown_table(soup):
     """
     Parses the significant strike breakdown table.
@@ -119,7 +143,7 @@ def parse_sig_str_breakdown_table(soup):
     try:
 
         # HEAD
-        red_head, blue_head = parse_red_blue_pair(cols[3])
+        red_head, blue_head = parse_two_stat_pairs(cols[3])
 
         r_head_land, r_head_att = parse_stat_pair(
             red_head
@@ -137,7 +161,7 @@ def parse_sig_str_breakdown_table(soup):
 
 
         # BODY
-        red_body, blue_body = parse_red_blue_pair(cols[4])
+        red_body, blue_body = parse_two_stat_pairs(cols[4])
 
         r_body_land, r_body_att = parse_stat_pair(
             red_body
@@ -155,7 +179,7 @@ def parse_sig_str_breakdown_table(soup):
 
 
         # LEG
-        red_leg, blue_leg = parse_red_blue_pair(cols[5])
+        red_leg, blue_leg = parse_two_stat_pairs(cols[5])
 
         r_leg_land, r_leg_att = parse_stat_pair(
             red_leg
@@ -173,7 +197,7 @@ def parse_sig_str_breakdown_table(soup):
 
 
         # DISTANCE
-        red_dist, blue_dist = parse_red_blue_pair(cols[6])
+        red_dist, blue_dist = parse_two_stat_pairs(cols[6])
 
         r_dist_land, r_dist_att = parse_stat_pair(
             red_dist
@@ -191,7 +215,7 @@ def parse_sig_str_breakdown_table(soup):
 
 
         # CLINCH
-        red_clinch, blue_clinch = parse_red_blue_pair(cols[7])
+        red_clinch, blue_clinch = parse_two_stat_pairs(cols[7])
 
         r_clinch_land, r_clinch_att = parse_stat_pair(
             red_clinch
@@ -209,7 +233,7 @@ def parse_sig_str_breakdown_table(soup):
 
 
         # GROUND
-        red_ground, blue_ground = parse_red_blue_pair(cols[8])
+        red_ground, blue_ground = parse_two_stat_pairs(cols[8])
 
         r_ground_land, r_ground_att = parse_stat_pair(
             red_ground
@@ -355,7 +379,7 @@ def scrape_fight_details(
     # ============================================================
     
     # KD
-    red_kd, blue_kd = parse_red_blue_pair(
+    red_kd, blue_kd = parse_two_stat_pairs(
         cols[1] if len(cols) > 1 else None
     )
     
@@ -364,7 +388,7 @@ def scrape_fight_details(
     
     
     # SIG STR
-    sig_red, sig_blue = parse_red_blue_pair(
+    sig_red, sig_blue = parse_two_stat_pairs(
         cols[2] if len(cols) > 2 else None
     )
     
@@ -384,7 +408,7 @@ def scrape_fight_details(
     
     
     # SIG STR %
-    red_sig_pct, blue_sig_pct = parse_red_blue_pair(
+    red_sig_pct, blue_sig_pct = parse_two_stat_pairs(
         cols[3] if len(cols) > 3 else None
     )
     
@@ -393,7 +417,7 @@ def scrape_fight_details(
     
     
     # TOTAL STR
-    tot_red, tot_blue = parse_red_blue_pair(
+    tot_red, tot_blue = parse_two_stat_pairs(
         cols[4] if len(cols) > 4 else None
     )
     
@@ -413,7 +437,7 @@ def scrape_fight_details(
     
     
     # TD
-    td_red, td_blue = parse_red_blue_pair(
+    td_red, td_blue = parse_two_stat_pairs(
         cols[5] if len(cols) > 5 else None
     )
     
@@ -433,7 +457,7 @@ def scrape_fight_details(
     
     
     # TD %
-    red_td_pct, blue_td_pct = parse_red_blue_pair(
+    red_td_pct, blue_td_pct = parse_two_stat_pairs(
         cols[6] if len(cols) > 6 else None
     )
     
@@ -442,7 +466,7 @@ def scrape_fight_details(
     
     
     # SUB ATT
-    red_sub_att, blue_sub_att = parse_red_blue_pair(
+    red_sub_att, blue_sub_att = parse_two_stat_pairs(
         cols[7] if len(cols) > 7 else None
     )
     
@@ -451,7 +475,7 @@ def scrape_fight_details(
     
     
     # REV
-    red_rev, blue_rev = parse_red_blue_pair(
+    red_rev, blue_rev = parse_two_stat_pairs(
         cols[8] if len(cols) > 8 else None
     )
     
@@ -460,7 +484,7 @@ def scrape_fight_details(
     
     
     # CTRL
-    red_ctrl, blue_ctrl = parse_red_blue_pair(
+    red_ctrl, blue_ctrl = parse_two_stat_pairs(
         cols[9] if len(cols) > 9 else None
     )
     
