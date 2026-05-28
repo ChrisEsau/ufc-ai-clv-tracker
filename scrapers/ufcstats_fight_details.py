@@ -39,6 +39,34 @@ def parse_stat_pair(text):
 
     return landed, attempted
 
+def parse_red_blue_pair(text):
+    """
+    Parses UFCStats paired values.
+
+    Examples:
+    "1 0"
+    "64% 39%"
+    "9:28 1:45"
+
+    Returns:
+    red_value, blue_value
+    """
+
+    text = clean_text(text)
+
+    if not text:
+        return None, None
+
+    parts = text.split()
+
+    if len(parts) < 2:
+        return text, None
+
+    red_value = parts[0]
+    blue_value = parts[1]
+
+    return red_value, blue_value
+
 
 def scrape_fight_details(
     fight_url,
