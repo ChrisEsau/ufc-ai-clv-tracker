@@ -8,6 +8,9 @@ from utils.dm_append_status import (
     render_append_status,
 )
 
+from utils.dm_dataset_health import (
+    render_dataset_health,
+)
 
 def render_data_maintenance():
 
@@ -30,3 +33,5 @@ def render_data_maintenance():
     st.markdown("---")
 
     render_validation_gate()
+
+    render_dataset_health()
