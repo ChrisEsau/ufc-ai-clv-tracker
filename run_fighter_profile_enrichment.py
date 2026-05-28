@@ -17,7 +17,7 @@ AUDIT_OUTPUT = f"{BASE_PATH}/ufc_fighter_profile_scrape_audit.parquet"
 RUN_ID = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 RUN_TIMESTAMP = datetime.now(timezone.utc).isoformat()
 
-MAX_FIGHTERS_TO_SCRAPE = 10
+MAX_FIGHTERS_TO_SCRAPE = 50
 
 
 staged_fights = pd.read_parquet(STAGED_FIGHTS_PATH)
