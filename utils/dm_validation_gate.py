@@ -44,7 +44,8 @@ def render_validation_gate():
         st.warning("No append precheck artifact found yet.")
         st.button(
             "⚠️ Append / Ingest Staged Data",
-            disabled=True,
+            disabled=not append_ready,
+            type=button_type,
             use_container_width=True,
         )
         return
@@ -96,6 +97,10 @@ def render_validation_gate():
     st.button(
         "⚠️ Append / Ingest Staged Data",
         disabled=not append_ready,
-        type="primary",
+        button_type = (
+            "primary"
+            if append_ready
+            else "secondary"
+        ),
         use_container_width=True,
     )
