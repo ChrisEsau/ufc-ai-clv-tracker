@@ -40,6 +40,14 @@ def parse_stat_pair(text):
     return landed, attempted
     
 def parse_two_stat_pairs(text):
+    """
+    Parses paired UFCStats values like:
+    '17 of 38 5 of 17'
+
+    Returns:
+    red_landed, red_attempted, blue_landed, blue_attempted
+    """
+
     text = clean_text(text)
 
     if not text:
@@ -47,40 +55,10 @@ def parse_two_stat_pairs(text):
 
     parts = text.split()
 
-    # Expected: landed of attempted landed of attempted
-    # Example: 17 of 38 5 of 17
     if len(parts) >= 6 and parts[1] == "of" and parts[4] == "of":
         return parts[0], parts[2], parts[3], parts[5]
 
     return None, None, None, None
-    
-def parse_two_stat_pairs(text):
-    """
-    Parses UFCStats paired values.
-
-    Examples:
-    "1 0"
-    "64% 39%"
-    "9:28 1:45"
-
-    Returns:
-    red_value, blue_value
-    """
-
-    text = clean_text(text)
-
-    if not text:
-        return None, None
-
-    parts = text.split()
-
-    if len(parts) < 2:
-        return text, None
-
-    red_value = parts[0]
-    blue_value = parts[1]
-
-    return red_value, blue_value
 
 def time_to_seconds(x):
     x = clean_text(x)
