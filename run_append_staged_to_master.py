@@ -91,11 +91,39 @@ for col in updated.columns:
         updated[col] = updated[col].apply(
             lambda x: x.isoformat() if hasattr(x, "isoformat") else x
         )
+  
+# ============================================================
+# ALIGN STAGED DTYPES TO MASTER
+# ============================================================
 
-# Keep date format consistent with master convention
-if "date" in updated.columns:
-    updated["date"] = updated["date"].astype(str).str.replace("-", "/", regex=False)
-    
+for col in master.columns:
+
+    master_dtype = master[col].dtype
+
+    try:
+
+        if pd.api.types.is_numeric_dtype(master_dtype):
+
+            updated[col] = pd.to_numeric(
+                updated[col],
+                errors="coerce"
+            )
+
+        elif pd.api.types.is_datetime64_any_dtype(master_dtype):
+
+            updated[col] = pd.to_datetime(
+                updated[col],
+                errors="coerce"
+            )
+
+        else:
+
+            updated[col] = updated[col].astype(str)
+
+    except Exception as e:
+
+        print(f"WARNING dtype harmonization failed for {col}: {e}")   
+        
 updated.to_parquet(
     MASTER_PATH,
     index=False,
