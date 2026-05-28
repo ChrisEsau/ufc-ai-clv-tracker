@@ -232,3 +232,11 @@ print("Staged fight_id nulls:", int(staged_fight_ids.isna().sum()))
 print("Staged unique valid fight_ids:", int(valid_staged_fight_ids.nunique()))
 print("Master unique valid fight_ids:", int(valid_master_fight_ids.nunique()))
 print("Overlap count:", int(staged_fight_ids.isin(set(valid_master_fight_ids)).sum()))
+print()
+print("========== OVERLAPPING FIGHTS ==========")
+
+overlap_preview = already_in_master[
+    ["event_name", "date", "fight_id", "r_name", "b_name"]
+].head(25)
+
+print(overlap_preview.to_string(index=False))
