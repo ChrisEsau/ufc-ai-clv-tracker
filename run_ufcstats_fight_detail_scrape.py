@@ -28,7 +28,7 @@ RUN_TIMESTAMP = datetime.now(
     timezone.utc
 ).isoformat()
 
-MAX_FIGHTS_TO_SCRAPE = 5
+MAX_FIGHTS_TO_SCRAPE = 1
 # set to 10 for testing if desired
 
 
