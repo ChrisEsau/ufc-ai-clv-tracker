@@ -3,6 +3,8 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from utils.github_actions import trigger_workflow
+
 
 APPEND_PRECHECK_PATH = "ufc_append_precheck.parquet"
 
@@ -72,8 +74,6 @@ def render_validation_gate():
             "Validation failures detected."
         )
 
-    metric_cols = st.columns(3)
-
     staged_rows = (
         int(precheck["staged_rows"].iloc[0])
         if "staged_rows" in precheck.columns
@@ -88,19 +88,23 @@ def render_validation_gate():
 
     failed_checks = len(failed)
 
-    metric_cols[0].metric(
-        "Staged Rows",
-        staged_rows,
+    st.markdown("#### Gate Summary")
+
+    summary_df = pd.DataFrame(
+        [
+            {
+                "Append Ready": append_ready,
+                "Staged Rows": staged_rows,
+                "Master Rows": master_rows,
+                "Failed Checks": failed_checks,
+            }
+        ]
     )
 
-    metric_cols[1].metric(
-        "Master Rows",
-        master_rows,
-    )
-
-    metric_cols[2].metric(
-        "Failed Checks",
-        failed_checks,
+    st.dataframe(
+        summary_df,
+        use_container_width=True,
+        hide_index=True,
     )
 
     display_cols = [
@@ -113,28 +117,29 @@ def render_validation_gate():
         if c in precheck.columns
     ]
 
-    st.dataframe(
-        precheck[display_cols],
-        use_container_width=True,
-    )
-
-    if not failed.empty:
-
-        st.markdown("#### Failed Checks")
-
-        failed_cols = [
-            c for c in [
-                "check_name",
-                "failure_count",
-                "details",
-            ]
-            if c in failed.columns
-        ]
-
+    with st.expander("Validation Details", expanded=False):
         st.dataframe(
-            failed[failed_cols],
+            precheck[display_cols],
             use_container_width=True,
         )
+
+        if not failed.empty:
+
+            st.markdown("#### Failed Checks")
+
+            failed_cols = [
+                c for c in [
+                    "check_name",
+                    "failure_count",
+                    "details",
+                ]
+                if c in failed.columns
+            ]
+
+            st.dataframe(
+                failed[failed_cols],
+                use_container_width=True,
+            )
 
     button_type = (
         "primary"
@@ -142,9 +147,17 @@ def render_validation_gate():
         else "secondary"
     )
 
-    st.button(
+    if st.button(
         "⚠️ Append / Ingest Staged Data",
         disabled=not append_ready,
         type=button_type,
         use_container_width=True,
-    )
+    ):
+        ok, msg = trigger_workflow(
+            "run-append-staged-to-master.yml"
+        )
+
+        if ok:
+            st.success(msg)
+        else:
+            st.error(msg)
