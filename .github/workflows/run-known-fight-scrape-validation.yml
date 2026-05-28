@@ -1,0 +1,49 @@
+name: Run Known Fight Scrape Validation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  run-known-fight-scrape-validation:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Pull latest repo state
+        run: |
+          git pull --rebase origin main
+
+      - name: Install Google Chrome
+        run: |
+          sudo apt-get update -qq
+          wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo apt install -y ./google-chrome-stable_current_amd64.deb
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install pandas numpy pyarrow beautifulsoup4 selenium webdriver-manager lxml
+
+      - name: Run known fight scrape validation
+        run: |
+          python run_known_fight_scrape_validation.py
+
+      - name: Commit known fight validation output
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add ufc_known_fight_scrape_validation.parquet
+
+          git commit -m "Update known fight scrape validation artifact" || echo "No changes to commit"
+
+          git push
