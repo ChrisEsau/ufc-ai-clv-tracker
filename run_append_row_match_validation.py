@@ -25,6 +25,21 @@ master_row = master[
     & (master["fight_id"].astype(str) == TARGET_FIGHT_ID)
 ]
 
+common_fight_ids = set(master["fight_id"].astype(str)).intersection(
+    set(mapped["fight_id"].astype(str))
+)
+
+if not common_fight_ids:
+    raise ValueError(
+        "No overlapping fight_id values found between master and mapped staged parquet."
+    )
+
+TARGET_FIGHT_ID = sorted(common_fight_ids)[0]
+
+master_row = master[
+    master["fight_id"].astype(str) == TARGET_FIGHT_ID
+]
+
 mapped_row = mapped[
     mapped["fight_id"].astype(str) == TARGET_FIGHT_ID
 ]
