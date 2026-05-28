@@ -104,13 +104,13 @@ def parse_sig_str_breakdown_table(soup):
     # Last row is TOTAL
     row = rows[-1]
 
+    cols = row.select(
+        "td.b-fight-details__table-col"
+    )
+    
     cols = [
-        clean_text(
-            c.get_text(" ", strip=True)
-        )
-        for c in row.select(
-            "td.b-fight-details__table-col"
-        )
+        clean_text(c.get_text(" ", strip=True))
+        for c in cols
     ]
 
     if len(cols) < 9:
