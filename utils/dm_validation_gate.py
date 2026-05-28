@@ -94,13 +94,15 @@ def render_validation_gate():
             use_container_width=True,
         )
 
-    st.button(
-        "⚠️ Append / Ingest Staged Data",
-        disabled=not append_ready,
         button_type = (
             "primary"
             if append_ready
             else "secondary"
-        ),
-        use_container_width=True,
-    )
+        )
+        
+        st.button(
+            "⚠️ Append / Ingest Staged Data",
+            disabled=not append_ready,
+            type=button_type,
+            use_container_width=True,
+        )
