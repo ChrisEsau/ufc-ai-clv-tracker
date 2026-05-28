@@ -97,7 +97,24 @@ result_col = first_existing([
     "Result",
 ])
 
+raw_dates = df["date"].astype(str)
 
+parsed_dates = pd.to_datetime(
+    raw_dates,
+    errors="coerce"
+)
+
+invalid_dates = df[parsed_dates.isna()][
+    ["event_name", "date", "fight_id", "r_name", "b_name"]
+]
+
+print()
+print("========== INVALID DATE ROWS ==========")
+
+if invalid_dates.empty:
+    print("None")
+else:
+    print(invalid_dates.head(50).to_string(index=False))
 # ============================================================
 # BASIC HEALTH METRICS
 # ============================================================
