@@ -37,7 +37,10 @@ mapped = pd.DataFrame(columns=master.columns)
 # =========================
 
 mapped["event_name"] = staged["event_name"]
-mapped["date"] = staged["event_date"]
+mapped["date"] = pd.to_datetime(
+    staged["event_date"],
+    errors="coerce"
+).dt.strftime("%-m/%-d/%Y")
 
 mapped["fight_id"] = (
     staged["fight_url"]
