@@ -1,0 +1,50 @@
+name: Run UFCStats Fight Scrape
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  run-ufcstats-fight-scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Sync latest repo
+        run: git pull --rebase origin main
+
+      - name: Install Google Chrome
+        run: |
+          sudo apt-get update -qq
+          wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo apt install -y ./google-chrome-stable_current_amd64.deb
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install pandas numpy pyarrow requests beautifulsoup4 selenium webdriver-manager lxml
+
+      - name: Run fight scrape
+        run: |
+          python run_ufcstats_fight_scrape.py
+
+      - name: Commit staged scrape outputs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add \
+            ufc_staged_fight_rows.parquet \
+            ufc_fight_scrape_audit.parquet
+
+          git commit -m "Update staged UFC fight scrape artifacts" || echo "No changes to commit"
+
+          git push
