@@ -1,0 +1,25 @@
+name: Run Master First Row
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-master-first-row:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install pandas pyarrow
+
+      - name: Run master first row
+        run: |
+          python run_master_first_row.py
