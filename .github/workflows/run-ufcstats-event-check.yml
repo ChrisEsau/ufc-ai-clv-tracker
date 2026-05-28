@@ -24,7 +24,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pandas numpy pyarrow requests beautifulsoup4
+          pip install pandas numpy pyarrow requests beautifulsoup4 selenium webdriver-manager
 
       - name: Run UFCStats event check
         run: python run_ufcstats_event_check.py
