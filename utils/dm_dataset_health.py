@@ -23,32 +23,34 @@ def render_dataset_health():
         "ufc_dataset_status.parquet"
     )
 
-    with st.expander(
-        "📊 Dataset Health",
-        expanded=False,
+with st.expander(
+    "📊 Dataset Health",
+    expanded=False,
+):
+
+    if st.button(
+        "Run Dataset Status",
+        use_container_width=True,
+        key="run_dataset_status",
     ):
+        ok, msg = trigger_workflow(
+            "run-dataset-status.yml"
+        )
 
-        if status is None:
-            st.warning(
-                "Dataset status artifact not found."
-            )
-            return
-            
-         if st.button(
-            "Run Dataset Status",
-            use_container_width=True,
-            key="run_dataset_status",
-        ):
-            ok, msg = trigger_workflow(
-                "run-dataset-status.yml"
-            )
-        
-            if ok:
-                st.success(msg)
-            else:
-                st.error(msg)
+        if ok:
+            st.success(msg)
+        else:
+            st.error(msg)
 
-        row = status.iloc[0]
+    if status is None:
+        st.warning(
+            "Dataset status artifact not found."
+        )
+        return
+
+    row = status.iloc[0]
+
+    # dataset health tables here...
 
         health_df = pd.DataFrame(
             [
