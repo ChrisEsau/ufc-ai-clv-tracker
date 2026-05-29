@@ -218,7 +218,38 @@ mapped["winner"] = np.where(
 # RUN METADATA
 # =========================
 
-mapped["event_id"] = np.nan
+def extract_id_from_url(url):
+    if pd.isna(url):
+        return None
+
+    return (
+        str(url)
+        .strip()
+        .rstrip("/")
+        .split("/")[-1]
+    )
+
+
+event_url_col = None
+
+for candidate in [
+    "event_url",
+    "ufcstats_event_url",
+    "event_link",
+]:
+    if candidate in staged.columns:
+        event_url_col = candidate
+        break
+
+if event_url_col is None:
+    raise ValueError(
+        "No event URL column found in staged data. "
+        "Expected one of: event_url, ufcstats_event_url, event_link"
+    )
+
+mapped["event_id"] = staged[event_url_col].apply(extract_id_from_url)
+
+
 mapped["winner_id"] = np.nan
 
 mapped["run_id"] = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
