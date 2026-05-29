@@ -39,88 +39,116 @@ def get_append_precheck():
 
 def render_validation_gate():
 
-    st.subheader("Append Validation Gate")
+    with st.expander(
+        "✅ Validation Gate",
+        expanded=False,
+    ):
 
-    append_ready, precheck = get_append_precheck()
+        st.caption(
+            "Validates staged data before append. "
+            "Append execution lives in the final Append Status section."
+        )
 
-    if precheck is None:
-
-        st.warning("No append precheck artifact found yet.")
-
-        st.button(
-            "⚠️ Append / Ingest Staged Data",
-            disabled=True,
-            type="secondary",
+        if st.button(
+            "Run Column Validation",
             use_container_width=True,
+            key="run_column_validation",
+        ):
+            ok, msg = trigger_workflow(
+                "run-master-column-validation.yml"
+            )
+
+            if ok:
+                st.success(msg)
+            else:
+                st.error(msg)
+
+        if st.button(
+            "Run Append Precheck",
+            use_container_width=True,
+            key="run_append_precheck",
+        ):
+            ok, msg = trigger_workflow(
+                "run-append-precheck-validation.yml"
+            )
+
+            if ok:
+                st.success(msg)
+            else:
+                st.error(msg)
+
+        append_ready, precheck = get_append_precheck()
+
+        if precheck is None:
+
+            st.warning("No append precheck artifact found yet.")
+            return
+
+        if "status" in precheck.columns:
+            failed = precheck[
+                precheck["status"] == "fail"
+            ]
+        else:
+            failed = pd.DataFrame()
+
+        if append_ready:
+            st.success(
+                "✅ Append validation passed. "
+                "Staged data is ready for append."
+            )
+        else:
+            st.error(
+                "❌ Append blocked. "
+                "Validation failures detected."
+            )
+
+        staged_rows = (
+            int(precheck["staged_rows"].iloc[0])
+            if "staged_rows" in precheck.columns
+            else 0
         )
 
-        return
-
-    if "status" in precheck.columns:
-        failed = precheck[
-            precheck["status"] == "fail"
-        ]
-    else:
-        failed = pd.DataFrame()
-
-    if append_ready:
-        st.success(
-            "✅ Append validation passed. "
-            "Staged data is ready to ingest."
-        )
-    else:
-        st.error(
-            "❌ Append blocked. "
-            "Validation failures detected."
+        master_rows = (
+            int(precheck["master_rows"].iloc[0])
+            if "master_rows" in precheck.columns
+            else 0
         )
 
-    staged_rows = (
-        int(precheck["staged_rows"].iloc[0])
-        if "staged_rows" in precheck.columns
-        else 0
-    )
+        failed_checks = len(failed)
 
-    master_rows = (
-        int(precheck["master_rows"].iloc[0])
-        if "master_rows" in precheck.columns
-        else 0
-    )
+        summary_df = pd.DataFrame(
+            [
+                {
+                    "Append Ready": append_ready,
+                    "Staged Rows": staged_rows,
+                    "Master Rows": master_rows,
+                    "Failed Checks": failed_checks,
+                }
+            ]
+        )
 
-    failed_checks = len(failed)
+        st.dataframe(
+            summary_df,
+            use_container_width=True,
+            hide_index=True,
+        )
 
-    st.markdown("#### Gate Summary")
-
-    summary_df = pd.DataFrame(
-        [
-            {
-                "Append Ready": append_ready,
-                "Staged Rows": staged_rows,
-                "Master Rows": master_rows,
-                "Failed Checks": failed_checks,
-            }
+        display_cols = [
+            c for c in [
+                "check_name",
+                "status",
+                "failure_count",
+                "details",
+            ]
+            if c in precheck.columns
         ]
-    )
 
-    st.dataframe(
-        summary_df,
-        use_container_width=True,
-        hide_index=True,
-    )
+        st.markdown("#### Validation Details")
 
-    display_cols = [
-        c for c in [
-            "check_name",
-            "status",
-            "failure_count",
-            "details",
-        ]
-        if c in precheck.columns
-    ]
-
-    with st.expander("Validation Details", expanded=False):
         st.dataframe(
             precheck[display_cols],
             use_container_width=True,
+            hide_index=True,
         )
 
         if not failed.empty:
@@ -139,25 +167,5 @@ def render_validation_gate():
             st.dataframe(
                 failed[failed_cols],
                 use_container_width=True,
+                hide_index=True,
             )
-
-    button_type = (
-        "primary"
-        if append_ready
-        else "secondary"
-    )
-
-    if st.button(
-        "⚠️ Append / Ingest Staged Data",
-        disabled=not append_ready,
-        type=button_type,
-        use_container_width=True,
-    ):
-        ok, msg = trigger_workflow(
-            "run-append-staged-to-master.yml"
-        )
-
-        if ok:
-            st.success(msg)
-        else:
-            st.error(msg)
