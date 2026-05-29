@@ -33,6 +33,18 @@ local_event_ids = set(
     .str.strip()
 )
 
+print("\n========== LOCAL EVENT ID SAMPLE ==========")
+
+sample_ids = (
+    master["event_id"]
+    .dropna()
+    .astype(str)
+    .unique()[:10]
+)
+
+for x in sample_ids:
+    print(x)
+
 print("Local events:", len(local_event_ids))
 
 ufcstats_events = scrape_completed_events()
