@@ -26,6 +26,10 @@ master = pd.read_parquet("ufc_master.parquet")
 print(f"Staged rows: {len(staged)}")
 print(f"Master cols: {len(master.columns)}")
 
+print()
+print("========== STAGED COLUMNS ==========")
+print(list(staged.columns))
+
 # =========================
 # CREATE OUTPUT FRAME
 # =========================
