@@ -13,15 +13,18 @@ import pandas as pd
 # CONFIG
 # ============================================================
 
-BASE_PATH = "."
+from pipeline.paths import (
+    MASTER_PATH,
+    DATASET_STATUS_PATH,
+    DATASET_EVENT_STATUS_PATH,
+)
 
-MASTER_DATASET_PATH = f"{BASE_PATH}/ufc_master.parquet"
-DATASET_STATUS_OUTPUT = f"{BASE_PATH}/ufc_dataset_status.parquet"
-DATASET_EVENT_STATUS_OUTPUT = f"{BASE_PATH}/ufc_dataset_event_status.parquet"
+MASTER_DATASET_PATH = MASTER_PATH
+DATASET_STATUS_OUTPUT = DATASET_STATUS_PATH
+DATASET_EVENT_STATUS_OUTPUT = DATASET_EVENT_STATUS_PATH
 
 RUN_ID = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 RUN_TIMESTAMP = datetime.now(timezone.utc).isoformat()
-
 
 # ============================================================
 # LOAD DATA
@@ -122,7 +125,7 @@ else:
 status = {
     "run_id": RUN_ID,
     "run_timestamp": RUN_TIMESTAMP,
-    "dataset_path": MASTER_DATASET_PATH,
+    "dataset_path": str(MASTER_PATH),
     "row_count": len(df),
     "column_count": len(df.columns),
     "memory_mb": df.memory_usage(deep=True).sum() / 1024**2,
