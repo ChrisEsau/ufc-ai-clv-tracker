@@ -10,7 +10,7 @@ from utils.dm_event_discovery import render_event_discovery
 from utils.dm_fight_scrape import render_fight_scrape
 from utils.dm_enrichment import render_enrichment
 from utils.dm_append_status import render_append_status
-
+from utils.dm_audit_history import (render_audit_history)
 
 def render_data_maintenance():
 
@@ -24,15 +24,10 @@ def render_data_maintenance():
 
     #st.markdown("---")
 
-    #render_workflow_controls()
-
-    #st.markdown("---")
-
-    #render_validation_gate()
-
     render_dataset_health()
     render_event_discovery()
     render_fight_scrape()
     render_enrichment()
     render_validation_gate()
+    render_audit_history()
     render_append_status()
