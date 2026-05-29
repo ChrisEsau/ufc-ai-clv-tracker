@@ -20,10 +20,6 @@ def render_data_maintenance():
         "UFC ingestion control tower"
     )
 
-    render_append_status()
-
-    st.markdown("---")
-
     #render_pipeline_status()
 
     #st.markdown("---")
