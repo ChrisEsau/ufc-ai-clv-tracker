@@ -22,10 +22,10 @@ from utils.sidebar import render_sidebar
 
 apply_theme()
 
-st.title("UFC Betting Intelligence Platform")
-st.caption(
-    "Model probability, market movement, EV, CLV, and betting decision intelligence."
-)
+#st.title("UFC Betting Intelligence Platform")
+#st.caption(
+#    "Model probability, market movement, EV, CLV, and betting decision intelligence."
+#)
 
 page = render_sidebar()
 
