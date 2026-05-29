@@ -12,6 +12,8 @@ from utils.dm_dataset_health import (
     render_dataset_health,
 )
 
+from utils.dm_event_discovery import render_event_discovery
+
 def render_data_maintenance():
 
     st.title("Data Maintenance")
@@ -35,3 +37,5 @@ def render_data_maintenance():
     render_validation_gate()
 
     render_dataset_health()
+    
+    render_event_discovery()
