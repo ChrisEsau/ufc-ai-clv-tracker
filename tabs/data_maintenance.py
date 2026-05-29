@@ -9,6 +9,8 @@ from utils.dm_dataset_health import render_dataset_health
 from utils.dm_event_discovery import render_event_discovery
 from utils.dm_fight_scrape import render_fight_scrape
 from utils.dm_enrichment import render_enrichment
+from utils.dm_append_status import render_append_status
+
 
 def render_data_maintenance():
 
@@ -37,3 +39,4 @@ def render_data_maintenance():
     render_fight_scrape()
     render_enrichment()
     render_validation_gate()
+    render_append_status()
