@@ -21,15 +21,15 @@ def render_data_maintenance():
 
     st.markdown("---")
 
-    render_pipeline_status()
+    #render_pipeline_status()
 
-    st.markdown("---")
+    #st.markdown("---")
 
-    render_workflow_controls()
+    #render_workflow_controls()
 
-    st.markdown("---")
+    #st.markdown("---")
 
-    render_validation_gate()
+    #render_validation_gate()
 
     render_dataset_health()
     render_event_discovery()
