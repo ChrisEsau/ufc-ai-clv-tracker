@@ -6,19 +6,15 @@ from scrapers.ufcstats_fight_details import (
     scrape_fight_details,
 )
 
-BASE_PATH = "."
-
-STAGED_FIGHTS_PATH = (
-    f"{BASE_PATH}/ufc_staged_fight_rows.parquet"
+from pipeline.paths import (
+    STAGED_FIGHT_ROWS_PATH,
+    STAGED_FIGHT_DETAILS_PATH,
+    FIGHT_DETAIL_SCRAPE_AUDIT_PATH,
 )
 
-DETAIL_OUTPUT = (
-    f"{BASE_PATH}/ufc_staged_fight_details.parquet"
-)
-
-AUDIT_OUTPUT = (
-    f"{BASE_PATH}/ufc_fight_detail_scrape_audit.parquet"
-)
+STAGED_FIGHTS_PATH = STAGED_FIGHT_ROWS_PATH
+DETAIL_OUTPUT = STAGED_FIGHT_DETAILS_PATH
+AUDIT_OUTPUT = FIGHT_DETAIL_SCRAPE_AUDIT_PATH
 
 RUN_ID = datetime.now(timezone.utc).strftime(
     "%Y%m%d_%H%M%S"
@@ -28,7 +24,7 @@ RUN_TIMESTAMP = datetime.now(
     timezone.utc
 ).isoformat()
 
-MAX_FIGHTS_TO_SCRAPE = 25
+MAX_FIGHTS_TO_SCRAPE = 5
 # set to 10 for testing if desired
 
 

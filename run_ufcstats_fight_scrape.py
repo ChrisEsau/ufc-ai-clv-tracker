@@ -4,13 +4,14 @@ import pandas as pd
 
 from scrapers.ufcstats_fights import scrape_event_fights
 
+from pipeline.paths import (
+    MISSING_EVENTS_PATH,
+    STAGED_FIGHT_ROWS_PATH,
+    FIGHT_SCRAPE_AUDIT_PATH,
+)
 
-BASE_PATH = "."
-
-MISSING_EVENTS_PATH = f"{BASE_PATH}/ufc_missing_events.parquet"
-
-STAGED_OUTPUT = f"{BASE_PATH}/ufc_staged_fight_rows.parquet"
-AUDIT_OUTPUT = f"{BASE_PATH}/ufc_fight_scrape_audit.parquet"
+STAGED_OUTPUT = STAGED_FIGHT_ROWS_PATH
+AUDIT_OUTPUT = FIGHT_SCRAPE_AUDIT_PATH
 
 RUN_ID = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 RUN_TIMESTAMP = datetime.now(timezone.utc).isoformat()
