@@ -47,4 +47,5 @@ jobs:
 
           git commit -m "Update staged UFC fight scrape artifacts" || echo "No changes to commit"
 
+          git pull --rebase origin main
           git push
