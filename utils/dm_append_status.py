@@ -3,6 +3,12 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from utils.github_actions import trigger_workflow
+
+
+APPEND_PRECHECK_PATH = "ufc_append_precheck.parquet"
+APPEND_AUDIT_PATH = "ufc_append_audit.parquet"
+
 
 def safe_read_parquet(path):
     path = Path(path)
@@ -18,51 +24,39 @@ def safe_read_parquet(path):
 
 def render_append_status():
 
-    precheck = safe_read_parquet(
-        "ufc_append_precheck.parquet"
-    )
+    st.markdown("---")
+
+    st.subheader("🚀 Append Status")
+
+    precheck = safe_read_parquet(APPEND_PRECHECK_PATH)
 
     append_ready = False
     staged_rows = 0
     failed_checks = 0
     master_rows = 0
 
-    if precheck is not None:
+    if precheck is not None and not precheck.empty:
 
         if "append_ready" in precheck.columns:
-            append_ready = bool(
-                precheck["append_ready"].iloc[0]
-            )
+            append_ready = bool(precheck["append_ready"].iloc[0])
 
         if "staged_rows" in precheck.columns:
-            staged_rows = int(
-                precheck["staged_rows"].iloc[0]
-            )
+            staged_rows = int(precheck["staged_rows"].iloc[0])
 
         if "master_rows" in precheck.columns:
-            master_rows = int(
-                precheck["master_rows"].iloc[0]
-            )
+            master_rows = int(precheck["master_rows"].iloc[0])
 
         if "status" in precheck.columns:
             failed_checks = len(
-                precheck[
-                    precheck["status"] == "fail"
-                ]
+                precheck[precheck["status"] == "fail"]
             )
 
-    st.subheader("🚀 Append Status")
+    status_label = "✅ READY" if append_ready else "❌ BLOCKED"
 
-    status_icon = (
-        "✅ READY"
-        if append_ready
-        else "❌ BLOCKED"
-    )
-
-    status_df = pd.DataFrame(
+    summary_df = pd.DataFrame(
         [
             {
-                "Status": status_icon,
+                "Append Ready": status_label,
                 "Staged Rows": staged_rows,
                 "Failed Checks": failed_checks,
                 "Master Rows": master_rows,
@@ -71,7 +65,38 @@ def render_append_status():
     )
 
     st.dataframe(
-        status_df,
+        summary_df,
         hide_index=True,
         use_container_width=True,
     )
+
+    button_type = "primary" if append_ready else "secondary"
+
+    if st.button(
+        "⚠️ Append To Master",
+        disabled=not append_ready,
+        type=button_type,
+        use_container_width=True,
+        key="append_to_master_final",
+    ):
+        ok, msg = trigger_workflow(
+            "run-append-staged-to-master.yml"
+        )
+
+        if ok:
+            st.success(msg)
+        else:
+            st.error(msg)
+
+    append_audit = safe_read_parquet(APPEND_AUDIT_PATH)
+
+    with st.expander("Latest Append Audit", expanded=False):
+
+        if append_audit is None:
+            st.info("No append audit artifact found yet.")
+        else:
+            st.dataframe(
+                append_audit,
+                hide_index=True,
+                use_container_width=True,
+            )
