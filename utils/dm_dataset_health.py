@@ -3,6 +3,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from utils.github_actions import trigger_workflow
 
 def safe_read_parquet(path):
     path = Path(path)
@@ -32,6 +33,20 @@ def render_dataset_health():
                 "Dataset status artifact not found."
             )
             return
+            
+         if st.button(
+            "Run Dataset Status",
+            use_container_width=True,
+            key="run_dataset_status",
+        ):
+            ok, msg = trigger_workflow(
+                "run-dataset-status.yml"
+            )
+        
+            if ok:
+                st.success(msg)
+            else:
+                st.error(msg)
 
         row = status.iloc[0]
 
