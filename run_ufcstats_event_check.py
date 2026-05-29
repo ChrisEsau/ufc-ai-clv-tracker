@@ -58,6 +58,21 @@ missing_events = ufcstats_events[
     ~ufcstats_events["exists_in_master"]
 ].copy()
 
+print("\n========== FIRST MISSING EVENT ==========\n")
+
+if len(missing_events):
+
+    first_event_id = (
+        missing_events.iloc[0]["ufcstats_event_id"]
+    )
+
+    print("Missing event id:", first_event_id)
+
+    print(
+        "Exists in local ids:",
+        first_event_id in local_event_ids,
+    )
+
 ufcstats_events.to_parquet(
     EVENT_CHECK_OUTPUT,
     index=False,
