@@ -36,3 +36,4 @@ def render_data_maintenance():
     render_event_discovery()
     render_fight_scrape()
     render_enrichment()
+    render_validation_gate()
