@@ -3,14 +3,19 @@ import pandas as pd
 import numpy as np
 
 
-BASE_PATH = "."
+from pipeline.paths import (
+    MASTER_PATH,
+    STAGED_MASTER_ROWS_PROFILED_PATH,
+    APPEND_PRECHECK_PATH,
+    APPEND_DUPLICATE_CHECK_PATH,
+    APPEND_REQUIRED_FIELD_AUDIT_PATH,
+)
 
-MASTER_PATH = f"{BASE_PATH}/ufc_master.parquet"
-STAGED_PATH = f"{BASE_PATH}/ufc_staged_master_rows_profiled.parquet"
+STAGED_PATH = STAGED_MASTER_ROWS_PROFILED_PATH
 
-PRECHECK_OUTPUT = f"{BASE_PATH}/ufc_append_precheck.parquet"
-DUPLICATE_OUTPUT = f"{BASE_PATH}/ufc_append_duplicate_check.parquet"
-REQUIRED_FIELD_OUTPUT = f"{BASE_PATH}/ufc_append_required_field_audit.parquet"
+PRECHECK_OUTPUT = APPEND_PRECHECK_PATH
+DUPLICATE_OUTPUT = APPEND_DUPLICATE_CHECK_PATH
+REQUIRED_FIELD_OUTPUT = APPEND_REQUIRED_FIELD_AUDIT_PATH
 
 RUN_ID = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 RUN_TIMESTAMP = datetime.now(timezone.utc).isoformat()
@@ -18,6 +23,13 @@ RUN_TIMESTAMP = datetime.now(timezone.utc).isoformat()
 
 master = pd.read_parquet(MASTER_PATH)
 staged = pd.read_parquet(STAGED_PATH)
+
+print()
+print("========== PRECHECK INPUTS ==========")
+print("Master rows:", len(master))
+print("Staged rows:", len(staged))
+print("Master cols:", len(master.columns))
+print("Staged cols:", len(staged.columns))
 
 checks = []
 
@@ -213,6 +225,23 @@ precheck["run_timestamp"] = RUN_TIMESTAMP
 precheck["staged_rows"] = len(staged)
 precheck["master_rows"] = len(master)
 precheck["append_ready"] = append_ready
+
+print()
+print("========== APPEND GATE ==========")
+print("Append ready:", append_ready)
+
+failed_checks = precheck[
+    precheck["status"] == "fail"
+]
+
+if not failed_checks.empty:
+    print()
+    print("Failed checks:")
+    print(
+        failed_checks[
+            ["check_name", "failure_count"]
+        ].to_string(index=False)
+    )
 
 precheck.to_parquet(PRECHECK_OUTPUT, index=False)
 

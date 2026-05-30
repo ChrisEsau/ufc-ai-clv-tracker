@@ -5,11 +5,14 @@ import pandas as pd
 
 BASE_PATH = "."
 
-MASTER_PATH = f"{BASE_PATH}/ufc_master.parquet"
-#MAPPED_PATH = f"{BASE_PATH}/ufc_staged_master_rows.parquet"
-MAPPED_PATH = f"{BASE_PATH}/ufc_staged_master_rows_profiled.parquet"
+from pipeline.paths import (
+    MASTER_PATH,
+    STAGED_MASTER_ROWS_PROFILED_PATH,
+    MASTER_COLUMN_VALIDATION_PATH,
+)
 
-VALIDATION_OUTPUT = f"{BASE_PATH}/ufc_master_column_validation.parquet"
+MAPPED_PATH = STAGED_MASTER_ROWS_PROFILED_PATH
+VALIDATION_OUTPUT = MASTER_COLUMN_VALIDATION_PATH
 
 RUN_ID = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 RUN_TIMESTAMP = datetime.now(timezone.utc).isoformat()

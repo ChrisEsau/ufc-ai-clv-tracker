@@ -3,19 +3,22 @@ import shutil
 import pandas as pd
 
 
-BASE_PATH = "."
+from pipeline.paths import (
+    MASTER_PATH,
+    STAGED_MASTER_ROWS_PROFILED_PATH,
+    APPEND_PRECHECK_PATH,
+    APPEND_AUDIT_PATH,
+    master_backup_path,
+)
 
-MASTER_PATH = f"{BASE_PATH}/ufc_master.parquet"
-STAGED_PATH = f"{BASE_PATH}/ufc_staged_master_rows_profiled.parquet"
-PRECHECK_PATH = f"{BASE_PATH}/ufc_append_precheck.parquet"
-
-APPEND_AUDIT_OUTPUT = f"{BASE_PATH}/ufc_append_audit.parquet"
+STAGED_PATH = STAGED_MASTER_ROWS_PROFILED_PATH
+PRECHECK_PATH = APPEND_PRECHECK_PATH
+APPEND_AUDIT_OUTPUT = APPEND_AUDIT_PATH
 
 RUN_ID = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 RUN_TIMESTAMP = datetime.now(timezone.utc).isoformat()
 
-BACKUP_PATH = f"{BASE_PATH}/ufc_master_backup_before_append_{RUN_ID}.parquet"
-
+BACKUP_PATH = master_backup_path(f"before_append_{RUN_ID}")
 
 # ============================================================
 # LOAD PRECHECK
