@@ -19,6 +19,7 @@ STAGING_DIR = DATA_DIR / "staging"
 AUDITS_DIR = DATA_DIR / "audits"
 STATUS_DIR = DATA_DIR / "status"
 BACKUPS_DIR = DATA_DIR / "backups"
+DOCS_DIR = ROOT_DIR / "docs"
 
 
 # ============================================================
@@ -57,7 +58,7 @@ APPEND_DUPLICATE_CHECK_PATH = AUDITS_DIR / "ufc_append_duplicate_check.parquet"
 APPEND_REQUIRED_FIELD_AUDIT_PATH = AUDITS_DIR / "ufc_append_required_field_audit.parquet"
 APPEND_AUDIT_PATH = AUDITS_DIR / "ufc_append_audit.parquet"
 STAGED_MASTER_MAPPING_AUDIT_PATH = AUDITS_DIR / "ufc_staged_master_mapping_audit.parquet"
-STAGED_DERIVED_STATS_AUDIT_PATH =  AUDITS_DIR / "ufc_staged_derived_stats_audit.parquet"
+STAGED_DERIVED_STATS_AUDIT_PATH = AUDITS_DIR / "ufc_staged_derived_stats_audit.parquet"
 
 # ============================================================
 # STATUS
@@ -67,6 +68,16 @@ DATASET_STATUS_PATH = STATUS_DIR / "ufc_dataset_status.parquet"
 DATASET_EVENT_STATUS_PATH = STATUS_DIR / "ufc_dataset_event_status.parquet"
 UFCSTATS_EVENT_CHECK_PATH = STATUS_DIR / "ufc_ufcstats_event_check.parquet"
 
+# ============================================================
+# DOCS
+# ============================================================
+
+INGESTION_PIPELINE_REGISTRY_DOC = DOCS_DIR / "UFC_INGESTION_PIPELINE_REGISTRY.md"
+MASTER_SCHEMA_DOC = DOCS_DIR / "UFC_MASTER_SCHEMA.md"
+PATH_REGISTRY_DOC = DOCS_DIR / "UFC_PATH_REGISTRY.md"
+DM_DASHBOARD_ARCHITECTURE_DOC = DOCS_DIR / "UFC_DM_DASHBOARD_ARCHITECTURE.md"
+PREDICTION_PIPELINE_DOC = DOCS_DIR / "UFC_PREDICTION_PIPELINE.md"
+CLV_TRACKING_DOC = DOCS_DIR / "UFC_CLV_TRACKING.md"
 
 # ============================================================
 # BACKUPS
@@ -87,5 +98,6 @@ def ensure_data_dirs():
         AUDITS_DIR,
         STATUS_DIR,
         BACKUPS_DIR,
+        DOCS_DIR,
     ]:
         path.mkdir(parents=True, exist_ok=True)
