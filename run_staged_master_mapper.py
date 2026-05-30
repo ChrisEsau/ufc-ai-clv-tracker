@@ -2,6 +2,13 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 
+from pipeline.paths import (
+    STAGED_FIGHT_DETAILS_PATH,
+    MASTER_PATH,
+    STAGED_MASTER_ROWS_PATH,
+    STAGED_MASTER_MAPPING_AUDIT_PATH,
+)
+
 print("========== STAGED MASTER MAPPER ==========")
 
 def time_to_seconds(x):
@@ -20,8 +27,8 @@ def time_to_seconds(x):
 # LOAD DATA
 # =========================
 
-staged = pd.read_parquet("ufc_staged_fight_details.parquet")
-master = pd.read_parquet("ufc_master.parquet")
+staged = pd.read_parquet(STAGED_FIGHT_DETAILS_PATH)
+master = pd.read_parquet(MASTER_PATH)
 
 print(f"Staged rows: {len(staged)}")
 print(f"Master cols: {len(master.columns)}")
@@ -46,12 +53,15 @@ mapped["date"] = pd.to_datetime(
     errors="coerce"
 ).dt.strftime("%-m/%-d/%Y")
 
-mapped["fight_id"] = (
-    staged["fight_url"]
-    .astype(str)
-    .str.split("/")
-    .str[-1]
-)
+if "fight_id" in staged.columns:
+    mapped["fight_id"] = staged["fight_id"]
+else:
+    mapped["fight_id"] = (
+        staged["fight_url"]
+        .astype(str)
+        .str.split("/")
+        .str[-1]
+    )
 
 mapped["method"] = staged["method"]
 
@@ -234,24 +244,12 @@ def extract_id_from_url(url):
     )
 
 
-event_url_col = None
-
-for candidate in [
-    "event_url",
-    "ufcstats_event_url",
-    "event_link",
-]:
-    if candidate in staged.columns:
-        event_url_col = candidate
-        break
-
-if event_url_col is None:
+if "event_id" not in staged.columns:
     raise ValueError(
-        "No event URL column found in staged data. "
-        "Expected one of: event_url, ufcstats_event_url, event_link"
+        "Missing event_id column in staged fight details."
     )
 
-mapped["event_id"] = staged[event_url_col].apply(extract_id_from_url)
+mapped["event_id"] = staged["event_id"]
 
 
 mapped["winner_id"] = np.nan
@@ -270,7 +268,7 @@ mapped = mapped.reindex(columns=master.columns)
 # =========================
 
 mapped.to_parquet(
-    "ufc_staged_master_rows.parquet",
+    STAGED_MASTER_ROWS_PATH,
     index=False
 )
 
@@ -283,7 +281,7 @@ audit = pd.DataFrame({
 })
 
 audit.to_parquet(
-    "ufc_staged_master_mapping_audit.parquet",
+    STAGED_MASTER_MAPPING_AUDIT_PATH,
     index=False
 )
 

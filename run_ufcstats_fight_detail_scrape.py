@@ -24,7 +24,7 @@ RUN_TIMESTAMP = datetime.now(
     timezone.utc
 ).isoformat()
 
-MAX_FIGHTS_TO_SCRAPE = 5
+MAX_FIGHTS_TO_SCRAPE = 1
 # set to 10 for testing if desired
 
 
@@ -82,7 +82,10 @@ for idx, row in staged.iterrows():
 
         details["run_id"] = RUN_ID
         details["run_timestamp"] = RUN_TIMESTAMP
-
+        details["event_id"] = row.get("event_id")
+        details["event_url"] = row.get("event_url")
+        details["fight_id"] = row.get("fight_id")
+        details["fight_url"] = row.get("fight_url")
         detail_rows.append(
             details
         )

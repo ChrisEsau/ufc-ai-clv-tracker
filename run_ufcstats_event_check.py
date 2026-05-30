@@ -40,31 +40,6 @@ print(
     .nunique()
 )
 
-recent = master[
-    master["event_name"].isin([
-        "UFC Fight Night: Allen vs. Costa",
-        "UFC 328: Chimaev vs. Strickland",
-    ])
-]
-
-print("\n========== RECENT APPENDED ROWS ==========")
-
-if len(recent):
-
-    print(
-        recent[
-            [
-                "event_name",
-                "event_id",
-                "fight_id"
-            ]
-        ]
-        .head(20)
-        .to_string(index=False)
-    )
-else:
-    print("No matching rows found")
-
 if "event_id" not in master.columns:
     raise ValueError("ufc_master.parquet does not contain event_id column.")
 
