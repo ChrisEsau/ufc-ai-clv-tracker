@@ -29,7 +29,7 @@ jobs:
 
       - name: Run dataset status
         run: |
-          python run_dataset_status.py
+          python -m pipeline.data_maintenance.run_dataset_status
 
       - name: Commit dataset status outputs
         run: |
