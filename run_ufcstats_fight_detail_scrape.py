@@ -86,6 +86,11 @@ for idx, row in staged.iterrows():
         details["event_url"] = row.get("event_url")
         details["fight_id"] = row.get("fight_id")
         details["fight_url"] = row.get("fight_url")
+
+        print("DEBUG event_id:", row.get("event_id"))
+        print("DEBUG fight_id:", row.get("fight_id"))
+        print("DEBUG fight_url:", row.get("fight_url"))
+
         detail_rows.append(
             details
         )

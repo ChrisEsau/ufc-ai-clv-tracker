@@ -57,6 +57,7 @@ APPEND_DUPLICATE_CHECK_PATH = AUDITS_DIR / "ufc_append_duplicate_check.parquet"
 APPEND_REQUIRED_FIELD_AUDIT_PATH = AUDITS_DIR / "ufc_append_required_field_audit.parquet"
 APPEND_AUDIT_PATH = AUDITS_DIR / "ufc_append_audit.parquet"
 STAGED_MASTER_MAPPING_AUDIT_PATH = AUDITS_DIR / "ufc_staged_master_mapping_audit.parquet"
+STAGED_DERIVED_STATS_AUDIT_PATH =  AUDITS_DIR / "ufc_staged_derived_stats_audit.parquet"
 
 # ============================================================
 # STATUS

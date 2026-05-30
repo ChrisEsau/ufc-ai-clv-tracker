@@ -4,9 +4,15 @@ import pandas as pd
 import numpy as np
 
 
-INPUT_PATH = "./ufc_staged_master_rows.parquet"
-OUTPUT_PATH = "./ufc_staged_master_rows_enriched.parquet"
-AUDIT_PATH = "./ufc_staged_derived_stats_audit.parquet"
+from pipeline.paths import (
+    STAGED_MASTER_ROWS_PATH,
+    STAGED_MASTER_ROWS_ENRICHED_PATH,
+    STAGED_DERIVED_STATS_AUDIT_PATH,
+)
+
+INPUT_PATH = STAGED_MASTER_ROWS_PATH
+OUTPUT_PATH = STAGED_MASTER_ROWS_ENRICHED_PATH
+AUDIT_PATH = STAGED_DERIVED_STATS_AUDIT_PATH
 
 
 df = pd.read_parquet(INPUT_PATH)
@@ -103,7 +109,53 @@ for side in ["r", "b"]:
             sig_landed,
         )
 
+# =========================
+# DEBUG OUTPUT
+# =========================
 
+derived_cols = [
+    c for c in df.columns
+    if c.endswith("_acc")
+    or c.endswith("_per")
+]
+
+print()
+print("========== DERIVED STATS SAMPLE ==========")
+
+debug_cols = [
+    "event_name",
+    "fight_id",
+] + derived_cols
+
+debug_cols = [
+    c for c in debug_cols
+    if c in df.columns
+]
+
+print(
+    df[debug_cols]
+    .head(5)
+    .to_string(index=False)
+)
+
+print()
+print("========== INPUT COLUMN COMPLETENESS ==========")
+
+for col in [
+    "fight_id",
+    "r_head_landed",
+    "r_head_atmpted",
+    "r_body_landed",
+    "r_body_atmpted",
+    "r_leg_landed",
+    "r_leg_atmpted",
+]:
+    if col in df.columns:
+        print(
+            f"{col:<20} "
+            f"non_null={df[col].notna().sum()} "
+            f"sample={df[col].dropna().head(3).tolist()}"
+        )
 # =========================
 # Save
 # =========================

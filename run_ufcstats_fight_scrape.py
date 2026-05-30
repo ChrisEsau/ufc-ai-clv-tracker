@@ -33,6 +33,11 @@ missing_events = pd.read_parquet(MISSING_EVENTS_PATH)
 
 print("Missing events:", len(missing_events))
 
+MAX_EVENTS_TO_SCRAPE = 1  # None = all events
+
+if MAX_EVENTS_TO_SCRAPE is not None:
+    missing_events = missing_events.head(MAX_EVENTS_TO_SCRAPE)
+
 all_fights = []
 audit_rows = []
 
@@ -57,10 +62,38 @@ for idx, row in missing_events.iterrows():
             event_date=event_date,
         )
 
+        fights = fights[
+            fights["fight_url"].astype(str).str.contains(
+                "fight-details",
+                na=False,
+            )
+        ].copy()
+
+        fights = fights.reset_index(drop=True)
+
+        print(
+            fights[
+                [
+                    "fight_order",
+                    "fight_url",
+                    "red_fighter",
+                    "blue_fighter"
+                ]
+            ].head(3)
+        )
+
         fights["event_url"] = event_url
         fights["event_id"] = event_id
         fights["event_name"] = event_name
         fights["event_date"] = event_date
+
+        fights["fight_id"] = (
+            fights["fight_url"]
+            .astype(str)
+            .str.rstrip("/")
+            .str.split("/")
+            .str[-1]
+        )
 
         fights["run_id"] = RUN_ID
         fights["run_timestamp"] = RUN_TIMESTAMP

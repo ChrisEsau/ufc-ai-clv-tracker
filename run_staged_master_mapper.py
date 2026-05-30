@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timezone
 
 from pipeline.paths import (
     STAGED_FIGHT_DETAILS_PATH,
@@ -171,6 +171,21 @@ mapped["b_sub_att"] = pd.to_numeric(
 mapped["b_ctrl"] = staged["blue_ctrl"]
 
 # =========================
+# ZONE STRIKING MAPS
+# =========================
+for side, prefix in [("r", "red"), ("b", "blue")]:
+    for zone in ["head", "body", "leg", "dist", "clinch", "ground"]:
+        mapped[f"{side}_{zone}_landed"] = pd.to_numeric(
+            staged[f"{side}_{zone}_landed"],
+            errors="coerce",
+        )
+        mapped[f"{side}_{zone}_atmpted"] = pd.to_numeric(
+            staged[f"{side}_{zone}_atmpted"],
+            errors="coerce",
+        )
+
+
+# =========================
 # PERCENTAGE DERIVATIONS
 # =========================
 
@@ -254,8 +269,8 @@ mapped["event_id"] = staged["event_id"]
 
 mapped["winner_id"] = np.nan
 
-mapped["run_id"] = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-mapped["run_timestamp"] = datetime.utcnow()
+mapped["run_id"] = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+mapped["run_timestamp"] = datetime.now(timezone.utc)
 
 # =========================
 # ALIGN COLUMN ORDER
@@ -297,5 +312,5 @@ filled_cols = (
 print(f"Populated cols: {filled_cols}")
 
 print()
-print("Saved: ./ufc_staged_master_rows.parquet")
-print("Saved: ./ufc_staged_master_mapping_audit.parquet")
+print("Saved:", STAGED_MASTER_ROWS_PATH)
+print("Saved:", STAGED_MASTER_MAPPING_AUDIT_PATH)
