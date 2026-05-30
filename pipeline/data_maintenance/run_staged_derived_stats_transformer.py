@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 
 
-from pipeline.paths import (
+from pipeline.common.paths import (
     STAGED_MASTER_ROWS_PATH,
     STAGED_MASTER_ROWS_ENRICHED_PATH,
     STAGED_DERIVED_STATS_AUDIT_PATH,

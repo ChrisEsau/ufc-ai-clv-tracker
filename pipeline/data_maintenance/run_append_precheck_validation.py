@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 
 
-from pipeline.paths import (
+from pipeline.common.paths import (
     MASTER_PATH,
     STAGED_MASTER_ROWS_PROFILED_PATH,
     APPEND_PRECHECK_PATH,

@@ -2,7 +2,7 @@ import pandas as pd
 
 from scrapers.ufcstats_events import scrape_completed_events
 
-from pipeline.paths import (
+from pipeline.common.paths import (
     MASTER_PATH,
     UFCSTATS_EVENT_CHECK_PATH,
     MISSING_EVENTS_PATH,

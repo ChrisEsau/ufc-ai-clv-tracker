@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timezone
 
-from pipeline.paths import (
+from pipeline.common.paths import (
     STAGED_FIGHT_DETAILS_PATH,
     MASTER_PATH,
     STAGED_MASTER_ROWS_PATH,

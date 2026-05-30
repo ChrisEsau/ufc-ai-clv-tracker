@@ -4,7 +4,7 @@ import pandas as pd
 
 from scrapers.ufcstats_fights import scrape_event_fights
 
-from pipeline.paths import (
+from pipeline.common.paths import (
     MISSING_EVENTS_PATH,
     STAGED_FIGHT_ROWS_PATH,
     FIGHT_SCRAPE_AUDIT_PATH,

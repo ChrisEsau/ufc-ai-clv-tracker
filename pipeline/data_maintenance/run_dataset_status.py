@@ -13,7 +13,7 @@ import pandas as pd
 # CONFIG
 # ============================================================
 
-from pipeline.paths import (
+from pipeline.common.paths import (
     MASTER_PATH,
     DATASET_STATUS_PATH,
     DATASET_EVENT_STATUS_PATH,

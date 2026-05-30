@@ -3,7 +3,7 @@ import shutil
 import pandas as pd
 
 
-from pipeline.paths import (
+from pipeline.common.paths import (
     MASTER_PATH,
     STAGED_MASTER_ROWS_PROFILED_PATH,
     APPEND_PRECHECK_PATH,

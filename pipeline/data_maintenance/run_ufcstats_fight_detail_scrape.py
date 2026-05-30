@@ -6,7 +6,7 @@ from scrapers.ufcstats_fight_details import (
     scrape_fight_details,
 )
 
-from pipeline.paths import (
+from pipeline.common.paths import (
     STAGED_FIGHT_ROWS_PATH,
     STAGED_FIGHT_DETAILS_PATH,
     FIGHT_DETAIL_SCRAPE_AUDIT_PATH,

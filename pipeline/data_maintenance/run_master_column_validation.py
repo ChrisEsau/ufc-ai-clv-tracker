@@ -5,7 +5,7 @@ import pandas as pd
 
 BASE_PATH = "."
 
-from pipeline.paths import (
+from pipeline.common.paths import (
     MASTER_PATH,
     STAGED_MASTER_ROWS_PROFILED_PATH,
     MASTER_COLUMN_VALIDATION_PATH,

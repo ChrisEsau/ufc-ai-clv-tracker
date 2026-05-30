@@ -5,7 +5,7 @@ import pandas as pd
 from scrapers.ufcstats_fighter_profiles import scrape_fighter_profile
 
 
-from pipeline.paths import (
+from pipeline.common.paths import (
     STAGED_FIGHT_ROWS_PATH,
     STAGED_MASTER_ROWS_ENRICHED_PATH,
     STAGED_FIGHTER_PROFILES_PATH,
