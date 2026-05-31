@@ -14,7 +14,7 @@ def get_github_config():
     return owner, repo, token, branch
 
 
-def trigger_workflow(workflow_file):
+def trigger_workflow(workflow_file, inputs=None):
     owner, repo, token, branch = get_github_config()
 
     if not owner or not repo or not token:
@@ -33,7 +33,8 @@ def trigger_workflow(workflow_file):
     }
 
     payload = {
-        "ref": branch,
+    "ref": branch,
+    "inputs": inputs or {},
     }
 
     response = requests.post(

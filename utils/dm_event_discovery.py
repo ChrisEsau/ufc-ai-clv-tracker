@@ -3,10 +3,8 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from pipeline.common.paths import MISSING_EVENTS_PATH
 from utils.github_actions import trigger_workflow
-
-
-MISSING_EVENTS_PATH = "ufc_missing_events.parquet"
 
 
 def safe_read_parquet(path):
@@ -64,7 +62,7 @@ def render_event_discovery():
             [
                 {
                     "Missing Events": missing_count,
-                    "Artifact": MISSING_EVENTS_PATH,
+                    "Artifact": str(MISSING_EVENTS_PATH),
                 }
             ]
         )
@@ -79,6 +77,7 @@ def render_event_discovery():
             c for c in [
                 "ufcstats_event_name",
                 "ufcstats_event_date",
+                "ufcstats_event_id",
                 "ufcstats_event_url",
             ]
             if c in missing_events.columns
@@ -92,9 +91,63 @@ def render_event_discovery():
                 use_container_width=True,
                 hide_index=True,
             )
-        else:
-            st.dataframe(
-                missing_events.head(20),
-                use_container_width=True,
-                hide_index=True,
+
+        st.markdown("#### Ingest Selected Event")
+
+        if "ufcstats_event_id" not in missing_events.columns:
+            st.error(
+                "Missing events artifact does not contain "
+                "`ufcstats_event_id`."
             )
+            return
+
+        event_options = (
+            missing_events[
+                [
+                    "ufcstats_event_name",
+                    "ufcstats_event_date",
+                    "ufcstats_event_id",
+                ]
+            ]
+            .dropna(subset=["ufcstats_event_id"])
+            .copy()
+        )
+
+        event_options["label"] = (
+            event_options["ufcstats_event_date"].astype(str)
+            + " | "
+            + event_options["ufcstats_event_name"].astype(str)
+            + " | "
+            + event_options["ufcstats_event_id"].astype(str)
+        )
+
+        selected_label = st.selectbox(
+            "Select missing event",
+            options=event_options["label"].tolist(),
+            key="event_discovery_selected_event",
+        )
+
+        selected_row = event_options[
+            event_options["label"] == selected_label
+        ].iloc[0]
+
+        selected_event_id = selected_row["ufcstats_event_id"]
+
+        st.code(str(selected_event_id), language="text")
+
+        if st.button(
+            "Ingest Selected Event",
+            use_container_width=True,
+            key="event_discovery_ingest_selected_event",
+        ):
+            ok, msg = trigger_workflow(
+                "dm-ingest-single-event.yml",
+                inputs={
+                    "event_id": str(selected_event_id),
+                },
+            )
+
+            if ok:
+                st.success(msg)
+            else:
+                st.error(msg)

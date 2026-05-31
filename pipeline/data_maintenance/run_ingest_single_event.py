@@ -58,9 +58,19 @@ def run_ingest_single_event(
     print("========== SINGLE EVENT INGEST COMPLETE ==========")
 
 
+import os
+
 if __name__ == "__main__":
+
+    event_id = os.getenv("EVENT_ID")
+
+    if not event_id:
+        raise ValueError(
+            "EVENT_ID environment variable not supplied."
+        )
+
     run_ingest_single_event(
-        event_id="73abb7a5c57fb443",
+        event_id=event_id,
         max_fights=1,
         max_fighters=1,
     )

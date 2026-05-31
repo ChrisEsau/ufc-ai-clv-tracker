@@ -1,0 +1,32 @@
+name: DM - Ingest Single Event
+
+on:
+  workflow_dispatch:
+    inputs:
+      event_id:
+        description: "UFCStats Event ID"
+        required: true
+        type: string
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run Single Event Ingestion
+        env:
+          EVENT_ID: ${{ github.event.inputs.event_id }}
+        run: |
+          python -m pipeline.data_maintenance.run_ingest_single_event
