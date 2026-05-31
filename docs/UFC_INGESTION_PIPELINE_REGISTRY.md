@@ -380,3 +380,13 @@ Precheck
 Append
 ↓
 Master Updated
+
+
+## run_ingest_single_event.py
+
+Purpose:
+Orchestrates single-event ingestion through validation and append precheck.
+
+Command:
+```powershell
+python -m pipeline.data_maintenance.run_ingest_single_event
