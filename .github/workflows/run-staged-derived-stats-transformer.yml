@@ -14,10 +14,6 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Pull latest repo state
-        run: |
-          git pull --rebase origin main
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -29,17 +25,16 @@ jobs:
 
       - name: Run staged derived stats transformer
         run: |
-          python run_staged_derived_stats_transformer.py
+          python -m pipeline.data_maintenance.run_staged_derived_stats_transformer
 
       - name: Commit derived stats outputs
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add ufc_staged_master_rows_enriched.parquet
-          git add ufc_staged_derived_stats_audit.parquet
+          git add data/staging/ufc_staged_master_rows_enriched.parquet
+          git add data/audits/ufc_staged_derived_stats_audit.parquet
 
           git commit -m "Update staged derived stats artifacts" || echo "No changes to commit"
 
-          git pull --rebase origin main
           git push
