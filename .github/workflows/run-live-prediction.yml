@@ -84,6 +84,5 @@ jobs:
           git add *.parquet
           git commit -m "Automated CLV update" || echo "No changes to commit"
 
-          git pull --rebase --autostash origin main
 
           git push

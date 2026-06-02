@@ -14,9 +14,6 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Sync latest repo
-        run: git pull --rebase origin main
-
       - name: Install Google Chrome
         run: |
           sudo apt-get update -qq
@@ -34,7 +31,7 @@ jobs:
 
       - name: Run fight detail scrape
         run: |
-          python run_ufcstats_fight_detail_scrape.py
+          python -m pipeline.data_maintenance.run_ufcstats_fight_detail_scrape
 
       - name: Commit fight detail outputs
         run: |
@@ -42,8 +39,8 @@ jobs:
           git config user.email "github-actions@github.com"
 
           git add \
-            ufc_staged_fight_details.parquet \
-            ufc_fight_detail_scrape_audit.parquet
+            data/staging/ufc_staged_fight_details.parquet \
+            data/audits/ufc_fight_detail_scrape_audit.parquet
 
           git commit -m "Update staged fight detail artifacts" || echo "No changes to commit"
 

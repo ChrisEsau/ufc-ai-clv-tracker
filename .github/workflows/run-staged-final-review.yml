@@ -1,4 +1,4 @@
-name: Run Append Staged To Master
+name: Run Staged Final Review
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ permissions:
   contents: write
 
 jobs:
-  run-append-staged-to-master:
+  run-staged-final-review:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,19 +23,17 @@ jobs:
         run: |
           pip install pandas numpy pyarrow
 
-      - name: Run append staged to master
+      - name: Run staged final review
         run: |
-          python -m pipeline.data_maintenance.run_append_staged_to_master
+          python -m pipeline.data_maintenance.run_staged_final_review
 
-      - name: Commit appended master and audit
+      - name: Commit staged final review output
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add data/master/ufc_master.parquet
-          git add data/audits/ufc_append_audit.parquet
-          git add -f data/backups/ufc_master_backup_before_append_*.parquet
+          git add -f data/audits/ufc_staged_final_review.parquet
 
-          git commit -m "Append staged UFC fights to master dataset" || echo "No changes to commit"
+          git commit -m "Update staged final review artifact" || echo "No changes to commit"
 
           git push
