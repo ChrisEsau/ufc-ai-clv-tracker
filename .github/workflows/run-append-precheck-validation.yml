@@ -14,10 +14,6 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Pull latest repo state
-        run: |
-          git pull --rebase origin main
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -29,18 +25,17 @@ jobs:
 
       - name: Run append precheck validation
         run: |
-          python run_append_precheck_validation.py
+          python -m pipeline.data_maintenance.run_append_precheck_validation
 
       - name: Commit append precheck outputs
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add ufc_append_precheck.parquet
-          git add ufc_append_duplicate_check.parquet
-          git add ufc_append_required_field_audit.parquet
+          git add data/audits/ufc_append_precheck.parquet
+          git add data/audits/ufc_append_duplicate_check.parquet
+          git add data/audits/ufc_append_required_field_audit.parquet
 
           git commit -m "Update append precheck artifacts" || echo "No changes to commit"
 
-          git pull --rebase origin main
           git push
