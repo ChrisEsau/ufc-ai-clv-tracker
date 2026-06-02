@@ -86,108 +86,109 @@ def render_staged_row_preview():
 
 
 def render_final_review():
-    with st.expander("🧾 Final Staged Review", expanded=True):
-        st.caption(
-            "Human-readable semantic review before append. The append button should "
-            "remain disabled until both append precheck and final review pass."
-        )
+    st.markdown("---")
+    st.subheader("🧾 Final Staged Review")
+    st.caption(
+        "Human-readable semantic review before append. The append button remains "
+        "disabled until both append precheck and final review pass."
+    )
 
-        if st.button(
-            "Run Final Staged Review",
-            use_container_width=True,
-            key="run_staged_final_review",
-        ):
-            ok, msg = trigger_workflow("run-staged-final-review.yml")
+    if st.button(
+        "Run Final Staged Review",
+        use_container_width=True,
+        key="run_staged_final_review",
+    ):
+        ok, msg = trigger_workflow("run-staged-final-review.yml")
 
-            if ok:
-                st.success(msg)
-            else:
-                st.error(msg)
-
-        final_review_pass, final_review = get_final_review_status()
-
-        if final_review is None:
-            st.warning(
-                f"No final review artifact found at `{STAGED_FINAL_REVIEW_PATH}`."
-            )
-            render_staged_row_preview()
-            return
-
-        failed = final_review_failed_checks(final_review)
-        blocking_failed = (
-            failed[failed["severity"] == "block"]
-            if "severity" in failed.columns
-            else failed
-        )
-        warning_failed = (
-            failed[failed["severity"] == "warning"]
-            if "severity" in failed.columns
-            else pd.DataFrame()
-        )
-
-        if final_review_pass:
-            st.success("✅ Final review passed. Staged row is semantically ready.")
+        if ok:
+            st.success(msg)
         else:
-            st.error("❌ Final review blocked append. Review failed checks below.")
+            st.error(msg)
 
-        staged_rows = (
-            int(final_review["staged_rows"].iloc[0])
-            if "staged_rows" in final_review.columns
-            else 0
-        )
-        master_rows = (
-            int(final_review["master_rows"].iloc[0])
-            if "master_rows" in final_review.columns
-            else 0
-        )
-        run_timestamp = (
-            final_review["run_timestamp"].iloc[0]
-            if "run_timestamp" in final_review.columns
-            else None
-        )
+    final_review_pass, final_review = get_final_review_status()
 
-        summary = pd.DataFrame(
-            [
-                {
-                    "Final Review Pass": final_review_pass,
-                    "Staged Rows": staged_rows,
-                    "Master Rows": master_rows,
-                    "Blocking Failures": len(blocking_failed),
-                    "Warning Failures": len(warning_failed),
-                    "Run Timestamp": run_timestamp,
-                    "Artifact": str(STAGED_FINAL_REVIEW_PATH),
-                }
-            ]
+    if final_review is None:
+        st.warning(
+            f"No final review artifact found at `{STAGED_FINAL_REVIEW_PATH}`."
         )
-
-        st.dataframe(
-            summary,
-            use_container_width=True,
-            hide_index=True,
-        )
-
         render_staged_row_preview()
+        return
 
-        display_cols = [
-            col for col in [
-                "check_name",
-                "severity",
-                "status",
-                "failure_count",
-                "details",
-            ]
-            if col in final_review.columns
+    failed = final_review_failed_checks(final_review)
+    blocking_failed = (
+        failed[failed["severity"] == "block"]
+        if "severity" in failed.columns
+        else failed
+    )
+    warning_failed = (
+        failed[failed["severity"] == "warning"]
+        if "severity" in failed.columns
+        else pd.DataFrame()
+    )
+
+    if final_review_pass:
+        st.success("✅ Final review passed. Staged row is semantically ready.")
+    else:
+        st.error("❌ Final review blocked append. Review failed checks below.")
+
+    staged_rows = (
+        int(final_review["staged_rows"].iloc[0])
+        if "staged_rows" in final_review.columns
+        else 0
+    )
+    master_rows = (
+        int(final_review["master_rows"].iloc[0])
+        if "master_rows" in final_review.columns
+        else 0
+    )
+    run_timestamp = (
+        final_review["run_timestamp"].iloc[0]
+        if "run_timestamp" in final_review.columns
+        else None
+    )
+
+    summary = pd.DataFrame(
+        [
+            {
+                "Final Review Pass": final_review_pass,
+                "Staged Rows": staged_rows,
+                "Master Rows": master_rows,
+                "Blocking Failures": len(blocking_failed),
+                "Warning Failures": len(warning_failed),
+                "Run Timestamp": run_timestamp,
+                "Artifact": str(STAGED_FINAL_REVIEW_PATH),
+            }
         ]
+    )
 
-        st.markdown("#### Final Review Checks")
+    st.dataframe(
+        summary,
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    render_staged_row_preview()
+
+    display_cols = [
+        col for col in [
+            "check_name",
+            "severity",
+            "status",
+            "failure_count",
+            "details",
+        ]
+        if col in final_review.columns
+    ]
+
+    with st.expander("Final Review Checks", expanded=True):
         st.dataframe(
             final_review[display_cols],
             use_container_width=True,
             hide_index=True,
         )
 
-        if not failed.empty:
-            st.markdown("#### Failed Final Review Checks")
+    if not failed.empty:
+        with st.expander("Failed Final Review Checks", expanded=True):
             st.dataframe(
                 failed[display_cols],
                 use_container_width=True,

@@ -12,6 +12,7 @@ from pipeline.common.paths import (
     FIGHTER_PROFILE_SCRAPE_AUDIT_PATH,
     MASTER_COLUMN_VALIDATION_PATH,
     STAGED_DERIVED_STATS_AUDIT_PATH,
+    STAGED_FINAL_REVIEW_PATH,
     UFCSTATS_EVENT_CHECK_PATH,
 )
 
@@ -48,6 +49,10 @@ AUDIT_ARTIFACTS = [
     (
         "Append Precheck",
         APPEND_PRECHECK_PATH,
+    ),
+    (
+        "Final Staged Review",
+        STAGED_FINAL_REVIEW_PATH,
     ),
     (
         "Append Audit",
