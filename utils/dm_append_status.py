@@ -3,11 +3,8 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from pipeline.common.paths import APPEND_AUDIT_PATH, APPEND_PRECHECK_PATH
 from utils.github_actions import trigger_workflow
-
-
-APPEND_PRECHECK_PATH = "ufc_append_precheck.parquet"
-APPEND_AUDIT_PATH = "ufc_append_audit.parquet"
 
 
 def safe_read_parquet(path):
@@ -60,6 +57,7 @@ def render_append_status():
                 "Staged Rows": staged_rows,
                 "Failed Checks": failed_checks,
                 "Master Rows": master_rows,
+                "Precheck Artifact": str(APPEND_PRECHECK_PATH),
             }
         ]
     )
@@ -93,7 +91,7 @@ def render_append_status():
     with st.expander("Latest Append Audit", expanded=False):
 
         if append_audit is None:
-            st.info("No append audit artifact found yet.")
+            st.info(f"No append audit artifact found at `{APPEND_AUDIT_PATH}`.")
         else:
             st.dataframe(
                 append_audit,

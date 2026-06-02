@@ -14,9 +14,6 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Sync latest repo
-        run: git pull --rebase origin main
-
       - name: Install Google Chrome
         run: |
           sudo apt-get update -qq
@@ -33,7 +30,7 @@ jobs:
           pip install pandas numpy pyarrow requests beautifulsoup4 selenium webdriver-manager
 
       - name: Run UFCStats event check
-        run: python run_ufcstats_event_check.py
+        run: python -m pipeline.data_maintenance.run_ufcstats_event_check
 
       - name: Commit event check outputs
         run: |
@@ -41,8 +38,8 @@ jobs:
           git config user.email "github-actions@github.com"
 
           git add \
-            ufc_ufcstats_event_check.parquet \
-            ufc_missing_events.parquet
+            data/status/ufc_ufcstats_event_check.parquet \
+            data/staging/ufc_missing_events.parquet
 
           git commit -m "Update UFCStats event check artifacts" || echo "No changes to commit"
 
