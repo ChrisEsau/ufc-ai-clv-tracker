@@ -40,6 +40,10 @@ WORKFLOWS = [
         "label": "Run Append Precheck",
         "workflow": "run-append-precheck-validation.yml",
     },
+    {
+        "label": "Run Final Staged Review",
+        "workflow": "run-staged-final-review.yml",
+    },
 ]
 
 
