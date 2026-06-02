@@ -14,10 +14,6 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Pull latest repo state
-        run: |
-          git pull --rebase origin main
-
       - name: Install Google Chrome
         run: |
           sudo apt-get update -qq
