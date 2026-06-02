@@ -1,3 +1,4 @@
+from argparse import ArgumentParser
 from datetime import datetime, timezone
 
 import pandas as pd
@@ -19,6 +20,105 @@ PROFILE_OUTPUT = STAGED_FIGHTER_PROFILES_PATH
 PROFILED_MASTER_OUTPUT = STAGED_MASTER_ROWS_PROFILED_PATH
 AUDIT_OUTPUT = FIGHTER_PROFILE_SCRAPE_AUDIT_PATH
 
+MISSING_STRINGS = {"", "nan", "None", "NaN", "NaT", "<NA>"}
+
+
+def clean_string(value):
+    if pd.isna(value):
+        return None
+
+    value = str(value).strip()
+
+    if value in MISSING_STRINGS:
+        return None
+
+    return value
+
+
+def normalize_name(value):
+    value = clean_string(value)
+
+    if value is None:
+        return None
+
+    return " ".join(value.lower().split())
+
+
+def fighter_id_from_url(value):
+    value = clean_string(value)
+
+    if value is None:
+        return None
+
+    return value.rstrip("/").split("/")[-1]
+
+
+def is_missing(value):
+    return clean_string(value) is None
+
+
+def build_fighter_queue(staged_fights):
+    fighter_rows = []
+
+    for _, row in staged_fights.iterrows():
+        for side, name_col, url_col in [
+            ("r", "red_fighter", "red_fighter_url"),
+            ("b", "blue_fighter", "blue_fighter_url"),
+        ]:
+            fighter_url = clean_string(row.get(url_col))
+
+            if fighter_url is None:
+                continue
+
+            fighter_rows.append(
+                {
+                    "fighter_role": side,
+                    "fighter_name": clean_string(row.get(name_col)),
+                    "fighter_name_key": normalize_name(row.get(name_col)),
+                    "fighter_url": fighter_url,
+                    "fighter_id": fighter_id_from_url(fighter_url),
+                }
+            )
+
+    if not fighter_rows:
+        return pd.DataFrame(
+            columns=[
+                "fighter_role",
+                "fighter_name",
+                "fighter_name_key",
+                "fighter_url",
+                "fighter_id",
+            ]
+        )
+
+    return (
+        pd.DataFrame(fighter_rows)
+        .dropna(subset=["fighter_url", "fighter_id"])
+        .drop_duplicates(subset=["fighter_id"])
+        .reset_index(drop=True)
+    )
+
+
+
+def build_profile_maps(profiles):
+    if profiles.empty:
+        return {}, {}
+
+    by_id = {}
+    by_name = {}
+
+    for _, row in profiles.iterrows():
+        fighter_id = clean_string(row.get("fighter_id"))
+        fighter_name_key = normalize_name(row.get("fighter_name"))
+
+        if fighter_id is not None and fighter_id not in by_id:
+            by_id[fighter_id] = row
+
+        if fighter_name_key is not None and fighter_name_key not in by_name:
+            by_name[fighter_name_key] = row
+
+    return by_id, by_name
+
 
 def run_fighter_profile_enrichment(max_fighters=None):
     run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
@@ -27,39 +127,7 @@ def run_fighter_profile_enrichment(max_fighters=None):
     staged_fights = pd.read_parquet(STAGED_FIGHTS_PATH)
     staged_master = pd.read_parquet(STAGED_MASTER_PATH)
 
-    fighter_rows = []
-
-    for _, row in staged_fights.iterrows():
-        fighter_rows.append(
-            {
-                "fighter_role": "r",
-                "fighter_name": row.get("red_fighter"),
-                "fighter_url": row.get("red_fighter_url"),
-            }
-        )
-
-        fighter_rows.append(
-            {
-                "fighter_role": "b",
-                "fighter_name": row.get("blue_fighter"),
-                "fighter_url": row.get("blue_fighter_url"),
-            }
-        )
-
-    fighters = pd.DataFrame(fighter_rows)
-
-    fighters = (
-        fighters.dropna(subset=["fighter_url"])
-        .drop_duplicates(subset=["fighter_url"])
-        .reset_index(drop=True)
-    )
-
-    fighters["fighter_id"] = (
-        fighters["fighter_url"]
-        .astype(str)
-        .str.split("/")
-        .str[-1]
-    )
+    fighters = build_fighter_queue(staged_fights)
 
     if max_fighters is not None:
         fighters = fighters.head(max_fighters)
@@ -69,16 +137,20 @@ def run_fighter_profile_enrichment(max_fighters=None):
     print()
     print("========== FIGHTERS TO SCRAPE ==========")
 
-    print(
-        fighters[
-            [
-                "fighter_name",
-                "fighter_id",
+    if fighters.empty:
+        print("None")
+    else:
+        print(
+            fighters[
+                [
+                    "fighter_name",
+                    "fighter_id",
+                    "fighter_role",
+                ]
             ]
-        ]
-        .head(10)
-        .to_string(index=False)
-    )
+            .head(20)
+            .to_string(index=False)
+        )
 
     profile_dfs = []
     audit_rows = []
@@ -106,6 +178,7 @@ def run_fighter_profile_enrichment(max_fighters=None):
                     "run_id": run_id,
                     "run_timestamp": run_timestamp,
                     "fighter_id": fighter_id,
+                    "fighter_name": row.get("fighter_name"),
                     "fighter_url": fighter_url,
                     "status": "success",
                     "error": None,
@@ -120,6 +193,7 @@ def run_fighter_profile_enrichment(max_fighters=None):
                     "run_id": run_id,
                     "run_timestamp": run_timestamp,
                     "fighter_id": fighter_id,
+                    "fighter_name": row.get("fighter_name"),
                     "fighter_url": fighter_url,
                     "status": "failed",
                     "error": str(e),
@@ -156,9 +230,11 @@ def run_fighter_profile_enrichment(max_fighters=None):
 
         print(
             profiles[sample_cols]
-            .head(5)
+            .head(10)
             .to_string(index=False)
         )
+    else:
+        print("None")
 
     profiles.to_parquet(PROFILE_OUTPUT, index=False)
 
@@ -185,55 +261,52 @@ def run_fighter_profile_enrichment(max_fighters=None):
         "sub_avg",
     ]
 
-    for side, name_col in [("r", "r_name"), ("b", "b_name")]:
+    profiles_by_id, profiles_by_name = build_profile_maps(profiles)
 
+    for side, name_col in [("r", "r_name"), ("b", "b_name")]:
         id_col = f"{side}_id"
 
-        if id_col in staged_master.columns:
+        if id_col in staged_master.columns and name_col in staged_master.columns:
 
-            def lookup_id(name):
-                if profiles.empty:
+            def lookup_id(row):
+                existing_id = clean_string(row.get(id_col))
+
+                if existing_id is not None:
+                    return existing_id
+
+                name_key = normalize_name(row.get(name_col))
+                match = profiles_by_name.get(name_key)
+
+                if match is None:
                     return None
 
-                matches = profiles[
-                    profiles["fighter_name"] == name
-                ]
+                return match.get("fighter_id")
 
-                if matches.empty:
-                    return None
-
-                return matches.iloc[0].get("fighter_id")
-
-            staged_master[id_col] = (
-                staged_master[name_col]
-                .apply(lookup_id)
-            )
+            staged_master[id_col] = staged_master.apply(lookup_id, axis=1)
 
         for profile_col in profile_cols:
-
             target_col = f"{side}_{profile_col}"
 
-            def lookup_profile(fid):
-                if profiles.empty or pd.isna(fid):
-                    return None
-
-                matches = profiles[
-                    profiles["fighter_id"] == fid
-                ]
-
-                if matches.empty:
-                    return None
-
-                return matches.iloc[0].get(profile_col)
-
             if (
-                target_col in staged_master.columns
-                and id_col in staged_master.columns
+                target_col not in staged_master.columns
+                or id_col not in staged_master.columns
             ):
-                staged_master[target_col] = (
-                    staged_master[id_col]
-                    .apply(lookup_profile)
-                )
+                continue
+
+            def lookup_profile(fid):
+                fighter_id = clean_string(fid)
+
+                if fighter_id is None:
+                    return None
+
+                match = profiles_by_id.get(fighter_id)
+
+                if match is None:
+                    return None
+
+                return match.get(profile_col)
+
+            staged_master[target_col] = staged_master[id_col].apply(lookup_profile)
 
     if (
         "winner" in staged_master.columns
@@ -241,17 +314,20 @@ def run_fighter_profile_enrichment(max_fighters=None):
     ):
 
         def get_winner_id(row):
-            if row.get("winner") == row.get("r_name"):
+            winner = normalize_name(row.get("winner"))
+
+            if winner is None:
+                return None
+
+            if winner == normalize_name(row.get("r_name")):
                 return row.get("r_id")
 
-            if row.get("winner") == row.get("b_name"):
+            if winner == normalize_name(row.get("b_name")):
                 return row.get("b_id")
 
             return None
 
-        staged_master["winner_id"] = (
-            staged_master.apply(get_winner_id, axis=1)
-        )
+        staged_master["winner_id"] = staged_master.apply(get_winner_id, axis=1)
 
     print()
     print("========== PROFILE LOOKUP DEBUG ==========")
@@ -267,20 +343,29 @@ def run_fighter_profile_enrichment(max_fighters=None):
                     "stance",
                 ]
             ]
-            .head()
+            .head(10)
             .to_string(index=False)
         )
+    else:
+        print("None")
 
     print()
     print("========== MASTER DEBUG ==========")
 
-    print(
-        staged_master[
-            [
-                "r_name",
-                "r_id",
-            ]
+    debug_cols = [
+        c for c in [
+            "r_name",
+            "r_id",
+            "b_name",
+            "b_id",
+            "winner",
+            "winner_id",
         ]
+        if c in staged_master.columns
+    ]
+
+    print(
+        staged_master[debug_cols]
         .head()
         .to_string(index=False)
     )
@@ -302,5 +387,20 @@ def run_fighter_profile_enrichment(max_fighters=None):
     return profiles, staged_master, audit
 
 
+def parse_args():
+    parser = ArgumentParser(
+        description="Scrape UFCStats fighter profiles for staged red and blue fighters."
+    )
+    parser.add_argument(
+        "--max-fighters",
+        type=int,
+        default=None,
+        help="Optional scrape limit for local smoke testing; defaults to all fighters.",
+    )
+
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    run_fighter_profile_enrichment(max_fighters=1)
+    args = parse_args()
+    run_fighter_profile_enrichment(max_fighters=args.max_fighters)
