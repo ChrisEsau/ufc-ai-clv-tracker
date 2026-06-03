@@ -9,7 +9,6 @@ __pycache__/
 Thumbs.db
 
 # Generated binary artifacts
-*.parquet
 *.pkl
 *.pickle
 *.png
