@@ -72,15 +72,20 @@ Never append directly to master.
 Required sequence:
 
 Event Discovery
-→ Ingestion
+→ Single Event Ingestion
 → Validation
 → Append Precheck
+→ Final Staged Review
+→ Human Confirmation
 → Append
+
+Single Event Ingestion must never append to master.
 
 Append must be blocked unless:
 
 ```text
 append_ready == True
+final_review_pass == True
 ```
 
 ---

@@ -53,7 +53,18 @@ Validation
     ↓
 Append Precheck
     ↓
+Final Staged Review
+    ↓
+Human Confirmation
+    ↓
 Append
+```
+
+Append requires both:
+
+```text
+append_ready == True
+final_review_pass == True
 ```
 
 ---
@@ -70,18 +81,16 @@ Dashboard does not contain business logic.
 
 ### Data Maintenance Layout
 
-Preferred section order:
+Current top-level section order:
 
 ```text
 Dataset Health
-Workflow Status
 Event Discovery
-Fight Scrape
-Enrichment
-Validation Gate
+Final Staged Review
 Audit History
-Append Status
 ```
+
+Fight scrape, enrichment, validation, final review, append readiness, and append controls are consolidated into the Final Staged Review workspace.
 
 ---
 

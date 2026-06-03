@@ -49,19 +49,21 @@ pipeline.data_maintenance.run_master_column_validation
 
 ---
 
-### 2. Append is blocked unless schema validation passes
+### 2. Append is blocked unless schema validation and final review pass
 
 No staged rows may be appended to master unless:
 
 ```text
 validation_pass == True
 append_ready == True
+final_review_pass == True
 ```
 
 Validated by:
 
 ```text
 pipeline.data_maintenance.run_append_precheck_validation
+pipeline.data_maintenance.run_staged_final_review
 ```
 
 ---
@@ -343,6 +345,12 @@ Duplicate check audit:
 
 ```text
 data/audits/ufc_append_duplicate_check.parquet
+```
+
+Final staged review output:
+
+```text
+data/audits/ufc_staged_final_review.parquet
 ```
 
 ---
