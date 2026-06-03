@@ -135,6 +135,17 @@ def render_event_discovery():
 
         st.code(str(selected_event_id), language="text")
 
+        ingest_mode = st.radio(
+            "Ingestion mode",
+            options=["full", "smoke"],
+            format_func=lambda value: {
+                "full": "Full event — scrape all fights and fighters",
+                "smoke": "Smoke test — scrape one fight and two fighters",
+            }[value],
+            horizontal=True,
+            key="event_discovery_ingest_mode",
+        )
+
         if st.button(
             "Ingest Selected Event",
             use_container_width=True,
@@ -144,6 +155,7 @@ def render_event_discovery():
                 "dm-ingest-single-event.yml",
                 inputs={
                     "event_id": str(selected_event_id),
+                    "mode": ingest_mode,
                 },
             )
 
