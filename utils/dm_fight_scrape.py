@@ -3,6 +3,12 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from pipeline.common.paths import (
+    FIGHT_DETAIL_SCRAPE_AUDIT_PATH,
+    FIGHT_SCRAPE_AUDIT_PATH,
+    STAGED_FIGHT_DETAILS_PATH,
+    STAGED_FIGHT_ROWS_PATH,
+)
 from utils.github_actions import trigger_workflow
 
 
@@ -22,11 +28,11 @@ def render_artifact_summary(label, path):
     df = safe_read_parquet(path)
 
     if df is None:
-        st.warning(f"{label}: artifact not found")
+        st.warning(f"{label}: artifact not found at `{path}`")
         return
 
     st.success(f"{label}: found")
-    st.caption(f"Rows: {len(df)} | Columns: {len(df.columns)}")
+    st.caption(f"Path: {path} | Rows: {len(df)} | Columns: {len(df.columns)}")
 
     with st.expander(f"View {label}", expanded=False):
         st.dataframe(
@@ -79,20 +85,20 @@ def render_fight_scrape():
 
         render_artifact_summary(
             "Staged Fight Rows",
-            "ufc_staged_fight_rows.parquet",
+            STAGED_FIGHT_ROWS_PATH,
         )
 
         render_artifact_summary(
             "Fight Scrape Audit",
-            "ufc_fight_scrape_audit.parquet",
+            FIGHT_SCRAPE_AUDIT_PATH,
         )
 
         render_artifact_summary(
             "Staged Fight Details",
-            "ufc_staged_fight_details.parquet",
+            STAGED_FIGHT_DETAILS_PATH,
         )
 
         render_artifact_summary(
             "Fight Detail Scrape Audit",
-            "ufc_fight_detail_scrape_audit.parquet",
+            FIGHT_DETAIL_SCRAPE_AUDIT_PATH,
         )

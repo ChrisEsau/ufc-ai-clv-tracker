@@ -13,14 +13,13 @@ AUDIT_PATH = STAGED_DERIVED_STATS_AUDIT_PATH
 
 
 def safe_pct(num, den):
+    numerator = pd.to_numeric(num, errors="coerce").fillna(0)
+    denominator = pd.to_numeric(den, errors="coerce").fillna(0)
+
     return np.where(
-        pd.to_numeric(den, errors="coerce") > 0,
-        (
-            pd.to_numeric(num, errors="coerce")
-            / pd.to_numeric(den, errors="coerce")
-            * 100
-        ).round(0),
-        np.nan,
+        denominator > 0,
+        (numerator / denominator * 100).round(0),
+        0,
     )
 
 
