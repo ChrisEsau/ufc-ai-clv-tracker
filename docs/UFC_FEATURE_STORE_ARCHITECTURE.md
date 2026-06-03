@@ -5,7 +5,7 @@
 Artifact:
 
 ```text
-ufc_rolling_features_EWM.parquet
+data/features/UFC_enhanced_rolling_features_EWM.parquet
 ```
 
 Purpose:
@@ -25,7 +25,7 @@ Used for:
 Artifact:
 
 ```text
-ufc_current_fighter_features.parquet
+data/features/ufc_current_fighter_features.parquet
 ```
 
 Purpose:

@@ -32,7 +32,7 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add ufc_current_fighter_features.parquet
+          git add -f data/features/ufc_current_fighter_features.parquet
 
           git commit -m "Update current fighter feature store" || echo "No changes to commit"
 

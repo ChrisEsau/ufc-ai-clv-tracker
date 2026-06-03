@@ -1,27 +1,39 @@
-from pathlib import Path
 import json
 import pickle
+from pathlib import Path
 
 import pandas as pd
 
+from pipeline.common.paths import (
+    LIVE_FEATURE_AUDIT_PATH,
+    LIVE_MATCH_AUDIT_PATH,
+    MODEL_BEST_THRESHOLD_PATH,
+    MODEL_CALIBRATED_PATH,
+    MODEL_FEATURE_COLUMNS_PATH,
+    MODEL_PREDICTIONS_PATH,
+    MODEL_PRODUCTION_CONFIG_JSON_PATH,
+    MODEL_PRODUCTION_CONFIG_PKL_PATH,
+    MODEL_QUALITY_SUMMARY_PATH,
+    MODEL_RAW_PATH,
+    MODEL_SHAP_IMPORTANCE_PATH,
+)
 
-MODEL_DIR = Path("UFC_Model_v5_Experiment")
 
 MODEL_ARTIFACTS = {
-    "Production Config JSON": MODEL_DIR / "production_config.json",
-    "Production Config Pickle": MODEL_DIR / "production_config.pkl",
-    "Feature Columns": MODEL_DIR / "feature_columns.pkl",
-    "Best Threshold": MODEL_DIR / "best_threshold.pkl",
-    "Calibrated Model": MODEL_DIR / "calibrated_model.pkl",
-    "Raw Model": MODEL_DIR / "raw_model.pkl",
-    "Model Quality Summary": MODEL_DIR / "model_quality_summary.csv",
-    "SHAP Importance": MODEL_DIR / "shap_importance.csv",
+    "Production Config JSON": MODEL_PRODUCTION_CONFIG_JSON_PATH,
+    "Production Config Pickle": MODEL_PRODUCTION_CONFIG_PKL_PATH,
+    "Feature Columns": MODEL_FEATURE_COLUMNS_PATH,
+    "Best Threshold": MODEL_BEST_THRESHOLD_PATH,
+    "Calibrated Model": MODEL_CALIBRATED_PATH,
+    "Raw Model": MODEL_RAW_PATH,
+    "Model Quality Summary": MODEL_QUALITY_SUMMARY_PATH,
+    "SHAP Importance": MODEL_SHAP_IMPORTANCE_PATH,
 }
 
 LIVE_AUDIT_ARTIFACTS = {
-    "Model Predictions": Path("ufc_model_predictions.parquet"),
-    "Live Feature Audit": Path("ufc_live_feature_audit.parquet"),
-    "Live Match Audit": Path("ufc_live_match_audit.parquet"),
+    "Model Predictions": MODEL_PREDICTIONS_PATH,
+    "Live Feature Audit": LIVE_FEATURE_AUDIT_PATH,
+    "Live Match Audit": LIVE_MATCH_AUDIT_PATH,
 }
 
 
@@ -44,6 +56,7 @@ def artifact_status_rows(artifacts):
     rows = []
 
     for artifact_name, path in artifacts.items():
+        path = Path(path)
         exists = path.exists()
         size_bytes = path.stat().st_size if exists else None
 
@@ -108,11 +121,11 @@ def load_parquet(path):
 
 
 def load_production_config():
-    return load_json(MODEL_ARTIFACTS["Production Config JSON"])
+    return load_json(MODEL_PRODUCTION_CONFIG_JSON_PATH)
 
 
 def load_feature_columns():
-    feature_columns, error = load_pickle(MODEL_ARTIFACTS["Feature Columns"])
+    feature_columns, error = load_pickle(MODEL_FEATURE_COLUMNS_PATH)
 
     if error:
         return [], error
@@ -121,7 +134,7 @@ def load_feature_columns():
 
 
 def load_best_threshold():
-    threshold, error = load_pickle(MODEL_ARTIFACTS["Best Threshold"])
+    threshold, error = load_pickle(MODEL_BEST_THRESHOLD_PATH)
 
     if error:
         return None, error
@@ -130,11 +143,11 @@ def load_best_threshold():
 
 
 def load_model_quality_summary():
-    return load_csv(MODEL_ARTIFACTS["Model Quality Summary"])
+    return load_csv(MODEL_QUALITY_SUMMARY_PATH)
 
 
 def load_shap_importance():
-    df, error = load_csv(MODEL_ARTIFACTS["SHAP Importance"])
+    df, error = load_csv(MODEL_SHAP_IMPORTANCE_PATH)
 
     if error or df.empty:
         return df, error
@@ -146,15 +159,15 @@ def load_shap_importance():
 
 
 def load_model_predictions():
-    return load_parquet(LIVE_AUDIT_ARTIFACTS["Model Predictions"])
+    return load_parquet(MODEL_PREDICTIONS_PATH)
 
 
 def load_live_feature_audit():
-    return load_parquet(LIVE_AUDIT_ARTIFACTS["Live Feature Audit"])
+    return load_parquet(LIVE_FEATURE_AUDIT_PATH)
 
 
 def load_live_match_audit():
-    return load_parquet(LIVE_AUDIT_ARTIFACTS["Live Match Audit"])
+    return load_parquet(LIVE_MATCH_AUDIT_PATH)
 
 
 def quality_metric_value(quality_df, metric_name):

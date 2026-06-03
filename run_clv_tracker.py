@@ -11,6 +11,7 @@ BASE_PATH = "."
 if PROJECT_ROOT not in sys.path:
     sys.path.append(PROJECT_ROOT)
 
+from pipeline.common.paths import LIVE_ACTION_BOARD_PATH, LIVE_CARD_PATH
 from pipeline_config import *
 from ufc_pipeline_utils import *
 from ufc_odds_utils import *
@@ -19,8 +20,7 @@ from ufc_clv_utils import *
 
 BASE_PATH = PROJECT_ROOT
 
-ACTION_BOARD_PATH = f"{BASE_PATH}/ufc_live_action_board.csv"
-LIVE_CARD_PATH = f"{BASE_PATH}/ufc_live_card.parquet"
+ACTION_BOARD_PATH = LIVE_ACTION_BOARD_PATH
 
 OFFICIAL_BETS_LOG_PATH = f"{BASE_PATH}/ufc_official_bets_log.csv"
 MARKET_SNAPSHOT_PATH = f"{BASE_PATH}/ufc_market_snapshots.parquet"

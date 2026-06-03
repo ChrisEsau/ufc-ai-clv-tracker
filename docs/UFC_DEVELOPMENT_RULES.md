@@ -115,13 +115,13 @@ GitHub Actions acts as execution layer.
 Historical Feature Store:
 
 ```text
-ufc_rolling_features_EWM.parquet
+data/features/UFC_enhanced_rolling_features_EWM.parquet
 ```
 
 Live Feature Store:
 
 ```text
-ufc_current_fighter_features.parquet
+data/features/ufc_current_fighter_features.parquet
 ```
 
 Do not mix responsibilities between stores.

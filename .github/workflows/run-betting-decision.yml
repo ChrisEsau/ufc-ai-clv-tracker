@@ -34,10 +34,10 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add \
-            ufc_betting_board.parquet \
-            ufc_live_watchlist.parquet \
-            ufc_official_bets.parquet
+          git add -f \
+            data/predictions/ufc_betting_board.parquet \
+            data/predictions/ufc_live_watchlist.parquet \
+            data/predictions/ufc_official_bets.parquet
 
           git commit -m "Update betting decision outputs" || echo "No changes to commit"
 

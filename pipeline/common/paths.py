@@ -13,12 +13,16 @@ ROOT_DIR = Path(".")
 # ============================================================
 
 DATA_DIR = ROOT_DIR / "data"
+MODELS_DIR = ROOT_DIR / "models"
 
 MASTER_DIR = DATA_DIR / "master"
 STAGING_DIR = DATA_DIR / "staging"
 AUDITS_DIR = DATA_DIR / "audits"
 STATUS_DIR = DATA_DIR / "status"
 BACKUPS_DIR = DATA_DIR / "backups"
+FEATURES_DIR = DATA_DIR / "features"
+PREDICTIONS_DIR = DATA_DIR / "predictions"
+MODEL_LAB_DIR = DATA_DIR / "model_lab"
 DOCS_DIR = ROOT_DIR / "docs"
 
 
@@ -61,6 +65,37 @@ STAGED_MASTER_MAPPING_AUDIT_PATH = AUDITS_DIR / "ufc_staged_master_mapping_audit
 STAGED_DERIVED_STATS_AUDIT_PATH = AUDITS_DIR / "ufc_staged_derived_stats_audit.parquet"
 STAGED_FINAL_REVIEW_PATH = AUDITS_DIR / "ufc_staged_final_review.parquet"
 
+
+# ============================================================
+# MODEL / FEATURE / PREDICTION ARTIFACTS
+# ============================================================
+
+MODEL_VERSION = "UFC_Model_v5_Experiment"
+MODEL_DIR = MODELS_DIR / MODEL_VERSION
+
+MODEL_PRODUCTION_CONFIG_JSON_PATH = MODEL_DIR / "production_config.json"
+MODEL_PRODUCTION_CONFIG_PKL_PATH = MODEL_DIR / "production_config.pkl"
+MODEL_FEATURE_COLUMNS_PATH = MODEL_DIR / "feature_columns.pkl"
+MODEL_BEST_THRESHOLD_PATH = MODEL_DIR / "best_threshold.pkl"
+MODEL_CALIBRATED_PATH = MODEL_DIR / "calibrated_model.pkl"
+MODEL_RAW_PATH = MODEL_DIR / "raw_model.pkl"
+MODEL_QUALITY_SUMMARY_PATH = MODEL_DIR / "model_quality_summary.csv"
+MODEL_SHAP_IMPORTANCE_PATH = MODEL_DIR / "shap_importance.csv"
+
+ROLLING_FEATURES_PATH = FEATURES_DIR / "UFC_enhanced_rolling_features_EWM.parquet"
+CURRENT_FIGHTER_FEATURES_PATH = FEATURES_DIR / "ufc_current_fighter_features.parquet"
+
+LIVE_CARD_PATH = PREDICTIONS_DIR / "ufc_live_card.parquet"
+MODEL_PREDICTIONS_PATH = PREDICTIONS_DIR / "ufc_model_predictions.parquet"
+LIVE_ACTION_BOARD_PATH = PREDICTIONS_DIR / "ufc_live_action_board.parquet"
+LIVE_WATCHLIST_PATH = PREDICTIONS_DIR / "ufc_live_watchlist.parquet"
+BETTING_BOARD_PATH = PREDICTIONS_DIR / "ufc_betting_board.parquet"
+OFFICIAL_BETS_PATH = PREDICTIONS_DIR / "ufc_official_bets.parquet"
+
+LIVE_FEATURE_AUDIT_PATH = AUDITS_DIR / "ufc_live_feature_audit.parquet"
+LIVE_MATCH_AUDIT_PATH = AUDITS_DIR / "ufc_live_match_audit.parquet"
+LIVE_ODDS_AUDIT_PATH = AUDITS_DIR / "ufc_live_odds_audit.parquet"
+
 # ============================================================
 # STATUS
 # ============================================================
@@ -99,6 +134,11 @@ def ensure_data_dirs():
         AUDITS_DIR,
         STATUS_DIR,
         BACKUPS_DIR,
+        FEATURES_DIR,
+        PREDICTIONS_DIR,
+        MODEL_LAB_DIR,
+        MODELS_DIR,
+        MODEL_DIR,
         DOCS_DIR,
     ]:
         path.mkdir(parents=True, exist_ok=True)
