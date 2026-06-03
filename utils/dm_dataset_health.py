@@ -5,6 +5,11 @@ import streamlit as st
 
 from pipeline.common.paths import DATASET_STATUS_PATH
 from utils.github_actions import trigger_workflow
+from utils.dm_workflow_status import (
+    remember_launched_workflow,
+    render_workflow_status,
+)
+
 
 
 def safe_read_parquet(path):
@@ -38,9 +43,16 @@ def render_dataset_health():
             )
 
             if ok:
+                remember_launched_workflow(
+                    "dataset_status",
+                    "Run Dataset Status",
+                    "run-dataset-status.yml",
+                )
                 st.success(msg)
             else:
                 st.error(msg)
+
+        render_workflow_status("dataset_status")
 
         if status is None:
             st.warning(

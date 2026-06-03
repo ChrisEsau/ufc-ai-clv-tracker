@@ -5,6 +5,10 @@ import streamlit as st
 
 from pipeline.common.paths import MISSING_EVENTS_PATH
 from utils.github_actions import trigger_workflow
+from utils.dm_workflow_status import (
+    remember_launched_workflow,
+    render_workflow_status,
+)
 
 
 def safe_read_parquet(path):
@@ -41,9 +45,16 @@ def render_event_discovery():
             )
 
             if ok:
+                remember_launched_workflow(
+                    "event_check",
+                    "Run Event Check",
+                    "run-ufcstats-event-check.yml",
+                )
                 st.success(msg)
             else:
                 st.error(msg)
+
+        render_workflow_status("event_check")
 
         missing_events = safe_read_parquet(
             MISSING_EVENTS_PATH
@@ -160,6 +171,17 @@ def render_event_discovery():
             )
 
             if ok:
+                remember_launched_workflow(
+                    "single_event_ingest",
+                    "DM - Ingest Single Event",
+                    "dm-ingest-single-event.yml",
+                    inputs={
+                        "event_id": str(selected_event_id),
+                        "mode": ingest_mode,
+                    },
+                )
                 st.success(msg)
             else:
                 st.error(msg)
+
+        render_workflow_status("single_event_ingest")

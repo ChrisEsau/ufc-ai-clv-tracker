@@ -21,6 +21,10 @@ from pipeline.common.paths import (
     STAGED_MASTER_ROWS_PROFILED_PATH,
 )
 from utils.github_actions import trigger_workflow
+from utils.dm_workflow_status import (
+    remember_launched_workflow,
+    render_workflow_status,
+)
 
 
 REVIEW_SUMMARY_COLUMNS = [
@@ -373,9 +377,16 @@ def render_append_decision(append_ready, final_review_pass):
         ok, msg = trigger_workflow("run-append-staged-to-master.yml")
 
         if ok:
+            remember_launched_workflow(
+                "append_to_master",
+                "Append Staged Rows To Master",
+                "run-append-staged-to-master.yml",
+            )
             st.success(msg)
         else:
             st.error(msg)
+
+    render_workflow_status("append_to_master")
 
     append_audit = safe_read_parquet(APPEND_AUDIT_PATH)
 
@@ -419,9 +430,16 @@ def render_final_review():
             ok, msg = trigger_workflow("run-append-precheck-validation.yml")
 
             if ok:
+                remember_launched_workflow(
+                    "append_precheck_final_review",
+                    "Append Precheck + Final Review",
+                    "run-append-precheck-validation.yml",
+                )
                 st.success(msg)
             else:
                 st.error(msg)
+
+        render_workflow_status("append_precheck_final_review")
 
         staged = safe_read_parquet(STAGED_MASTER_ROWS_PROFILED_PATH)
         append_ready, precheck = get_append_precheck_status()
