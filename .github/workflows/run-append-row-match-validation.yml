@@ -14,10 +14,6 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Pull latest repo state
-        run: |
-          git pull --rebase origin main
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:

@@ -1,6 +1,8 @@
 # UFC Data Flow
 
-## Ingestion Flow
+## Data Maintenance / Ingestion Flow
+
+Current non-append staging flow:
 
 ```text
 UFCStats
@@ -8,6 +10,8 @@ UFCStats
 Event Check
     ↓
 Missing Events
+    ↓
+Single Event Ingestion
     ↓
 Fight Scrape
     ↓
@@ -19,14 +23,58 @@ Derived Stats
     ↓
 Profile Enrichment
     ↓
-Validation
+Master Column Validation
     ↓
 Append Precheck
     ↓
-Append
+Final Staged Review
+    ↓
+Dashboard Human Review
+```
+
+Append flow:
+
+```text
+Append Precheck PASS
+    ↓
+Final Staged Review PASS
+    ↓
+Human confirmation in dashboard
+    ↓
+Append Workflow
+    ↓
+Master Backup
     ↓
 ufc_master.parquet
+    ↓
+Append Audit
 ```
+
+Important rule:
+
+```text
+Single Event Ingestion never appends to master.
+```
+
+---
+
+## Dashboard Workflow Flow
+
+```text
+Streamlit Button
+    ↓
+GitHub workflow_dispatch
+    ↓
+GitHub Actions run
+    ↓
+Pipeline module
+    ↓
+Committed canonical artifacts
+    ↓
+Dashboard status/review panels
+```
+
+The dashboard can poll GitHub Actions runs for workflow status using configured GitHub secrets.
 
 ---
 

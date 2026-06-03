@@ -14,10 +14,6 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Pull latest repo state
-        run: |
-          git pull --rebase origin main
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -29,14 +25,14 @@ jobs:
 
       - name: Run master column validation
         run: |
-          python run_master_column_validation.py
+          python -m pipeline.data_maintenance.run_master_column_validation
 
       - name: Commit validation output
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add ufc_master_column_validation.parquet
+          git add data/audits/ufc_master_column_validation.parquet
 
           git commit -m "Update master column validation artifact" || echo "No changes to commit"
 

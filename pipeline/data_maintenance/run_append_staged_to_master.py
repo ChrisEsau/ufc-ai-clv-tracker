@@ -7,12 +7,14 @@ from pipeline.common.paths import (
     MASTER_PATH,
     STAGED_MASTER_ROWS_PROFILED_PATH,
     APPEND_PRECHECK_PATH,
+    STAGED_FINAL_REVIEW_PATH,
     APPEND_AUDIT_PATH,
     master_backup_path,
 )
 
 STAGED_PATH = STAGED_MASTER_ROWS_PROFILED_PATH
 PRECHECK_PATH = APPEND_PRECHECK_PATH
+FINAL_REVIEW_PATH = STAGED_FINAL_REVIEW_PATH
 APPEND_AUDIT_OUTPUT = APPEND_AUDIT_PATH
 
 
@@ -27,6 +29,23 @@ def run_append_staged_to_master():
     if not append_ready:
         print("Append precheck failed. Refusing to append.")
         print(precheck[["check_name", "status", "failure_count", "details"]])
+        return None, False
+
+    if not FINAL_REVIEW_PATH.exists():
+        print("Staged final review artifact is missing. Refusing to append.")
+        print("Run python -m pipeline.data_maintenance.run_staged_final_review first.")
+        return None, False
+
+    final_review = pd.read_parquet(FINAL_REVIEW_PATH)
+    final_review_pass = bool(final_review["final_review_pass"].iloc[0])
+
+    if not final_review_pass:
+        print("Staged final review failed. Refusing to append.")
+        print(
+            final_review[
+                ["check_name", "severity", "status", "failure_count", "details"]
+            ]
+        )
         return None, False
 
     master = pd.read_parquet(MASTER_PATH)

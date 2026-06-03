@@ -4,11 +4,33 @@
 
 Purpose:
 
-Ingest new UFC events from UFCStats into `ufc_master.parquet` using a gated, auditable workflow.
+Ingest new UFC events from UFCStats into staged artifacts, validate them, run final human-review checks, and append only after operator approval.
 
-Architecture:
+Current architecture:
 
-SCRAPE → MAP → ENRICH → VALIDATE → APPEND
+```text
+EVENT CHECK
+  ↓
+SINGLE EVENT INGEST
+  ↓
+SCRAPE
+  ↓
+MAP
+  ↓
+ENRICH
+  ↓
+VALIDATE
+  ↓
+APPEND PRECHECK
+  ↓
+FINAL STAGED REVIEW
+  ↓
+HUMAN APPROVAL
+  ↓
+APPEND
+```
+
+Single-event ingestion stops after final staged review. It does **not** append.
 
 ---
 
@@ -67,7 +89,7 @@ Key Output:
 ## run_ufcstats_fight_scrape.py
 
 Purpose:
-Scrape fight rows for missing events.
+Scrape fight rows for selected/missing events.
 
 Input:
 
@@ -80,20 +102,10 @@ Outputs:
 
 Important Rules:
 
-* Filter UFCStats blank summary row
-* Extract event_id
-* Extract fight_id
-
-Adds:
-
-* event_id
-* fight_id
-* event_url
-* fight_url
-
-Known Validation:
-
-* Allen vs Costa = 13 fights
+* Filter UFCStats blank summary row.
+* Extract `event_id`.
+* Extract `fight_id`.
+* Preserve event/fight URLs in staging and audits.
 
 ---
 
@@ -145,16 +157,18 @@ Outputs:
 * data/staging/ufc_staged_master_rows.parquet
 * data/audits/ufc_staged_master_mapping_audit.parquet
 
-Important Fixes:
+Creates / maps:
 
-* event_id propagation
-* fight_id propagation
-* zone stat mapping
+* `location` from the UFCStats event page location field propagated through staged fight rows.
+* `division` from the staged UFCStats weight class after removing title-bout markers.
+* `title_fight` as `1` for title fights and `0` for non-title fights.
+* `total_rounds` from UFCStats `time_format` when available, with safe fallback to `5` for title fights and `3` otherwise.
+* Accuracy fields using `0` when the denominator is zero or missing, rather than storing missing values for zero-attempt calculations.
 
 Architecture Boundary:
 
-* URLs dropped here
-* IDs retained
+* URLs are dropped here.
+* IDs are retained.
 
 ---
 
@@ -176,10 +190,15 @@ Outputs:
 
 Creates:
 
-* strike accuracy
-* takedown accuracy
-* zone accuracy
-* strike distribution metrics
+* Strike accuracy
+* Takedown accuracy
+* Zone accuracy
+* Strike distribution metrics
+
+Zero denominator rule:
+
+* Derived accuracy / percentage calculations must return `0` when the denominator is zero or missing.
+* New staged rows should not emit `NA` solely because an accuracy calculation evaluates to zero.
 
 Examples:
 
@@ -213,20 +232,25 @@ Adds:
 
 * r_id
 * b_id
+* winner_id
 * height
 * reach
 * stance
 * DOB
-* wins
-* losses
+* wins/losses/draws
 * SLpM
 * SApM
 * TD Avg
 * TD Def
 * Sub Avg
 
-Future Refactor:
-Move to ID-first enrichment.
+Current behavior:
+
+* Builds queue from both red and blue fighter URLs.
+* Extracts fighter IDs from UFCStats fighter URLs.
+* Deduplicates by fighter ID.
+* Maps profiles by fighter ID and normalized fighter name.
+* Supports optional `--max-fighters` smoke-test limit.
 
 ---
 
@@ -250,7 +274,9 @@ Checks:
 
 * Column count
 * Column order
-* Dtype alignment
+* Duplicate mapped columns
+* Missing columns
+* Extra columns
 
 Expected:
 
@@ -277,21 +303,80 @@ Outputs:
 * data/audits/ufc_append_duplicate_check.parquet
 * data/audits/ufc_append_required_field_audit.parquet
 
-Checks:
+Blocking checks include:
 
 * Column count match
 * Column order match
-* Duplicate fight IDs
-* Existing fight IDs
-* Required fields
-* Negative stats
+* Duplicate fight IDs in staged rows
+* Fight IDs already in master
+* Required blocking fields populated, including event/fight metadata (`location`, `division`, `title_fight`, `total_rounds`)
+* Fighter identity complete (`r_id`, `b_id`, `winner_id`)
+* Negative stat check
+
+Warning checks include:
+
+* Optional profile completeness fields such as height, reach, stance, DOB
 
 Result:
+
+```text
 append_ready = True | False
+```
+
+`append_ready` is computed from blocking checks only.
 
 ---
 
 # Runner 10
+
+## run_staged_final_review.py
+
+Purpose:
+Run semantic staged-row review before append.
+
+Inputs:
+
+* data/master/ufc_master.parquet
+* data/staging/ufc_staged_master_rows_profiled.parquet
+
+Outputs:
+
+* data/audits/ufc_staged_final_review.parquet
+
+Blocking checks include:
+
+* Staged rows present
+* Identity fields present
+* Red and blue fighters distinct
+* `winner_id` matches either `r_id` or `b_id`
+* `winner` matches either `r_name` or `b_name`
+* Fight IDs not already in master
+* Fight IDs unique in staged rows
+* Date parseable
+* Fight metadata present (`location`, `division`, `title_fight`, `total_rounds`)
+* `title_fight` is `1` for yes or `0` for no
+* `total_rounds` is plausible (`3` or `5`)
+* Finish round plausible
+* Match time plausible
+* Landed stats not greater than attempted stats
+
+Warning checks include:
+
+* Existing master event identity consistency
+* Percentage values in range
+* Fighter profile plausibility
+
+Result:
+
+```text
+final_review_pass = True | False
+```
+
+`final_review_pass` is computed from blocking checks only.
+
+---
+
+# Runner 11
 
 ## run_append_staged_to_master.py
 
@@ -303,6 +388,7 @@ Inputs:
 * data/master/ufc_master.parquet
 * data/staging/ufc_staged_master_rows_profiled.parquet
 * data/audits/ufc_append_precheck.parquet
+* data/audits/ufc_staged_final_review.parquet
 
 Outputs:
 
@@ -312,9 +398,69 @@ Outputs:
 
 Safety Controls:
 
-* Refuse append if append_ready=False
-* Refuse duplicate fight IDs
-* Backup master before append
+* Refuse append if `append_ready=False`.
+* Refuse append if final review artifact is missing.
+* Refuse append if `final_review_pass=False`.
+* Refuse duplicate fight IDs.
+* Backup master before append.
+
+---
+
+# Orchestrator
+
+## run_ingest_single_event.py
+
+Purpose:
+Stage and review one selected UFCStats event.
+
+Workflow:
+
+```text
+Fight Scrape
+  ↓
+Fight Detail Scrape
+  ↓
+Mapper
+  ↓
+Derived Stats
+  ↓
+Fighter Profiles
+  ↓
+Master Column Validation
+  ↓
+Append Precheck
+  ↓
+Final Staged Review
+```
+
+Important rule:
+
+```text
+run_ingest_single_event.py does not append to master.
+```
+
+Modes:
+
+```text
+full  = all fights and all staged fighters
+smoke = one fight and two fighters
+```
+
+Environment variables / CLI:
+
+```text
+EVENT_ID or --event-id
+INGEST_MODE or --mode
+MAX_FIGHTS or --max-fights
+MAX_FIGHTERS or --max-fighters
+```
+
+Example:
+
+```bash
+EVENT_ID=1e75e6c9de99fa76 INGEST_MODE=full \
+python -m pipeline.data_maintenance.run_ingest_single_event
+```
 
 ---
 
@@ -348,45 +494,3 @@ Feature Stores:
 Prediction Pipeline:
 
 * IDs only
-
----
-
-# Next Phase
-
-Single Event Ingestion
-
-Workflow:
-
-Event Discovery
-↓
-Select Event
-↓
-run_ingest_single_event.py
-↓
-Fight Scrape
-↓
-Fight Detail Scrape
-↓
-Mapper
-↓
-Derived Stats
-↓
-Fighter Profiles
-↓
-Validation
-↓
-Precheck
-↓
-Append
-↓
-Master Updated
-
-
-## run_ingest_single_event.py
-
-Purpose:
-Orchestrates single-event ingestion through validation and append precheck.
-
-Command:
-```powershell
-python -m pipeline.data_maintenance.run_ingest_single_event

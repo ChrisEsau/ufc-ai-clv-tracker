@@ -24,6 +24,33 @@ def clean_id_series(s):
     )
 
 
+def missing_value_mask(df, column_name):
+    if column_name not in df.columns:
+        return pd.Series(True, index=df.index)
+
+    series = df[column_name]
+
+    return series.isna() | (
+        series.astype(str)
+        .str.strip()
+        .isin(["", "nan", "None", "NaN", "NaT"])
+    )
+
+
+def missing_value_count(df, column_name):
+    return int(missing_value_mask(df, column_name).sum())
+
+
+def add_check(checks, check_name, status, failure_count, details, severity="block"):
+    checks.append({
+        "check_name": check_name,
+        "severity": severity,
+        "status": status,
+        "failure_count": failure_count,
+        "details": details,
+    })
+
+
 def run_append_precheck_validation():
     run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     run_timestamp = datetime.now(timezone.utc).isoformat()
@@ -46,21 +73,23 @@ def run_append_precheck_validation():
     column_count_match = len(master_cols) == len(staged_cols)
     column_order_match = master_cols == staged_cols
 
-    checks.append({
-        "check_name": "column_count_match",
-        "status": "pass" if column_count_match else "fail",
-        "failure_count": 0 if column_count_match else 1,
-        "details": f"master={len(master_cols)}, staged={len(staged_cols)}",
-    })
+    add_check(
+        checks,
+        check_name="column_count_match",
+        status="pass" if column_count_match else "fail",
+        failure_count=0 if column_count_match else 1,
+        details=f"master={len(master_cols)}, staged={len(staged_cols)}",
+    )
 
-    checks.append({
-        "check_name": "column_order_match",
-        "status": "pass" if column_order_match else "fail",
-        "failure_count": 0 if column_order_match else 1,
-        "details": "staged column order matches master"
+    add_check(
+        checks,
+        check_name="column_order_match",
+        status="pass" if column_order_match else "fail",
+        failure_count=0 if column_order_match else 1,
+        details="staged column order matches master"
         if column_order_match
         else "staged column order does not match master",
-    })
+    )
 
     staged_fight_ids = clean_id_series(staged["fight_id"])
     master_fight_ids = clean_id_series(master["fight_id"])
@@ -81,19 +110,21 @@ def run_append_precheck_validation():
     duplicate_in_staged_count = len(duplicate_in_staged)
     already_in_master_count = len(already_in_master)
 
-    checks.append({
-        "check_name": "duplicate_fight_ids_in_staged",
-        "status": "pass" if duplicate_in_staged_count == 0 else "fail",
-        "failure_count": duplicate_in_staged_count,
-        "details": f"{duplicate_in_staged_count} duplicate staged fight_id rows",
-    })
+    add_check(
+        checks,
+        check_name="duplicate_fight_ids_in_staged",
+        status="pass" if duplicate_in_staged_count == 0 else "fail",
+        failure_count=duplicate_in_staged_count,
+        details=f"{duplicate_in_staged_count} duplicate staged fight_id rows",
+    )
 
-    checks.append({
-        "check_name": "fight_ids_already_in_master",
-        "status": "pass" if already_in_master_count == 0 else "fail",
-        "failure_count": already_in_master_count,
-        "details": f"{already_in_master_count} staged fight_id rows already exist in master",
-    })
+    add_check(
+        checks,
+        check_name="fight_ids_already_in_master",
+        status="pass" if already_in_master_count == 0 else "fail",
+        failure_count=already_in_master_count,
+        details=f"{already_in_master_count} staged fight_id rows already exist in master",
+    )
 
     duplicate_check = pd.concat(
         [
@@ -106,11 +137,20 @@ def run_append_precheck_validation():
     duplicate_check.to_parquet(DUPLICATE_OUTPUT, index=False)
 
     required_fields = [
+        "event_id",
         "event_name",
         "date",
+        "location",
         "fight_id",
+        "division",
+        "title_fight",
+        "total_rounds",
         "r_name",
         "b_name",
+        "r_id",
+        "b_id",
+        "winner",
+        "winner_id",
         "method",
         "finish_round",
         "match_time_sec",
@@ -118,23 +158,37 @@ def run_append_precheck_validation():
         "b_sig_str_landed",
         "r_total_str_landed",
         "b_total_str_landed",
-        "winner",
+    ]
+
+    profile_warning_fields = [
+        "r_height",
+        "b_height",
+        "r_reach",
+        "b_reach",
+        "r_stance",
+        "b_stance",
+        "r_dob",
+        "b_dob",
     ]
 
     required_rows = []
 
     for col in required_fields:
-        if col not in staged.columns:
-            missing_count = len(staged)
-        else:
-            series = staged[col]
-            missing_count = int(
-                series.isna().sum()
-                + (series.astype(str).str.strip().isin(["", "nan", "None"])).sum()
-            )
+        missing_count = missing_value_count(staged, col)
 
         required_rows.append({
             "column_name": col,
+            "severity": "block",
+            "missing_count": missing_count,
+            "status": "pass" if missing_count == 0 else "fail",
+        })
+
+    for col in profile_warning_fields:
+        missing_count = missing_value_count(staged, col)
+
+        required_rows.append({
+            "column_name": col,
+            "severity": "warning",
             "missing_count": missing_count,
             "status": "pass" if missing_count == 0 else "fail",
         })
@@ -158,14 +212,57 @@ def run_append_precheck_validation():
             ].to_string(index=False)
         )
 
-    required_failures = int((required_audit["status"] == "fail").sum())
+    failed_required_blockers = required_audit[
+        (required_audit["severity"] == "block")
+        & (required_audit["status"] == "fail")
+    ]
 
-    checks.append({
-        "check_name": "required_fields_populated",
-        "status": "pass" if required_failures == 0 else "fail",
-        "failure_count": required_failures,
-        "details": f"{required_failures} required fields have missing values",
-    })
+    required_failures = len(failed_required_blockers)
+
+    add_check(
+        checks,
+        check_name="required_fields_populated",
+        status="pass" if required_failures == 0 else "fail",
+        failure_count=required_failures,
+        details=f"{required_failures} required blocking fields have missing values",
+    )
+
+    fighter_identity_fields = ["r_id", "b_id", "winner_id"]
+    missing_identity_mask = pd.concat(
+        [missing_value_mask(staged, field) for field in fighter_identity_fields],
+        axis=1,
+    ).any(axis=1)
+    missing_identity_count = int(missing_identity_mask.sum())
+
+    add_check(
+        checks,
+        check_name="fighter_identity_complete",
+        status="pass" if missing_identity_count == 0 else "fail",
+        failure_count=missing_identity_count,
+        details=(
+            f"{missing_identity_count} staged rows missing "
+            "r_id, b_id, or winner_id"
+        ),
+    )
+
+    failed_profile_warnings = required_audit[
+        (required_audit["severity"] == "warning")
+        & (required_audit["status"] == "fail")
+    ]
+
+    profile_warning_count = len(failed_profile_warnings)
+
+    add_check(
+        checks,
+        check_name="profile_completeness_warning",
+        severity="warning",
+        status="pass" if profile_warning_count == 0 else "fail",
+        failure_count=profile_warning_count,
+        details=(
+            f"{profile_warning_count} optional profile fields have "
+            "missing values"
+        ),
+    )
 
     stat_cols = [
         c for c in staged.columns
@@ -191,16 +288,18 @@ def run_append_precheck_validation():
         vals = pd.to_numeric(staged[col], errors="coerce")
         negative_count += int((vals < 0).sum())
 
-    checks.append({
-        "check_name": "negative_stat_check",
-        "status": "pass" if negative_count == 0 else "fail",
-        "failure_count": negative_count,
-        "details": f"{negative_count} negative numeric stat values found",
-    })
+    add_check(
+        checks,
+        check_name="negative_stat_check",
+        status="pass" if negative_count == 0 else "fail",
+        failure_count=negative_count,
+        details=f"{negative_count} negative numeric stat values found",
+    )
 
     precheck = pd.DataFrame(checks)
 
-    append_ready = bool((precheck["status"] == "pass").all())
+    blocking_checks = precheck[precheck["severity"] == "block"]
+    append_ready = bool((blocking_checks["status"] == "pass").all())
 
     precheck["run_id"] = run_id
     precheck["run_timestamp"] = run_timestamp
@@ -212,15 +311,30 @@ def run_append_precheck_validation():
     print("========== APPEND GATE ==========")
     print("Append ready:", append_ready)
 
-    failed_checks = precheck[
-        precheck["status"] == "fail"
+    blocking_failures = precheck[
+        (precheck["severity"] == "block")
+        & (precheck["status"] == "fail")
     ]
 
-    if not failed_checks.empty:
+    warning_failures = precheck[
+        (precheck["severity"] == "warning")
+        & (precheck["status"] == "fail")
+    ]
+
+    if not blocking_failures.empty:
         print()
-        print("Failed checks:")
+        print("Blocking failed checks:")
         print(
-            failed_checks[
+            blocking_failures[
+                ["check_name", "failure_count"]
+            ].to_string(index=False)
+        )
+
+    if not warning_failures.empty:
+        print()
+        print("Warning checks:")
+        print(
+            warning_failures[
                 ["check_name", "failure_count"]
             ].to_string(index=False)
         )
@@ -232,7 +346,7 @@ def run_append_precheck_validation():
     print("Staged rows:", len(staged))
     print("Append ready:", append_ready)
     print()
-    print(precheck[["check_name", "status", "failure_count", "details"]])
+    print(precheck[["check_name", "severity", "status", "failure_count", "details"]])
     print()
     print("Saved:", PRECHECK_OUTPUT)
     print("Saved:", DUPLICATE_OUTPUT)
@@ -253,7 +367,11 @@ def run_append_precheck_validation():
     overlap_cols = [
         "event_name",
         "date",
+        "location",
         "fight_id",
+        "division",
+        "title_fight",
+        "total_rounds",
         "r_name",
         "b_name",
     ]

@@ -4,6 +4,22 @@ from bs4 import BeautifulSoup
 from scrapers.selenium_core import fetch_html
 
 
+def clean_event_detail_text(value):
+    return " ".join(str(value).replace("\n", " ").split())
+
+
+def parse_event_location(soup):
+    detail_items = soup.select("li.b-list__box-list-item")
+
+    for item in detail_items:
+        text = clean_event_detail_text(item.get_text(" ", strip=True))
+
+        if text.lower().startswith("location:"):
+            return text.split(":", 1)[1].strip() or None
+
+    return None
+
+
 def scrape_event_fights(
     event_url,
     event_name=None,
@@ -16,6 +32,8 @@ def scrape_event_fights(
         html,
         "html.parser",
     )
+
+    event_location = parse_event_location(soup)
 
     fight_rows = []
 
@@ -98,6 +116,7 @@ def scrape_event_fights(
                 "event_name": event_name,
                 "event_date": event_date,
                 "event_url": event_url,
+                "event_location": event_location,
                 "fight_order": idx + 1,
                 "fight_url": fight_url,
                 "red_fighter": red_fighter,
