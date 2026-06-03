@@ -62,7 +62,7 @@ def render_validation_gate():
                 st.error(msg)
 
         if st.button(
-            "Run Append Precheck",
+            "Run Append Precheck + Final Review",
             use_container_width=True,
             key="run_append_precheck",
         ):

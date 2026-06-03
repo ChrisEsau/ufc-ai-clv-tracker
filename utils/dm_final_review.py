@@ -94,11 +94,11 @@ def render_final_review():
     )
 
     if st.button(
-        "Run Final Staged Review",
+        "Run Append Precheck + Final Review",
         use_container_width=True,
         key="run_staged_final_review",
     ):
-        ok, msg = trigger_workflow("run-staged-final-review.yml")
+        ok, msg = trigger_workflow("run-append-precheck-validation.yml")
 
         if ok:
             st.success(msg)
