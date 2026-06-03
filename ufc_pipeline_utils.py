@@ -31,6 +31,21 @@ import joblib
 import numpy as np
 import pandas as pd
 
+from pipeline.common.paths import (
+    LIVE_ACTION_BOARD_PATH,
+    LIVE_CARD_PATH,
+    LIVE_ODDS_AUDIT_PATH,
+    LIVE_WATCHLIST_PATH,
+    MODEL_BEST_THRESHOLD_PATH,
+    MODEL_CALIBRATED_PATH,
+    MODEL_DIR,
+    MODEL_FEATURE_COLUMNS_PATH,
+    MODEL_PRODUCTION_CONFIG_PKL_PATH,
+    MODEL_PREDICTIONS_PATH,
+    MODEL_VERSION,
+    ROLLING_FEATURES_PATH,
+)
+
 
 # ============================================================
 # PATH / CONFIG HELPERS
@@ -44,16 +59,16 @@ class UFCPipelinePaths:
     Change model_version here instead of hardcoding production paths
     independently inside every notebook.
     """
-    base_path: str = "/content/drive/MyDrive/UFC_AI"
-    model_version: str = "UFC_Model_v5_Experiment"
+    base_path: str = "."
+    model_version: str = MODEL_VERSION
 
     @property
     def production_dir(self) -> str:
-        return f"{self.base_path}/{self.model_version}"
+        return str(MODEL_DIR)
 
     @property
     def rolling_features_path(self) -> str:
-        return f"{self.base_path}/UFC_enhanced_rolling_features_EWM.csv"
+        return str(ROLLING_FEATURES_PATH)
 
     @property
     def feature_registry_path(self) -> str:
@@ -61,27 +76,27 @@ class UFCPipelinePaths:
 
     @property
     def live_card_output(self) -> str:
-        return f"{self.base_path}/ufc_live_card_with_odds.csv"
+        return str(LIVE_CARD_PATH)
 
     @property
     def live_predictions_output(self) -> str:
-        return f"{self.base_path}/ufc_live_predictions.csv"
+        return str(MODEL_PREDICTIONS_PATH)
 
     @property
     def live_betting_card_output(self) -> str:
-        return f"{self.base_path}/ufc_live_betting_card.csv"
+        return str(LIVE_CARD_PATH)
 
     @property
     def watchlist_output(self) -> str:
-        return f"{self.base_path}/ufc_live_watchlist.csv"
+        return str(LIVE_WATCHLIST_PATH)
 
     @property
     def action_board_output(self) -> str:
-        return f"{self.base_path}/ufc_live_action_board.csv"
+        return str(LIVE_ACTION_BOARD_PATH)
 
     @property
     def clv_log_path(self) -> str:
-        return f"{self.base_path}/ufc_clv_tracking_log.csv"
+        return str(LIVE_ODDS_AUDIT_PATH)
 
 
 def ensure_dir(path: str) -> None:
@@ -478,13 +493,11 @@ def load_production_artifacts(paths: UFCPipelinePaths) -> Dict:
     """
     Load frozen model artifacts from the production directory.
     """
-    production_dir = paths.production_dir
-
     artifacts = {
-        "model": joblib.load(f"{production_dir}/calibrated_model.pkl"),
-        "feature_columns": joblib.load(f"{production_dir}/feature_columns.pkl"),
-        "best_threshold": joblib.load(f"{production_dir}/best_threshold.pkl"),
-        "production_config": joblib.load(f"{production_dir}/production_config.pkl"),
+        "model": joblib.load(MODEL_CALIBRATED_PATH),
+        "feature_columns": joblib.load(MODEL_FEATURE_COLUMNS_PATH),
+        "best_threshold": joblib.load(MODEL_BEST_THRESHOLD_PATH),
+        "production_config": joblib.load(MODEL_PRODUCTION_CONFIG_PKL_PATH),
     }
 
     return artifacts

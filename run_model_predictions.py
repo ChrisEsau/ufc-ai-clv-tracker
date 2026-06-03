@@ -9,7 +9,19 @@ import joblib
 import numpy as np
 import pandas as pd
 
-from pipeline_config import *
+from pipeline.common.paths import (
+    CURRENT_FIGHTER_FEATURES_PATH,
+    LIVE_CARD_PATH,
+    LIVE_FEATURE_AUDIT_PATH,
+    LIVE_MATCH_AUDIT_PATH,
+    MODEL_BEST_THRESHOLD_PATH,
+    MODEL_CALIBRATED_PATH,
+    MODEL_FEATURE_COLUMNS_PATH,
+    MODEL_PREDICTIONS_PATH,
+    MODEL_PRODUCTION_CONFIG_PKL_PATH,
+    MODEL_VERSION,
+    ensure_data_dirs,
+)
 from ufc_pipeline_utils import *
 from ufc_feature_engineering import (
     add_v5_engineered_features,
@@ -20,17 +32,9 @@ from ufc_feature_engineering import (
 # CONFIG
 # ============================================================
 
-BASE_PATH = "."
-
-MODEL_VERSION = "UFC_Model_v5_Experiment"
-PRODUCTION_DIR = f"{BASE_PATH}/{MODEL_VERSION}"
-
-LIVE_CARD_PATH = f"{BASE_PATH}/ufc_live_card.parquet"
-CURRENT_FIGHTER_FEATURES_PATH = f"{BASE_PATH}/ufc_current_fighter_features.parquet"
-
-MODEL_PREDICTIONS_OUTPUT = f"{BASE_PATH}/ufc_model_predictions.parquet"
-FEATURE_AUDIT_OUTPUT = f"{BASE_PATH}/ufc_live_feature_audit.parquet"
-MATCH_AUDIT_OUTPUT = f"{BASE_PATH}/ufc_live_match_audit.parquet"
+MODEL_PREDICTIONS_OUTPUT = MODEL_PREDICTIONS_PATH
+FEATURE_AUDIT_OUTPUT = LIVE_FEATURE_AUDIT_PATH
+MATCH_AUDIT_OUTPUT = LIVE_MATCH_AUDIT_PATH
 
 PREDICTION_RUN_ID = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 PREDICTION_TIMESTAMP = datetime.now(timezone.utc).isoformat()
@@ -43,11 +47,12 @@ CLIP_HIGH = 0.98
 # ============================================================
 
 print("Loading model artifacts...")
+ensure_data_dirs()
 
-model = joblib.load(f"{PRODUCTION_DIR}/calibrated_model.pkl")
-feature_columns = joblib.load(f"{PRODUCTION_DIR}/feature_columns.pkl")
-BEST_THRESHOLD = joblib.load(f"{PRODUCTION_DIR}/best_threshold.pkl")
-production_config = joblib.load(f"{PRODUCTION_DIR}/production_config.pkl")
+model = joblib.load(MODEL_CALIBRATED_PATH)
+feature_columns = joblib.load(MODEL_FEATURE_COLUMNS_PATH)
+BEST_THRESHOLD = joblib.load(MODEL_BEST_THRESHOLD_PATH)
+production_config = joblib.load(MODEL_PRODUCTION_CONFIG_PKL_PATH)
 
 print("Model version:", production_config.get("version", MODEL_VERSION))
 print("Feature count:", len(feature_columns))

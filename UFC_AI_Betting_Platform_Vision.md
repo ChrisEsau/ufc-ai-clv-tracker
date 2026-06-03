@@ -76,12 +76,12 @@ EVENT SCRAPER (Colab)
 ↓
 ufcstats_upcoming_events.parquet
 ufcstats_upcoming_fights.parquet
-ufc_live_card.parquet
+data/predictions/ufc_live_card.parquet
 
 LIVE PREDICTION ENGINE (GitHub Actions)
 ↓
-ufc_live_action_board.parquet
-ufc_live_watchlist.parquet
+data/predictions/ufc_live_action_board.parquet
+data/predictions/ufc_live_watchlist.parquet
 ufc_live_card_with_odds.parquet
 
 CLV ENGINE (Scheduled GitHub Actions)

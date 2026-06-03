@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 import numpy as np
 import pandas as pd
 
+from pipeline.common.paths import MODEL_PREDICTIONS_PATH
 from pipeline_config import *
 from ufc_pipeline_utils import *
 from ufc_odds_utils import *
@@ -17,10 +18,6 @@ from ufc_odds_utils import *
 # ============================================================
 
 BASE_PATH = "."
-
-MODEL_PREDICTIONS_PATH = (
-    f"{BASE_PATH}/ufc_model_predictions.parquet"
-)
 
 MARKET_ODDS_OUTPUT = (
     f"{BASE_PATH}/ufc_market_odds.parquet"

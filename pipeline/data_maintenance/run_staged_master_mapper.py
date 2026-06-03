@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import re
 from datetime import datetime, timezone
 
 from pipeline.common.paths import (
@@ -8,6 +9,79 @@ from pipeline.common.paths import (
     STAGED_MASTER_ROWS_PATH,
     STAGED_MASTER_MAPPING_AUDIT_PATH,
 )
+
+
+def clean_string(value):
+    if pd.isna(value):
+        return None
+
+    value = str(value).strip()
+
+    if value.lower() in {"", "nan", "none", "nat", "<na>"}:
+        return None
+
+    return value
+
+
+def first_existing_series(df, column_names, default=None):
+    for column_name in column_names:
+        if column_name in df.columns:
+            return df[column_name]
+
+    return pd.Series(default, index=df.index)
+
+
+def clean_division(value):
+    value = clean_string(value)
+
+    if value is None:
+        return None
+
+    value = re.sub(r"\btitle\s+bout\b", "", value, flags=re.IGNORECASE)
+    value = re.sub(r"\btitle\b", "", value, flags=re.IGNORECASE)
+    value = " ".join(value.replace("\n", " ").split())
+
+    return value.lower() if value else None
+
+
+def title_fight_flag(value):
+    value = clean_string(value)
+
+    if value is None:
+        return 0
+
+    return int("title" in value.lower())
+
+
+def total_rounds_from_time_format(value, title_fight=0):
+    value = clean_string(value)
+
+    if value is not None:
+        match = re.search(r"(\d+)\s*rnd", value, flags=re.IGNORECASE)
+
+        if match:
+            return int(match.group(1))
+
+        rounds = re.search(r"\(([^)]*)\)", value)
+
+        if rounds:
+            round_count = len([part for part in rounds.group(1).split("-") if part])
+
+            if round_count > 0:
+                return round_count
+
+    return 5 if int(title_fight or 0) == 1 else 3
+
+
+def safe_pct(num, den):
+    numerator = pd.to_numeric(num, errors="coerce").fillna(0)
+    denominator = pd.to_numeric(den, errors="coerce").fillna(0)
+
+    return np.where(
+        denominator > 0,
+        (numerator / denominator * 100).round(0),
+        0,
+    )
 
 
 def time_to_seconds(x):
@@ -43,6 +117,18 @@ def run_staged_master_mapper():
         staged["event_date"],
         errors="coerce",
     ).dt.strftime("%-m/%-d/%Y")
+
+    weight_class = first_existing_series(staged, ["weight_class", "division"])
+    event_location = first_existing_series(staged, ["event_location", "location"])
+    time_format = first_existing_series(staged, ["time_format"])
+
+    mapped["location"] = event_location
+    mapped["division"] = weight_class.apply(clean_division)
+    mapped["title_fight"] = weight_class.apply(title_fight_flag)
+    mapped["total_rounds"] = [
+        total_rounds_from_time_format(value, title_fight)
+        for value, title_fight in zip(time_format, mapped["title_fight"])
+    ]
 
     if "fight_id" in staged.columns:
         mapped["fight_id"] = staged["fight_id"]
@@ -107,28 +193,24 @@ def run_staged_master_mapper():
                 errors="coerce",
             )
 
-    mapped["r_sig_str_acc"] = np.where(
-        mapped["r_sig_str_atmpted"] > 0,
-        (mapped["r_sig_str_landed"] / mapped["r_sig_str_atmpted"] * 100).round(0),
-        np.nan,
+    mapped["r_sig_str_acc"] = safe_pct(
+        mapped["r_sig_str_landed"],
+        mapped["r_sig_str_atmpted"],
     )
 
-    mapped["b_sig_str_acc"] = np.where(
-        mapped["b_sig_str_atmpted"] > 0,
-        (mapped["b_sig_str_landed"] / mapped["b_sig_str_atmpted"] * 100).round(0),
-        np.nan,
+    mapped["b_sig_str_acc"] = safe_pct(
+        mapped["b_sig_str_landed"],
+        mapped["b_sig_str_atmpted"],
     )
 
-    mapped["r_td_acc"] = np.where(
-        mapped["r_td_atmpted"] > 0,
-        (mapped["r_td_landed"] / mapped["r_td_atmpted"] * 100).round(0),
-        np.nan,
+    mapped["r_td_acc"] = safe_pct(
+        mapped["r_td_landed"],
+        mapped["r_td_atmpted"],
     )
 
-    mapped["b_td_acc"] = np.where(
-        mapped["b_td_atmpted"] > 0,
-        (mapped["b_td_landed"] / mapped["b_td_atmpted"] * 100).round(0),
-        np.nan,
+    mapped["b_td_acc"] = safe_pct(
+        mapped["b_td_landed"],
+        mapped["b_td_atmpted"],
     )
 
     mapped["winner"] = np.where(

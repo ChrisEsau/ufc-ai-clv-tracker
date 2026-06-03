@@ -1,6 +1,14 @@
-import streamlit as st
-import pandas as pd
 from pathlib import Path
+
+import streamlit as st
+
+from pipeline.common.paths import (
+    APPEND_PRECHECK_PATH,
+    STAGED_DERIVED_STATS_AUDIT_PATH,
+    STAGED_FIGHT_ROWS_PATH,
+    STAGED_MASTER_ROWS_PATH,
+    STAGED_MASTER_ROWS_PROFILED_PATH,
+)
 
 
 def artifact_exists(path):
@@ -14,23 +22,23 @@ def render_pipeline_status():
     pipeline = [
         (
             "SCRAPE",
-            artifact_exists("ufc_staged_fight_rows.parquet"),
+            artifact_exists(STAGED_FIGHT_ROWS_PATH),
         ),
         (
             "MAP",
-            artifact_exists("ufc_staged_master_rows.parquet"),
+            artifact_exists(STAGED_MASTER_ROWS_PATH),
         ),
         (
             "DERIVED",
-            artifact_exists("ufc_staged_derived_stats_audit.parquet"),
+            artifact_exists(STAGED_DERIVED_STATS_AUDIT_PATH),
         ),
         (
             "ENRICH",
-            artifact_exists("ufc_staged_master_rows_profiled.parquet"),
+            artifact_exists(STAGED_MASTER_ROWS_PROFILED_PATH),
         ),
         (
             "VALIDATE",
-            artifact_exists("ufc_append_precheck.parquet"),
+            artifact_exists(APPEND_PRECHECK_PATH),
         ),
     ]
 
