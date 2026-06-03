@@ -93,6 +93,16 @@ models/UFC_Model_v5_Experiment/model_quality_summary.csv
 models/UFC_Model_v5_Experiment/shap_importance.csv
 ```
 
+Purpose:
+
+* `ufc_missing_events.parquet` stores completed UFCStats events not represented in the local master dataset.
+* `ufc_staged_fight_rows.parquet` stores fight-level rows from selected event pages.
+* `ufc_staged_fight_details.parquet` stores detailed UFCStats fight-page output.
+* `ufc_staged_master_rows.parquet` stores staged rows mapped into the canonical master schema.
+* `ufc_staged_master_rows_enriched.parquet` stores rows after derived-stat calculation.
+* `ufc_staged_fighter_profiles.parquet` stores scraped fighter profile rows.
+* `ufc_staged_master_rows_profiled.parquet` stores final staged rows with fighter profile enrichment.
+
 ---
 
 ## Status Artifacts
