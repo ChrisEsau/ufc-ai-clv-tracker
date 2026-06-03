@@ -157,6 +157,14 @@ Outputs:
 * data/staging/ufc_staged_master_rows.parquet
 * data/audits/ufc_staged_master_mapping_audit.parquet
 
+Creates / maps:
+
+* `location` from the UFCStats event page location field propagated through staged fight rows.
+* `division` from the staged UFCStats weight class after removing title-bout markers.
+* `title_fight` as `1` for title fights and `0` for non-title fights.
+* `total_rounds` from UFCStats `time_format` when available, with safe fallback to `5` for title fights and `3` otherwise.
+* Accuracy fields using `0` when the denominator is zero or missing, rather than storing missing values for zero-attempt calculations.
+
 Architecture Boundary:
 
 * URLs are dropped here.
@@ -186,6 +194,11 @@ Creates:
 * Takedown accuracy
 * Zone accuracy
 * Strike distribution metrics
+
+Zero denominator rule:
+
+* Derived accuracy / percentage calculations must return `0` when the denominator is zero or missing.
+* New staged rows should not emit `NA` solely because an accuracy calculation evaluates to zero.
 
 Examples:
 
@@ -296,7 +309,7 @@ Blocking checks include:
 * Column order match
 * Duplicate fight IDs in staged rows
 * Fight IDs already in master
-* Required blocking fields populated
+* Required blocking fields populated, including event/fight metadata (`location`, `division`, `title_fight`, `total_rounds`)
 * Fighter identity complete (`r_id`, `b_id`, `winner_id`)
 * Negative stat check
 
@@ -340,6 +353,9 @@ Blocking checks include:
 * Fight IDs not already in master
 * Fight IDs unique in staged rows
 * Date parseable
+* Fight metadata present (`location`, `division`, `title_fight`, `total_rounds`)
+* `title_fight` is `1` for yes or `0` for no
+* `total_rounds` is plausible (`3` or `5`)
 * Finish round plausible
 * Match time plausible
 * Landed stats not greater than attempted stats

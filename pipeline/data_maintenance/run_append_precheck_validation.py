@@ -140,7 +140,11 @@ def run_append_precheck_validation():
         "event_id",
         "event_name",
         "date",
+        "location",
         "fight_id",
+        "division",
+        "title_fight",
+        "total_rounds",
         "r_name",
         "b_name",
         "r_id",
@@ -363,7 +367,11 @@ def run_append_precheck_validation():
     overlap_cols = [
         "event_name",
         "date",
+        "location",
         "fight_id",
+        "division",
+        "title_fight",
+        "total_rounds",
         "r_name",
         "b_name",
     ]

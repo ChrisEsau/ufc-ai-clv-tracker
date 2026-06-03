@@ -244,6 +244,42 @@ def run_staged_final_review():
         details="date must be parseable before append",
     )
 
+    metadata_fields = ["location", "division", "title_fight", "total_rounds"]
+    missing_metadata = pd.Series(False, index=staged.index)
+
+    for field in metadata_fields:
+        missing_metadata = missing_metadata | missing_mask(staged, field)
+
+    add_check(
+        checks,
+        check_name="fight_metadata_present",
+        severity="block",
+        failure_mask=missing_metadata,
+        details="requires location, division, title_fight, and total_rounds",
+    )
+
+    title_fight = to_numeric_series(staged, "title_fight")
+    bad_title_fight = title_fight.isna() | ~title_fight.isin([0, 1])
+
+    add_check(
+        checks,
+        check_name="title_fight_flag_valid",
+        severity="block",
+        failure_mask=bad_title_fight,
+        details="title_fight must be 1 for yes or 0 for no",
+    )
+
+    total_rounds = to_numeric_series(staged, "total_rounds")
+    bad_total_rounds = total_rounds.isna() | ~total_rounds.isin([3, 5])
+
+    add_check(
+        checks,
+        check_name="total_rounds_plausible",
+        severity="block",
+        failure_mask=bad_total_rounds,
+        details="total_rounds must be populated as 3 or 5",
+    )
+
     event_conflict = pd.Series(False, index=staged.index)
 
     if {"event_id", "event_name", "date"}.issubset(staged.columns) and {
@@ -289,14 +325,20 @@ def run_staged_final_review():
     )
 
     finish_round = to_numeric_series(staged, "finish_round")
-    bad_finish_round = finish_round.isna() | (finish_round < 1) | (finish_round > 5)
+    total_rounds = to_numeric_series(staged, "total_rounds")
+    bad_finish_round = (
+        finish_round.isna()
+        | (finish_round < 1)
+        | (finish_round > 5)
+        | (total_rounds.notna() & (finish_round > total_rounds))
+    )
 
     add_check(
         checks,
         check_name="finish_round_plausible",
         severity="block",
         failure_mask=bad_finish_round,
-        details="finish_round must be numeric and between 1 and 5",
+        details="finish_round must be numeric, between 1 and 5, and not exceed total_rounds",
     )
 
     match_time_sec = to_numeric_series(staged, "match_time_sec")

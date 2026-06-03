@@ -118,11 +118,11 @@ Example:
 | location       | Event location                         |
 | fight_id       | UFCStats fight identifier              |
 | division       | Weight class                           |
-| title_fight    | Whether fight was a title fight        |
+| title_fight    | Whether fight was a title fight (`1` yes, `0` no) |
 | method         | Fight result method                    |
 | finish_round   | Round fight ended                      |
 | match_time_sec | Fight-ending time converted to seconds |
-| total_rounds   | Scheduled round count                  |
+| total_rounds   | Scheduled round count (`3` or `5`)     |
 | referee        | Referee name                           |
 
 ---
@@ -318,6 +318,15 @@ b_name_y
 These columns are retained for compatibility with the current master schema.
 
 Future schema refactor should remove these only through a deliberate migration process.
+
+---
+
+## Metadata and Derived Value Rules
+
+* New staged rows must populate `location`, `division`, `title_fight`, and `total_rounds` before append.
+* `title_fight` must use numeric flags: `1` for yes and `0` for no.
+* `total_rounds` must be the scheduled round count, normally `3` or `5`.
+* Accuracy and percentage-derived fields should use `0` when an attempted/denominator value is zero or missing, rather than storing `NA` for a zero-attempt calculation.
 
 ---
 
