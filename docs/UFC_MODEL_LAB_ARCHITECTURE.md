@@ -34,7 +34,7 @@ Is the model stable over recent UFC eras?
 * data/master/ufc_master.parquet
 * historical feature stores
 * training feature registry
-* model artifacts
+* model artifacts under `models/UFC_Model_v5_Experiment/`
 * market odds history
 * bet result history
 
@@ -89,13 +89,13 @@ Priority areas:
 Historical point-in-time feature store:
 
 ```text
-ufc_rolling_features_EWM.parquet
+data/features/UFC_enhanced_rolling_features_EWM.parquet
 ```
 
 Live fighter-state feature store:
 
 ```text
-ufc_current_fighter_features.parquet
+data/features/ufc_current_fighter_features.parquet
 ```
 
 ---

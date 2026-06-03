@@ -21,6 +21,14 @@ PROJECT_ROOT = "."
 if PROJECT_ROOT not in sys.path:
     sys.path.append(PROJECT_ROOT)
 
+from pipeline.common.paths import (
+    LIVE_ACTION_BOARD_PATH,
+    LIVE_CARD_PATH,
+    LIVE_FEATURE_AUDIT_PATH,
+    LIVE_MATCH_AUDIT_PATH,
+    LIVE_ODDS_AUDIT_PATH,
+    ensure_data_dirs,
+)
 from ufc_pipeline_utils import *
 from ufc_odds_utils import *
 from pipeline_config import *
@@ -52,7 +60,7 @@ pd.set_option("display.width", 200)
 # Change model_version here once, instead of hardcoding paths throughout the notebook.
 paths = UFCPipelinePaths(
     base_path=".",
-    model_version="UFC_Model_v5_Experiment"
+    model_version=MODEL_VERSION
 )
 
 BASE_PATH = paths.base_path
@@ -62,16 +70,18 @@ ROLLING_FEATURES_PATH = paths.rolling_features_path
 LIVE_CARD_OUTPUT = paths.live_card_output
 LIVE_PREDICTIONS_OUTPUT = paths.live_predictions_output
 LIVE_BETTING_CARD_OUTPUT = paths.live_betting_card_output
-LIVE_FEATURE_AUDIT_OUTPUT = f"{BASE_PATH}/ufc_live_feature_audit.csv"
-LIVE_MATCH_AUDIT_OUTPUT = f"{BASE_PATH}/ufc_live_match_audit.csv"
-LIVE_ODDS_AUDIT_OUTPUT = f"{BASE_PATH}/ufc_live_odds_audit.csv"
-ACTION_BOARD_PARQUET_OUTPUT = f"{BASE_PATH}/ufc_live_action_board.parquet"
+LIVE_FEATURE_AUDIT_OUTPUT = LIVE_FEATURE_AUDIT_PATH
+LIVE_MATCH_AUDIT_OUTPUT = LIVE_MATCH_AUDIT_PATH
+LIVE_ODDS_AUDIT_OUTPUT = LIVE_ODDS_AUDIT_PATH
+ACTION_BOARD_PARQUET_OUTPUT = LIVE_ACTION_BOARD_PATH
 WATCHLIST_OUTPUT = paths.watchlist_output
 ACTION_BOARD_OUTPUT = paths.action_board_output
 CLV_LOG_PATH = paths.clv_log_path
 
 PREFERRED_BOOKMAKER = "DraftKings"
 BANKROLL = 10000
+
+ensure_data_dirs()
 
 print("BASE_PATH:", BASE_PATH)
 print("PRODUCTION_DIR:", PRODUCTION_DIR)
@@ -159,9 +169,7 @@ print("All required shared helpers are available.")
 # SECTION 4 — LOAD ROLLING FEATURE DATABASE
 # ============================================================
 
-rolling_df = pd.read_parquet(
-    "UFC_enhanced_rolling_features_EWM.parquet"
-)
+rolling_df = pd.read_parquet(ROLLING_FEATURES_PATH)
 
 rolling_df["date"] = pd.to_datetime(
     rolling_df["date"],
@@ -315,7 +323,7 @@ display(
 # SECTION 7 — LOAD CACHED LIVE CARD
 # ============================================================
 
-LIVE_CARD_BASE_OUTPUT = f"{BASE_PATH}/ufc_live_card.parquet"
+LIVE_CARD_BASE_OUTPUT = LIVE_CARD_PATH
 
 ufcstats_card_df = pd.read_parquet(
     LIVE_CARD_BASE_OUTPUT
@@ -591,7 +599,7 @@ print("X_live shape:", X_live.shape)
 # SAVE NORMALIZED LIVE CARD FOR DOWNSTREAM SYSTEMS
 # ============================================================
 
-LIVE_CARD_BASE_OUTPUT = f"{BASE_PATH}/ufc_live_card.parquet"
+LIVE_CARD_BASE_OUTPUT = LIVE_CARD_PATH
 
 live_card_base_cols = [
     "event_name",

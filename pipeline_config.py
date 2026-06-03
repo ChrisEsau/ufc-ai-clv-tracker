@@ -7,9 +7,9 @@
 # PATHS
 # ------------------------------------------------------------
 
-BASE_PATH = "/content/drive/MyDrive/UFC_AI"
+from pipeline.common.paths import MODEL_VERSION
 
-MODEL_VERSION = "UFC_Model_v5_Experiment"
+BASE_PATH = "."
 
 
 # ------------------------------------------------------------

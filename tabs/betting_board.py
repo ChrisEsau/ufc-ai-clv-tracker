@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
+from pipeline.common.paths import BETTING_BOARD_PATH
 from utils.data_loader import load_parquet
 from utils.ui_components import render_metric, money, american, pct
 
@@ -13,7 +14,7 @@ from utils.panels import (
 )
 
 def render_betting_board():
-    board = load_parquet("ufc_betting_board.parquet")
+    board = load_parquet(BETTING_BOARD_PATH)
 
     if board.empty:
         st.warning("No betting board data found. Run the betting decision workflow.")
@@ -31,7 +32,7 @@ def render_betting_board():
     # LOAD DATA
     # ============================================================
     
-    board = load_parquet("ufc_betting_board.parquet")
+    board = load_parquet(BETTING_BOARD_PATH)
     
     # ============================================================
     # HEADER

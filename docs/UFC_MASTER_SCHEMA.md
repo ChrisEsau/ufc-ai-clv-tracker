@@ -49,19 +49,21 @@ pipeline.data_maintenance.run_master_column_validation
 
 ---
 
-### 2. Append is blocked unless schema validation passes
+### 2. Append is blocked unless schema validation and final review pass
 
 No staged rows may be appended to master unless:
 
 ```text
 validation_pass == True
 append_ready == True
+final_review_pass == True
 ```
 
 Validated by:
 
 ```text
 pipeline.data_maintenance.run_append_precheck_validation
+pipeline.data_maintenance.run_staged_final_review
 ```
 
 ---
@@ -116,11 +118,11 @@ Example:
 | location       | Event location                         |
 | fight_id       | UFCStats fight identifier              |
 | division       | Weight class                           |
-| title_fight    | Whether fight was a title fight        |
+| title_fight    | Whether fight was a title fight (`1` yes, `0` no) |
 | method         | Fight result method                    |
 | finish_round   | Round fight ended                      |
 | match_time_sec | Fight-ending time converted to seconds |
-| total_rounds   | Scheduled round count                  |
+| total_rounds   | Scheduled round count (`3` or `5`)     |
 | referee        | Referee name                           |
 
 ---
@@ -319,6 +321,15 @@ Future schema refactor should remove these only through a deliberate migration p
 
 ---
 
+## Metadata and Derived Value Rules
+
+* New staged rows must populate `location`, `division`, `title_fight`, and `total_rounds` before append.
+* `title_fight` must use numeric flags: `1` for yes and `0` for no.
+* `total_rounds` must be the scheduled round count, normally `3` or `5`.
+* Accuracy and percentage-derived fields should use `0` when an attempted/denominator value is zero or missing, rather than storing `NA` for a zero-attempt calculation.
+
+---
+
 ## Validation Artifacts
 
 Schema validation output:
@@ -343,6 +354,12 @@ Duplicate check audit:
 
 ```text
 data/audits/ufc_append_duplicate_check.parquet
+```
+
+Final staged review output:
+
+```text
+data/audits/ufc_staged_final_review.parquet
 ```
 
 ---

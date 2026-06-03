@@ -3,11 +3,13 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from pipeline.common.paths import (
+    APPEND_AUDIT_PATH,
+    APPEND_PRECHECK_PATH,
+    STAGED_FINAL_REVIEW_PATH,
+)
 from utils.github_actions import trigger_workflow
-
-
-APPEND_PRECHECK_PATH = "ufc_append_precheck.parquet"
-APPEND_AUDIT_PATH = "ufc_append_audit.parquet"
+from utils.dm_final_review import get_final_review_status
 
 
 def safe_read_parquet(path):
@@ -31,6 +33,8 @@ def render_append_status():
     precheck = safe_read_parquet(APPEND_PRECHECK_PATH)
 
     append_ready = False
+    final_review_pass, final_review = get_final_review_status()
+    append_allowed = False
     staged_rows = 0
     failed_checks = 0
     master_rows = 0
@@ -51,15 +55,23 @@ def render_append_status():
                 precheck[precheck["status"] == "fail"]
             )
 
-    status_label = "✅ READY" if append_ready else "❌ BLOCKED"
+    append_allowed = append_ready and final_review_pass
+
+    status_label = "✅ READY" if append_allowed else "❌ BLOCKED"
+    precheck_label = "✅ PASS" if append_ready else "❌ BLOCKED"
+    final_review_label = "✅ PASS" if final_review_pass else "❌ BLOCKED"
 
     summary_df = pd.DataFrame(
         [
             {
-                "Append Ready": status_label,
+                "Append Allowed": status_label,
+                "Precheck": precheck_label,
+                "Final Review": final_review_label,
                 "Staged Rows": staged_rows,
-                "Failed Checks": failed_checks,
+                "Failed Precheck Checks": failed_checks,
                 "Master Rows": master_rows,
+                "Precheck Artifact": str(APPEND_PRECHECK_PATH),
+                "Final Review Artifact": str(STAGED_FINAL_REVIEW_PATH),
             }
         ]
     )
@@ -70,11 +82,17 @@ def render_append_status():
         use_container_width=True,
     )
 
-    button_type = "primary" if append_ready else "secondary"
+    button_type = "primary" if append_allowed else "secondary"
+
+    if final_review is None:
+        st.warning(
+            f"No final review artifact found at `{STAGED_FINAL_REVIEW_PATH}`. "
+            "Run Final Staged Review before append."
+        )
 
     if st.button(
         "⚠️ Append To Master",
-        disabled=not append_ready,
+        disabled=not append_allowed,
         type=button_type,
         use_container_width=True,
         key="append_to_master_final",
@@ -93,7 +111,7 @@ def render_append_status():
     with st.expander("Latest Append Audit", expanded=False):
 
         if append_audit is None:
-            st.info("No append audit artifact found yet.")
+            st.info(f"No append audit artifact found at `{APPEND_AUDIT_PATH}`.")
         else:
             st.dataframe(
                 append_audit,
