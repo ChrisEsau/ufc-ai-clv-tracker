@@ -37,7 +37,7 @@ WORKFLOWS = [
         "workflow": "run-master-column-validation.yml",
     },
     {
-        "label": "Run Append Precheck",
+        "label": "Run Append Precheck + Final Review",
         "workflow": "run-append-precheck-validation.yml",
     },
 ]

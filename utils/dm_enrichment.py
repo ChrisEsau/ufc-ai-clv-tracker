@@ -3,6 +3,14 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from pipeline.common.paths import (
+    FIGHTER_PROFILE_SCRAPE_AUDIT_PATH,
+    STAGED_DERIVED_STATS_AUDIT_PATH,
+    STAGED_FIGHTER_PROFILES_PATH,
+    STAGED_MASTER_ROWS_ENRICHED_PATH,
+    STAGED_MASTER_ROWS_PATH,
+    STAGED_MASTER_ROWS_PROFILED_PATH,
+)
 from utils.github_actions import trigger_workflow
 
 
@@ -22,11 +30,11 @@ def render_artifact_summary(label, path):
     df = safe_read_parquet(path)
 
     if df is None:
-        st.warning(f"{label}: artifact not found")
+        st.warning(f"{label}: artifact not found at `{path}`")
         return
 
     st.success(f"{label}: found")
-    st.caption(f"Rows: {len(df)} | Columns: {len(df.columns)}")
+    st.caption(f"Path: {path} | Rows: {len(df)} | Columns: {len(df.columns)}")
 
     with st.expander(f"View {label}", expanded=False):
         st.dataframe(
@@ -94,30 +102,30 @@ def render_enrichment():
 
         render_artifact_summary(
             "Mapped Master Rows",
-            "ufc_staged_master_rows.parquet",
+            STAGED_MASTER_ROWS_PATH,
         )
 
         render_artifact_summary(
             "Derived Stats Audit",
-            "ufc_staged_derived_stats_audit.parquet",
+            STAGED_DERIVED_STATS_AUDIT_PATH,
         )
 
         render_artifact_summary(
             "Derived/Enriched Master Rows",
-            "ufc_staged_master_rows_enriched.parquet",
+            STAGED_MASTER_ROWS_ENRICHED_PATH,
         )
 
         render_artifact_summary(
             "Fighter Profiles",
-            "ufc_staged_fighter_profiles.parquet",
+            STAGED_FIGHTER_PROFILES_PATH,
         )
 
         render_artifact_summary(
             "Profiled Master Rows",
-            "ufc_staged_master_rows_profiled.parquet",
+            STAGED_MASTER_ROWS_PROFILED_PATH,
         )
 
         render_artifact_summary(
             "Fighter Profile Scrape Audit",
-            "ufc_fighter_profile_scrape_audit.parquet",
+            FIGHTER_PROFILE_SCRAPE_AUDIT_PATH,
         )

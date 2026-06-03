@@ -14,10 +14,6 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Pull latest repo state
-        run: |
-          git pull --rebase origin main
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -29,18 +25,17 @@ jobs:
 
       - name: Run append staged to master
         run: |
-          python run_append_staged_to_master.py
+          python -m pipeline.data_maintenance.run_append_staged_to_master
 
       - name: Commit appended master and audit
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add ufc_master.parquet
-          git add ufc_append_audit.parquet
-          git add ufc_master_backup_before_append_*.parquet
+          git add data/master/ufc_master.parquet
+          git add data/audits/ufc_append_audit.parquet
+          git add -f data/backups/ufc_master_backup_before_append_*.parquet
 
           git commit -m "Append staged UFC fights to master dataset" || echo "No changes to commit"
 
-          git pull --rebase origin main
           git push
