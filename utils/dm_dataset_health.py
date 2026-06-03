@@ -11,6 +11,7 @@ from utils.dm_workflow_status import (
 )
 
 
+
 def safe_read_parquet(path):
     path = Path(path)
 
