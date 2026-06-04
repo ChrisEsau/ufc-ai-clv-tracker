@@ -105,3 +105,7 @@ Dynamic Bet Requalification Engine:
 A self-maintaining UFC betting intelligence platform
 that continuously learns, adapts to the market,
 and maximizes long-term ROI.
+
+## Betting Board Event Selection Update
+
+The near-term Betting Board workflow should use UFCStats upcoming-event scraping as the source of selectable cards. Operators refresh upcoming events, choose a UFCStats event id in the Betting Board tab, and launch a selected-event workflow that builds the live card and downstream betting artifacts from canonical `data/cards/`, `data/predictions/`, and `data/market/` paths.

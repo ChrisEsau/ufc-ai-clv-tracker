@@ -8,7 +8,13 @@ from datetime import datetime, timezone
 import numpy as np
 import pandas as pd
 
-from pipeline.common.paths import MODEL_PREDICTIONS_PATH
+from pipeline.common.paths import (
+    MARKET_MATCH_AUDIT_PATH,
+    MARKET_ODDS_PATH,
+    MARKET_SNAPSHOTS_PATH,
+    MODEL_PREDICTIONS_PATH,
+    ensure_data_dirs,
+)
 from pipeline_config import *
 from ufc_pipeline_utils import *
 from ufc_odds_utils import *
@@ -19,17 +25,9 @@ from ufc_odds_utils import *
 
 BASE_PATH = "."
 
-MARKET_ODDS_OUTPUT = (
-    f"{BASE_PATH}/ufc_market_odds.parquet"
-)
-
-MARKET_SNAPSHOTS_OUTPUT = (
-    f"{BASE_PATH}/ufc_market_snapshots.parquet"
-)
-
-MARKET_MATCH_AUDIT_OUTPUT = (
-    f"{BASE_PATH}/ufc_market_match_audit.parquet"
-)
+MARKET_ODDS_OUTPUT = MARKET_ODDS_PATH
+MARKET_SNAPSHOTS_OUTPUT = MARKET_SNAPSHOTS_PATH
+MARKET_MATCH_AUDIT_OUTPUT = MARKET_MATCH_AUDIT_PATH
 
 SNAPSHOT_TIMESTAMP = datetime.now(
     timezone.utc
@@ -44,6 +42,8 @@ PREFERRED_BOOKMAKER = "DraftKings"
 # ============================================================
 # LOAD MODEL PREDICTIONS
 # ============================================================
+
+ensure_data_dirs()
 
 predictions_df = pd.read_parquet(
     MODEL_PREDICTIONS_PATH

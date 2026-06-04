@@ -93,6 +93,21 @@ models/UFC_Model_v5_Experiment/model_quality_summary.csv
 models/UFC_Model_v5_Experiment/shap_importance.csv
 ```
 
+---
+
+## Model Artifacts
+
+```text
+models/UFC_Model_v5_Experiment/production_config.json
+models/UFC_Model_v5_Experiment/production_config.pkl
+models/UFC_Model_v5_Experiment/feature_columns.pkl
+models/UFC_Model_v5_Experiment/best_threshold.pkl
+models/UFC_Model_v5_Experiment/calibrated_model.pkl
+models/UFC_Model_v5_Experiment/raw_model.pkl
+models/UFC_Model_v5_Experiment/model_quality_summary.csv
+models/UFC_Model_v5_Experiment/shap_importance.csv
+```
+
 Purpose:
 
 * `ufc_missing_events.parquet` stores completed UFCStats events not represented in the local master dataset.
@@ -208,3 +223,22 @@ data/backups/ufc_master_backup_<run_id>.parquet
 ```
 
 Created before appending staged rows to master.
+
+## Betting Card Artifacts
+
+| Artifact | Canonical Path | Producer | Consumer |
+|---|---|---|---|
+| UFCStats upcoming events | `data/cards/ufcstats_upcoming_events.parquet` | `pipeline.prediction.run_refresh_upcoming_events` | Betting Board event selector |
+| UFCStats upcoming fights | `data/cards/ufcstats_upcoming_fights.parquet` | `pipeline.prediction.run_refresh_upcoming_events` | Selected live-card builder |
+| Selected live-card event | `data/cards/ufc_selected_live_card_event.parquet` | `pipeline.prediction.run_build_live_card` | Betting Board diagnostics |
+
+## Market / CLV Artifacts
+
+| Artifact | Canonical Path | Producer | Consumer |
+|---|---|---|---|
+| Market odds | `data/market/ufc_market_odds.parquet` | `run_market_update.py` | `run_betting_decision.py` |
+| Market snapshots | `data/market/ufc_market_snapshots.parquet` | `run_market_update.py`, `run_clv_tracker.py` | Line Movement / CLV tab |
+| Market match audit | `data/market/ufc_market_match_audit.parquet` | `run_market_update.py` | Betting Board diagnostics |
+| Closing lines | `data/market/ufc_closing_lines.parquet` | `run_clv_tracker.py` | CLV reporting |
+| Line movement | `data/market/ufc_line_movement.parquet` | `run_clv_tracker.py` | Line Movement / CLV tab |
+| CLV results | `data/market/ufc_clv_results.parquet` | `run_clv_tracker.py` | CLV reporting |

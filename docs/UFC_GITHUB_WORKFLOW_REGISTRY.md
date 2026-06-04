@@ -295,3 +295,13 @@ prediction-model.yml
 clv-market-update.yml
 features-current-fighter.yml
 ```
+
+## Betting Board Workflows
+
+### `run-refresh-upcoming-events.yml`
+
+Refreshes the UFCStats upcoming event list and upcoming fight-card artifacts used by the Betting Board selector. This workflow is safe to run before each prediction cycle because it only updates generated card artifacts under `data/cards/`.
+
+### `run-betting-board-selected-event.yml`
+
+Accepts a UFCStats `event_id`, rebuilds the live card for that selected event, runs model predictions, refreshes market odds, and produces the Betting Board outputs. This is the preferred entrypoint when an operator wants predictions for a specific upcoming card.

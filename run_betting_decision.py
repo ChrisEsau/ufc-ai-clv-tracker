@@ -11,6 +11,7 @@ import pandas as pd
 from pipeline.common.paths import (
     BETTING_BOARD_PATH,
     LIVE_WATCHLIST_PATH,
+    MARKET_ODDS_PATH,
     MODEL_PREDICTIONS_PATH,
     OFFICIAL_BETS_PATH,
     ensure_data_dirs,
@@ -24,7 +25,6 @@ from ufc_pipeline_utils import *
 
 BASE_PATH = "."
 
-MARKET_ODDS_PATH = f"{BASE_PATH}/ufc_market_odds.parquet"
 
 BETTING_BOARD_OUTPUT = BETTING_BOARD_PATH
 WATCHLIST_OUTPUT = LIVE_WATCHLIST_PATH

@@ -39,7 +39,11 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add *.parquet
+          git add -f \
+            data/market/ufc_market_snapshots.parquet \
+            data/market/ufc_closing_lines.parquet \
+            data/market/ufc_clv_results.parquet \
+            data/market/ufc_line_movement.parquet
           git commit -m "Automated CLV update" || echo "No changes to commit"
 
 

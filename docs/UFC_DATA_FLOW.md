@@ -109,3 +109,11 @@ Closing Lines
     ↓
 CLV Results
 ```
+
+## Betting Prediction Flow
+
+Betting prediction input selection is now driven by UFCStats upcoming-event discovery:
+
+`UFCStats upcoming events page` → `data/cards/ufcstats_upcoming_events.parquet` + `data/cards/ufcstats_upcoming_fights.parquet` → selected event id → `data/predictions/ufc_live_card.parquet` → `data/predictions/ufc_model_predictions.parquet` → `data/market/ufc_market_odds.parquet` → `data/predictions/ufc_betting_board.parquet`.
+
+The Betting Board tab owns the operator UX for refreshing upcoming cards, selecting a UFCStats event id, dispatching the selected-event workflow, and reviewing artifact readiness before trusting the betting board output.

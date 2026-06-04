@@ -97,3 +97,14 @@ ufc_clv_results.parquet
 * CLV by model confidence bucket
 * CLV by odds range
 * CLV by sportsbook
+
+## Canonical Market Artifact Location
+
+Line movement and CLV runtime artifacts now live under `data/market/`:
+
+- `data/market/ufc_market_snapshots.parquet`
+- `data/market/ufc_closing_lines.parquet`
+- `data/market/ufc_line_movement.parquet`
+- `data/market/ufc_clv_results.parquet`
+
+The dashboard and CLV runner should use `pipeline.common.paths` rather than root-level parquet filenames.

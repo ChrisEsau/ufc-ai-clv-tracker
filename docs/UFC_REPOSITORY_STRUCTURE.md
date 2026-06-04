@@ -132,3 +132,9 @@ Utils contain reusable dashboard components.
 GitHub Actions entry points only.
 
 Business logic belongs in pipeline modules.
+
+## Betting Board Runtime Directories
+
+- `data/cards/` stores UFCStats upcoming-event discovery artifacts and the selected event marker used to build the live card.
+- `data/market/` stores market odds, snapshots, match audits, closing lines, line movement, and CLV outputs.
+- These directories contain generated parquet files. Source branches should not manually commit ad-hoc generated parquet files; workflows force-add only the canonical artifacts they produce.
