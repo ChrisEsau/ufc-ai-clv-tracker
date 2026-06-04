@@ -4,81 +4,57 @@ import pandas as pd
 import pyarrow.parquet as pq
 
 from pipeline.common.paths import (
-    BETTING_BOARD_PATH,
+    BET_LEDGER_PATH,
+    CLOSING_LINES_PATH,
     CLV_RESULTS_PATH,
-    LIVE_ACTION_BOARD_PATH,
-    LIVE_CARD_PATH,
-    LIVE_WATCHLIST_PATH,
+    LINE_MOVEMENT_PATH,
     MARKET_MATCH_AUDIT_PATH,
     MARKET_ODDS_PATH,
     MARKET_SNAPSHOTS_PATH,
-    MODEL_PREDICTIONS_PATH,
     OFFICIAL_BETS_PATH,
-    SELECTED_LIVE_CARD_EVENT_PATH,
-    UPCOMING_EVENTS_PATH,
-    UPCOMING_FIGHTS_PATH,
 )
 
 
-UPCOMING_ARTIFACTS = {
-    "Upcoming events": {
-        "path": UPCOMING_EVENTS_PATH,
-        "required_for": "Event selection",
-    },
-    "Upcoming fights": {
-        "path": UPCOMING_FIGHTS_PATH,
-        "required_for": "Event preview",
-    },
-    "Selected live card event": {
-        "path": SELECTED_LIVE_CARD_EVENT_PATH,
-        "required_for": "Selected-event diagnostics",
-    },
-    "Live card": {
-        "path": LIVE_CARD_PATH,
-        "required_for": "Prediction input",
-    },
-}
-
-BETTING_ARTIFACTS = {
-    "Model predictions": {
-        "path": MODEL_PREDICTIONS_PATH,
-        "required_for": "Betting Board output",
-    },
+CLV_ARTIFACTS = {
     "Market odds": {
         "path": MARKET_ODDS_PATH,
-        "required_for": "Betting Board output",
+        "required_for": "Current market prices",
     },
     "Market snapshots": {
         "path": MARKET_SNAPSHOTS_PATH,
-        "required_for": "Market diagnostics",
+        "required_for": "Line movement history",
     },
     "Market match audit": {
         "path": MARKET_MATCH_AUDIT_PATH,
         "required_for": "Odds matching diagnostics",
     },
-    "Betting board": {
-        "path": BETTING_BOARD_PATH,
-        "required_for": "Betting Board output",
+    "Closing lines": {
+        "path": CLOSING_LINES_PATH,
+        "required_for": "Closing-line capture",
     },
-    "Action board": {
-        "path": LIVE_ACTION_BOARD_PATH,
-        "required_for": "Legacy action-board output",
-        "optional": True,
-    },
-    "Watchlist": {
-        "path": LIVE_WATCHLIST_PATH,
-        "required_for": "Watchlist output",
-    },
-    "Official bets": {
-        "path": OFFICIAL_BETS_PATH,
-        "required_for": "Official-bets output",
+    "Line movement": {
+        "path": LINE_MOVEMENT_PATH,
+        "required_for": "Line movement analytics",
     },
     "CLV results": {
         "path": CLV_RESULTS_PATH,
-        "required_for": "CLV output",
+        "required_for": "CLV reporting",
+    },
+    "Official bets": {
+        "path": OFFICIAL_BETS_PATH,
+        "required_for": "Recommended official bets",
+        "optional": True,
+    },
+    "Bet ledger": {
+        "path": BET_LEDGER_PATH,
+        "required_for": "Placed wager source of truth",
         "optional": True,
     },
 }
+
+
+FRESH_HOURS = 6
+AGING_HOURS = 24
 
 
 def format_file_size(path):
@@ -99,7 +75,17 @@ def parquet_row_count(path):
         return None
 
 
-def artifact_status_rows(artifacts):
+def freshness_status(age_hours):
+    if age_hours is None:
+        return "missing"
+    if age_hours <= FRESH_HOURS:
+        return "fresh"
+    if age_hours <= AGING_HOURS:
+        return "aging"
+    return "stale"
+
+
+def artifact_status_rows(artifacts=CLV_ARTIFACTS):
     rows = []
     now = pd.Timestamp.utcnow()
 
@@ -109,6 +95,7 @@ def artifact_status_rows(artifacts):
         optional = bool(metadata.get("optional", False))
         row_count = parquet_row_count(path) if exists and path.suffix == ".parquet" else None
         modified_utc = pd.to_datetime(path.stat().st_mtime, unit="s", utc=True) if exists else None
+        age_hours = round((now - modified_utc).total_seconds() / 3600, 2) if modified_utc is not None else None
 
         if not exists:
             health = "optional_missing" if optional else "missing"
@@ -125,12 +112,14 @@ def artifact_status_rows(artifacts):
                 "path": str(path),
                 "exists": exists,
                 "health": health,
+                "freshness": freshness_status(age_hours),
                 "rows": row_count,
                 "size": format_file_size(path) if exists else "missing",
                 "modified_utc": modified_utc.isoformat() if modified_utc is not None else None,
-                "age_hours": round((now - modified_utc).total_seconds() / 3600, 2) if modified_utc is not None else None,
+                "age_hours": age_hours,
             }
         )
+
     return pd.DataFrame(rows)
 
 
@@ -142,53 +131,23 @@ def artifact_readiness_summary(status):
             "missing_required": 0,
             "empty_required": 0,
             "optional_missing": 0,
+            "stale_ready_artifacts": 0,
             "ready_to_review": False,
         }
 
     required = status[~status["optional"]]
+    ready_required = required[required["health"] == "ready"]
+
     return {
-        "required_ready": int((required["health"] == "ready").sum()),
+        "required_ready": int(len(ready_required)),
         "required_total": int(len(required)),
         "missing_required": int((required["health"] == "missing").sum()),
         "empty_required": int((required["health"] == "empty").sum()),
         "optional_missing": int((status["health"] == "optional_missing").sum()),
+        "stale_ready_artifacts": int((ready_required["freshness"] == "stale").sum()),
         "ready_to_review": bool((required["health"] == "ready").all()) if len(required) else False,
     }
 
 
-def load_parquet_with_error(path):
-    path = Path(path)
-    if not path.exists():
-        return pd.DataFrame(), f"Missing artifact: {path}"
-    try:
-        return pd.read_parquet(path), None
-    except Exception as exc:
-        return pd.DataFrame(), f"Could not read {path}: {exc}"
-
-
-def get_upcoming_artifact_status():
-    return artifact_status_rows(UPCOMING_ARTIFACTS)
-
-
-def get_betting_artifact_status():
-    return artifact_status_rows(BETTING_ARTIFACTS)
-
-
-def load_upcoming_events():
-    return load_parquet_with_error(UPCOMING_EVENTS_PATH)
-
-
-def load_upcoming_fights():
-    return load_parquet_with_error(UPCOMING_FIGHTS_PATH)
-
-
-def load_selected_live_card_event():
-    return load_parquet_with_error(SELECTED_LIVE_CARD_EVENT_PATH)
-
-
-def event_label(event_row):
-    name = event_row.get("ufcstats_event_name") or event_row.get("event_name") or "Unknown event"
-    date = event_row.get("ufcstats_event_date") or event_row.get("event_date") or "date unknown"
-    location = event_row.get("ufcstats_event_location") or event_row.get("event_location") or "location unknown"
-    event_id = event_row.get("ufcstats_event_id") or event_row.get("event_id") or "missing-id"
-    return f"{date} — {name} — {location} ({event_id})"
+def get_clv_artifact_status():
+    return artifact_status_rows(CLV_ARTIFACTS)

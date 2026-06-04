@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 import streamlit.components.v1 as components
 
 from pipeline.common.paths import MARKET_SNAPSHOTS_PATH
+from utils.clv_artifacts import artifact_readiness_summary, get_clv_artifact_status
 from utils.data_loader import load_parquet
 from utils.ui_components import render_metric
 
@@ -15,11 +16,46 @@ from utils.panels import (
     render_status_pill,
 )
 
+
+def render_clv_artifact_health():
+    render_section_header("CLV Artifact Health")
+
+    status = get_clv_artifact_status()
+    summary = artifact_readiness_summary(status)
+
+    cols = st.columns(5)
+    cols[0].metric("Required ready", f"{summary['required_ready']} / {summary['required_total']}")
+    cols[1].metric("Missing required", summary["missing_required"])
+    cols[2].metric("Empty required", summary["empty_required"])
+    cols[3].metric("Optional missing", summary["optional_missing"])
+    cols[4].metric("Stale ready", summary["stale_ready_artifacts"])
+
+    if summary["ready_to_review"]:
+        st.success("Required CLV artifacts are present and non-empty.")
+    else:
+        st.warning("One or more required CLV artifacts are missing or empty. Run the market update / CLV workflows before trusting CLV output.")
+
+    display_cols = [
+        "artifact",
+        "required_for",
+        "health",
+        "freshness",
+        "optional",
+        "rows",
+        "size",
+        "age_hours",
+        "modified_utc",
+        "path",
+    ]
+    st.dataframe(status[display_cols], use_container_width=True, hide_index=True)
+
+
 def render_line_movement():
     # ============================================================
     # LINE MOVEMENT / CLV SECTION
     # ============================================================
     render_section_header("Line Movement / CLV")
+    render_clv_artifact_health()
     
     snapshots = load_parquet(MARKET_SNAPSHOTS_PATH)
     

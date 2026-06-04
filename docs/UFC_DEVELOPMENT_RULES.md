@@ -1,5 +1,15 @@
 # UFC Development Rules
 
+## Change Approval Rule
+
+Before coding, moving files, committing, or creating a PR, the agent must first provide a concise summary of the intended implementation and receive explicit user approval.
+
+Read-only review, repository scans, recommendations, and project planning are allowed without approval only when they do not modify files.
+
+Approval for one implementation scope does not imply approval for unrelated follow-up changes.
+
+---
+
 ## Paths
 
 Always use:

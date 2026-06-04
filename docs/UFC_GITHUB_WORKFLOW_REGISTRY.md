@@ -29,6 +29,8 @@ Canonical data/status/staging/audit artifacts
 
 Workflows that commit generated parquet artifacts must use `git add -f` because generated binary artifacts are ignored by `.gitignore`.
 
+Archived workflows live under `archive/.github/workflows/` and are retained only for historical reference. They are not active GitHub Actions entry points and should not be dispatched by the dashboard.
+
 ---
 
 ## Data Maintenance Workflows
@@ -234,23 +236,25 @@ CLV
 
 ## Legacy / Audit Workflows
 
-### LEGACY
+### ARCHIVED
+
+These workflows are no longer active GitHub Actions entry points under `.github/workflows/`. They have been moved to `archive/.github/workflows/` for historical reference while the production pipeline stabilizes.
 
 ```text
-run-detail-column-inventory.yml
-run-master-column-inventory.yml
-run-master-first-row.yml
-run-staged-mapping-audit.yml
-run-staged-master-alignment-audit.yml
-run-staged-schema-audit.yml
-run-known-fight-scrape-validation.yml
-run-append-row-match-validation.yml
-run-fight-detail-structure-audit.yml
-run-repair-master-date-format.yml
+archive/.github/workflows/run-detail-column-inventory.yml
+archive/.github/workflows/run-master-column-inventory.yml
+archive/.github/workflows/run-master-first-row.yml
+archive/.github/workflows/run-staged-mapping-audit.yml
+archive/.github/workflows/run-staged-master-alignment-audit.yml
+archive/.github/workflows/run-staged-schema-audit.yml
+archive/.github/workflows/run-known-fight-scrape-validation.yml
+archive/.github/workflows/run-append-row-match-validation.yml
+archive/.github/workflows/run-fight-detail-structure-audit.yml
+archive/.github/workflows/run-repair-master-date-format.yml
 ```
 
 Purpose:
-Development and audit workflows retained for reference.
+Development and audit workflows retained for reference only.
 
 ---
 

@@ -499,6 +499,8 @@ Codex should avoid modifying binary/data artifacts.
 
 Codex should prefer small, reviewable changes.
 
+Before coding or moving files, Codex must provide a concise implementation summary and wait for explicit user approval. Read-only review, planning, and recommendations do not count as approval to edit files.
+
 Codex should explain:
 
 * What files changed
