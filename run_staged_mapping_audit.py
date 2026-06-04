@@ -1,11 +1,12 @@
 from datetime import datetime, timezone
 import pandas as pd
 
+from pipeline.common.paths import MASTER_PATH, STAGED_FIGHT_ROWS_PATH
+
 
 BASE_PATH = "."
 
-MASTER_PATH = f"{BASE_PATH}/ufc_master.parquet"
-STAGED_PATH = f"{BASE_PATH}/ufc_staged_fight_rows.parquet"
+STAGED_PATH = STAGED_FIGHT_ROWS_PATH
 
 MAPPING_AUDIT_OUTPUT = f"{BASE_PATH}/ufc_staged_mapping_audit.parquet"
 
