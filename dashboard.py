@@ -10,7 +10,7 @@ import streamlit.components.v1 as components
 import plotly.graph_objects as go
 
 from utils.theme import apply_theme
-from tabs.betting_board import render_betting_board
+#from tabs.betting_board import render_betting_board
 from tabs.line_movement import render_line_movement
 from tabs.model_lab import render_model_lab
 from tabs.data_maintenance import render_data_maintenance
