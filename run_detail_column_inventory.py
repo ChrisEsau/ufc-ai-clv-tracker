@@ -1,6 +1,8 @@
 import pandas as pd
 
-DETAILS_PATH = "./ufc_staged_fight_details.parquet"
+from pipeline.common.paths import STAGED_FIGHT_DETAILS_PATH
+
+DETAILS_PATH = STAGED_FIGHT_DETAILS_PATH
 
 df = pd.read_parquet(DETAILS_PATH)
 

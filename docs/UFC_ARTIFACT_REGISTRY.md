@@ -12,10 +12,35 @@ data/audits
 data/backups
 data/features
 data/predictions
+data/cards
+data/market
+data/bankroll
+data/model_lab
 models
+archive
 ```
 
 Generated binary artifacts such as parquet files are ignored by `.gitignore` by default. GitHub Actions workflows must use `git add -f` for generated parquet artifacts that should be committed back to the repository.
+
+
+## Archive
+
+```text
+archive/
+archive/.github/workflows/
+```
+
+Purpose:
+
+* Stores legacy root-level files and duplicate generated artifacts moved out of the repository root.
+* Stores archived legacy/audit workflows that should no longer appear as active GitHub Actions entry points.
+* Retains historical reference material while the active pipeline stabilizes.
+
+Rules:
+
+* Do not use archived artifacts as active pipeline inputs.
+* Do not dispatch archived workflows as production workflows.
+* Active runtime artifacts should live under canonical `data/` directories and be accessed through `pipeline.common.paths`.
 
 ---
 

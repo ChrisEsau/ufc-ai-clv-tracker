@@ -4,6 +4,7 @@ import streamlit as st
 
 from pipeline.common.paths import BETTING_BOARD_PATH, MARKET_MATCH_AUDIT_PATH
 from utils.betting_board_artifacts import (
+    artifact_readiness_summary,
     event_label,
     get_betting_artifact_status,
     get_upcoming_artifact_status,
@@ -38,7 +39,34 @@ def _artifact_health_table():
         ],
         ignore_index=True,
     )
-    return status[["group", "artifact", "exists", "size", "modified_utc", "path"]]
+    return status[
+        [
+            "group",
+            "artifact",
+            "required_for",
+            "health",
+            "optional",
+            "rows",
+            "size",
+            "age_hours",
+            "modified_utc",
+            "path",
+        ]
+    ]
+
+
+def render_artifact_readiness(status):
+    summary = artifact_readiness_summary(status)
+    cols = st.columns(4)
+    cols[0].metric("Required ready", f"{summary['required_ready']} / {summary['required_total']}")
+    cols[1].metric("Missing required", summary["missing_required"])
+    cols[2].metric("Empty required", summary["empty_required"])
+    cols[3].metric("Optional missing", summary["optional_missing"])
+
+    if summary["ready_to_review"]:
+        st.success("Required Betting Board artifacts are present and non-empty.")
+    else:
+        st.warning("One or more required Betting Board artifacts are missing or empty. Refresh/run the selected-event workflow before trusting board output.")
 
 
 def _selected_event_id(event_row):
@@ -55,7 +83,9 @@ def render_upcoming_event_selection():
             "betting board outputs from canonical data/ paths."
         )
 
-        st.dataframe(_artifact_health_table(), use_container_width=True, hide_index=True)
+        artifact_status = _artifact_health_table()
+        render_artifact_readiness(artifact_status)
+        st.dataframe(artifact_status, use_container_width=True, hide_index=True)
 
         control_cols = st.columns([1, 1])
 
@@ -569,7 +599,9 @@ def render_status_and_diagnostics(filtered):
         st.info("No bet_status column found.")
 
     render_section_header("Artifact Diagnostics")
-    st.dataframe(get_betting_artifact_status(), use_container_width=True, hide_index=True)
+    betting_status = get_betting_artifact_status()
+    render_artifact_readiness(betting_status)
+    st.dataframe(betting_status, use_container_width=True, hide_index=True)
 
 
 def render_selected_fight_detail(filtered):

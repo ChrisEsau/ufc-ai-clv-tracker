@@ -1,7 +1,8 @@
 import pandas as pd
 
-MASTER_PATH = "./ufc_master.parquet"
-STAGED_PATH = "./ufc_staged_fight_details.parquet"
+from pipeline.common.paths import MASTER_PATH, STAGED_FIGHT_DETAILS_PATH
+
+STAGED_PATH = STAGED_FIGHT_DETAILS_PATH
 
 master = pd.read_parquet(MASTER_PATH)
 staged = pd.read_parquet(STAGED_PATH)
