@@ -1,6 +1,8 @@
 import pandas as pd
 
-PATH = "ufc_market_snapshots.parquet"
+from pipeline.common.paths import MARKET_SNAPSHOTS_PATH
+
+PATH = MARKET_SNAPSHOTS_PATH
 
 df = pd.read_parquet(PATH)
 

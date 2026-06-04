@@ -3,15 +3,16 @@
 # ============================================================
 
 import pandas as pd
-from pathlib import Path
 
+from pipeline.common.paths import (
+    CURRENT_FIGHTER_FEATURES_PATH,
+    ROLLING_FEATURES_PATH,
+    ensure_data_dirs,
+)
 from ufc_pipeline_utils import normalize_name
 
 
-BASE_PATH = "."
-
-ROLLING_FEATURES_PATH = f"{BASE_PATH}/UFC_enhanced_rolling_features_EWM.parquet"
-CURRENT_FEATURES_OUTPUT = f"{BASE_PATH}/ufc_current_fighter_features.parquet"
+CURRENT_FEATURES_OUTPUT = CURRENT_FIGHTER_FEATURES_PATH
 
 
 def first_existing_column(df, possible_cols):
@@ -168,6 +169,7 @@ def build_current_fighter_features(rolling_df):
 
 def main():
     print("Building current fighter feature store...")
+    ensure_data_dirs()
 
     rolling_df = pd.read_parquet(ROLLING_FEATURES_PATH)
 

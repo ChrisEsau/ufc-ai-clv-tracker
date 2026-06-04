@@ -4,6 +4,7 @@ import numpy as np
 import plotly.graph_objects as go
 import streamlit.components.v1 as components
 
+from pipeline.common.paths import MARKET_SNAPSHOTS_PATH
 from utils.data_loader import load_parquet
 from utils.ui_components import render_metric
 
@@ -20,7 +21,7 @@ def render_line_movement():
     # ============================================================
     render_section_header("Line Movement / CLV")
     
-    snapshots = load_parquet("ufc_market_snapshots.parquet")
+    snapshots = load_parquet(MARKET_SNAPSHOTS_PATH)
     
     if snapshots.empty:
         st.info("No market snapshots found yet.")

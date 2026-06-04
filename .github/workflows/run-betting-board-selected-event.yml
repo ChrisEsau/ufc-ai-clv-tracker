@@ -1,0 +1,79 @@
+name: Run Betting Board for Selected Event
+
+on:
+  workflow_dispatch:
+    inputs:
+      event_id:
+        description: "UFCStats event id to build predictions for"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  run-selected-event-betting-board:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install scikit-learn==1.6.1 xgboost
+
+      - name: Refresh upcoming events
+        run: |
+          python -m pipeline.prediction.run_refresh_upcoming_events
+
+      - name: Build selected live card
+        env:
+          EVENT_ID: ${{ github.event.inputs.event_id }}
+        run: |
+          python -m pipeline.prediction.run_build_live_card --event-id "$EVENT_ID"
+
+      - name: Run model predictions
+        run: |
+          python run_model_predictions.py
+
+      - name: Run market update
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        run: |
+          python run_market_update.py
+
+      - name: Run betting decision
+        run: |
+          python run_betting_decision.py
+
+      - name: Commit betting board artifacts
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add -f \
+            data/cards/ufcstats_upcoming_events.parquet \
+            data/cards/ufcstats_upcoming_fights.parquet \
+            data/cards/ufc_selected_live_card_event.parquet \
+            data/predictions/ufc_live_card.parquet \
+            data/predictions/ufc_model_predictions.parquet \
+            data/predictions/ufc_betting_board.parquet \
+            data/predictions/ufc_live_action_board.parquet \
+            data/predictions/ufc_live_watchlist.parquet \
+            data/predictions/ufc_official_bets.parquet \
+            data/market/ufc_market_odds.parquet \
+            data/market/ufc_market_snapshots.parquet \
+            data/market/ufc_market_match_audit.parquet \
+            data/audits/ufc_live_feature_audit.parquet \
+            data/audits/ufc_live_match_audit.parquet \
+            data/audits/ufc_live_odds_audit.parquet
+
+          git commit -m "Run selected-event betting board artifacts" || echo "No changes to commit"
+          git push
