@@ -8,6 +8,14 @@ from datetime import datetime, timezone
 import numpy as np
 import pandas as pd
 
+from pipeline.common.paths import (
+    BETTING_BOARD_PATH,
+    LIVE_WATCHLIST_PATH,
+    MARKET_ODDS_PATH,
+    MODEL_PREDICTIONS_PATH,
+    OFFICIAL_BETS_PATH,
+    ensure_data_dirs,
+)
 from pipeline_config import *
 from ufc_pipeline_utils import *
 
@@ -17,12 +25,10 @@ from ufc_pipeline_utils import *
 
 BASE_PATH = "."
 
-MODEL_PREDICTIONS_PATH = f"{BASE_PATH}/ufc_model_predictions.parquet"
-MARKET_ODDS_PATH = f"{BASE_PATH}/ufc_market_odds.parquet"
 
-BETTING_BOARD_OUTPUT = f"{BASE_PATH}/ufc_betting_board.parquet"
-WATCHLIST_OUTPUT = f"{BASE_PATH}/ufc_live_watchlist.parquet"
-OFFICIAL_BETS_OUTPUT = f"{BASE_PATH}/ufc_official_bets.parquet"
+BETTING_BOARD_OUTPUT = BETTING_BOARD_PATH
+WATCHLIST_OUTPUT = LIVE_WATCHLIST_PATH
+OFFICIAL_BETS_OUTPUT = OFFICIAL_BETS_PATH
 
 DECISION_RUN_ID = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 DECISION_TIMESTAMP = datetime.now(timezone.utc).isoformat()
@@ -32,6 +38,8 @@ BANKROLL = 10000
 # ============================================================
 # LOAD INPUTS
 # ============================================================
+
+ensure_data_dirs()
 
 predictions_df = pd.read_parquet(MODEL_PREDICTIONS_PATH)
 market_df = pd.read_parquet(MARKET_ODDS_PATH)
@@ -45,7 +53,7 @@ print("Market rows:", len(market_df))
 
 paths = UFCPipelinePaths(
     base_path=BASE_PATH,
-    model_version="UFC_Model_v5_Experiment",
+    model_version=MODEL_VERSION,
 )
 
 artifacts = load_production_artifacts(paths)

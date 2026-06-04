@@ -17,6 +17,7 @@ pipeline/
 scrapers/
 tabs/
 utils/
+models/
 .github/workflows/
 ```
 
@@ -30,6 +31,9 @@ data/staging
 data/audits
 data/status
 data/backups
+data/features
+data/predictions
+data/model_lab
 ```
 
 ### master
@@ -51,6 +55,26 @@ Operational status artifacts.
 ### backups
 
 Automatic master backups.
+
+### features
+
+Historical and current feature stores.
+
+### predictions
+
+Live card, model prediction, betting-board, and action-board outputs.
+
+### model_lab
+
+Future model-lab reports such as backtests, calibration reports, and model comparisons.
+
+## Models
+
+```text
+models/UFC_Model_v5_Experiment
+```
+
+Frozen production model artifacts live outside `data/` under `models/`. Runtime code should access these via `pipeline.common.paths`.
 
 ---
 
@@ -108,3 +132,9 @@ Utils contain reusable dashboard components.
 GitHub Actions entry points only.
 
 Business logic belongs in pipeline modules.
+
+## Betting Board Runtime Directories
+
+- `data/cards/` stores UFCStats upcoming-event discovery artifacts and the selected event marker used to build the live card.
+- `data/market/` stores market odds, snapshots, match audits, closing lines, line movement, and CLV outputs.
+- These directories contain generated parquet files. Source branches should not manually commit ad-hoc generated parquet files; workflows force-add only the canonical artifacts they produce.

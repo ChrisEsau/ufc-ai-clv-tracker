@@ -7,6 +7,17 @@ on:
         description: "UFCStats Event ID"
         required: true
         type: string
+      mode:
+        description: "Ingestion mode"
+        required: true
+        default: "full"
+        type: choice
+        options:
+          - full
+          - smoke
+
+permissions:
+  contents: write
 
 jobs:
   ingest:
@@ -28,5 +39,33 @@ jobs:
       - name: Run Single Event Ingestion
         env:
           EVENT_ID: ${{ github.event.inputs.event_id }}
+          INGEST_MODE: ${{ github.event.inputs.mode }}
         run: |
           python -m pipeline.data_maintenance.run_ingest_single_event
+
+      - name: Commit single-event ingestion outputs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add -f \
+            data/staging/ufc_staged_fight_rows.parquet \
+            data/staging/ufc_staged_fight_details.parquet \
+            data/staging/ufc_staged_master_rows.parquet \
+            data/staging/ufc_staged_master_rows_enriched.parquet \
+            data/staging/ufc_staged_fighter_profiles.parquet \
+            data/staging/ufc_staged_master_rows_profiled.parquet \
+            data/audits/ufc_fight_scrape_audit.parquet \
+            data/audits/ufc_fight_detail_scrape_audit.parquet \
+            data/audits/ufc_staged_master_mapping_audit.parquet \
+            data/audits/ufc_staged_derived_stats_audit.parquet \
+            data/audits/ufc_fighter_profile_scrape_audit.parquet \
+            data/audits/ufc_master_column_validation.parquet \
+            data/audits/ufc_append_precheck.parquet \
+            data/audits/ufc_append_duplicate_check.parquet \
+            data/audits/ufc_append_required_field_audit.parquet \
+            data/audits/ufc_staged_final_review.parquet
+
+          git commit -m "Update single-event ingestion artifacts" || echo "No changes to commit"
+
+          git push

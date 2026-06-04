@@ -16,10 +16,6 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Sync with latest repo
-        run: |
-          git pull --rebase origin main
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -40,10 +36,10 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add \
-            ufc_market_odds.parquet \
-            ufc_market_snapshots.parquet \
-            ufc_market_match_audit.parquet
+          git add -f \
+            data/market/ufc_market_odds.parquet \
+            data/market/ufc_market_snapshots.parquet \
+            data/market/ufc_market_match_audit.parquet
 
           git commit -m "Update market odds data" || echo "No changes to commit"
 
