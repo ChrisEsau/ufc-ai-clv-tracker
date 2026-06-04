@@ -305,3 +305,9 @@ Refreshes the UFCStats upcoming event list and upcoming fight-card artifacts use
 ### `run-betting-board-selected-event.yml`
 
 Accepts a UFCStats `event_id`, rebuilds the live card for that selected event, runs model predictions, refreshes market odds, and produces the Betting Board outputs. This is the preferred entrypoint when an operator wants predictions for a specific upcoming card.
+
+## Bankroll Workflows
+
+### `run-bankroll-status.yml`
+
+Rebuilds derived bankroll status artifacts from the official bet ledger using `python -m pipeline.bankroll.run_bankroll_status`. It writes `data/bankroll/ufc_open_bets.parquet` and `data/bankroll/ufc_bankroll_snapshots.parquet` for the Bankroll workspace.

@@ -1,0 +1,38 @@
+name: Run Bankroll Status
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  run-bankroll-status:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install pandas numpy pyarrow
+
+      - name: Run bankroll status
+        run: |
+          python -m pipeline.bankroll.run_bankroll_status
+
+      - name: Commit bankroll status artifacts
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add -f data/bankroll/ufc_open_bets.parquet data/bankroll/ufc_bankroll_snapshots.parquet
+
+          git commit -m "Update bankroll status artifacts" || echo "No changes to commit"
+          git push
