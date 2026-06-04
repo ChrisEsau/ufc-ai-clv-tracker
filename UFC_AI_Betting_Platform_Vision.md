@@ -76,12 +76,12 @@ EVENT SCRAPER (Colab)
 ↓
 ufcstats_upcoming_events.parquet
 ufcstats_upcoming_fights.parquet
-ufc_live_card.parquet
+data/predictions/ufc_live_card.parquet
 
 LIVE PREDICTION ENGINE (GitHub Actions)
 ↓
-ufc_live_action_board.parquet
-ufc_live_watchlist.parquet
+data/predictions/ufc_live_action_board.parquet
+data/predictions/ufc_live_watchlist.parquet
 ufc_live_card_with_odds.parquet
 
 CLV ENGINE (Scheduled GitHub Actions)
@@ -105,3 +105,7 @@ Dynamic Bet Requalification Engine:
 A self-maintaining UFC betting intelligence platform
 that continuously learns, adapts to the market,
 and maximizes long-term ROI.
+
+## Betting Board Event Selection Update
+
+The near-term Betting Board workflow should use UFCStats upcoming-event scraping as the source of selectable cards. Operators refresh upcoming events, choose a UFCStats event id in the Betting Board tab, and launch a selected-event workflow that builds the live card and downstream betting artifacts from canonical `data/cards/`, `data/predictions/`, and `data/market/` paths.

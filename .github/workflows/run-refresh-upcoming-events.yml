@@ -1,0 +1,51 @@
+name: Refresh Upcoming UFCStats Events
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_events:
+        description: "Optional max events to scrape fight cards for"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  refresh-upcoming-events:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Refresh upcoming events
+        env:
+          MAX_EVENTS: ${{ github.event.inputs.max_events }}
+        run: |
+          if [ -n "$MAX_EVENTS" ]; then
+            python -m pipeline.prediction.run_refresh_upcoming_events --max-events "$MAX_EVENTS"
+          else
+            python -m pipeline.prediction.run_refresh_upcoming_events
+          fi
+
+      - name: Commit upcoming event artifacts
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add -f \
+            data/cards/ufcstats_upcoming_events.parquet \
+            data/cards/ufcstats_upcoming_fights.parquet
+
+          git commit -m "Refresh upcoming UFCStats event artifacts" || echo "No changes to commit"
+          git push

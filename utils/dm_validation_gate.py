@@ -3,10 +3,8 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from pipeline.common.paths import APPEND_PRECHECK_PATH
 from utils.github_actions import trigger_workflow
-
-
-APPEND_PRECHECK_PATH = "ufc_append_precheck.parquet"
 
 
 def safe_read_parquet(path):
@@ -19,7 +17,7 @@ def safe_read_parquet(path):
         return pd.read_parquet(path)
 
     except Exception as e:
-        st.warning(f"Could not read `{path.name}`: {e}")
+        st.warning(f"Could not read `{path}`: {e}")
         return None
 
 
@@ -64,7 +62,7 @@ def render_validation_gate():
                 st.error(msg)
 
         if st.button(
-            "Run Append Precheck",
+            "Run Append Precheck + Final Review",
             use_container_width=True,
             key="run_append_precheck",
         ):
@@ -81,7 +79,9 @@ def render_validation_gate():
 
         if precheck is None:
 
-            st.warning("No append precheck artifact found yet.")
+            st.warning(
+                f"No append precheck artifact found at `{APPEND_PRECHECK_PATH}`."
+            )
             return
 
         if "status" in precheck.columns:
@@ -123,6 +123,7 @@ def render_validation_gate():
                     "Staged Rows": staged_rows,
                     "Master Rows": master_rows,
                     "Failed Checks": failed_checks,
+                    "Artifact": str(APPEND_PRECHECK_PATH),
                 }
             ]
         )

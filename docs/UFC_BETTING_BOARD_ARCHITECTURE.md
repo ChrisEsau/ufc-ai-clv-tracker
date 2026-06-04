@@ -105,3 +105,24 @@ Bet Sizing: Half Kelly
 * Confidence-weighted staking
 * Market-aware model features
 * Bet ledger integration
+
+## Selected Upcoming Event Flow
+
+The Betting Board now treats the target card as a selectable upstream artifact instead of a hard-coded live-card parquet file.
+
+1. `run-refresh-upcoming-events.yml` runs `python -m pipeline.prediction.run_refresh_upcoming_events` to scrape the UFCStats upcoming-events page and each upcoming event detail page.
+2. The refresh runner writes `data/cards/ufcstats_upcoming_events.parquet` and `data/cards/ufcstats_upcoming_fights.parquet`.
+3. The Betting Board tab reads those card artifacts and lets the operator select one UFCStats event id.
+4. `run-betting-board-selected-event.yml` rebuilds `data/predictions/ufc_live_card.parquet` from the selected event, then runs model predictions, market update, and betting decision in sequence.
+5. The workflow commits only generated runtime artifacts with `git add -f`; source branches should not manually commit those parquet outputs.
+
+This keeps event selection auditable while avoiding a permanent hard-coded prediction input file.
+
+## Active Betting Board Workflows
+
+| Workflow | Purpose | Primary Outputs |
+|---|---|---|
+| `run-refresh-upcoming-events.yml` | Refresh UFCStats upcoming event/card choices. | `data/cards/ufcstats_upcoming_events.parquet`, `data/cards/ufcstats_upcoming_fights.parquet` |
+| `run-betting-board-selected-event.yml` | Run the full selected-event prediction and betting-board sequence. | `data/predictions/ufc_live_card.parquet`, `data/predictions/ufc_model_predictions.parquet`, `data/market/*`, `data/predictions/ufc_betting_board.parquet` |
+| `run-market-update.yml` | Refresh market odds for the current model prediction artifact. | `data/market/ufc_market_odds.parquet`, `data/market/ufc_market_snapshots.parquet`, `data/market/ufc_market_match_audit.parquet` |
+| `run-clv-tracker.yml` | Update closing-line and CLV tracking artifacts. | `data/market/ufc_closing_lines.parquet`, `data/market/ufc_clv_results.parquet`, `data/market/ufc_line_movement.parquet` |
