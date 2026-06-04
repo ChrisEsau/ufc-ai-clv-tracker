@@ -2,10 +2,12 @@ from datetime import datetime, timezone
 
 import pandas as pd
 
+from pipeline.common.paths import STAGED_FIGHT_DETAILS_PATH
+
 
 BASE_PATH = "."
 
-DETAILS_PATH = f"{BASE_PATH}/ufc_staged_fight_details.parquet"
+DETAILS_PATH = STAGED_FIGHT_DETAILS_PATH
 
 STRUCTURE_AUDIT_OUTPUT = f"{BASE_PATH}/ufc_fight_detail_structure_audit.parquet"
 RAW_SAMPLE_OUTPUT = f"{BASE_PATH}/ufc_fight_detail_raw_sample.parquet"
