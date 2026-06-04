@@ -30,7 +30,7 @@ apply_theme()
 page = render_sidebar()
 
 if page == "Betting Board":
-    render_betting_board()
+   # render_betting_board()
 elif page == "Line Movement / CLV":
     render_line_movement()
 elif page == "Model Lab":
