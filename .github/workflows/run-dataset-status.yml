@@ -14,10 +14,6 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Sync latest repo
-        run: |
-          git pull --rebase origin main
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -37,8 +33,8 @@ jobs:
           git config user.email "github-actions@github.com"
 
           git add \
-            ufc_dataset_status.parquet \
-            ufc_dataset_event_status.parquet
+            data/status/ufc_dataset_status.parquet \
+            data/status/ufc_dataset_event_status.parquet
 
           git commit -m "Update dataset status artifacts" || echo "No changes to commit"
 

@@ -14,10 +14,6 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Pull latest repo state
-        run: |
-          git pull --rebase origin main
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -29,15 +25,15 @@ jobs:
 
       - name: Run staged master mapper
         run: |
-          python run_staged_master_mapper.py
+          python -m pipeline.data_maintenance.run_staged_master_mapper
 
       - name: Commit mapper outputs
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add ufc_staged_master_rows.parquet
-          git add ufc_staged_master_mapping_audit.parquet
+          git add data/staging/ufc_staged_master_rows.parquet
+          git add data/audits/ufc_staged_master_mapping_audit.parquet
 
           git commit -m "Update staged master mapped rows" || echo "No changes to commit"
 

@@ -81,9 +81,14 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add *.parquet
+          git add -f \
+            data/predictions/ufc_live_card.parquet \
+            data/predictions/ufc_live_action_board.parquet \
+            data/predictions/ufc_live_watchlist.parquet \
+            data/audits/ufc_live_feature_audit.parquet \
+            data/audits/ufc_live_match_audit.parquet \
+            data/audits/ufc_live_odds_audit.parquet
           git commit -m "Automated CLV update" || echo "No changes to commit"
 
-          git pull --rebase --autostash origin main
 
           git push

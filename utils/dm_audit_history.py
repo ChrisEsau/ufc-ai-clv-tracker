@@ -3,43 +3,60 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from pipeline.common.paths import (
+    APPEND_AUDIT_PATH,
+    APPEND_PRECHECK_PATH,
+    DATASET_STATUS_PATH,
+    FIGHT_DETAIL_SCRAPE_AUDIT_PATH,
+    FIGHT_SCRAPE_AUDIT_PATH,
+    FIGHTER_PROFILE_SCRAPE_AUDIT_PATH,
+    MASTER_COLUMN_VALIDATION_PATH,
+    STAGED_DERIVED_STATS_AUDIT_PATH,
+    STAGED_FINAL_REVIEW_PATH,
+    UFCSTATS_EVENT_CHECK_PATH,
+)
+
 
 AUDIT_ARTIFACTS = [
     (
         "Dataset Status",
-        "ufc_dataset_status.parquet",
+        DATASET_STATUS_PATH,
     ),
     (
         "Event Check",
-        "ufc_ufcstats_event_check.parquet",
+        UFCSTATS_EVENT_CHECK_PATH,
     ),
     (
         "Fight Scrape Audit",
-        "ufc_fight_scrape_audit.parquet",
+        FIGHT_SCRAPE_AUDIT_PATH,
     ),
     (
         "Fight Detail Audit",
-        "ufc_fight_detail_scrape_audit.parquet",
+        FIGHT_DETAIL_SCRAPE_AUDIT_PATH,
     ),
     (
         "Derived Stats Audit",
-        "ufc_staged_derived_stats_audit.parquet",
+        STAGED_DERIVED_STATS_AUDIT_PATH,
     ),
     (
         "Fighter Profile Audit",
-        "ufc_fighter_profile_scrape_audit.parquet",
+        FIGHTER_PROFILE_SCRAPE_AUDIT_PATH,
     ),
     (
         "Column Validation",
-        "ufc_master_column_validation.parquet",
+        MASTER_COLUMN_VALIDATION_PATH,
     ),
     (
         "Append Precheck",
-        "ufc_append_precheck.parquet",
+        APPEND_PRECHECK_PATH,
+    ),
+    (
+        "Final Staged Review",
+        STAGED_FINAL_REVIEW_PATH,
     ),
     (
         "Append Audit",
-        "ufc_append_audit.parquet",
+        APPEND_AUDIT_PATH,
     ),
 ]
 
@@ -81,6 +98,7 @@ def render_audit_history():
             summary_rows.append(
                 {
                     "Artifact": label,
+                    "Path": str(path),
                     "Exists": exists,
                     "Last Updated": modified,
                 }
@@ -116,6 +134,7 @@ def render_audit_history():
         else:
 
             st.caption(
+                f"Path: {artifact_path} | "
                 f"Rows: {len(audit_df)} | "
                 f"Columns: {len(audit_df.columns)}"
             )

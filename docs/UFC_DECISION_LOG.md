@@ -53,7 +53,18 @@ Validation
     ↓
 Append Precheck
     ↓
+Final Staged Review
+    ↓
+Human Confirmation
+    ↓
 Append
+```
+
+Append requires both:
+
+```text
+append_ready == True
+final_review_pass == True
 ```
 
 ---
@@ -70,18 +81,16 @@ Dashboard does not contain business logic.
 
 ### Data Maintenance Layout
 
-Preferred section order:
+Current top-level section order:
 
 ```text
 Dataset Health
-Workflow Status
 Event Discovery
-Fight Scrape
-Enrichment
-Validation Gate
+Final Staged Review
 Audit History
-Append Status
 ```
+
+Fight scrape, enrichment, validation, final review, append readiness, and append controls are consolidated into the Final Staged Review workspace.
 
 ---
 
@@ -95,3 +104,34 @@ Confidence Threshold = 70%
 Odds Range = -250 to +400
 Half Kelly staking
 ```
+
+---
+
+### Model Lab Pause
+
+Model Lab is paused while development focus moves to the Betting Board.
+
+Current locked Model Lab state:
+
+```text
+Read-only artifact and diagnostics dashboard
+Canonical paths via pipeline.common.paths
+Production model artifacts under models/UFC_Model_v5_Experiment/
+Feature artifacts under data/features/
+Prediction artifacts under data/predictions/
+Live audit artifacts under data/audits/
+```
+
+Deferred Model Lab work:
+
+```text
+Backtest runner
+Threshold / ROI sweep
+Calibration bins
+Recent-era validation
+Feature drift report
+Model comparison summary
+Model Lab workflow dispatch
+```
+
+Do not add retraining, promotion, rollback, or ensemble controls until the Betting Board phase is complete and the historical evaluation layer exists.

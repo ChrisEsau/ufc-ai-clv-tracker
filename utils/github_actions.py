@@ -14,6 +14,14 @@ def get_github_config():
     return owner, repo, token, branch
 
 
+def github_headers(token):
+    return {
+        "Accept": "application/vnd.github+json",
+        "Authorization": f"Bearer {token}",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+
+
 def trigger_workflow(workflow_file, inputs=None):
     owner, repo, token, branch = get_github_config()
 
@@ -26,20 +34,14 @@ def trigger_workflow(workflow_file, inputs=None):
         f"{workflow_file}/dispatches"
     )
 
-    headers = {
-        "Accept": "application/vnd.github+json",
-        "Authorization": f"Bearer {token}",
-        "X-GitHub-Api-Version": "2022-11-28",
-    }
-
     payload = {
-    "ref": branch,
-    "inputs": inputs or {},
+        "ref": branch,
+        "inputs": inputs or {},
     }
 
     response = requests.post(
         url,
-        headers=headers,
+        headers=github_headers(token),
         json=payload,
         timeout=20,
     )
@@ -51,3 +53,49 @@ def trigger_workflow(workflow_file, inputs=None):
         f"GitHub API error {response.status_code}: "
         f"{response.text}"
     )
+
+
+def get_workflow_runs(workflow_file, branch=None, per_page=10):
+    owner, repo, token, default_branch = get_github_config()
+
+    if not owner or not repo or not token:
+        return False, "Missing GitHub Streamlit secrets.", []
+
+    branch = branch or default_branch
+
+    url = (
+        f"{GITHUB_API_BASE}/repos/"
+        f"{owner}/{repo}/actions/workflows/"
+        f"{workflow_file}/runs"
+    )
+
+    response = requests.get(
+        url,
+        headers=github_headers(token),
+        params={
+            "branch": branch,
+            "event": "workflow_dispatch",
+            "per_page": per_page,
+        },
+        timeout=20,
+    )
+
+    if response.status_code != 200:
+        return False, (
+            f"GitHub API error {response.status_code}: "
+            f"{response.text}"
+        ), []
+
+    return True, "Workflow runs loaded.", response.json().get("workflow_runs", [])
+
+
+def get_latest_workflow_run(workflow_file, branch=None):
+    ok, msg, runs = get_workflow_runs(workflow_file, branch=branch, per_page=10)
+
+    if not ok:
+        return False, msg, None
+
+    if not runs:
+        return True, "No workflow runs found.", None
+
+    return True, "Latest workflow run loaded.", runs[0]

@@ -57,8 +57,10 @@ def run_fight_detail_scrape(max_fights=None):
             details["run_timestamp"] = run_timestamp
             details["event_id"] = row.get("event_id")
             details["event_url"] = row.get("event_url")
+            details["event_location"] = row.get("event_location")
             details["fight_id"] = row.get("fight_id")
             details["fight_url"] = row.get("fight_url")
+            details["weight_class"] = row.get("weight_class")
 
             detail_rows.append(details)
 
@@ -69,7 +71,9 @@ def run_fight_detail_scrape(max_fights=None):
                     "fight_url": fight_url,
                     "event_name": row.get("event_name"),
                     "event_id": row.get("event_id"),
+                    "event_location": row.get("event_location"),
                     "fight_id": row.get("fight_id"),
+                    "weight_class": row.get("weight_class"),
                     "status": "success",
                     "detail_rows": len(details),
                     "error": None,
@@ -86,7 +90,9 @@ def run_fight_detail_scrape(max_fights=None):
                     "fight_url": fight_url,
                     "event_name": row.get("event_name"),
                     "event_id": row.get("event_id"),
+                    "event_location": row.get("event_location"),
                     "fight_id": row.get("fight_id"),
+                    "weight_class": row.get("weight_class"),
                     "status": "failed",
                     "detail_rows": 0,
                     "error": str(e),
