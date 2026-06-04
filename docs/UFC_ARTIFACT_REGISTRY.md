@@ -93,6 +93,39 @@ models/UFC_Model_v5_Experiment/model_quality_summary.csv
 models/UFC_Model_v5_Experiment/shap_importance.csv
 ```
 
+Purpose:
+
+* `UFC_enhanced_rolling_features_EWM.parquet` stores historical point-in-time training/backtesting features.
+* `ufc_current_fighter_features.parquet` stores latest one-row-per-fighter state for live prediction.
+
+---
+
+## Prediction Artifacts
+
+```text
+data/predictions/ufc_live_card.parquet
+data/predictions/ufc_model_predictions.parquet
+data/predictions/ufc_live_action_board.parquet
+data/predictions/ufc_live_watchlist.parquet
+data/predictions/ufc_betting_board.parquet
+data/predictions/ufc_official_bets.parquet
+```
+
+---
+
+## Model Artifacts
+
+```text
+models/UFC_Model_v5_Experiment/production_config.json
+models/UFC_Model_v5_Experiment/production_config.pkl
+models/UFC_Model_v5_Experiment/feature_columns.pkl
+models/UFC_Model_v5_Experiment/best_threshold.pkl
+models/UFC_Model_v5_Experiment/calibrated_model.pkl
+models/UFC_Model_v5_Experiment/raw_model.pkl
+models/UFC_Model_v5_Experiment/model_quality_summary.csv
+models/UFC_Model_v5_Experiment/shap_importance.csv
+```
+
 ---
 
 ## Model Artifacts

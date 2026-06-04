@@ -8,3 +8,6 @@ beautifulsoup4
 lxml
 selenium
 webdriver-manager
+joblib
+scikit-learn==1.6.1
+xgboost
