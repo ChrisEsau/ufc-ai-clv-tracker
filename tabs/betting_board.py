@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from pipeline.common.paths import BETTING_BOARD_PATH
+from pipeline.common.paths import BETTING_BOARD_PATH, MARKET_MATCH_AUDIT_PATH
 from utils.betting_board_artifacts import (
     event_label,
     get_betting_artifact_status,
@@ -13,6 +13,7 @@ from utils.betting_board_artifacts import (
 from utils.betting_board_rules import (
     BettingRules,
     apply_betting_rules,
+    normalize_betting_board_odds,
     default_betting_rules,
     rules_changed_from_default,
     scenario_comparison,
@@ -600,7 +601,13 @@ def render_selected_fight_detail(filtered):
         "recommended_stake",
         "display_bet_reason",
         "odds_match_score",
+        "odds_min_single_score",
         "odds_match_type",
+        "odds_match_order",
+        "odds_inferred_match_order",
+        "odds_side_mapping_status",
+        "matched_fighter_1",
+        "matched_fighter_2",
     ]
     detail_cols = [column for column in detail_cols if column in selected_rows.columns]
     st.dataframe(selected_rows[detail_cols], use_container_width=True, hide_index=True)
@@ -617,6 +624,38 @@ def render_betting_board():
     if board.empty:
         st.warning("No betting board data found. Select an upcoming event and run the betting workflow.")
         return
+
+    market_audit = load_parquet(MARKET_MATCH_AUDIT_PATH)
+    if not market_audit.empty and {"event_name", "red_fighter", "blue_fighter"}.issubset(market_audit.columns):
+        audit_cols = [
+            column
+            for column in [
+                "event_name",
+                "red_fighter",
+                "blue_fighter",
+                "matched_fighter_1",
+                "matched_fighter_2",
+            ]
+            if column in market_audit.columns
+        ]
+        deduped_audit = market_audit[audit_cols].drop_duplicates(
+            subset=["event_name", "red_fighter", "blue_fighter"],
+            keep="last",
+        )
+        board = board.merge(
+            deduped_audit,
+            how="left",
+            on=["event_name", "red_fighter", "blue_fighter"],
+            suffixes=("", "_audit"),
+        )
+
+    board = normalize_betting_board_odds(board)
+    corrected_rows = int((board.get("odds_side_mapping_status", pd.Series(dtype=str)) == "corrected_reversed_order").sum())
+    if corrected_rows:
+        st.warning(
+            f"Corrected {corrected_rows} reversed sportsbook odds row(s) in the dashboard display. "
+            "Rerun the selected-event Betting Board workflow to regenerate the official artifacts with side-mapped odds."
+        )
 
     rules = render_betting_rules_controls()
     scenario_board = apply_betting_rules(board, rules)

@@ -76,23 +76,28 @@ print("Staking:", production_config["staking"])
 # MERGE MODEL + MARKET
 # ============================================================
 
+market_merge_columns = [
+    "fight_id",
+    "snapshot_run_id",
+    "snapshot_timestamp",
+    "bookmaker",
+    "red_american_odds",
+    "blue_american_odds",
+    "red_decimal_odds",
+    "blue_decimal_odds",
+    "red_implied_prob",
+    "blue_implied_prob",
+    "odds_match_score",
+    "odds_min_single_score",
+    "odds_match_type",
+    "odds_match_order",
+    "matched_fighter_1",
+    "matched_fighter_2",
+]
+market_merge_columns = [column for column in market_merge_columns if column in market_df.columns]
+
 df = predictions_df.merge(
-    market_df[
-        [
-            "fight_id",
-            "snapshot_run_id",
-            "snapshot_timestamp",
-            "bookmaker",
-            "red_american_odds",
-            "blue_american_odds",
-            "red_decimal_odds",
-            "blue_decimal_odds",
-            "red_implied_prob",
-            "blue_implied_prob",
-            "odds_match_score",
-            "odds_match_type",
-        ]
-    ],
+    market_df[market_merge_columns],
     how="left",
     on="fight_id",
 )
@@ -474,7 +479,11 @@ output_cols = [
     "passes_feature_validation",
 
     "odds_match_score",
+    "odds_min_single_score",
     "odds_match_type",
+    "odds_match_order",
+    "matched_fighter_1",
+    "matched_fighter_2",
 ]
 
 output_cols = [

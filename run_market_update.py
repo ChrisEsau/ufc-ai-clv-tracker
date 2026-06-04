@@ -99,109 +99,120 @@ odds_df["fighter_2_norm"] = odds_df[
 market_rows = []
 market_audit_rows = []
 
+MIN_ODDS_MATCH_SCORE = 90
+
+MARKET_OUTPUT_COLUMNS = [
+    "fight_id",
+    "event_name",
+    "red_fighter",
+    "blue_fighter",
+    "snapshot_run_id",
+    "snapshot_timestamp",
+    "bookmaker",
+    "commence_time",
+    "red_american_odds",
+    "blue_american_odds",
+    "red_decimal_odds",
+    "blue_decimal_odds",
+    "red_implied_prob",
+    "blue_implied_prob",
+    "odds_match_score",
+    "odds_min_single_score",
+    "odds_match_type",
+    "odds_match_order",
+    "matched_fighter_1",
+    "matched_fighter_2",
+    "odds_fighter_1_id",
+    "odds_fighter_2_id",
+    "odds_fighter_1_score",
+    "odds_fighter_2_score",
+]
+
+
+def is_blank_name(value):
+    return pd.isna(value) or str(value).strip() == ""
+
+
 for _, pred in predictions_df.iterrows():
 
-    red_norm = normalize_name(
-        pred["red_fighter"]
-    )
+    red_fighter = pred.get("red_fighter")
+    blue_fighter = pred.get("blue_fighter")
 
-    blue_norm = normalize_name(
-        pred["blue_fighter"]
-    )
-
-    best_match = None
-    best_score = -1
-
-    for _, odds in odds_df.iterrows():
-
-        f1 = odds["fighter_1_norm"]
-        f2 = odds["fighter_2_norm"]
-
-        score_a = (
-            token_set_score(red_norm, f1)
-            +
-            token_set_score(blue_norm, f2)
-        ) / 2
-
-        score_b = (
-            token_set_score(red_norm, f2)
-            +
-            token_set_score(blue_norm, f1)
-        ) / 2
-
-        score = max(score_a, score_b)
-
-        if score > best_score:
-            best_score = score
-            best_match = odds
-
-        MIN_ODDS_MATCH_SCORE = 90
-
-        match_type = (
-            "matched"
-            if best_score >= MIN_ODDS_MATCH_SCORE
-            else "low_confidence"
-        )
-
-    market_audit_rows.append({
+    audit_row = {
         "snapshot_run_id": SNAPSHOT_RUN_ID,
         "snapshot_timestamp": SNAPSHOT_TIMESTAMP,
+        "event_name": pred.get("event_name"),
+        "fight_id": pred.get("fight_id"),
+        "red_fighter": red_fighter,
+        "blue_fighter": blue_fighter,
+        "matched_fighter_1": None,
+        "matched_fighter_2": None,
+        "odds_match_score": np.nan,
+        "odds_min_single_score": np.nan,
+        "odds_match_type": "low_confidence",
+        "odds_match_order": None,
+        "odds_fighter_1_score": np.nan,
+        "odds_fighter_2_score": np.nan,
+    }
 
-        "event_name": pred["event_name"],
-
-        "red_fighter": pred["red_fighter"],
-        "blue_fighter": pred["blue_fighter"],
-
-        "matched_fighter_1": (
-            None if best_match is None
-            else best_match["fighter_1"]
-        ),
-
-        "matched_fighter_2": (
-            None if best_match is None
-            else best_match["fighter_2"]
-        ),
-
-        "odds_match_score": best_score,
-        "odds_match_type": match_type,
-    })
-
-    if best_match is None:
+    if is_blank_name(red_fighter) or is_blank_name(blue_fighter):
+        audit_row["odds_match_type"] = "invalid_prediction_fighters"
+        market_audit_rows.append(audit_row)
         continue
 
+    odds_match = match_live_fight_to_odds_row(
+        live_row=pred,
+        odds_pool=odds_df,
+        min_single_score=MIN_ODDS_MATCH_SCORE,
+    )
+
+    if odds_match is None:
+        market_audit_rows.append(audit_row)
+        continue
+
+    # match_live_fight_to_odds_row() detects whether The Odds API row
+    # is in the same order as UFCStats red/blue or reversed.  Use its
+    # already-side-mapped red/blue odds rather than blindly assigning
+    # fighter_1 odds to red and fighter_2 odds to blue.
+    odds_match_order = odds_match.get("odds_match_type")
+
+    audit_row.update({
+        "matched_fighter_1": odds_match.get("matched_odds_fighter_1"),
+        "matched_fighter_2": odds_match.get("matched_odds_fighter_2"),
+        "odds_match_score": odds_match.get("odds_match_score"),
+        "odds_min_single_score": odds_match.get("odds_min_single_score"),
+        "odds_match_type": "matched",
+        "odds_match_order": odds_match_order,
+        "odds_fighter_1_id": odds_match.get("odds_fighter_1_id"),
+        "odds_fighter_2_id": odds_match.get("odds_fighter_2_id"),
+        "odds_fighter_1_score": odds_match.get("odds_fighter_1_score"),
+        "odds_fighter_2_score": odds_match.get("odds_fighter_2_score"),
+    })
+    market_audit_rows.append(audit_row)
+
     row = pred.to_dict()
-
-    row["snapshot_run_id"] = SNAPSHOT_RUN_ID
-    row["snapshot_timestamp"] = SNAPSHOT_TIMESTAMP
-
-    row["bookmaker"] = best_match["bookmaker"]
-
-    row["red_american_odds"] = (
-        best_match["fighter_1_american_odds"]
-    )
-
-    row["blue_american_odds"] = (
-        best_match["fighter_2_american_odds"]
-    )
-
-    row["red_decimal_odds"] = (
-        best_match["fighter_1_decimal_odds"]
-    )
-
-    row["blue_decimal_odds"] = (
-        best_match["fighter_2_decimal_odds"]
-    )
-
-    row["red_implied_prob"] = (
-        best_match["fighter_1_implied_prob"]
-    )
-
-    row["blue_implied_prob"] = (
-        best_match["fighter_2_implied_prob"]
-    )
-
-    row["odds_match_score"] = best_score
-    row["odds_match_type"] = match_type
+    row.update({
+        "snapshot_run_id": SNAPSHOT_RUN_ID,
+        "snapshot_timestamp": SNAPSHOT_TIMESTAMP,
+        "bookmaker": odds_match.get("bookmaker"),
+        "commence_time": odds_match.get("commence_time"),
+        "red_american_odds": odds_match.get("red_american_odds"),
+        "blue_american_odds": odds_match.get("blue_american_odds"),
+        "red_decimal_odds": odds_match.get("red_decimal_odds"),
+        "blue_decimal_odds": odds_match.get("blue_decimal_odds"),
+        "red_implied_prob": odds_match.get("red_implied_prob"),
+        "blue_implied_prob": odds_match.get("blue_implied_prob"),
+        "odds_match_score": odds_match.get("odds_match_score"),
+        "odds_min_single_score": odds_match.get("odds_min_single_score"),
+        "odds_match_type": "matched",
+        "odds_match_order": odds_match_order,
+        "matched_fighter_1": odds_match.get("matched_odds_fighter_1"),
+        "matched_fighter_2": odds_match.get("matched_odds_fighter_2"),
+        "odds_fighter_1_id": odds_match.get("odds_fighter_1_id"),
+        "odds_fighter_2_id": odds_match.get("odds_fighter_2_id"),
+        "odds_fighter_1_score": odds_match.get("odds_fighter_1_score"),
+        "odds_fighter_2_score": odds_match.get("odds_fighter_2_score"),
+    })
 
     market_rows.append(row)
 
@@ -210,6 +221,9 @@ for _, pred in predictions_df.iterrows():
 # ============================================================
 
 market_df = pd.DataFrame(market_rows)
+for column in MARKET_OUTPUT_COLUMNS:
+    if column not in market_df.columns:
+        market_df[column] = pd.Series(dtype="object")
 
 market_audit_df = pd.DataFrame(
     market_audit_rows

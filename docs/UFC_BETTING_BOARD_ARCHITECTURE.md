@@ -146,3 +146,21 @@ After that artifact exists, the Betting Board tab supports dashboard-only scenar
 * stake rounding.
 
 Scenario controls recalculate displayed statuses and stakes in memory. They do not overwrite `data/predictions/ufc_betting_board.parquet`, do not change the selected-event workflow inputs, and do not commit generated artifacts. The tab should clearly show production-vs-scenario official bets and stake totals so an operator can compare default output against adjusted rules.
+
+## Market Odds Side Mapping Rule
+
+Sportsbook odds rows are not guaranteed to list fighters in the same order as UFCStats red/blue corners. The market update runner must compare both same-order and reversed-order name matches before assigning odds to `red_american_odds` and `blue_american_odds`.
+
+Required behavior:
+
+* If sportsbook `fighter_1` matches the red fighter and `fighter_2` matches the blue fighter, assign fighter-1 odds to red and fighter-2 odds to blue.
+* If sportsbook `fighter_1` matches the blue fighter and `fighter_2` matches the red fighter, assign fighter-2 odds to red and fighter-1 odds to blue.
+* Preserve `odds_match_type = matched` for downstream filters when a valid match is found.
+* Store the side/order diagnostic separately as `odds_match_order`, with values such as `same_order` or `reversed_order`.
+* Exclude or audit prediction rows with missing red/blue fighter names instead of attempting an odds match.
+
+This prevents the Betting Board from displaying blue-fighter odds on the red fighter, or red-fighter odds on the blue fighter, when sportsbook outcome order differs from UFCStats corner order.
+
+### Dashboard Fallback for Older Betting Board Artifacts
+
+If an existing `data/predictions/ufc_betting_board.parquet` was generated before `odds_match_order` existed, the Betting Board may still contain sportsbook-order red/blue odds. The Streamlit tab should merge the latest `data/market/ufc_market_match_audit.parquet` diagnostics, infer whether the sportsbook row was reversed, correct red/blue odds in memory, and recompute displayed edge/EV/best-side values. This is a dashboard safety fallback only; operators should rerun the selected-event Betting Board workflow to regenerate official artifacts with side-mapped odds.
