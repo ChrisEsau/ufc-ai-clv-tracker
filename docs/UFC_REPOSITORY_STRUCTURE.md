@@ -18,6 +18,7 @@ scrapers/
 tabs/
 utils/
 models/
+archive/
 .github/workflows/
 ```
 
@@ -130,6 +131,18 @@ utils/
 Tabs contain workspace rendering.
 
 Utils contain reusable dashboard components.
+
+---
+
+
+## Archive
+
+```text
+archive/
+archive/.github/workflows/
+```
+
+The archive stores historical root-level files, duplicate generated artifacts, and retired legacy/audit workflows. Files in `archive/` are retained for reference and should not be treated as active runtime artifacts or production workflow entry points.
 
 ---
 

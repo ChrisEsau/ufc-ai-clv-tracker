@@ -29,6 +29,8 @@ Canonical data/status/staging/audit artifacts
 
 Workflows that commit generated parquet artifacts must use `git add -f` because generated binary artifacts are ignored by `.gitignore`.
 
+Archived workflows live under `archive/.github/workflows/` and are retained only for historical reference. They are not active GitHub Actions entry points and should not be dispatched by the dashboard.
+
 ---
 
 ## Data Maintenance Workflows

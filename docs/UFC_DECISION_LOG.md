@@ -2,6 +2,14 @@
 
 ## Locked Decisions
 
+### Change Approval Before Coding
+
+Before coding, moving files, committing, or creating a PR, the agent must summarize the intended implementation and receive explicit user approval.
+
+Read-only scans, reports, and planning can proceed without file changes.
+
+---
+
 ### Master Schema
 
 128-column schema is authoritative.
@@ -135,3 +143,31 @@ Model Lab workflow dispatch
 ```
 
 Do not add retraining, promotion, rollback, or ensemble controls until the Betting Board phase is complete and the historical evaluation layer exists.
+
+---
+
+### Phase Status After Repository Cleanup
+
+Completed and verified:
+
+```text
+Phase 0 cleanup / archive stabilization
+Phase 1.1 Betting Board artifact diagnostics review
+Phase 1.2 Odds side-mapping validation
+Phase 1.3 Selected-event workflow validation
+Phase 2 Data Maintenance validation
+```
+
+Deferred by operator decision:
+
+```text
+Phase 1.4 Production-vs-scenario comparison polish
+Phase 1.5 Betting Board operator checklist
+```
+
+Current next focus:
+
+```text
+Phase 3 Line Movement / CLV tracking
+```
+

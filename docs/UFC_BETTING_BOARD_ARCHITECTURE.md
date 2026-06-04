@@ -127,6 +127,30 @@ This keeps event selection auditable while avoiding a permanent hard-coded predi
 | `run-market-update.yml` | Refresh market odds for the current model prediction artifact. | `data/market/ufc_market_odds.parquet`, `data/market/ufc_market_snapshots.parquet`, `data/market/ufc_market_match_audit.parquet` |
 | `run-clv-tracker.yml` | Update closing-line and CLV tracking artifacts. | `data/market/ufc_closing_lines.parquet`, `data/market/ufc_clv_results.parquet`, `data/market/ufc_line_movement.parquet` |
 
+
+## Implemented Artifact Readiness Diagnostics
+
+The Betting Board now surfaces artifact readiness before an operator trusts betting output. The dashboard reports each card, prediction, market, and betting artifact with:
+
+* canonical path,
+* purpose / required-for label,
+* required vs optional status,
+* exists flag,
+* health state (`ready`, `missing`, `empty`, or `optional_missing`),
+* parquet row count when available,
+* file size,
+* last modified timestamp,
+* artifact age in hours.
+
+The readiness summary shows required-ready count, missing required artifacts, empty required artifacts, and optional missing artifacts. Required Betting Board artifacts must be present and non-empty before the board is considered ready for review; optional outputs such as CLV results or legacy action-board artifacts do not block readiness.
+
+Phase 1 status:
+
+* Artifact diagnostics review is complete.
+* Odds side-mapping validation is complete.
+* Selected-event workflow validation is complete.
+* Production-vs-scenario polish and operator checklist work are intentionally deferred.
+
 ## Adjustable Dashboard Betting Rules
 
 The selected-event workflow remains the production/default execution path: when an operator presses **Run Betting Predictions for Selected Event**, the workflow uses the default betting filters and staking settings and writes the official Betting Board artifact.
