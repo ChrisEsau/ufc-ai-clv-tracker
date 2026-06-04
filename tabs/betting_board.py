@@ -10,6 +10,13 @@ from utils.betting_board_artifacts import (
     load_upcoming_events,
     load_upcoming_fights,
 )
+from utils.betting_board_rules import (
+    BettingRules,
+    apply_betting_rules,
+    default_betting_rules,
+    rules_changed_from_default,
+    scenario_comparison,
+)
 from utils.data_loader import load_parquet
 from utils.dm_workflow_status import remember_launched_workflow, render_workflow_status
 from utils.github_actions import trigger_workflow
@@ -142,6 +149,212 @@ def render_upcoming_event_selection():
         return selected_event
 
 
+def _rule_state_key(name):
+    return f"betting_rule_{name}"
+
+
+def _reset_rule_state(defaults):
+    default_values = {
+        "min_edge": defaults.min_edge,
+        "min_confidence": defaults.min_confidence,
+        "min_odds": defaults.min_odds,
+        "max_odds": defaults.max_odds,
+        "require_positive_ev": defaults.require_positive_ev,
+        "watchlist_max_failed_thresholds": defaults.watchlist_max_failed_thresholds,
+        "watchlist_high_ev_override": defaults.watchlist_high_ev_override,
+        "bankroll": defaults.bankroll,
+        "kelly_fraction": defaults.kelly_fraction,
+        "max_stake_pct_percent": defaults.max_stake_pct * 100,
+        "min_stake": defaults.min_stake,
+        "stake_rounding": defaults.stake_rounding,
+    }
+
+    for key, value in default_values.items():
+        st.session_state[_rule_state_key(key)] = value
+
+
+def render_betting_rules_controls():
+    defaults = default_betting_rules()
+
+    with st.expander("Betting Rules / Scenario Controls", expanded=True):
+        st.caption(
+            "Workflow runs use the production defaults. Adjust these controls after a run to recalculate "
+            "the displayed board as a dashboard-only scenario. Scenario values are not committed."
+        )
+
+        if st.button("Reset rules to production defaults", use_container_width=True):
+            _reset_rule_state(defaults)
+            st.rerun()
+
+        st.markdown("#### Bet Qualification")
+        c1, c2, c3, c4 = st.columns(4)
+
+        with c1:
+            min_edge = st.number_input(
+                "Minimum edge",
+                min_value=-1.0,
+                max_value=1.0,
+                value=float(st.session_state.get(_rule_state_key("min_edge"), defaults.min_edge)),
+                step=0.01,
+                format="%.2f",
+                key=_rule_state_key("min_edge"),
+            )
+
+        with c2:
+            min_confidence = st.number_input(
+                "Minimum confidence (%)",
+                min_value=0.0,
+                max_value=100.0,
+                value=float(st.session_state.get(_rule_state_key("min_confidence"), defaults.min_confidence)),
+                step=1.0,
+                format="%.1f",
+                key=_rule_state_key("min_confidence"),
+            )
+
+        with c3:
+            min_odds = st.number_input(
+                "Minimum American odds",
+                min_value=-1000,
+                max_value=1000,
+                value=int(st.session_state.get(_rule_state_key("min_odds"), defaults.min_odds)),
+                step=5,
+                key=_rule_state_key("min_odds"),
+            )
+
+        with c4:
+            max_odds = st.number_input(
+                "Maximum American odds",
+                min_value=-1000,
+                max_value=2000,
+                value=int(st.session_state.get(_rule_state_key("max_odds"), defaults.max_odds)),
+                step=5,
+                key=_rule_state_key("max_odds"),
+            )
+
+        require_positive_ev = st.checkbox(
+            "Require positive EV for official bets",
+            value=bool(st.session_state.get(_rule_state_key("require_positive_ev"), defaults.require_positive_ev)),
+            key=_rule_state_key("require_positive_ev"),
+        )
+
+        st.markdown("#### Watchlist Rules")
+        w1, w2 = st.columns(2)
+
+        with w1:
+            watchlist_max_failed_thresholds = st.number_input(
+                "Watchlist max failed betting thresholds",
+                min_value=0,
+                max_value=4,
+                value=int(st.session_state.get(_rule_state_key("watchlist_max_failed_thresholds"), defaults.watchlist_max_failed_thresholds)),
+                step=1,
+                key=_rule_state_key("watchlist_max_failed_thresholds"),
+            )
+
+        with w2:
+            watchlist_high_ev_override = st.number_input(
+                "Watchlist high-EV override",
+                min_value=-100.0,
+                max_value=500.0,
+                value=float(st.session_state.get(_rule_state_key("watchlist_high_ev_override"), defaults.watchlist_high_ev_override)),
+                step=1.0,
+                format="%.2f",
+                key=_rule_state_key("watchlist_high_ev_override"),
+            )
+
+        st.markdown("#### Bankroll / Kelly Staking")
+        s1, s2, s3, s4 = st.columns(4)
+
+        with s1:
+            bankroll = st.number_input(
+                "Bankroll ($)",
+                min_value=0.0,
+                max_value=10000000.0,
+                value=float(st.session_state.get(_rule_state_key("bankroll"), defaults.bankroll)),
+                step=100.0,
+                format="%.2f",
+                key=_rule_state_key("bankroll"),
+            )
+
+        with s2:
+            kelly_fraction = st.number_input(
+                "Kelly fraction",
+                min_value=0.0,
+                max_value=2.0,
+                value=float(st.session_state.get(_rule_state_key("kelly_fraction"), defaults.kelly_fraction)),
+                step=0.05,
+                format="%.2f",
+                key=_rule_state_key("kelly_fraction"),
+            )
+
+        with s3:
+            max_stake_pct_percent = st.number_input(
+                "Max stake (% bankroll)",
+                min_value=0.0,
+                max_value=100.0,
+                value=float(st.session_state.get(_rule_state_key("max_stake_pct_percent"), defaults.max_stake_pct * 100)),
+                step=0.25,
+                format="%.2f",
+                key=_rule_state_key("max_stake_pct_percent"),
+            )
+
+        with s4:
+            min_stake = st.number_input(
+                "Minimum stake ($)",
+                min_value=0.0,
+                max_value=100000.0,
+                value=float(st.session_state.get(_rule_state_key("min_stake"), defaults.min_stake)),
+                step=1.0,
+                format="%.2f",
+                key=_rule_state_key("min_stake"),
+            )
+
+        stake_rounding = st.number_input(
+            "Round stake to nearest ($)",
+            min_value=0.0,
+            max_value=1000.0,
+            value=float(st.session_state.get(_rule_state_key("stake_rounding"), defaults.stake_rounding)),
+            step=1.0,
+            format="%.2f",
+            key=_rule_state_key("stake_rounding"),
+        )
+
+        rules = BettingRules(
+            min_edge=float(min_edge),
+            min_confidence=float(min_confidence),
+            min_odds=int(min_odds),
+            max_odds=int(max_odds),
+            require_positive_ev=bool(require_positive_ev),
+            watchlist_max_failed_thresholds=int(watchlist_max_failed_thresholds),
+            watchlist_high_ev_override=float(watchlist_high_ev_override),
+            bankroll=float(bankroll),
+            kelly_fraction=float(kelly_fraction),
+            max_stake_pct=float(max_stake_pct_percent) / 100,
+            min_stake=float(min_stake),
+            stake_rounding=float(stake_rounding),
+        )
+
+        if rules_changed_from_default(rules):
+            st.warning("Scenario rules differ from production defaults. Displayed results are dashboard-only what-if results.")
+        else:
+            st.success("Using production default betting rules.")
+
+    return rules
+
+
+def render_scenario_summary(board, scenario):
+    comparison = scenario_comparison(board, scenario)
+
+    render_section_header("Production vs Scenario Summary")
+
+    cols = st.columns(6)
+    cols[0].metric("Prod Official", comparison["production_official_bets"])
+    cols[1].metric("Scenario Official", comparison["scenario_official_bets"])
+    cols[2].metric("Prod Stake", money(comparison["production_total_stake"]))
+    cols[3].metric("Scenario Stake", money(comparison["scenario_total_stake"]))
+    cols[4].metric("Added / Removed", f"+{comparison['added_official_bets']} / -{comparison['removed_official_bets']}")
+    cols[5].metric("Stake Delta", money(comparison["stake_delta"]))
+
+
 def render_board_filters(board):
     with st.expander("Betting Board Filters", expanded=True):
         events = sorted(board["event_name"].dropna().unique().tolist()) if "event_name" in board.columns else []
@@ -155,7 +368,8 @@ def render_board_filters(board):
             "INVALID MODEL DATA",
             "NO BET",
         ]
-        available_statuses = [s for s in status_order if "bet_status" in board.columns and s in board["bet_status"].dropna().unique()]
+        status_column = "scenario_bet_status" if "scenario_bet_status" in board.columns else "bet_status"
+        available_statuses = [s for s in status_order if status_column in board.columns and s in board[status_column].dropna().unique()]
         selected_statuses = st.multiselect("Bet status", available_statuses, default=available_statuses)
         show_only_actionable = st.checkbox("Show only actionable statuses", value=False)
         min_ev = st.slider("Minimum EV", min_value=-100.0, max_value=100.0, value=-100.0, step=1.0)
@@ -166,11 +380,13 @@ def render_board_filters(board):
     if selected_event != "All Events" and "event_name" in filtered.columns:
         filtered = filtered[filtered["event_name"] == selected_event]
 
-    if selected_statuses and "bet_status" in filtered.columns:
-        filtered = filtered[filtered["bet_status"].isin(selected_statuses)]
+    status_column = "scenario_bet_status" if "scenario_bet_status" in filtered.columns else "bet_status"
 
-    if show_only_actionable and "bet_status" in filtered.columns:
-        filtered = filtered[filtered["bet_status"].isin(["OFFICIAL BET", "WATCHLIST"])]
+    if selected_statuses and status_column in filtered.columns:
+        filtered = filtered[filtered[status_column].isin(selected_statuses)]
+
+    if show_only_actionable and status_column in filtered.columns:
+        filtered = filtered[filtered[status_column].isin(["OFFICIAL BET", "WATCHLIST"])]
 
     ev_col = "best_ev_pct" if "best_ev_pct" in filtered.columns else "best_ev"
     if ev_col in filtered.columns:
@@ -184,11 +400,13 @@ def render_board_filters(board):
 
 def render_summary_cards(filtered):
     total_fights = len(filtered)
-    official_bets = int((filtered["bet_status"] == "OFFICIAL BET").sum()) if "bet_status" in filtered.columns else 0
-    watchlist = int((filtered["bet_status"] == "WATCHLIST").sum()) if "bet_status" in filtered.columns else 0
+    status_column = "scenario_bet_status" if "scenario_bet_status" in filtered.columns else "bet_status"
+    stake_column = "scenario_recommended_stake" if "scenario_recommended_stake" in filtered.columns else "recommended_stake"
+    official_bets = int((filtered[status_column] == "OFFICIAL BET").sum()) if status_column in filtered.columns else 0
+    watchlist = int((filtered[status_column] == "WATCHLIST").sum()) if status_column in filtered.columns else 0
     best_ev_col = "best_ev_pct" if "best_ev_pct" in filtered.columns else "best_ev"
     best_ev = filtered[best_ev_col].max() if best_ev_col in filtered.columns and not filtered.empty else np.nan
-    recommended_stake = filtered["recommended_stake"].sum() if "recommended_stake" in filtered.columns and not filtered.empty else 0
+    recommended_stake = filtered[stake_column].sum() if stake_column in filtered.columns and not filtered.empty else 0
     latest_market_time = str(filtered["snapshot_timestamp"].max()) if "snapshot_timestamp" in filtered.columns and not filtered.empty else "N/A"
 
     cols = st.columns(6)
@@ -226,8 +444,20 @@ def build_display_frame(filtered):
     if "best_confidence" in display.columns:
         display["best_confidence_display"] = display["best_confidence"].apply(lambda x: f"{x:.1f}%" if pd.notna(x) else "")
 
+    if "scenario_recommended_stake" in display.columns:
+        display["scenario_stake_display"] = display["scenario_recommended_stake"].apply(money)
+
     if "recommended_stake" in display.columns:
+        display["production_stake_display"] = display["recommended_stake"].apply(money)
         display["stake_display"] = display["recommended_stake"].apply(money)
+
+    if "scenario_bet_status" in display.columns:
+        display["display_bet_status"] = display["scenario_bet_status"]
+        display["production_bet_status"] = display.get("bet_status", "")
+        display["display_bet_reason"] = display.get("scenario_bet_reason", "")
+    else:
+        display["display_bet_status"] = display.get("bet_status", "")
+        display["display_bet_reason"] = display.get("bet_reason", "")
 
     status_rank = {
         "OFFICIAL BET": 0,
@@ -237,7 +467,7 @@ def build_display_frame(filtered):
         "INVALID MODEL DATA": 4,
         "NO BET": 5,
     }
-    display["_status_rank"] = display["bet_status"].map(status_rank).fillna(99) if "bet_status" in display.columns else 99
+    display["_status_rank"] = display["display_bet_status"].map(status_rank).fillna(99) if "display_bet_status" in display.columns else 99
 
     sort_cols = ["_status_rank"]
     ascending = [True]
@@ -254,7 +484,8 @@ def render_action_board(filtered):
 
     display = build_display_frame(filtered)
     main_cols = [
-        "bet_status",
+        "display_bet_status",
+        "production_bet_status",
         "fight",
         "best_side",
         "odds_display",
@@ -263,8 +494,9 @@ def render_action_board(filtered):
         "best_edge_display",
         "best_ev_display",
         "best_confidence_display",
-        "stake_display",
-        "bet_reason",
+        "scenario_stake_display",
+        "production_stake_display",
+        "display_bet_reason",
     ]
     main_cols = [column for column in main_cols if column in display.columns]
     st.dataframe(display[main_cols], use_container_width=True, hide_index=True)
@@ -272,8 +504,9 @@ def render_action_board(filtered):
 
 def render_status_and_diagnostics(filtered):
     render_section_header("Status Breakdown")
-    if "bet_status" in filtered.columns:
-        status_counts = filtered["bet_status"].value_counts().rename_axis("status").reset_index(name="count")
+    status_column = "scenario_bet_status" if "scenario_bet_status" in filtered.columns else "bet_status"
+    if status_column in filtered.columns:
+        status_counts = filtered[status_column].value_counts().rename_axis("status").reset_index(name="count")
         st.dataframe(status_counts, use_container_width=True, hide_index=True)
     else:
         st.info("No bet_status column found.")
@@ -299,15 +532,17 @@ def render_selected_fight_detail(filtered):
         "event_name",
         "fight",
         "best_side",
-        "bet_status",
+        "display_bet_status",
+        "production_bet_status",
         "best_american_odds",
         "best_prob",
         "best_implied_prob",
         "best_edge",
         "best_ev",
         "best_confidence",
+        "scenario_recommended_stake",
         "recommended_stake",
-        "bet_reason",
+        "display_bet_reason",
         "odds_match_score",
         "odds_match_type",
     ]
@@ -327,7 +562,11 @@ def render_betting_board():
         st.warning("No betting board data found. Select an upcoming event and run the betting workflow.")
         return
 
-    filtered = render_board_filters(board)
+    rules = render_betting_rules_controls()
+    scenario_board = apply_betting_rules(board, rules)
+    render_scenario_summary(board, scenario_board)
+
+    filtered = render_board_filters(scenario_board)
     render_summary_cards(filtered)
     render_action_board(filtered)
     render_status_and_diagnostics(filtered)

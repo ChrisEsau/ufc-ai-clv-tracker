@@ -126,3 +126,23 @@ This keeps event selection auditable while avoiding a permanent hard-coded predi
 | `run-betting-board-selected-event.yml` | Run the full selected-event prediction and betting-board sequence. | `data/predictions/ufc_live_card.parquet`, `data/predictions/ufc_model_predictions.parquet`, `data/market/*`, `data/predictions/ufc_betting_board.parquet` |
 | `run-market-update.yml` | Refresh market odds for the current model prediction artifact. | `data/market/ufc_market_odds.parquet`, `data/market/ufc_market_snapshots.parquet`, `data/market/ufc_market_match_audit.parquet` |
 | `run-clv-tracker.yml` | Update closing-line and CLV tracking artifacts. | `data/market/ufc_closing_lines.parquet`, `data/market/ufc_clv_results.parquet`, `data/market/ufc_line_movement.parquet` |
+
+## Adjustable Dashboard Betting Rules
+
+The selected-event workflow remains the production/default execution path: when an operator presses **Run Betting Predictions for Selected Event**, the workflow uses the default betting filters and staking settings and writes the official Betting Board artifact.
+
+After that artifact exists, the Betting Board tab supports dashboard-only scenario controls for:
+
+* minimum edge,
+* minimum confidence,
+* American odds range,
+* positive-EV requirement,
+* watchlist near-miss behavior,
+* high-EV watchlist override,
+* bankroll,
+* Kelly fraction,
+* maximum stake percentage,
+* minimum stake,
+* stake rounding.
+
+Scenario controls recalculate displayed statuses and stakes in memory. They do not overwrite `data/predictions/ufc_betting_board.parquet`, do not change the selected-event workflow inputs, and do not commit generated artifacts. The tab should clearly show production-vs-scenario official bets and stake totals so an operator can compare default output against adjusted rules.
