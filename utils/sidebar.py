@@ -35,6 +35,10 @@ def render_sidebar():
         st.session_state.page = "Line Movement / CLV"
         st.rerun()
 
+    if st.sidebar.button("💰  Bet Ledger / Bankroll", use_container_width=True):
+        st.session_state.page = "Bet Ledger / Bankroll"
+        st.rerun()
+
     if st.sidebar.button("🧪  Model Lab", use_container_width=True):
         st.session_state.page = "Model Lab"
         st.rerun()

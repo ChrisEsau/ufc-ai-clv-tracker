@@ -17,6 +17,7 @@ from utils.betting_board_rules import (
     rules_changed_from_default,
     scenario_comparison,
 )
+from utils.bankroll_artifacts import append_official_bets
 from utils.data_loader import load_parquet
 from utils.dm_workflow_status import remember_launched_workflow, render_workflow_status
 from utils.github_actions import trigger_workflow
@@ -502,6 +503,61 @@ def render_action_board(filtered):
     st.dataframe(display[main_cols], use_container_width=True, hide_index=True)
 
 
+
+def render_add_official_bets_to_ledger(board):
+    render_section_header("Add Official Bets to Bankroll Ledger")
+
+    status_column = "scenario_bet_status" if "scenario_bet_status" in board.columns else "bet_status"
+    if status_column not in board.columns:
+        st.info("No bet-status column is available to add ledger candidates.")
+        return
+
+    official = board[board[status_column] == "OFFICIAL BET"].copy()
+    if official.empty:
+        st.info("No official bets are available under the current rules.")
+        return
+
+    with st.expander("Review and add official bets to ledger", expanded=False):
+        st.caption(
+            "The Betting Board recommends bets; the bankroll ledger records wagers you actually place. "
+            "Select only bets that were placed, then add them to the ledger as Open."
+        )
+        official["add_to_ledger"] = True
+        preview_cols = [
+            "add_to_ledger",
+            "event_name",
+            "red_fighter",
+            "blue_fighter",
+            "best_side",
+            "best_american_odds",
+            "best_prob",
+            "best_edge",
+            "best_ev",
+            "scenario_recommended_stake",
+            "recommended_stake",
+            "scenario_bet_reason",
+            "bet_reason",
+        ]
+        preview_cols = [column for column in preview_cols if column in official.columns]
+        edited = st.data_editor(
+            official[preview_cols],
+            use_container_width=True,
+            hide_index=True,
+            disabled=[column for column in preview_cols if column != "add_to_ledger"],
+            key="bankroll_ledger_add_candidates",
+        )
+        selected = official.loc[edited[edited["add_to_ledger"]].index].copy()
+        st.caption(f"Selected ledger rows: {len(selected)}")
+
+        if st.button("Add Selected Bets to Bankroll Ledger", use_container_width=True, disabled=selected.empty):
+            added, skipped = append_official_bets(selected, source_workflow="Betting Board")
+            if added:
+                st.success(f"Added {added} open bet(s) to the bankroll ledger. Skipped {skipped} duplicate(s).")
+            else:
+                st.warning(f"No new bets were added. Skipped {skipped} duplicate(s).")
+            st.cache_data.clear()
+
+
 def render_status_and_diagnostics(filtered):
     render_section_header("Status Breakdown")
     status_column = "scenario_bet_status" if "scenario_bet_status" in filtered.columns else "bet_status"
@@ -569,6 +625,7 @@ def render_betting_board():
     filtered = render_board_filters(scenario_board)
     render_summary_cards(filtered)
     render_action_board(filtered)
+    render_add_official_bets_to_ledger(filtered)
     render_status_and_diagnostics(filtered)
     render_selected_fight_detail(filtered)
 

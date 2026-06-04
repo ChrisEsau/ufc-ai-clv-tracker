@@ -33,6 +33,7 @@ data/status
 data/backups
 data/features
 data/predictions
+data/bankroll
 data/model_lab
 ```
 
@@ -64,6 +65,10 @@ Historical and current feature stores.
 
 Live card, model prediction, betting-board, and action-board outputs.
 
+### bankroll
+
+Official bet ledger, open exposure, bankroll snapshots, and persistent risk settings.
+
 ### model_lab
 
 Future model-lab reports such as backtests, calibration reports, and model comparisons.
@@ -86,6 +91,7 @@ pipeline/data_maintenance
 pipeline/prediction
 pipeline/features
 pipeline/clv
+pipeline/bankroll
 ```
 
 ### common
@@ -107,6 +113,10 @@ Feature engineering.
 ### clv
 
 Market tracking and CLV logic.
+
+### bankroll
+
+Ledger, settlement, exposure, and bankroll status runners.
 
 ---
 
@@ -137,4 +147,5 @@ Business logic belongs in pipeline modules.
 
 - `data/cards/` stores UFCStats upcoming-event discovery artifacts and the selected event marker used to build the live card.
 - `data/market/` stores market odds, snapshots, match audits, closing lines, line movement, and CLV outputs.
+- `data/bankroll/` stores the official wager ledger, open bets, bankroll snapshots, and risk settings.
 - These directories contain generated parquet files. Source branches should not manually commit ad-hoc generated parquet files; workflows force-add only the canonical artifacts they produce.

@@ -155,6 +155,16 @@ Created before appending staged rows to master.
 | UFCStats upcoming fights | `data/cards/ufcstats_upcoming_fights.parquet` | `pipeline.prediction.run_refresh_upcoming_events` | Selected live-card builder |
 | Selected live-card event | `data/cards/ufc_selected_live_card_event.parquet` | `pipeline.prediction.run_build_live_card` | Betting Board diagnostics |
 
+
+## Bankroll Artifacts
+
+| Artifact | Canonical Path | Producer | Consumer |
+|---|---|---|---|
+| Bet ledger | `data/bankroll/ufc_bet_ledger.parquet` | Betting Board operator confirmation / Bankroll settlement | Bankroll workspace |
+| Open bets | `data/bankroll/ufc_open_bets.parquet` | Bankroll ledger utilities | Bankroll open exposure |
+| Bankroll snapshots | `data/bankroll/ufc_bankroll_snapshots.parquet` | Bankroll ledger utilities | Bankroll summary and performance tracking |
+| Bankroll settings | `data/bankroll/ufc_bankroll_settings.parquet` | Bankroll risk settings form | Betting Board / Bankroll risk controls |
+
 ## Market / CLV Artifacts
 
 | Artifact | Canonical Path | Producer | Consumer |

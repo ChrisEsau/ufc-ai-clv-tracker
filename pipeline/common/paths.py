@@ -24,6 +24,7 @@ FEATURES_DIR = DATA_DIR / "features"
 PREDICTIONS_DIR = DATA_DIR / "predictions"
 CARDS_DIR = DATA_DIR / "cards"
 MARKET_DIR = DATA_DIR / "market"
+BANKROLL_DIR = DATA_DIR / "bankroll"
 MODEL_LAB_DIR = DATA_DIR / "model_lab"
 DOCS_DIR = ROOT_DIR / "docs"
 
@@ -110,6 +111,15 @@ LIVE_MATCH_AUDIT_PATH = AUDITS_DIR / "ufc_live_match_audit.parquet"
 LIVE_ODDS_AUDIT_PATH = AUDITS_DIR / "ufc_live_odds_audit.parquet"
 
 # ============================================================
+# BANKROLL ARTIFACTS
+# ============================================================
+
+BET_LEDGER_PATH = BANKROLL_DIR / "ufc_bet_ledger.parquet"
+OPEN_BETS_PATH = BANKROLL_DIR / "ufc_open_bets.parquet"
+BANKROLL_SNAPSHOTS_PATH = BANKROLL_DIR / "ufc_bankroll_snapshots.parquet"
+BANKROLL_SETTINGS_PATH = BANKROLL_DIR / "ufc_bankroll_settings.parquet"
+
+# ============================================================
 # STATUS
 # ============================================================
 
@@ -151,6 +161,7 @@ def ensure_data_dirs():
         PREDICTIONS_DIR,
         CARDS_DIR,
         MARKET_DIR,
+        BANKROLL_DIR,
         MODEL_LAB_DIR,
         MODELS_DIR,
         MODEL_DIR,

@@ -365,3 +365,18 @@ Responsibilities include:
 * ROI analysis
 
 The Bankroll workspace should provide a complete historical record of all betting activity and serve as the primary source of truth for platform profitability.
+
+## Implementation Notes
+
+The first Bankroll implementation should use the canonical path registry and should not hard-code file names in dashboard code.
+
+Runtime artifacts:
+
+| Artifact | Canonical Path | Purpose |
+|---|---|---|
+| Bet ledger | `data/bankroll/ufc_bet_ledger.parquet` | Authoritative operator-confirmed wager history. |
+| Open bets | `data/bankroll/ufc_open_bets.parquet` | Derived unresolved wagers from the ledger. |
+| Bankroll snapshots | `data/bankroll/ufc_bankroll_snapshots.parquet` | Point-in-time bankroll summary snapshots. |
+| Bankroll settings | `data/bankroll/ufc_bankroll_settings.parquet` | Persistent risk-management settings. |
+
+The Betting Board remains the recommendation workspace. Bets should enter the bankroll ledger only after an operator confirms they were actually placed. New ledger rows should start with `result = Open`; settlement then updates result, realized P/L, optional closing odds, optional CLV, and bankroll snapshots.
