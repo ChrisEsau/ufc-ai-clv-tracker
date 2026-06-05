@@ -1,6 +1,9 @@
 import pandas as pd
 import streamlit as st
 
+from pipeline.common.booleans import coerce_bool
+from utils.ui.sections import page_header
+
 from utils.model_lab_artifacts import (
     get_live_audit_artifact_status,
     get_model_artifact_status,
@@ -20,14 +23,10 @@ from utils.model_lab_artifacts import (
 
 
 def render_model_lab():
-    st.markdown(
-        '<div class="section-header">Model Lab</div>',
-        unsafe_allow_html=True,
-    )
-
-    st.caption(
-        "Read-only diagnostics for the current production model, feature importance, "
-        "and live prediction audit artifacts."
+    page_header(
+        "Model Lab",
+        "Read-only diagnostics for production model quality, feature importance, and live prediction audits.",
+        kicker="Research Workspace",
     )
 
     render_model_artifact_status()
@@ -266,9 +265,8 @@ def render_live_prediction_audit():
             st.dataframe(pd.DataFrame(summary_rows), use_container_width=True, hide_index=True)
 
             if "passes_feature_validation" in feature_audit_df.columns:
-                problem_fights = feature_audit_df[
-                    feature_audit_df["passes_feature_validation"] == False
-                ].copy()
+                validation_passed = feature_audit_df["passes_feature_validation"].apply(coerce_bool)
+                problem_fights = feature_audit_df[~validation_passed].copy()
 
                 st.subheader("Problem Fights")
 
@@ -309,7 +307,7 @@ def safe_sum_bool(df, column_name):
     if df.empty or column_name not in df.columns:
         return None
 
-    return int(df[column_name].fillna(False).astype(bool).sum())
+    return int(df[column_name].apply(coerce_bool).sum())
 
 
 def safe_mean(df, column_name):
