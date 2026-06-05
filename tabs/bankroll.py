@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import html
+import json
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
@@ -23,9 +24,7 @@ from utils.bankroll_artifacts import (
     exposure_by_event,
     is_open_result,
     load_bet_ledger,
-    normalize_ledger,
     performance_by_event,
-    save_bet_ledger,
     settle_bet,
 )
 from utils.data_loader import load_parquet
@@ -34,6 +33,7 @@ from utils.ui.charts import apply_plotly_theme
 
 RESULT_OPTIONS = ["Win", "Loss", "Push", "Void"]
 BANKROLL_STATUS_WORKFLOW = "run-bankroll-status.yml"
+MANUAL_BET_WORKFLOW = "run-append-manual-bet.yml"
 CENTRAL_TZ = ZoneInfo("America/Chicago")
 
 
@@ -464,6 +464,8 @@ def _load_fight_options() -> pd.DataFrame:
             "best_edge",
             "best_ev",
             "best_american_odds",
+            "bookmaker",
+            "sportsbook",
             "recommended_stake",
             "scenario_recommended_stake",
             "model_pick",
@@ -488,11 +490,19 @@ def _manual_bet_id(row: dict) -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
 
 
-def _append_manual_bet(row: dict) -> None:
-    ledger = load_bet_ledger()
-    row["bet_id"] = _manual_bet_id(row)
-    updated = pd.concat([ledger, pd.DataFrame([row])], ignore_index=True)
-    save_bet_ledger(normalize_ledger(updated))
+def _manual_bet_workflow_inputs(row: dict) -> dict[str, str]:
+    """Convert a manual bet row into a single workflow_dispatch JSON input."""
+
+    row = row.copy()
+    row["bet_id"] = row.get("bet_id") or _manual_bet_id(row)
+    serializable = {key: "" if pd.isna(value) else str(value) for key, value in row.items()}
+    return {"bet_json": json.dumps(serializable)}
+
+
+def _dispatch_manual_bet(row: dict) -> tuple[bool, str]:
+    """Persist a manual bet by dispatching the ledger append workflow."""
+
+    return trigger_workflow(MANUAL_BET_WORKFLOW, inputs=_manual_bet_workflow_inputs(row))
 
 
 def _auto_settlement(open_bet: pd.Series) -> tuple[str | None, str]:
@@ -575,6 +585,7 @@ def _render_add_bet_form(in_dialog: bool = False) -> None:
             "opponent": opponent,
             "opponent_id": opponent_id,
             "market_type": "Moneyline",
+            "sportsbook": selected.get("sportsbook", selected.get("bookmaker", "")),
             "odds_taken": odds,
             "stake": stake,
             "result": "Open",
@@ -591,12 +602,15 @@ def _render_add_bet_form(in_dialog: bool = False) -> None:
             "source_prediction_run_id": "",
             "notes": "Manual bankroll entry",
         }
-        _append_manual_bet(row)
-        st.success("Bet added to the bankroll ledger.")
-        st.cache_data.clear()
-        if in_dialog:
-            st.session_state["bankroll_dialog"] = None
-        st.rerun()
+        ok, message = _dispatch_manual_bet(row)
+        if ok:
+            st.success("Manual bet append workflow launched. Refresh after it completes to load the committed ledger.")
+            st.cache_data.clear()
+            if in_dialog:
+                st.session_state["bankroll_dialog"] = None
+            st.rerun()
+        else:
+            st.error(f"Could not launch manual bet append workflow: {message}")
 
 
 def _open_settle_dialog(ledger: pd.DataFrame):
