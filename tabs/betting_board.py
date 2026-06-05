@@ -41,10 +41,6 @@ def _escape(value) -> str:
         return "—"
     return html.escape(str(value))
 
-def _escape(value) -> str:
-    if pd.isna(value):
-        return "—"
-    return html.escape(str(value))
 
 def _as_float(value, default=None):
     value = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
@@ -52,11 +48,6 @@ def _as_float(value, default=None):
         return default
     return float(value)
 
-def _as_float(value, default=None):
-    value = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
-    if pd.isna(value):
-        return default
-    return float(value)
 
 def _money(value, decimals: int = 0) -> str:
     value = _as_float(value)
@@ -65,12 +56,6 @@ def _money(value, decimals: int = 0) -> str:
     prefix = "-$" if value < 0 else "$"
     return f"{prefix}{abs(value):,.{decimals}f}"
 
-def _money(value, decimals: int = 0) -> str:
-    value = _as_float(value)
-    if value is None:
-        return "—"
-    prefix = "-$" if value < 0 else "$"
-    return f"{prefix}{abs(value):,.{decimals}f}"
 
 def _signed_money(value, decimals: int = 0) -> str:
     value = _as_float(value)
@@ -169,10 +154,6 @@ def _event_date(row: dict | pd.Series | None):
         return None
     return row.get("ufcstats_event_date") or row.get("event_date")
 
-def _event_date(row: dict | pd.Series | None):
-    if row is None:
-        return None
-    return row.get("ufcstats_event_date") or row.get("event_date")
 
 def _display_event_date(row: dict | pd.Series | None) -> str:
     date = _event_date(row)
@@ -183,16 +164,23 @@ def _display_event_date(row: dict | pd.Series | None) -> str:
         return str(date)
     return parsed.strftime("%a, %b %-d, %Y")
 
-def _event_location(row: dict | pd.Series | None):
-    if row is None:
-        return None
-    return row.get("ufcstats_event_location") or row.get("event_location")
+def _event_label(option: dict) -> str:
+    return _event_name(option) or "Unknown event"
 
 def _event_location(row: dict | pd.Series | None):
     if row is None:
         return None
     return row.get("ufcstats_event_location") or row.get("event_location")
 
+def _current_event(options: list[dict]) -> dict | None:
+    if not options:
+        return None
+    labels = [_event_label(option) for option in options]
+    current = st.session_state.get("betting_board_event_label")
+    if current not in labels:
+        current = labels[0]
+        st.session_state["betting_board_event_label"] = current
+    return options[labels.index(current)]
 
 def _event_options(events: pd.DataFrame, board: pd.DataFrame) -> list[dict]:
     options: list[dict] = []
@@ -214,38 +202,20 @@ def _event_label(option: dict) -> str:
 
 
 def _current_event(options: list[dict]) -> dict | None:
-    if not options:
+    selected_name = st.session_state.get("bb_filter_event", "All Events")
+    if not options or selected_name == "All Events":
         return None
-    labels = [_event_label(option) for option in options]
-    current = st.session_state.get("betting_board_event_label")
-    if current not in labels:
-        current = labels[0]
-        st.session_state["betting_board_event_label"] = current
-    return options[labels.index(current)]
-
-
-def _selected_event(options: list[dict]) -> dict | None:
-    if not options:
-        return None
-    labels = [_event_label(option) for option in options]
-    current = st.session_state.get("betting_board_event_label")
-    index = labels.index(current) if current in labels else 0
-    selected_label = st.selectbox(
-        "Event",
-        labels,
-        index=index,
-        label_visibility="collapsed",
-        key="betting_board_event_selector",
-    )
-    if selected_label != current:
-        st.session_state["betting_board_event_label"] = selected_label
-        st.rerun()
-    return options[labels.index(selected_label)]
+    for option in options:
+        if _event_label(option) == selected_name:
+            return option
+    return None
 
 
 def _scope_board(board: pd.DataFrame, selected_event: dict | None) -> pd.DataFrame:
-    if board is None or board.empty or selected_event is None:
-        return board.copy() if board is not None else pd.DataFrame()
+    if board is None or board.empty:
+        return pd.DataFrame()
+    if selected_event is None:
+        return board.copy()
 
     selected_id = _event_id(selected_event)
     selected_name = _event_name(selected_event)
@@ -334,6 +304,81 @@ def _display_board(board: pd.DataFrame, fights: pd.DataFrame) -> pd.DataFrame:
     return valid.reset_index(drop=True)
 
 
+def _selected_event_title(selected_event: dict | None) -> str:
+    if selected_event is not None:
+        return _event_name(selected_event) or "Selected Event"
+    selected_name = st.session_state.get("bb_filter_event", "All Events")
+    return selected_name if selected_name != "All Events" else "All Events"
+
+
+def _selected_event_date_label(selected_event: dict | None, display: pd.DataFrame) -> str:
+    if selected_event is not None:
+        return _display_event_date(selected_event)
+    date_range = st.session_state.get("bb_filter_date_range")
+    if isinstance(date_range, (tuple, list)) and len(date_range) == 2:
+        start = pd.to_datetime(date_range[0], errors="coerce")
+        end = pd.to_datetime(date_range[1], errors="coerce")
+        if not pd.isna(start) and not pd.isna(end):
+            return f"{start.strftime('%b %-d')} – {end.strftime('%b %-d, %Y')}"
+    if not display.empty and "event_date" in display.columns:
+        parsed = pd.to_datetime(display["event_date"], errors="coerce").dropna()
+        if not parsed.empty:
+            return parsed.min().strftime("%a, %b %-d, %Y")
+    return "All upcoming dates"
+
+
+def _selected_event_location_label(selected_event: dict | None, display: pd.DataFrame) -> str:
+    if selected_event is not None:
+        return _event_location(selected_event) or "Location TBD"
+    if not display.empty and "event_location" in display.columns:
+        locations = display["event_location"].dropna().astype(str).unique()
+        if len(locations) == 1:
+            return locations[0]
+    return "All locations"
+
+
+def _date_range_mask(display: pd.DataFrame) -> pd.Series:
+    if "event_date" not in display.columns:
+        return pd.Series(True, index=display.index)
+    selected_range = st.session_state.get("bb_filter_date_range")
+    if not isinstance(selected_range, (tuple, list)) or len(selected_range) != 2:
+        return pd.Series(True, index=display.index)
+    start = pd.to_datetime(selected_range[0], errors="coerce")
+    end = pd.to_datetime(selected_range[1], errors="coerce")
+    dates = pd.to_datetime(display["event_date"], errors="coerce")
+    if pd.isna(start) or pd.isna(end):
+        return pd.Series(True, index=display.index)
+    return dates.between(start, end) | dates.isna()
+
+
+def _apply_sidebar_filters(display: pd.DataFrame) -> pd.DataFrame:
+    if display.empty:
+        return display
+    filtered = display.copy()
+    filtered = filtered[_date_range_mask(filtered)]
+
+    odds_min, odds_max = st.session_state.get("bb_filter_odds_range", (-250, 400))
+    odds = pd.to_numeric(filtered.get("best_american_odds"), errors="coerce")
+    hide_missing = st.session_state.get("bb_filter_hide_missing_odds", True)
+    odds_mask = odds.between(odds_min, odds_max)
+    if not hide_missing:
+        odds_mask = odds_mask | odds.isna()
+    filtered = filtered[odds_mask]
+
+    ev_threshold = float(st.session_state.get("bb_filter_ev_threshold", 50))
+    if ev_threshold > 0:
+        ev = pd.to_numeric(filtered.get("ev_dollars"), errors="coerce")
+        filtered = filtered[ev >= ev_threshold]
+    elif st.session_state.get("bb_filter_positive_ev", False):
+        ev = pd.to_numeric(filtered.get("ev_dollars"), errors="coerce")
+        filtered = filtered[ev > 0]
+
+    min_confidence = float(st.session_state.get("bb_filter_min_confidence", 70))
+    confidence = pd.to_numeric(filtered.get("confidence_pct"), errors="coerce")
+    filtered = filtered[confidence >= min_confidence]
+    return filtered.reset_index(drop=True)
+
+
 # -----------------------------------------------------------------------------
 # UI rendering
 # -----------------------------------------------------------------------------
@@ -410,17 +455,22 @@ def _render_kpis(display: pd.DataFrame) -> None:
         _metric_tile("Bankroll at Risk", _money(stake), "Recommended stakes", "#a855f7")
 
 
-def _render_event_bar(selected_event: dict | None, options: list[dict]) -> dict | None:
-    with st.container():
-        cols = st.columns([1.7, 0.48, 0.86])
-        with cols[0]:
-            selected_event = _selected_event(options)
-        with cols[1]:
-            st.html(f'<div class="bb-event-meta">📅 {_escape(_display_event_date(selected_event))}</div>')
-        with cols[2]:
-            location = _event_location(selected_event) or "Location TBD"
-            st.html(f'<div class="bb-event-meta">📍 {_escape(location)}</div>')
-    return selected_event
+def _render_event_bar(selected_event: dict | None, display: pd.DataFrame) -> None:
+    title = _selected_event_title(selected_event)
+    date_label = _selected_event_date_label(selected_event, display)
+    location = _selected_event_location_label(selected_event, display)
+    st.html(
+        "".join(
+            [
+                '<div class="bb-event-bar">',
+                f'<div class="bb-event-heading">{_escape(title)}</div>',
+                f'<div class="bb-event-meta-inline">📅 {_escape(date_label)}</div>',
+                f'<div class="bb-event-meta-inline">📍 {_escape(location)}</div>',
+                '<div class="bb-card-tabs"><span class="active">All Fights</span><span>Main Card</span><span>Prelims</span><span>Early Prelims</span></div>',
+                '</div>',
+            ]
+        )
+    )
 
 
 def _corner_html(label: str, fighter: str, probability, odds, implied, edge, ev, color: str) -> str:
@@ -644,7 +694,12 @@ def _inject_betting_board_css() -> None:
         .bb-metric-value { font-size:1.85rem; line-height:1.05; font-weight:900; margin-top:.35rem; }
         .bb-metric-caption { color:#dbe7f5; font-size:.78rem; margin-top:.45rem; }
         .bb-event-title { color:#f5f7fb; font-weight:900; font-size:1.05rem; padding:.72rem 1rem; min-height:2.9rem; }
-        .bb-event-meta { color:#dbe7f5; font-size:.82rem; padding:.82rem .85rem; min-height:2.9rem; }
+        .bb-event-bar { display:grid; grid-template-columns:1.35fr .55fr .9fr 1.55fr; gap:1rem; align-items:center; margin-top:1rem; padding:.55rem .75rem; background:linear-gradient(180deg, rgba(16,28,45,.92), rgba(13,23,39,.94)); border:1px solid rgba(38,54,74,.96); border-radius:10px; }
+        .bb-event-heading { color:#f5f7fb; font-size:1.05rem; font-weight:900; letter-spacing:-.02em; }
+        .bb-event-meta, .bb-event-meta-inline { color:#dbe7f5; font-size:.82rem; font-weight:700; }
+        .bb-card-tabs { display:flex; justify-content:flex-end; gap:.45rem; }
+        .bb-card-tabs span { color:#f5f7fb; font-size:.78rem; font-weight:800; padding:.55rem .8rem; border:1px solid rgba(38,54,74,.96); border-radius:7px; }
+        .bb-card-tabs .active { background:#143b78; border-color:#2f68d8; }
         .bb-table { overflow:hidden; margin-top:.45rem; }
         .bb-table-head { display:grid; grid-template-columns:.28fr 4.82fr .9fr 1.15fr 1.1fr .2fr; gap:0; align-items:center; padding:.75rem 1rem; border-bottom:1px solid rgba(38,54,74,.95); color:#f5f7fb; font-size:.72rem; font-weight:900; text-transform:uppercase; }
         .bb-fight-heading { display:grid; grid-template-columns:1.45rem 1.9fr .8fr .8fr .85fr .75fr .75fr; align-items:center; gap:.35rem; }
@@ -702,10 +757,10 @@ def render_betting_board():
     if fights_error:
         st.warning(fights_error)
 
+    display = _apply_sidebar_filters(display)
+
     _render_kpis(display)
-    selected_event = _render_event_bar(selected_event, options)
-    scoped = _scope_board(raw_board, selected_event)
-    display = _display_board(scoped, fights)
+    _render_event_bar(selected_event, display)
 
     _render_main_table(display)
     _render_bottom(display)
