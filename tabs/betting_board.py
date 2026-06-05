@@ -25,6 +25,7 @@ from utils.dm_workflow_status import remember_launched_workflow, render_workflow
 from utils.github_actions import trigger_workflow
 from utils.panels import render_section_header
 from utils.ui_components import american, money, pct, render_metric
+from utils.ui.sections import page_header
 
 
 REFRESH_UPCOMING_WORKFLOW = "run-refresh-upcoming-events.yml"
@@ -686,8 +687,11 @@ def render_selected_fight_detail(filtered):
 
 
 def render_betting_board():
-    st.title("UFC Betting Intelligence Platform")
-    st.caption("Betting Board — event selection, model probability, market odds, EV, quality gates, and recommended action.")
+    page_header(
+        "Betting Board",
+        "Live fight predictions, market odds, EV, quality gates, and recommended actions.",
+        kicker="Primary Workspace",
+    )
 
     selected_event = render_upcoming_event_selection()
 
