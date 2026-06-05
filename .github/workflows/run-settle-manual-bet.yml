@@ -1,10 +1,10 @@
-name: Save Bankroll Risk Settings
+name: Settle Manual Bankroll Bet
 
 on:
   workflow_dispatch:
     inputs:
-      settings_json:
-        description: "JSON payload for persisted bankroll risk settings"
+      settlement_json:
+        description: JSON payload for one manually settled bet
         required: true
         type: string
 
@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  save-risk-settings:
+  settle-manual-bet:
     runs-on: ubuntu-latest
 
     steps:
@@ -32,22 +32,21 @@ jobs:
         run: |
           pip install pandas numpy pyarrow
 
-      - name: Save risk settings
+      - name: Settle manual bet in ledger
         env:
-          SETTINGS_JSON: ${{ inputs.settings_json }}
+          SETTLEMENT_JSON: ${{ inputs.settlement_json }}
         run: |
-          python -m pipeline.bankroll.run_save_risk_settings --settings-json "$SETTINGS_JSON"
+          python -m pipeline.bankroll.run_settle_manual_bet --settlement-json "$SETTLEMENT_JSON"
 
-      - name: Commit bankroll risk artifacts
+      - name: Commit bankroll ledger artifacts
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
           git add -f \
-            data/bankroll/ufc_bankroll_settings.parquet \
             data/bankroll/ufc_bet_ledger.parquet \
             data/bankroll/ufc_open_bets.parquet \
             data/bankroll/ufc_bankroll_snapshots.parquet
 
-          git commit -m "Update bankroll risk settings" || echo "No changes to commit"
+          git commit -m "Settle manual bankroll bet" || echo "No changes to commit"
           git push

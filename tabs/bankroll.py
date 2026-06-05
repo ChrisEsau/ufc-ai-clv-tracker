@@ -24,7 +24,6 @@ from utils.bankroll_artifacts import (
     is_open_result,
     load_bet_ledger,
     performance_by_event,
-    settle_bet,
 )
 from utils.data_loader import load_parquet
 from utils.github_actions import trigger_workflow
@@ -32,6 +31,7 @@ from utils.ui.charts import apply_plotly_theme
 
 RESULT_OPTIONS = ["Win", "Loss", "Push", "Void"]
 MANUAL_BET_WORKFLOW = "run-append-manual-bet.yml"
+SETTLE_BET_WORKFLOW = "run-settle-manual-bet.yml"
 RISK_SETTINGS_WORKFLOW = "run-save-risk-settings.yml"
 CENTRAL_TZ = ZoneInfo("America/Chicago")
 
@@ -504,6 +504,34 @@ def _dispatch_manual_bet(row: dict) -> tuple[bool, str]:
     return trigger_workflow(MANUAL_BET_WORKFLOW, inputs=_manual_bet_workflow_inputs(row))
 
 
+def _settlement_workflow_inputs(bet_id: str, result: str, closing_odds=None, clv=None, notes: str | None = None) -> dict[str, str]:
+    """Build workflow_dispatch inputs for durable settlement persistence."""
+
+    payload = {
+        "bet_id": bet_id,
+        "result": result,
+        "closing_odds": "" if closing_odds is None else closing_odds,
+        "clv": "" if clv is None else clv,
+        "notes": notes or "",
+    }
+    return {"settlement_json": json.dumps(payload, default=str)}
+
+
+def _dispatch_settlement(bet_id: str, result: str, closing_odds=None, clv=None, notes: str | None = None) -> tuple[bool, str]:
+    """Persist a settlement by dispatching the ledger settlement workflow."""
+
+    return trigger_workflow(
+        SETTLE_BET_WORKFLOW,
+        inputs=_settlement_workflow_inputs(
+            bet_id=bet_id,
+            result=result,
+            closing_odds=closing_odds,
+            clv=clv,
+            notes=notes,
+        ),
+    )
+
+
 def _risk_settings_workflow_inputs(settings: RiskSettings) -> dict[str, str]:
     """Build workflow_dispatch inputs for durable risk-settings persistence."""
 
@@ -668,15 +696,21 @@ def _render_settle_form(ledger: pd.DataFrame, in_dialog: bool = False) -> None:
     clv = st.number_input("CLV", min_value=-10.0, max_value=10.0, value=0.0, step=0.01, format="%.3f", key="bankroll_settle_clv")
     notes = st.text_input("Settlement notes", value=str(selected.get("notes", "") or ""), key="bankroll_settle_notes")
     if st.button("Settle Bet", use_container_width=True, key="bankroll_settle_submit"):
-        ok = settle_bet(selected["bet_id"], result=result, closing_odds=None if closing_odds == 0 else closing_odds, clv=clv, notes=notes)
+        ok, msg = _dispatch_settlement(
+            selected["bet_id"],
+            result=result,
+            closing_odds=None if closing_odds == 0 else closing_odds,
+            clv=clv,
+            notes=notes,
+        )
         if ok:
-            st.success("Bet settled and bankroll ledger updated.")
+            st.success("Settlement workflow launched. Refresh after it completes to load the committed ledger.")
             st.cache_data.clear()
             if in_dialog:
                 st.session_state["bankroll_dialog"] = None
             st.rerun()
         else:
-            st.error("Could not find the selected bet in the ledger.")
+            st.error(f"Could not launch settlement workflow: {msg}")
 
 
 

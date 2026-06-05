@@ -11,6 +11,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: bankroll-artifacts-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   append-manual-bet:
     runs-on: ubuntu-latest

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import html
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -133,6 +134,12 @@ def _latest_timestamp(*frames: pd.DataFrame) -> str | None:
     return f"Last Updated: {latest.strftime('%b %-d, %Y %I:%M %p %Z')}"
 
 
+def _parse_github_time(value: str | None):
+    if not value:
+        return None
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
 def _refresh_status_label(updated_label: str | None) -> str | None:
     """Show a compact running state in the timestamp slot after dispatch."""
 
@@ -140,11 +147,20 @@ def _refresh_status_label(updated_label: str | None) -> str | None:
         return updated_label
 
     ok, _, run = get_latest_workflow_run(SELECTED_EVENT_WORKFLOW)
-    if ok and run is not None and run.get("status") == "completed":
+    if not ok or run is None:
+        return "Refresh queued..."
+
+    launched_at = _parse_github_time(st.session_state.get("bb_refresh_launched_at"))
+    created_at = _parse_github_time(run.get("created_at"))
+    stale_run = bool(launched_at and created_at and created_at < launched_at - timedelta(seconds=30))
+    if stale_run:
+        return "Refresh queued..."
+
+    if run.get("status") == "completed":
         st.session_state["bb_refresh_running"] = False
         return updated_label
 
-    return "Running....."
+    return "Refresh running..."
 
 
 # -----------------------------------------------------------------------------
@@ -468,19 +484,20 @@ def _render_header(updated_label: str | None, selected_event: dict | None) -> No
             )
         with action_cols[1]:
             event_id = _event_id(selected_event)
-            disabled = not bool(event_id)
-            if st.button("↻ Refresh Data", type="primary", use_container_width=True, disabled=disabled):
+            workflow_inputs = {"event_id": str(event_id)} if event_id else {}
+            if st.button("↻ Refresh Data", type="primary", use_container_width=True):
                 ok, msg = trigger_workflow(
                     SELECTED_EVENT_WORKFLOW,
-                    inputs={"event_id": str(event_id)},
+                    inputs=workflow_inputs,
                 )
                 if ok:
                     st.session_state["bb_refresh_running"] = True
+                    st.session_state["bb_refresh_launched_at"] = datetime.now(timezone.utc).isoformat()
                     remember_launched_workflow(
                         "betting_selected_event",
                         "Refresh Betting Board Data",
                         SELECTED_EVENT_WORKFLOW,
-                        inputs={"event_id": str(event_id)},
+                        inputs=workflow_inputs,
                     )
                     st.rerun()
                 else:
