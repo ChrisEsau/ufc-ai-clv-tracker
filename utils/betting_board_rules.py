@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 
 from pipeline.common.booleans import coerce_bool
+from pipeline.common.risk_settings import load_risk_settings
 
 
 STATUS_ORDER = [
@@ -44,13 +45,22 @@ class BettingRules:
     watchlist_high_ev_override: float = 0.25
     bankroll: float = 10000.0
     kelly_fraction: float = 0.50
-    max_stake_pct: float = 1.0
+    max_stake_pct: float = 0.03
     min_stake: float = 0.0
     stake_rounding: float = 1.0
 
 
 def default_betting_rules() -> BettingRules:
-    return BettingRules()
+    settings = load_risk_settings()
+    return BettingRules(
+        min_edge=settings.min_edge,
+        min_confidence=settings.min_confidence,
+        min_odds=settings.min_odds,
+        max_odds=settings.max_odds,
+        bankroll=settings.starting_bankroll,
+        kelly_fraction=settings.kelly_fraction,
+        max_stake_pct=settings.max_stake_pct,
+    )
 
 
 def rules_to_dict(rules: BettingRules) -> dict:

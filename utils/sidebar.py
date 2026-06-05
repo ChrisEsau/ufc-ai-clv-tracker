@@ -7,6 +7,7 @@ from utils.betting_board_artifacts import load_upcoming_events
 from utils.bankroll_artifacts import load_bet_ledger
 from utils.data_loader import load_parquet
 from pipeline.common.paths import BETTING_BOARD_PATH, MARKET_SNAPSHOTS_PATH
+from pipeline.common.risk_settings import load_risk_settings
 
 NAV_ITEMS = [
     ("Betting Board", "▣", "Live EV board"),
@@ -78,6 +79,7 @@ def _betting_board_date_bounds() -> tuple:
 
 def _render_betting_board_filters() -> None:
     _sidebar_section("Filters", compact=True)
+    risk_settings = load_risk_settings()
     event_names = _betting_board_event_names()
     if st.session_state.get("bb_filter_event") not in event_names:
         st.session_state["bb_filter_event"] = "All Events"
@@ -97,7 +99,7 @@ def _render_betting_board_filters() -> None:
         "Odds Range",
         min_value=-500,
         max_value=500,
-        value=st.session_state.get("bb_filter_odds_range", (-250, 400)),
+        value=st.session_state.get("bb_filter_odds_range", (risk_settings.min_odds, risk_settings.max_odds)),
         step=10,
         key="bb_filter_odds_range",
     )
@@ -107,15 +109,21 @@ def _render_betting_board_filters() -> None:
         index=2,
         key="bb_filter_ev_threshold",
     )
+    confidence_options = [0, 50, 60, 70, 75, 80, 85, 90]
+    confidence_default = min(
+        range(len(confidence_options)),
+        key=lambda idx: abs(confidence_options[idx] - risk_settings.min_confidence),
+    )
     st.sidebar.selectbox(
         "Min Model Confidence (%)",
-        [0, 50, 60, 70, 75, 80, 85, 90],
-        index=3,
+        confidence_options,
+        index=confidence_default,
         key="bb_filter_min_confidence",
     )
     st.sidebar.radio(
         "Kelly Stake Sizing",
         ["1/2 Kelly", "1/4 Kelly"],
+        index=1 if risk_settings.kelly_fraction <= 0.25 else 0,
         horizontal=True,
         key="bb_kelly_mode",
     )

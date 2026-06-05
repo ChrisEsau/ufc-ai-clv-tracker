@@ -29,6 +29,11 @@ from pipeline.common.paths import (
     LIVE_ODDS_AUDIT_PATH,
     ensure_data_dirs,
 )
+from pipeline.common.risk_settings import (
+    load_risk_settings,
+    risk_settings_to_betting_filters,
+    risk_settings_to_staking_config,
+)
 from ufc_pipeline_utils import *
 from ufc_odds_utils import *
 from pipeline_config import *
@@ -79,7 +84,8 @@ ACTION_BOARD_OUTPUT = paths.action_board_output
 CLV_LOG_PATH = paths.clv_log_path
 
 PREFERRED_BOOKMAKER = "DraftKings"
-BANKROLL = 10000
+RISK_SETTINGS = load_risk_settings()
+BANKROLL = RISK_SETTINGS.starting_bankroll
 
 ensure_data_dirs()
 
@@ -98,21 +104,22 @@ feature_columns = artifacts["feature_columns"]
 BEST_THRESHOLD = artifacts["best_threshold"]
 production_config = artifacts["production_config"]
 
-betting_filters = get_betting_filters(production_config)
+betting_filters = risk_settings_to_betting_filters(RISK_SETTINGS)
+staking_config = risk_settings_to_staking_config(RISK_SETTINGS)
 MIN_EDGE = betting_filters["min_edge"]
 MIN_CONFIDENCE = betting_filters["min_confidence"]
 MIN_ODDS = betting_filters["min_odds"]
 MAX_ODDS = betting_filters["max_odds"]
 
-KELLY_FRACTION = production_config["staking"]["kelly_fraction"]
+KELLY_FRACTION = staking_config["kelly_fraction"]
 KELLY_MULTIPLIER = KELLY_FRACTION
-MAX_STAKE_PCT = production_config["staking"]["max_stake_pct"]
+MAX_STAKE_PCT = staking_config["max_stake_pct"]
 
 print("Model version:", production_config.get("version"))
 print("Feature count:", len(feature_columns))
 print("Best threshold:", BEST_THRESHOLD)
-print("Filters:", production_config["betting_filters"])
-print("Staking:", production_config["staking"])
+print("Filters:", betting_filters)
+print("Staking:", staking_config)
 
 
 # ============================================================
@@ -684,8 +691,6 @@ display(prediction_display)
 # SECTION 12 — PULL ODDS FROM THE ODDS API
 # ============================================================
 
-from pipeline_config import *
-
 odds_data = fetch_the_odds_api_events(
     api_key=ODDS_API_KEY,
     sport=SPORT,
@@ -1240,6 +1245,7 @@ action_board_display_cols = [
     # IDENTIFIERS
     # =========================================================
     "event_name",
+    "event_id",
     "commence_time",
     "fight_id",
 
@@ -1304,6 +1310,11 @@ action_board_display_cols = [
 
     "odds_match_type",
     "odds_match_score",
+]
+
+action_board_display_cols = [
+    column for column in action_board_display_cols
+    if column in action_board_df.columns
 ]
 
 action_board_df = action_board_df[

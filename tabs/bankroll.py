@@ -11,18 +11,20 @@ import streamlit as st
 import plotly.express as px
 
 from pipeline.common.paths import BETTING_BOARD_PATH, LIVE_CARD_PATH, MASTER_PATH
+from pipeline.common.risk_settings import (
+    RiskSettings,
+    load_risk_settings,
+    save_risk_settings,
+)
 from utils.bankroll_artifacts import (
-    BankrollSettings,
     american_profit,
     bankroll_summary,
     derive_open_bets,
     exposure_by_event,
     is_open_result,
-    load_bankroll_settings,
     load_bet_ledger,
     normalize_ledger,
     performance_by_event,
-    save_bankroll_settings,
     save_bet_ledger,
     settle_bet,
 )
@@ -93,14 +95,8 @@ def _ledger_csv(ledger: pd.DataFrame) -> str:
         return ""
     return ledger.to_csv(index=False)
 
-def _signed_money(value) -> str:
-    if value is None or pd.isna(value):
-        return "$0.00"
-    value = float(value)
-    sign = "+" if value >= 0 else "-"
-    return f"{sign}${abs(value):,.2f}"
 
-def _ledger_summary(ledger: pd.DataFrame, settings: BankrollSettings) -> dict:
+def _ledger_summary(ledger: pd.DataFrame, settings: RiskSettings) -> dict:
     summary = bankroll_summary(ledger=ledger, settings=settings)
     settled = ledger[~ledger["result"].apply(is_open_result)].copy() if not ledger.empty else pd.DataFrame()
     wins = int((settled.get("result", pd.Series(dtype=str)).astype(str).str.lower() == "win").sum()) if not settled.empty else 0
@@ -138,7 +134,7 @@ def _open_exposure_by_fighter(open_bets: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-def _bankroll_points(ledger: pd.DataFrame, settings: BankrollSettings) -> pd.DataFrame:
+def _bankroll_points(ledger: pd.DataFrame, settings: RiskSettings) -> pd.DataFrame:
     if ledger.empty:
         return pd.DataFrame(columns=["date", "bankroll"])
     settled = ledger[~ledger["result"].apply(is_open_result)].copy()
@@ -177,7 +173,7 @@ def _inject_css() -> None:
         <style>
         .bankroll-title { color:#f5f7fb; font-size:1.95rem; line-height:1; font-weight:900; letter-spacing:-.04em; }
         .bankroll-subtitle { color:#dbe7f5; font-size:.98rem; margin-top:.35rem; }
-        .bankroll-actions { color:#f5f7fb; font-size:.82rem; font-weight:700; text-align:right; margin-bottom:.35rem; }
+        .bankroll-actions { display:flex; justify-content:flex-end; align-items:center; color:#dbe7f5; font-size:.78rem; line-height:1; white-space:nowrap; padding-top:.35rem; }
         .bankroll-kpis { display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:.65rem; margin:.85rem 0 1rem; }
         .bankroll-card { background:linear-gradient(180deg, rgba(17,31,49,.94), rgba(12,24,39,.98)); border:1px solid rgba(43,60,82,.96); border-radius:7px; box-shadow:0 20px 40px rgba(0,0,0,.22); }
         .bankroll-kpi { min-height:84px; padding:.95rem .75rem .8rem; text-align:center; }
@@ -226,21 +222,10 @@ def _render_header(ledger: pd.DataFrame) -> None:
     with left:
         st.html('<div class="bankroll-title">BANKROLL</div><div class="bankroll-subtitle">Track performance, manage risk, and grow your bankroll</div>')
     with right:
-        st.markdown(f"<div class='bankroll-actions'>{_escape(_last_updated(ledger))}</div>", unsafe_allow_html=True)
-        st.download_button(
-            "⇩  Export Report",
-            data=_ledger_csv(ledger),
-            file_name="ufc_bet_ledger.csv",
-            mime="text/csv",
-            use_container_width=True,
-            disabled=ledger.empty,
-        )
+        st.html(f"<div class='bankroll-actions'><span>{_escape(_last_updated(ledger))}</span></div>")
 
-def _as_float(value, default: float = 0.0) -> float:
-    value = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
-    return default if pd.isna(value) else float(value)
 
-def _render_kpis(summary: dict, settings: BankrollSettings) -> None:
+def _render_kpis(summary: dict, settings: RiskSettings) -> None:
     total_profit = float(summary.get("total_profit", 0.0))
     roi = total_profit / settings.starting_bankroll if settings.starting_bankroll else 0.0
     cards = [
@@ -424,7 +409,7 @@ def _clv_summary_html(ledger: pd.DataFrame) -> str:
     return f"<table class='bankroll-table'><tbody>{body}</tbody></table>"
 
 
-def _risk_settings_html(settings: BankrollSettings) -> str:
+def _risk_settings_html(settings: RiskSettings) -> str:
     items = [
         ("Kelly Fraction", f"{settings.kelly_fraction:.2f}"),
         ("Max Stake Per Bet", _pct(settings.max_stake_pct)),
@@ -436,42 +421,11 @@ def _risk_settings_html(settings: BankrollSettings) -> str:
     ]
     return "<div class='bankroll-settings'>" + "".join(f"<div class='bankroll-setting'><div class='bankroll-setting-label'>{_escape(label)}</div><div class='bankroll-setting-value'>{_escape(value)}</div></div>" for label, value in items) + "</div>"
 
-def _ledger_summary(ledger: pd.DataFrame, settings: BankrollSettings) -> dict:
-    summary = bankroll_summary(ledger=ledger, settings=settings)
-    settled = ledger[~ledger["result"].apply(is_open_result)].copy() if not ledger.empty else pd.DataFrame()
-    wins = int((settled.get("result", pd.Series(dtype=str)).astype(str).str.lower() == "win").sum()) if not settled.empty else 0
-    losses = int((settled.get("result", pd.Series(dtype=str)).astype(str).str.lower() == "loss").sum()) if not settled.empty else 0
-    pushes = int((settled.get("result", pd.Series(dtype=str)).astype(str).str.lower().isin(["push", "void"])).sum()) if not settled.empty else 0
-    decisions = wins + losses
-    win_rate = wins / decisions if decisions else 0.0
-    summary.update(
-        {
-            "wins": wins,
-            "losses": losses,
-            "pushes": pushes,
-            "win_rate": win_rate,
-            "total_stake": float(pd.to_numeric(ledger.get("stake", pd.Series(dtype=float)), errors="coerce").fillna(0).sum()) if not ledger.empty else 0.0,
-        }
-    )
-    return summary
 
+def _first_non_empty(values: pd.Series):
+    clean = values.replace("", pd.NA).dropna()
+    return clean.iloc[0] if not clean.empty else pd.NA
 
-def _potential_profit(row: pd.Series) -> float:
-    return max(american_profit(row.get("stake"), row.get("odds_taken"), "Win"), 0.0)
-
-
-def _open_exposure_by_fighter(open_bets: pd.DataFrame) -> pd.DataFrame:
-    if open_bets.empty:
-        return pd.DataFrame(columns=["fighter", "stake", "potential_profit", "open_bets"])
-    work = open_bets.copy()
-    work["stake"] = pd.to_numeric(work["stake"], errors="coerce").fillna(0.0)
-    work["potential_profit"] = work.apply(_potential_profit, axis=1)
-    return (
-        work.groupby("fighter", dropna=False)
-        .agg(open_bets=("bet_id", "count"), stake=("stake", "sum"), potential_profit=("potential_profit", "sum"))
-        .reset_index()
-        .sort_values("stake", ascending=False)
-    )
 
 def _load_fight_options() -> pd.DataFrame:
     frames = []
@@ -481,15 +435,56 @@ def _load_fight_options() -> pd.DataFrame:
             frames.append(df)
     if not frames:
         return pd.DataFrame()
+
     rows = pd.concat(frames, ignore_index=True, sort=False)
-    keep = [col for col in ["event_name", "event_date", "fight_id", "red_fighter", "blue_fighter", "best_side", "best_prob", "best_edge", "best_ev", "best_american_odds", "model_pick", "model_confidence"] if col in rows.columns]
-    rows = rows[keep].dropna(subset=["fight_id"]).drop_duplicates(subset=["fight_id", "event_name"]).copy()
-    rows["label"] = rows.apply(lambda row: f"{row.get('event_name', 'Unknown Event')} — {row.get('red_fighter', 'Red')} vs {row.get('blue_fighter', 'Blue')}", axis=1)
-    return rows.sort_values(["event_name", "label"])
+    if "event_id" not in rows.columns and "ufcstats_event_id" in rows.columns:
+        rows["event_id"] = rows["ufcstats_event_id"]
+    elif "event_id" in rows.columns and "ufcstats_event_id" in rows.columns:
+        rows["event_id"] = rows["event_id"].fillna(rows["ufcstats_event_id"])
+    if "event_date" not in rows.columns and "commence_time" in rows.columns:
+        rows["event_date"] = rows["commence_time"]
+    elif "event_date" in rows.columns and "commence_time" in rows.columns:
+        rows["event_date"] = rows["event_date"].fillna(rows["commence_time"])
+
+    keep = [
+        col
+        for col in [
+            "event_name",
+            "event_id",
+            "event_date",
+            "fight_id",
+            "red_fighter",
+            "blue_fighter",
+            "red_fighter_id",
+            "blue_fighter_id",
+            "best_side",
+            "best_side_fighter_id",
+            "best_side_opponent_id",
+            "best_prob",
+            "best_edge",
+            "best_ev",
+            "best_american_odds",
+            "recommended_stake",
+            "scenario_recommended_stake",
+            "model_pick",
+            "model_confidence",
+        ]
+        if col in rows.columns
+    ]
+    rows = rows[keep].dropna(subset=["fight_id"]).copy()
+    group_cols = [col for col in ["fight_id", "event_name"] if col in rows.columns]
+    rows = rows.groupby(group_cols, as_index=False, dropna=False).agg(_first_non_empty) if group_cols else rows
+    rows["event_label"] = rows.apply(
+        lambda row: f"{row.get('event_name', 'Unknown Event')}"
+        + (f" — {pd.to_datetime(row.get('event_date'), errors='coerce').strftime('%b %-d, %Y')}" if pd.notna(pd.to_datetime(row.get('event_date'), errors='coerce')) else ""),
+        axis=1,
+    )
+    rows["label"] = rows.apply(lambda row: f"{row.get('red_fighter', 'Red')} vs {row.get('blue_fighter', 'Blue')}", axis=1)
+    return rows.sort_values([col for col in ["event_name", "label"] if col in rows.columns])
 
 
 def _manual_bet_id(row: dict) -> str:
-    raw = "|".join(str(row.get(key, "")) for key in ["event_name", "fight_id", "fighter", "odds_taken", "stake", "placed_timestamp"])
+    raw = "|".join(str(row.get(key, "")) for key in ["event_name", "event_id", "fight_id", "fighter", "fighter_id", "odds_taken", "stake", "placed_timestamp"])
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
 
 
@@ -545,12 +540,22 @@ def _render_add_bet_form(in_dialog: bool = False) -> None:
     if options.empty:
         st.warning("No current fight options are available from live card or Betting Board artifacts.")
         return
-    selected = st.selectbox("Fight", options.to_dict("records"), format_func=lambda row: row["label"], key="bankroll_add_fight")
+
+    events = options.drop_duplicates(subset=["event_label"]).sort_values("event_label")
+    selected_event = st.selectbox("Event", events.to_dict("records"), format_func=lambda row: row["event_label"], key="bankroll_add_event")
+    event_mask = options["event_label"].astype(str) == str(selected_event.get("event_label"))
+    event_options = options[event_mask].copy()
+    selected = st.selectbox("Fight", event_options.to_dict("records"), format_func=lambda row: row["label"], key="bankroll_add_fight")
+
     fighters = [fighter for fighter in [selected.get("red_fighter"), selected.get("blue_fighter")] if pd.notna(fighter) and str(fighter).strip()]
+    if not fighters:
+        st.warning("The selected fight does not include fighter names yet.")
+        return
     default_idx = fighters.index(selected.get("best_side")) if selected.get("best_side") in fighters else 0
     fighter = st.selectbox("Pick", fighters, index=default_idx, key="bankroll_add_pick")
-    stake = st.number_input("Amount Staked", min_value=0.0, value=float(selected.get("recommended_stake", 0) or 0), step=25.0, key="bankroll_add_stake")
-    default_odds = int(selected.get("best_american_odds") or 0) if pd.notna(selected.get("best_american_odds")) else 0
+    stake_value = selected.get("scenario_recommended_stake", selected.get("recommended_stake", 0))
+    stake = st.number_input("Amount Staked", min_value=0.0, value=_as_float(stake_value, 0.0), step=25.0, key="bankroll_add_stake")
+    default_odds = int(_as_float(selected.get("best_american_odds"), 0.0))
     odds = st.number_input("Odds Taken", min_value=-2000, max_value=3000, value=default_odds, step=5, key="bankroll_add_odds")
     submitted = st.button("Add Bet", use_container_width=True, key="bankroll_add_submit")
     if submitted:
@@ -558,12 +563,17 @@ def _render_add_bet_form(in_dialog: bool = False) -> None:
             st.error("Enter a positive stake and non-zero odds.")
             return
         opponent = next((name for name in fighters if name != fighter), "")
+        fighter_id = selected.get("red_fighter_id") if fighter == selected.get("red_fighter") else selected.get("blue_fighter_id")
+        opponent_id = selected.get("blue_fighter_id") if fighter == selected.get("red_fighter") else selected.get("red_fighter_id")
         row = {
             "event_name": selected.get("event_name", ""),
+            "event_id": selected.get("event_id", ""),
             "event_date": selected.get("event_date", ""),
             "fight_id": selected.get("fight_id", ""),
             "fighter": fighter,
+            "fighter_id": fighter_id,
             "opponent": opponent,
+            "opponent_id": opponent_id,
             "market_type": "Moneyline",
             "odds_taken": odds,
             "stake": stake,
@@ -632,7 +642,7 @@ def _render_settle_form(ledger: pd.DataFrame, in_dialog: bool = False) -> None:
 
 
 def _open_risk_settings_dialog():
-    settings = load_bankroll_settings()
+    settings = load_risk_settings()
     if not hasattr(st, "dialog"):
         st.info("Your Streamlit version does not support popup dialogs. Risk settings are shown inline below.")
         return _render_risk_settings_form(settings, in_dialog=False)
@@ -644,7 +654,7 @@ def _open_risk_settings_dialog():
     dialog()
 
 
-def _render_risk_settings_form(settings: BankrollSettings, in_dialog: bool = False) -> None:
+def _render_risk_settings_form(settings: RiskSettings, in_dialog: bool = False) -> None:
     st.caption("Update the bankroll risk defaults stored in the settings artifact, then refresh bankroll status through the existing pipeline workflow.")
     with st.form("bankroll_risk_settings_dialog_form"):
         starting_bankroll = st.number_input(
@@ -653,12 +663,13 @@ def _render_risk_settings_form(settings: BankrollSettings, in_dialog: bool = Fal
             value=float(settings.starting_bankroll),
             step=100.0,
         )
-        kelly_fraction = st.number_input(
+        kelly_options = [0.25, 0.50]
+        kelly_fraction = st.radio(
             "Kelly fraction",
-            min_value=0.0,
-            max_value=2.0,
-            value=float(settings.kelly_fraction),
-            step=0.05,
+            kelly_options,
+            index=kelly_options.index(0.25) if float(settings.kelly_fraction) == 0.25 else kelly_options.index(0.50),
+            format_func=lambda value: f"{value:.2f}",
+            horizontal=True,
         )
         max_stake_pct = st.number_input(
             "Max stake per bet (%)",
@@ -696,74 +707,8 @@ def _render_risk_settings_form(settings: BankrollSettings, in_dialog: bool = Fal
         run_workflow = st.checkbox("Run bankroll status workflow after save", value=True)
         submitted = st.form_submit_button("Save Risk Settings", use_container_width=True)
 
-
-def _manual_bet_id(row: dict) -> str:
-    raw = "|".join(str(row.get(key, "")) for key in ["event_name", "fight_id", "fighter", "odds_taken", "stake", "placed_timestamp"])
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
-
-
-def _append_manual_bet(row: dict) -> None:
-    ledger = load_bet_ledger()
-    row["bet_id"] = _manual_bet_id(row)
-    updated = pd.concat([ledger, pd.DataFrame([row])], ignore_index=True)
-    save_bet_ledger(normalize_ledger(updated))
-
-
-def _auto_settlement(open_bet: pd.Series) -> tuple[str | None, str]:
-    master = load_parquet(MASTER_PATH)
-    if master is None or master.empty:
-        return None, "Master results are not available yet."
-    work = master.copy()
-    fight_id = str(open_bet.get("fight_id", ""))
-    if fight_id and "fight_id" in work.columns:
-        work = work[work["fight_id"].astype(str) == fight_id]
-    if work.empty:
-        fighter = str(open_bet.get("fighter", "")).lower()
-        opponent = str(open_bet.get("opponent", "")).lower()
-        name_cols = [col for col in ["r_name", "b_name", "red_fighter", "blue_fighter"] if col in master.columns]
-        if name_cols:
-            mask = False
-            for col in name_cols:
-                values = master[col].astype(str).str.lower()
-                mask = mask | values.isin([fighter, opponent]) if not isinstance(mask, bool) else values.isin([fighter, opponent])
-            work = master[mask]
-    if work.empty or "winner" not in work.columns:
-        return None, "No completed fight result matched this open bet."
-    row = work.iloc[-1]
-    winner = str(row.get("winner", "")).strip().lower()
-    fighter = str(open_bet.get("fighter", "")).strip().lower()
-    if not winner:
-        return None, "Matched fight does not have a winner recorded yet."
-    return ("Win" if winner == fighter else "Loss"), f"Matched master winner: {row.get('winner')}"
-
-
-def _open_add_bet_dialog():
-    if not hasattr(st, "dialog"):
-        st.info("Your Streamlit version does not support popup dialogs. Add-bet controls are shown inline below.")
-        return _render_add_bet_form(in_dialog=False)
-
-    @st.dialog("Add New Bet")
-    def dialog():
-        _render_add_bet_form(in_dialog=True)
-
-    dialog()
-
-
-def _render_add_bet_form(in_dialog: bool = False) -> None:
-    options = _load_fight_options()
-    if options.empty:
-        st.warning("No current fight options are available from live card or Betting Board artifacts.")
-        return
-    selected = st.selectbox("Fight", options.to_dict("records"), format_func=lambda row: row["label"], key="bankroll_add_fight")
-    fighters = [fighter for fighter in [selected.get("red_fighter"), selected.get("blue_fighter")] if pd.notna(fighter) and str(fighter).strip()]
-    default_idx = fighters.index(selected.get("best_side")) if selected.get("best_side") in fighters else 0
-    fighter = st.selectbox("Pick", fighters, index=default_idx, key="bankroll_add_pick")
-    stake = st.number_input("Amount Staked", min_value=0.0, value=float(selected.get("recommended_stake", 0) or 0), step=25.0, key="bankroll_add_stake")
-    default_odds = int(selected.get("best_american_odds") or 0) if pd.notna(selected.get("best_american_odds")) else 0
-    odds = st.number_input("Odds Taken", min_value=-2000, max_value=3000, value=default_odds, step=5, key="bankroll_add_odds")
-    submitted = st.button("Add Bet", use_container_width=True, key="bankroll_add_submit")
     if submitted:
-        updated = BankrollSettings(
+        updated = RiskSettings(
             starting_bankroll=float(starting_bankroll),
             kelly_fraction=float(kelly_fraction),
             max_stake_pct=float(max_stake_pct) / 100,
@@ -773,7 +718,7 @@ def _render_add_bet_form(in_dialog: bool = False) -> None:
             min_odds=int(min_odds),
             max_odds=int(max_odds),
         )
-        save_bankroll_settings(updated)
+        save_risk_settings(updated)
         if run_workflow:
             ok, msg = trigger_workflow(BANKROLL_STATUS_WORKFLOW)
             if ok:
@@ -787,6 +732,7 @@ def _render_add_bet_form(in_dialog: bool = False) -> None:
             st.session_state["bankroll_dialog"] = None
         st.rerun()
 
+
 def _handle_dialogs(ledger: pd.DataFrame) -> None:
     dialog = st.session_state.get("bankroll_dialog")
     if dialog == "add":
@@ -799,7 +745,7 @@ def _handle_dialogs(ledger: pd.DataFrame) -> None:
 
 def render_bankroll():
     _inject_css()
-    settings = load_bankroll_settings()
+    settings = load_risk_settings()
     ledger = load_bet_ledger()
     summary = _ledger_summary(ledger, settings)
     open_bets = derive_open_bets(ledger)

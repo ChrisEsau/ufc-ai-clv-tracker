@@ -16,6 +16,11 @@ from pipeline.common.paths import (
     OFFICIAL_BETS_PATH,
     ensure_data_dirs,
 )
+from pipeline.common.risk_settings import (
+    load_risk_settings,
+    risk_settings_to_betting_filters,
+    risk_settings_to_staking_config,
+)
 from pipeline_config import *
 from ufc_pipeline_utils import *
 
@@ -33,7 +38,8 @@ OFFICIAL_BETS_OUTPUT = OFFICIAL_BETS_PATH
 DECISION_RUN_ID = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 DECISION_TIMESTAMP = datetime.now(timezone.utc).isoformat()
 
-BANKROLL = 10000
+RISK_SETTINGS = load_risk_settings()
+BANKROLL = RISK_SETTINGS.starting_bankroll
 
 # ============================================================
 # LOAD INPUTS
@@ -59,18 +65,19 @@ paths = UFCPipelinePaths(
 artifacts = load_production_artifacts(paths)
 production_config = artifacts["production_config"]
 
-betting_filters = get_betting_filters(production_config)
+betting_filters = risk_settings_to_betting_filters(RISK_SETTINGS)
+staking_config = risk_settings_to_staking_config(RISK_SETTINGS)
 
 MIN_EDGE = betting_filters["min_edge"]
 MIN_CONFIDENCE = betting_filters["min_confidence"]
 MIN_ODDS = betting_filters["min_odds"]
 MAX_ODDS = betting_filters["max_odds"]
 
-KELLY_FRACTION = production_config["staking"]["kelly_fraction"]
-MAX_STAKE_PCT = production_config["staking"]["max_stake_pct"]
+KELLY_FRACTION = staking_config["kelly_fraction"]
+MAX_STAKE_PCT = staking_config["max_stake_pct"]
 
 print("Filters:", betting_filters)
-print("Staking:", production_config["staking"])
+print("Staking:", staking_config)
 
 # ============================================================
 # MERGE MODEL + MARKET
@@ -417,6 +424,7 @@ output_cols = [
     "decision_timestamp",
 
     "event_name",
+    "event_id",
     "commence_time",
     "fight_id",
 
