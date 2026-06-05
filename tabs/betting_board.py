@@ -41,6 +41,10 @@ def _escape(value) -> str:
         return "—"
     return html.escape(str(value))
 
+def _escape(value) -> str:
+    if pd.isna(value):
+        return "—"
+    return html.escape(str(value))
 
 def _as_float(value, default=None):
     value = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
@@ -48,6 +52,11 @@ def _as_float(value, default=None):
         return default
     return float(value)
 
+def _as_float(value, default=None):
+    value = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+    if pd.isna(value):
+        return default
+    return float(value)
 
 def _money(value, decimals: int = 0) -> str:
     value = _as_float(value)
@@ -56,6 +65,12 @@ def _money(value, decimals: int = 0) -> str:
     prefix = "-$" if value < 0 else "$"
     return f"{prefix}{abs(value):,.{decimals}f}"
 
+def _money(value, decimals: int = 0) -> str:
+    value = _as_float(value)
+    if value is None:
+        return "—"
+    prefix = "-$" if value < 0 else "$"
+    return f"{prefix}{abs(value):,.{decimals}f}"
 
 def _signed_money(value, decimals: int = 0) -> str:
     value = _as_float(value)
@@ -154,6 +169,10 @@ def _event_date(row: dict | pd.Series | None):
         return None
     return row.get("ufcstats_event_date") or row.get("event_date")
 
+def _event_date(row: dict | pd.Series | None):
+    if row is None:
+        return None
+    return row.get("ufcstats_event_date") or row.get("event_date")
 
 def _display_event_date(row: dict | pd.Series | None) -> str:
     date = _event_date(row)
@@ -164,6 +183,10 @@ def _display_event_date(row: dict | pd.Series | None) -> str:
         return str(date)
     return parsed.strftime("%a, %b %-d, %Y")
 
+def _event_location(row: dict | pd.Series | None):
+    if row is None:
+        return None
+    return row.get("ufcstats_event_location") or row.get("event_location")
 
 def _event_location(row: dict | pd.Series | None):
     if row is None:
