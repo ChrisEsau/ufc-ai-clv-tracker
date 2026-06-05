@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import plotly.graph_objects as go
 import streamlit.components.v1 as components
 
@@ -14,12 +13,7 @@ from utils.data_loader import load_parquet
 from utils.ui_components import render_metric
 from utils.ui.sections import page_header
 
-from utils.panels import (
-    render_section_header,
-    render_panel_open,
-    render_panel_close,
-    render_status_pill,
-)
+from utils.panels import render_section_header
 
 
 def render_clv_artifact_health():
@@ -428,8 +422,6 @@ def render_line_movement():
         cards_html += """
         </div>
         """
-    
-        import streamlit.components.v1 as components
     
         components.html(
             cards_html,

@@ -46,10 +46,10 @@ def render_sidebar():
     page = st.session_state.page
 
     if page == "Betting Board":
-        _sidebar_section("Filters")
-        st.sidebar.caption("Use in-page controls for event, confidence, odds, and EV thresholds.")
-        st.sidebar.toggle("Show only positive EV", value=True, key="sidebar_positive_ev_hint")
-        st.sidebar.toggle("Hide fights without odds", value=True, key="sidebar_odds_hint")
+        _sidebar_section("Betting Board")
+        st.sidebar.caption(
+            "Event selection, rules, and actionable filters remain inside the Betting Board so controls directly affect the table."
+        )
         _sidebar_section("Legend")
         st.sidebar.markdown("🟢 Strong Bet  \n🔵 Lean Bet  \n🟡 Watchlist  \n⚪ Pass")
     elif page == "Line Movement / CLV":

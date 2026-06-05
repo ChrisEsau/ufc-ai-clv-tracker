@@ -264,9 +264,8 @@ def render_live_prediction_audit():
             st.dataframe(pd.DataFrame(summary_rows), use_container_width=True, hide_index=True)
 
             if "passes_feature_validation" in feature_audit_df.columns:
-                problem_fights = feature_audit_df[
-                    feature_audit_df["passes_feature_validation"] == False
-                ].copy()
+                failed_validation = ~feature_audit_df["passes_feature_validation"].fillna(False).astype(bool)
+                problem_fights = feature_audit_df[failed_validation].copy()
 
                 st.subheader("Problem Fights")
 
