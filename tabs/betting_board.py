@@ -17,7 +17,7 @@ from utils.betting_board_artifacts import (
 from utils.betting_board_rules import normalize_betting_board_odds
 from utils.data_loader import load_parquet
 from utils.dm_workflow_status import remember_launched_workflow, render_workflow_status
-from utils.github_actions import trigger_workflow
+from utils.github_actions import get_latest_workflow_run, trigger_workflow
 from utils.ui.charts import apply_plotly_theme
 from utils.ui.sections import page_header
 
@@ -74,6 +74,12 @@ def _signed_pct(value, decimals: int = 1) -> str:
     sign = "+" if value >= 0 else ""
     return f"{sign}{value:.{decimals}f}%"
 
+def _american(value) -> str:
+    value = _as_float(value)
+    if value is None or value == 0:
+        return "—"
+    rounded = int(round(value))
+    return f"+{rounded}" if rounded > 0 else str(rounded)
 
 def _pct(value, decimals: int = 1) -> str:
     value = _as_float(value)
@@ -91,12 +97,6 @@ def _american(value) -> str:
     rounded = int(round(value))
     return f"+{rounded}" if rounded > 0 else str(rounded)
 
-def _american(value) -> str:
-    value = _as_float(value)
-    if value is None or value == 0:
-        return "—"
-    rounded = int(round(value))
-    return f"+{rounded}" if rounded > 0 else str(rounded)
 
 def _confidence_value(value) -> float | None:
     value = _as_float(value)
@@ -138,16 +138,38 @@ def _latest_timestamp(*frames: pd.DataFrame) -> str | None:
     return f"Last Updated: {latest.strftime('%b %-d, %Y %I:%M %p %Z')}"
 
 
+def _refresh_status_label(updated_label: str | None) -> str | None:
+    """Show a compact running state in the timestamp slot after dispatch."""
+
+    if not st.session_state.get("bb_refresh_running"):
+        return updated_label
+
+    ok, _, run = get_latest_workflow_run(SELECTED_EVENT_WORKFLOW)
+    if ok and run is not None and run.get("status") == "completed":
+        st.session_state["bb_refresh_running"] = False
+        return updated_label
+
+    return "Running....."
+
+
 # -----------------------------------------------------------------------------
 # Data preparation
 # -----------------------------------------------------------------------------
-
 
 def _event_id(row: dict | pd.Series | None):
     if row is None:
         return None
     return row.get("ufcstats_event_id") or row.get("event_id")
 
+def _event_id(row: dict | pd.Series | None):
+    if row is None:
+        return None
+    return row.get("ufcstats_event_id") or row.get("event_id")
+
+def _event_name(row: dict | pd.Series | None):
+    if row is None:
+        return None
+    return row.get("ufcstats_event_name") or row.get("event_name")
 
 def _event_name(row: dict | pd.Series | None):
     if row is None:
@@ -170,20 +192,12 @@ def _display_event_date(row: dict | pd.Series | None) -> str:
         return str(date)
     return parsed.strftime("%a, %b %-d, %Y")
 
-def _event_id(row: dict | pd.Series | None):
-    if row is None:
-        return None
-    return row.get("ufcstats_event_id") or row.get("event_id")
 
 def _event_location(row: dict | pd.Series | None):
     if row is None:
         return None
     return row.get("ufcstats_event_location") or row.get("event_location")
 
-def _event_name(row: dict | pd.Series | None):
-    if row is None:
-        return None
-    return row.get("ufcstats_event_name") or row.get("event_name")
 
 def _event_options(events: pd.DataFrame, board: pd.DataFrame) -> list[dict]:
     options: list[dict] = []
@@ -432,6 +446,7 @@ def _metric_tile(label: str, value: str, caption: str, color: str = "#f5f7fb") -
 
 
 def _render_header(updated_label: str | None, selected_event: dict | None) -> None:
+    updated_label = _refresh_status_label(updated_label)
     top_cols = st.columns([1, 0.62])
     with top_cols[0]:
         page_header("Betting Board", "Live fight predictions and betting opportunities")
@@ -444,8 +459,7 @@ def _render_header(updated_label: str | None, selected_event: dict | None) -> No
         with action_cols[1]:
             event_id = _event_id(selected_event)
             disabled = not bool(event_id)
-            button_label = "↻ Running..." if st.session_state.get("bb_refresh_running") else "↻ Refresh Data"
-            if st.button(button_label, type="primary", use_container_width=True, disabled=disabled):
+            if st.button("↻ Refresh Data", type="primary", use_container_width=True, disabled=disabled):
                 ok, msg = trigger_workflow(
                     SELECTED_EVENT_WORKFLOW,
                     inputs={"event_id": str(event_id)},
@@ -674,26 +688,27 @@ def _render_charts(display: pd.DataFrame) -> None:
     st.plotly_chart(conf_fig, use_container_width=True)
 
 
-def _render_bottom(display: pd.DataFrame) -> None:
+def _render_bottom(display: pd.DataFrame, chart_display: pd.DataFrame | None = None) -> None:
+    chart_display = display if chart_display is None else chart_display
     cols = st.columns([1.25, 1, 1])
     with cols[0]:
         with st.container(border=True):
             _render_top_ev(display)
     with cols[1]:
         with st.container(border=True):
-            ev = display["ev_dollars"] if not display.empty else pd.Series(dtype=float)
+            ev = chart_display["ev_dollars"] if not chart_display.empty else pd.Series(dtype=float)
             pos = int((ev > 0).sum())
             even = int((ev == 0).sum())
             neg = int((ev < 0).sum())
-            fig = _donut("EV Distribution", ["Positive EV", "Break Even", "Negative EV"], [pos, even, neg], ["#35d96b", "#9aa8bd", "#ef4444"], f"{len(display)}<br>Total Fights")
+            fig = _donut("EV Distribution", ["Positive EV", "Break Even", "Negative EV"], [pos, even, neg], ["#35d96b", "#9aa8bd", "#ef4444"], f"{len(chart_display)}<br>Total Fights")
             st.plotly_chart(fig, use_container_width=True)
     with cols[2]:
         with st.container(border=True):
-            conf = display["confidence_pct"] if not display.empty else pd.Series(dtype=float)
+            conf = chart_display["confidence_pct"] if not chart_display.empty else pd.Series(dtype=float)
             high = int((conf >= 70).sum())
             med = int(((conf >= 60) & (conf < 70)).sum())
             low = int((conf < 60).sum())
-            fig = _donut("Confidence Distribution", ["High", "Medium", "Low"], [high, med, low], ["#35d96b", "#facc15", "#ef4444"], f"{len(display)}<br>Total Fights")
+            fig = _donut("Confidence Distribution", ["High", "Medium", "Low"], [high, med, low], ["#35d96b", "#facc15", "#ef4444"], f"{len(chart_display)}<br>Total Fights")
             st.plotly_chart(fig, use_container_width=True)
 
 
@@ -801,7 +816,8 @@ def render_betting_board():
     selected_event = _current_event(options) if options else None
     scoped = _scope_board(raw_board, selected_event)
     display = _display_board(scoped, fights)
-    card_fight_count = len(display)
+    card_display = display.copy()
+    card_fight_count = len(card_display)
     updated = _latest_timestamp(raw_board, events, fights)
 
     _render_header(updated, selected_event)
@@ -817,5 +833,5 @@ def render_betting_board():
     _render_event_bar(selected_event, display)
 
     _render_main_table(display)
-    _render_bottom(display)
+    _render_bottom(display, chart_display=card_display)
     _render_artifacts_link()
