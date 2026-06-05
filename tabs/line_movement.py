@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import plotly.graph_objects as go
 import streamlit.components.v1 as components
 
@@ -12,13 +11,9 @@ from utils.clv_artifacts import (
 )
 from utils.data_loader import load_parquet
 from utils.ui_components import render_metric
+from utils.ui.sections import page_header
 
-from utils.panels import (
-    render_section_header,
-    render_panel_open,
-    render_panel_close,
-    render_status_pill,
-)
+from utils.panels import render_section_header
 
 
 def render_clv_artifact_health():
@@ -106,7 +101,11 @@ def render_line_movement():
     # ============================================================
     # LINE MOVEMENT / CLV SECTION
     # ============================================================
-    render_section_header("Line Movement / CLV")
+    page_header(
+        "Line Movement / CLV",
+        "Track market movement, sportsbook snapshots, and closing line value performance.",
+        kicker="Market Intelligence",
+    )
     render_clv_artifact_health()
     
     snapshots = load_parquet(MARKET_SNAPSHOTS_PATH)
@@ -423,8 +422,6 @@ def render_line_movement():
         cards_html += """
         </div>
         """
-    
-        import streamlit.components.v1 as components
     
         components.html(
             cards_html,
