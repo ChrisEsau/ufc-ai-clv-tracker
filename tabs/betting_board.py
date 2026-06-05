@@ -74,6 +74,12 @@ def _signed_pct(value, decimals: int = 1) -> str:
     sign = "+" if value >= 0 else ""
     return f"{sign}{value:.{decimals}f}%"
 
+def _american(value) -> str:
+    value = _as_float(value)
+    if value is None or value == 0:
+        return "—"
+    rounded = int(round(value))
+    return f"+{rounded}" if rounded > 0 else str(rounded)
 
 def _pct(value, decimals: int = 1) -> str:
     value = _as_float(value)
@@ -150,12 +156,20 @@ def _refresh_status_label(updated_label: str | None) -> str | None:
 # Data preparation
 # -----------------------------------------------------------------------------
 
+def _event_id(row: dict | pd.Series | None):
+    if row is None:
+        return None
+    return row.get("ufcstats_event_id") or row.get("event_id")
 
 def _event_id(row: dict | pd.Series | None):
     if row is None:
         return None
     return row.get("ufcstats_event_id") or row.get("event_id")
 
+def _event_name(row: dict | pd.Series | None):
+    if row is None:
+        return None
+    return row.get("ufcstats_event_name") or row.get("event_name")
 
 def _event_name(row: dict | pd.Series | None):
     if row is None:
@@ -533,6 +547,13 @@ def _confidence_ring(confidence) -> str:
         f'<div>{confidence:.0f}%</div></div>'
     )
 
+def _confidence_ring(confidence) -> str:
+    confidence = _confidence_value(confidence) or 0
+    color = "#35d96b" if confidence >= 70 else "#facc15" if confidence >= 60 else "#ef4444"
+    return (
+        f'<div class="bb-ring" style="background: conic-gradient({color} {confidence:.0f}%, rgba(148,163,184,.24) 0);">'
+        f'<div>{confidence:.0f}%</div></div>'
+    )
 
 def _stake_text(row: pd.Series) -> str:
     if not _is_bet(row):
