@@ -150,12 +150,20 @@ def _refresh_status_label(updated_label: str | None) -> str | None:
 # Data preparation
 # -----------------------------------------------------------------------------
 
+def _event_id(row: dict | pd.Series | None):
+    if row is None:
+        return None
+    return row.get("ufcstats_event_id") or row.get("event_id")
 
 def _event_id(row: dict | pd.Series | None):
     if row is None:
         return None
     return row.get("ufcstats_event_id") or row.get("event_id")
 
+def _event_name(row: dict | pd.Series | None):
+    if row is None:
+        return None
+    return row.get("ufcstats_event_name") or row.get("event_name")
 
 def _event_name(row: dict | pd.Series | None):
     if row is None:
