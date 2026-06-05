@@ -93,12 +93,6 @@ def _ledger_csv(ledger: pd.DataFrame) -> str:
         return ""
     return ledger.to_csv(index=False)
 
-def _signed_money(value) -> str:
-    if value is None or pd.isna(value):
-        return "$0.00"
-    value = float(value)
-    sign = "+" if value >= 0 else "-"
-    return f"{sign}${abs(value):,.2f}"
 
 def _ledger_summary(ledger: pd.DataFrame, settings: BankrollSettings) -> dict:
     summary = bankroll_summary(ledger=ledger, settings=settings)
@@ -236,9 +230,6 @@ def _render_header(ledger: pd.DataFrame) -> None:
             disabled=ledger.empty,
         )
 
-def _as_float(value, default: float = 0.0) -> float:
-    value = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
-    return default if pd.isna(value) else float(value)
 
 def _render_kpis(summary: dict, settings: BankrollSettings) -> None:
     total_profit = float(summary.get("total_profit", 0.0))
@@ -436,42 +427,6 @@ def _risk_settings_html(settings: BankrollSettings) -> str:
     ]
     return "<div class='bankroll-settings'>" + "".join(f"<div class='bankroll-setting'><div class='bankroll-setting-label'>{_escape(label)}</div><div class='bankroll-setting-value'>{_escape(value)}</div></div>" for label, value in items) + "</div>"
 
-def _ledger_summary(ledger: pd.DataFrame, settings: BankrollSettings) -> dict:
-    summary = bankroll_summary(ledger=ledger, settings=settings)
-    settled = ledger[~ledger["result"].apply(is_open_result)].copy() if not ledger.empty else pd.DataFrame()
-    wins = int((settled.get("result", pd.Series(dtype=str)).astype(str).str.lower() == "win").sum()) if not settled.empty else 0
-    losses = int((settled.get("result", pd.Series(dtype=str)).astype(str).str.lower() == "loss").sum()) if not settled.empty else 0
-    pushes = int((settled.get("result", pd.Series(dtype=str)).astype(str).str.lower().isin(["push", "void"])).sum()) if not settled.empty else 0
-    decisions = wins + losses
-    win_rate = wins / decisions if decisions else 0.0
-    summary.update(
-        {
-            "wins": wins,
-            "losses": losses,
-            "pushes": pushes,
-            "win_rate": win_rate,
-            "total_stake": float(pd.to_numeric(ledger.get("stake", pd.Series(dtype=float)), errors="coerce").fillna(0).sum()) if not ledger.empty else 0.0,
-        }
-    )
-    return summary
-
-
-def _potential_profit(row: pd.Series) -> float:
-    return max(american_profit(row.get("stake"), row.get("odds_taken"), "Win"), 0.0)
-
-
-def _open_exposure_by_fighter(open_bets: pd.DataFrame) -> pd.DataFrame:
-    if open_bets.empty:
-        return pd.DataFrame(columns=["fighter", "stake", "potential_profit", "open_bets"])
-    work = open_bets.copy()
-    work["stake"] = pd.to_numeric(work["stake"], errors="coerce").fillna(0.0)
-    work["potential_profit"] = work.apply(_potential_profit, axis=1)
-    return (
-        work.groupby("fighter", dropna=False)
-        .agg(open_bets=("bet_id", "count"), stake=("stake", "sum"), potential_profit=("potential_profit", "sum"))
-        .reset_index()
-        .sort_values("stake", ascending=False)
-    )
 
 def _load_fight_options() -> pd.DataFrame:
     frames = []
@@ -697,95 +652,6 @@ def _render_risk_settings_form(settings: BankrollSettings, in_dialog: bool = Fal
         submitted = st.form_submit_button("Save Risk Settings", use_container_width=True)
 
 
-def _manual_bet_id(row: dict) -> str:
-    raw = "|".join(str(row.get(key, "")) for key in ["event_name", "fight_id", "fighter", "odds_taken", "stake", "placed_timestamp"])
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
-
-
-def _append_manual_bet(row: dict) -> None:
-    ledger = load_bet_ledger()
-    row["bet_id"] = _manual_bet_id(row)
-    updated = pd.concat([ledger, pd.DataFrame([row])], ignore_index=True)
-    save_bet_ledger(normalize_ledger(updated))
-
-
-def _auto_settlement(open_bet: pd.Series) -> tuple[str | None, str]:
-    master = load_parquet(MASTER_PATH)
-    if master is None or master.empty:
-        return None, "Master results are not available yet."
-    work = master.copy()
-    fight_id = str(open_bet.get("fight_id", ""))
-    if fight_id and "fight_id" in work.columns:
-        work = work[work["fight_id"].astype(str) == fight_id]
-    if work.empty:
-        fighter = str(open_bet.get("fighter", "")).lower()
-        opponent = str(open_bet.get("opponent", "")).lower()
-        name_cols = [col for col in ["r_name", "b_name", "red_fighter", "blue_fighter"] if col in master.columns]
-        if name_cols:
-            mask = False
-            for col in name_cols:
-                values = master[col].astype(str).str.lower()
-                mask = mask | values.isin([fighter, opponent]) if not isinstance(mask, bool) else values.isin([fighter, opponent])
-            work = master[mask]
-    if work.empty or "winner" not in work.columns:
-        return None, "No completed fight result matched this open bet."
-    row = work.iloc[-1]
-    winner = str(row.get("winner", "")).strip().lower()
-    fighter = str(open_bet.get("fighter", "")).strip().lower()
-    if not winner:
-        return None, "Matched fight does not have a winner recorded yet."
-    return ("Win" if winner == fighter else "Loss"), f"Matched master winner: {row.get('winner')}"
-
-
-def _open_add_bet_dialog():
-    if not hasattr(st, "dialog"):
-        st.info("Your Streamlit version does not support popup dialogs. Add-bet controls are shown inline below.")
-        return _render_add_bet_form(in_dialog=False)
-
-    @st.dialog("Add New Bet")
-    def dialog():
-        _render_add_bet_form(in_dialog=True)
-
-    dialog()
-
-
-def _render_add_bet_form(in_dialog: bool = False) -> None:
-    options = _load_fight_options()
-    if options.empty:
-        st.warning("No current fight options are available from live card or Betting Board artifacts.")
-        return
-    selected = st.selectbox("Fight", options.to_dict("records"), format_func=lambda row: row["label"], key="bankroll_add_fight")
-    fighters = [fighter for fighter in [selected.get("red_fighter"), selected.get("blue_fighter")] if pd.notna(fighter) and str(fighter).strip()]
-    default_idx = fighters.index(selected.get("best_side")) if selected.get("best_side") in fighters else 0
-    fighter = st.selectbox("Pick", fighters, index=default_idx, key="bankroll_add_pick")
-    stake = st.number_input("Amount Staked", min_value=0.0, value=float(selected.get("recommended_stake", 0) or 0), step=25.0, key="bankroll_add_stake")
-    default_odds = int(selected.get("best_american_odds") or 0) if pd.notna(selected.get("best_american_odds")) else 0
-    odds = st.number_input("Odds Taken", min_value=-2000, max_value=3000, value=default_odds, step=5, key="bankroll_add_odds")
-    submitted = st.button("Add Bet", use_container_width=True, key="bankroll_add_submit")
-    if submitted:
-        updated = BankrollSettings(
-            starting_bankroll=float(starting_bankroll),
-            kelly_fraction=float(kelly_fraction),
-            max_stake_pct=float(max_stake_pct) / 100,
-            max_event_exposure_pct=float(max_event_exposure_pct) / 100,
-            min_edge=float(min_edge),
-            min_confidence=float(min_confidence),
-            min_odds=int(min_odds),
-            max_odds=int(max_odds),
-        )
-        save_bankroll_settings(updated)
-        if run_workflow:
-            ok, msg = trigger_workflow(BANKROLL_STATUS_WORKFLOW)
-            if ok:
-                st.success("Risk settings saved and bankroll status workflow launched.")
-            else:
-                st.warning(f"Risk settings saved, but the workflow could not be launched: {msg}")
-        else:
-            st.success("Risk settings saved.")
-        st.cache_data.clear()
-        if in_dialog:
-            st.session_state["bankroll_dialog"] = None
-        st.rerun()
 
 def _handle_dialogs(ledger: pd.DataFrame) -> None:
     dialog = st.session_state.get("bankroll_dialog")
