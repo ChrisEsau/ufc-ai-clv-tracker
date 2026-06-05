@@ -6,7 +6,7 @@ import streamlit as st
 
 
 THEME = {
-    "background": "#07111f",
+    "background": "#05080d",
     "panel": "#0d1727",
     "panel_alt": "#101c2d",
     "border": "#26364a",
@@ -55,25 +55,46 @@ def apply_theme() -> None:
 
         .stApp {{
             color: var(--ufc-text);
-            background:
-                radial-gradient(circle at 18% 8%, rgba(59, 130, 246, 0.13), transparent 30%),
-                radial-gradient(circle at 84% 0%, rgba(168, 85, 247, 0.10), transparent 26%),
-                linear-gradient(135deg, #050b14 0%, #07111f 42%, #091421 100%);
+            background: #05080d;
+        }}
+
+        [data-testid="stAppViewContainer"],
+        [data-testid="stMain"],
+        [data-testid="stMainBlockContainer"],
+        .main {{
+            background: #05080d !important;
+        }}
+
+        [data-testid="stHeader"] {{
+            background: #05080d !important;
+            height: 0 !important;
+            min-height: 0 !important;
+            visibility: hidden !important;
+        }}
+
+        [data-testid="stToolbar"],
+        [data-testid="stDecoration"],
+        #MainMenu {{
+            display: none !important;
         }}
 
         .block-container {{
             max-width: 1580px;
-            padding: 1.45rem 1.65rem 4rem;
+            padding: 1.05rem 1.65rem 4rem;
         }}
 
         section[data-testid="stSidebar"] {{
-            background:
-                linear-gradient(180deg, rgba(7, 17, 31, 0.98), rgba(5, 11, 20, 0.98));
+            background: #05080d !important;
             border-right: 1px solid rgba(38, 54, 74, 0.95);
         }}
 
         section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {{
-            padding-top: 1rem;
+            padding-top: 0.15rem;
+        }}
+
+        section[data-testid="stSidebar"] img {{
+            margin-top: -0.35rem;
+            margin-bottom: -0.2rem;
         }}
 
         h1, h2, h3 {{
@@ -212,12 +233,12 @@ def apply_theme() -> None:
         }}
 
         section[data-testid="stSidebar"] .stButton {{
-            margin: 0.10rem 0 0.18rem 0;
+            margin: 0.02rem 0 0.08rem 0;
         }}
 
         section[data-testid="stSidebar"] .stButton > button {{
-            min-height: 2.25rem !important;
-            padding: 0.42rem 0.75rem !important;
+            min-height: 1.85rem !important;
+            padding: 0.26rem 0.70rem !important;
             justify-content: flex-start !important;
             text-align: left !important;
             border-radius: 8px !important;

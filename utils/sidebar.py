@@ -20,7 +20,7 @@ def _sidebar_section(label: str) -> None:
 def render_sidebar():
     """Render persistent left navigation without changing workspace backends."""
 
-    st.sidebar.image("assets/ufc_betting_logo.png", width=190)
+    st.sidebar.image("assets/ufc_betting_logo.png", width=230)
     st.sidebar.markdown(
         '<div class="sidebar-note">INTELLIGENCE PLATFORM</div>',
         unsafe_allow_html=True,
