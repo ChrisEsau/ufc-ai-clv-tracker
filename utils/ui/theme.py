@@ -238,6 +238,20 @@ def apply_theme() -> None:
             margin-top: 0.35rem;
             margin-bottom: 0.10rem;
         }}
+        .sidebar-stat-row {{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: .75rem;
+            color: #dbe7f5;
+            font-size: .80rem;
+            padding: .34rem 0;
+            border-bottom: 1px solid rgba(245,247,251,.08);
+        }}
+        .sidebar-stat-row strong {{
+            color: #31df63;
+            font-size: .92rem;
+        }}
 
         .sidebar-version, .sidebar-note {{
             color: #dbe7f5;

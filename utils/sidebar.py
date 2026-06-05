@@ -5,7 +5,7 @@ import streamlit as st
 
 from utils.betting_board_artifacts import load_upcoming_events
 from utils.data_loader import load_parquet
-from pipeline.common.paths import BETTING_BOARD_PATH
+from pipeline.common.paths import BETTING_BOARD_PATH, MARKET_SNAPSHOTS_PATH
 
 NAV_ITEMS = [
     ("Betting Board", "▣", "Live EV board"),
@@ -122,6 +122,125 @@ def _render_betting_board_filters() -> None:
     st.sidebar.toggle("Hide Fights Without Odds", value=True, key="bb_filter_hide_missing_odds")
 
 
+
+def _clv_snapshots() -> pd.DataFrame:
+    snapshots = load_parquet(MARKET_SNAPSHOTS_PATH)
+    if snapshots is None or snapshots.empty:
+        return pd.DataFrame()
+    snapshots = snapshots.copy()
+    snapshots["snapshot_timestamp"] = pd.to_datetime(
+        snapshots.get("snapshot_timestamp"), utc=True, errors="coerce"
+    )
+    snapshots["commence_time"] = pd.to_datetime(
+        snapshots.get("commence_time"), utc=True, errors="coerce"
+    )
+    return snapshots
+
+
+def _clv_event_names(snapshots: pd.DataFrame) -> list[str]:
+    if snapshots.empty or "event_name" not in snapshots.columns:
+        return ["All Events"]
+    event_dates = (
+        snapshots.dropna(subset=["event_name"])
+        .groupby("event_name")["commence_time"]
+        .min()
+        .sort_values(na_position="last")
+    )
+    return ["All Events", *[str(name) for name in event_dates.index if str(name).strip()]]
+
+
+def _clv_date_bounds(snapshots: pd.DataFrame) -> tuple:
+    if snapshots.empty:
+        return ()
+    dates = snapshots["commence_time"].dropna()
+    if dates.empty:
+        dates = snapshots["snapshot_timestamp"].dropna()
+    if dates.empty:
+        return ()
+    return (dates.min().date(), dates.max().date())
+
+
+def _clv_books(snapshots: pd.DataFrame) -> list[str]:
+    if snapshots.empty or "bookmaker" not in snapshots.columns:
+        return ["All Books"]
+    books = sorted({str(book).strip() for book in snapshots["bookmaker"].dropna() if str(book).strip()})
+    return ["All Books", *books]
+
+
+def _clv_sidebar_summary(snapshots: pd.DataFrame) -> dict[str, str]:
+    if snapshots.empty:
+        return {
+            "Bets Tracked": "0",
+            "Beat Closing Line %": "0.0%",
+            "Average CLV": "+0.0%",
+            "Median CLV": "+0.0%",
+            "Total CLV": "+0.0%",
+        }
+    grouped = snapshots.sort_values("snapshot_timestamp").groupby(["fight_id", "bookmaker"], dropna=False)
+    values = []
+    for _, group in grouped:
+        first = group.iloc[0]
+        last = group.iloc[-1]
+        pick = str(first.get("model_pick", "")).strip()
+        use_blue = pick and pick == str(first.get("blue_fighter", "")).strip()
+        taken = first.get("blue_american_odds" if use_blue else "red_american_odds")
+        closing = last.get("blue_american_odds" if use_blue else "red_american_odds")
+        try:
+            taken = float(taken)
+            closing = float(closing)
+        except (TypeError, ValueError):
+            continue
+        taken_decimal = 1 + taken / 100 if taken > 0 else 1 + 100 / abs(taken) if taken else None
+        closing_decimal = 1 + closing / 100 if closing > 0 else 1 + 100 / abs(closing) if closing else None
+        if taken_decimal and closing_decimal:
+            values.append((taken_decimal / closing_decimal - 1) * 100)
+    series = pd.Series(values, dtype="float64").dropna()
+    if series.empty:
+        beat = avg = median = total = 0.0
+    else:
+        beat = (series >= 0).mean() * 100
+        avg = series.mean()
+        median = series.median()
+        total = series.sum()
+    return {
+        "Bets Tracked": f"{len(series):,}",
+        "Beat Closing Line %": f"{beat:.1f}%",
+        "Average CLV": f"{avg:+.1f}%",
+        "Median CLV": f"{median:+.1f}%",
+        "Total CLV": f"{total:+.1f}%",
+    }
+
+
+def _render_clv_filters() -> None:
+    _sidebar_section("Filters", compact=True)
+    snapshots = _clv_snapshots()
+    bounds = _clv_date_bounds(snapshots)
+    if bounds:
+        st.sidebar.date_input("Date Range", value=bounds, key="sidebar_clv_date_range")
+    else:
+        st.sidebar.caption("Date Range: no market dates available")
+
+    events = _clv_event_names(snapshots)
+    if st.session_state.get("sidebar_clv_event") not in events:
+        st.session_state["sidebar_clv_event"] = "All Events"
+    st.sidebar.selectbox("Event", events, key="sidebar_clv_event")
+
+    books = _clv_books(snapshots)
+    if st.session_state.get("sidebar_clv_book") not in books:
+        st.session_state["sidebar_clv_book"] = "All Books"
+    st.sidebar.selectbox("Sportsbook", books, key="sidebar_clv_book")
+    st.sidebar.selectbox("Market Type", ["Moneyline"], key="sidebar_clv_market")
+    st.sidebar.toggle("Show My Bets Only", value=False, key="sidebar_clv_my_bets_only")
+
+    st.sidebar.markdown('<div class="sidebar-divider compact"></div>', unsafe_allow_html=True)
+    _sidebar_section("CLV Summary (All-Time)", compact=True)
+    for label, value in _clv_sidebar_summary(snapshots).items():
+        st.sidebar.markdown(
+            f'<div class="sidebar-stat-row"><span>{label}</span><strong>{value}</strong></div>',
+            unsafe_allow_html=True,
+        )
+    st.sidebar.caption("All times shown in America/Chicago")
+
 def render_sidebar():
     """Render persistent left navigation without changing workspace backends."""
 
@@ -147,10 +266,7 @@ def render_sidebar():
     if page == "Betting Board":
         _render_betting_board_filters()
     elif page == "Line Movement / CLV":
-        _sidebar_section("Filters", compact=True)
-        st.sidebar.selectbox("Market Type", ["Moneyline"], key="sidebar_clv_market")
-        st.sidebar.selectbox("View", ["Movement", "CLV Results"], key="sidebar_clv_view")
-        st.sidebar.caption("Market snapshots, closing lines, and CLV results are loaded from canonical artifacts.")
+        _render_clv_filters()
     elif page == "Model Lab":
         _sidebar_section("Filters", compact=True)
         st.sidebar.selectbox("Model View", ["Model Performance", "Feature Importance", "Live Prediction Audit"], key="sidebar_model_lab_view")
