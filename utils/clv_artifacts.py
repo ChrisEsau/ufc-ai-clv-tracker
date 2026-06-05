@@ -149,5 +149,80 @@ def artifact_readiness_summary(status):
     }
 
 
+def _safe_nunique(df, column):
+    if column not in df.columns:
+        return 0
+    return int(df[column].dropna().nunique())
+
+
+def _missing_count(df, column):
+    if column not in df.columns:
+        return None
+    return int(df[column].isna().sum())
+
+
+def market_snapshot_coverage_summary(snapshots_df):
+    """Summarize market snapshot freshness and fight/card coverage."""
+
+    if snapshots_df is None or snapshots_df.empty:
+        return {
+            "snapshot_rows": 0,
+            "latest_snapshot": None,
+            "snapshot_age_hours": None,
+            "freshness": "missing",
+            "unique_events": 0,
+            "unique_fights": 0,
+            "unique_sportsbooks": 0,
+            "matched_rows": 0,
+            "unmatched_rows": 0,
+            "missing_red_odds": None,
+            "missing_blue_odds": None,
+        }
+
+    snapshots = snapshots_df.copy()
+    if "snapshot_timestamp" in snapshots.columns:
+        snapshots["snapshot_timestamp"] = pd.to_datetime(
+            snapshots["snapshot_timestamp"],
+            utc=True,
+            errors="coerce",
+        )
+        latest_snapshot = snapshots["snapshot_timestamp"].max()
+    else:
+        latest_snapshot = None
+
+    if pd.notna(latest_snapshot):
+        age_hours = round(
+            (pd.Timestamp.utcnow() - latest_snapshot).total_seconds() / 3600,
+            2,
+        )
+        latest_snapshot_value = latest_snapshot.isoformat()
+    else:
+        age_hours = None
+        latest_snapshot_value = None
+
+    if "odds_match_type" in snapshots.columns:
+        matched_rows = int((snapshots["odds_match_type"] == "matched").sum())
+        unmatched_rows = int((snapshots["odds_match_type"] != "matched").sum())
+    else:
+        matched_rows = 0
+        unmatched_rows = 0
+
+    sportsbook_column = "bookmaker" if "bookmaker" in snapshots.columns else "sportsbook"
+
+    return {
+        "snapshot_rows": int(len(snapshots)),
+        "latest_snapshot": latest_snapshot_value,
+        "snapshot_age_hours": age_hours,
+        "freshness": freshness_status(age_hours),
+        "unique_events": _safe_nunique(snapshots, "event_name"),
+        "unique_fights": _safe_nunique(snapshots, "fight_id"),
+        "unique_sportsbooks": _safe_nunique(snapshots, sportsbook_column),
+        "matched_rows": matched_rows,
+        "unmatched_rows": unmatched_rows,
+        "missing_red_odds": _missing_count(snapshots, "red_american_odds"),
+        "missing_blue_odds": _missing_count(snapshots, "blue_american_odds"),
+    }
+
+
 def get_clv_artifact_status():
     return artifact_status_rows(CLV_ARTIFACTS)
