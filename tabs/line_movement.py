@@ -12,6 +12,7 @@ from utils.clv_artifacts import (
 )
 from utils.data_loader import load_parquet
 from utils.ui_components import render_metric
+from utils.ui.sections import page_header
 
 from utils.panels import (
     render_section_header,
@@ -106,7 +107,11 @@ def render_line_movement():
     # ============================================================
     # LINE MOVEMENT / CLV SECTION
     # ============================================================
-    render_section_header("Line Movement / CLV")
+    page_header(
+        "Line Movement / CLV",
+        "Track market movement, sportsbook snapshots, and closing line value performance.",
+        kicker="Market Intelligence",
+    )
     render_clv_artifact_health()
     
     snapshots = load_parquet(MARKET_SNAPSHOTS_PATH)

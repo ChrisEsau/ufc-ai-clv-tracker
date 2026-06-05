@@ -34,7 +34,7 @@ if page == "Betting Board":
     render_betting_board()
 elif page == "Line Movement / CLV":
     render_line_movement()
-elif page == "Bet Ledger / Bankroll":
+elif page in {"Bankroll", "Bet Ledger / Bankroll"}:
     render_bankroll()
 elif page == "Model Lab":
     render_model_lab()
