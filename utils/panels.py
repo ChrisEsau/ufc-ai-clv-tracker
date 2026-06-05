@@ -1,5 +1,7 @@
 """Panel helpers retained for existing tab imports."""
 
+import html
+
 import streamlit as st
 
 from utils.ui.sections import section_heading
@@ -14,7 +16,7 @@ def render_panel_open():
 
 
 def render_panel_close():
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def render_status_pill(status):
@@ -29,4 +31,4 @@ def render_status_pill(status):
         "PASS": "status-neutral",
     }
     css_class = status_classes.get(status, "status-info")
-    return f'<span class="status-pill {css_class}">{status}</span>'
+    return f'<span class="status-pill {css_class}">{html.escape(str(status))}</span>'

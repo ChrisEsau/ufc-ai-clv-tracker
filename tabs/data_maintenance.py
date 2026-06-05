@@ -63,19 +63,49 @@ def render_data_maintenance():
 
     cols = st.columns(6)
     with cols[0]:
-        metric_card("Master Rows", row.get("row_count", "—"), caption="ufc_master.parquet", status="info")
+        metric_card(
+            "Master Rows",
+            row.get("row_count", "—"),
+            caption="ufc_master.parquet",
+            status="info",
+        )
     with cols[1]:
-        metric_card("Master Columns", row.get("column_count", "—"), caption="Locked schema target: 128", status="neutral")
+        metric_card(
+            "Master Columns",
+            row.get("column_count", "—"),
+            caption="Locked schema target: 128",
+            status="neutral",
+        )
     with cols[2]:
-        metric_card("Events", row.get("unique_events", "—"), caption="Unique event names", status="info")
+        metric_card(
+            "Events",
+            row.get("unique_events", "—"),
+            caption="Unique event names",
+            status="info",
+        )
     with cols[3]:
-        metric_card("Missing Events", len(missing_events) if not missing_events.empty else 0, caption="Discovery artifact", status="warning" if not missing_events.empty else "success")
+        metric_card(
+            "Missing Events",
+            len(missing_events) if not missing_events.empty else 0,
+            caption="Discovery artifact",
+            status="warning" if not missing_events.empty else "success",
+        )
     with cols[4]:
-        metric_card("Staged Rows", len(staged) if not staged.empty else 0, caption="Profiled master rows", status="info" if not staged.empty else "neutral")
+        metric_card(
+            "Staged Rows",
+            len(staged) if not staged.empty else 0,
+            caption="Profiled master rows",
+            status="info" if not staged.empty else "neutral",
+        )
     with cols[5]:
         gate_status = "success" if append_ready and final_pass else "danger"
         gate_value = "Ready" if append_ready and final_pass else "Blocked"
-        metric_card("Append Gate", gate_value, caption="Requires precheck + final review", status=gate_status)
+        metric_card(
+            "Append Gate",
+            gate_value,
+            caption="Requires precheck + final review",
+            status=gate_status,
+        )
 
     section_heading(
         "Consolidated Data Maintenance Flow",
