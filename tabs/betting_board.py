@@ -1,37 +1,735 @@
-import numpy as np
+from __future__ import annotations
+
+import html
+from zoneinfo import ZoneInfo
+
 import pandas as pd
+import plotly.graph_objects as go
 import streamlit as st
 
 from pipeline.common.paths import BETTING_BOARD_PATH, MARKET_MATCH_AUDIT_PATH
 from utils.betting_board_artifacts import (
-    artifact_readiness_summary,
-    event_label,
     get_betting_artifact_status,
     get_upcoming_artifact_status,
     load_upcoming_events,
     load_upcoming_fights,
 )
-from utils.betting_board_rules import (
-    BettingRules,
-    apply_betting_rules,
-    normalize_betting_board_odds,
-    default_betting_rules,
-    rules_changed_from_default,
-    scenario_comparison,
-)
-from utils.bankroll_artifacts import append_official_bets
+from utils.betting_board_rules import normalize_betting_board_odds
 from utils.data_loader import load_parquet
 from utils.dm_workflow_status import remember_launched_workflow, render_workflow_status
-from utils.github_actions import trigger_workflow
-from utils.panels import render_section_header
-from utils.ui_components import american, money, pct, render_metric
+from utils.github_actions import get_latest_workflow_run, trigger_workflow
+from utils.ui.charts import apply_plotly_theme
+from utils.ui.sections import page_header
 
-
-REFRESH_UPCOMING_WORKFLOW = "run-refresh-upcoming-events.yml"
 SELECTED_EVENT_WORKFLOW = "run-betting-board-selected-event.yml"
 
+RECOMMENDATION_COLORS = {
+    "STRONG BET": "#35d96b",
+    "LEAN BET": "#3b82f6",
+    "WATCHLIST": "#facc15",
+    "PASS": "#9aa8bd",
+}
 
-def _artifact_health_table():
+
+# -----------------------------------------------------------------------------
+# Formatting helpers
+# -----------------------------------------------------------------------------
+
+
+def _escape(value) -> str:
+    if pd.isna(value):
+        return "—"
+    return html.escape(str(value))
+
+
+def _as_float(value, default=None):
+    value = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+    if pd.isna(value):
+        return default
+    return float(value)
+
+
+def _money(value, decimals: int = 0) -> str:
+    value = _as_float(value)
+    if value is None:
+        return "—"
+    prefix = "-$" if value < 0 else "$"
+    return f"{prefix}{abs(value):,.{decimals}f}"
+
+
+def _signed_money(value, decimals: int = 0) -> str:
+    value = _as_float(value)
+    if value is None:
+        return "—"
+    sign = "+" if value >= 0 else "-"
+    return f"{sign}${abs(value):,.{decimals}f}"
+
+
+def _signed_pct(value, decimals: int = 1) -> str:
+    value = _as_float(value)
+    if value is None:
+        return "—"
+    if abs(value) <= 1:
+        value *= 100
+    sign = "+" if value >= 0 else ""
+    return f"{sign}{value:.{decimals}f}%"
+
+
+def _pct(value, decimals: int = 1) -> str:
+    value = _as_float(value)
+    if value is None:
+        return "—"
+    if abs(value) <= 1:
+        value *= 100
+    return f"{value:.{decimals}f}%"
+
+
+def _american(value) -> str:
+    value = _as_float(value)
+    if value is None or value == 0:
+        return "—"
+    rounded = int(round(value))
+    return f"+{rounded}" if rounded > 0 else str(rounded)
+
+
+def _confidence_value(value) -> float | None:
+    value = _as_float(value)
+    if value is None:
+        return None
+    return value * 100 if abs(value) <= 1 else value
+
+
+def _probability(value) -> float | None:
+    value = _as_float(value)
+    if value is None:
+        return None
+    return value / 100 if value > 1 else value
+
+
+def _ev_for_100(probability, american_odds) -> float | None:
+    probability = _probability(probability)
+    american_odds = _as_float(american_odds)
+    if probability is None or american_odds is None or american_odds == 0:
+        return None
+    profit = american_odds if american_odds > 0 else 10000 / abs(american_odds)
+    return probability * profit - (1 - probability) * 100
+
+
+def _latest_timestamp(*frames: pd.DataFrame) -> str | None:
+    candidates = []
+    for frame in frames:
+        if frame is None or frame.empty:
+            continue
+        for column in ["decision_timestamp", "snapshot_timestamp", "run_timestamp"]:
+            if column not in frame.columns:
+                continue
+            parsed = pd.to_datetime(frame[column], errors="coerce", utc=True).dropna()
+            if not parsed.empty:
+                candidates.append(parsed.max())
+    if not candidates:
+        return None
+    latest = max(candidates).tz_convert(ZoneInfo("America/Chicago"))
+    return f"Last Updated: {latest.strftime('%b %-d, %Y %I:%M %p %Z')}"
+
+
+def _refresh_status_label(updated_label: str | None) -> str | None:
+    """Show a compact running state in the timestamp slot after dispatch."""
+
+    if not st.session_state.get("bb_refresh_running"):
+        return updated_label
+
+    ok, _, run = get_latest_workflow_run(SELECTED_EVENT_WORKFLOW)
+    if ok and run is not None and run.get("status") == "completed":
+        st.session_state["bb_refresh_running"] = False
+        return updated_label
+
+    return "Running....."
+
+
+# -----------------------------------------------------------------------------
+# Data preparation
+# -----------------------------------------------------------------------------
+
+
+def _event_id(row: dict | pd.Series | None):
+    if row is None:
+        return None
+    return row.get("ufcstats_event_id") or row.get("event_id")
+
+
+def _event_name(row: dict | pd.Series | None):
+    if row is None:
+        return None
+    return row.get("ufcstats_event_name") or row.get("event_name")
+
+
+def _event_date(row: dict | pd.Series | None):
+    if row is None:
+        return None
+    return row.get("ufcstats_event_date") or row.get("event_date")
+
+
+def _display_event_date(row: dict | pd.Series | None) -> str:
+    date = _event_date(row)
+    if not date:
+        return "Date TBD"
+    parsed = pd.to_datetime(date, errors="coerce")
+    if pd.isna(parsed):
+        return str(date)
+    return parsed.strftime("%a, %b %-d, %Y")
+
+
+def _event_location(row: dict | pd.Series | None):
+    if row is None:
+        return None
+    return row.get("ufcstats_event_location") or row.get("event_location")
+
+
+def _event_options(events: pd.DataFrame, board: pd.DataFrame) -> list[dict]:
+    options: list[dict] = []
+    if events is not None and not events.empty:
+        sort_column = "ufcstats_event_date" if "ufcstats_event_date" in events.columns else None
+        source = events.sort_values(sort_column, na_position="last") if sort_column else events
+        options.extend(source.to_dict("records"))
+
+    existing_names = {_event_name(option) for option in options}
+    if board is not None and not board.empty and "event_name" in board.columns:
+        for name in board["event_name"].dropna().astype(str).unique():
+            if name not in existing_names:
+                options.append({"event_name": name, "ufcstats_event_name": name})
+    return options
+
+
+def _event_label(option: dict) -> str:
+    return _event_name(option) or "Unknown event"
+
+
+def _current_event(options: list[dict]) -> dict | None:
+    selected_name = st.session_state.get("bb_filter_event", "All Events")
+    if not options or selected_name == "All Events":
+        return None
+    for option in options:
+        if _event_label(option) == selected_name:
+            return option
+    return None
+
+
+def _scope_board(board: pd.DataFrame, selected_event: dict | None) -> pd.DataFrame:
+    if board is None or board.empty:
+        return pd.DataFrame()
+    if selected_event is None:
+        return board.copy()
+
+    selected_id = _event_id(selected_event)
+    selected_name = _event_name(selected_event)
+    masks = []
+    if selected_id:
+        for column in ["event_id", "ufcstats_event_id"]:
+            if column in board.columns:
+                masks.append(board[column].astype(str) == str(selected_id))
+    if selected_name and "event_name" in board.columns:
+        masks.append(board["event_name"].astype(str) == str(selected_name))
+    if not masks:
+        return board.copy()
+
+    mask = masks[0]
+    for next_mask in masks[1:]:
+        mask = mask | next_mask
+    scoped = board[mask].copy()
+    return scoped if not scoped.empty else board.copy()
+
+
+def _fight_metadata(fights: pd.DataFrame) -> pd.DataFrame:
+    if fights is None or fights.empty or "fight_id" not in fights.columns:
+        return pd.DataFrame()
+    columns = [
+        column
+        for column in ["fight_id", "fight_order", "weight_class", "event_date", "event_location"]
+        if column in fights.columns
+    ]
+    return fights[columns].drop_duplicates("fight_id", keep="last")
+
+
+def _recommendation(row: pd.Series) -> str:
+    status = str(row.get("bet_status", "")).upper().strip()
+    ev = _as_float(row.get("ev_dollars"), default=0.0) or 0.0
+    if status == "OFFICIAL BET":
+        return "STRONG BET" if ev >= 100 else "LEAN BET"
+    if status == "WATCHLIST":
+        return "WATCHLIST"
+    if status in {"NO BET", "INVALID MODEL DATA", "LOW ODDS MATCH", "SPARSE FEATURES"}:
+        return "PASS"
+    if ev >= 100:
+        return "STRONG BET"
+    if ev >= 50:
+        return "LEAN BET"
+    if ev > 0:
+        return "WATCHLIST"
+    return "PASS"
+
+
+def _display_board(board: pd.DataFrame, fights: pd.DataFrame) -> pd.DataFrame:
+    if board is None or board.empty:
+        return pd.DataFrame()
+
+    prepared = normalize_betting_board_odds(board).copy()
+    if not {"red_fighter", "blue_fighter"}.issubset(prepared.columns):
+        return pd.DataFrame()
+    valid = prepared.dropna(subset=["red_fighter", "blue_fighter"], how="any").copy()
+    if valid.empty:
+        return valid
+
+    if "fight_id" in valid.columns:
+        metadata = _fight_metadata(fights)
+        if not metadata.empty:
+            valid = valid.merge(metadata, on="fight_id", how="left", suffixes=("", "_card"))
+
+    valid["ev_dollars"] = valid.apply(
+        lambda row: _ev_for_100(row.get("best_prob"), row.get("best_american_odds")),
+        axis=1,
+    )
+    valid["red_ev_dollars"] = valid.apply(
+        lambda row: _ev_for_100(row.get("red_model_prob"), row.get("red_american_odds")),
+        axis=1,
+    )
+    valid["blue_ev_dollars"] = valid.apply(
+        lambda row: _ev_for_100(row.get("blue_model_prob"), row.get("blue_american_odds")),
+        axis=1,
+    )
+    if "best_ev" in valid.columns:
+        valid["ev_dollars"] = valid["ev_dollars"].fillna(pd.to_numeric(valid["best_ev"], errors="coerce"))
+
+    valid["recommendation"] = valid.apply(_recommendation, axis=1)
+    valid["confidence_pct"] = valid["best_confidence"].apply(_confidence_value)
+    valid["sort_ev"] = pd.to_numeric(valid["ev_dollars"], errors="coerce").fillna(-10_000)
+    if "fight_order" in valid.columns:
+        valid["sort_order"] = pd.to_numeric(valid["fight_order"], errors="coerce").fillna(999)
+    else:
+        valid["sort_order"] = range(1, len(valid) + 1)
+
+    if "fight_id" in valid.columns:
+        valid = valid.sort_values(["sort_order", "sort_ev"], ascending=[True, False])
+        valid = valid.drop_duplicates("fight_id", keep="first")
+    else:
+        valid = valid.sort_values("sort_ev", ascending=False)
+    return valid.reset_index(drop=True)
+
+
+def _selected_event_title(selected_event: dict | None) -> str:
+    if selected_event is not None:
+        return _event_name(selected_event) or "Selected Event"
+    selected_name = st.session_state.get("bb_filter_event", "All Events")
+    return selected_name if selected_name != "All Events" else "All Events"
+
+
+def _selected_event_date_label(selected_event: dict | None, display: pd.DataFrame) -> str:
+    if selected_event is not None:
+        return _display_event_date(selected_event)
+    date_range = st.session_state.get("bb_filter_date_range")
+    if isinstance(date_range, (tuple, list)) and len(date_range) == 2:
+        start = pd.to_datetime(date_range[0], errors="coerce")
+        end = pd.to_datetime(date_range[1], errors="coerce")
+        if not pd.isna(start) and not pd.isna(end):
+            return f"{start.strftime('%b %-d')} – {end.strftime('%b %-d, %Y')}"
+    if not display.empty and "event_date" in display.columns:
+        parsed = pd.to_datetime(display["event_date"], errors="coerce").dropna()
+        if not parsed.empty:
+            return parsed.min().strftime("%a, %b %-d, %Y")
+    return "All upcoming dates"
+
+
+def _selected_event_location_label(selected_event: dict | None, display: pd.DataFrame) -> str:
+    if selected_event is not None:
+        return _event_location(selected_event) or "Location TBD"
+    if not display.empty and "event_location" in display.columns:
+        locations = display["event_location"].dropna().astype(str).unique()
+        if len(locations) == 1:
+            return locations[0]
+    return "All locations"
+
+
+def _date_range_mask(display: pd.DataFrame) -> pd.Series:
+    if "event_date" not in display.columns:
+        return pd.Series(True, index=display.index)
+    selected_range = st.session_state.get("bb_filter_date_range")
+    if not isinstance(selected_range, (tuple, list)) or len(selected_range) != 2:
+        return pd.Series(True, index=display.index)
+    start = pd.to_datetime(selected_range[0], errors="coerce")
+    end = pd.to_datetime(selected_range[1], errors="coerce")
+    dates = pd.to_datetime(display["event_date"], errors="coerce")
+    if pd.isna(start) or pd.isna(end):
+        return pd.Series(True, index=display.index)
+    return dates.between(start, end) | dates.isna()
+
+
+def _kelly_multiplier() -> float:
+    return 0.25 if st.session_state.get("bb_kelly_mode") == "1/4 Kelly" else 0.50
+
+
+def _is_bet(row: pd.Series) -> bool:
+    return str(row.get("recommendation", "")).upper().strip() in {"STRONG BET", "LEAN BET"}
+
+
+def _kelly_stake(row: pd.Series, bankroll: float = 10_000.0) -> float:
+    if not _is_bet(row):
+        return 0.0
+    probability = _probability(row.get("best_prob"))
+    american_odds = _as_float(row.get("best_american_odds"))
+    if probability is None or american_odds is None or american_odds == 0:
+        return 0.0
+    b = american_odds / 100 if american_odds > 0 else 100 / abs(american_odds)
+    if b <= 0:
+        return 0.0
+    full_kelly = max(0.0, ((b * probability) - (1 - probability)) / b)
+    return round(bankroll * full_kelly * _kelly_multiplier())
+
+
+def _apply_kelly_stakes(display: pd.DataFrame) -> pd.DataFrame:
+    if display.empty:
+        return display
+    adjusted = display.copy()
+    adjusted["recommended_stake"] = adjusted.apply(_kelly_stake, axis=1)
+    return adjusted
+
+
+def _apply_sidebar_filters(display: pd.DataFrame) -> pd.DataFrame:
+    if display.empty:
+        return display
+    filtered = display.copy()
+    filtered = filtered[_date_range_mask(filtered)]
+
+    odds_min, odds_max = st.session_state.get("bb_filter_odds_range", (-250, 400))
+    odds = pd.to_numeric(filtered.get("best_american_odds"), errors="coerce")
+    hide_missing = st.session_state.get("bb_filter_hide_missing_odds", True)
+    odds_mask = odds.between(odds_min, odds_max)
+    if not hide_missing:
+        odds_mask = odds_mask | odds.isna()
+    filtered = filtered[odds_mask]
+
+    ev_threshold = float(st.session_state.get("bb_filter_ev_threshold", 50))
+    if ev_threshold > 0:
+        ev = pd.to_numeric(filtered.get("ev_dollars"), errors="coerce")
+        filtered = filtered[ev >= ev_threshold]
+    elif st.session_state.get("bb_filter_positive_ev", False):
+        ev = pd.to_numeric(filtered.get("ev_dollars"), errors="coerce")
+        filtered = filtered[ev > 0]
+
+    min_confidence = float(st.session_state.get("bb_filter_min_confidence", 70))
+    confidence = pd.to_numeric(filtered.get("confidence_pct"), errors="coerce")
+    filtered = filtered[confidence >= min_confidence]
+    return filtered.reset_index(drop=True)
+
+
+# -----------------------------------------------------------------------------
+# UI rendering
+# -----------------------------------------------------------------------------
+
+
+def _metric_tile(label: str, value: str, caption: str, color: str = "#f5f7fb") -> None:
+    st.html(
+        "".join(
+            [
+                '<div class="bb-metric-card">',
+                f'<div class="bb-metric-label">{html.escape(label)}</div>',
+                f'<div class="bb-metric-value" style="color:{color};">{html.escape(value)}</div>',
+                f'<div class="bb-metric-caption">{html.escape(caption)}</div>',
+                "</div>",
+            ]
+        )
+    )
+
+
+def _render_header(updated_label: str | None, selected_event: dict | None) -> None:
+    updated_label = _refresh_status_label(updated_label)
+    top_cols = st.columns([1, 0.62])
+    with top_cols[0]:
+        page_header("Betting Board", "Live fight predictions and betting opportunities")
+    with top_cols[1]:
+        action_cols = st.columns([0.58, 0.42], vertical_alignment="center")
+        with action_cols[0]:
+            st.html(
+                f'<div class="bb-top-actions"><span>{html.escape(updated_label or "Artifacts not refreshed yet")}</span></div>'
+            )
+        with action_cols[1]:
+            event_id = _event_id(selected_event)
+            disabled = not bool(event_id)
+            if st.button("↻ Refresh Data", type="primary", use_container_width=True, disabled=disabled):
+                ok, msg = trigger_workflow(
+                    SELECTED_EVENT_WORKFLOW,
+                    inputs={"event_id": str(event_id)},
+                )
+                if ok:
+                    st.session_state["bb_refresh_running"] = True
+                    remember_launched_workflow(
+                        "betting_selected_event",
+                        "Refresh Betting Board Data",
+                        SELECTED_EVENT_WORKFLOW,
+                        inputs={"event_id": str(event_id)},
+                    )
+                    st.rerun()
+                else:
+                    st.error(msg)
+
+
+def _render_kpis(display: pd.DataFrame, card_display: pd.DataFrame | None = None) -> None:
+    card_display = display if card_display is None else card_display
+    total_fights = len(card_display)
+    displayed_fights = len(display)
+    positive = int((card_display["ev_dollars"] > 0).sum()) if not card_display.empty else 0
+    strong = int((card_display["recommendation"] == "STRONG BET").sum()) if not card_display.empty else 0
+    total_ev = card_display["ev_dollars"].dropna().sum() if not card_display.empty else 0
+    positive_ev = display.loc[display["ev_dollars"] > 0, "ev_dollars"].dropna()
+    avg_ev = positive_ev.mean() if not positive_ev.empty else 0
+    bet_display = display[display.apply(_is_bet, axis=1)] if not display.empty else display
+    stake = bet_display["recommended_stake"].dropna().sum() if "recommended_stake" in bet_display.columns else 0
+
+    cols = st.columns(6)
+    with cols[0]:
+        _metric_tile("Total Fights", str(total_fights), "Today / Upcoming", "#3b82f6")
+    with cols[1]:
+        pct_card = f"{positive / total_fights:.0%} of card" if total_fights else "0% of card"
+        _metric_tile("Positive EV Fights", str(positive), pct_card, "#35d96b")
+    with cols[2]:
+        strong_card = f"{strong / total_fights:.0%} of card" if total_fights else "0% of card"
+        _metric_tile("Strong Bets", str(strong), strong_card, "#35d96b")
+    with cols[3]:
+        _metric_tile("Total EV", _money(total_ev), "Across all fights", "#35d96b" if total_ev >= 0 else "#ef4444")
+    with cols[4]:
+        _metric_tile("Avg EV per Fight", _money(avg_ev), "Positive EV only", "#35d96b")
+    with cols[5]:
+        _metric_tile("Bankroll at Risk", _money(stake), "Recommended stakes", "#a855f7")
+
+
+def _render_event_bar(selected_event: dict | None, display: pd.DataFrame) -> None:
+    title = _selected_event_title(selected_event)
+    date_label = _selected_event_date_label(selected_event, display)
+    location = _selected_event_location_label(selected_event, display)
+    st.html(
+        "".join(
+            [
+                '<div class="bb-event-bar">',
+                f'<div class="bb-event-heading">{_escape(title)}</div>',
+                f'<div class="bb-event-meta-inline">📅 {_escape(date_label)}</div>',
+                f'<div class="bb-event-meta-inline">📍 {_escape(location)}</div>',
+                '<div class="bb-card-tabs"><span class="active">All Fights</span><span>Main Card</span><span>Prelims</span><span>Early Prelims</span></div>',
+                '</div>',
+            ]
+        )
+    )
+
+
+def _corner_html(label: str, fighter: str, probability, odds, implied, edge, ev, color: str) -> str:
+    return "".join(
+        [
+            '<div class="bb-corner-row">',
+            f'<span class="bb-corner-badge" style="background:{color};">{label}</span>',
+            f'<span class="bb-fighter-name">{_escape(fighter)}</span>',
+            f'<span class="bb-prob">{_pct(probability)}</span>',
+            f'<span class="bb-odds">{_american(odds)}</span>',
+            f'<span class="bb-implied">{_pct(implied)}</span>',
+            f'<span class="bb-edge {"pos" if (_as_float(edge, 0) or 0) >= 0 else "neg"}">{_signed_pct(edge)}</span>',
+            f'<span class="bb-ev {"pos" if (_as_float(ev, 0) or 0) >= 0 else "neg"}">{_signed_money(ev)}</span>',
+            "</div>",
+        ]
+    )
+
+
+def _confidence_ring(confidence) -> str:
+    confidence = _confidence_value(confidence) or 0
+    color = "#35d96b" if confidence >= 70 else "#facc15" if confidence >= 60 else "#ef4444"
+    return (
+        f'<div class="bb-ring" style="background: conic-gradient({color} {confidence:.0f}%, rgba(148,163,184,.24) 0);">'
+        f'<div>{confidence:.0f}%</div></div>'
+    )
+
+
+def _stake_text(row: pd.Series) -> str:
+    if not _is_bet(row):
+        return "—"
+    stake = _as_float(row.get("recommended_stake"), 0) or 0
+    if stake <= 0:
+        return "—"
+    return f"{_money(stake)}<br><span>{stake / 150:.1f}u</span>"
+
+
+def _render_main_table(display: pd.DataFrame) -> None:
+    if display.empty:
+        st.warning("No betting board rows are available for this event. Refresh data or select a different event.")
+        return
+
+    rows = []
+    for idx, row in display.iterrows():
+        rec = row.get("recommendation", "PASS")
+        rec_color = RECOMMENDATION_COLORS.get(rec, "#9aa8bd")
+        rows.append(
+            "".join(
+                [
+                    '<div class="bb-table-row">',
+                    f'<div class="bb-rank">{idx + 1}</div>',
+                    '<div class="bb-fight-cell">',
+                    _corner_html("R", row.get("red_fighter"), row.get("red_model_prob"), row.get("red_american_odds"), row.get("red_implied_prob"), row.get("red_edge"), row.get("red_ev_dollars"), "#ef4444"),
+                    _corner_html("B", row.get("blue_fighter"), row.get("blue_model_prob"), row.get("blue_american_odds"), row.get("blue_implied_prob"), row.get("blue_edge"), row.get("blue_ev_dollars"), "#3b82f6"),
+                    "</div>",
+                    f'<div class="bb-confidence-cell">{_confidence_ring(row.get("best_confidence"))}</div>',
+                    f'<div class="bb-rec" style="color:{rec_color};">{_escape(rec)}</div>',
+                    f'<div class="bb-stake">{_stake_text(row)}</div>',
+                    '<div class="bb-menu">⋮</div>',
+                    "</div>",
+                ]
+            )
+        )
+
+    bet_rows = display[display.apply(_is_bet, axis=1)] if not display.empty else display
+    total_stake = bet_rows["recommended_stake"].dropna().sum() if "recommended_stake" in bet_rows.columns else 0
+    table_html = "".join(
+        [
+            '<div class="bb-table">',
+            f'<div class="bb-table-head"><span class="bb-rank-head"></span><div class="bb-fight-heading"><span class="corner-head"></span><span class="fight-label">Fight</span><span>Model<br>Prob.</span><span>Market<br>Odds</span><span>Implied<br>Prob.</span><span>Edge</span><span>EV ($)</span></div><span class="confidence-head">Confidence</span><span class="recommendation-head">Recommendation</span><span class="stake-head">Suggested Stake<br>({_escape(st.session_state.get("bb_kelly_mode", "1/2 Kelly"))})</span><span></span></div>',
+            *rows,
+            '<div class="bb-table-foot">',
+            f'<span>{len(display)} fights</span>',
+            '<span class="bb-legend"><b style="color:#35d96b;">◼ Strong Bet</b> EV >= $100&nbsp;&nbsp;&nbsp;<b style="color:#3b82f6;">◼ Lean Bet</b> $50 <= EV < $100&nbsp;&nbsp;&nbsp;<b style="color:#facc15;">◼ Watchlist</b> $0 < EV < $50&nbsp;&nbsp;&nbsp;<b style="color:#9aa8bd;">◼ Pass</b> EV <= $0</span>',
+            f'<span class="bb-total-stake">Total Recommended Stake: {_money(total_stake)}</span>',
+            "</div>",
+            "</div>",
+        ]
+    )
+    st.html(table_html)
+
+
+def _render_top_ev(display: pd.DataFrame) -> None:
+    st.html('<div class="bb-panel-title">Top Positive EV Opportunities</div>')
+    if display.empty:
+        st.info("No opportunities available.")
+        return
+    rows = display[display["ev_dollars"] > 0].sort_values("ev_dollars", ascending=False).head(5)
+    if rows.empty:
+        st.info("No positive EV opportunities for this card.")
+        return
+    table_rows = []
+    for rank, (_, row) in enumerate(rows.iterrows(), start=1):
+        table_rows.append(
+            "<tr>"
+            f"<td>{rank}</td>"
+            f"<td>{_escape(row.get('best_side'))}</td>"
+            f"<td>{_escape(row.get('blue_fighter') if row.get('best_side') == row.get('red_fighter') else row.get('red_fighter'))}</td>"
+            f"<td>{_american(row.get('best_american_odds'))}</td>"
+            f"<td>{_signed_money(row.get('ev_dollars'))}</td>"
+            f"<td>{_pct(row.get('best_confidence'))}</td>"
+            f"<td>{_stake_text(row) if _is_bet(row) else '—'}</td>"
+            "</tr>"
+        )
+    st.html(
+        '<table class="bb-mini-table"><thead><tr><th>Rank</th><th>Fighter</th><th>Opponent</th><th>Odds</th><th>EV ($)</th><th>Conf.</th><th>Stake</th></tr></thead><tbody>'
+        + "".join(table_rows)
+        + "</tbody></table>"
+    )
+
+
+def _legend_labels(labels: list[str], values: list[int]) -> list[str]:
+    total = sum(values)
+    if total <= 0:
+        return [f"{label} (0%)" for label in labels]
+    return [f"{label} ({value / total:.0%})" for label, value in zip(labels, values)]
+
+
+def _donut(title: str, labels: list[str], values: list[int], colors: list[str], center: str) -> go.Figure:
+    fig = go.Figure(
+        data=[
+            go.Pie(
+                labels=_legend_labels(labels, values),
+                values=values,
+                hole=0.58,
+                marker={"colors": colors},
+                textinfo="none",
+            )
+        ]
+    )
+    fig.add_annotation(text=center, x=0.5, y=0.5, showarrow=False, font={"size": 13, "color": "#f5f7fb"})
+    fig = apply_plotly_theme(fig, height=245)
+    fig.update_layout(
+        title={"text": title, "font": {"color": "#f5f7fb", "size": 14}},
+        showlegend=True,
+        legend={
+            "font": {"color": "#f5f7fb"},
+            "orientation": "v",
+            "x": 1.04,
+            "xanchor": "left",
+            "y": 0.5,
+            "yanchor": "middle",
+        },
+        margin={"l": 20, "r": 118, "t": 38, "b": 20},
+    )
+    return fig
+
+
+def _render_charts(display: pd.DataFrame) -> None:
+    total = len(display)
+    ev = display["ev_dollars"] if not display.empty else pd.Series(dtype=float)
+    pos = int((ev > 0).sum())
+    even = int((ev == 0).sum())
+    neg = int((ev < 0).sum())
+    ev_fig = _donut(
+        "EV Distribution",
+        ["Positive EV", "Break Even", "Negative EV"],
+        [pos, even, neg],
+        ["#35d96b", "#9aa8bd", "#ef4444"],
+        f"{total}<br>Total Fights",
+    )
+
+    conf = display["confidence_pct"] if not display.empty else pd.Series(dtype=float)
+    high = int((conf >= 70).sum())
+    med = int(((conf >= 60) & (conf < 70)).sum())
+    low = int((conf < 60).sum())
+    conf_fig = _donut(
+        "Confidence Distribution",
+        ["High (70%+)", "Medium (60-70%)", "Low (<60%)"],
+        [high, med, low],
+        ["#35d96b", "#facc15", "#ef4444"],
+        f"{total}<br>Total Fights",
+    )
+    st.plotly_chart(ev_fig, use_container_width=True)
+    st.plotly_chart(conf_fig, use_container_width=True)
+
+
+def _render_bottom(display: pd.DataFrame, chart_display: pd.DataFrame | None = None) -> None:
+    chart_display = display if chart_display is None else chart_display
+    cols = st.columns([1.25, 1, 1])
+    with cols[0]:
+        with st.container(border=True):
+            _render_top_ev(display)
+    with cols[1]:
+        with st.container(border=True):
+            ev = chart_display["ev_dollars"] if not chart_display.empty else pd.Series(dtype=float)
+            pos = int((ev > 0).sum())
+            even = int((ev == 0).sum())
+            neg = int((ev < 0).sum())
+            fig = _donut("EV Distribution", ["Positive EV", "Break Even", "Negative EV"], [pos, even, neg], ["#35d96b", "#9aa8bd", "#ef4444"], f"{len(chart_display)}<br>Total Fights")
+            st.plotly_chart(fig, use_container_width=True)
+    with cols[2]:
+        with st.container(border=True):
+            conf = chart_display["confidence_pct"] if not chart_display.empty else pd.Series(dtype=float)
+            high = int((conf >= 70).sum())
+            med = int(((conf >= 60) & (conf < 70)).sum())
+            low = int((conf < 60).sum())
+            fig = _donut("Confidence Distribution", ["High", "Medium", "Low"], [high, med, low], ["#35d96b", "#facc15", "#ef4444"], f"{len(chart_display)}<br>Total Fights")
+            st.plotly_chart(fig, use_container_width=True)
+
+
+def _render_artifacts_link() -> None:
+    st.markdown(
+        '<div class="bb-artifact-link-wrap"><a href="?betting_board_view=diagnostics" target="_self">Artifacts & audits →</a></div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _render_diagnostics() -> None:
+    page_header("Betting Board Diagnostics", "Artifacts, audits, and workflow status")
+    if st.button("← Back to Betting Board"):
+        st.session_state["betting_board_view"] = "board"
+        st.query_params.clear()
+        st.rerun()
+
     status = pd.concat(
         [
             get_upcoming_artifact_status().assign(group="Card selection"),
@@ -39,721 +737,104 @@ def _artifact_health_table():
         ],
         ignore_index=True,
     )
-    return status[
-        [
-            "group",
-            "artifact",
-            "required_for",
-            "health",
-            "optional",
-            "rows",
-            "size",
-            "age_hours",
-            "modified_utc",
-            "path",
-        ]
-    ]
-
-
-def render_artifact_readiness(status):
-    summary = artifact_readiness_summary(status)
-    cols = st.columns(4)
-    cols[0].metric("Required ready", f"{summary['required_ready']} / {summary['required_total']}")
-    cols[1].metric("Missing required", summary["missing_required"])
-    cols[2].metric("Empty required", summary["empty_required"])
-    cols[3].metric("Optional missing", summary["optional_missing"])
-
-    if summary["ready_to_review"]:
-        st.success("Required Betting Board artifacts are present and non-empty.")
+    st.dataframe(status, use_container_width=True, hide_index=True)
+    audit = load_parquet(MARKET_MATCH_AUDIT_PATH)
+    st.markdown("### Market Match Audit")
+    if audit.empty:
+        st.info(f"No market match audit found at `{MARKET_MATCH_AUDIT_PATH}`.")
     else:
-        st.warning("One or more required Betting Board artifacts are missing or empty. Refresh/run the upcoming-events workflow before trusting board output.")
-
-
-def _selected_event_id(event_row):
-    if event_row is None:
-        return None
-    return event_row.get("ufcstats_event_id") or event_row.get("event_id")
-
-
-def _selected_event_name(event_row):
-    if event_row is None:
-        return None
-    return event_row.get("ufcstats_event_name") or event_row.get("event_name")
-
-
-def _scope_board_to_selected_event(board, selected_event):
-    """Return only rows for the event currently selected in the card selector."""
-
-    if selected_event is None or board.empty:
-        return board, None, False
-
-    selected_event_id = _selected_event_id(selected_event)
-    selected_event_name = _selected_event_name(selected_event)
-    selected_label = selected_event_name or selected_event_id
-
-    masks = []
-    if selected_event_id:
-        for event_id_column in ["event_id", "ufcstats_event_id"]:
-            if event_id_column in board.columns:
-                masks.append(board[event_id_column].astype(str) == str(selected_event_id))
-
-    if selected_event_name and "event_name" in board.columns:
-        masks.append(board["event_name"].astype(str) == str(selected_event_name))
-
-    if not masks:
-        return board, selected_label, False
-
-    selected_mask = masks[0]
-    for mask in masks[1:]:
-        selected_mask = selected_mask | mask
-
-    return board[selected_mask].copy(), selected_label, True
-
-
-def render_upcoming_event_selection():
-    render_section_header("Upcoming Event Selection")
-
-    with st.expander("Select an upcoming UFCStats event for betting predictions", expanded=True):
-        st.caption(
-            "Refresh the UFCStats upcoming-events artifact, choose a card, then launch the upcoming-events "
-            "betting workflow. The workflow builds model predictions, market odds, and betting board outputs "
-            "for all upcoming fights; this selector controls which event appears in the Action Board."
-        )
-
-        artifact_status = _artifact_health_table()
-        render_artifact_readiness(artifact_status)
-        st.dataframe(artifact_status, use_container_width=True, hide_index=True)
-
-        control_cols = st.columns([1, 1])
-
-        with control_cols[0]:
-            if st.button("Refresh Upcoming Events", use_container_width=True):
-                ok, msg = trigger_workflow(REFRESH_UPCOMING_WORKFLOW)
-                if ok:
-                    remember_launched_workflow(
-                        "betting_refresh_upcoming_events",
-                        "Refresh Upcoming Events",
-                        REFRESH_UPCOMING_WORKFLOW,
-                    )
-                    st.success(msg)
-                else:
-                    st.error(msg)
-
-        with control_cols[1]:
-            st.caption(
-                "Refresh before selecting a new card if UFCStats has changed. The prediction workflow evaluates "
-                "every upcoming fight; the selected event only scopes the dashboard display."
-            )
-
-        render_workflow_status("betting_refresh_upcoming_events")
-
-        events, events_error = load_upcoming_events()
-        fights, fights_error = load_upcoming_fights()
-
-        if events_error:
-            st.warning(events_error)
-            return None
-
-        if events.empty:
-            st.warning("No upcoming events are available yet. Refresh upcoming events first.")
-            return None
-
-        events = events.sort_values("ufcstats_event_date", na_position="last").reset_index(drop=True)
-        event_options = events.to_dict("records")
-        selected_event = st.selectbox(
-            "Upcoming event",
-            options=event_options,
-            format_func=event_label,
-            key="betting_selected_upcoming_event",
-        )
-
-        selected_event_id = _selected_event_id(selected_event)
-
-        event_cols = [
-            column
-            for column in [
-                "ufcstats_event_id",
-                "ufcstats_event_date",
-                "ufcstats_event_name",
-                "ufcstats_event_location",
-                "ufcstats_event_url",
-            ]
-            if column in events.columns
-        ]
-        st.dataframe(pd.DataFrame([selected_event])[event_cols], use_container_width=True, hide_index=True)
-
-        if fights_error:
-            st.warning(fights_error)
-        elif not fights.empty and "event_id" in fights.columns:
-            selected_fights = fights[fights["event_id"].astype(str) == str(selected_event_id)]
-            fight_cols = [
-                column
-                for column in [
-                    "fight_order",
-                    "red_fighter",
-                    "blue_fighter",
-                    "weight_class",
-                    "fight_id",
-                ]
-                if column in selected_fights.columns
-            ]
-            st.markdown(f"**Selected card fights:** {len(selected_fights)}")
-            st.dataframe(selected_fights[fight_cols], use_container_width=True, hide_index=True)
-
-        if st.button("Run Betting Predictions for Upcoming Events", type="primary", use_container_width=True):
-            ok, msg = trigger_workflow(
-                SELECTED_EVENT_WORKFLOW,
-                inputs={"event_id": str(selected_event_id)},
-            )
-            if ok:
-                remember_launched_workflow(
-                    "betting_selected_event",
-                    "Run Betting Predictions for Upcoming Events",
-                    SELECTED_EVENT_WORKFLOW,
-                    inputs={"event_id": str(selected_event_id)},
-                )
-                st.success(msg)
-            else:
-                st.error(msg)
-
-        render_workflow_status("betting_selected_event")
-
-        return selected_event
-
-
-def _rule_state_key(name):
-    return f"betting_rule_{name}"
-
-
-def _reset_rule_state(defaults):
-    default_values = {
-        "min_edge": defaults.min_edge,
-        "min_confidence": defaults.min_confidence,
-        "min_odds": defaults.min_odds,
-        "max_odds": defaults.max_odds,
-        "require_positive_ev": defaults.require_positive_ev,
-        "watchlist_max_failed_thresholds": defaults.watchlist_max_failed_thresholds,
-        "watchlist_high_ev_override": defaults.watchlist_high_ev_override,
-        "bankroll": defaults.bankroll,
-        "kelly_fraction": defaults.kelly_fraction,
-        "max_stake_pct_percent": defaults.max_stake_pct * 100,
-        "min_stake": defaults.min_stake,
-        "stake_rounding": defaults.stake_rounding,
-    }
-
-    for key, value in default_values.items():
-        st.session_state[_rule_state_key(key)] = value
-
-
-def render_betting_rules_controls():
-    defaults = default_betting_rules()
-
-    with st.expander("Betting Rules / Scenario Controls", expanded=True):
-        st.caption(
-            "Workflow runs use the production defaults. Adjust these controls after a run to recalculate "
-            "the displayed board as a dashboard-only scenario. Scenario values are not committed."
-        )
-
-        if st.button("Reset rules to production defaults", use_container_width=True):
-            _reset_rule_state(defaults)
-            st.rerun()
-
-        st.markdown("#### Bet Qualification")
-        c1, c2, c3, c4 = st.columns(4)
-
-        with c1:
-            min_edge = st.number_input(
-                "Minimum edge",
-                min_value=-1.0,
-                max_value=1.0,
-                value=float(st.session_state.get(_rule_state_key("min_edge"), defaults.min_edge)),
-                step=0.01,
-                format="%.2f",
-                key=_rule_state_key("min_edge"),
-            )
-
-        with c2:
-            min_confidence = st.number_input(
-                "Minimum confidence (%)",
-                min_value=0.0,
-                max_value=100.0,
-                value=float(st.session_state.get(_rule_state_key("min_confidence"), defaults.min_confidence)),
-                step=1.0,
-                format="%.1f",
-                key=_rule_state_key("min_confidence"),
-            )
-
-        with c3:
-            min_odds = st.number_input(
-                "Minimum American odds",
-                min_value=-1000,
-                max_value=1000,
-                value=int(st.session_state.get(_rule_state_key("min_odds"), defaults.min_odds)),
-                step=5,
-                key=_rule_state_key("min_odds"),
-            )
-
-        with c4:
-            max_odds = st.number_input(
-                "Maximum American odds",
-                min_value=-1000,
-                max_value=2000,
-                value=int(st.session_state.get(_rule_state_key("max_odds"), defaults.max_odds)),
-                step=5,
-                key=_rule_state_key("max_odds"),
-            )
-
-        require_positive_ev = st.checkbox(
-            "Require positive EV for official bets",
-            value=bool(st.session_state.get(_rule_state_key("require_positive_ev"), defaults.require_positive_ev)),
-            key=_rule_state_key("require_positive_ev"),
-        )
-
-        st.markdown("#### Watchlist Rules")
-        w1, w2 = st.columns(2)
-
-        with w1:
-            watchlist_max_failed_thresholds = st.number_input(
-                "Watchlist max failed betting thresholds",
-                min_value=0,
-                max_value=4,
-                value=int(st.session_state.get(_rule_state_key("watchlist_max_failed_thresholds"), defaults.watchlist_max_failed_thresholds)),
-                step=1,
-                key=_rule_state_key("watchlist_max_failed_thresholds"),
-            )
-
-        with w2:
-            watchlist_high_ev_override = st.number_input(
-                "Watchlist high-EV override",
-                min_value=-100.0,
-                max_value=500.0,
-                value=float(st.session_state.get(_rule_state_key("watchlist_high_ev_override"), defaults.watchlist_high_ev_override)),
-                step=1.0,
-                format="%.2f",
-                key=_rule_state_key("watchlist_high_ev_override"),
-            )
-
-        st.markdown("#### Bankroll / Kelly Staking")
-        s1, s2, s3, s4 = st.columns(4)
-
-        with s1:
-            bankroll = st.number_input(
-                "Bankroll ($)",
-                min_value=0.0,
-                max_value=10000000.0,
-                value=float(st.session_state.get(_rule_state_key("bankroll"), defaults.bankroll)),
-                step=100.0,
-                format="%.2f",
-                key=_rule_state_key("bankroll"),
-            )
-
-        with s2:
-            kelly_fraction = st.number_input(
-                "Kelly fraction",
-                min_value=0.0,
-                max_value=2.0,
-                value=float(st.session_state.get(_rule_state_key("kelly_fraction"), defaults.kelly_fraction)),
-                step=0.05,
-                format="%.2f",
-                key=_rule_state_key("kelly_fraction"),
-            )
-
-        with s3:
-            max_stake_pct_percent = st.number_input(
-                "Max stake (% bankroll)",
-                min_value=0.0,
-                max_value=100.0,
-                value=float(st.session_state.get(_rule_state_key("max_stake_pct_percent"), defaults.max_stake_pct * 100)),
-                step=0.25,
-                format="%.2f",
-                key=_rule_state_key("max_stake_pct_percent"),
-            )
-
-        with s4:
-            min_stake = st.number_input(
-                "Minimum stake ($)",
-                min_value=0.0,
-                max_value=100000.0,
-                value=float(st.session_state.get(_rule_state_key("min_stake"), defaults.min_stake)),
-                step=1.0,
-                format="%.2f",
-                key=_rule_state_key("min_stake"),
-            )
-
-        stake_rounding = st.number_input(
-            "Round stake to nearest ($)",
-            min_value=0.0,
-            max_value=1000.0,
-            value=float(st.session_state.get(_rule_state_key("stake_rounding"), defaults.stake_rounding)),
-            step=1.0,
-            format="%.2f",
-            key=_rule_state_key("stake_rounding"),
-        )
-
-        rules = BettingRules(
-            min_edge=float(min_edge),
-            min_confidence=float(min_confidence),
-            min_odds=int(min_odds),
-            max_odds=int(max_odds),
-            require_positive_ev=bool(require_positive_ev),
-            watchlist_max_failed_thresholds=int(watchlist_max_failed_thresholds),
-            watchlist_high_ev_override=float(watchlist_high_ev_override),
-            bankroll=float(bankroll),
-            kelly_fraction=float(kelly_fraction),
-            max_stake_pct=float(max_stake_pct_percent) / 100,
-            min_stake=float(min_stake),
-            stake_rounding=float(stake_rounding),
-        )
-
-        if rules_changed_from_default(rules):
-            st.warning("Scenario rules differ from production defaults. Displayed results are dashboard-only what-if results.")
-        else:
-            st.success("Using production default betting rules.")
-
-    return rules
-
-
-def render_scenario_summary(board, scenario):
-    comparison = scenario_comparison(board, scenario)
-
-    render_section_header("Production vs Scenario Summary")
-
-    cols = st.columns(6)
-    cols[0].metric("Prod Official", comparison["production_official_bets"])
-    cols[1].metric("Scenario Official", comparison["scenario_official_bets"])
-    cols[2].metric("Prod Stake", money(comparison["production_total_stake"]))
-    cols[3].metric("Scenario Stake", money(comparison["scenario_total_stake"]))
-    cols[4].metric("Added / Removed", f"+{comparison['added_official_bets']} / -{comparison['removed_official_bets']}")
-    cols[5].metric("Stake Delta", money(comparison["stake_delta"]))
-
-
-def render_board_filters(board):
-    with st.expander("Betting Board Filters", expanded=True):
-        events = sorted(board["event_name"].dropna().unique().tolist()) if "event_name" in board.columns else []
-        selected_event = st.selectbox("Event", ["All Events"] + events)
-
-        status_order = [
-            "OFFICIAL BET",
-            "WATCHLIST",
-            "LOW ODDS MATCH",
-            "SPARSE FEATURES",
-            "INVALID MODEL DATA",
-            "NO BET",
-        ]
-        status_column = "scenario_bet_status" if "scenario_bet_status" in board.columns else "bet_status"
-        available_statuses = [s for s in status_order if status_column in board.columns and s in board[status_column].dropna().unique()]
-        selected_statuses = st.multiselect("Bet status", available_statuses, default=available_statuses)
-        show_only_actionable = st.checkbox("Show only actionable statuses", value=False)
-        min_ev = st.slider("Minimum EV", min_value=-100.0, max_value=100.0, value=-100.0, step=1.0)
-        min_confidence = st.slider("Minimum confidence", min_value=0.0, max_value=100.0, value=0.0, step=1.0)
-
-    filtered = board.copy()
-
-    if selected_event != "All Events" and "event_name" in filtered.columns:
-        filtered = filtered[filtered["event_name"] == selected_event]
-
-    status_column = "scenario_bet_status" if "scenario_bet_status" in filtered.columns else "bet_status"
-
-    if selected_statuses and status_column in filtered.columns:
-        filtered = filtered[filtered[status_column].isin(selected_statuses)]
-
-    if show_only_actionable and status_column in filtered.columns:
-        filtered = filtered[filtered[status_column].isin(["OFFICIAL BET", "WATCHLIST"])]
-
-    ev_col = "best_ev_pct" if "best_ev_pct" in filtered.columns else "best_ev"
-    if ev_col in filtered.columns:
-        filtered = filtered[pd.to_numeric(filtered[ev_col], errors="coerce").fillna(-999) >= min_ev]
-
-    if "best_confidence" in filtered.columns:
-        filtered = filtered[pd.to_numeric(filtered["best_confidence"], errors="coerce").fillna(0) >= min_confidence]
-
-    return filtered
-
-
-def render_summary_cards(filtered):
-    total_fights = len(filtered)
-    status_column = "scenario_bet_status" if "scenario_bet_status" in filtered.columns else "bet_status"
-    stake_column = "scenario_recommended_stake" if "scenario_recommended_stake" in filtered.columns else "recommended_stake"
-    official_bets = int((filtered[status_column] == "OFFICIAL BET").sum()) if status_column in filtered.columns else 0
-    watchlist = int((filtered[status_column] == "WATCHLIST").sum()) if status_column in filtered.columns else 0
-    best_ev_col = "best_ev_pct" if "best_ev_pct" in filtered.columns else "best_ev"
-    best_ev = filtered[best_ev_col].max() if best_ev_col in filtered.columns and not filtered.empty else np.nan
-    recommended_stake = filtered[stake_column].sum() if stake_column in filtered.columns and not filtered.empty else 0
-    latest_market_time = str(filtered["snapshot_timestamp"].max()) if "snapshot_timestamp" in filtered.columns and not filtered.empty else "N/A"
-
-    cols = st.columns(6)
-    with cols[0]:
-        render_metric("Fights", total_fights)
-    with cols[1]:
-        render_metric("Official Bets", official_bets)
-    with cols[2]:
-        render_metric("Watchlist", watchlist)
-    with cols[3]:
-        render_metric("Best EV", f"{best_ev:.1f}%" if pd.notna(best_ev) else "N/A")
-    with cols[4]:
-        render_metric("Total Stake", money(recommended_stake))
-    with cols[5]:
-        render_metric("Latest Market", latest_market_time[:16])
-
-
-def build_display_frame(filtered):
-    display = filtered.copy()
-
-    if "red_fighter" in display.columns and "blue_fighter" in display.columns:
-        display["fight"] = display["red_fighter"].fillna("") + " vs " + display["blue_fighter"].fillna("")
-
-    if "best_american_odds" in display.columns:
-        display["odds_display"] = display["best_american_odds"].apply(american)
-
-    for column in ["best_prob", "best_implied_prob", "best_edge"]:
-        if column in display.columns:
-            display[f"{column}_display"] = display[column].apply(pct)
-
-    ev_col = "best_ev_pct" if "best_ev_pct" in display.columns else "best_ev"
-    if ev_col in display.columns:
-        display["best_ev_display"] = display[ev_col].apply(lambda x: f"{x:.1f}%" if pd.notna(x) else "")
-
-    if "best_confidence" in display.columns:
-        display["best_confidence_display"] = display["best_confidence"].apply(lambda x: f"{x:.1f}%" if pd.notna(x) else "")
-
-    if "scenario_recommended_stake" in display.columns:
-        display["scenario_stake_display"] = display["scenario_recommended_stake"].apply(money)
-
-    if "recommended_stake" in display.columns:
-        display["production_stake_display"] = display["recommended_stake"].apply(money)
-        display["stake_display"] = display["recommended_stake"].apply(money)
-
-    if "scenario_bet_status" in display.columns:
-        display["display_bet_status"] = display["scenario_bet_status"]
-        display["production_bet_status"] = display.get("bet_status", "")
-        display["display_bet_reason"] = display.get("scenario_bet_reason", "")
-    else:
-        display["display_bet_status"] = display.get("bet_status", "")
-        display["display_bet_reason"] = display.get("bet_reason", "")
-
-    status_rank = {
-        "OFFICIAL BET": 0,
-        "WATCHLIST": 1,
-        "LOW ODDS MATCH": 2,
-        "SPARSE FEATURES": 3,
-        "INVALID MODEL DATA": 4,
-        "NO BET": 5,
-    }
-    display["_status_rank"] = display["display_bet_status"].map(status_rank).fillna(99) if "display_bet_status" in display.columns else 99
-
-    sort_cols = ["_status_rank"]
-    ascending = [True]
-    ev_sort_col = "best_ev_pct" if "best_ev_pct" in display.columns else "best_ev"
-    if ev_sort_col in display.columns:
-        sort_cols.append(ev_sort_col)
-        ascending.append(False)
-
-    return display.sort_values(sort_cols, ascending=ascending, na_position="last")
-
-
-def render_action_board(filtered):
-    render_section_header("Primary Action Board")
-
-    display = build_display_frame(filtered)
-    main_cols = [
-        "display_bet_status",
-        "production_bet_status",
-        "fight",
-        "best_side",
-        "odds_display",
-        "best_prob_display",
-        "best_implied_prob_display",
-        "best_edge_display",
-        "best_ev_display",
-        "best_confidence_display",
-        "scenario_stake_display",
-        "production_stake_display",
-        "display_bet_reason",
-    ]
-    main_cols = [column for column in main_cols if column in display.columns]
-    st.dataframe(display[main_cols], use_container_width=True, hide_index=True)
-
-
-
-def render_add_official_bets_to_ledger(board):
-    render_section_header("Add Official Bets to Bankroll Ledger")
-
-    status_column = "scenario_bet_status" if "scenario_bet_status" in board.columns else "bet_status"
-    if status_column not in board.columns:
-        st.info("No bet-status column is available to add ledger candidates.")
-        return
-
-    official = board[board[status_column] == "OFFICIAL BET"].copy()
-    if official.empty:
-        st.info("No official bets are available under the current rules.")
-        return
-
-    with st.expander("Review and add official bets to ledger", expanded=False):
-        st.caption(
-            "The Betting Board recommends bets; the bankroll ledger records wagers you actually place. "
-            "Select only bets that were placed, then add them to the ledger as Open."
-        )
-        official["add_to_ledger"] = True
-        preview_cols = [
-            "add_to_ledger",
-            "event_name",
-            "red_fighter",
-            "blue_fighter",
-            "best_side",
-            "best_american_odds",
-            "best_prob",
-            "best_edge",
-            "best_ev",
-            "scenario_recommended_stake",
-            "recommended_stake",
-            "scenario_bet_reason",
-            "bet_reason",
-        ]
-        preview_cols = [column for column in preview_cols if column in official.columns]
-        edited = st.data_editor(
-            official[preview_cols],
-            use_container_width=True,
-            hide_index=True,
-            disabled=[column for column in preview_cols if column != "add_to_ledger"],
-            key="bankroll_ledger_add_candidates",
-        )
-        selected = official.loc[edited[edited["add_to_ledger"]].index].copy()
-        st.caption(f"Selected ledger rows: {len(selected)}")
-
-        if st.button("Add Selected Bets to Bankroll Ledger", use_container_width=True, disabled=selected.empty):
-            added, skipped = append_official_bets(selected, source_workflow="Betting Board")
-            if added:
-                st.success(f"Added {added} open bet(s) to the bankroll ledger. Skipped {skipped} duplicate(s).")
-            else:
-                st.warning(f"No new bets were added. Skipped {skipped} duplicate(s).")
-            st.cache_data.clear()
-
-
-def render_status_and_diagnostics(filtered):
-    render_section_header("Status Breakdown")
-    status_column = "scenario_bet_status" if "scenario_bet_status" in filtered.columns else "bet_status"
-    if status_column in filtered.columns:
-        status_counts = filtered[status_column].value_counts().rename_axis("status").reset_index(name="count")
-        st.dataframe(status_counts, use_container_width=True, hide_index=True)
-    else:
-        st.info("No bet_status column found.")
-
-    render_section_header("Artifact Diagnostics")
-    betting_status = get_betting_artifact_status()
-    render_artifact_readiness(betting_status)
-    st.dataframe(betting_status, use_container_width=True, hide_index=True)
-
-
-def render_selected_fight_detail(filtered):
-    render_section_header("Selected Fight Detail")
-    if filtered.empty:
-        st.info("No fights match the current filters.")
-        return
-
-    display = build_display_frame(filtered)
-    if "fight" not in display.columns:
-        st.info("Fight names are not available in this artifact.")
-        return
-
-    selected_fight = st.selectbox("Inspect fight", display["fight"].dropna().unique().tolist())
-    selected_rows = display[display["fight"] == selected_fight]
-    detail_cols = [
-        "event_name",
-        "fight",
-        "best_side",
-        "display_bet_status",
-        "production_bet_status",
-        "best_american_odds",
-        "best_prob",
-        "best_implied_prob",
-        "best_edge",
-        "best_ev",
-        "best_confidence",
-        "scenario_recommended_stake",
-        "recommended_stake",
-        "display_bet_reason",
-        "odds_match_score",
-        "odds_min_single_score",
-        "odds_match_type",
-        "odds_match_order",
-        "odds_inferred_match_order",
-        "odds_side_mapping_status",
-        "matched_fighter_1",
-        "matched_fighter_2",
-    ]
-    detail_cols = [column for column in detail_cols if column in selected_rows.columns]
-    st.dataframe(selected_rows[detail_cols], use_container_width=True, hide_index=True)
+        st.dataframe(audit, use_container_width=True, hide_index=True)
+    render_workflow_status("betting_selected_event")
+
+
+def _inject_betting_board_css() -> None:
+    st.markdown(
+        """
+        <style>
+        .bb-top-actions { display:flex; justify-content:flex-end; align-items:center; color:#dbe7f5; font-size:.78rem; line-height:1; white-space:nowrap; }
+        div[data-testid="stSelectbox"] [data-baseweb="select"] > div { background:linear-gradient(180deg, rgba(16,28,45,.92), rgba(13,23,39,.94)); border:1px solid rgba(38,54,74,.96); border-radius:10px; min-height:2.9rem; color:#f5f7fb; }
+        div[data-testid="stSelectbox"] [data-baseweb="select"] span { color:#f5f7fb; font-size:.95rem; font-weight:900; letter-spacing:-.01em; }
+        .bb-metric-card, .bb-panel, .bb-table, .bb-event-title, .bb-event-meta { background:linear-gradient(180deg, rgba(16,28,45,.92), rgba(13,23,39,.94)); border:1px solid rgba(38,54,74,.96); border-radius:10px; }
+        .bb-metric-card { min-height:98px; text-align:center; padding:1rem .75rem; }
+        .bb-metric-label { color:#f5f7fb; font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.04em; }
+        .bb-metric-value { font-size:1.85rem; line-height:1.05; font-weight:900; margin-top:.35rem; }
+        .bb-metric-caption { color:#dbe7f5; font-size:.78rem; margin-top:.45rem; }
+        .bb-event-title { color:#f5f7fb; font-weight:900; font-size:1.05rem; padding:.72rem 1rem; min-height:2.9rem; }
+        .bb-event-bar { display:grid; grid-template-columns:1.35fr .55fr .9fr 1.55fr; gap:1rem; align-items:center; margin-top:1rem; padding:.55rem .75rem; background:linear-gradient(180deg, rgba(16,28,45,.92), rgba(13,23,39,.94)); border:1px solid rgba(38,54,74,.96); border-radius:10px; }
+        .bb-event-heading { color:#f5f7fb; font-size:1.05rem; font-weight:900; letter-spacing:-.02em; }
+        .bb-event-meta, .bb-event-meta-inline { color:#dbe7f5; font-size:.82rem; font-weight:700; }
+        .bb-card-tabs { display:flex; justify-content:flex-end; gap:.45rem; }
+        .bb-card-tabs span { color:#f5f7fb; font-size:.78rem; font-weight:800; padding:.55rem .8rem; border:1px solid rgba(38,54,74,.96); border-radius:7px; }
+        .bb-card-tabs .active { background:#143b78; border-color:#2f68d8; }
+        .bb-table { overflow:hidden; margin-top:.45rem; }
+        .bb-table-head { display:grid; grid-template-columns:.28fr 4.82fr .9fr 1.15fr 1.1fr .2fr; gap:0; align-items:center; padding:.75rem 1rem; border-bottom:1px solid rgba(38,54,74,.95); color:#f5f7fb; font-size:.72rem; font-weight:900; text-transform:uppercase; }
+        .bb-fight-heading { display:grid; grid-template-columns:1.45rem 1.9fr .8fr .8fr .85fr .75fr .75fr; align-items:center; column-gap:.35rem; }
+        .bb-fight-heading span { text-align:center; line-height:1.15; }
+        .bb-fight-heading .fight-label { text-align:left; }
+        .bb-table-head > span:nth-child(n+3) { text-align:center; line-height:1.15; display:flex; align-items:center; justify-content:center; min-height:2.1rem; }
+        .bb-table-head .confidence-head { transform:translateX(-.15rem); }
+        .bb-table-head .recommendation-head { transform:translateX(.1rem); }
+        .bb-table-head .stake-head { transform:translateX(.15rem); }
+        .bb-table-row { display:grid; grid-template-columns:.28fr 4.82fr .9fr 1.15fr 1.1fr .2fr; align-items:center; min-height:76px; padding:.45rem 1rem; border-bottom:1px solid rgba(38,54,74,.75); }
+        .bb-rank, .bb-menu { color:#dbe7f5; font-size:.8rem; }
+        .bb-fight-cell { display:flex; flex-direction:column; gap:.42rem; }
+        .bb-corner-row { display:grid; grid-template-columns:1.45rem 1.9fr .8fr .8fr .85fr .75fr .75fr; align-items:center; gap:.35rem; color:#f5f7fb; font-size:.84rem; }
+        .bb-corner-badge { color:#fff; border-radius:4px; width:1.05rem; height:1.05rem; display:inline-flex; justify-content:center; align-items:center; font-size:.68rem; font-weight:900; }
+        .bb-fighter-name { font-weight:800; }
+        .bb-prob { color:#35d96b; font-weight:800; }
+        .bb-odds, .bb-implied { color:#f5f7fb; }
+        .bb-edge.pos, .bb-ev.pos { color:#35d96b; } .bb-edge.neg, .bb-ev.neg { color:#ef4444; }
+        .bb-confidence-cell { display:flex; justify-content:center; }
+        .bb-ring { width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+        .bb-ring div { background:#0d1727; width:39px; height:39px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#f5f7fb; font-size:.78rem; font-weight:900; }
+        .bb-rec { text-align:center; font-size:.82rem; font-weight:900; }
+        .bb-stake { color:#f5f7fb; text-align:center; font-weight:900; font-size:.83rem; } .bb-stake span { color:#dbe7f5; font-weight:500; }
+        .bb-table-foot { display:grid; grid-template-columns:.5fr 2.5fr 1.1fr; gap:1rem; padding:.75rem 1rem; color:#dbe7f5; font-size:.78rem; align-items:center; }
+        .bb-total-stake { color:#a855f7; font-size:.9rem; font-weight:900; text-align:right; }
+        .bb-panel { padding:.9rem 1rem; min-height:225px; margin-top:.65rem; }
+        .bb-panel-title { color:#f5f7fb; font-weight:900; text-transform:uppercase; font-size:.78rem; margin-bottom:.65rem; }
+        .bb-mini-table { width:100%; border-collapse:collapse; color:#f5f7fb; font-size:.76rem; } .bb-mini-table th { color:#dbe7f5; text-align:left; text-transform:uppercase; font-size:.68rem; padding:.35rem; } .bb-mini-table td { padding:.42rem .35rem; border-top:1px solid rgba(38,54,74,.65); }
+        .bb-artifact-link-wrap { display:flex; justify-content:flex-end; margin-top:.45rem; font-size:.72rem; }
+        .bb-artifact-link-wrap a { color:#8fb4ff; text-decoration:none; }
+        .bb-artifact-link-wrap a:hover { color:#dbe7f5; text-decoration:underline; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def render_betting_board():
-    st.title("UFC Betting Intelligence Platform")
-    st.caption("Betting Board — event selection, model probability, market odds, EV, quality gates, and recommended action.")
+    _inject_betting_board_css()
 
-    selected_event = render_upcoming_event_selection()
+    if st.query_params.get("betting_board_view") == "diagnostics":
+        st.session_state["betting_board_view"] = "diagnostics"
 
-    board = load_parquet(BETTING_BOARD_PATH)
-
-    if board.empty:
-        st.warning("No betting board data found. Select an upcoming event and run the betting workflow.")
+    if st.session_state.get("betting_board_view") == "diagnostics":
+        _render_diagnostics()
         return
 
-    market_audit = load_parquet(MARKET_MATCH_AUDIT_PATH)
-    if not market_audit.empty and {"event_name", "red_fighter", "blue_fighter"}.issubset(market_audit.columns):
-        audit_cols = [
-            column
-            for column in [
-                "event_name",
-                "red_fighter",
-                "blue_fighter",
-                "matched_fighter_1",
-                "matched_fighter_2",
-            ]
-            if column in market_audit.columns
-        ]
-        deduped_audit = market_audit[audit_cols].drop_duplicates(
-            subset=["event_name", "red_fighter", "blue_fighter"],
-            keep="last",
-        )
-        board = board.merge(
-            deduped_audit,
-            how="left",
-            on=["event_name", "red_fighter", "blue_fighter"],
-            suffixes=("", "_audit"),
-        )
+    raw_board = load_parquet(BETTING_BOARD_PATH)
+    events, events_error = load_upcoming_events()
+    fights, fights_error = load_upcoming_fights()
+    options = _event_options(events, raw_board)
+    selected_event = _current_event(options) if options else None
+    scoped = _scope_board(raw_board, selected_event)
+    display = _display_board(scoped, fights)
+    card_display = display.copy()
+    updated = _latest_timestamp(raw_board, events, fights)
 
-    board = normalize_betting_board_odds(board)
-    board, selected_event_label, event_filter_applied = _scope_board_to_selected_event(board, selected_event)
-    if selected_event_label and event_filter_applied:
-        if board.empty:
-            st.warning(
-                f"No Betting Board rows match the selected event: {selected_event_label}. "
-                "Run the upcoming-events Betting Board workflow and refresh the dashboard artifacts."
-            )
-            return
-        st.info(f"Primary Action Board is scoped to the selected event: {selected_event_label}.")
-    elif selected_event_label:
-        st.warning(
-            "The Betting Board artifact does not include event identifiers or event names that can be matched "
-            f"to the selected event ({selected_event_label}), so the full board is being displayed."
-        )
+    _render_header(updated, selected_event)
+    if events_error:
+        st.warning(events_error)
+    if fights_error:
+        st.warning(fights_error)
 
-    corrected_rows = int((board.get("odds_side_mapping_status", pd.Series(dtype=str)) == "corrected_reversed_order").sum())
-    if corrected_rows:
-        st.warning(
-            f"Corrected {corrected_rows} reversed sportsbook odds row(s) in the dashboard display. "
-            "Rerun the upcoming-events Betting Board workflow to regenerate the official artifacts with side-mapped odds."
-        )
+    display = _apply_sidebar_filters(display)
+    display = _apply_kelly_stakes(display)
 
-    rules = render_betting_rules_controls()
-    scenario_board = apply_betting_rules(board, rules)
-    render_scenario_summary(board, scenario_board)
+    _render_kpis(display, card_display=card_display)
+    _render_event_bar(selected_event, display)
 
-    filtered = render_board_filters(scenario_board)
-    render_summary_cards(filtered)
-    render_action_board(filtered)
-    render_add_official_bets_to_ledger(filtered)
-    render_status_and_diagnostics(filtered)
-    render_selected_fight_detail(filtered)
-
-    with st.expander("Raw Betting Board Data", expanded=False):
-        st.dataframe(board, use_container_width=True, hide_index=True)
+    _render_main_table(display)
+    _render_bottom(display, chart_display=card_display)
+    _render_artifacts_link()
