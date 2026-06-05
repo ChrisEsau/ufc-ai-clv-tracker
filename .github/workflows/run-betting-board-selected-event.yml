@@ -11,6 +11,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: betting-board-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   run-upcoming-events-betting-board:
     runs-on: ubuntu-latest
@@ -33,9 +37,15 @@ jobs:
         run: |
           python -m pipeline.prediction.run_refresh_upcoming_events
 
-      - name: Build all upcoming live cards
+      - name: Build live card
+        env:
+          EVENT_ID: ${{ inputs.event_id }}
         run: |
-          python -m pipeline.prediction.run_build_live_card --all-upcoming
+          if [ -n "$EVENT_ID" ]; then
+            python -m pipeline.prediction.run_build_live_card --event-id "$EVENT_ID"
+          else
+            python -m pipeline.prediction.run_build_live_card --all-upcoming
+          fi
 
       - name: Run model predictions
         run: |

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import html
+import json
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
@@ -14,7 +15,6 @@ from pipeline.common.paths import BETTING_BOARD_PATH, LIVE_CARD_PATH, MASTER_PAT
 from pipeline.common.risk_settings import (
     RiskSettings,
     load_risk_settings,
-    save_risk_settings,
 )
 from utils.bankroll_artifacts import (
     american_profit,
@@ -23,17 +23,16 @@ from utils.bankroll_artifacts import (
     exposure_by_event,
     is_open_result,
     load_bet_ledger,
-    normalize_ledger,
     performance_by_event,
-    save_bet_ledger,
-    settle_bet,
 )
 from utils.data_loader import load_parquet
 from utils.github_actions import trigger_workflow
 from utils.ui.charts import apply_plotly_theme
 
 RESULT_OPTIONS = ["Win", "Loss", "Push", "Void"]
-BANKROLL_STATUS_WORKFLOW = "run-bankroll-status.yml"
+MANUAL_BET_WORKFLOW = "run-append-manual-bet.yml"
+SETTLE_BET_WORKFLOW = "run-settle-manual-bet.yml"
+RISK_SETTINGS_WORKFLOW = "run-save-risk-settings.yml"
 CENTRAL_TZ = ZoneInfo("America/Chicago")
 
 
@@ -464,6 +463,8 @@ def _load_fight_options() -> pd.DataFrame:
             "best_edge",
             "best_ev",
             "best_american_odds",
+            "bookmaker",
+            "sportsbook",
             "recommended_stake",
             "scenario_recommended_stake",
             "model_pick",
@@ -488,11 +489,73 @@ def _manual_bet_id(row: dict) -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
 
 
-def _append_manual_bet(row: dict) -> None:
-    ledger = load_bet_ledger()
-    row["bet_id"] = _manual_bet_id(row)
-    updated = pd.concat([ledger, pd.DataFrame([row])], ignore_index=True)
-    save_bet_ledger(normalize_ledger(updated))
+def _manual_bet_workflow_inputs(row: dict) -> dict[str, str]:
+    """Convert a manual bet row into a single workflow_dispatch JSON input."""
+
+    row = row.copy()
+    row["bet_id"] = row.get("bet_id") or _manual_bet_id(row)
+    serializable = {key: "" if pd.isna(value) else str(value) for key, value in row.items()}
+    return {"bet_json": json.dumps(serializable)}
+
+
+def _dispatch_manual_bet(row: dict) -> tuple[bool, str]:
+    """Persist a manual bet by dispatching the ledger append workflow."""
+
+    return trigger_workflow(MANUAL_BET_WORKFLOW, inputs=_manual_bet_workflow_inputs(row))
+
+
+def _settlement_workflow_inputs(bet_id: str, result: str, closing_odds=None, clv=None, notes: str | None = None) -> dict[str, str]:
+    """Build workflow_dispatch inputs for durable settlement persistence."""
+
+    payload = {
+        "bet_id": bet_id,
+        "result": result,
+        "closing_odds": "" if closing_odds is None else closing_odds,
+        "clv": "" if clv is None else clv,
+        "notes": notes or "",
+    }
+    return {"settlement_json": json.dumps(payload, default=str)}
+
+
+def _dispatch_settlement(bet_id: str, result: str, closing_odds=None, clv=None, notes: str | None = None) -> tuple[bool, str]:
+    """Persist a settlement by dispatching the ledger settlement workflow."""
+
+    return trigger_workflow(
+        SETTLE_BET_WORKFLOW,
+        inputs=_settlement_workflow_inputs(
+            bet_id=bet_id,
+            result=result,
+            closing_odds=closing_odds,
+            clv=clv,
+            notes=notes,
+        ),
+    )
+
+
+def _risk_settings_workflow_inputs(settings: RiskSettings) -> dict[str, str]:
+    """Build workflow_dispatch inputs for durable risk-settings persistence."""
+
+    return {
+        "settings_json": json.dumps(
+            {
+                "starting_bankroll": settings.starting_bankroll,
+                "kelly_fraction": settings.kelly_fraction,
+                "max_stake_pct": settings.max_stake_pct,
+                "max_event_exposure_pct": settings.max_event_exposure_pct,
+                "min_edge": settings.min_edge,
+                "min_confidence": settings.min_confidence,
+                "min_odds": settings.min_odds,
+                "max_odds": settings.max_odds,
+            },
+            default=str,
+        )
+    }
+
+
+def _dispatch_risk_settings(settings: RiskSettings) -> tuple[bool, str]:
+    """Persist risk settings by dispatching the risk-settings workflow."""
+
+    return trigger_workflow(RISK_SETTINGS_WORKFLOW, inputs=_risk_settings_workflow_inputs(settings))
 
 
 def _auto_settlement(open_bet: pd.Series) -> tuple[str | None, str]:
@@ -575,6 +638,7 @@ def _render_add_bet_form(in_dialog: bool = False) -> None:
             "opponent": opponent,
             "opponent_id": opponent_id,
             "market_type": "Moneyline",
+            "sportsbook": selected.get("sportsbook", selected.get("bookmaker", "")),
             "odds_taken": odds,
             "stake": stake,
             "result": "Open",
@@ -591,12 +655,15 @@ def _render_add_bet_form(in_dialog: bool = False) -> None:
             "source_prediction_run_id": "",
             "notes": "Manual bankroll entry",
         }
-        _append_manual_bet(row)
-        st.success("Bet added to the bankroll ledger.")
-        st.cache_data.clear()
-        if in_dialog:
-            st.session_state["bankroll_dialog"] = None
-        st.rerun()
+        ok, message = _dispatch_manual_bet(row)
+        if ok:
+            st.success("Manual bet append workflow launched. Refresh after it completes to load the committed ledger.")
+            st.cache_data.clear()
+            if in_dialog:
+                st.session_state["bankroll_dialog"] = None
+            st.rerun()
+        else:
+            st.error(f"Could not launch manual bet append workflow: {message}")
 
 
 def _open_settle_dialog(ledger: pd.DataFrame):
@@ -629,15 +696,21 @@ def _render_settle_form(ledger: pd.DataFrame, in_dialog: bool = False) -> None:
     clv = st.number_input("CLV", min_value=-10.0, max_value=10.0, value=0.0, step=0.01, format="%.3f", key="bankroll_settle_clv")
     notes = st.text_input("Settlement notes", value=str(selected.get("notes", "") or ""), key="bankroll_settle_notes")
     if st.button("Settle Bet", use_container_width=True, key="bankroll_settle_submit"):
-        ok = settle_bet(selected["bet_id"], result=result, closing_odds=None if closing_odds == 0 else closing_odds, clv=clv, notes=notes)
+        ok, msg = _dispatch_settlement(
+            selected["bet_id"],
+            result=result,
+            closing_odds=None if closing_odds == 0 else closing_odds,
+            clv=clv,
+            notes=notes,
+        )
         if ok:
-            st.success("Bet settled and bankroll ledger updated.")
+            st.success("Settlement workflow launched. Refresh after it completes to load the committed ledger.")
             st.cache_data.clear()
             if in_dialog:
                 st.session_state["bankroll_dialog"] = None
             st.rerun()
         else:
-            st.error("Could not find the selected bet in the ledger.")
+            st.error(f"Could not launch settlement workflow: {msg}")
 
 
 
@@ -655,7 +728,7 @@ def _open_risk_settings_dialog():
 
 
 def _render_risk_settings_form(settings: RiskSettings, in_dialog: bool = False) -> None:
-    st.caption("Update the bankroll risk defaults stored in the settings artifact, then refresh bankroll status through the existing pipeline workflow.")
+    st.caption("Update the bankroll risk defaults stored in the committed settings artifact. Saving launches a GitHub workflow so the settings persist beyond this Streamlit session.")
     with st.form("bankroll_risk_settings_dialog_form"):
         starting_bankroll = st.number_input(
             "Starting bankroll",
@@ -704,7 +777,6 @@ def _render_risk_settings_form(settings: RiskSettings, in_dialog: bool = False) 
             min_odds = st.number_input("Minimum odds", min_value=-1000, max_value=1000, value=int(settings.min_odds), step=5)
         with odds_col2:
             max_odds = st.number_input("Maximum odds", min_value=-1000, max_value=3000, value=int(settings.max_odds), step=5)
-        run_workflow = st.checkbox("Run bankroll status workflow after save", value=True)
         submitted = st.form_submit_button("Save Risk Settings", use_container_width=True)
 
     if submitted:
@@ -718,16 +790,13 @@ def _render_risk_settings_form(settings: RiskSettings, in_dialog: bool = False) 
             min_odds=int(min_odds),
             max_odds=int(max_odds),
         )
-        save_risk_settings(updated)
-        if run_workflow:
-            ok, msg = trigger_workflow(BANKROLL_STATUS_WORKFLOW)
-            if ok:
-                st.success("Risk settings saved and bankroll status workflow launched.")
-            else:
-                st.warning(f"Risk settings saved, but the workflow could not be launched: {msg}")
+        ok, msg = _dispatch_risk_settings(updated)
+        if ok:
+            st.success("Risk settings workflow launched. Refresh after it completes to load the committed settings.")
+            st.cache_data.clear()
         else:
-            st.success("Risk settings saved.")
-        st.cache_data.clear()
+            st.error(f"Could not launch risk settings workflow: {msg}")
+            return
         if in_dialog:
             st.session_state["bankroll_dialog"] = None
         st.rerun()
