@@ -1,5 +1,6 @@
 import pandas as pd
 import streamlit as st
+import plotly.express as px
 
 from utils.bankroll_artifacts import (
     BankrollSettings,
@@ -14,6 +15,8 @@ from utils.bankroll_artifacts import (
 )
 from utils.panels import render_section_header
 from utils.ui_components import american, money, pct, render_metric
+from utils.ui.sections import page_header
+from utils.ui.charts import apply_plotly_theme
 
 
 RESULT_OPTIONS = ["Open", "Win", "Loss", "Push", "Void"]
@@ -153,16 +156,28 @@ def render_performance(ledger):
         st.info("No settled bets are available yet for performance analytics.")
         return
 
-    chart_data = event_perf.set_index("event_name")[["profit_loss"]]
-    st.bar_chart(chart_data)
+    chart_col, table_col = st.columns([1.1, 1])
+    with chart_col:
+        chart = event_perf.copy()
+        chart["bar_color"] = chart["profit_loss"].apply(lambda value: "Profit" if value >= 0 else "Loss")
+        fig = px.bar(
+            chart,
+            x="event_name",
+            y="profit_loss",
+            color="bar_color",
+            color_discrete_map={"Profit": "#35d96b", "Loss": "#ef4444"},
+            labels={"event_name": "Event", "profit_loss": "Profit / Loss"},
+        )
+        st.plotly_chart(apply_plotly_theme(fig, height=320), use_container_width=True)
 
     display = _display_money_columns(event_perf, ["profit_loss", "stake"])
     display["roi_display"] = display["roi"].apply(_format_roi)
-    st.dataframe(
-        display[["event_name", "bets", "profit_loss_display", "stake_display", "roi_display"]],
-        use_container_width=True,
-        hide_index=True,
-    )
+    with table_col:
+        st.dataframe(
+            display[["event_name", "bets", "profit_loss_display", "stake_display", "roi_display"]],
+            use_container_width=True,
+            hide_index=True,
+        )
 
 
 def render_clv_quality(ledger):
@@ -259,8 +274,11 @@ def render_settlement_controls(ledger):
 
 
 def render_bankroll():
-    st.title("UFC Bankroll Control Center")
-    st.caption("Official wager ledger, open exposure, risk settings, performance analytics, and CLV quality.")
+    page_header(
+        "Bankroll",
+        "Track performance, manage open risk, settle wagers, and maintain bankroll settings.",
+        kicker="Financial Control Center",
+    )
 
     settings = load_bankroll_settings()
     ledger = load_bet_ledger()

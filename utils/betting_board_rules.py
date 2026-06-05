@@ -3,6 +3,8 @@ from dataclasses import asdict, dataclass
 import numpy as np
 import pandas as pd
 
+from pipeline.common.booleans import coerce_bool
+
 
 STATUS_ORDER = [
     "OFFICIAL BET",
@@ -42,7 +44,7 @@ class BettingRules:
     watchlist_high_ev_override: float = 0.25
     bankroll: float = 10000.0
     kelly_fraction: float = 0.50
-    max_stake_pct: float = 0.03
+    max_stake_pct: float = 1.0
     min_stake: float = 0.0
     stake_rounding: float = 1.0
 
@@ -266,7 +268,7 @@ def _bool_series(df, column, default=False):
     if column not in df.columns:
         return pd.Series(default, index=df.index)
 
-    return df[column].fillna(default).astype(bool)
+    return df[column].apply(lambda value: coerce_bool(value, default=default))
 
 
 def _numeric_series(df, column, default=np.nan):
