@@ -11,7 +11,7 @@ THEME = {
     "panel_alt": "#101c2d",
     "border": "#26364a",
     "text": "#f5f7fb",
-    "muted": "#9aa8bd",
+    "muted": "#cbd5e1",
     "green": "#35d96b",
     "blue": "#3b82f6",
     "yellow": "#facc15",
@@ -36,17 +36,17 @@ def apply_theme() -> None:
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
         :root {{
-            --ufc-bg: {THEME['background']};
-            --ufc-panel: {THEME['panel']};
-            --ufc-panel-alt: {THEME['panel_alt']};
-            --ufc-border: {THEME['border']};
-            --ufc-text: {THEME['text']};
-            --ufc-muted: {THEME['muted']};
-            --ufc-green: {THEME['green']};
-            --ufc-blue: {THEME['blue']};
-            --ufc-yellow: {THEME['yellow']};
-            --ufc-red: {THEME['red']};
-            --ufc-purple: {THEME['purple']};
+            --ufc-bg: {THEME["background"]};
+            --ufc-panel: {THEME["panel"]};
+            --ufc-panel-alt: {THEME["panel_alt"]};
+            --ufc-border: {THEME["border"]};
+            --ufc-text: {THEME["text"]};
+            --ufc-muted: {THEME["muted"]};
+            --ufc-green: {THEME["green"]};
+            --ufc-blue: {THEME["blue"]};
+            --ufc-yellow: {THEME["yellow"]};
+            --ufc-red: {THEME["red"]};
+            --ufc-purple: {THEME["purple"]};
         }}
 
         html, body, [class*="css"] {{
@@ -198,17 +198,65 @@ def apply_theme() -> None:
         .status-neutral {{ color: #cbd5e1; background: rgba(148, 163, 184, .11); border-color: rgba(148,163,184,.24); }}
 
         .sidebar-section {{
-            color: var(--ufc-muted);
+            color: #dbeafe;
             font-size: 0.72rem;
             font-weight: 900;
             letter-spacing: 0.09em;
             text-transform: uppercase;
-            margin: 1rem 0 0.45rem;
+            margin: 0.85rem 0 0.35rem;
         }}
 
         .sidebar-version, .sidebar-note {{
-            color: #718096;
+            color: #dbe7f5;
             font-size: 0.76rem;
+        }}
+
+        section[data-testid="stSidebar"] .stButton {{
+            margin: 0.10rem 0 0.18rem 0;
+        }}
+
+        section[data-testid="stSidebar"] .stButton > button {{
+            min-height: 2.25rem !important;
+            padding: 0.42rem 0.75rem !important;
+            justify-content: flex-start !important;
+            text-align: left !important;
+            border-radius: 8px !important;
+            color: #ffffff !important;
+            font-weight: 800 !important;
+        }}
+
+        section[data-testid="stSidebar"] .stButton > button[kind="secondary"],
+        section[data-testid="stSidebar"] .stButton > button[data-testid="baseButton-secondary"] {{
+            background: rgba(2, 8, 15, 0.94) !important;
+            border: 1px solid rgba(245, 247, 251, 0.18) !important;
+            box-shadow: none !important;
+        }}
+
+        section[data-testid="stSidebar"] .stButton > button[kind="secondary"]:hover,
+        section[data-testid="stSidebar"] .stButton > button[data-testid="baseButton-secondary"]:hover {{
+            background: rgba(16, 28, 45, 0.98) !important;
+            border-color: rgba(245, 247, 251, 0.36) !important;
+            color: #ffffff !important;
+        }}
+
+        section[data-testid="stSidebar"] .stButton > button[kind="primary"],
+        section[data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"] {{
+            background: linear-gradient(180deg, rgba(30, 83, 168, 0.96), rgba(20, 65, 135, 0.96)) !important;
+            border: 1px solid rgba(73, 144, 255, 0.98) !important;
+            color: #ffffff !important;
+            box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.18) inset !important;
+        }}
+
+        section[data-testid="stSidebar"] p,
+        section[data-testid="stSidebar"] span,
+        section[data-testid="stSidebar"] label {{
+            color: #f5f7fb !important;
+        }}
+
+        section[data-testid="stSidebar"] [data-testid="stCaptionContainer"] p,
+        section[data-testid="stSidebar"] .sidebar-note,
+        section[data-testid="stSidebar"] .sidebar-version {{
+            color: #dbe7f5 !important;
         }}
 
         div[data-testid="stDataFrame"] {{
