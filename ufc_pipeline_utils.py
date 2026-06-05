@@ -45,6 +45,7 @@ from pipeline.common.paths import (
     MODEL_VERSION,
     ROLLING_FEATURES_PATH,
 )
+from pipeline.common.risk_settings import load_risk_settings, risk_settings_to_betting_filters
 
 
 # ============================================================
@@ -414,20 +415,23 @@ def kelly_fraction(model_prob, american_odds) -> float:
 
 
 def scaled_kelly_stake(
-    bankroll: float,
+    bankroll: float | None,
     model_prob,
     american_odds,
-    kelly_multiplier: float = 0.50,
-    max_stake_pct: float = 0.03,
+    kelly_multiplier: float | None = None,
+    max_stake_pct: float | None = None,
     min_stake: float = 0.0,
 ) -> float:
     """
     Calculate a risk-controlled Kelly stake.
 
-    Defaults:
-    - half Kelly
-    - max 3% bankroll
+    Defaults come from pipeline.common.risk_settings.
     """
+    settings = load_risk_settings()
+    bankroll = settings.starting_bankroll if bankroll is None else bankroll
+    kelly_multiplier = settings.kelly_fraction if kelly_multiplier is None else kelly_multiplier
+    max_stake_pct = settings.max_stake_pct if max_stake_pct is None else max_stake_pct
+
     full_kelly = kelly_fraction(model_prob, american_odds)
     raw_stake = bankroll * full_kelly * kelly_multiplier
     capped_stake = min(raw_stake, bankroll * max_stake_pct)
@@ -503,18 +507,14 @@ def load_production_artifacts(paths: UFCPipelinePaths) -> Dict:
     return artifacts
 
 
-def get_betting_filters(production_config: Dict) -> Dict:
+def get_betting_filters(production_config: Dict | None = None) -> Dict:
     """
-    Extract betting filters from production_config with safe defaults.
-    """
-    filters = production_config.get("betting_filters", {})
+    Return canonical betting filters from persisted risk settings.
 
-    return {
-        "min_edge": filters.get("min_edge", 0.0),
-        "min_confidence": filters.get("min_confidence", 0.0),
-        "min_odds": filters.get("min_odds", -250),
-        "max_odds": filters.get("max_odds", 400),
-    }
+    The production_config argument is accepted for backwards compatibility, but
+    pipeline risk settings are the single source of truth.
+    """
+    return risk_settings_to_betting_filters(load_risk_settings())
 
 
 # ============================================================
@@ -556,14 +556,20 @@ def apply_standard_bet_filters(
     confidence_col: str = "best_confidence",
     odds_col: str = "best_american_odds",
     ev_col: str = "best_ev",
-    min_edge: float = 0.0,
-    min_confidence: float = 0.0,
-    min_odds: float = -250,
-    max_odds: float = 400,
+    min_edge: float | None = None,
+    min_confidence: float | None = None,
+    min_odds: float | None = None,
+    max_odds: float | None = None,
 ) -> pd.DataFrame:
     """
     Apply standard production betting filters.
     """
+    settings = load_risk_settings()
+    min_edge = settings.min_edge if min_edge is None else min_edge
+    min_confidence = settings.min_confidence if min_confidence is None else min_confidence
+    min_odds = settings.min_odds if min_odds is None else min_odds
+    max_odds = settings.max_odds if max_odds is None else max_odds
+
     out = df.copy()
 
     out["passes_edge_filter"] = out[edge_col] >= min_edge

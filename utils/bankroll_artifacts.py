@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
@@ -10,21 +9,24 @@ import numpy as np
 import pandas as pd
 
 from pipeline.common.paths import (
-    BANKROLL_SETTINGS_PATH,
     BANKROLL_SNAPSHOTS_PATH,
     BET_LEDGER_PATH,
     OPEN_BETS_PATH,
     ensure_data_dirs,
 )
+from pipeline.common.risk_settings import RiskSettings, load_risk_settings
 
 
 LEDGER_COLUMNS = [
     "bet_id",
     "event_name",
+    "event_id",
     "event_date",
     "fight_id",
     "fighter",
+    "fighter_id",
     "opponent",
+    "opponent_id",
     "market_type",
     "odds_taken",
     "stake",
@@ -46,18 +48,6 @@ LEDGER_COLUMNS = [
 
 OPEN_RESULTS = {"open", "pending", ""}
 SETTLED_RESULTS = {"win", "loss", "push", "void"}
-
-
-@dataclass(frozen=True)
-class BankrollSettings:
-    starting_bankroll: float = 10000.0
-    kelly_fraction: float = 0.50
-    max_stake_pct: float = 0.03
-    max_event_exposure_pct: float = 0.10
-    min_edge: float = 0.05
-    min_confidence: float = 70.0
-    min_odds: int = -250
-    max_odds: int = 400
 
 
 def _empty_frame(columns: Iterable[str]) -> pd.DataFrame:
@@ -92,33 +82,6 @@ def save_bet_ledger(ledger: pd.DataFrame) -> None:
     clean.to_parquet(BET_LEDGER_PATH, index=False)
     derive_open_bets(clean).to_parquet(OPEN_BETS_PATH, index=False)
     build_bankroll_snapshot(clean).to_parquet(BANKROLL_SNAPSHOTS_PATH, index=False)
-
-
-def load_bankroll_settings() -> BankrollSettings:
-    df = _read_parquet(BANKROLL_SETTINGS_PATH)
-    if df.empty:
-        return BankrollSettings()
-
-    row = df.iloc[-1].to_dict()
-    defaults = asdict(BankrollSettings())
-    values = {key: row.get(key, default) for key, default in defaults.items()}
-    return BankrollSettings(
-        starting_bankroll=float(values["starting_bankroll"]),
-        kelly_fraction=float(values["kelly_fraction"]),
-        max_stake_pct=float(values["max_stake_pct"]),
-        max_event_exposure_pct=float(values["max_event_exposure_pct"]),
-        min_edge=float(values["min_edge"]),
-        min_confidence=float(values["min_confidence"]),
-        min_odds=int(values["min_odds"]),
-        max_odds=int(values["max_odds"]),
-    )
-
-
-def save_bankroll_settings(settings: BankrollSettings) -> None:
-    ensure_data_dirs()
-    row = asdict(settings)
-    row["updated_timestamp"] = datetime.now(timezone.utc).isoformat()
-    pd.DataFrame([row]).to_parquet(BANKROLL_SETTINGS_PATH, index=False)
 
 
 def _clean_result(value) -> str:
@@ -176,8 +139,10 @@ def derive_open_bets(ledger: pd.DataFrame | None = None) -> pd.DataFrame:
 def _stable_bet_id(row: pd.Series) -> str:
     parts = [
         row.get("event_name", ""),
+        row.get("event_id", ""),
         row.get("fight_id", ""),
         row.get("fighter", ""),
+        row.get("fighter_id", ""),
         row.get("market_type", "Moneyline"),
         row.get("odds_taken", ""),
         row.get("stake", ""),
@@ -193,14 +158,17 @@ def official_bets_to_ledger_rows(official_bets: pd.DataFrame, source_workflow: s
 
     rows = pd.DataFrame(index=official_bets.index)
     rows["event_name"] = official_bets.get("event_name", "")
-    rows["event_date"] = official_bets.get("event_date", official_bets.get("date", ""))
+    rows["event_id"] = official_bets.get("event_id", official_bets.get("ufcstats_event_id", ""))
+    rows["event_date"] = official_bets.get("event_date", official_bets.get("date", official_bets.get("commence_time", "")))
     rows["fight_id"] = official_bets.get("fight_id", "")
     rows["fighter"] = official_bets.get("best_side", official_bets.get("fighter", ""))
+    rows["fighter_id"] = official_bets.get("best_side_fighter_id", official_bets.get("fighter_id", ""))
     rows["opponent"] = np.where(
         official_bets.get("best_side", "") == official_bets.get("red_fighter", ""),
         official_bets.get("blue_fighter", ""),
         official_bets.get("red_fighter", ""),
     )
+    rows["opponent_id"] = official_bets.get("best_side_opponent_id", official_bets.get("opponent_id", ""))
     rows["market_type"] = "Moneyline"
     rows["odds_taken"] = official_bets.get("best_american_odds", np.nan)
     rows["stake"] = official_bets.get(
@@ -262,8 +230,8 @@ def settle_bet(bet_id: str, result: str, closing_odds=None, clv=None, notes: str
     return True
 
 
-def bankroll_summary(ledger: pd.DataFrame | None = None, settings: BankrollSettings | None = None) -> dict:
-    settings = settings or load_bankroll_settings()
+def bankroll_summary(ledger: pd.DataFrame | None = None, settings: RiskSettings | None = None) -> dict:
+    settings = settings or load_risk_settings()
     ledger = load_bet_ledger() if ledger is None else normalize_ledger(ledger)
     open_bets = derive_open_bets(ledger)
 

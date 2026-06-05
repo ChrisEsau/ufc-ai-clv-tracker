@@ -8,6 +8,7 @@
 # ------------------------------------------------------------
 
 from pipeline.common.paths import MODEL_VERSION
+from pipeline.common.risk_settings import load_risk_settings
 
 BASE_PATH = "."
 
@@ -36,21 +37,23 @@ PREFERRED_BOOKMAKER = "DraftKings"
 # PRODUCTION FILTERS
 # ------------------------------------------------------------
 
-MIN_EDGE = 0.05
-MIN_CONFIDENCE = 0.70
+_RISK_SETTINGS = load_risk_settings()
 
-MIN_ODDS = -250
-MAX_ODDS = 400
+MIN_EDGE = _RISK_SETTINGS.min_edge
+MIN_CONFIDENCE = _RISK_SETTINGS.min_confidence
+
+MIN_ODDS = _RISK_SETTINGS.min_odds
+MAX_ODDS = _RISK_SETTINGS.max_odds
 
 
 # ------------------------------------------------------------
 # BANKROLL SETTINGS
 # ------------------------------------------------------------
 
-STARTING_BANKROLL = 10000
+STARTING_BANKROLL = _RISK_SETTINGS.starting_bankroll
 
-KELLY_MULTIPLIER = 0.50
-MAX_STAKE_PCT = 0.03
+KELLY_MULTIPLIER = _RISK_SETTINGS.kelly_fraction
+MAX_STAKE_PCT = _RISK_SETTINGS.max_stake_pct
 
 
 # ------------------------------------------------------------
