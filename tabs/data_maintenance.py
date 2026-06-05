@@ -3,6 +3,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from pipeline.common.booleans import coerce_bool
 from pipeline.common.paths import (
     DATASET_STATUS_PATH,
     STAGED_FINAL_REVIEW_PATH,
@@ -31,16 +32,16 @@ def _safe_read(path):
 def _append_ready(precheck):
     if precheck.empty or "append_ready" not in precheck.columns:
         return False
-    return bool(precheck["append_ready"].iloc[0])
+    return coerce_bool(precheck["append_ready"].iloc[0])
 
 
 def _final_review_pass(final_review):
     if final_review.empty:
         return False
     if "final_review_pass" in final_review.columns:
-        return bool(final_review["final_review_pass"].iloc[0])
+        return coerce_bool(final_review["final_review_pass"].iloc[0])
     if "check_passed" in final_review.columns:
-        return bool(final_review["check_passed"].fillna(False).astype(bool).all())
+        return all(coerce_bool(value) for value in final_review["check_passed"])
     return False
 
 

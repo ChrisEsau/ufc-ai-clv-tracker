@@ -1,6 +1,7 @@
 import pandas as pd
 import streamlit as st
 
+from pipeline.common.booleans import coerce_bool
 from utils.ui.sections import page_header
 
 from utils.model_lab_artifacts import (
@@ -264,8 +265,8 @@ def render_live_prediction_audit():
             st.dataframe(pd.DataFrame(summary_rows), use_container_width=True, hide_index=True)
 
             if "passes_feature_validation" in feature_audit_df.columns:
-                failed_validation = ~feature_audit_df["passes_feature_validation"].fillna(False).astype(bool)
-                problem_fights = feature_audit_df[failed_validation].copy()
+                validation_passed = feature_audit_df["passes_feature_validation"].apply(coerce_bool)
+                problem_fights = feature_audit_df[~validation_passed].copy()
 
                 st.subheader("Problem Fights")
 
@@ -306,7 +307,7 @@ def safe_sum_bool(df, column_name):
     if df.empty or column_name not in df.columns:
         return None
 
-    return int(df[column_name].fillna(False).astype(bool).sum())
+    return int(df[column_name].apply(coerce_bool).sum())
 
 
 def safe_mean(df, column_name):
