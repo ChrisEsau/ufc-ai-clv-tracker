@@ -16,9 +16,10 @@ NAV_ITEMS = [
 ]
 
 
-def _sidebar_section(label: str) -> None:
+def _sidebar_section(label: str, compact: bool = False) -> None:
+    compact_class = " compact" if compact else ""
     st.sidebar.markdown(
-        f'<div class="sidebar-section">{label}</div>', unsafe_allow_html=True
+        f'<div class="sidebar-section{compact_class}">{label}</div>', unsafe_allow_html=True
     )
 
 
@@ -75,7 +76,7 @@ def _betting_board_date_bounds() -> tuple:
 
 
 def _render_betting_board_filters() -> None:
-    _sidebar_section("Filters")
+    _sidebar_section("Filters", compact=True)
     event_names = _betting_board_event_names()
     if st.session_state.get("bb_filter_event") not in event_names:
         st.session_state["bb_filter_event"] = "All Events"
@@ -120,10 +121,6 @@ def _render_betting_board_filters() -> None:
     st.sidebar.toggle("Show Only Positive EV", value=True, key="bb_filter_positive_ev")
     st.sidebar.toggle("Hide Fights Without Odds", value=True, key="bb_filter_hide_missing_odds")
 
-    st.sidebar.markdown("---")
-    _sidebar_section("Legend")
-    st.sidebar.markdown("🟢 Strong Bet  \n🔵 Lean Bet  \n🟡 Watchlist  \n⚪ Pass")
-
 
 def render_sidebar():
     """Render persistent left navigation without changing workspace backends."""
@@ -144,26 +141,26 @@ def render_sidebar():
             st.session_state.page = page
             st.rerun()
 
-    st.sidebar.markdown("---")
+    st.sidebar.markdown('<div class="sidebar-divider compact"></div>', unsafe_allow_html=True)
     page = st.session_state.page
 
     if page == "Betting Board":
         _render_betting_board_filters()
     elif page == "Line Movement / CLV":
-        _sidebar_section("Filters")
+        _sidebar_section("Filters", compact=True)
         st.sidebar.selectbox("Market Type", ["Moneyline"], key="sidebar_clv_market")
         st.sidebar.selectbox("View", ["Movement", "CLV Results"], key="sidebar_clv_view")
         st.sidebar.caption("Market snapshots, closing lines, and CLV results are loaded from canonical artifacts.")
     elif page == "Model Lab":
-        _sidebar_section("Filters")
+        _sidebar_section("Filters", compact=True)
         st.sidebar.selectbox("Model View", ["Model Performance", "Feature Importance", "Live Prediction Audit"], key="sidebar_model_lab_view")
         st.sidebar.caption("Read-only diagnostics; no retraining controls are added.")
     elif page == "Data Maintenance":
-        _sidebar_section("Filters")
+        _sidebar_section("Filters", compact=True)
         st.sidebar.selectbox("Workflow Area", ["Dataset Health", "Event Discovery", "Final Staged Review", "Audit History"], key="sidebar_dm_area")
         st.sidebar.caption("Following the consolidated Final Staged Review architecture.")
     elif page == "Bankroll":
-        _sidebar_section("Filters")
+        _sidebar_section("Filters", compact=True)
         st.sidebar.selectbox("Ledger View", ["Overview", "Bet Ledger", "Performance", "Risk Settings"], key="sidebar_bankroll_view")
 
     st.sidebar.markdown("---")

@@ -226,6 +226,18 @@ def apply_theme() -> None:
             text-transform: uppercase;
             margin: 0.85rem 0 0.35rem;
         }}
+        .sidebar-section.compact {{
+            margin-top: 0.30rem;
+        }}
+        .sidebar-divider {{
+            border-top: 1px solid rgba(245, 247, 251, 0.14);
+            height: 1px;
+            margin: 0.40rem 0 0.15rem;
+        }}
+        .sidebar-divider.compact {{
+            margin-top: 0.35rem;
+            margin-bottom: 0.10rem;
+        }}
 
         .sidebar-version, .sidebar-note {{
             color: #dbe7f5;

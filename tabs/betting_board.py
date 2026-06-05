@@ -778,7 +778,8 @@ def _inject_betting_board_css() -> None:
         .bb-table-head { display:grid; grid-template-columns:.28fr 4.82fr .9fr 1.15fr 1.1fr .2fr; gap:0; align-items:center; padding:.75rem 1rem; border-bottom:1px solid rgba(38,54,74,.95); color:#f5f7fb; font-size:.72rem; font-weight:900; text-transform:uppercase; }
         .bb-fight-heading { display:grid; grid-template-columns:1.45rem 1.9fr .8fr .8fr .85fr .75fr .75fr; align-items:center; column-gap:.35rem; }
         .bb-fight-heading span { text-align:center; line-height:1.15; }
-        .bb-fight-heading .fight-label { text-align:left; }
+        .bb-fight-heading span:nth-child(n+3) { transform:translateX(-.38rem); }
+        .bb-fight-heading .fight-label { text-align:left; transform:none; }
         .bb-table-head > span:nth-child(n+3) { text-align:center; line-height:1.15; display:flex; align-items:center; justify-content:center; min-height:2.1rem; }
         .bb-table-head .confidence-head { transform:translateX(-.15rem); }
         .bb-table-head .recommendation-head { transform:translateX(.1rem); }
