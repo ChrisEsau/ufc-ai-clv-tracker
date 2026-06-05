@@ -3,6 +3,8 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from pipeline.common.booleans import coerce_bool
+
 from pipeline.common.paths import (
     APPEND_AUDIT_PATH,
     APPEND_PRECHECK_PATH,
@@ -40,9 +42,8 @@ def render_append_status():
     master_rows = 0
 
     if precheck is not None and not precheck.empty:
-
         if "append_ready" in precheck.columns:
-            append_ready = bool(precheck["append_ready"].iloc[0])
+            append_ready = coerce_bool(precheck["append_ready"].iloc[0])
 
         if "staged_rows" in precheck.columns:
             staged_rows = int(precheck["staged_rows"].iloc[0])
@@ -51,9 +52,7 @@ def render_append_status():
             master_rows = int(precheck["master_rows"].iloc[0])
 
         if "status" in precheck.columns:
-            failed_checks = len(
-                precheck[precheck["status"] == "fail"]
-            )
+            failed_checks = len(precheck[precheck["status"] == "fail"])
 
     append_allowed = append_ready and final_review_pass
 
@@ -97,9 +96,7 @@ def render_append_status():
         use_container_width=True,
         key="append_to_master_final",
     ):
-        ok, msg = trigger_workflow(
-            "run-append-staged-to-master.yml"
-        )
+        ok, msg = trigger_workflow("run-append-staged-to-master.yml")
 
         if ok:
             st.success(msg)
@@ -109,7 +106,6 @@ def render_append_status():
     append_audit = safe_read_parquet(APPEND_AUDIT_PATH)
 
     with st.expander("Latest Append Audit", expanded=False):
-
         if append_audit is None:
             st.info(f"No append audit artifact found at `{APPEND_AUDIT_PATH}`.")
         else:
