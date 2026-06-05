@@ -15,7 +15,6 @@ from pipeline.common.paths import BETTING_BOARD_PATH, LIVE_CARD_PATH, MASTER_PAT
 from pipeline.common.risk_settings import (
     RiskSettings,
     load_risk_settings,
-    save_risk_settings,
 )
 from utils.bankroll_artifacts import (
     american_profit,
@@ -32,8 +31,8 @@ from utils.github_actions import trigger_workflow
 from utils.ui.charts import apply_plotly_theme
 
 RESULT_OPTIONS = ["Win", "Loss", "Push", "Void"]
-BANKROLL_STATUS_WORKFLOW = "run-bankroll-status.yml"
 MANUAL_BET_WORKFLOW = "run-append-manual-bet.yml"
+RISK_SETTINGS_WORKFLOW = "run-save-risk-settings.yml"
 CENTRAL_TZ = ZoneInfo("America/Chicago")
 
 
@@ -505,6 +504,32 @@ def _dispatch_manual_bet(row: dict) -> tuple[bool, str]:
     return trigger_workflow(MANUAL_BET_WORKFLOW, inputs=_manual_bet_workflow_inputs(row))
 
 
+def _risk_settings_workflow_inputs(settings: RiskSettings) -> dict[str, str]:
+    """Build workflow_dispatch inputs for durable risk-settings persistence."""
+
+    return {
+        "settings_json": json.dumps(
+            {
+                "starting_bankroll": settings.starting_bankroll,
+                "kelly_fraction": settings.kelly_fraction,
+                "max_stake_pct": settings.max_stake_pct,
+                "max_event_exposure_pct": settings.max_event_exposure_pct,
+                "min_edge": settings.min_edge,
+                "min_confidence": settings.min_confidence,
+                "min_odds": settings.min_odds,
+                "max_odds": settings.max_odds,
+            },
+            default=str,
+        )
+    }
+
+
+def _dispatch_risk_settings(settings: RiskSettings) -> tuple[bool, str]:
+    """Persist risk settings by dispatching the risk-settings workflow."""
+
+    return trigger_workflow(RISK_SETTINGS_WORKFLOW, inputs=_risk_settings_workflow_inputs(settings))
+
+
 def _auto_settlement(open_bet: pd.Series) -> tuple[str | None, str]:
     master = load_parquet(MASTER_PATH)
     if master is None or master.empty:
@@ -669,7 +694,7 @@ def _open_risk_settings_dialog():
 
 
 def _render_risk_settings_form(settings: RiskSettings, in_dialog: bool = False) -> None:
-    st.caption("Update the bankroll risk defaults stored in the settings artifact, then refresh bankroll status through the existing pipeline workflow.")
+    st.caption("Update the bankroll risk defaults stored in the committed settings artifact. Saving launches a GitHub workflow so the settings persist beyond this Streamlit session.")
     with st.form("bankroll_risk_settings_dialog_form"):
         starting_bankroll = st.number_input(
             "Starting bankroll",
@@ -718,7 +743,6 @@ def _render_risk_settings_form(settings: RiskSettings, in_dialog: bool = False) 
             min_odds = st.number_input("Minimum odds", min_value=-1000, max_value=1000, value=int(settings.min_odds), step=5)
         with odds_col2:
             max_odds = st.number_input("Maximum odds", min_value=-1000, max_value=3000, value=int(settings.max_odds), step=5)
-        run_workflow = st.checkbox("Run bankroll status workflow after save", value=True)
         submitted = st.form_submit_button("Save Risk Settings", use_container_width=True)
 
     if submitted:
@@ -732,16 +756,13 @@ def _render_risk_settings_form(settings: RiskSettings, in_dialog: bool = False) 
             min_odds=int(min_odds),
             max_odds=int(max_odds),
         )
-        save_risk_settings(updated)
-        if run_workflow:
-            ok, msg = trigger_workflow(BANKROLL_STATUS_WORKFLOW)
-            if ok:
-                st.success("Risk settings saved and bankroll status workflow launched.")
-            else:
-                st.warning(f"Risk settings saved, but the workflow could not be launched: {msg}")
+        ok, msg = _dispatch_risk_settings(updated)
+        if ok:
+            st.success("Risk settings workflow launched. Refresh after it completes to load the committed settings.")
+            st.cache_data.clear()
         else:
-            st.success("Risk settings saved.")
-        st.cache_data.clear()
+            st.error(f"Could not launch risk settings workflow: {msg}")
+            return
         if in_dialog:
             st.session_state["bankroll_dialog"] = None
         st.rerun()

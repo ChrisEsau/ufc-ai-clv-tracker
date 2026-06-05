@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 from pipeline.common.paths import BANKROLL_SNAPSHOTS_PATH, OPEN_BETS_PATH, ensure_data_dirs
+from pipeline.common.risk_settings import load_risk_settings, save_risk_settings
 from utils.bankroll_artifacts import build_bankroll_snapshot, derive_open_bets, load_bet_ledger, save_bet_ledger
 
 
 def main() -> None:
     ensure_data_dirs()
+    settings = load_risk_settings()
+    save_risk_settings(settings)
     ledger = load_bet_ledger()
     # Persist the canonical ledger as the source of truth, even when empty,
     # then refresh derived open-bet and bankroll snapshot artifacts.
@@ -18,6 +21,7 @@ def main() -> None:
 
     row = snapshot.iloc[0].to_dict()
     print("========== BANKROLL STATUS ==========")
+    print(f"Starting bankroll: {settings.starting_bankroll:.2f}")
     print(f"Ledger bets: {len(ledger)}")
     print(f"Open bets: {len(open_bets)}")
     print(f"Current bankroll: {row['current_bankroll']:.2f}")

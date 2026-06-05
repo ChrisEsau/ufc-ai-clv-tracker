@@ -32,7 +32,7 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add -f data/bankroll/ufc_bet_ledger.parquet data/bankroll/ufc_open_bets.parquet data/bankroll/ufc_bankroll_snapshots.parquet
+          git add -f data/bankroll/ufc_bankroll_settings.parquet data/bankroll/ufc_bet_ledger.parquet data/bankroll/ufc_open_bets.parquet data/bankroll/ufc_bankroll_snapshots.parquet
 
           git commit -m "Update bankroll status artifacts" || echo "No changes to commit"
           git push
