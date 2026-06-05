@@ -1245,6 +1245,7 @@ action_board_display_cols = [
     # IDENTIFIERS
     # =========================================================
     "event_name",
+    "event_id",
     "commence_time",
     "fight_id",
 
@@ -1309,6 +1310,11 @@ action_board_display_cols = [
 
     "odds_match_type",
     "odds_match_score",
+]
+
+action_board_display_cols = [
+    column for column in action_board_display_cols
+    if column in action_board_df.columns
 ]
 
 action_board_df = action_board_df[

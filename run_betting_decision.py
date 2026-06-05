@@ -424,6 +424,7 @@ output_cols = [
     "decision_timestamp",
 
     "event_name",
+    "event_id",
     "commence_time",
     "fight_id",
 

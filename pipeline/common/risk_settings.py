@@ -10,6 +10,9 @@ import pandas as pd
 from pipeline.common.paths import BANKROLL_SETTINGS_PATH, ensure_data_dirs
 
 
+ALLOWED_KELLY_FRACTIONS = (0.25, 0.50)
+
+
 @dataclass(frozen=True)
 class RiskSettings:
     """Single source of truth for UFC betting risk and staking settings."""
@@ -43,6 +46,11 @@ def _coerce_int(value: Any, default: int) -> int:
     return int(default) if pd.isna(parsed) else int(parsed)
 
 
+def _coerce_kelly_fraction(value: Any, default: float) -> float:
+    parsed = _coerce_float(value, default)
+    return min(ALLOWED_KELLY_FRACTIONS, key=lambda allowed: abs(allowed - parsed))
+
+
 def load_risk_settings(path: Path = BANKROLL_SETTINGS_PATH) -> RiskSettings:
     """Load persisted risk settings, falling back to locked production defaults."""
 
@@ -56,7 +64,7 @@ def load_risk_settings(path: Path = BANKROLL_SETTINGS_PATH) -> RiskSettings:
 
     return RiskSettings(
         starting_bankroll=_coerce_float(values.get("starting_bankroll"), defaults["starting_bankroll"]),
-        kelly_fraction=_coerce_float(values.get("kelly_fraction"), defaults["kelly_fraction"]),
+        kelly_fraction=_coerce_kelly_fraction(values.get("kelly_fraction"), defaults["kelly_fraction"]),
         max_stake_pct=_coerce_float(values.get("max_stake_pct"), defaults["max_stake_pct"]),
         max_event_exposure_pct=_coerce_float(
             values.get("max_event_exposure_pct"),
@@ -73,6 +81,16 @@ def save_risk_settings(settings: RiskSettings, path: Path = BANKROLL_SETTINGS_PA
     """Persist risk settings to the canonical bankroll settings artifact."""
 
     ensure_data_dirs()
+    settings = RiskSettings(
+        starting_bankroll=settings.starting_bankroll,
+        kelly_fraction=_coerce_kelly_fraction(settings.kelly_fraction, RiskSettings().kelly_fraction),
+        max_stake_pct=settings.max_stake_pct,
+        max_event_exposure_pct=settings.max_event_exposure_pct,
+        min_edge=settings.min_edge,
+        min_confidence=settings.min_confidence,
+        min_odds=settings.min_odds,
+        max_odds=settings.max_odds,
+    )
     row = asdict(settings)
     row["updated_timestamp"] = datetime.now(timezone.utc).isoformat()
     pd.DataFrame([row]).to_parquet(path, index=False)

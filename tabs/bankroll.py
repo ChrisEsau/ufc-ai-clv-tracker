@@ -430,6 +430,11 @@ def _risk_settings_html(settings: RiskSettings) -> str:
     return "<div class='bankroll-settings'>" + "".join(f"<div class='bankroll-setting'><div class='bankroll-setting-label'>{_escape(label)}</div><div class='bankroll-setting-value'>{_escape(value)}</div></div>" for label, value in items) + "</div>"
 
 
+def _first_non_empty(values: pd.Series):
+    clean = values.replace("", pd.NA).dropna()
+    return clean.iloc[0] if not clean.empty else pd.NA
+
+
 def _load_fight_options() -> pd.DataFrame:
     frames = []
     for path in [BETTING_BOARD_PATH, LIVE_CARD_PATH]:
@@ -438,15 +443,56 @@ def _load_fight_options() -> pd.DataFrame:
             frames.append(df)
     if not frames:
         return pd.DataFrame()
+
     rows = pd.concat(frames, ignore_index=True, sort=False)
-    keep = [col for col in ["event_name", "event_date", "fight_id", "red_fighter", "blue_fighter", "best_side", "best_prob", "best_edge", "best_ev", "best_american_odds", "model_pick", "model_confidence"] if col in rows.columns]
-    rows = rows[keep].dropna(subset=["fight_id"]).drop_duplicates(subset=["fight_id", "event_name"]).copy()
-    rows["label"] = rows.apply(lambda row: f"{row.get('event_name', 'Unknown Event')} — {row.get('red_fighter', 'Red')} vs {row.get('blue_fighter', 'Blue')}", axis=1)
-    return rows.sort_values(["event_name", "label"])
+    if "event_id" not in rows.columns and "ufcstats_event_id" in rows.columns:
+        rows["event_id"] = rows["ufcstats_event_id"]
+    elif "event_id" in rows.columns and "ufcstats_event_id" in rows.columns:
+        rows["event_id"] = rows["event_id"].fillna(rows["ufcstats_event_id"])
+    if "event_date" not in rows.columns and "commence_time" in rows.columns:
+        rows["event_date"] = rows["commence_time"]
+    elif "event_date" in rows.columns and "commence_time" in rows.columns:
+        rows["event_date"] = rows["event_date"].fillna(rows["commence_time"])
+
+    keep = [
+        col
+        for col in [
+            "event_name",
+            "event_id",
+            "event_date",
+            "fight_id",
+            "red_fighter",
+            "blue_fighter",
+            "red_fighter_id",
+            "blue_fighter_id",
+            "best_side",
+            "best_side_fighter_id",
+            "best_side_opponent_id",
+            "best_prob",
+            "best_edge",
+            "best_ev",
+            "best_american_odds",
+            "recommended_stake",
+            "scenario_recommended_stake",
+            "model_pick",
+            "model_confidence",
+        ]
+        if col in rows.columns
+    ]
+    rows = rows[keep].dropna(subset=["fight_id"]).copy()
+    group_cols = [col for col in ["fight_id", "event_name"] if col in rows.columns]
+    rows = rows.groupby(group_cols, as_index=False, dropna=False).agg(_first_non_empty) if group_cols else rows
+    rows["event_label"] = rows.apply(
+        lambda row: f"{row.get('event_name', 'Unknown Event')}"
+        + (f" — {pd.to_datetime(row.get('event_date'), errors='coerce').strftime('%b %-d, %Y')}" if pd.notna(pd.to_datetime(row.get('event_date'), errors='coerce')) else ""),
+        axis=1,
+    )
+    rows["label"] = rows.apply(lambda row: f"{row.get('red_fighter', 'Red')} vs {row.get('blue_fighter', 'Blue')}", axis=1)
+    return rows.sort_values([col for col in ["event_name", "label"] if col in rows.columns])
 
 
 def _manual_bet_id(row: dict) -> str:
-    raw = "|".join(str(row.get(key, "")) for key in ["event_name", "fight_id", "fighter", "odds_taken", "stake", "placed_timestamp"])
+    raw = "|".join(str(row.get(key, "")) for key in ["event_name", "event_id", "fight_id", "fighter", "fighter_id", "odds_taken", "stake", "placed_timestamp"])
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
 
 
@@ -502,12 +548,22 @@ def _render_add_bet_form(in_dialog: bool = False) -> None:
     if options.empty:
         st.warning("No current fight options are available from live card or Betting Board artifacts.")
         return
-    selected = st.selectbox("Fight", options.to_dict("records"), format_func=lambda row: row["label"], key="bankroll_add_fight")
+
+    events = options.drop_duplicates(subset=["event_label"]).sort_values("event_label")
+    selected_event = st.selectbox("Event", events.to_dict("records"), format_func=lambda row: row["event_label"], key="bankroll_add_event")
+    event_mask = options["event_label"].astype(str) == str(selected_event.get("event_label"))
+    event_options = options[event_mask].copy()
+    selected = st.selectbox("Fight", event_options.to_dict("records"), format_func=lambda row: row["label"], key="bankroll_add_fight")
+
     fighters = [fighter for fighter in [selected.get("red_fighter"), selected.get("blue_fighter")] if pd.notna(fighter) and str(fighter).strip()]
+    if not fighters:
+        st.warning("The selected fight does not include fighter names yet.")
+        return
     default_idx = fighters.index(selected.get("best_side")) if selected.get("best_side") in fighters else 0
     fighter = st.selectbox("Pick", fighters, index=default_idx, key="bankroll_add_pick")
-    stake = st.number_input("Amount Staked", min_value=0.0, value=float(selected.get("recommended_stake", 0) or 0), step=25.0, key="bankroll_add_stake")
-    default_odds = int(selected.get("best_american_odds") or 0) if pd.notna(selected.get("best_american_odds")) else 0
+    stake_value = selected.get("scenario_recommended_stake", selected.get("recommended_stake", 0))
+    stake = st.number_input("Amount Staked", min_value=0.0, value=_as_float(stake_value, 0.0), step=25.0, key="bankroll_add_stake")
+    default_odds = int(_as_float(selected.get("best_american_odds"), 0.0))
     odds = st.number_input("Odds Taken", min_value=-2000, max_value=3000, value=default_odds, step=5, key="bankroll_add_odds")
     submitted = st.button("Add Bet", use_container_width=True, key="bankroll_add_submit")
     if submitted:
@@ -515,12 +571,17 @@ def _render_add_bet_form(in_dialog: bool = False) -> None:
             st.error("Enter a positive stake and non-zero odds.")
             return
         opponent = next((name for name in fighters if name != fighter), "")
+        fighter_id = selected.get("red_fighter_id") if fighter == selected.get("red_fighter") else selected.get("blue_fighter_id")
+        opponent_id = selected.get("blue_fighter_id") if fighter == selected.get("red_fighter") else selected.get("red_fighter_id")
         row = {
             "event_name": selected.get("event_name", ""),
+            "event_id": selected.get("event_id", ""),
             "event_date": selected.get("event_date", ""),
             "fight_id": selected.get("fight_id", ""),
             "fighter": fighter,
+            "fighter_id": fighter_id,
             "opponent": opponent,
+            "opponent_id": opponent_id,
             "market_type": "Moneyline",
             "odds_taken": odds,
             "stake": stake,
@@ -610,12 +671,13 @@ def _render_risk_settings_form(settings: RiskSettings, in_dialog: bool = False) 
             value=float(settings.starting_bankroll),
             step=100.0,
         )
-        kelly_fraction = st.number_input(
+        kelly_options = [0.25, 0.50]
+        kelly_fraction = st.radio(
             "Kelly fraction",
-            min_value=0.0,
-            max_value=2.0,
-            value=float(settings.kelly_fraction),
-            step=0.05,
+            kelly_options,
+            index=kelly_options.index(0.25) if float(settings.kelly_fraction) == 0.25 else kelly_options.index(0.50),
+            format_func=lambda value: f"{value:.2f}",
+            horizontal=True,
         )
         max_stake_pct = st.number_input(
             "Max stake per bet (%)",

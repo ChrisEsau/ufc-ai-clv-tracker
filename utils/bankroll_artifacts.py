@@ -20,10 +20,13 @@ from pipeline.common.risk_settings import RiskSettings, load_risk_settings
 LEDGER_COLUMNS = [
     "bet_id",
     "event_name",
+    "event_id",
     "event_date",
     "fight_id",
     "fighter",
+    "fighter_id",
     "opponent",
+    "opponent_id",
     "market_type",
     "odds_taken",
     "stake",
@@ -136,8 +139,10 @@ def derive_open_bets(ledger: pd.DataFrame | None = None) -> pd.DataFrame:
 def _stable_bet_id(row: pd.Series) -> str:
     parts = [
         row.get("event_name", ""),
+        row.get("event_id", ""),
         row.get("fight_id", ""),
         row.get("fighter", ""),
+        row.get("fighter_id", ""),
         row.get("market_type", "Moneyline"),
         row.get("odds_taken", ""),
         row.get("stake", ""),
@@ -153,14 +158,17 @@ def official_bets_to_ledger_rows(official_bets: pd.DataFrame, source_workflow: s
 
     rows = pd.DataFrame(index=official_bets.index)
     rows["event_name"] = official_bets.get("event_name", "")
-    rows["event_date"] = official_bets.get("event_date", official_bets.get("date", ""))
+    rows["event_id"] = official_bets.get("event_id", official_bets.get("ufcstats_event_id", ""))
+    rows["event_date"] = official_bets.get("event_date", official_bets.get("date", official_bets.get("commence_time", "")))
     rows["fight_id"] = official_bets.get("fight_id", "")
     rows["fighter"] = official_bets.get("best_side", official_bets.get("fighter", ""))
+    rows["fighter_id"] = official_bets.get("best_side_fighter_id", official_bets.get("fighter_id", ""))
     rows["opponent"] = np.where(
         official_bets.get("best_side", "") == official_bets.get("red_fighter", ""),
         official_bets.get("blue_fighter", ""),
         official_bets.get("red_fighter", ""),
     )
+    rows["opponent_id"] = official_bets.get("best_side_opponent_id", official_bets.get("opponent_id", ""))
     rows["market_type"] = "Moneyline"
     rows["odds_taken"] = official_bets.get("best_american_odds", np.nan)
     rows["stake"] = official_bets.get(
