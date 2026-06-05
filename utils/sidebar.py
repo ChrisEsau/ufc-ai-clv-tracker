@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from utils.betting_board_artifacts import load_upcoming_events
+from utils.bankroll_artifacts import load_bet_ledger
 from utils.data_loader import load_parquet
 from pipeline.common.paths import BETTING_BOARD_PATH, MARKET_SNAPSHOTS_PATH
 
@@ -276,11 +277,29 @@ def render_sidebar():
         st.sidebar.selectbox("Workflow Area", ["Dataset Health", "Event Discovery", "Final Staged Review", "Audit History"], key="sidebar_dm_area")
         st.sidebar.caption("Following the consolidated Final Staged Review architecture.")
     elif page == "Bankroll":
-        _sidebar_section("Filters", compact=True)
-        st.sidebar.selectbox("Ledger View", ["Overview", "Bet Ledger", "Performance", "Risk Settings"], key="sidebar_bankroll_view")
+        _sidebar_section("Bankroll Status", compact=True)
+        ledger = load_bet_ledger()
+        open_count = 0 if ledger.empty else int(ledger["result"].astype(str).str.lower().isin(["open", "pending", ""]).sum())
+        st.sidebar.caption(f"{len(ledger):,} ledger bets · {open_count:,} open")
 
     st.sidebar.markdown("---")
     _sidebar_section("Quick Actions")
+    if page == "Bankroll":
+        if st.sidebar.button("＋  Add New Bet", use_container_width=True):
+            st.session_state["bankroll_dialog"] = "add"
+            st.rerun()
+        if st.sidebar.button("◎  Settle Bet", use_container_width=True):
+            st.session_state["bankroll_dialog"] = "settle"
+            st.rerun()
+        ledger = load_bet_ledger()
+        st.sidebar.download_button(
+            "⇩  Export Ledger",
+            data="" if ledger.empty else ledger.to_csv(index=False),
+            file_name="ufc_bet_ledger.csv",
+            mime="text/csv",
+            use_container_width=True,
+            disabled=ledger.empty,
+        )
     if st.sidebar.button("↻  Refresh Data", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
