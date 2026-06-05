@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import html
-from textwrap import dedent
-
 import streamlit as st
 
 
@@ -28,19 +26,19 @@ def page_header(
         if updated_label
         else ""
     )
-    header_html = dedent(
-        f"""
-        <div class="ufc-page-header">
-            <div>
-                {kicker_html}
-                <h1 class="ufc-title">{html.escape(title)}</h1>
-                <div class="ufc-subtitle">{html.escape(subtitle)}</div>
-            </div>
-            {updated_html}
-        </div>
-        """
-    ).strip()
-    st.markdown(header_html, unsafe_allow_html=True)
+    title_html = html.escape(title)
+    subtitle_html = html.escape(subtitle)
+    header_html = (
+        '<div class="ufc-page-header">'
+        "<div>"
+        f"{kicker_html}"
+        f'<h1 class="ufc-title">{title_html}</h1>'
+        f'<div class="ufc-subtitle">{subtitle_html}</div>'
+        "</div>"
+        f"{updated_html}"
+        "</div>"
+    )
+    st.html(header_html)
 
 
 def section_heading(

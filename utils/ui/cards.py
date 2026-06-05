@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import html
-from textwrap import dedent
-
 import streamlit as st
 
 ACCENT_COLORS = {
@@ -41,17 +39,17 @@ def metric_card(
         if caption
         else ""
     )
-    card_html = dedent(
-        f"""
-        <div class="metric-card">
-            <div class="metric-label">{html.escape(str(label))}</div>
-            <div class="metric-value" style="color:{color};">{html.escape(str(value))}</div>
-            {delta_html}
-            {caption_html}
-        </div>
-        """
-    ).strip()
-    st.markdown(card_html, unsafe_allow_html=True)
+    label_html = html.escape(str(label))
+    value_html = html.escape(str(value))
+    card_html = (
+        '<div class="metric-card">'
+        f'<div class="metric-label">{label_html}</div>'
+        f'<div class="metric-value" style="color:{color};">{value_html}</div>'
+        f"{delta_html}"
+        f"{caption_html}"
+        "</div>"
+    )
+    st.html(card_html)
 
 
 def stat_row(label: str, value, status: str = "neutral") -> str:
