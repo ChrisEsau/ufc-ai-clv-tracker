@@ -11,18 +11,20 @@ import streamlit as st
 import plotly.express as px
 
 from pipeline.common.paths import BETTING_BOARD_PATH, LIVE_CARD_PATH, MASTER_PATH
+from pipeline.common.risk_settings import (
+    RiskSettings,
+    load_risk_settings,
+    save_risk_settings,
+)
 from utils.bankroll_artifacts import (
-    BankrollSettings,
     american_profit,
     bankroll_summary,
     derive_open_bets,
     exposure_by_event,
     is_open_result,
-    load_bankroll_settings,
     load_bet_ledger,
     normalize_ledger,
     performance_by_event,
-    save_bankroll_settings,
     save_bet_ledger,
     settle_bet,
 )
@@ -94,7 +96,7 @@ def _ledger_csv(ledger: pd.DataFrame) -> str:
     return ledger.to_csv(index=False)
 
 
-def _ledger_summary(ledger: pd.DataFrame, settings: BankrollSettings) -> dict:
+def _ledger_summary(ledger: pd.DataFrame, settings: RiskSettings) -> dict:
     summary = bankroll_summary(ledger=ledger, settings=settings)
     settled = ledger[~ledger["result"].apply(is_open_result)].copy() if not ledger.empty else pd.DataFrame()
     wins = int((settled.get("result", pd.Series(dtype=str)).astype(str).str.lower() == "win").sum()) if not settled.empty else 0
@@ -132,7 +134,7 @@ def _open_exposure_by_fighter(open_bets: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-def _bankroll_points(ledger: pd.DataFrame, settings: BankrollSettings) -> pd.DataFrame:
+def _bankroll_points(ledger: pd.DataFrame, settings: RiskSettings) -> pd.DataFrame:
     if ledger.empty:
         return pd.DataFrame(columns=["date", "bankroll"])
     settled = ledger[~ledger["result"].apply(is_open_result)].copy()
@@ -231,7 +233,7 @@ def _render_header(ledger: pd.DataFrame) -> None:
         )
 
 
-def _render_kpis(summary: dict, settings: BankrollSettings) -> None:
+def _render_kpis(summary: dict, settings: RiskSettings) -> None:
     total_profit = float(summary.get("total_profit", 0.0))
     roi = total_profit / settings.starting_bankroll if settings.starting_bankroll else 0.0
     cards = [
@@ -415,7 +417,7 @@ def _clv_summary_html(ledger: pd.DataFrame) -> str:
     return f"<table class='bankroll-table'><tbody>{body}</tbody></table>"
 
 
-def _risk_settings_html(settings: BankrollSettings) -> str:
+def _risk_settings_html(settings: RiskSettings) -> str:
     items = [
         ("Kelly Fraction", f"{settings.kelly_fraction:.2f}"),
         ("Max Stake Per Bet", _pct(settings.max_stake_pct)),
@@ -587,7 +589,7 @@ def _render_settle_form(ledger: pd.DataFrame, in_dialog: bool = False) -> None:
 
 
 def _open_risk_settings_dialog():
-    settings = load_bankroll_settings()
+    settings = load_risk_settings()
     if not hasattr(st, "dialog"):
         st.info("Your Streamlit version does not support popup dialogs. Risk settings are shown inline below.")
         return _render_risk_settings_form(settings, in_dialog=False)
@@ -599,7 +601,7 @@ def _open_risk_settings_dialog():
     dialog()
 
 
-def _render_risk_settings_form(settings: BankrollSettings, in_dialog: bool = False) -> None:
+def _render_risk_settings_form(settings: RiskSettings, in_dialog: bool = False) -> None:
     st.caption("Update the bankroll risk defaults stored in the settings artifact, then refresh bankroll status through the existing pipeline workflow.")
     with st.form("bankroll_risk_settings_dialog_form"):
         starting_bankroll = st.number_input(
@@ -651,6 +653,30 @@ def _render_risk_settings_form(settings: BankrollSettings, in_dialog: bool = Fal
         run_workflow = st.checkbox("Run bankroll status workflow after save", value=True)
         submitted = st.form_submit_button("Save Risk Settings", use_container_width=True)
 
+    if submitted:
+        updated = RiskSettings(
+            starting_bankroll=float(starting_bankroll),
+            kelly_fraction=float(kelly_fraction),
+            max_stake_pct=float(max_stake_pct) / 100,
+            max_event_exposure_pct=float(max_event_exposure_pct) / 100,
+            min_edge=float(min_edge),
+            min_confidence=float(min_confidence),
+            min_odds=int(min_odds),
+            max_odds=int(max_odds),
+        )
+        save_risk_settings(updated)
+        if run_workflow:
+            ok, msg = trigger_workflow(BANKROLL_STATUS_WORKFLOW)
+            if ok:
+                st.success("Risk settings saved and bankroll status workflow launched.")
+            else:
+                st.warning(f"Risk settings saved, but the workflow could not be launched: {msg}")
+        else:
+            st.success("Risk settings saved.")
+        st.cache_data.clear()
+        if in_dialog:
+            st.session_state["bankroll_dialog"] = None
+        st.rerun()
 
 
 def _handle_dialogs(ledger: pd.DataFrame) -> None:
@@ -665,7 +691,7 @@ def _handle_dialogs(ledger: pd.DataFrame) -> None:
 
 def render_bankroll():
     _inject_css()
-    settings = load_bankroll_settings()
+    settings = load_risk_settings()
     ledger = load_bet_ledger()
     summary = _ledger_summary(ledger, settings)
     open_bets = derive_open_bets(ledger)

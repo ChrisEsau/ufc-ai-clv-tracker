@@ -8,6 +8,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from pipeline.common.paths import BETTING_BOARD_PATH, MARKET_MATCH_AUDIT_PATH
+from pipeline.common.risk_settings import load_risk_settings
 from utils.betting_board_artifacts import (
     get_betting_artifact_status,
     get_upcoming_artifact_status,
@@ -371,16 +372,20 @@ def _date_range_mask(display: pd.DataFrame) -> pd.Series:
 
 
 def _kelly_multiplier() -> float:
-    return 0.25 if st.session_state.get("bb_kelly_mode") == "1/4 Kelly" else 0.50
+    if st.session_state.get("bb_kelly_mode") == "1/4 Kelly":
+        return 0.25
+    return load_risk_settings().kelly_fraction
 
 
 def _is_bet(row: pd.Series) -> bool:
     return str(row.get("recommendation", "")).upper().strip() in {"STRONG BET", "LEAN BET"}
 
 
-def _kelly_stake(row: pd.Series, bankroll: float = 10_000.0) -> float:
+def _kelly_stake(row: pd.Series, bankroll: float | None = None) -> float:
     if not _is_bet(row):
         return 0.0
+    settings = load_risk_settings()
+    bankroll = settings.starting_bankroll if bankroll is None else bankroll
     probability = _probability(row.get("best_prob"))
     american_odds = _as_float(row.get("best_american_odds"))
     if probability is None or american_odds is None or american_odds == 0:
@@ -389,7 +394,9 @@ def _kelly_stake(row: pd.Series, bankroll: float = 10_000.0) -> float:
     if b <= 0:
         return 0.0
     full_kelly = max(0.0, ((b * probability) - (1 - probability)) / b)
-    return round(bankroll * full_kelly * _kelly_multiplier())
+    raw_stake = bankroll * full_kelly * _kelly_multiplier()
+    capped_stake = min(raw_stake, bankroll * settings.max_stake_pct)
+    return round(capped_stake)
 
 
 def _apply_kelly_stakes(display: pd.DataFrame) -> pd.DataFrame:
@@ -406,7 +413,8 @@ def _apply_sidebar_filters(display: pd.DataFrame) -> pd.DataFrame:
     filtered = display.copy()
     filtered = filtered[_date_range_mask(filtered)]
 
-    odds_min, odds_max = st.session_state.get("bb_filter_odds_range", (-250, 400))
+    settings = load_risk_settings()
+    odds_min, odds_max = st.session_state.get("bb_filter_odds_range", (settings.min_odds, settings.max_odds))
     odds = pd.to_numeric(filtered.get("best_american_odds"), errors="coerce")
     hide_missing = st.session_state.get("bb_filter_hide_missing_odds", True)
     odds_mask = odds.between(odds_min, odds_max)
@@ -422,7 +430,7 @@ def _apply_sidebar_filters(display: pd.DataFrame) -> pd.DataFrame:
         ev = pd.to_numeric(filtered.get("ev_dollars"), errors="coerce")
         filtered = filtered[ev > 0]
 
-    min_confidence = float(st.session_state.get("bb_filter_min_confidence", 70))
+    min_confidence = float(st.session_state.get("bb_filter_min_confidence", settings.min_confidence))
     confidence = pd.to_numeric(filtered.get("confidence_pct"), errors="coerce")
     filtered = filtered[confidence >= min_confidence]
     return filtered.reset_index(drop=True)
