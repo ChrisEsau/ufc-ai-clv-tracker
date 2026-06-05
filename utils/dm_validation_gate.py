@@ -3,6 +3,8 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from pipeline.common.booleans import coerce_bool
+
 from pipeline.common.paths import APPEND_PRECHECK_PATH
 from utils.github_actions import trigger_workflow
 
@@ -30,7 +32,7 @@ def get_append_precheck():
     if "append_ready" not in precheck.columns:
         return False, precheck
 
-    append_ready = bool(precheck["append_ready"].iloc[0])
+    append_ready = coerce_bool(precheck["append_ready"].iloc[0])
 
     return append_ready, precheck
 
@@ -41,7 +43,6 @@ def render_validation_gate():
         "✅ Validation Gate",
         expanded=False,
     ):
-
         st.caption(
             "Validates staged data before append. "
             "Append execution lives in the final Append Status section."
@@ -52,9 +53,7 @@ def render_validation_gate():
             use_container_width=True,
             key="run_column_validation",
         ):
-            ok, msg = trigger_workflow(
-                "run-master-column-validation.yml"
-            )
+            ok, msg = trigger_workflow("run-master-column-validation.yml")
 
             if ok:
                 st.success(msg)
@@ -66,9 +65,7 @@ def render_validation_gate():
             use_container_width=True,
             key="run_append_precheck",
         ):
-            ok, msg = trigger_workflow(
-                "run-append-precheck-validation.yml"
-            )
+            ok, msg = trigger_workflow("run-append-precheck-validation.yml")
 
             if ok:
                 st.success(msg)
@@ -78,29 +75,20 @@ def render_validation_gate():
         append_ready, precheck = get_append_precheck()
 
         if precheck is None:
-
             st.warning(
                 f"No append precheck artifact found at `{APPEND_PRECHECK_PATH}`."
             )
             return
 
         if "status" in precheck.columns:
-            failed = precheck[
-                precheck["status"] == "fail"
-            ]
+            failed = precheck[precheck["status"] == "fail"]
         else:
             failed = pd.DataFrame()
 
         if append_ready:
-            st.success(
-                "✅ Append validation passed. "
-                "Staged data is ready for append."
-            )
+            st.success("✅ Append validation passed. Staged data is ready for append.")
         else:
-            st.error(
-                "❌ Append blocked. "
-                "Validation failures detected."
-            )
+            st.error("❌ Append blocked. Validation failures detected.")
 
         staged_rows = (
             int(precheck["staged_rows"].iloc[0])
@@ -135,7 +123,8 @@ def render_validation_gate():
         )
 
         display_cols = [
-            c for c in [
+            c
+            for c in [
                 "check_name",
                 "status",
                 "failure_count",
@@ -153,11 +142,11 @@ def render_validation_gate():
         )
 
         if not failed.empty:
-
             st.markdown("#### Failed Checks")
 
             failed_cols = [
-                c for c in [
+                c
+                for c in [
                     "check_name",
                     "failure_count",
                     "details",
