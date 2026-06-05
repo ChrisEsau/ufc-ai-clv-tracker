@@ -173,7 +173,7 @@ def _inject_css() -> None:
         <style>
         .bankroll-title { color:#f5f7fb; font-size:1.95rem; line-height:1; font-weight:900; letter-spacing:-.04em; }
         .bankroll-subtitle { color:#dbe7f5; font-size:.98rem; margin-top:.35rem; }
-        .bankroll-actions { color:#f5f7fb; font-size:.82rem; font-weight:700; text-align:right; margin-bottom:.35rem; }
+        .bankroll-actions { display:flex; justify-content:flex-end; align-items:center; color:#dbe7f5; font-size:.78rem; line-height:1; white-space:nowrap; padding-top:.35rem; }
         .bankroll-kpis { display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:.65rem; margin:.85rem 0 1rem; }
         .bankroll-card { background:linear-gradient(180deg, rgba(17,31,49,.94), rgba(12,24,39,.98)); border:1px solid rgba(43,60,82,.96); border-radius:7px; box-shadow:0 20px 40px rgba(0,0,0,.22); }
         .bankroll-kpi { min-height:84px; padding:.95rem .75rem .8rem; text-align:center; }
@@ -222,15 +222,7 @@ def _render_header(ledger: pd.DataFrame) -> None:
     with left:
         st.html('<div class="bankroll-title">BANKROLL</div><div class="bankroll-subtitle">Track performance, manage risk, and grow your bankroll</div>')
     with right:
-        st.markdown(f"<div class='bankroll-actions'>{_escape(_last_updated(ledger))}</div>", unsafe_allow_html=True)
-        st.download_button(
-            "⇩  Export Report",
-            data=_ledger_csv(ledger),
-            file_name="ufc_bet_ledger.csv",
-            mime="text/csv",
-            use_container_width=True,
-            disabled=ledger.empty,
-        )
+        st.html(f"<div class='bankroll-actions'><span>{_escape(_last_updated(ledger))}</span></div>")
 
 
 def _render_kpis(summary: dict, settings: RiskSettings) -> None:
