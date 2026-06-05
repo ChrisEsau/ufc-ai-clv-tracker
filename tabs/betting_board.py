@@ -358,7 +358,13 @@ def _kelly_multiplier() -> float:
     return 0.25 if st.session_state.get("bb_kelly_mode") == "1/4 Kelly" else 0.50
 
 
+def _is_bet(row: pd.Series) -> bool:
+    return str(row.get("recommendation", "")).upper().strip() in {"STRONG BET", "LEAN BET"}
+
+
 def _kelly_stake(row: pd.Series, bankroll: float = 10_000.0) -> float:
+    if not _is_bet(row):
+        return 0.0
     probability = _probability(row.get("best_prob"))
     american_odds = _as_float(row.get("best_american_odds"))
     if probability is None or american_odds is None or american_odds == 0:
@@ -457,23 +463,25 @@ def _render_header(updated_label: str | None, selected_event: dict | None) -> No
                     st.error(msg)
 
 
-def _render_kpis(display: pd.DataFrame) -> None:
-    total_fights = len(display)
+def _render_kpis(display: pd.DataFrame, total_fights: int | None = None) -> None:
+    total_fights = len(display) if total_fights is None else total_fights
+    displayed_fights = len(display)
     positive = int((display["ev_dollars"] > 0).sum()) if not display.empty else 0
     strong = int((display["recommendation"] == "STRONG BET").sum()) if not display.empty else 0
     total_ev = display["ev_dollars"].dropna().sum() if not display.empty else 0
     positive_ev = display.loc[display["ev_dollars"] > 0, "ev_dollars"].dropna()
     avg_ev = positive_ev.mean() if not positive_ev.empty else 0
-    stake = display["recommended_stake"].dropna().sum() if "recommended_stake" in display.columns else 0
+    bet_display = display[display.apply(_is_bet, axis=1)] if not display.empty else display
+    stake = bet_display["recommended_stake"].dropna().sum() if "recommended_stake" in bet_display.columns else 0
 
     cols = st.columns(6)
     with cols[0]:
         _metric_tile("Total Fights", str(total_fights), "Today / Upcoming", "#3b82f6")
     with cols[1]:
-        pct_card = f"{positive / total_fights:.0%} of card" if total_fights else "0% of card"
+        pct_card = f"{positive / displayed_fights:.0%} displayed" if displayed_fights else "0% displayed"
         _metric_tile("Positive EV Fights", str(positive), pct_card, "#35d96b")
     with cols[2]:
-        strong_card = f"{strong / total_fights:.0%} of card" if total_fights else "0% of card"
+        strong_card = f"{strong / displayed_fights:.0%} displayed" if displayed_fights else "0% displayed"
         _metric_tile("Strong Bets", str(strong), strong_card, "#35d96b")
     with cols[3]:
         _metric_tile("Total EV", _money(total_ev), "Across all fights", "#35d96b" if total_ev >= 0 else "#ef4444")
@@ -525,8 +533,17 @@ def _confidence_ring(confidence) -> str:
         f'<div>{confidence:.0f}%</div></div>'
     )
 
+def _confidence_ring(confidence) -> str:
+    confidence = _confidence_value(confidence) or 0
+    color = "#35d96b" if confidence >= 70 else "#facc15" if confidence >= 60 else "#ef4444"
+    return (
+        f'<div class="bb-ring" style="background: conic-gradient({color} {confidence:.0f}%, rgba(148,163,184,.24) 0);">'
+        f'<div>{confidence:.0f}%</div></div>'
+    )
 
 def _stake_text(row: pd.Series) -> str:
+    if not _is_bet(row):
+        return "—"
     stake = _as_float(row.get("recommended_stake"), 0) or 0
     if stake <= 0:
         return "—"
@@ -560,11 +577,12 @@ def _render_main_table(display: pd.DataFrame) -> None:
             )
         )
 
-    total_stake = display["recommended_stake"].dropna().sum() if "recommended_stake" in display.columns else 0
+    bet_rows = display[display.apply(_is_bet, axis=1)] if not display.empty else display
+    total_stake = bet_rows["recommended_stake"].dropna().sum() if "recommended_stake" in bet_rows.columns else 0
     table_html = "".join(
         [
             '<div class="bb-table">',
-            f'<div class="bb-table-head"><span class="bb-rank-head"></span><div class="bb-fight-heading"><span></span><span class="fight-label">Fight</span><span>Model<br>Prob.</span><span>Market<br>Odds</span><span>Implied<br>Prob.</span><span>Edge</span><span>EV ($)</span></div><span>Confidence</span><span>Recommendation</span><span>Suggested Stake<br>({_escape(st.session_state.get("bb_kelly_mode", "1/2 Kelly"))})</span><span></span></div>',
+            f'<div class="bb-table-head"><span class="bb-rank-head"></span><div class="bb-fight-heading"><span class="corner-head"></span><span class="fight-label">Fight</span><span>Model<br>Prob.</span><span>Market<br>Odds</span><span>Implied<br>Prob.</span><span>Edge</span><span>EV ($)</span></div><span class="confidence-head">Confidence</span><span class="recommendation-head">Recommendation</span><span class="stake-head">Suggested Stake<br>({_escape(st.session_state.get("bb_kelly_mode", "1/2 Kelly"))})</span><span></span></div>',
             *rows,
             '<div class="bb-table-foot">',
             f'<span>{len(display)} fights</span>',
@@ -596,7 +614,7 @@ def _render_top_ev(display: pd.DataFrame) -> None:
             f"<td>{_american(row.get('best_american_odds'))}</td>"
             f"<td>{_signed_money(row.get('ev_dollars'))}</td>"
             f"<td>{_pct(row.get('best_confidence'))}</td>"
-            f"<td>{_money(row.get('recommended_stake'))}</td>"
+            f"<td>{_stake_text(row) if _is_bet(row) else '—'}</td>"
             "</tr>"
         )
     st.html(
@@ -619,7 +637,11 @@ def _donut(title: str, labels: list[str], values: list[int], colors: list[str], 
         ]
     )
     fig.add_annotation(text=center, x=0.5, y=0.5, showarrow=False, font={"size": 18, "color": "#f5f7fb"})
-    fig.update_layout(title={"text": title, "font": {"color": "#f5f7fb", "size": 14}}, showlegend=True)
+    fig.update_layout(
+        title={"text": title, "font": {"color": "#f5f7fb", "size": 14}},
+        showlegend=True,
+        legend={"font": {"color": "#f5f7fb"}},
+    )
     return apply_plotly_theme(fig, height=245)
 
 
@@ -727,11 +749,13 @@ def _inject_betting_board_css() -> None:
         .bb-card-tabs .active { background:#143b78; border-color:#2f68d8; }
         .bb-table { overflow:hidden; margin-top:.45rem; }
         .bb-table-head { display:grid; grid-template-columns:.28fr 4.82fr .9fr 1.15fr 1.1fr .2fr; gap:0; align-items:center; padding:.75rem 1rem; border-bottom:1px solid rgba(38,54,74,.95); color:#f5f7fb; font-size:.72rem; font-weight:900; text-transform:uppercase; }
-        .bb-fight-heading { display:grid; grid-template-columns:1.45rem 1.9fr .8fr .8fr .85fr .75fr .75fr; align-items:center; gap:.35rem; }
+        .bb-fight-heading { display:grid; grid-template-columns:1.45rem 1.9fr .8fr .8fr .85fr .75fr .75fr; align-items:center; column-gap:.35rem; }
         .bb-fight-heading span { text-align:center; line-height:1.15; }
         .bb-fight-heading .fight-label { text-align:left; }
         .bb-table-head > span:nth-child(n+3) { text-align:center; line-height:1.15; display:flex; align-items:center; justify-content:center; min-height:2.1rem; }
-        .bb-table-head > span:nth-child(5) { padding-right:.35rem; }
+        .bb-table-head .confidence-head { transform:translateX(-.15rem); }
+        .bb-table-head .recommendation-head { transform:translateX(.1rem); }
+        .bb-table-head .stake-head { transform:translateX(.15rem); }
         .bb-table-row { display:grid; grid-template-columns:.28fr 4.82fr .9fr 1.15fr 1.1fr .2fr; align-items:center; min-height:76px; padding:.45rem 1rem; border-bottom:1px solid rgba(38,54,74,.75); }
         .bb-rank, .bb-menu { color:#dbe7f5; font-size:.8rem; }
         .bb-fight-cell { display:flex; flex-direction:column; gap:.42rem; }
@@ -777,6 +801,7 @@ def render_betting_board():
     selected_event = _current_event(options) if options else None
     scoped = _scope_board(raw_board, selected_event)
     display = _display_board(scoped, fights)
+    card_fight_count = len(display)
     updated = _latest_timestamp(raw_board, events, fights)
 
     _render_header(updated, selected_event)
@@ -788,7 +813,7 @@ def render_betting_board():
     display = _apply_sidebar_filters(display)
     display = _apply_kelly_stakes(display)
 
-    _render_kpis(display)
+    _render_kpis(display, total_fights=card_fight_count)
     _render_event_bar(selected_event, display)
 
     _render_main_table(display)
