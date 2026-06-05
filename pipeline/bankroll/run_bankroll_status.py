@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from pipeline.common.paths import BANKROLL_SNAPSHOTS_PATH, OPEN_BETS_PATH, ensure_data_dirs
-from utils.bankroll_artifacts import build_bankroll_snapshot, derive_open_bets, load_bet_ledger
+from utils.bankroll_artifacts import build_bankroll_snapshot, derive_open_bets, load_bet_ledger, save_bet_ledger
 
 
 def main() -> None:
     ensure_data_dirs()
     ledger = load_bet_ledger()
+    # Persist the canonical ledger as the source of truth, even when empty,
+    # then refresh derived open-bet and bankroll snapshot artifacts.
+    save_bet_ledger(ledger)
     open_bets = derive_open_bets(ledger)
     snapshot = build_bankroll_snapshot(ledger)
 
