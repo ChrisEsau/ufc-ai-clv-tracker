@@ -1,0 +1,69 @@
+"""Run the canonical CLV artifact pipeline.
+
+This runner intentionally consumes existing market snapshots and bankroll ledger
+artifacts.  It does not pull fresh odds; market ingestion remains owned by the
+market update pipeline so the Betting Board contract stays stable.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pandas as pd
+
+from pipeline.clv.closing_lines import CLOSING_LINE_COLUMNS, build_closing_lines
+from pipeline.clv.clv_results import CLV_RESULT_COLUMNS, build_clv_results
+from pipeline.clv.line_movement import LINE_MOVEMENT_COLUMNS, build_line_movement
+from pipeline.clv.market_normalization import normalize_market_snapshots
+from pipeline.common.paths import (
+    BET_LEDGER_PATH,
+    CLOSING_LINES_PATH,
+    CLV_RESULTS_PATH,
+    LINE_MOVEMENT_PATH,
+    MARKET_SNAPSHOTS_PATH,
+    ensure_data_dirs,
+)
+from utils.bankroll_artifacts import load_bet_ledger
+
+
+def _read_parquet(path: Path) -> pd.DataFrame:
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_parquet(path)
+
+
+def _write_parquet(df: pd.DataFrame, path: Path, columns: list[str]) -> None:
+    output = df.copy()
+    for column in columns:
+        if column not in output.columns:
+            output[column] = pd.NA
+    output = output[columns]
+    output.to_parquet(path, index=False)
+
+
+def main() -> None:
+    ensure_data_dirs()
+
+    market_snapshots = _read_parquet(MARKET_SNAPSHOTS_PATH)
+    ledger = load_bet_ledger() if BET_LEDGER_PATH.exists() else pd.DataFrame()
+
+    normalized_snapshots = normalize_market_snapshots(market_snapshots)
+    closing_lines = build_closing_lines(normalized_snapshots)
+    line_movement = build_line_movement(normalized_snapshots)
+    clv_results = build_clv_results(ledger, closing_lines)
+
+    _write_parquet(closing_lines, CLOSING_LINES_PATH, CLOSING_LINE_COLUMNS)
+    _write_parquet(line_movement, LINE_MOVEMENT_PATH, LINE_MOVEMENT_COLUMNS)
+    _write_parquet(clv_results, CLV_RESULTS_PATH, CLV_RESULT_COLUMNS)
+
+    print("========== UFC CLV PIPELINE ==========")
+    print(f"Market snapshots loaded: {len(market_snapshots)}")
+    print(f"Normalized market rows: {len(normalized_snapshots)}")
+    print(f"Ledger bets loaded: {len(ledger)}")
+    print(f"Closing lines written: {len(closing_lines)} -> {CLOSING_LINES_PATH}")
+    print(f"Line movement rows written: {len(line_movement)} -> {LINE_MOVEMENT_PATH}")
+    print(f"CLV result rows written: {len(clv_results)} -> {CLV_RESULTS_PATH}")
+
+
+if __name__ == "__main__":
+    main()
