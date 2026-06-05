@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import html
+from textwrap import dedent
+
 import streamlit as st
 
 
@@ -26,7 +28,7 @@ def page_header(
         if updated_label
         else ""
     )
-    st.markdown(
+    header_html = dedent(
         f"""
         <div class="ufc-page-header">
             <div>
@@ -36,9 +38,9 @@ def page_header(
             </div>
             {updated_html}
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+        """
+    ).strip()
+    st.markdown(header_html, unsafe_allow_html=True)
 
 
 def section_heading(

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import html
+from textwrap import dedent
 
 import streamlit as st
 
@@ -20,13 +21,27 @@ ACCENT_COLORS = {
 }
 
 
-def metric_card(label: str, value, delta: str | None = None, status: str = "neutral", caption: str | None = None) -> None:
+def metric_card(
+    label: str,
+    value,
+    delta: str | None = None,
+    status: str = "neutral",
+    caption: str | None = None,
+) -> None:
     """Render a high-contrast KPI card."""
 
     color = ACCENT_COLORS.get(status, ACCENT_COLORS["neutral"])
-    delta_html = f'<div class="metric-delta" style="color:{color};">{html.escape(str(delta))}</div>' if delta else ""
-    caption_html = f'<div class="metric-subtext">{html.escape(str(caption))}</div>' if caption else ""
-    st.markdown(
+    delta_html = (
+        f'<div class="metric-delta" style="color:{color};">{html.escape(str(delta))}</div>'
+        if delta
+        else ""
+    )
+    caption_html = (
+        f'<div class="metric-subtext">{html.escape(str(caption))}</div>'
+        if caption
+        else ""
+    )
+    card_html = dedent(
         f"""
         <div class="metric-card">
             <div class="metric-label">{html.escape(str(label))}</div>
@@ -34,9 +49,9 @@ def metric_card(label: str, value, delta: str | None = None, status: str = "neut
             {delta_html}
             {caption_html}
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+        """
+    ).strip()
+    st.markdown(card_html, unsafe_allow_html=True)
 
 
 def stat_row(label: str, value, status: str = "neutral") -> str:
@@ -48,5 +63,5 @@ def stat_row(label: str, value, status: str = "neutral") -> str:
         'padding:.42rem 0;border-bottom:1px solid rgba(38,54,74,.65);">'
         f'<span style="color:#9aa8bd;">{html.escape(str(label))}</span>'
         f'<strong style="color:{color};">{html.escape(str(value))}</strong>'
-        '</div>'
+        "</div>"
     )
