@@ -3,6 +3,7 @@ import shutil
 
 import pandas as pd
 
+from pipeline.common.booleans import coerce_bool
 from pipeline.common.paths import (
     MASTER_PATH,
     STAGED_MASTER_ROWS_PROFILED_PATH,
@@ -24,7 +25,7 @@ def run_append_staged_to_master():
     backup_path = master_backup_path(f"before_append_{run_id}")
 
     precheck = pd.read_parquet(PRECHECK_PATH)
-    append_ready = bool(precheck["append_ready"].iloc[0])
+    append_ready = coerce_bool(precheck["append_ready"].iloc[0])
 
     if not append_ready:
         print("Append precheck failed. Refusing to append.")
@@ -37,7 +38,7 @@ def run_append_staged_to_master():
         return None, False
 
     final_review = pd.read_parquet(FINAL_REVIEW_PATH)
-    final_review_pass = bool(final_review["final_review_pass"].iloc[0])
+    final_review_pass = coerce_bool(final_review["final_review_pass"].iloc[0])
 
     if not final_review_pass:
         print("Staged final review failed. Refusing to append.")
