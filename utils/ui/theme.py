@@ -80,7 +80,7 @@ def apply_theme() -> None:
 
         .block-container {{
             max-width: 1580px;
-            padding: 1.05rem 1.65rem 4rem;
+            padding: 0.45rem 1.65rem 4rem;
         }}
 
         section[data-testid="stSidebar"] {{
@@ -111,7 +111,7 @@ def apply_theme() -> None:
             align-items: flex-start;
             justify-content: space-between;
             gap: 1rem;
-            margin: 0 0 1.1rem;
+            margin: 0 0 0.75rem;
         }}
 
         .ufc-kicker {{
@@ -135,7 +135,7 @@ def apply_theme() -> None:
         .ufc-subtitle {{
             color: var(--ufc-muted);
             font-size: 0.98rem;
-            margin-top: 0.45rem;
+            margin-top: 0.18rem;
         }}
 
         .ufc-updated {{

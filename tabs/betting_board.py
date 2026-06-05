@@ -690,7 +690,6 @@ def render_betting_board():
     page_header(
         "Betting Board",
         "Live fight predictions, market odds, EV, quality gates, and recommended actions.",
-        kicker="Primary Workspace",
     )
 
     selected_event = render_upcoming_event_selection()

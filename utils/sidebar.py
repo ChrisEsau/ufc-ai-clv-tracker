@@ -21,11 +21,6 @@ def render_sidebar():
     """Render persistent left navigation without changing workspace backends."""
 
     st.sidebar.image("assets/ufc_betting_logo.png", width=230)
-    st.sidebar.markdown(
-        '<div class="sidebar-note">INTELLIGENCE PLATFORM</div>',
-        unsafe_allow_html=True,
-    )
-
     if "page" not in st.session_state:
         st.session_state.page = "Betting Board"
     if st.session_state.page == "Bet Ledger / Bankroll":
