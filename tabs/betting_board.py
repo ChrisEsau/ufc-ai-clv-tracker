@@ -74,12 +74,6 @@ def _signed_pct(value, decimals: int = 1) -> str:
     sign = "+" if value >= 0 else ""
     return f"{sign}{value:.{decimals}f}%"
 
-def _american(value) -> str:
-    value = _as_float(value)
-    if value is None or value == 0:
-        return "—"
-    rounded = int(round(value))
-    return f"+{rounded}" if rounded > 0 else str(rounded)
 
 def _pct(value, decimals: int = 1) -> str:
     value = _as_float(value)
@@ -302,6 +296,14 @@ def _display_board(board: pd.DataFrame, fights: pd.DataFrame) -> pd.DataFrame:
         lambda row: _ev_for_100(row.get("best_prob"), row.get("best_american_odds")),
         axis=1,
     )
+    valid["red_ev_dollars"] = valid.apply(
+        lambda row: _ev_for_100(row.get("red_model_prob"), row.get("red_american_odds")),
+        axis=1,
+    )
+    valid["blue_ev_dollars"] = valid.apply(
+        lambda row: _ev_for_100(row.get("blue_model_prob"), row.get("blue_american_odds")),
+        axis=1,
+    )
     if "best_ev" in valid.columns:
         valid["ev_dollars"] = valid["ev_dollars"].fillna(pd.to_numeric(valid["best_ev"], errors="coerce"))
 
@@ -477,12 +479,13 @@ def _render_header(updated_label: str | None, selected_event: dict | None) -> No
                     st.error(msg)
 
 
-def _render_kpis(display: pd.DataFrame, total_fights: int | None = None) -> None:
-    total_fights = len(display) if total_fights is None else total_fights
+def _render_kpis(display: pd.DataFrame, card_display: pd.DataFrame | None = None) -> None:
+    card_display = display if card_display is None else card_display
+    total_fights = len(card_display)
     displayed_fights = len(display)
-    positive = int((display["ev_dollars"] > 0).sum()) if not display.empty else 0
-    strong = int((display["recommendation"] == "STRONG BET").sum()) if not display.empty else 0
-    total_ev = display["ev_dollars"].dropna().sum() if not display.empty else 0
+    positive = int((card_display["ev_dollars"] > 0).sum()) if not card_display.empty else 0
+    strong = int((card_display["recommendation"] == "STRONG BET").sum()) if not card_display.empty else 0
+    total_ev = card_display["ev_dollars"].dropna().sum() if not card_display.empty else 0
     positive_ev = display.loc[display["ev_dollars"] > 0, "ev_dollars"].dropna()
     avg_ev = positive_ev.mean() if not positive_ev.empty else 0
     bet_display = display[display.apply(_is_bet, axis=1)] if not display.empty else display
@@ -492,10 +495,10 @@ def _render_kpis(display: pd.DataFrame, total_fights: int | None = None) -> None
     with cols[0]:
         _metric_tile("Total Fights", str(total_fights), "Today / Upcoming", "#3b82f6")
     with cols[1]:
-        pct_card = f"{positive / displayed_fights:.0%} displayed" if displayed_fights else "0% displayed"
+        pct_card = f"{positive / total_fights:.0%} of card" if total_fights else "0% of card"
         _metric_tile("Positive EV Fights", str(positive), pct_card, "#35d96b")
     with cols[2]:
-        strong_card = f"{strong / displayed_fights:.0%} displayed" if displayed_fights else "0% displayed"
+        strong_card = f"{strong / total_fights:.0%} of card" if total_fights else "0% of card"
         _metric_tile("Strong Bets", str(strong), strong_card, "#35d96b")
     with cols[3]:
         _metric_tile("Total EV", _money(total_ev), "Across all fights", "#35d96b" if total_ev >= 0 else "#ef4444")
@@ -547,13 +550,6 @@ def _confidence_ring(confidence) -> str:
         f'<div>{confidence:.0f}%</div></div>'
     )
 
-def _confidence_ring(confidence) -> str:
-    confidence = _confidence_value(confidence) or 0
-    color = "#35d96b" if confidence >= 70 else "#facc15" if confidence >= 60 else "#ef4444"
-    return (
-        f'<div class="bb-ring" style="background: conic-gradient({color} {confidence:.0f}%, rgba(148,163,184,.24) 0);">'
-        f'<div>{confidence:.0f}%</div></div>'
-    )
 
 def _stake_text(row: pd.Series) -> str:
     if not _is_bet(row):
@@ -579,8 +575,8 @@ def _render_main_table(display: pd.DataFrame) -> None:
                     '<div class="bb-table-row">',
                     f'<div class="bb-rank">{idx + 1}</div>',
                     '<div class="bb-fight-cell">',
-                    _corner_html("R", row.get("red_fighter"), row.get("red_model_prob"), row.get("red_american_odds"), row.get("red_implied_prob"), row.get("red_edge"), row.get("red_ev"), "#ef4444"),
-                    _corner_html("B", row.get("blue_fighter"), row.get("blue_model_prob"), row.get("blue_american_odds"), row.get("blue_implied_prob"), row.get("blue_edge"), row.get("blue_ev"), "#3b82f6"),
+                    _corner_html("R", row.get("red_fighter"), row.get("red_model_prob"), row.get("red_american_odds"), row.get("red_implied_prob"), row.get("red_edge"), row.get("red_ev_dollars"), "#ef4444"),
+                    _corner_html("B", row.get("blue_fighter"), row.get("blue_model_prob"), row.get("blue_american_odds"), row.get("blue_implied_prob"), row.get("blue_edge"), row.get("blue_ev_dollars"), "#3b82f6"),
                     "</div>",
                     f'<div class="bb-confidence-cell">{_confidence_ring(row.get("best_confidence"))}</div>',
                     f'<div class="bb-rec" style="color:{rec_color};">{_escape(rec)}</div>',
@@ -638,11 +634,18 @@ def _render_top_ev(display: pd.DataFrame) -> None:
     )
 
 
+def _legend_labels(labels: list[str], values: list[int]) -> list[str]:
+    total = sum(values)
+    if total <= 0:
+        return [f"{label} (0%)" for label in labels]
+    return [f"{label} ({value / total:.0%})" for label, value in zip(labels, values)]
+
+
 def _donut(title: str, labels: list[str], values: list[int], colors: list[str], center: str) -> go.Figure:
     fig = go.Figure(
         data=[
             go.Pie(
-                labels=labels,
+                labels=_legend_labels(labels, values),
                 values=values,
                 hole=0.58,
                 marker={"colors": colors},
@@ -650,13 +653,22 @@ def _donut(title: str, labels: list[str], values: list[int], colors: list[str], 
             )
         ]
     )
-    fig.add_annotation(text=center, x=0.5, y=0.5, showarrow=False, font={"size": 18, "color": "#f5f7fb"})
+    fig.add_annotation(text=center, x=0.5, y=0.5, showarrow=False, font={"size": 13, "color": "#f5f7fb"})
+    fig = apply_plotly_theme(fig, height=245)
     fig.update_layout(
         title={"text": title, "font": {"color": "#f5f7fb", "size": 14}},
         showlegend=True,
-        legend={"font": {"color": "#f5f7fb"}},
+        legend={
+            "font": {"color": "#f5f7fb"},
+            "orientation": "v",
+            "x": 1.04,
+            "xanchor": "left",
+            "y": 0.5,
+            "yanchor": "middle",
+        },
+        margin={"l": 20, "r": 118, "t": 38, "b": 20},
     )
-    return apply_plotly_theme(fig, height=245)
+    return fig
 
 
 def _render_charts(display: pd.DataFrame) -> None:
@@ -667,7 +679,7 @@ def _render_charts(display: pd.DataFrame) -> None:
     neg = int((ev < 0).sum())
     ev_fig = _donut(
         "EV Distribution",
-        [f"Positive EV ({pos})", f"Break Even ({even})", f"Negative EV ({neg})"],
+        ["Positive EV", "Break Even", "Negative EV"],
         [pos, even, neg],
         ["#35d96b", "#9aa8bd", "#ef4444"],
         f"{total}<br>Total Fights",
@@ -679,7 +691,7 @@ def _render_charts(display: pd.DataFrame) -> None:
     low = int((conf < 60).sum())
     conf_fig = _donut(
         "Confidence Distribution",
-        [f"High (70%+) ({high})", f"Medium (60-70%) ({med})", f"Low (<60%) ({low})"],
+        ["High (70%+)", "Medium (60-70%)", "Low (<60%)"],
         [high, med, low],
         ["#35d96b", "#facc15", "#ef4444"],
         f"{total}<br>Total Fights",
@@ -817,7 +829,6 @@ def render_betting_board():
     scoped = _scope_board(raw_board, selected_event)
     display = _display_board(scoped, fights)
     card_display = display.copy()
-    card_fight_count = len(card_display)
     updated = _latest_timestamp(raw_board, events, fights)
 
     _render_header(updated, selected_event)
@@ -829,7 +840,7 @@ def render_betting_board():
     display = _apply_sidebar_filters(display)
     display = _apply_kelly_stakes(display)
 
-    _render_kpis(display, total_fights=card_fight_count)
+    _render_kpis(display, card_display=card_display)
     _render_event_bar(selected_event, display)
 
     _render_main_table(display)
