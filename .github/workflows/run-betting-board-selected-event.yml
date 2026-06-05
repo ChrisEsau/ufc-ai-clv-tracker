@@ -1,18 +1,18 @@
-name: Run Betting Board for Selected Event
+name: Run Betting Board for Upcoming Events
 
 on:
   workflow_dispatch:
     inputs:
       event_id:
-        description: "UFCStats event id to build predictions for"
-        required: true
+        description: "Optional UFCStats event id to preselect in the dashboard; workflow builds all upcoming fights"
+        required: false
         type: string
 
 permissions:
   contents: write
 
 jobs:
-  run-selected-event-betting-board:
+  run-upcoming-events-betting-board:
     runs-on: ubuntu-latest
 
     steps:
@@ -33,11 +33,9 @@ jobs:
         run: |
           python -m pipeline.prediction.run_refresh_upcoming_events
 
-      - name: Build selected live card
-        env:
-          EVENT_ID: ${{ github.event.inputs.event_id }}
+      - name: Build all upcoming live cards
         run: |
-          python -m pipeline.prediction.run_build_live_card --event-id "$EVENT_ID"
+          python -m pipeline.prediction.run_build_live_card --all-upcoming
 
       - name: Run model predictions
         run: |
@@ -75,5 +73,5 @@ jobs:
             data/audits/ufc_live_match_audit.parquet \
             data/audits/ufc_live_odds_audit.parquet
 
-          git commit -m "Run selected-event betting board artifacts" || echo "No changes to commit"
+          git commit -m "Run upcoming-events betting board artifacts" || echo "No changes to commit"
           git push

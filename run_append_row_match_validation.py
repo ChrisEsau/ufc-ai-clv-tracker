@@ -2,11 +2,12 @@ from datetime import datetime, timezone
 import pandas as pd
 import numpy as np
 
+from pipeline.common.paths import MASTER_PATH, STAGED_MASTER_ROWS_PATH
+
 
 BASE_PATH = "."
 
-MASTER_PATH = f"{BASE_PATH}/ufc_master.parquet"
-MAPPED_PATH = f"{BASE_PATH}/ufc_staged_master_rows.parquet"
+MAPPED_PATH = STAGED_MASTER_ROWS_PATH
 
 OUTPUT_PATH = f"{BASE_PATH}/ufc_append_row_match_validation.parquet"
 

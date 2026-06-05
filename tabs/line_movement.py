@@ -5,6 +5,11 @@ import plotly.graph_objects as go
 import streamlit.components.v1 as components
 
 from pipeline.common.paths import MARKET_SNAPSHOTS_PATH
+from utils.clv_artifacts import (
+    artifact_readiness_summary,
+    get_clv_artifact_status,
+    market_snapshot_coverage_summary,
+)
 from utils.data_loader import load_parquet
 from utils.ui_components import render_metric
 
@@ -15,13 +20,97 @@ from utils.panels import (
     render_status_pill,
 )
 
+
+def render_clv_artifact_health():
+    render_section_header("CLV Artifact Health")
+
+    status = get_clv_artifact_status()
+    summary = artifact_readiness_summary(status)
+
+    cols = st.columns(5)
+    cols[0].metric("Required ready", f"{summary['required_ready']} / {summary['required_total']}")
+    cols[1].metric("Missing required", summary["missing_required"])
+    cols[2].metric("Empty required", summary["empty_required"])
+    cols[3].metric("Optional missing", summary["optional_missing"])
+    cols[4].metric("Stale ready", summary["stale_ready_artifacts"])
+
+    if summary["ready_to_review"]:
+        st.success("Required CLV artifacts are present and non-empty.")
+    else:
+        st.warning("One or more required CLV artifacts are missing or empty. Run the market update / CLV workflows before trusting CLV output.")
+
+    display_cols = [
+        "artifact",
+        "required_for",
+        "health",
+        "freshness",
+        "optional",
+        "rows",
+        "size",
+        "age_hours",
+        "modified_utc",
+        "path",
+    ]
+    st.dataframe(status[display_cols], use_container_width=True, hide_index=True)
+
+
+def render_market_snapshot_coverage(snapshots):
+    render_section_header("Market Snapshot Coverage")
+
+    summary = market_snapshot_coverage_summary(snapshots)
+
+    cols = st.columns(4)
+    cols[0].metric("Snapshot rows", summary["snapshot_rows"])
+    cols[1].metric("Tracked fights", summary["unique_fights"])
+    cols[2].metric("Tracked events", summary["unique_events"])
+    cols[3].metric("Sportsbooks", summary["unique_sportsbooks"])
+
+    cols = st.columns(4)
+    cols[0].metric("Freshness", summary["freshness"])
+    snapshot_age = (
+        "n/a"
+        if summary["snapshot_age_hours"] is None
+        else f"{summary['snapshot_age_hours']:.2f}h"
+    )
+    cols[1].metric("Snapshot age", snapshot_age)
+    cols[2].metric("Matched rows", summary["matched_rows"])
+    cols[3].metric("Unmatched rows", summary["unmatched_rows"])
+
+    if summary["freshness"] == "fresh":
+        st.success("Market snapshots are fresh.")
+    elif summary["freshness"] == "aging":
+        st.warning("Market snapshots are aging. Consider refreshing market odds before making timing-sensitive decisions.")
+    elif summary["freshness"] == "stale":
+        st.error("Market snapshots are stale. Refresh market odds before trusting line movement or CLV output.")
+    else:
+        st.warning("Market snapshot freshness could not be determined.")
+
+    detail = pd.DataFrame([summary])
+    display_cols = [
+        "latest_snapshot",
+        "snapshot_age_hours",
+        "freshness",
+        "snapshot_rows",
+        "unique_events",
+        "unique_fights",
+        "unique_sportsbooks",
+        "matched_rows",
+        "unmatched_rows",
+        "missing_red_odds",
+        "missing_blue_odds",
+    ]
+    st.dataframe(detail[display_cols], use_container_width=True, hide_index=True)
+
+
 def render_line_movement():
     # ============================================================
     # LINE MOVEMENT / CLV SECTION
     # ============================================================
     render_section_header("Line Movement / CLV")
+    render_clv_artifact_health()
     
     snapshots = load_parquet(MARKET_SNAPSHOTS_PATH)
+    render_market_snapshot_coverage(snapshots)
     
     if snapshots.empty:
         st.info("No market snapshots found yet.")
