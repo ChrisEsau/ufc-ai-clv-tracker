@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+import plotly.express as px
 
 from pipeline.common.paths import BETTING_BOARD_PATH, LIVE_CARD_PATH, MASTER_PATH
 from utils.bankroll_artifacts import (
