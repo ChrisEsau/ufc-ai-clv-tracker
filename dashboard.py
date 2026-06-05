@@ -2,12 +2,6 @@
 # UFC BETTING INTELLIGENCE DASHBOARD
 # ============================================================
 
-import streamlit as st
-import pandas as pd
-import numpy as np
-import requests
-import streamlit.components.v1 as components
-import plotly.graph_objects as go
 
 from utils.theme import apply_theme
 from tabs.betting_board import render_betting_board
@@ -23,10 +17,6 @@ from utils.sidebar import render_sidebar
 
 apply_theme()
 
-#st.title("UFC Betting Intelligence Platform")
-#st.caption(
-#    "Model probability, market movement, EV, CLV, and betting decision intelligence."
-#)
 
 page = render_sidebar()
 
@@ -34,7 +24,7 @@ if page == "Betting Board":
     render_betting_board()
 elif page == "Line Movement / CLV":
     render_line_movement()
-elif page == "Bet Ledger / Bankroll":
+elif page in {"Bankroll", "Bet Ledger / Bankroll"}:
     render_bankroll()
 elif page == "Model Lab":
     render_model_lab()
