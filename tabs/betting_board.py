@@ -164,12 +164,23 @@ def _display_event_date(row: dict | pd.Series | None) -> str:
         return str(date)
     return parsed.strftime("%a, %b %-d, %Y")
 
+def _event_label(option: dict) -> str:
+    return _event_name(option) or "Unknown event"
 
 def _event_location(row: dict | pd.Series | None):
     if row is None:
         return None
     return row.get("ufcstats_event_location") or row.get("event_location")
 
+def _current_event(options: list[dict]) -> dict | None:
+    if not options:
+        return None
+    labels = [_event_label(option) for option in options]
+    current = st.session_state.get("betting_board_event_label")
+    if current not in labels:
+        current = labels[0]
+        st.session_state["betting_board_event_label"] = current
+    return options[labels.index(current)]
 
 def _event_options(events: pd.DataFrame, board: pd.DataFrame) -> list[dict]:
     options: list[dict] = []
