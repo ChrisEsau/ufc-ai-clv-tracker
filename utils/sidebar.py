@@ -23,22 +23,41 @@ def _sidebar_section(label: str) -> None:
 
 
 def _betting_board_event_names() -> list[str]:
-    """Return event filter choices from upcoming-card and betting-board artifacts."""
+    """Return event filter choices sorted by upcoming date, nearest first."""
 
-    names: list[str] = []
+    event_dates: dict[str, pd.Timestamp] = {}
     events, _ = load_upcoming_events()
     if events is not None and not events.empty:
-        for column in ["ufcstats_event_name", "event_name"]:
-            if column in events.columns:
-                names.extend(events[column].dropna().astype(str).tolist())
-                break
+        name_column = next(
+            (column for column in ["ufcstats_event_name", "event_name"] if column in events.columns),
+            None,
+        )
+        date_column = next(
+            (column for column in ["ufcstats_event_date", "event_date"] if column in events.columns),
+            None,
+        )
+        if name_column:
+            for _, row in events.iterrows():
+                name = str(row.get(name_column) or "").strip()
+                if not name:
+                    continue
+                parsed_date = pd.to_datetime(row.get(date_column), errors="coerce") if date_column else pd.NaT
+                current_date = event_dates.get(name, pd.NaT)
+                if pd.isna(current_date) or (not pd.isna(parsed_date) and parsed_date < current_date):
+                    event_dates[name] = parsed_date
 
     board = load_parquet(BETTING_BOARD_PATH)
     if board is not None and not board.empty and "event_name" in board.columns:
-        names.extend(board["event_name"].dropna().astype(str).tolist())
+        for name in board["event_name"].dropna().astype(str):
+            clean_name = name.strip()
+            if clean_name and clean_name not in event_dates:
+                event_dates[clean_name] = pd.NaT
 
-    unique = sorted({name for name in names if name.strip()})
-    return ["All Events", *unique]
+    sorted_events = sorted(
+        event_dates.items(),
+        key=lambda item: (pd.isna(item[1]), item[1] if not pd.isna(item[1]) else pd.Timestamp.max, item[0]),
+    )
+    return ["All Events", *[name for name, _ in sorted_events]]
 
 
 def _betting_board_date_bounds() -> tuple:
@@ -88,8 +107,8 @@ def _render_betting_board_filters() -> None:
     )
     st.sidebar.selectbox(
         "Min Model Confidence (%)",
-        [50, 60, 70, 75, 80, 85, 90],
-        index=2,
+        [0, 50, 60, 70, 75, 80, 85, 90],
+        index=3,
         key="bb_filter_min_confidence",
     )
     st.sidebar.toggle("Show Only Positive EV", value=True, key="bb_filter_positive_ev")

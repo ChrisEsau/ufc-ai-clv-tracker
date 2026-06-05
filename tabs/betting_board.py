@@ -91,6 +91,12 @@ def _american(value) -> str:
     rounded = int(round(value))
     return f"+{rounded}" if rounded > 0 else str(rounded)
 
+def _american(value) -> str:
+    value = _as_float(value)
+    if value is None or value == 0:
+        return "—"
+    rounded = int(round(value))
+    return f"+{rounded}" if rounded > 0 else str(rounded)
 
 def _confidence_value(value) -> float | None:
     value = _as_float(value)
@@ -164,23 +170,12 @@ def _display_event_date(row: dict | pd.Series | None) -> str:
         return str(date)
     return parsed.strftime("%a, %b %-d, %Y")
 
-def _event_label(option: dict) -> str:
-    return _event_name(option) or "Unknown event"
 
 def _event_location(row: dict | pd.Series | None):
     if row is None:
         return None
     return row.get("ufcstats_event_location") or row.get("event_location")
 
-def _current_event(options: list[dict]) -> dict | None:
-    if not options:
-        return None
-    labels = [_event_label(option) for option in options]
-    current = st.session_state.get("betting_board_event_label")
-    if current not in labels:
-        current = labels[0]
-        st.session_state["betting_board_event_label"] = current
-    return options[labels.index(current)]
 
 def _event_options(events: pd.DataFrame, board: pd.DataFrame) -> list[dict]:
     options: list[dict] = []
@@ -196,6 +191,14 @@ def _event_options(events: pd.DataFrame, board: pd.DataFrame) -> list[dict]:
                 options.append({"event_name": name, "ufcstats_event_name": name})
     return options
 
+def _display_event_date(row: dict | pd.Series | None) -> str:
+    date = _event_date(row)
+    if not date:
+        return "Date TBD"
+    parsed = pd.to_datetime(date, errors="coerce")
+    if pd.isna(parsed):
+        return str(date)
+    return parsed.strftime("%a, %b %-d, %Y")
 
 def _event_label(option: dict) -> str:
     return _event_name(option) or "Unknown event"
@@ -536,7 +539,7 @@ def _render_main_table(display: pd.DataFrame) -> None:
     table_html = "".join(
         [
             '<div class="bb-table">',
-            '<div class="bb-table-head"><span></span><div class="bb-fight-heading"><span></span><span>Fight</span><span>Model Probability</span><span>Market Odds</span><span>Implied</span><span>Edge</span><span>EV</span></div><span>Confidence</span><span>Recommendation</span><span>Suggested Stake<br>(Half Kelly)</span><span></span></div>',
+            '<div class="bb-table-head"><span class="bb-rank-head"></span><div class="bb-fight-heading"><span></span><span class="fight-label">Fight</span><span>Model<br>Prob.</span><span>Market<br>Odds</span><span>Implied<br>Prob.</span><span>Edge</span><span>EV ($)</span></div><span>Confidence</span><span>Recommendation</span><span>Suggested Stake<br>(Half Kelly)</span><span></span></div>',
             *rows,
             '<div class="bb-table-foot">',
             f'<span>{len(display)} fights</span>',
@@ -703,7 +706,9 @@ def _inject_betting_board_css() -> None:
         .bb-table { overflow:hidden; margin-top:.45rem; }
         .bb-table-head { display:grid; grid-template-columns:.28fr 4.82fr .9fr 1.15fr 1.1fr .2fr; gap:0; align-items:center; padding:.75rem 1rem; border-bottom:1px solid rgba(38,54,74,.95); color:#f5f7fb; font-size:.72rem; font-weight:900; text-transform:uppercase; }
         .bb-fight-heading { display:grid; grid-template-columns:1.45rem 1.9fr .8fr .8fr .85fr .75fr .75fr; align-items:center; gap:.35rem; }
-        .bb-fight-heading span:nth-child(n+3), .bb-table-head > span:nth-child(n+3) { text-align:center; }
+        .bb-fight-heading span { text-align:center; line-height:1.15; }
+        .bb-fight-heading .fight-label { text-align:left; }
+        .bb-table-head > span:nth-child(n+3) { text-align:center; line-height:1.15; }
         .bb-table-row { display:grid; grid-template-columns:.28fr 4.82fr .9fr 1.15fr 1.1fr .2fr; align-items:center; min-height:76px; padding:.45rem 1rem; border-bottom:1px solid rgba(38,54,74,.75); }
         .bb-rank, .bb-menu { color:#dbe7f5; font-size:.8rem; }
         .bb-fight-cell { display:flex; flex-direction:column; gap:.42rem; }
