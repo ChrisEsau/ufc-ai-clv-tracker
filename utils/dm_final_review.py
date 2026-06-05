@@ -3,6 +3,8 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from pipeline.common.booleans import coerce_bool
+
 from pipeline.common.paths import (
     APPEND_AUDIT_PATH,
     APPEND_PRECHECK_PATH,
@@ -92,7 +94,7 @@ def get_final_review_status():
     if "final_review_pass" not in final_review.columns:
         return False, final_review
 
-    final_review_pass = bool(final_review["final_review_pass"].iloc[0])
+    final_review_pass = coerce_bool(final_review["final_review_pass"].iloc[0])
 
     return final_review_pass, final_review
 
@@ -106,7 +108,7 @@ def get_append_precheck_status():
     if "append_ready" not in precheck.columns:
         return False, precheck
 
-    append_ready = bool(precheck["append_ready"].iloc[0])
+    append_ready = coerce_bool(precheck["append_ready"].iloc[0])
 
     return append_ready, precheck
 
@@ -151,9 +153,15 @@ def render_staged_event_summary(staged):
         st.warning("No profiled staged rows are available for review.")
         return
 
-    event_names = sorted(staged.get("event_name", pd.Series(dtype=object)).dropna().astype(str).unique())
-    event_ids = sorted(staged.get("event_id", pd.Series(dtype=object)).dropna().astype(str).unique())
-    dates = sorted(staged.get("date", pd.Series(dtype=object)).dropna().astype(str).unique())
+    event_names = sorted(
+        staged.get("event_name", pd.Series(dtype=object)).dropna().astype(str).unique()
+    )
+    event_ids = sorted(
+        staged.get("event_id", pd.Series(dtype=object)).dropna().astype(str).unique()
+    )
+    dates = sorted(
+        staged.get("date", pd.Series(dtype=object)).dropna().astype(str).unique()
+    )
     fighter_count = len(
         pd.concat(
             [
@@ -198,10 +206,7 @@ def render_staged_row_preview(staged=None):
         )
         return
 
-    display_cols = [
-        col for col in REVIEW_SUMMARY_COLUMNS
-        if col in staged.columns
-    ]
+    display_cols = [col for col in REVIEW_SUMMARY_COLUMNS if col in staged.columns]
 
     st.caption(f"Source: `{STAGED_MASTER_ROWS_PROFILED_PATH}`")
     st.dataframe(
@@ -250,7 +255,8 @@ def render_precheck_summary(append_ready, precheck):
     st.dataframe(summary, use_container_width=True, hide_index=True)
 
     display_cols = [
-        col for col in ["check_name", "severity", "status", "failure_count", "details"]
+        col
+        for col in ["check_name", "severity", "status", "failure_count", "details"]
         if col in precheck.columns
     ]
 
@@ -259,7 +265,9 @@ def render_precheck_summary(append_ready, precheck):
 
     if not failed.empty:
         with st.expander("Failed Append Precheck Checks", expanded=True):
-            st.dataframe(failed[display_cols], use_container_width=True, hide_index=True)
+            st.dataframe(
+                failed[display_cols], use_container_width=True, hide_index=True
+            )
 
     return failed
 
@@ -314,7 +322,8 @@ def render_final_review_summary(final_review_pass, final_review):
     st.dataframe(summary, use_container_width=True, hide_index=True)
 
     display_cols = [
-        col for col in ["check_name", "severity", "status", "failure_count", "details"]
+        col
+        for col in ["check_name", "severity", "status", "failure_count", "details"]
         if col in final_review.columns
     ]
 
