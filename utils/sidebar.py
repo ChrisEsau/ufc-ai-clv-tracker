@@ -111,6 +111,12 @@ def _render_betting_board_filters() -> None:
         index=3,
         key="bb_filter_min_confidence",
     )
+    st.sidebar.radio(
+        "Kelly Stake Sizing",
+        ["1/2 Kelly", "1/4 Kelly"],
+        horizontal=True,
+        key="bb_kelly_mode",
+    )
     st.sidebar.toggle("Show Only Positive EV", value=True, key="bb_filter_positive_ev")
     st.sidebar.toggle("Hide Fights Without Odds", value=True, key="bb_filter_hide_missing_odds")
 

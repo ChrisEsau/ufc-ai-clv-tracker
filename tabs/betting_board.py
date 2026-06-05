@@ -170,12 +170,20 @@ def _display_event_date(row: dict | pd.Series | None) -> str:
         return str(date)
     return parsed.strftime("%a, %b %-d, %Y")
 
+def _event_id(row: dict | pd.Series | None):
+    if row is None:
+        return None
+    return row.get("ufcstats_event_id") or row.get("event_id")
 
 def _event_location(row: dict | pd.Series | None):
     if row is None:
         return None
     return row.get("ufcstats_event_location") or row.get("event_location")
 
+def _event_name(row: dict | pd.Series | None):
+    if row is None:
+        return None
+    return row.get("ufcstats_event_name") or row.get("event_name")
 
 def _event_options(events: pd.DataFrame, board: pd.DataFrame) -> list[dict]:
     options: list[dict] = []
@@ -191,14 +199,6 @@ def _event_options(events: pd.DataFrame, board: pd.DataFrame) -> list[dict]:
                 options.append({"event_name": name, "ufcstats_event_name": name})
     return options
 
-def _display_event_date(row: dict | pd.Series | None) -> str:
-    date = _event_date(row)
-    if not date:
-        return "Date TBD"
-    parsed = pd.to_datetime(date, errors="coerce")
-    if pd.isna(parsed):
-        return str(date)
-    return parsed.strftime("%a, %b %-d, %Y")
 
 def _event_label(option: dict) -> str:
     return _event_name(option) or "Unknown event"
@@ -354,6 +354,30 @@ def _date_range_mask(display: pd.DataFrame) -> pd.Series:
     return dates.between(start, end) | dates.isna()
 
 
+def _kelly_multiplier() -> float:
+    return 0.25 if st.session_state.get("bb_kelly_mode") == "1/4 Kelly" else 0.50
+
+
+def _kelly_stake(row: pd.Series, bankroll: float = 10_000.0) -> float:
+    probability = _probability(row.get("best_prob"))
+    american_odds = _as_float(row.get("best_american_odds"))
+    if probability is None or american_odds is None or american_odds == 0:
+        return 0.0
+    b = american_odds / 100 if american_odds > 0 else 100 / abs(american_odds)
+    if b <= 0:
+        return 0.0
+    full_kelly = max(0.0, ((b * probability) - (1 - probability)) / b)
+    return round(bankroll * full_kelly * _kelly_multiplier())
+
+
+def _apply_kelly_stakes(display: pd.DataFrame) -> pd.DataFrame:
+    if display.empty:
+        return display
+    adjusted = display.copy()
+    adjusted["recommended_stake"] = adjusted.apply(_kelly_stake, axis=1)
+    return adjusted
+
+
 def _apply_sidebar_filters(display: pd.DataFrame) -> pd.DataFrame:
     if display.empty:
         return display
@@ -414,22 +438,23 @@ def _render_header(updated_label: str | None, selected_event: dict | None) -> No
         with action_cols[1]:
             event_id = _event_id(selected_event)
             disabled = not bool(event_id)
-            if st.button("↻ Refresh Data", type="primary", use_container_width=True, disabled=disabled):
+            button_label = "↻ Running..." if st.session_state.get("bb_refresh_running") else "↻ Refresh Data"
+            if st.button(button_label, type="primary", use_container_width=True, disabled=disabled):
                 ok, msg = trigger_workflow(
                     SELECTED_EVENT_WORKFLOW,
                     inputs={"event_id": str(event_id)},
                 )
                 if ok:
+                    st.session_state["bb_refresh_running"] = True
                     remember_launched_workflow(
                         "betting_selected_event",
                         "Refresh Betting Board Data",
                         SELECTED_EVENT_WORKFLOW,
                         inputs={"event_id": str(event_id)},
                     )
-                    st.success(msg)
+                    st.rerun()
                 else:
                     st.error(msg)
-    render_workflow_status("betting_selected_event")
 
 
 def _render_kpis(display: pd.DataFrame) -> None:
@@ -539,7 +564,7 @@ def _render_main_table(display: pd.DataFrame) -> None:
     table_html = "".join(
         [
             '<div class="bb-table">',
-            '<div class="bb-table-head"><span class="bb-rank-head"></span><div class="bb-fight-heading"><span></span><span class="fight-label">Fight</span><span>Model<br>Prob.</span><span>Market<br>Odds</span><span>Implied<br>Prob.</span><span>Edge</span><span>EV ($)</span></div><span>Confidence</span><span>Recommendation</span><span>Suggested Stake<br>(Half Kelly)</span><span></span></div>',
+            f'<div class="bb-table-head"><span class="bb-rank-head"></span><div class="bb-fight-heading"><span></span><span class="fight-label">Fight</span><span>Model<br>Prob.</span><span>Market<br>Odds</span><span>Implied<br>Prob.</span><span>Edge</span><span>EV ($)</span></div><span>Confidence</span><span>Recommendation</span><span>Suggested Stake<br>({_escape(st.session_state.get("bb_kelly_mode", "1/2 Kelly"))})</span><span></span></div>',
             *rows,
             '<div class="bb-table-foot">',
             f'<span>{len(display)} fights</span>',
@@ -594,7 +619,7 @@ def _donut(title: str, labels: list[str], values: list[int], colors: list[str], 
         ]
     )
     fig.add_annotation(text=center, x=0.5, y=0.5, showarrow=False, font={"size": 18, "color": "#f5f7fb"})
-    fig.update_layout(title=title, showlegend=True)
+    fig.update_layout(title={"text": title, "font": {"color": "#f5f7fb", "size": 14}}, showlegend=True)
     return apply_plotly_theme(fig, height=245)
 
 
@@ -630,27 +655,24 @@ def _render_charts(display: pd.DataFrame) -> None:
 def _render_bottom(display: pd.DataFrame) -> None:
     cols = st.columns([1.25, 1, 1])
     with cols[0]:
-        st.html('<div class="bb-panel">')
-        _render_top_ev(display)
-        st.html("</div>")
+        with st.container(border=True):
+            _render_top_ev(display)
     with cols[1]:
-        st.html('<div class="bb-panel">')
-        ev = display["ev_dollars"] if not display.empty else pd.Series(dtype=float)
-        pos = int((ev > 0).sum())
-        even = int((ev == 0).sum())
-        neg = int((ev < 0).sum())
-        fig = _donut("EV Distribution", ["Positive EV", "Break Even", "Negative EV"], [pos, even, neg], ["#35d96b", "#9aa8bd", "#ef4444"], f"{len(display)}<br>Total Fights")
-        st.plotly_chart(fig, use_container_width=True)
-        st.html("</div>")
+        with st.container(border=True):
+            ev = display["ev_dollars"] if not display.empty else pd.Series(dtype=float)
+            pos = int((ev > 0).sum())
+            even = int((ev == 0).sum())
+            neg = int((ev < 0).sum())
+            fig = _donut("EV Distribution", ["Positive EV", "Break Even", "Negative EV"], [pos, even, neg], ["#35d96b", "#9aa8bd", "#ef4444"], f"{len(display)}<br>Total Fights")
+            st.plotly_chart(fig, use_container_width=True)
     with cols[2]:
-        st.html('<div class="bb-panel">')
-        conf = display["confidence_pct"] if not display.empty else pd.Series(dtype=float)
-        high = int((conf >= 70).sum())
-        med = int(((conf >= 60) & (conf < 70)).sum())
-        low = int((conf < 60).sum())
-        fig = _donut("Confidence Distribution", ["High", "Medium", "Low"], [high, med, low], ["#35d96b", "#facc15", "#ef4444"], f"{len(display)}<br>Total Fights")
-        st.plotly_chart(fig, use_container_width=True)
-        st.html("</div>")
+        with st.container(border=True):
+            conf = display["confidence_pct"] if not display.empty else pd.Series(dtype=float)
+            high = int((conf >= 70).sum())
+            med = int(((conf >= 60) & (conf < 70)).sum())
+            low = int((conf < 60).sum())
+            fig = _donut("Confidence Distribution", ["High", "Medium", "Low"], [high, med, low], ["#35d96b", "#facc15", "#ef4444"], f"{len(display)}<br>Total Fights")
+            st.plotly_chart(fig, use_container_width=True)
 
 
 def _render_artifacts_link() -> None:
@@ -708,7 +730,8 @@ def _inject_betting_board_css() -> None:
         .bb-fight-heading { display:grid; grid-template-columns:1.45rem 1.9fr .8fr .8fr .85fr .75fr .75fr; align-items:center; gap:.35rem; }
         .bb-fight-heading span { text-align:center; line-height:1.15; }
         .bb-fight-heading .fight-label { text-align:left; }
-        .bb-table-head > span:nth-child(n+3) { text-align:center; line-height:1.15; }
+        .bb-table-head > span:nth-child(n+3) { text-align:center; line-height:1.15; display:flex; align-items:center; justify-content:center; min-height:2.1rem; }
+        .bb-table-head > span:nth-child(5) { padding-right:.35rem; }
         .bb-table-row { display:grid; grid-template-columns:.28fr 4.82fr .9fr 1.15fr 1.1fr .2fr; align-items:center; min-height:76px; padding:.45rem 1rem; border-bottom:1px solid rgba(38,54,74,.75); }
         .bb-rank, .bb-menu { color:#dbe7f5; font-size:.8rem; }
         .bb-fight-cell { display:flex; flex-direction:column; gap:.42rem; }
@@ -763,6 +786,7 @@ def render_betting_board():
         st.warning(fights_error)
 
     display = _apply_sidebar_filters(display)
+    display = _apply_kelly_stakes(display)
 
     _render_kpis(display)
     _render_event_bar(selected_event, display)

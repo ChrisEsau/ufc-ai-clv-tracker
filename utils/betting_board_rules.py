@@ -44,7 +44,7 @@ class BettingRules:
     watchlist_high_ev_override: float = 0.25
     bankroll: float = 10000.0
     kelly_fraction: float = 0.50
-    max_stake_pct: float = 0.03
+    max_stake_pct: float = 1.0
     min_stake: float = 0.0
     stake_rounding: float = 1.0
 
