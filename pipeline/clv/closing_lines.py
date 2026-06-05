@@ -26,6 +26,36 @@ CLOSING_LINE_COLUMNS = [
 ]
 
 
+def _select_closing_row(group: pd.DataFrame) -> pd.Series:
+    """Select the most reliable closing row for one fighter/book/market group."""
+
+    ordered = group.sort_values("snapshot_timestamp").copy()
+    has_commence = ordered["commence_time"].notna()
+    if has_commence.any():
+        pre_fight = ordered[ordered["snapshot_timestamp"] <= ordered["commence_time"]]
+        if not pre_fight.empty:
+            selected = pre_fight.iloc[-1].copy()
+            minutes = (selected["commence_time"] - selected["snapshot_timestamp"]).total_seconds() / 60
+            selected["minutes_before_fight"] = minutes
+            selected["is_true_closing_window"] = bool(0 <= minutes <= 60)
+            selected["closing_line_status"] = "true_close_window" if selected["is_true_closing_window"] else "latest_pre_fight_snapshot"
+            return selected
+
+        selected = ordered.iloc[-1].copy()
+        commence_time = ordered["commence_time"].dropna().iloc[-1]
+        selected["commence_time"] = commence_time
+        selected["minutes_before_fight"] = (commence_time - selected["snapshot_timestamp"]).total_seconds() / 60
+        selected["is_true_closing_window"] = False
+        selected["closing_line_status"] = "post_fight_fallback"
+        return selected
+
+    selected = ordered.iloc[-1].copy()
+    selected["minutes_before_fight"] = pd.NA
+    selected["is_true_closing_window"] = False
+    selected["closing_line_status"] = "missing_commence_time"
+    return selected
+
+
 def build_closing_lines(normalized_snapshots: pd.DataFrame | None) -> pd.DataFrame:
     """Extract latest available pre-fight line for each fighter/book/market."""
 
@@ -43,33 +73,14 @@ def build_closing_lines(normalized_snapshots: pd.DataFrame | None) -> pd.DataFra
     if snapshots.empty:
         return empty_frame(CLOSING_LINE_COLUMNS)
 
-    pre_fight = snapshots[
-        snapshots["commence_time"].isna() | (snapshots["snapshot_timestamp"] <= snapshots["commence_time"])
-    ].copy()
-    if pre_fight.empty:
-        pre_fight = snapshots.copy()
-
     group_cols = ["fight_id", "fighter_id", "sportsbook", "market_type"]
-    closing = (
-        pre_fight.sort_values("snapshot_timestamp")
-        .groupby(group_cols, dropna=False)
-        .tail(1)
-        .copy()
-    )
+    closing = pd.DataFrame([_select_closing_row(group) for _, group in snapshots.groupby(group_cols, dropna=False)])
     closing = closing.rename(
         columns={
             "snapshot_timestamp": "closing_timestamp",
             "american_odds": "closing_odds",
             "implied_prob": "closing_implied_prob",
         }
-    )
-
-    closing["minutes_before_fight"] = (
-        closing["commence_time"] - closing["closing_timestamp"]
-    ).dt.total_seconds() / 60
-    closing["is_true_closing_window"] = closing["minutes_before_fight"].le(60).fillna(False)
-    closing["closing_line_status"] = closing["is_true_closing_window"].map(
-        {True: "true_close_window", False: "latest_pre_fight_snapshot"}
     )
 
     for column in CLOSING_LINE_COLUMNS:

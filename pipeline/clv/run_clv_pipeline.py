@@ -14,13 +14,20 @@ import pandas as pd
 from pipeline.clv.closing_lines import CLOSING_LINE_COLUMNS, build_closing_lines
 from pipeline.clv.clv_results import CLV_RESULT_COLUMNS, build_clv_results
 from pipeline.clv.line_movement import LINE_MOVEMENT_COLUMNS, build_line_movement
-from pipeline.clv.market_normalization import normalize_market_snapshots
+from pipeline.clv.market_normalization import (
+    MARKET_NORMALIZATION_AUDIT_COLUMNS,
+    NORMALIZED_MARKET_COLUMNS,
+    build_market_normalization_audit,
+    normalize_market_snapshots,
+)
 from pipeline.common.paths import (
     BET_LEDGER_PATH,
     CLOSING_LINES_PATH,
+    CLV_MARKET_NORMALIZATION_AUDIT_PATH,
     CLV_RESULTS_PATH,
     LINE_MOVEMENT_PATH,
     MARKET_SNAPSHOTS_PATH,
+    NORMALIZED_MARKET_SNAPSHOTS_PATH,
     ensure_data_dirs,
 )
 from utils.bankroll_artifacts import load_bet_ledger
@@ -48,17 +55,21 @@ def main() -> None:
     ledger = load_bet_ledger() if BET_LEDGER_PATH.exists() else pd.DataFrame()
 
     normalized_snapshots = normalize_market_snapshots(market_snapshots)
+    normalization_audit = build_market_normalization_audit(market_snapshots, normalized_snapshots)
     closing_lines = build_closing_lines(normalized_snapshots)
     line_movement = build_line_movement(normalized_snapshots)
     clv_results = build_clv_results(ledger, closing_lines)
 
+    _write_parquet(normalized_snapshots, NORMALIZED_MARKET_SNAPSHOTS_PATH, NORMALIZED_MARKET_COLUMNS)
+    _write_parquet(normalization_audit, CLV_MARKET_NORMALIZATION_AUDIT_PATH, MARKET_NORMALIZATION_AUDIT_COLUMNS)
     _write_parquet(closing_lines, CLOSING_LINES_PATH, CLOSING_LINE_COLUMNS)
     _write_parquet(line_movement, LINE_MOVEMENT_PATH, LINE_MOVEMENT_COLUMNS)
     _write_parquet(clv_results, CLV_RESULTS_PATH, CLV_RESULT_COLUMNS)
 
     print("========== UFC CLV PIPELINE ==========")
     print(f"Market snapshots loaded: {len(market_snapshots)}")
-    print(f"Normalized market rows: {len(normalized_snapshots)}")
+    print(f"Normalized market rows written: {len(normalized_snapshots)} -> {NORMALIZED_MARKET_SNAPSHOTS_PATH}")
+    print(f"Market normalization audit written: {CLV_MARKET_NORMALIZATION_AUDIT_PATH}")
     print(f"Ledger bets loaded: {len(ledger)}")
     print(f"Closing lines written: {len(closing_lines)} -> {CLOSING_LINES_PATH}")
     print(f"Line movement rows written: {len(line_movement)} -> {LINE_MOVEMENT_PATH}")

@@ -39,6 +39,8 @@ jobs:
 
           git add -f \
             data/market/ufc_market_snapshots.parquet \
+            data/market/ufc_normalized_market_snapshots.parquet \
+            data/audits/ufc_clv_market_normalization_audit.parquet \
             data/market/ufc_closing_lines.parquet \
             data/market/ufc_clv_results.parquet \
             data/market/ufc_line_movement.parquet
