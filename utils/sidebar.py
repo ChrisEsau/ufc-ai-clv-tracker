@@ -291,6 +291,9 @@ def render_sidebar():
         if st.sidebar.button("◎  Settle Bet", use_container_width=True):
             st.session_state["bankroll_dialog"] = "settle"
             st.rerun()
+        if st.sidebar.button("⚙  Risk Settings", use_container_width=True):
+            st.session_state["bankroll_dialog"] = "risk"
+            st.rerun()
         ledger = load_bet_ledger()
         st.sidebar.download_button(
             "⇩  Export Ledger",
