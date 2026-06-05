@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import html
-from datetime import datetime
-from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -42,6 +41,10 @@ def _escape(value) -> str:
         return "—"
     return html.escape(str(value))
 
+def _escape(value) -> str:
+    if pd.isna(value):
+        return "—"
+    return html.escape(str(value))
 
 def _as_float(value, default=None):
     value = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
@@ -49,6 +52,11 @@ def _as_float(value, default=None):
         return default
     return float(value)
 
+def _as_float(value, default=None):
+    value = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+    if pd.isna(value):
+        return default
+    return float(value)
 
 def _money(value, decimals: int = 0) -> str:
     value = _as_float(value)
@@ -57,6 +65,12 @@ def _money(value, decimals: int = 0) -> str:
     prefix = "-$" if value < 0 else "$"
     return f"{prefix}{abs(value):,.{decimals}f}"
 
+def _money(value, decimals: int = 0) -> str:
+    value = _as_float(value)
+    if value is None:
+        return "—"
+    prefix = "-$" if value < 0 else "$"
+    return f"{prefix}{abs(value):,.{decimals}f}"
 
 def _signed_money(value, decimals: int = 0) -> str:
     value = _as_float(value)
@@ -129,8 +143,8 @@ def _latest_timestamp(*frames: pd.DataFrame) -> str | None:
                 candidates.append(parsed.max())
     if not candidates:
         return None
-    latest = max(candidates)
-    return f"Last Updated: {latest.strftime('%b %-d, %Y %I:%M %p UTC')}"
+    latest = max(candidates).tz_convert(ZoneInfo("America/Chicago"))
+    return f"Last Updated: {latest.strftime('%b %-d, %Y %I:%M %p %Z')}"
 
 
 # -----------------------------------------------------------------------------
@@ -155,6 +169,24 @@ def _event_date(row: dict | pd.Series | None):
         return None
     return row.get("ufcstats_event_date") or row.get("event_date")
 
+def _event_date(row: dict | pd.Series | None):
+    if row is None:
+        return None
+    return row.get("ufcstats_event_date") or row.get("event_date")
+
+def _display_event_date(row: dict | pd.Series | None) -> str:
+    date = _event_date(row)
+    if not date:
+        return "Date TBD"
+    parsed = pd.to_datetime(date, errors="coerce")
+    if pd.isna(parsed):
+        return str(date)
+    return parsed.strftime("%a, %b %-d, %Y")
+
+def _event_location(row: dict | pd.Series | None):
+    if row is None:
+        return None
+    return row.get("ufcstats_event_location") or row.get("event_location")
 
 def _event_location(row: dict | pd.Series | None):
     if row is None:
@@ -178,9 +210,7 @@ def _event_options(events: pd.DataFrame, board: pd.DataFrame) -> list[dict]:
 
 
 def _event_label(option: dict) -> str:
-    date = _event_date(option)
-    name = _event_name(option) or "Unknown event"
-    return f"{date} — {name}" if date else name
+    return _event_name(option) or "Unknown event"
 
 
 def _current_event(options: list[dict]) -> dict | None:
@@ -324,15 +354,16 @@ def _metric_tile(label: str, value: str, caption: str, color: str = "#f5f7fb") -
 
 
 def _render_header(updated_label: str | None, selected_event: dict | None) -> None:
-    top_cols = st.columns([1, 0.42])
+    top_cols = st.columns([1, 0.62])
     with top_cols[0]:
         page_header("Betting Board", "Live fight predictions and betting opportunities")
     with top_cols[1]:
-        st.html(
-            f'<div class="bb-top-actions"><span>{html.escape(updated_label or "Artifacts not refreshed yet")}</span></div>'
-        )
-        button_cols = st.columns([0.35, 0.65])
-        with button_cols[1]:
+        action_cols = st.columns([0.58, 0.42], vertical_alignment="center")
+        with action_cols[0]:
+            st.html(
+                f'<div class="bb-top-actions"><span>{html.escape(updated_label or "Artifacts not refreshed yet")}</span></div>'
+            )
+        with action_cols[1]:
             event_id = _event_id(selected_event)
             disabled = not bool(event_id)
             if st.button("↻ Refresh Data", type="primary", use_container_width=True, disabled=disabled):
@@ -381,19 +412,14 @@ def _render_kpis(display: pd.DataFrame) -> None:
 
 def _render_event_bar(selected_event: dict | None, options: list[dict]) -> dict | None:
     with st.container():
-        cols = st.columns([1.55, 0.5, 0.65, 0.95])
+        cols = st.columns([1.7, 0.48, 0.86])
         with cols[0]:
             selected_event = _selected_event(options)
         with cols[1]:
-            date = _event_date(selected_event) or "Date TBD"
-            st.html(f'<div class="bb-event-meta">📅 {_escape(date)}</div>')
+            st.html(f'<div class="bb-event-meta">📅 {_escape(_display_event_date(selected_event))}</div>')
         with cols[2]:
             location = _event_location(selected_event) or "Location TBD"
             st.html(f'<div class="bb-event-meta">📍 {_escape(location)}</div>')
-        with cols[3]:
-            if st.button("Artifacts & audits →", use_container_width=True):
-                st.session_state["betting_board_view"] = "diagnostics"
-                st.rerun()
     return selected_event
 
 
@@ -460,7 +486,7 @@ def _render_main_table(display: pd.DataFrame) -> None:
     table_html = "".join(
         [
             '<div class="bb-table">',
-            '<div class="bb-table-head"><span>Fight</span><span>Model Probability / Market Odds / Implied / Edge / EV</span><span>Confidence</span><span>Recommendation</span><span>Suggested Stake<br>(Half Kelly)</span><span></span></div>',
+            '<div class="bb-table-head"><span></span><div class="bb-fight-heading"><span></span><span>Fight</span><span>Model Probability</span><span>Market Odds</span><span>Implied</span><span>Edge</span><span>EV</span></div><span>Confidence</span><span>Recommendation</span><span>Suggested Stake<br>(Half Kelly)</span><span></span></div>',
             *rows,
             '<div class="bb-table-foot">',
             f'<span>{len(display)} fights</span>',
@@ -574,10 +600,18 @@ def _render_bottom(display: pd.DataFrame) -> None:
         st.html("</div>")
 
 
+def _render_artifacts_link() -> None:
+    st.markdown(
+        '<div class="bb-artifact-link-wrap"><a href="?betting_board_view=diagnostics" target="_self">Artifacts & audits →</a></div>',
+        unsafe_allow_html=True,
+    )
+
+
 def _render_diagnostics() -> None:
     page_header("Betting Board Diagnostics", "Artifacts, audits, and workflow status")
     if st.button("← Back to Betting Board"):
         st.session_state["betting_board_view"] = "board"
+        st.query_params.clear()
         st.rerun()
 
     status = pd.concat(
@@ -601,9 +635,9 @@ def _inject_betting_board_css() -> None:
     st.markdown(
         """
         <style>
-        .bb-top-actions { display:flex; justify-content:flex-end; align-items:center; color:#dbe7f5; font-size:.8rem; padding-top:.18rem; }
+        .bb-top-actions { display:flex; justify-content:flex-end; align-items:center; color:#dbe7f5; font-size:.78rem; line-height:1; white-space:nowrap; }
         div[data-testid="stSelectbox"] [data-baseweb="select"] > div { background:linear-gradient(180deg, rgba(16,28,45,.92), rgba(13,23,39,.94)); border:1px solid rgba(38,54,74,.96); border-radius:10px; min-height:2.9rem; color:#f5f7fb; }
-        div[data-testid="stSelectbox"] [data-baseweb="select"] span { color:#f5f7fb; font-weight:900; }
+        div[data-testid="stSelectbox"] [data-baseweb="select"] span { color:#f5f7fb; font-size:.95rem; font-weight:900; letter-spacing:-.01em; }
         .bb-metric-card, .bb-panel, .bb-table, .bb-event-title, .bb-event-meta { background:linear-gradient(180deg, rgba(16,28,45,.92), rgba(13,23,39,.94)); border:1px solid rgba(38,54,74,.96); border-radius:10px; }
         .bb-metric-card { min-height:98px; text-align:center; padding:1rem .75rem; }
         .bb-metric-label { color:#f5f7fb; font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.04em; }
@@ -612,7 +646,9 @@ def _inject_betting_board_css() -> None:
         .bb-event-title { color:#f5f7fb; font-weight:900; font-size:1.05rem; padding:.72rem 1rem; min-height:2.9rem; }
         .bb-event-meta { color:#dbe7f5; font-size:.82rem; padding:.82rem .85rem; min-height:2.9rem; }
         .bb-table { overflow:hidden; margin-top:.45rem; }
-        .bb-table-head { display:grid; grid-template-columns: 2.1fr 3fr .9fr 1.15fr 1.1fr .2fr; gap:0; padding:.75rem 1rem; border-bottom:1px solid rgba(38,54,74,.95); color:#f5f7fb; font-size:.72rem; font-weight:900; text-transform:uppercase; }
+        .bb-table-head { display:grid; grid-template-columns:.28fr 4.82fr .9fr 1.15fr 1.1fr .2fr; gap:0; align-items:center; padding:.75rem 1rem; border-bottom:1px solid rgba(38,54,74,.95); color:#f5f7fb; font-size:.72rem; font-weight:900; text-transform:uppercase; }
+        .bb-fight-heading { display:grid; grid-template-columns:1.45rem 1.9fr .8fr .8fr .85fr .75fr .75fr; align-items:center; gap:.35rem; }
+        .bb-fight-heading span:nth-child(n+3), .bb-table-head > span:nth-child(n+3) { text-align:center; }
         .bb-table-row { display:grid; grid-template-columns:.28fr 4.82fr .9fr 1.15fr 1.1fr .2fr; align-items:center; min-height:76px; padding:.45rem 1rem; border-bottom:1px solid rgba(38,54,74,.75); }
         .bb-rank, .bb-menu { color:#dbe7f5; font-size:.8rem; }
         .bb-fight-cell { display:flex; flex-direction:column; gap:.42rem; }
@@ -632,6 +668,9 @@ def _inject_betting_board_css() -> None:
         .bb-panel { padding:.9rem 1rem; min-height:225px; margin-top:.65rem; }
         .bb-panel-title { color:#f5f7fb; font-weight:900; text-transform:uppercase; font-size:.78rem; margin-bottom:.65rem; }
         .bb-mini-table { width:100%; border-collapse:collapse; color:#f5f7fb; font-size:.76rem; } .bb-mini-table th { color:#dbe7f5; text-align:left; text-transform:uppercase; font-size:.68rem; padding:.35rem; } .bb-mini-table td { padding:.42rem .35rem; border-top:1px solid rgba(38,54,74,.65); }
+        .bb-artifact-link-wrap { display:flex; justify-content:flex-end; margin-top:.45rem; font-size:.72rem; }
+        .bb-artifact-link-wrap a { color:#8fb4ff; text-decoration:none; }
+        .bb-artifact-link-wrap a:hover { color:#dbe7f5; text-decoration:underline; }
         </style>
         """,
         unsafe_allow_html=True,
@@ -640,6 +679,9 @@ def _inject_betting_board_css() -> None:
 
 def render_betting_board():
     _inject_betting_board_css()
+
+    if st.query_params.get("betting_board_view") == "diagnostics":
+        st.session_state["betting_board_view"] = "diagnostics"
 
     if st.session_state.get("betting_board_view") == "diagnostics":
         _render_diagnostics()
@@ -667,3 +709,4 @@ def render_betting_board():
 
     _render_main_table(display)
     _render_bottom(display)
+    _render_artifacts_link()
