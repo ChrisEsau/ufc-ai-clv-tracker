@@ -91,6 +91,12 @@ def _american(value) -> str:
     rounded = int(round(value))
     return f"+{rounded}" if rounded > 0 else str(rounded)
 
+def _american(value) -> str:
+    value = _as_float(value)
+    if value is None or value == 0:
+        return "—"
+    rounded = int(round(value))
+    return f"+{rounded}" if rounded > 0 else str(rounded)
 
 def _confidence_value(value) -> float | None:
     value = _as_float(value)
@@ -164,12 +170,20 @@ def _display_event_date(row: dict | pd.Series | None) -> str:
         return str(date)
     return parsed.strftime("%a, %b %-d, %Y")
 
+def _event_id(row: dict | pd.Series | None):
+    if row is None:
+        return None
+    return row.get("ufcstats_event_id") or row.get("event_id")
 
 def _event_location(row: dict | pd.Series | None):
     if row is None:
         return None
     return row.get("ufcstats_event_location") or row.get("event_location")
 
+def _event_name(row: dict | pd.Series | None):
+    if row is None:
+        return None
+    return row.get("ufcstats_event_name") or row.get("event_name")
 
 def _event_options(events: pd.DataFrame, board: pd.DataFrame) -> list[dict]:
     options: list[dict] = []
