@@ -101,6 +101,7 @@ OFFICIAL_BETS_PATH = PREDICTIONS_DIR / "ufc_official_bets.parquet"
 
 MARKET_ODDS_PATH = MARKET_DIR / "ufc_market_odds.parquet"
 MARKET_SNAPSHOTS_PATH = MARKET_DIR / "ufc_market_snapshots.parquet"
+NORMALIZED_MARKET_SNAPSHOTS_PATH = MARKET_DIR / "ufc_normalized_market_snapshots.parquet"
 MARKET_MATCH_AUDIT_PATH = MARKET_DIR / "ufc_market_match_audit.parquet"
 CLOSING_LINES_PATH = MARKET_DIR / "ufc_closing_lines.parquet"
 LINE_MOVEMENT_PATH = MARKET_DIR / "ufc_line_movement.parquet"
@@ -109,6 +110,7 @@ CLV_RESULTS_PATH = MARKET_DIR / "ufc_clv_results.parquet"
 LIVE_FEATURE_AUDIT_PATH = AUDITS_DIR / "ufc_live_feature_audit.parquet"
 LIVE_MATCH_AUDIT_PATH = AUDITS_DIR / "ufc_live_match_audit.parquet"
 LIVE_ODDS_AUDIT_PATH = AUDITS_DIR / "ufc_live_odds_audit.parquet"
+CLV_MARKET_NORMALIZATION_AUDIT_PATH = AUDITS_DIR / "ufc_clv_market_normalization_audit.parquet"
 
 # ============================================================
 # BANKROLL ARTIFACTS
