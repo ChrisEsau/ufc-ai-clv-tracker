@@ -112,18 +112,19 @@ The Betting Board now treats the target card as a selectable upstream artifact i
 
 1. `run-refresh-upcoming-events.yml` runs `python -m pipeline.prediction.run_refresh_upcoming_events` to scrape the UFCStats upcoming-events page and each upcoming event detail page.
 2. The refresh runner writes `data/cards/ufcstats_upcoming_events.parquet` and `data/cards/ufcstats_upcoming_fights.parquet`.
-3. The Betting Board tab reads those card artifacts and lets the operator select one UFCStats event id.
-4. `run-betting-board-selected-event.yml` rebuilds `data/predictions/ufc_live_card.parquet` from the selected event, then runs model predictions, market update, and betting decision in sequence.
-5. The workflow commits only generated runtime artifacts with `git add -f`; source branches should not manually commit those parquet outputs.
+3. The Betting Board tab reads those card artifacts and lets the operator select one UFCStats event id for display scope.
+4. `run-betting-board-selected-event.yml` rebuilds `data/predictions/ufc_live_card.parquet` from all upcoming fights, then runs model predictions, market update, and betting decision in sequence.
+5. The Betting Board dashboard filters the full generated Betting Board artifact to the selected event before rendering the Primary Action Board.
+6. The workflow commits only generated runtime artifacts with `git add -f`; source branches should not manually commit those parquet outputs.
 
-This keeps event selection auditable while avoiding a permanent hard-coded prediction input file.
+This keeps event selection auditable while allowing one dispatch run to evaluate every upcoming event and preventing unrelated events from appearing in the selected event Action Board.
 
 ## Active Betting Board Workflows
 
 | Workflow | Purpose | Primary Outputs |
 |---|---|---|
 | `run-refresh-upcoming-events.yml` | Refresh UFCStats upcoming event/card choices. | `data/cards/ufcstats_upcoming_events.parquet`, `data/cards/ufcstats_upcoming_fights.parquet` |
-| `run-betting-board-selected-event.yml` | Run the full selected-event prediction and betting-board sequence. | `data/predictions/ufc_live_card.parquet`, `data/predictions/ufc_model_predictions.parquet`, `data/market/*`, `data/predictions/ufc_betting_board.parquet` |
+| `run-betting-board-selected-event.yml` | Run the full all-upcoming prediction and betting-board sequence; dashboard selection scopes display. | `data/predictions/ufc_live_card.parquet`, `data/predictions/ufc_model_predictions.parquet`, `data/market/*`, `data/predictions/ufc_betting_board.parquet` |
 | `run-market-update.yml` | Refresh market odds for the current model prediction artifact. | `data/market/ufc_market_odds.parquet`, `data/market/ufc_market_snapshots.parquet`, `data/market/ufc_market_match_audit.parquet` |
 | `run-clv-tracker.yml` | Update closing-line and CLV tracking artifacts. | `data/market/ufc_closing_lines.parquet`, `data/market/ufc_clv_results.parquet`, `data/market/ufc_line_movement.parquet` |
 
@@ -153,7 +154,7 @@ Phase 1 status:
 
 ## Adjustable Dashboard Betting Rules
 
-The selected-event workflow remains the production/default execution path: when an operator presses **Run Betting Predictions for Selected Event**, the workflow uses the default betting filters and staking settings and writes the official Betting Board artifact.
+The upcoming-events workflow remains the production/default execution path: when an operator presses **Run Betting Predictions for Upcoming Events**, the workflow uses the default betting filters and staking settings, evaluates all upcoming fights, and writes the official Betting Board artifact.
 
 After that artifact exists, the Betting Board tab supports dashboard-only scenario controls for:
 
@@ -169,7 +170,7 @@ After that artifact exists, the Betting Board tab supports dashboard-only scenar
 * minimum stake,
 * stake rounding.
 
-Scenario controls recalculate displayed statuses and stakes in memory. They do not overwrite `data/predictions/ufc_betting_board.parquet`, do not change the selected-event workflow inputs, and do not commit generated artifacts. The tab should clearly show production-vs-scenario official bets and stake totals so an operator can compare default output against adjusted rules.
+Scenario controls recalculate displayed statuses and stakes in memory. They do not overwrite `data/predictions/ufc_betting_board.parquet`, do not change the upcoming-events workflow inputs, and do not commit generated artifacts. The tab should clearly show production-vs-scenario official bets and stake totals so an operator can compare default output against adjusted rules.
 
 ## Market Odds Side Mapping Rule
 
@@ -187,4 +188,4 @@ This prevents the Betting Board from displaying blue-fighter odds on the red fig
 
 ### Dashboard Fallback for Older Betting Board Artifacts
 
-If an existing `data/predictions/ufc_betting_board.parquet` was generated before `odds_match_order` existed, the Betting Board may still contain sportsbook-order red/blue odds. The Streamlit tab should merge the latest `data/market/ufc_market_match_audit.parquet` diagnostics, infer whether the sportsbook row was reversed, correct red/blue odds in memory, and recompute displayed edge/EV/best-side values. This is a dashboard safety fallback only; operators should rerun the selected-event Betting Board workflow to regenerate official artifacts with side-mapped odds.
+If an existing `data/predictions/ufc_betting_board.parquet` was generated before `odds_match_order` existed, the Betting Board may still contain sportsbook-order red/blue odds. The Streamlit tab should merge the latest `data/market/ufc_market_match_audit.parquet` diagnostics, infer whether the sportsbook row was reversed, correct red/blue odds in memory, and recompute displayed edge/EV/best-side values. This is a dashboard safety fallback only; operators should rerun the upcoming-events Betting Board workflow to regenerate official artifacts with side-mapped odds.

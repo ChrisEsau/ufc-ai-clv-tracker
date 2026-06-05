@@ -308,7 +308,7 @@ Refreshes the UFCStats upcoming event list and upcoming fight-card artifacts use
 
 ### `run-betting-board-selected-event.yml`
 
-Accepts a UFCStats `event_id`, rebuilds the live card for that selected event, runs model predictions, refreshes market odds, and produces the Betting Board outputs. This is the preferred entrypoint when an operator wants predictions for a specific upcoming card.
+Optionally accepts a UFCStats `event_id` for dashboard preselection, but rebuilds the live card from all upcoming fights, runs model predictions, refreshes market odds, and produces the Betting Board outputs. This is the preferred entrypoint when an operator wants one dispatch run to evaluate all upcoming cards while the dashboard displays the selected event only.
 
 ## Bankroll Workflows
 

@@ -66,11 +66,48 @@ def render_artifact_readiness(status):
     if summary["ready_to_review"]:
         st.success("Required Betting Board artifacts are present and non-empty.")
     else:
-        st.warning("One or more required Betting Board artifacts are missing or empty. Refresh/run the selected-event workflow before trusting board output.")
+        st.warning("One or more required Betting Board artifacts are missing or empty. Refresh/run the upcoming-events workflow before trusting board output.")
 
 
 def _selected_event_id(event_row):
+    if event_row is None:
+        return None
     return event_row.get("ufcstats_event_id") or event_row.get("event_id")
+
+
+def _selected_event_name(event_row):
+    if event_row is None:
+        return None
+    return event_row.get("ufcstats_event_name") or event_row.get("event_name")
+
+
+def _scope_board_to_selected_event(board, selected_event):
+    """Return only rows for the event currently selected in the card selector."""
+
+    if selected_event is None or board.empty:
+        return board, None, False
+
+    selected_event_id = _selected_event_id(selected_event)
+    selected_event_name = _selected_event_name(selected_event)
+    selected_label = selected_event_name or selected_event_id
+
+    masks = []
+    if selected_event_id:
+        for event_id_column in ["event_id", "ufcstats_event_id"]:
+            if event_id_column in board.columns:
+                masks.append(board[event_id_column].astype(str) == str(selected_event_id))
+
+    if selected_event_name and "event_name" in board.columns:
+        masks.append(board["event_name"].astype(str) == str(selected_event_name))
+
+    if not masks:
+        return board, selected_label, False
+
+    selected_mask = masks[0]
+    for mask in masks[1:]:
+        selected_mask = selected_mask | mask
+
+    return board[selected_mask].copy(), selected_label, True
 
 
 def render_upcoming_event_selection():
@@ -78,9 +115,9 @@ def render_upcoming_event_selection():
 
     with st.expander("Select an upcoming UFCStats event for betting predictions", expanded=True):
         st.caption(
-            "Refresh the UFCStats upcoming-events artifact, choose a card, then launch the selected-event "
-            "betting workflow. The workflow builds the live card, model predictions, market odds, and "
-            "betting board outputs from canonical data/ paths."
+            "Refresh the UFCStats upcoming-events artifact, choose a card, then launch the upcoming-events "
+            "betting workflow. The workflow builds model predictions, market odds, and betting board outputs "
+            "for all upcoming fights; this selector controls which event appears in the Action Board."
         )
 
         artifact_status = _artifact_health_table()
@@ -103,7 +140,10 @@ def render_upcoming_event_selection():
                     st.error(msg)
 
         with control_cols[1]:
-            st.caption("Refresh before selecting a new card if UFCStats has changed.")
+            st.caption(
+                "Refresh before selecting a new card if UFCStats has changed. The prediction workflow evaluates "
+                "every upcoming fight; the selected event only scopes the dashboard display."
+            )
 
         render_workflow_status("betting_refresh_upcoming_events")
 
@@ -160,7 +200,7 @@ def render_upcoming_event_selection():
             st.markdown(f"**Selected card fights:** {len(selected_fights)}")
             st.dataframe(selected_fights[fight_cols], use_container_width=True, hide_index=True)
 
-        if st.button("Run Betting Predictions for Selected Event", type="primary", use_container_width=True):
+        if st.button("Run Betting Predictions for Upcoming Events", type="primary", use_container_width=True):
             ok, msg = trigger_workflow(
                 SELECTED_EVENT_WORKFLOW,
                 inputs={"event_id": str(selected_event_id)},
@@ -168,7 +208,7 @@ def render_upcoming_event_selection():
             if ok:
                 remember_launched_workflow(
                     "betting_selected_event",
-                    "Run Betting Predictions for Selected Event",
+                    "Run Betting Predictions for Upcoming Events",
                     SELECTED_EVENT_WORKFLOW,
                     inputs={"event_id": str(selected_event_id)},
                 )
@@ -649,7 +689,7 @@ def render_betting_board():
     st.title("UFC Betting Intelligence Platform")
     st.caption("Betting Board — event selection, model probability, market odds, EV, quality gates, and recommended action.")
 
-    render_upcoming_event_selection()
+    selected_event = render_upcoming_event_selection()
 
     board = load_parquet(BETTING_BOARD_PATH)
 
@@ -682,11 +722,26 @@ def render_betting_board():
         )
 
     board = normalize_betting_board_odds(board)
+    board, selected_event_label, event_filter_applied = _scope_board_to_selected_event(board, selected_event)
+    if selected_event_label and event_filter_applied:
+        if board.empty:
+            st.warning(
+                f"No Betting Board rows match the selected event: {selected_event_label}. "
+                "Run the upcoming-events Betting Board workflow and refresh the dashboard artifacts."
+            )
+            return
+        st.info(f"Primary Action Board is scoped to the selected event: {selected_event_label}.")
+    elif selected_event_label:
+        st.warning(
+            "The Betting Board artifact does not include event identifiers or event names that can be matched "
+            f"to the selected event ({selected_event_label}), so the full board is being displayed."
+        )
+
     corrected_rows = int((board.get("odds_side_mapping_status", pd.Series(dtype=str)) == "corrected_reversed_order").sum())
     if corrected_rows:
         st.warning(
             f"Corrected {corrected_rows} reversed sportsbook odds row(s) in the dashboard display. "
-            "Rerun the selected-event Betting Board workflow to regenerate the official artifacts with side-mapped odds."
+            "Rerun the upcoming-events Betting Board workflow to regenerate the official artifacts with side-mapped odds."
         )
 
     rules = render_betting_rules_controls()
