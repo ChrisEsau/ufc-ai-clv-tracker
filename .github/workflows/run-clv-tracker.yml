@@ -29,10 +29,8 @@ jobs:
           pip install pandas numpy requests pyarrow joblib streamlit
 
       - name: Run CLV tracker
-        env:
-          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
         run: |
-          python run_clv_tracker.py
+          python -m pipeline.clv.run_clv_pipeline
 
       - name: Commit updated parquet files
         run: |
