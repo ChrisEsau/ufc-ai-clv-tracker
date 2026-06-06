@@ -250,7 +250,7 @@ Current behavior:
 * Extracts fighter IDs from UFCStats fighter URLs.
 * Deduplicates by fighter ID.
 * Maps profiles by fighter ID and normalized fighter name.
-* Supports optional `--max-fighters` smoke-test limit.
+* Supports optional `--max-fighters` local scrape limit.
 
 ---
 
@@ -439,18 +439,16 @@ Important rule:
 run_ingest_single_event.py does not append to master.
 ```
 
-Modes:
+Mode:
 
 ```text
-full  = all fights and all staged fighters
-smoke = one fight and two fighters
+full selected-event ingestion only
 ```
 
 Environment variables / CLI:
 
 ```text
 EVENT_ID or --event-id
-INGEST_MODE or --mode
 MAX_FIGHTS or --max-fights
 MAX_FIGHTERS or --max-fighters
 ```
@@ -458,7 +456,7 @@ MAX_FIGHTERS or --max-fighters
 Example:
 
 ```bash
-EVENT_ID=1e75e6c9de99fa76 INGEST_MODE=full \
+EVENT_ID=1e75e6c9de99fa76 \
 python -m pipeline.data_maintenance.run_ingest_single_event
 ```
 

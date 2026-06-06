@@ -370,16 +370,10 @@ def render_append_decision(append_ready, final_review_pass):
             "Append remains disabled until both append precheck and final review pass."
         )
 
-    confirmed = st.checkbox(
-        "I reviewed the staged rows and understand this will append them to master.",
-        disabled=not append_allowed,
-        key="append_to_master_human_confirmation",
-    )
-
     if st.button(
         "⚠️ Append To Master",
-        disabled=not (append_allowed and confirmed),
-        type="primary" if append_allowed and confirmed else "secondary",
+        disabled=not append_allowed,
+        type="primary" if append_allowed else "secondary",
         use_container_width=True,
         key="append_to_master_final",
     ):

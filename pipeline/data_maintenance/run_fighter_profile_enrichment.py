@@ -395,7 +395,7 @@ def parse_args():
         "--max-fighters",
         type=int,
         default=None,
-        help="Optional scrape limit for local smoke testing; defaults to all fighters.",
+        help="Optional scrape limit for local validation; defaults to all fighters.",
     )
 
     return parser.parse_args()
