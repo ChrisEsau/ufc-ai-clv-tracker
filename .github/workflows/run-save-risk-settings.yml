@@ -1,0 +1,53 @@
+name: Save Bankroll Risk Settings
+
+on:
+  workflow_dispatch:
+    inputs:
+      settings_json:
+        description: "JSON payload for persisted bankroll risk settings"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bankroll-artifacts-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  save-risk-settings:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install pandas numpy pyarrow
+
+      - name: Save risk settings
+        env:
+          SETTINGS_JSON: ${{ inputs.settings_json }}
+        run: |
+          python -m pipeline.bankroll.run_save_risk_settings --settings-json "$SETTINGS_JSON"
+
+      - name: Commit bankroll risk artifacts
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add -f \
+            data/bankroll/ufc_bankroll_settings.parquet \
+            data/bankroll/ufc_bet_ledger.parquet \
+            data/bankroll/ufc_open_bets.parquet \
+            data/bankroll/ufc_bankroll_snapshots.parquet
+
+          git commit -m "Update bankroll risk settings" || echo "No changes to commit"
+          git push

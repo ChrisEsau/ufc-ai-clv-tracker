@@ -28,6 +28,7 @@ LEDGER_COLUMNS = [
     "opponent",
     "opponent_id",
     "market_type",
+    "sportsbook",
     "odds_taken",
     "stake",
     "result",
@@ -170,6 +171,7 @@ def official_bets_to_ledger_rows(official_bets: pd.DataFrame, source_workflow: s
     )
     rows["opponent_id"] = official_bets.get("best_side_opponent_id", official_bets.get("opponent_id", ""))
     rows["market_type"] = "Moneyline"
+    rows["sportsbook"] = official_bets.get("sportsbook", official_bets.get("bookmaker", ""))
     rows["odds_taken"] = official_bets.get("best_american_odds", np.nan)
     rows["stake"] = official_bets.get(
         "scenario_recommended_stake",
