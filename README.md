@@ -65,7 +65,21 @@ The project uses `pipeline/common/paths.py` as the path registry. Important arti
 - `data/market/` — odds snapshots, normalized market data, CLV outputs
 - `data/bankroll/` — bankroll settings, bet ledger, open bets, snapshots
 - `models/` — trained model artifacts
+- `configs/` — future model and training configuration files
 - `docs/` — architecture and registry documents
+
+## Model adapter direction
+
+The long-term model architecture is model-agnostic. Training/backtesting code may produce XGBoost, Random Forest, Neural Network, or Ensemble model bundles, but production prediction should consume them through a standard adapter contract.
+
+Core rule:
+
+```text
+Models own their required features.
+The pipeline owns the standard prediction output.
+```
+
+See `docs/MODEL_ADAPTER_ARCHITECTURE.md` before changing training, backtesting, model-bundle, or prediction-interface code.
 
 ## Data maintenance workflow
 
@@ -114,6 +128,7 @@ Workflows in `.github/workflows/` are used to run major pipeline stages and comm
 - Treat append-to-master as a gated operation.
 - Prefer auditable parquet outputs for validation steps.
 - Make dashboard failures visible instead of silently hiding broken artifacts.
+- Keep model-specific feature requirements inside model bundles/configs rather than hardcoding them into downstream Betting Board or CLV logic.
 
 ## Useful docs
 
@@ -130,3 +145,4 @@ See `docs/` for architecture and registry files, including:
 - `UFC_LINE_MOVEMENT_CLV_ARCHITECTURE.md`
 - `UFC_BANKROLL_ARCHITECTURE.md`
 - `UFC_MODEL_LAB_ARCHITECTURE.md`
+- `MODEL_ADAPTER_ARCHITECTURE.md`
