@@ -1,0 +1,142 @@
+# Full Rolling Feature Inventory
+#
+# Purpose:
+#   Permanent schema inventory for the complete rolling feature database.
+#
+# Source artifact:
+#   data/features/UFC_enhanced_rolling_features_EWM.parquet
+#
+# Source notebook:
+#   UFC_rolling_dataset_V4_refactored.ipynb
+#
+# Status:
+#   Scaffold created before notebook-to-Python refactor.
+#   The GitHub connector confirmed the parquet artifact exists, but could not
+#   expose the binary parquet schema contents in a readable way.
+#
+# Required next step:
+#   Run local schema extraction from the parquet artifact and replace
+#   `columns_pending_extraction` with the complete 483-column inventory.
+
+inventory_name: full_rolling_feature_inventory
+source_notebook: UFC_rolling_dataset_V4_refactored.ipynb
+source_artifact: data/features/UFC_enhanced_rolling_features_EWM.parquet
+source_artifact_sha_observed: 43d918e27d00397b587aa509c901a17af3f84bdf
+
+schema_status:
+  expected_column_count: 483
+  extraction_status: pending_local_schema_extraction
+  full_column_list_present: false
+  refactor_blocked_until_full_column_list_present: true
+
+required_extraction_output:
+  each_column_must_include:
+    - name
+    - dtype
+    - feature_layer
+    - feature_family
+    - preservation_status
+    - used_by_current_moneyline_v5
+
+allowed_feature_layers:
+  - metadata
+  - target_result
+  - base
+  - moneyline
+  - props
+  - deprecated_but_preserved
+
+known_protected_feature_families:
+  metadata:
+    patterns_or_examples:
+      - event_id
+      - event_name
+      - date
+      - location
+      - fight_id
+      - division
+      - title_fight
+      - method
+      - finish_round
+      - match_time_sec
+      - total_rounds
+      - referee
+
+  identifiers:
+    patterns_or_examples:
+      - r_id
+      - b_id
+      - winner_id
+      - r_name
+      - b_name
+      - winner
+
+  target_result:
+    patterns_or_examples:
+      - target
+      - winner
+      - winner_id
+
+  raw_corner_stats:
+    patterns_or_examples:
+      - r_*
+      - b_*
+    note: Raw corner stats are preserved in the rolling database but are not valid moneyline V5 training inputs unless converted into symmetry-safe differentials.
+
+  prefight_state:
+    patterns_or_examples:
+      - r_pre_*
+      - b_pre_*
+
+  career_differentials:
+    patterns_or_examples:
+      - '*_diff'
+
+  ewm_recent_form:
+    patterns_or_examples:
+      - ewm_*
+      - r_ewm_*
+      - b_ewm_*
+      - ewm_*_diff
+
+  recent_form:
+    patterns_or_examples:
+      - recent_*
+      - r_recent_form_*
+      - b_recent_form_*
+      - recent_form_*_diff
+
+  engineered_matchup_features:
+    source: configs/features/current_moneyline_v5_features.yaml
+
+current_moneyline_v5_dependency:
+  contract_file: configs/features/current_moneyline_v5_features.yaml
+  expected_training_feature_count: 124
+  selection_rule: all_columns_ending_in_diff_plus_registered_engineered_features
+
+columns_pending_extraction: true
+columns: []
+
+validation_rules:
+  - full_column_inventory_must_contain_483_columns_before_refactor
+  - every_column_must_have_feature_layer_assignment
+  - every_column_must_have_preservation_status
+  - current_moneyline_v5_features_must_remain_available
+  - no_column_may_be_dropped_without_explicit_approval
+
+local_extraction_guidance:
+  description: Run locally from repo root after dependencies are installed.
+  example_python: |
+    import pandas as pd
+    from pathlib import Path
+
+    path = Path("data/features/UFC_enhanced_rolling_features_EWM.parquet")
+    df = pd.read_parquet(path)
+
+    print(df.shape)
+    for col, dtype in df.dtypes.items():
+        print(col, dtype)
+
+notes:
+  - This scaffold intentionally blocks feature-layer refactor until the full schema is extracted.
+  - The rolling feature preservation contract requires all 483 columns to be preserved, mapped, or explicitly deprecated_but_preserved.
