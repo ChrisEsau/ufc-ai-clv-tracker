@@ -87,6 +87,11 @@ def _fmt_date(value) -> str:
         return "—"
     return parsed.strftime("%b %-d, %Y")
 
+def _fmt_date(value) -> str:
+    parsed = pd.to_datetime(value, errors="coerce")
+    if pd.isna(parsed):
+        return "—"
+    return parsed.strftime("%b %-d, %Y")
 
 def _read(path) -> pd.DataFrame:
     data = load_parquet(path)
