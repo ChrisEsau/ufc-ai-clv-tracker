@@ -8,9 +8,11 @@ from pipeline.common.paths import (
     CLOSING_LINES_PATH,
     CLV_RESULTS_PATH,
     LINE_MOVEMENT_PATH,
+    CLV_MARKET_NORMALIZATION_AUDIT_PATH,
     MARKET_MATCH_AUDIT_PATH,
     MARKET_ODDS_PATH,
     MARKET_SNAPSHOTS_PATH,
+    NORMALIZED_MARKET_SNAPSHOTS_PATH,
     OFFICIAL_BETS_PATH,
 )
 
@@ -23,6 +25,14 @@ CLV_ARTIFACTS = {
     "Market snapshots": {
         "path": MARKET_SNAPSHOTS_PATH,
         "required_for": "Line movement history",
+    },
+    "Normalized market snapshots": {
+        "path": NORMALIZED_MARKET_SNAPSHOTS_PATH,
+        "required_for": "Side-level CLV calculations",
+    },
+    "CLV normalization audit": {
+        "path": CLV_MARKET_NORMALIZATION_AUDIT_PATH,
+        "required_for": "CLV input validation",
     },
     "Market match audit": {
         "path": MARKET_MATCH_AUDIT_PATH,
