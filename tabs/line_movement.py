@@ -20,7 +20,6 @@ from utils.data_loader import load_parquet
 from utils.github_actions import trigger_workflow
 from utils.ui.charts import apply_plotly_theme
 
-MARKET_WORKFLOW = "run-market-update.yml"
 CLV_WORKFLOW = "run-clv-tracker.yml"
 CENTRAL_TZ = ZoneInfo("America/Chicago")
 
@@ -367,12 +366,12 @@ def _render_header(last_updated: str) -> None:
             st.html(f"<div class='clv-actions'>{_escape(last_updated)}</div>")
         with action_cols[1]:
             if st.button("↻ Refresh Data", type="primary", use_container_width=True):
-                ok_market, msg_market = trigger_workflow(MARKET_WORKFLOW)
                 ok_clv, msg_clv = trigger_workflow(CLV_WORKFLOW)
-                if ok_market and ok_clv:
-                    st.toast("Market + CLV workflows launched.", icon="🔄")
+                if ok_clv:
+                    st.toast("CLV tracker workflow launched.", icon="🔄")
+                    st.caption("Refresh again after the workflow commits updated CLV artifacts.")
                 else:
-                    st.warning(f"Unable to launch refresh workflows: {msg_market}; {msg_clv}")
+                    st.warning(f"Unable to launch CLV tracker workflow: {msg_clv}")
 
 
 def _kpi(label: str, value: str, caption: str = "", color_class: str = "") -> str:

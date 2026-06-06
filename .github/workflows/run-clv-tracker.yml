@@ -11,6 +11,10 @@ env:
 permissions:
   contents: write
 
+concurrency:
+  group: market-artifacts-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   run-clv:
     runs-on: ubuntu-latest
@@ -18,6 +22,13 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Sync latest branch state
+        run: |
+          git fetch origin "${GITHUB_REF_NAME}"
+          git pull --ff-only origin "${GITHUB_REF_NAME}"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -38,7 +49,6 @@ jobs:
           git config user.email "github-actions@github.com"
 
           git add -f \
-            data/market/ufc_market_snapshots.parquet \
             data/market/ufc_normalized_market_snapshots.parquet \
             data/audits/ufc_clv_market_normalization_audit.parquet \
             data/market/ufc_closing_lines.parquet \
@@ -46,5 +56,5 @@ jobs:
             data/market/ufc_line_movement.parquet
           git commit -m "Automated CLV update" || echo "No changes to commit"
 
-
-          git push
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
