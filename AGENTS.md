@@ -109,7 +109,7 @@ utils/
 
 ## Path Architecture
 
-Use `pipeline/paths.py` as the single source of truth for file paths.
+Use `pipeline.common.paths` as the single source of truth for file paths.
 
 Do not hardcode scattered paths throughout the app.
 
@@ -555,7 +555,7 @@ Use environment variables for secrets.
 
 * Master schema is locked at 128 columns.
 * Parquet artifacts live under structured `data/` folders.
-* `pipeline/paths.py` is the path registry.
+* `pipeline.common.paths` is the path registry.
 * Dashboard is mobile-first.
 * Data Maintenance append action belongs at the bottom.
 * Append button is gated by `append_ready`.
