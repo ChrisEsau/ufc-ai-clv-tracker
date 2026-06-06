@@ -63,11 +63,11 @@ Automatic master backups.
 
 ### features
 
-Historical and current feature stores.
+Historical, current, base, moneyline, and prop feature stores.
 
 ### predictions
 
-Live card, model prediction, betting-board, watchlist, official-bet, and action-board outputs.
+Live card, model prediction, betting-board, watchlist, official-bet, action-board, and future prop prediction outputs.
 
 ### cards
 
@@ -89,11 +89,23 @@ Future model-lab reports such as backtests, calibration reports, model compariso
 
 ## Models
 
+Model bundles should be organized first by market family, then by model name.
+
 ```text
 models/
-├── UFC_Model_v5_Experiment/
-├── UFC_Model_V5_XGBoost/
-├── UFC_Model_V5_RF/
+├── moneyline/
+│   ├── UFC_Model_v5_Experiment/
+│   ├── UFC_Model_V5_XGBoost/
+│   ├── UFC_Model_V5_RF/
+│   └── UFC_Model_V5_Ensemble/
+│
+├── props/
+│   ├── UFC_PROP_KO_TKO_V1/
+│   ├── UFC_PROP_SUB_V1/
+│   ├── UFC_PROP_DEC_V1/
+│   ├── UFC_PROP_GOES_DISTANCE_V1/
+│   └── UFC_PROP_ROUNDS_V1/
+│
 └── active_model.json
 ```
 
@@ -111,6 +123,8 @@ confidence_buckets.parquet
 training_metrics.json
 ```
 
+Prop models should generally use one model per prop market rather than one large multi-output model. Example: separate KO/TKO, Submission, Decision, Goes Distance, and Round models.
+
 ---
 
 ## Configs
@@ -118,9 +132,17 @@ training_metrics.json
 ```text
 configs/
 └── models/
-    ├── xgboost_v5.yaml
-    ├── random_forest_v1.yaml
-    └── ensemble_v1.yaml
+    ├── moneyline/
+    │   ├── xgboost_v5.yaml
+    │   ├── random_forest_v1.yaml
+    │   └── ensemble_v1.yaml
+    │
+    └── props/
+        ├── ko_tko_v1.yaml
+        ├── submission_v1.yaml
+        ├── decision_v1.yaml
+        ├── goes_distance_v1.yaml
+        └── rounds_v1.yaml
 ```
 
 The `configs/` folder is reserved for future model, training, backtesting, and runtime-selection configuration.
@@ -136,11 +158,18 @@ pipeline/common
 pipeline/data_maintenance
 pipeline/prediction
 pipeline/features
+pipeline/features/base
+pipeline/features/moneyline
+pipeline/features/props
 pipeline/feature_engineering
 pipeline/modeling
 pipeline/modeling/adapters
 pipeline/training
+pipeline/training/moneyline
+pipeline/training/props
 pipeline/backtesting
+pipeline/backtesting/moneyline
+pipeline/backtesting/props
 pipeline/clv
 pipeline/bankroll
 ```
@@ -159,7 +188,24 @@ Live prediction runners. These should eventually consume standardized model adap
 
 ### features / feature_engineering
 
-Feature engineering modules. Long term, feature builders should support model-specific feature contracts.
+Feature engineering modules. Long term, feature builders should support market-family and model-specific feature contracts.
+
+Expected future structure:
+
+```text
+pipeline/features/
+├── base/
+│   └── build_rolling_features.py
+├── moneyline/
+│   └── build_moneyline_features.py
+└── props/
+    ├── build_prop_labels.py
+    ├── build_ko_tko_features.py
+    ├── build_submission_features.py
+    ├── build_decision_features.py
+    ├── build_goes_distance_features.py
+    └── build_round_features.py
+```
 
 ### modeling
 
@@ -173,7 +219,8 @@ pipeline/modeling/
 │   ├── base_adapter.py
 │   ├── xgboost_adapter.py
 │   ├── random_forest_adapter.py
-│   └── ensemble_adapter.py
+│   ├── ensemble_adapter.py
+│   └── prop_adapter.py
 ├── model_registry.py
 ├── model_loader.py
 └── feature_contracts.py
@@ -183,9 +230,25 @@ pipeline/modeling/
 
 Python modules converted from training notebooks. Training code should create model bundles but should not directly alter downstream Betting Board or CLV logic.
 
+Training should be grouped by market family:
+
+```text
+pipeline/training/
+├── moneyline/
+└── props/
+```
+
 ### backtesting
 
-Walk-forward validation, model evaluation, calibration analysis, and confidence-bucket generation.
+Walk-forward validation, model evaluation, calibration analysis, betting-rule optimization, and confidence-bucket generation.
+
+Backtesting should be grouped by market family:
+
+```text
+pipeline/backtesting/
+├── moneyline/
+└── props/
+```
 
 ### clv
 
@@ -209,6 +272,8 @@ Tabs contain workspace rendering.
 Utils contain reusable dashboard components.
 
 Dashboard code should consume standardized artifacts and should not depend on whether the active model is XGBoost, Random Forest, Neural Network, or an Ensemble.
+
+Dashboard code should be market-aware but model-agnostic. Moneyline and prop predictions may use different output schemas, but the dashboard should not directly call model internals.
 
 ---
 
@@ -242,7 +307,7 @@ Model training should generally be developed and run from VS Code or external co
 - `data/cards/` stores UFCStats upcoming-event discovery artifacts and the selected event marker used to build the live card.
 - `data/market/` stores market odds, snapshots, match audits, closing lines, line movement, and CLV outputs.
 - `data/bankroll/` stores the official wager ledger, open bets, bankroll snapshots, and risk settings.
-- `data/predictions/` stores model prediction, betting board, watchlist, action board, and official bet artifacts.
+- `data/predictions/` stores model prediction, betting board, watchlist, action board, official bet, and future prop prediction artifacts.
 - These directories contain generated parquet files. Source branches should not manually commit ad-hoc generated parquet files; workflows force-add only the canonical artifacts they produce.
 
 ---
@@ -253,13 +318,15 @@ See:
 
 ```text
 docs/MODEL_ADAPTER_ARCHITECTURE.md
+docs/UFC_PROP_MODEL_ARCHITECTURE.md
 ```
 
 Core principle:
 
 ```text
+Market families own feature builders.
 Models own their required features.
-The pipeline owns the standard prediction output.
+The pipeline owns standard prediction outputs.
 ```
 
-Downstream systems should consume a stable prediction schema and remain model-agnostic.
+Downstream systems should consume stable prediction schemas and remain model-agnostic.
