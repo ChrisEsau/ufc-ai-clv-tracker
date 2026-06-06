@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import html
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -17,7 +18,7 @@ from pipeline.common.paths import (
     NORMALIZED_MARKET_SNAPSHOTS_PATH,
 )
 from utils.data_loader import load_parquet
-from utils.github_actions import trigger_workflow
+from utils.github_actions import get_latest_workflow_run, trigger_workflow
 from utils.ui.charts import apply_plotly_theme
 
 CLV_WORKFLOW = "run-clv-tracker.yml"
@@ -86,10 +87,47 @@ def _fmt_date(value) -> str:
         return "—"
     return parsed.strftime("%b %-d, %Y")
 
+def _fmt_date(value) -> str:
+    parsed = pd.to_datetime(value, errors="coerce")
+    if pd.isna(parsed):
+        return "—"
+    return parsed.strftime("%b %-d, %Y")
 
 def _read(path) -> pd.DataFrame:
     data = load_parquet(path)
     return pd.DataFrame() if data is None else data.copy()
+
+
+def _parse_github_time(value: str | None):
+    if not value:
+        return None
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
+def _refresh_status_label(last_updated: str) -> str:
+    """Show CLV tracker workflow state in the timestamp slot after dispatch."""
+
+    if not st.session_state.get("clv_refresh_running"):
+        return last_updated
+
+    ok, _, run = get_latest_workflow_run(CLV_WORKFLOW)
+    if not ok or run is None:
+        return "CLV refresh queued..."
+
+    launched_at = _parse_github_time(st.session_state.get("clv_refresh_launched_at"))
+    created_at = _parse_github_time(run.get("created_at"))
+    stale_run = bool(launched_at and created_at and created_at < launched_at - timedelta(seconds=30))
+    if stale_run:
+        return "CLV refresh queued..."
+
+    if run.get("status") == "completed":
+        st.session_state["clv_refresh_running"] = False
+        conclusion = run.get("conclusion")
+        if conclusion and conclusion != "success":
+            return f"CLV refresh {conclusion}."
+        return last_updated
+
+    return "CLV refresh running..."
 
 
 def _prepare_clv_results(raw: pd.DataFrame) -> pd.DataFrame:
@@ -352,6 +390,7 @@ def _inject_css() -> None:
 
 
 def _render_header(last_updated: str) -> None:
+    last_updated = _refresh_status_label(last_updated)
     left, right = st.columns([1.6, 1], vertical_alignment="center")
     with left:
         st.html(
@@ -368,8 +407,9 @@ def _render_header(last_updated: str) -> None:
             if st.button("↻ Refresh Data", type="primary", use_container_width=True):
                 ok_clv, msg_clv = trigger_workflow(CLV_WORKFLOW)
                 if ok_clv:
-                    st.toast("CLV tracker workflow launched.", icon="🔄")
-                    st.caption("Refresh again after the workflow commits updated CLV artifacts.")
+                    st.session_state["clv_refresh_running"] = True
+                    st.session_state["clv_refresh_launched_at"] = datetime.now(timezone.utc).isoformat()
+                    st.rerun()
                 else:
                     st.warning(f"Unable to launch CLV tracker workflow: {msg_clv}")
 

@@ -61,17 +61,27 @@ def _prepare_ledger(ledger: pd.DataFrame | None) -> pd.DataFrame:
     if ledger is None or ledger.empty:
         return pd.DataFrame()
     bets = ledger.copy()
-    for column in ["bet_id", "fight_id", "fighter_id", "market_type", "odds_taken"]:
+    for column in ["bet_id", "fight_id", "fighter_id", "fighter", "market_type", "odds_taken"]:
         if column not in bets.columns:
             bets[column] = pd.NA
-    bets = bets.dropna(subset=["bet_id", "fight_id", "fighter_id", "odds_taken"]).copy()
+
+    # CLV results are the official-bet reporting artifact, so keep every
+    # logged wager that has a bet id and odds taken even if fight/fighter ids
+    # are missing. Rows without join keys still appear in the CLV table with
+    # blank closing-line fields instead of disappearing entirely.
+    bets["bet_id"] = bets["bet_id"].replace("", pd.NA)
+    bets["odds_taken"] = pd.to_numeric(bets["odds_taken"], errors="coerce")
+    bets = bets.dropna(subset=["bet_id", "odds_taken"]).copy()
+    bets = bets[bets["odds_taken"] != 0].copy()
     if bets.empty:
         return bets
+
     bets["market_type"] = bets["market_type"].fillna(MONEYLINE).apply(normalize_market_type)
     if "sportsbook" not in bets.columns:
         bets["sportsbook"] = _column(bets, "bookmaker", pd.NA)
     bets["sportsbook"] = bets["sportsbook"].replace("", pd.NA)
-    bets["odds_taken"] = pd.to_numeric(bets["odds_taken"], errors="coerce")
+    bets["fight_id"] = bets["fight_id"].replace("", pd.NA)
+    bets["fighter_id"] = bets["fighter_id"].replace("", pd.NA)
     bets["bet_implied_prob"] = pd.to_numeric(_column(bets, "implied_probability", pd.NA), errors="coerce")
     bets.loc[bets["bet_implied_prob"].isna(), "bet_implied_prob"] = bets.loc[
         bets["bet_implied_prob"].isna(), "odds_taken"
@@ -107,28 +117,59 @@ def _merge_bets_to_closing(bets: pd.DataFrame, closing: pd.DataFrame) -> pd.Data
     ]
     closing = closing[closing_cols].copy()
 
-    if "sportsbook" in bets.columns and bets["sportsbook"].notna().any():
-        exact_bets = bets[bets["sportsbook"].notna()].copy()
-        missing_book_bets = bets[bets["sportsbook"].isna()].copy()
+    for column in join_cols:
+        if column not in bets.columns:
+            bets[column] = pd.NA
+
+    has_join_keys = bets[join_cols].notna().all(axis=1)
+    mergeable_bets = bets[has_join_keys].copy()
+    unmergeable_bets = bets[~has_join_keys].copy()
+
+    if unmergeable_bets.empty:
+        unmergeable = pd.DataFrame()
+    else:
+        unmergeable = unmergeable_bets.copy()
+        for column in ["closing_timestamp", "closing_odds", "closing_implied_prob", "closing_line_status"]:
+            unmergeable[column] = pd.NA
+
+    if mergeable_bets.empty:
+        return unmergeable.reset_index(drop=True)
+
+    fallback_closing = closing.sort_values("closing_timestamp").groupby(join_cols, dropna=False).tail(1).copy()
+
+    if "sportsbook" in mergeable_bets.columns and mergeable_bets["sportsbook"].notna().any():
+        exact_bets = mergeable_bets[mergeable_bets["sportsbook"].notna()].copy()
+        missing_book_bets = mergeable_bets[mergeable_bets["sportsbook"].isna()].copy()
         exact = exact_bets.merge(closing, how="left", on=[*join_cols, "sportsbook"], suffixes=("", "_closing"))
+
+        # If the logged sportsbook does not have a matching closing line yet,
+        # keep the bet row and use the latest side-level closing line as a
+        # temporary fallback. This preserves the official CLV row while the
+        # platform is still single-book / best-available.
+        unmatched = (
+            exact["closing_odds"].isna()
+            if "closing_odds" in exact.columns
+            else pd.Series(False, index=exact.index)
+        )
+        if unmatched.any():
+            fallback_values = exact.loc[unmatched].drop(
+                columns=["closing_timestamp", "closing_odds", "closing_implied_prob", "closing_line_status"],
+                errors="ignore",
+            ).merge(fallback_closing, how="left", on=join_cols, suffixes=("", "_fallback"))
+            for column in ["closing_timestamp", "closing_odds", "closing_implied_prob", "closing_line_status"]:
+                exact.loc[unmatched, column] = fallback_values[column].to_numpy()
     else:
         exact = pd.DataFrame()
-        missing_book_bets = bets.copy()
+        missing_book_bets = mergeable_bets.copy()
 
     if not missing_book_bets.empty:
-        fallback_closing = (
-            closing.sort_values("closing_timestamp")
-            .groupby(join_cols, dropna=False)
-            .tail(1)
-            .copy()
-        )
         fallback = missing_book_bets.drop(columns=["sportsbook"], errors="ignore").merge(
             fallback_closing, how="left", on=join_cols
         )
     else:
         fallback = pd.DataFrame()
 
-    merged = pd.concat([exact, fallback], ignore_index=True, sort=False)
+    merged = pd.concat([exact, fallback, unmergeable], ignore_index=True, sort=False)
     return merged
 
 
