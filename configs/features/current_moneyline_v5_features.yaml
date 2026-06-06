@@ -1,0 +1,131 @@
+# Current Moneyline V5 Feature Contract
+#
+# Purpose:
+#   Preserve the exact current V5 moneyline training input contract before
+#   converting notebooks into modular Python pipelines.
+#
+# Source of truth reviewed:
+#   UFC_model_train_V5_refactored.ipynb
+#
+# Notebook behavior:
+#   safe_cols = all columns ending in "_diff" plus registered engineered features.
+#   Raw red/blue fighter-specific columns are blocked.
+#   Final verified feature count is 124.
+
+contract_name: current_moneyline_v5_features
+market_family: moneyline
+model_family: UFC_Model_V5_XGBoost
+source_notebook: UFC_model_train_V5_refactored.ipynb
+source_feature_store_notebook: UFC_rolling_dataset_V4_refactored.ipynb
+
+selection_rule:
+  include:
+    - all_columns_ending_with: "_diff"
+    - registered_engineered_features
+  exclude:
+    - raw_red_prefixed_columns
+    - raw_blue_prefixed_columns
+    - raw_fighter_specific_columns
+  unsafe_prefixes:
+    - r_pre_
+    - b_pre_
+    - R_
+    - B_
+    - r_
+    - b_
+
+verified_expected_counts:
+  final_feature_count: 124
+  x_train_columns: 124
+  x_test_columns: 124
+  original_rows_before_symmetry_augmentation: 8190
+  augmented_rows_after_symmetry_augmentation: 16380
+
+registered_engineered_features:
+  - age_diff
+  - height_diff
+  - reach_diff
+  - weight_diff
+  - striking_edge
+  - grappling_edge
+  - finish_volatility
+  - wrestling_pressure_vs_defense
+  - reach_striking_combo
+  - chin_risk_diff
+  - experience_ratio_diff
+  - aggression_index_diff
+  - age_squared_diff
+  - pressure_striking_adv_diff
+  - wrestling_mismatch_diff
+  - submission_mismatch_diff
+
+base_stat_names_used_for_diff_families:
+  - elo
+  - fights
+  - wins
+  - losses
+  - win_pct
+  - kd_avg
+  - kd_absorbed_avg
+  - splm
+  - sapm
+  - str_acc
+  - str_def
+  - td_avg
+  - td_acc
+  - td_def
+  - sub_avg
+  - ctrl_per_min
+  - ctrl_against_per_min
+  - finish_rate
+  - ko_rate
+  - sub_win_rate
+  - decision_win_rate
+  - finish_loss_rate
+  - decision_loss_rate
+  - avg_opponent_elo
+  - best_win_elo
+  - worst_loss_elo
+  - avg_fight_time
+  - win_streak
+  - loss_streak
+  - days_since_last_fight
+  - recent_win_pct
+  - recent_splm
+  - recent_sapm
+  - recent_td_avg
+  - recent_finish_rate
+  - recent_avg_fight_time
+
+required_feature_families:
+  career_diff_features:
+    description: Red minus blue point-in-time career/pre-fight differentials.
+    expected_count: 36
+    pattern: "<stat>_diff"
+
+  ewm_diff_features:
+    description: Red minus blue exponentially weighted recent-form differentials.
+    expected_count: 36
+    pattern: "ewm_<stat>_diff"
+
+  recent_form_diff_features:
+    description: Red minus blue recent-form differentials created from EWM/recent-form layer.
+    expected_count: 36
+    pattern: "recent_form_<stat>_diff"
+
+  engineered_matchup_features:
+    description: Registered engineered features loaded from the engineered feature registry.
+    expected_count: 16
+
+validation_rules:
+  - generated_feature_count_must_equal_124
+  - all_registered_engineered_features_must_exist
+  - all_required_diff_families_must_exist
+  - no_raw_red_blue_prefixed_columns_allowed
+  - no_feature_may_be_renamed_without_updating_this_contract
+  - no_feature_may_be_removed_without_explicit_approval
+
+notes:
+  - Some registered engineered features also end with "_diff". The notebook de-duplicates using dict.fromkeys.
+  - This contract documents the current training input rule, not the full rolling database schema.
+  - The full rolling database preservation contract is documented separately in configs/features/rolling_feature_preservation_contract.yaml.
