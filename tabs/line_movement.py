@@ -370,7 +370,7 @@ def _render_header(last_updated: str) -> None:
                 ok_market, msg_market = trigger_workflow(MARKET_WORKFLOW)
                 ok_clv, msg_clv = trigger_workflow(CLV_WORKFLOW)
                 if ok_market and ok_clv:
-                    st.toast("Market + CLV workflows launched.", icon="↻")
+                    st.toast("Market + CLV workflows launched.", icon="🔄")
                 else:
                     st.warning(f"Unable to launch refresh workflows: {msg_market}; {msg_clv}")
 
