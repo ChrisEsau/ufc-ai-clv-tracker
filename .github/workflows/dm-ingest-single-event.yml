@@ -7,14 +7,6 @@ on:
         description: "UFCStats Event ID"
         required: true
         type: string
-      mode:
-        description: "Ingestion mode"
-        required: true
-        default: "full"
-        type: choice
-        options:
-          - full
-          - smoke
 
 permissions:
   contents: write
@@ -39,7 +31,6 @@ jobs:
       - name: Run Single Event Ingestion
         env:
           EVENT_ID: ${{ github.event.inputs.event_id }}
-          INGEST_MODE: ${{ github.event.inputs.mode }}
         run: |
           python -m pipeline.data_maintenance.run_ingest_single_event
 

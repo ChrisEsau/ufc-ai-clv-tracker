@@ -282,8 +282,8 @@ def render_sidebar():
         st.sidebar.caption("Read-only diagnostics; no retraining controls are added.")
     elif page == "Data Maintenance":
         _sidebar_section("Filters", compact=True)
-        st.sidebar.selectbox("Workflow Area", ["Dataset Health", "Event Discovery", "Final Staged Review", "Audit History"], key="sidebar_dm_area")
-        st.sidebar.caption("Following the consolidated Final Staged Review architecture.")
+        st.sidebar.selectbox("Workflow Area", ["Overview", "Event Discovery", "Pipeline Status", "Data Quality", "Append Approval"], key="sidebar_dm_area")
+        st.sidebar.caption("Append remains a separate gated final action.")
     elif page == "Bankroll":
         _sidebar_section("Bankroll Status", compact=True)
         ledger = load_bet_ledger()

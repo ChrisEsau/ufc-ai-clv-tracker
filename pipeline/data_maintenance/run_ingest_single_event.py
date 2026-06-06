@@ -19,8 +19,6 @@ from pipeline.data_maintenance.run_append_precheck_validation import (
 from pipeline.data_maintenance.run_staged_final_review import run_staged_final_review
 
 
-INGEST_MODES = {"smoke", "full"}
-
 
 def parse_optional_int(value):
     if value is None:
@@ -34,40 +32,14 @@ def parse_optional_int(value):
     return int(value)
 
 
-def limits_for_mode(mode):
-    if mode == "smoke":
-        return 1, 2
-
-    if mode == "full":
-        return None, None
-
-    raise ValueError(f"Unsupported ingest mode: {mode}")
-
-
 def run_ingest_single_event(
     event_id: str,
-    mode: str = "full",
     max_fights: int | None = None,
     max_fighters: int | None = None,
 ):
-    mode = str(mode).strip().lower()
-
-    if mode not in INGEST_MODES:
-        raise ValueError(
-            f"INGEST_MODE must be one of {sorted(INGEST_MODES)}. Got: {mode}"
-        )
-
-    default_max_fights, default_max_fighters = limits_for_mode(mode)
-
-    if max_fights is None:
-        max_fights = default_max_fights
-
-    if max_fighters is None:
-        max_fighters = default_max_fighters
-
     print("========== SINGLE EVENT INGEST ==========")
     print("Event ID:", event_id)
-    print("Mode:", mode)
+    print("Mode: full")
     print("Max fights:", "all" if max_fights is None else max_fights)
     print("Max fighters:", "all" if max_fighters is None else max_fighters)
 
@@ -118,7 +90,6 @@ def run_ingest_single_event(
 def parse_args():
     parser = ArgumentParser(description="Stage and review a selected UFCStats event.")
     parser.add_argument("--event-id", default=os.getenv("EVENT_ID"))
-    parser.add_argument("--mode", default=os.getenv("INGEST_MODE", "full"))
     parser.add_argument("--max-fights", default=os.getenv("MAX_FIGHTS"))
     parser.add_argument("--max-fighters", default=os.getenv("MAX_FIGHTERS"))
     return parser.parse_args()
@@ -132,7 +103,6 @@ if __name__ == "__main__":
 
     run_ingest_single_event(
         event_id=args.event_id,
-        mode=args.mode,
         max_fights=parse_optional_int(args.max_fights),
         max_fighters=parse_optional_int(args.max_fighters),
     )

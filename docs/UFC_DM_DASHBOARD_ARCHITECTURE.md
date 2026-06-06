@@ -9,7 +9,7 @@ Primary staged-ingestion workflow:
 ```text
 EVENT DISCOVERY
   ↓
-SINGLE EVENT INGESTION
+FULL SINGLE EVENT INGESTION
   ↓
 SCRAPE
   ↓
@@ -23,27 +23,30 @@ APPEND PRECHECK
   ↓
 FINAL STAGED REVIEW
   ↓
-HUMAN APPEND APPROVAL
+SEPARATE APPEND ACTION
   ↓
 APPEND
 ```
 
-Single-event ingestion must **not** append to master. It stages and reviews data only. The append action remains a separate operator-approved workflow.
+Single-event ingestion must **not** append to master. It stages and reviews data only. The append action remains a separate workflow button that is enabled only after machine gates pass.
 
 ---
 
-## Current Section Order
+## Current Layout Direction
 
-The Data Maintenance dashboard currently uses four top-level expanders:
+The Data Maintenance dashboard now follows the mockup-led operational control-plane layout rather than a strict four-expander structure. The page should present visible dashboard panels for:
 
 ```text
-Dataset Health
+Top Summary KPIs
+Dataset Status Overview
 Event Discovery
-Final Staged Review
-Audit History
+Ingestion Pipeline Status
+Data Quality Summary
+Recent Ingestion History / Audit Details
+Append Approval
 ```
 
-Older internal sections such as Fight Scrape, Enrichment, Validation Gate, and Append Status are no longer separate top-level dashboard sections. Their key outputs are consolidated into Final Staged Review.
+Append Approval remains a separate final action at the bottom of the workflow-oriented page.
 
 ---
 
@@ -76,7 +79,6 @@ Responsibilities:
 * Launch UFCStats event check.
 * Display missing completed UFCStats events.
 * Let the operator select a missing event.
-* Let the operator choose ingestion mode.
 * Launch single-event ingestion.
 * Display workflow status for event check and single-event ingestion.
 
@@ -87,25 +89,17 @@ Run Event Check
   ↓
 Select Missing Event
   ↓
-Choose Mode: full | smoke
-  ↓
 Ingest Selected Event
   ↓
 dm-ingest-single-event.yml
 ```
 
-### Ingestion Modes
+### Ingestion Mode
 
-```text
-full  = scrape all fights and all staged fighters for the selected event
-smoke = scrape one fight and two fighters for lightweight validation
-```
-
-The selected event button dispatches `dm-ingest-single-event.yml` with:
+Single-event ingestion always runs the full selected event. The selected event button dispatches `dm-ingest-single-event.yml` with:
 
 ```text
 event_id
-mode
 ```
 
 ---
@@ -122,7 +116,6 @@ Responsibilities:
 * Display append precheck summary and failed checks.
 * Display final review summary and failed checks.
 * Display append decision status.
-* Require human confirmation before append.
 * Launch append workflow only when gates pass and the operator confirms.
 * Display workflow status for append precheck/final review and append workflows.
 
@@ -131,7 +124,6 @@ Append is enabled only when:
 ```text
 append_ready == True
 final_review_pass == True
-human_confirmation == True
 ```
 
 The Final Staged Review expander should show, at minimum:
@@ -208,7 +200,6 @@ GITHUB_BRANCH
 * Single-event ingestion never appends.
 * Append button belongs inside Final Staged Review.
 * Append button remains disabled until precheck and final review pass.
-* Human confirmation is required before append dispatch.
 * Generated parquet artifacts are ignored by default and must be force-added in workflows when they are intended to be committed.
 
 ---

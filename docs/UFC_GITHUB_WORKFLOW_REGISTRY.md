@@ -74,13 +74,12 @@ Outputs:
 ### ACTIVE: dm-ingest-single-event.yml
 
 Purpose:
-Stage and review one selected UFCStats event.
+Stage and review one selected UFCStats event using full-event ingestion.
 
 Inputs:
 
 ```text
 event_id = UFCStats event ID
-mode     = full | smoke
 ```
 
 Runner:
