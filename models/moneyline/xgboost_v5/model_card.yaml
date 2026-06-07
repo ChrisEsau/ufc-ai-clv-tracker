@@ -1,0 +1,46 @@
+model_id: moneyline_xgboost_v5
+model_family: moneyline
+artifact_name: xgboost_v5
+algorithm: xgboost
+config_path: configs\models\moneyline_xgboost_v5.yaml
+trained_at_utc: '2026-06-07T14:26:06.762219+00:00'
+data:
+  rolling_features_path: data/features/UFC_enhanced_rolling_features_EWM.parquet
+  target_column: target
+  date_column: date
+split:
+  mode: train_calibration_test
+  train_end_date: '2022-12-31'
+  calibration_end_date: '2023-12-31'
+  train_rows: 13874
+  calibration_rows: 1040
+  test_rows: 2234
+features:
+  feature_count: 124
+  expected_feature_count: 124
+symmetry:
+  enabled: true
+  mode: flip_all
+calibration:
+  enabled: true
+  method: isotonic
+  calibration_rows: 1040
+params:
+  n_estimators: 500
+  max_depth: 4
+  learning_rate: 0.03
+  subsample: 0.8
+  colsample_bytree: 0.8
+  random_state: 42
+  eval_metric: logloss
+metrics:
+  accuracy: 0.8075201432408237
+  log_loss: 0.3992839553206625
+  roc_auc: 0.894757828272911
+  brier_score: 0.13238324312634117
+  threshold: 0.47
+  positive_pick_rate_percent: 53.40196956132498
+  negative_pick_rate_percent: 46.59803043867502
+  actual_positive_rate_percent: 50.0
+  row_count: 2234
+best_threshold: 0.47
