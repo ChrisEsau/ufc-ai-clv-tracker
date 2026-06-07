@@ -66,10 +66,17 @@ def add_fighter_ewm_columns(
     """Add ewm_* columns to the fighter-level dataframe."""
     fighter_long_df = fighter_long_df.copy()
 
-    for stat in stat_names:
-        fighter_long_df[f"ewm_{stat}"] = (
-            fighter_long_df.groupby("fighter_id")[stat]
-            .transform(lambda x: x.ewm(span=span, adjust=False).mean())
+    new_columns = {
+        f"ewm_{stat}": fighter_long_df.groupby("fighter_id")[stat].transform(
+            lambda x: x.ewm(span=span, adjust=False).mean()
+        )
+        for stat in stat_names
+    }
+
+    if new_columns:
+        fighter_long_df = pd.concat(
+            [fighter_long_df, pd.DataFrame(new_columns, index=fighter_long_df.index)],
+            axis=1,
         )
 
     return fighter_long_df
@@ -115,6 +122,7 @@ def merge_ewm_features(
 def add_ewm_diff_features(rolling_df: pd.DataFrame, stat_names: list[str]) -> pd.DataFrame:
     """Add ewm_*_diff columns for red-minus-blue EWM features."""
     rolling_df = rolling_df.copy()
+    new_columns = {}
 
     for stat in stat_names:
         r_col = f"r_ewm_{stat}"
@@ -122,7 +130,13 @@ def add_ewm_diff_features(rolling_df: pd.DataFrame, stat_names: list[str]) -> pd
         diff_col = f"ewm_{stat}_diff"
 
         if r_col in rolling_df.columns and b_col in rolling_df.columns:
-            rolling_df[diff_col] = rolling_df[r_col] - rolling_df[b_col]
+            new_columns[diff_col] = rolling_df[r_col] - rolling_df[b_col]
+
+    if new_columns:
+        rolling_df = pd.concat(
+            [rolling_df, pd.DataFrame(new_columns, index=rolling_df.index)],
+            axis=1,
+        )
 
     return rolling_df
 
@@ -130,6 +144,7 @@ def add_ewm_diff_features(rolling_df: pd.DataFrame, stat_names: list[str]) -> pd
 def add_recent_form_features(rolling_df: pd.DataFrame, stat_names: list[str]) -> pd.DataFrame:
     """Add recent-form edge features comparing EWM form to career prefight form."""
     rolling_df = rolling_df.copy()
+    new_columns = {}
 
     for stat in stat_names:
         r_ewm = f"r_ewm_{stat}"
@@ -137,16 +152,24 @@ def add_recent_form_features(rolling_df: pd.DataFrame, stat_names: list[str]) ->
         r_career = f"r_pre_{stat}"
         b_career = f"b_pre_{stat}"
 
-        if r_ewm in rolling_df.columns and r_career in rolling_df.columns:
-            rolling_df[f"r_recent_form_{stat}"] = rolling_df[r_ewm] - rolling_df[r_career]
-
-        if b_ewm in rolling_df.columns and b_career in rolling_df.columns:
-            rolling_df[f"b_recent_form_{stat}"] = rolling_df[b_ewm] - rolling_df[b_career]
-
         r_recent = f"r_recent_form_{stat}"
         b_recent = f"b_recent_form_{stat}"
-        if r_recent in rolling_df.columns and b_recent in rolling_df.columns:
-            rolling_df[f"recent_form_{stat}_diff"] = rolling_df[r_recent] - rolling_df[b_recent]
+        diff_recent = f"recent_form_{stat}_diff"
+
+        if r_ewm in rolling_df.columns and r_career in rolling_df.columns:
+            new_columns[r_recent] = rolling_df[r_ewm] - rolling_df[r_career]
+
+        if b_ewm in rolling_df.columns and b_career in rolling_df.columns:
+            new_columns[b_recent] = rolling_df[b_ewm] - rolling_df[b_career]
+
+        if r_recent in new_columns and b_recent in new_columns:
+            new_columns[diff_recent] = new_columns[r_recent] - new_columns[b_recent]
+
+    if new_columns:
+        rolling_df = pd.concat(
+            [rolling_df, pd.DataFrame(new_columns, index=rolling_df.index)],
+            axis=1,
+        )
 
     return rolling_df
 
