@@ -1,478 +1,264 @@
 # UFC Model Adapter Architecture
 
+## Status
+
+This document has been updated to align with the approved V2 prediction architecture.
+
+Authoritative target architecture:
+
+```text
+docs/UFC_PREDICTION_PIPELINE_V2.md
+```
+
+If this document and `UFC_PREDICTION_PIPELINE_V2.md` conflict, the V2 document wins.
+
+---
+
 ## Purpose
 
-This document defines the future architecture for supporting multiple predictive models across multiple UFC betting market families.
+The model adapter layer exists to let the UFC project run many predictive models through one shared prediction interface.
 
-Supported future model types may include:
+Supported future models may include:
 
 - XGBoost
 - Random Forest
-- Neural Networks
+- LightGBM
+- CatBoost
+- Neural networks
 - Ensembles
 - Market-specific classifiers
 
 Supported market families may include:
 
 - Moneyline
-- KO/TKO props
-- Submission props
-- Decision props
-- Goes Distance / Does Not Go Distance
+- Goes Distance / Inside Distance
+- KO/TKO
+- Submission
+- Decision
+- Method of Victory
 - Round totals
 - Round-specific props
 
-Core principles:
-
-- Market families own their feature-builder layer.
-- Models own their required feature contract.
-- The pipeline owns standardized prediction output contracts.
-- Downstream systems should remain model-agnostic and market-aware.
-
-This allows models and markets to expand without rewriting the Betting Board, CLV Tracker, Bankroll Tracker, or Dashboard.
-
 ---
 
-# High-Level Architecture
+## Core Design Decision
+
+The future adapter layer is generic.
+
+Do **not** build one adapter per market family such as:
 
 ```text
-Raw UFC Data
-    ↓
-Base Rolling Feature Store
-    ↓
-Market Family Feature Layer
-    ↓
-Model Adapter Layer
-    ↓
-Standard Prediction Output
-    ↓
-Betting Board / CLV / Bankroll / Dashboard
+MoneylineAdapter
+PropAdapter
+GoesDistanceAdapter
+SubmissionAdapter
 ```
 
-For example:
+Instead, use:
 
 ```text
-Base Rolling Features
-    ↓
-Moneyline Feature Builder
-    ↓
-Moneyline Model Adapter
-    ↓
-Moneyline Prediction Output
-```
-
-and:
-
-```text
-Base Rolling Features
-    ↓
-Prop Feature Builder
-    ↓
-Prop Model Adapter
-    ↓
-Prop Prediction Output
+Generic Prediction Adapter
+        ↓
+Algorithm Prediction Plug-in
+        ↓
+Config-Driven Formatter
+        ↓
+Outcome-Level Prediction Rows
 ```
 
 ---
 
-# Repository Structure
-
-Expected long-term structure:
+## High-Level Architecture
 
 ```text
-pipeline/
-├── features/
-│   ├── base/
-│   ├── moneyline/
-│   └── props/
-│
-├── training/
-│   ├── moneyline/
-│   └── props/
-│
-├── backtesting/
-│   ├── moneyline/
-│   └── props/
-│
-├── modeling/
-│   ├── adapters/
-│   │   ├── base_adapter.py
-│   │   ├── xgboost_adapter.py
-│   │   ├── random_forest_adapter.py
-│   │   ├── ensemble_adapter.py
-│   │   └── prop_adapter.py
-│   ├── model_registry.py
-│   ├── model_loader.py
-│   └── feature_contracts.py
-│
-├── prediction/
-├── clv/
-└── bankroll/
+Model Registry
+    ↓
+Model Config YAML
+    ↓
+Model Loader
+    ↓
+Generic Prediction Adapter
+    ↓
+Algorithm Prediction Plug-in
+    ↓
+Prediction Formatter
+    ↓
+Outcome-Based Prediction Artifact
 ```
 
-Model bundles should be grouped first by market family:
-
-```text
-models/
-├── moneyline/
-│   ├── UFC_Model_V5_XGBoost/
-│   ├── UFC_Model_V5_RF/
-│   └── UFC_Model_V5_Ensemble/
-│
-└── props/
-    ├── UFC_PROP_KO_TKO_V1/
-    ├── UFC_PROP_SUB_V1/
-    ├── UFC_PROP_DEC_V1/
-    ├── UFC_PROP_GOES_DISTANCE_V1/
-    └── UFC_PROP_ROUNDS_V1/
-```
-
-Configs should follow the same market-family structure:
-
-```text
-configs/
-└── models/
-    ├── moneyline/
-    │   ├── xgboost_v5.yaml
-    │   ├── random_forest_v1.yaml
-    │   └── ensemble_v1.yaml
-    │
-    └── props/
-        ├── ko_tko_v1.yaml
-        ├── submission_v1.yaml
-        ├── decision_v1.yaml
-        ├── goes_distance_v1.yaml
-        └── rounds_v1.yaml
-```
+The adapter receives fight-level model-ready features and returns outcome-level prediction rows.
 
 ---
 
-# Model Bundle Contract
+## Adapter Responsibilities
 
-Every production model should contain:
+The generic adapter owns:
 
-```text
-model.pkl
-feature_columns.pkl
-production_config.json
-confidence_buckets.parquet
-training_metrics.json
-```
+1. loading the selected model config
+2. loading the model bundle
+3. loading the feature contract
+4. aligning live features to the model feature list
+5. coercing model inputs to numeric values
+6. filling missing numeric values consistently with training behavior
+7. calling the algorithm prediction dispatcher
+8. applying probability clipping if configured
+9. sending probability output to the formatter
+10. returning canonical outcome rows
 
-Optional artifacts:
-
-```text
-calibration_model.pkl
-feature_importance.csv
-backtest_predictions.parquet
-model_card.md
-```
-
-Example:
-
-```text
-models/
-└── moneyline/
-    └── UFC_Model_V5_XGBoost/
-        ├── model.pkl
-        ├── feature_columns.pkl
-        ├── confidence_buckets.parquet
-        ├── training_metrics.json
-        └── production_config.json
-```
-
-Example prop model:
-
-```text
-models/
-└── props/
-    └── UFC_PROP_SUB_V1/
-        ├── model.pkl
-        ├── feature_columns.pkl
-        ├── confidence_buckets.parquet
-        ├── training_metrics.json
-        └── production_config.json
-```
+The adapter should not contain moneyline-specific or prop-specific business rules.
 
 ---
 
-# Feature Ownership
+## Algorithm Plug-ins
 
-Different market families require different feature builders.
+Prediction should mirror the training framework.
 
-Moneyline examples:
+Training pattern:
 
-- Elo differential
-- Rolling EWM differential stats
-- Reach differential
-- Age differential
-- Recent form
-- Wrestling mismatch
-- Striking edge
+```text
+pipeline/training/model_training.py
+        ↓
+pipeline/training/algorithms/xgboost_trainer.py
+```
 
-KO/TKO prop examples:
+Prediction pattern:
 
-- KO win rate
-- Knockdown rate
-- Striking pace
-- Opponent knockdowns absorbed
-- Chin risk
-- Finish loss rate
-- Defensive striking weakness
+```text
+pipeline/modeling/prediction_adapter.py
+        ↓
+pipeline/modeling/probability.py
+        ↓
+pipeline/modeling/algorithms/xgboost_predictor.py
+```
 
-Submission prop examples:
+Algorithm plug-ins should be narrow.
 
-- Submission win rate
-- Submission attempt rate
-- Takedown rate
-- Takedown defense
-- Control time
-- Submission mismatch
-- Grappling edge
-
-Decision / Goes Distance examples:
-
-- Average fight time
-- Decision win rate
-- Finish rate
-- Finish loss rate
-- Pace
-- Durability
-- Total rounds
-- Title fight flag
-
-Round prop examples:
-
-- Early finish rate
-- Late finish rate
-- Round-specific finish distribution
-- Cardio / fight-time history
-- Pace decay
-
-Models declare their own required feature set through:
-
-- `feature_columns.pkl`
-- `production_config.json`
-- optional YAML config under `configs/models/...`
-
-The prediction pipeline must build or load the features required by the selected model and market family.
-
----
-
-# Adapter Layer
-
-Prediction code should never directly call a specific model implementation.
-
-Avoid:
+For binary XGBoost models, the plug-in only needs to return:
 
 ```python
-xgb.predict_proba(X)
+model.predict_proba(X)[:, 1]
 ```
 
-Use:
-
-```python
-adapter = load_model(model_name)
-predictions = adapter.predict(df)
-```
-
-Adapters are responsible for:
-
-- Loading artifacts
-- Reading model metadata
-- Validating market family
-- Aligning feature columns
-- Validating missing features
-- Calling the underlying model
-- Applying calibration when needed
-- Looking up confidence buckets
-- Returning standardized output
+For multiclass XGBoost models, it should return the full class-probability matrix.
 
 ---
 
-# Standard Prediction Outputs
+## Formatter Responsibilities
 
-## Moneyline Prediction Output
+The formatter converts model probabilities into outcome rows.
 
-Required fields:
+Formatter behavior is controlled by the model YAML, not hardcoded market-specific adapters.
+
+Supported formatter types should include:
 
 ```text
-fight_id
-event_name
-red_name
-blue_name
+binary_matchup
+binary_prop
+multiclass
+```
+
+### binary_matchup
+
+Used for moneyline.
+
+One fight becomes two outcome rows:
+
+```text
+market_key = moneyline
+outcome_label = red fighter
+model_probability = red win probability
+```
+
+```text
+market_key = moneyline
+outcome_label = blue fighter
+model_probability = blue win probability
+```
+
+### binary_prop
+
+Used for markets such as goes-distance, KO/TKO, submission, decision, over/under.
+
+One fight becomes two outcome rows:
+
+```text
+outcome_label = positive_label
+model_probability = positive probability
+```
+
+```text
+outcome_label = negative_label
+model_probability = 1 - positive probability
+```
+
+### multiclass
+
+Used for method-style models.
+
+One fight becomes one row per configured class label.
+
+---
+
+## Canonical Output
+
+The long-term canonical adapter output is not:
+
+```text
 red_model_prob
 blue_model_prob
-model_pick
-model_version
-model_type
-market_family
-feature_set
-confidence_bucket
-bucket_reliability_score
-prediction_timestamp
 ```
 
-## Prop Prediction Output
-
-Required fields:
+The canonical output is:
 
 ```text
-fight_id
+market_key
+outcome_label
+model_probability
+```
+
+with metadata such as:
+
+```text
+prediction_run_id
+prediction_timestamp
+model_id
+model_family
+algorithm
+prediction_type
+event_id
 event_name
-market_family
-market_type
-selection
-fighter_name
-model_prob
-market_implied_prob
-edge
-ev
-model_name
-model_version
-model_type
-feature_set
-confidence_bucket
-bucket_reliability_score
-prediction_timestamp
+fight_id
+red_fighter
+blue_fighter
+is_model_pick
+model_confidence
+passes_model_data_quality
+passes_feature_validation
 ```
 
-Examples of `market_type`:
-
-```text
-KO_TKO
-SUBMISSION
-DECISION
-GOES_DISTANCE
-DOES_NOT_GO_DISTANCE
-ROUND_TOTAL_OVER
-ROUND_TOTAL_UNDER
-ROUND_1_FINISH
-```
-
-Downstream systems should consume these stable schemas and should not care whether the source model is XGBoost, Random Forest, Neural Network, or an Ensemble.
+Side-based columns may exist temporarily in legacy runners but are not the target architecture.
 
 ---
 
-# Confidence Buckets
-
-Confidence buckets are model-specific and market-specific artifacts.
-
-Generated during backtesting.
-
-Suggested location:
+## Expected Future Structure
 
 ```text
-models/<market_family>/<model_name>/confidence_buckets.parquet
+pipeline/modeling/
+  model_registry.py
+  model_config.py
+  model_loader.py
+  prediction_adapter.py
+  prediction_formatter.py
+  probability.py
+  algorithms/
+    xgboost_predictor.py
 ```
-
-Example columns:
-
-```text
-market_family
-market_type
-bucket_min
-bucket_max
-sample_size
-avg_model_prob
-actual_win_rate
-calibration_error
-bucket_reliability_score
-```
-
-Moneyline confidence buckets measure how well model probability bands predicted fight winners.
-
-Prop confidence buckets measure how well model probability bands predicted a specific prop outcome.
 
 ---
 
-# Data Flow by Market Family
+## Migration Notes
 
-## Moneyline
-
-```text
-Raw UFC Data
-    ↓
-Base Rolling Feature Store
-    ↓
-Moneyline Feature Builder
-    ↓
-Moneyline Model
-    ↓
-Moneyline Predictions
-    ↓
-Betting Board
-```
-
-## Props
-
-```text
-Raw UFC Data
-    ↓
-Base Rolling Feature Store
-    ↓
-Prop Label Builder
-    ↓
-Prop Feature Builder
-    ↓
-Prop Model
-    ↓
-Prop Predictions
-    ↓
-Betting Board
-```
-
-Prop models need both specialized labels and specialized features. For example, a submission model requires a target column for whether a fight ended by submission, not simply whether red won.
-
----
-
-# Migration Plan
-
-Phase 1
-
-- Convert the rolling feature notebook into Python modules.
-- Preserve existing V5 moneyline feature output.
-
-Phase 2
-
-- Convert the XGBoost training notebook into `pipeline/training/moneyline/` modules.
-- Preserve current XGBoost V5 behavior.
-
-Phase 3
-
-- Convert the backtest notebook into `pipeline/backtesting/moneyline/` modules.
-- Save confidence buckets as required model artifacts.
-
-Phase 4
-
-- Standardize model bundle format.
-- Standardize moneyline prediction outputs.
-
-Phase 5
-
-- Build model adapter layer and model registry.
-
-Phase 6
-
-- Add Random Forest and ensemble support for moneyline.
-
-Phase 7
-
-- Add prop feature builders, prop labels, prop backtests, and prop model adapters.
-
----
-
-# Current Recommendation
-
-Do not build the adapter layer first.
-
-Immediate priority:
-
-1. Convert the rolling feature notebook into reusable feature-store modules.
-2. Convert the training notebook into moneyline training modules.
-3. Convert the backtest notebook into moneyline backtesting modules.
-4. Verify identical outputs.
-5. Then introduce model bundles and adapters.
-6. Then add prop models as a separate market family.
-
-This minimizes risk while preserving the current production moneyline pipeline.
+- Keep current legacy prediction runner until the V2 outcome pipeline is implemented.
+- Do not add new long-term side-based prediction contracts.
+- New model families should be designed around outcome rows from the start.
+- Dashboard, Model Lab, CLV, and bankroll should eventually consume outcome-based betting artifacts.
