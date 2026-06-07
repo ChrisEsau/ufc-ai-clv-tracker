@@ -1,0 +1,70 @@
+# Base UFC moneyline XGBoost model configuration.
+#
+# This config is the source of truth for the first production replacement of
+# UFC_model_train_V5_refactored.ipynb. Future models should create their own
+# config files instead of changing the generic training runner.
+
+model_id: moneyline_xgb_base
+model_family: moneyline
+artifact_name: xgb_base
+
+algorithm: xgboost
+feature_contract: moneyline_xgb_base
+feature_contract_path: configs/features/model_feature_sets.yaml
+feature_registry_path: configs/features/feature_registry.yaml
+
+data:
+  rolling_features_path: data/features/UFC_enhanced_rolling_features_EWM.parquet
+  target_column: target
+  date_column: date
+
+split:
+  # Production-safe split.
+  # Model trains through 2022, calibration fits on 2023, final metrics evaluate 2024+.
+  mode: train_calibration_test
+  train_end_date: "2022-12-31"
+  calibration_end_date: "2023-12-31"
+
+symmetry:
+  enabled: true
+  mode: flip_all
+
+calibration:
+  enabled: true
+  method: isotonic
+
+params:
+  n_estimators: 500
+  max_depth: 4
+  learning_rate: 0.03
+  subsample: 0.8
+  colsample_bytree: 0.8
+  random_state: 42
+  eval_metric: logloss
+
+metrics:
+  threshold_min: 0.40
+  threshold_max: 0.60
+  threshold_step: 0.01
+  confidence_bucket_edges:
+    - 0.50
+    - 0.55
+    - 0.60
+    - 0.65
+    - 0.70
+    - 0.75
+    - 0.80
+    - 0.85
+    - 0.90
+    - 0.95
+    - 1.00
+
+artifacts:
+  output_dir: models/moneyline/xgb_base
+  save_raw_model: true
+  save_calibrated_model: true
+  save_feature_columns: true
+  save_metrics: true
+  save_threshold_sweep: true
+  save_confidence_buckets: true
+  save_model_card: true
