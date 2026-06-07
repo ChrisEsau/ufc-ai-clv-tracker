@@ -1,6 +1,40 @@
 # UFC AI CLV Tracker
 
-Private UFC betting intelligence platform for data maintenance, live fight prediction, betting-board review, line movement / CLV tracking, bankroll management, and model diagnostics.
+Private UFC betting intelligence platform for data maintenance, feature generation, model training, live fight prediction, betting-board review, line movement / CLV tracking, bankroll management, and model diagnostics.
+
+## Current project state
+
+As of the current development checkpoint, the project has a working modular moneyline training framework that replaces the old notebook-only training flow for the first production XGBoost model.
+
+Validated end-to-end run:
+
+```powershell
+python -m pipeline.training.run_train_model `
+  --config configs/models/moneyline_xgboost_v5.yaml
+```
+
+Last successful local run after cleaning 25 invalid-date master rows and rebuilding the rolling feature warehouse:
+
+```text
+Feature dataframe shape: (8574, 483)
+Resolved feature count: 124
+Model dataframe shape: (17148, 483)
+Train rows        : 13874
+Calibration rows  : 1040
+Test rows         : 2234
+Feature count     : 124
+Best threshold    : 0.47
+Accuracy          : 0.8075
+ROC-AUC           : 0.8948
+Log loss          : 0.3993
+Brier score       : 0.1324
+```
+
+Primary trained artifact output:
+
+```text
+models/moneyline/xgboost_v5/
+```
 
 ## Current branch strategy
 
@@ -11,6 +45,10 @@ Private UFC betting intelligence platform for data maintenance, live fight predi
 
 ## Local setup
 
+A virtual environment is recommended, but the project can also be run with system Python if dependencies are installed there.
+
+Recommended:
+
 ```bash
 git clone https://github.com/ChrisEsau/ufc-ai-clv-tracker.git
 cd ufc-ai-clv-tracker
@@ -20,10 +58,22 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
+If running without a venv, install dependencies into the active Python environment:
+
+```bash
+python -m pip install pandas pyarrow numpy pyyaml scikit-learn xgboost joblib streamlit plotly
+```
+
 On macOS/Linux:
 
 ```bash
 source .venv/bin/activate
+```
+
+To leave a venv:
+
+```bash
+deactivate
 ```
 
 ## Environment variables
@@ -65,21 +115,84 @@ The project uses `pipeline/common/paths.py` as the path registry. Important arti
 - `data/market/` — odds snapshots, normalized market data, CLV outputs
 - `data/bankroll/` — bankroll settings, bet ledger, open bets, snapshots
 - `models/` — trained model artifacts
-- `configs/` — future model and training configuration files
-- `docs/` — architecture and registry documents
+- `configs/` — model, feature-source, and feature-registry configuration files
+- `docs/` — architecture, migration, handoff, and registry documents
 
-## Model adapter direction
+## Current feature pipeline
 
-The long-term model architecture is model-agnostic. Training/backtesting code may produce XGBoost, Random Forest, Neural Network, or Ensemble model bundles, but production prediction should consume them through a standard adapter contract.
-
-Core rule:
+The current canonical rolling feature warehouse is:
 
 ```text
-Models own their required features.
-The pipeline owns the standard prediction output.
+data/features/UFC_enhanced_rolling_features_EWM.parquet
 ```
 
-See `docs/MODEL_ADAPTER_ARCHITECTURE.md` before changing training, backtesting, model-bundle, or prediction-interface code.
+It is rebuilt from:
+
+```text
+data/master/ufc_master.parquet
+```
+
+with:
+
+```powershell
+python -m pipeline.features.run_build_rolling_features
+```
+
+Current expected shape after the invalid-date cleanup:
+
+```text
+Master rows  : 8574
+Feature cols : 483
+```
+
+The current moneyline model uses an explicit 124-feature contract stored directly in:
+
+```text
+configs/models/moneyline_xgboost_v5.yaml
+```
+
+## Current training framework
+
+Current training modules:
+
+```text
+pipeline/training/
+  calibration.py
+  feature_selection.py
+  metrics.py
+  model_training.py
+  run_train_model.py
+  symmetry.py
+  temporal_split.py
+  algorithms/
+    xgboost_trainer.py
+```
+
+Current model config:
+
+```text
+configs/models/moneyline_xgboost_v5.yaml
+```
+
+Current feature-source registry:
+
+```text
+configs/features/feature_sources.yaml
+```
+
+Current model workflow:
+
+```text
+Load model config
+Load rolling feature warehouse
+Validate explicit 124-feature contract
+Apply symmetry augmentation
+Build train/calibration/test temporal split
+Train XGBoost
+Fit isotonic calibration on calibration split
+Evaluate final test split
+Save raw model, calibrated model, metrics, threshold sweep, confidence buckets, model card
+```
 
 ## Data maintenance workflow
 
@@ -95,6 +208,8 @@ Recommended order for a completed event:
 8. Run append precheck validation.
 9. Run final staged review.
 10. Append staged rows to master only after review passes.
+11. Rebuild rolling features.
+12. Re-run training/backtest if the master changed meaningfully.
 
 The single-event ingestion runner stages and reviews data but intentionally does not append automatically.
 
@@ -122,27 +237,32 @@ Workflows in `.github/workflows/` are used to run major pipeline stages and comm
 
 ## Development rules
 
-- Keep paths centralized in `pipeline/common/paths.py`.
+- Keep paths centralized in `pipeline/common/paths.py` where practical.
 - Prefer module runners under `pipeline/...` and keep root scripts as compatibility wrappers only.
 - Do not commit API keys, local `.env` files, virtual environments, or cache folders.
 - Treat append-to-master as a gated operation.
 - Prefer auditable parquet outputs for validation steps.
 - Make dashboard failures visible instead of silently hiding broken artifacts.
-- Keep model-specific feature requirements inside model bundles/configs rather than hardcoding them into downstream Betting Board or CLV logic.
+- Model configs are the single source of truth for model-specific features, algorithm, params, split, calibration, metrics, and artifacts.
+- Do not infer production model feature lists from naming rules; use explicit model config feature lists.
 
 ## Useful docs
 
-See `docs/` for architecture and registry files, including:
+Key docs:
 
-- `UFC_PROJECT_OVERVIEW.md`
-- `UFC_REPOSITORY_STRUCTURE.md`
-- `UFC_DATA_FLOW.md`
-- `UFC_INGESTION_PIPELINE_REGISTRY.md`
-- `UFC_MASTER_SCHEMA.md`
-- `UFC_GITHUB_WORKFLOW_REGISTRY.md`
-- `UFC_DM_DASHBOARD_ARCHITECTURE.md`
-- `UFC_BETTING_BOARD_ARCHITECTURE.md`
-- `UFC_LINE_MOVEMENT_CLV_ARCHITECTURE.md`
-- `UFC_BANKROLL_ARCHITECTURE.md`
-- `UFC_MODEL_LAB_ARCHITECTURE.md`
-- `MODEL_ADAPTER_ARCHITECTURE.md`
+- `docs/CURRENT_PROJECT_HANDOFF.md`
+- `docs/TRAINING_FRAMEWORK_ARCHITECTURE.md`
+- `docs/MODEL_REGISTRY_ARCHITECTURE.md`
+- `docs/ROLLING_NOTEBOOK_MIGRATION_PLAN.md`
+- `docs/MODEL_ADAPTER_ARCHITECTURE.md`
+- `docs/UFC_PROJECT_OVERVIEW.md`
+- `docs/UFC_REPOSITORY_STRUCTURE.md`
+- `docs/UFC_DATA_FLOW.md`
+- `docs/UFC_INGESTION_PIPELINE_REGISTRY.md`
+- `docs/UFC_MASTER_SCHEMA.md`
+- `docs/UFC_GITHUB_WORKFLOW_REGISTRY.md`
+- `docs/UFC_DM_DASHBOARD_ARCHITECTURE.md`
+- `docs/UFC_BETTING_BOARD_ARCHITECTURE.md`
+- `docs/UFC_LINE_MOVEMENT_CLV_ARCHITECTURE.md`
+- `docs/UFC_BANKROLL_ARCHITECTURE.md`
+- `docs/UFC_MODEL_LAB_ARCHITECTURE.md`
