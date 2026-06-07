@@ -18,6 +18,11 @@ import numpy as np
 import pandas as pd
 from sklearn.calibration import CalibratedClassifierCV
 
+try:
+    from sklearn.frozen import FrozenEstimator
+except ImportError:  # pragma: no cover - compatibility for older sklearn versions
+    FrozenEstimator = None  # type: ignore[assignment]
+
 
 @dataclass(frozen=True)
 class CalibrationResult:
@@ -104,9 +109,19 @@ def _normalize_sklearn_calibration_method(method: str) -> str:
 
 
 def _build_prefit_calibrator(model: Any, method: str) -> CalibratedClassifierCV:
-    """Build a CalibratedClassifierCV compatible with multiple sklearn versions."""
+    """Build a calibrator for an already-fitted base model.
+
+    Newer scikit-learn versions require wrapping already-fitted estimators with
+    FrozenEstimator instead of passing ``cv='prefit'``. Older versions do not
+    have FrozenEstimator, so we fall back to the legacy API.
+    """
+    if FrozenEstimator is not None:
+        return CalibratedClassifierCV(
+            estimator=FrozenEstimator(model),
+            method=method,
+        )
+
     try:
         return CalibratedClassifierCV(estimator=model, method=method, cv="prefit")
     except TypeError:
-        # Older sklearn versions used ``base_estimator`` instead of ``estimator``.
         return CalibratedClassifierCV(base_estimator=model, method=method, cv="prefit")
