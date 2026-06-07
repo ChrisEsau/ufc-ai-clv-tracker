@@ -1,0 +1,65 @@
+# UFC Feature Source Registry
+#
+# Purpose:
+#   Defines available feature warehouse sources and how models should load/join
+#   them. Model configs reference these source names and separately list the
+#   exact feature columns they consume.
+
+registry_name: ufc_feature_sources
+version: 1
+
+feature_sources:
+
+  rolling_moneyline_v5:
+    description: Current monolithic rolling feature warehouse used by the V5 moneyline model.
+    path: data/features/UFC_enhanced_rolling_features_EWM.parquet
+    expected_columns: 483
+    join_keys:
+      - fight_id
+    required_columns:
+      - fight_id
+      - date
+      - target
+    model_input_allowed: true
+    owner: pipeline.features.run_build_rolling_features
+    status: active
+    notes:
+      - This is the current single-file feature warehouse.
+      - The model config still explicitly lists the exact 124 model input columns.
+      - Future split feature stores can be added here without changing model-training code.
+
+  future_base_features:
+    description: Future reusable point-in-time base fighter-state feature store.
+    path: data/features/ufc_base_features.parquet
+    join_keys:
+      - fight_id
+    model_input_allowed: conditionally_via_model_config
+    owner: pipeline.features.base
+    status: planned
+
+  future_moneyline_features:
+    description: Future moneyline-specific symmetry-safe feature view.
+    path: data/features/ufc_moneyline_features.parquet
+    join_keys:
+      - fight_id
+    model_input_allowed: true
+    owner: pipeline.features.moneyline
+    status: planned
+
+  future_market_features:
+    description: Future odds, market movement, implied probability, CLV, and sportsbook-derived feature store.
+    path: data/features/ufc_market_features.parquet
+    join_keys:
+      - fight_id
+    model_input_allowed: true
+    owner: pipeline.features.market
+    status: planned
+
+  future_prop_features:
+    description: Future prop-market feature view for KO/TKO, submission, decision, goes-distance, and round models.
+    path: data/features/ufc_prop_features.parquet
+    join_keys:
+      - fight_id
+    model_input_allowed: true
+    owner: pipeline.features.props
+    status: planned
