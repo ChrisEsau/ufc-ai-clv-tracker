@@ -209,3 +209,42 @@ artifacts:
   save_threshold_sweep: true
   save_confidence_buckets: true
   save_model_card: true
+
+prediction:
+  format: binary_matchup
+  market_key: moneyline
+  prediction_type: binary_matchup
+
+  # Positive class for the current moneyline model is red-side fighter wins.
+  positive_class: red
+
+  threshold:
+    source: fixed
+    value: 0.50
+
+  probability:
+    clip_low: 0.02
+    clip_high: 0.98
+
+  outcomes:
+    positive:
+      outcome_side: red
+      label_source: red_fighter
+    negative:
+      outcome_side: blue
+      label_source: blue_fighter
+
+  output:
+    canonical_artifact: model_outcomes
+    path: data/predictions/model_outcomes.parquet
+    model_scoped_path_template: data/predictions/by_model/{model_id}/model_outcomes.parquet
+
+market:
+  source: the_odds_api
+  sport: mma_mixed_martial_arts
+  regions:
+    - us
+  bookmakers:
+    - draftkings
+  markets:
+    - h2h
