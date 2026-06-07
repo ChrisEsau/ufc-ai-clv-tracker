@@ -8,6 +8,7 @@ Run from repo root:
 
 Pipeline:
 - Load data/master/ufc_master.parquet
+- Exclude rows that cannot be labeled by winner/red/blue fighter IDs
 - Build an ID-based moneyline target where target=1 means winner_id == r_id
 - Build base rolling fighter-state features
 - Add EWM/recent-form features
@@ -27,11 +28,27 @@ from ufc_feature_engineering import add_v5_engineered_features
 
 EXPECTED_ROLLING_COLUMNS = 483
 TARGET_ID_COLUMNS = ["winner_id", "r_id", "b_id"]
+EXAMPLE_CONTEXT_COLUMNS = [
+    "event_name",
+    "date",
+    "fight_id",
+    "r_name",
+    "b_name",
+    "winner",
+    "winner_id",
+    "r_id",
+    "b_id",
+]
 
 
 def _normalized_id_series(df: pd.DataFrame, column: str) -> pd.Series:
     """Return normalized string IDs for target validation and comparison."""
     return df[column].astype("string").str.strip()
+
+
+def _available_example_columns(df: pd.DataFrame) -> list[str]:
+    """Return useful context columns that exist in the dataframe."""
+    return [column for column in EXAMPLE_CONTEXT_COLUMNS if column in df.columns]
 
 
 def add_id_based_target(df: pd.DataFrame) -> pd.DataFrame:
@@ -46,6 +63,12 @@ def add_id_based_target(df: pd.DataFrame) -> pd.DataFrame:
     dataset, ``winner`` stores the winning fighter name, not the literal corner
     value ``red`` or ``blue``. Using names or corner text here can silently
     corrupt labels and inflate model metrics after symmetry augmentation.
+
+    Rows missing ``winner_id``, ``r_id``, or ``b_id`` are excluded from the
+    feature build because they cannot be labeled safely or used to update
+    fighter state by stable ID. Non-missing rows where ``winner_id`` does not
+    match either fighter ID still fail loudly because that indicates corrupted
+    identity data.
     """
     missing_columns = [column for column in TARGET_ID_COLUMNS if column not in df.columns]
     if missing_columns:
@@ -61,11 +84,18 @@ def add_id_based_target(df: pd.DataFrame) -> pd.DataFrame:
 
     missing_id_mask = winner_id.isna() | red_id.isna() | blue_id.isna()
     if missing_id_mask.any():
-        bad_count = int(missing_id_mask.sum())
-        raise ValueError(
-            "Cannot build rolling features because target ID fields contain missing values "
-            f"in {bad_count} rows. Required columns: {TARGET_ID_COLUMNS}"
+        dropped_count = int(missing_id_mask.sum())
+        example_columns = _available_example_columns(out)
+        examples = out.loc[missing_id_mask, example_columns].head(10).to_dict("records")
+        print(
+            "WARNING: Excluding rows from rolling feature build because target ID fields "
+            f"are missing in {dropped_count} rows. Required columns: {TARGET_ID_COLUMNS}. "
+            f"Example rows: {examples}"
         )
+        out = out.loc[~missing_id_mask].copy()
+        winner_id = _normalized_id_series(out, "winner_id")
+        red_id = _normalized_id_series(out, "r_id")
+        blue_id = _normalized_id_series(out, "b_id")
 
     winner_matches_red = winner_id.eq(red_id)
     winner_matches_blue = winner_id.eq(blue_id)
@@ -73,11 +103,7 @@ def add_id_based_target(df: pd.DataFrame) -> pd.DataFrame:
 
     if invalid_winner_mask.any():
         bad_count = int(invalid_winner_mask.sum())
-        example_columns = [
-            column
-            for column in ["event_name", "date", "fight_id", "r_name", "b_name", "winner", "winner_id", "r_id", "b_id"]
-            if column in out.columns
-        ]
+        example_columns = _available_example_columns(out)
         examples = out.loc[invalid_winner_mask, example_columns].head(10).to_dict("records")
         raise ValueError(
             "Cannot build rolling features because winner_id does not match r_id or b_id "
