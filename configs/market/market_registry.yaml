@@ -1,0 +1,26 @@
+# Market Pipeline V2 registry
+
+provider: the_odds_api
+
+source: the_odds_api
+
+sport: mma_mixed_martial_arts
+regions: us
+odds_format: american
+
+bookmakers:
+  - DraftKings
+
+markets:
+  - moneyline
+
+market_provider_keys:
+  moneyline: h2h
+
+outputs:
+  market_outcomes_path: data/market/market_outcomes.parquet
+  market_outcome_snapshots_path: data/market/market_outcome_snapshots.parquet
+  market_audit_path: data/audits/ufc_market_outcome_audit.parquet
+
+matching:
+  min_single_score: 90
