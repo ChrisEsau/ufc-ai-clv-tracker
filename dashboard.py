@@ -4,7 +4,7 @@
 
 
 from utils.theme import apply_theme
-from tabs.betting_board import render_betting_board
+from tabs.betting_board_v2 import render_betting_board
 from tabs.line_movement import render_line_movement
 from tabs.bankroll import render_bankroll
 from tabs.model_lab import render_model_lab
@@ -30,4 +30,3 @@ elif page == "Model Lab":
     render_model_lab()
 elif page == "Data Maintenance":
     render_data_maintenance()
-
