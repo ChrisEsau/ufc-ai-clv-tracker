@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from pipeline.common.paths import LIVE_FEATURE_AUDIT_PATH, PREDICTIONS_DIR
+from pipeline.common.paths import LIVE_CARD_PATH, LIVE_FEATURE_AUDIT_PATH, PREDICTIONS_DIR
 
 
 DEFAULT_MODEL_OUTCOMES_PATH = PREDICTIONS_DIR / "model_outcomes.parquet"
@@ -20,6 +20,11 @@ class PredictionAuditError(RuntimeError):
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Audit Prediction V2 output artifacts.",
+    )
+    parser.add_argument(
+        "--live-card-path",
+        default=str(LIVE_CARD_PATH),
+        help="Path to raw live card parquet.",
     )
     parser.add_argument(
         "--model-outcomes-path",
@@ -40,7 +45,7 @@ def parse_args() -> argparse.Namespace:
         "--top-n",
         type=int,
         default=25,
-        help="Number of model picks to print.",
+        help="Number of rows/model picks to print.",
     )
     return parser.parse_args()
 
@@ -49,6 +54,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
 
+    live_card_path = Path(args.live_card_path)
     model_outcomes_path = Path(args.model_outcomes_path)
     live_features_path = Path(args.live_features_path)
     feature_audit_path = Path(args.feature_audit_path)
@@ -57,7 +63,20 @@ def main() -> None:
     print("PREDICTION V2 OUTPUT AUDIT")
     print("=" * 80)
 
+    if live_card_path.exists():
+        live_card = pd.read_parquet(live_card_path)
+        print("\n" + "=" * 80)
+        print("RAW LIVE CARD REVIEW")
+        print("=" * 80)
+        print(f"Live card path: {live_card_path}")
+        _audit_live_card(live_card, top_n=args.top_n)
+    else:
+        print(f"\nLive card not found: {live_card_path}")
+
     outcomes = _read_required_parquet(model_outcomes_path, "model outcomes")
+    print("\n" + "=" * 80)
+    print("MODEL OUTCOMES")
+    print("=" * 80)
     print(f"Model outcomes path: {model_outcomes_path}")
     _audit_outcomes(outcomes, top_n=args.top_n)
 
@@ -87,6 +106,115 @@ def _read_required_parquet(path: Path, label: str) -> pd.DataFrame:
     if not path.exists():
         raise PredictionAuditError(f"Missing {label}: {path}")
     return pd.read_parquet(path)
+
+
+
+def _audit_live_card(df: pd.DataFrame, *, top_n: int) -> None:
+    print(f"Rows: {len(df)}")
+    print(f"Columns: {len(df.columns)}")
+    print(f"Duplicate column names: {int(df.columns.duplicated().sum())}")
+    print(f"Unique fights: {_safe_nunique(df, 'fight_id')}")
+    print(f"Unique events: {_safe_nunique(df, 'event_id')}")
+
+    print("\nColumns:")
+    print(", ".join(str(column) for column in df.columns))
+
+    identity_candidates = [
+        "event_id",
+        "event_name",
+        "commence_time",
+        "date",
+        "fight_id",
+        "red_fighter_id",
+        "blue_fighter_id",
+        "r_id",
+        "b_id",
+        "red_fighter",
+        "blue_fighter",
+        "r_name",
+        "b_name",
+        "fighter_1",
+        "fighter_2",
+    ]
+    present_identity = [column for column in identity_candidates if column in df.columns]
+    if present_identity:
+        print("\nIdentity/display column null or blank counts:")
+        for column in present_identity:
+            print(f"  {column}: {_missing_or_blank_count(df[column])}")
+
+    for column in ["event_name", "event_id"]:
+        if column in df.columns:
+            print(f"\nTop {column} counts:")
+            print(df[column].value_counts(dropna=False).head(top_n).to_string())
+
+    if "fight_id" in df.columns:
+        duplicate_fight_rows = df[df["fight_id"].duplicated(keep=False)].copy()
+        print(f"\nDuplicate fight_id rows: {len(duplicate_fight_rows)}")
+        if len(duplicate_fight_rows) > 0:
+            display_columns = [
+                column for column in [
+                    "event_name",
+                    "event_id",
+                    "commence_time",
+                    "date",
+                    "fight_id",
+                    "red_fighter",
+                    "blue_fighter",
+                    "r_name",
+                    "b_name",
+                    "red_fighter_id",
+                    "blue_fighter_id",
+                    "r_id",
+                    "b_id",
+                ]
+                if column in duplicate_fight_rows.columns
+            ]
+            print("\nDuplicate fight_id sample:")
+            print(duplicate_fight_rows[display_columns].head(top_n).to_string(index=False))
+
+    id_pairs = _resolve_live_card_id_columns(df)
+    if id_pairs:
+        red_id_col, blue_id_col = id_pairs
+        missing_red = _missing_or_blank_mask(df[red_id_col])
+        missing_blue = _missing_or_blank_mask(df[blue_id_col])
+        missing_either = missing_red | missing_blue
+        print(f"\nUsing live-card ID columns: red={red_id_col}, blue={blue_id_col}")
+        print(f"Missing red IDs: {int(missing_red.sum())}")
+        print(f"Missing blue IDs: {int(missing_blue.sum())}")
+        print(f"Rows missing either fighter ID: {int(missing_either.sum())}")
+
+        if missing_either.any():
+            display_columns = [
+                column for column in [
+                    "event_name",
+                    "event_id",
+                    "commence_time",
+                    "date",
+                    "fight_id",
+                    "red_fighter",
+                    "blue_fighter",
+                    "r_name",
+                    "b_name",
+                    red_id_col,
+                    blue_id_col,
+                ]
+                if column in df.columns
+            ]
+            print("\nRows missing fighter IDs:")
+            print(df.loc[missing_either, display_columns].head(top_n).to_string(index=False))
+    else:
+        print("\nNo recognized red/blue fighter ID columns found in live card.")
+
+    name_pairs = _resolve_live_card_name_columns(df)
+    if name_pairs:
+        red_name_col, blue_name_col = name_pairs
+        missing_red_name = _missing_or_blank_mask(df[red_name_col])
+        missing_blue_name = _missing_or_blank_mask(df[blue_name_col])
+        missing_either_name = missing_red_name | missing_blue_name
+        print(f"\nUsing live-card name columns: red={red_name_col}, blue={blue_name_col}")
+        print(f"Missing red names: {int(missing_red_name.sum())}")
+        print(f"Missing blue names: {int(missing_blue_name.sum())}")
+        print(f"Rows missing either fighter name: {int(missing_either_name.sum())}")
 
 
 
@@ -213,12 +341,48 @@ def _print_missing_required(df: pd.DataFrame, *, required_columns: list[str]) ->
 
     print("\nRequired column null/blank counts:")
     for column in required_columns:
-        values = df[column]
-        if values.dtype == "object" or str(values.dtype).startswith("string"):
-            missing = values.astype("string").fillna("").str.strip().eq("").sum()
-        else:
-            missing = values.isna().sum()
-        print(f"  {column}: {int(missing)}")
+        print(f"  {column}: {_missing_or_blank_count(df[column])}")
+
+
+
+def _resolve_live_card_id_columns(df: pd.DataFrame) -> tuple[str, str] | None:
+    red_candidates = ["red_fighter_id", "r_id", "red_id"]
+    blue_candidates = ["blue_fighter_id", "b_id", "blue_id"]
+    red = _first_existing(df, red_candidates)
+    blue = _first_existing(df, blue_candidates)
+    if red and blue:
+        return red, blue
+    return None
+
+
+
+def _resolve_live_card_name_columns(df: pd.DataFrame) -> tuple[str, str] | None:
+    red_candidates = ["red_fighter", "r_name", "red_name", "fighter_1", "fighter_a"]
+    blue_candidates = ["blue_fighter", "b_name", "blue_name", "fighter_2", "fighter_b"]
+    red = _first_existing(df, red_candidates)
+    blue = _first_existing(df, blue_candidates)
+    if red and blue:
+        return red, blue
+    return None
+
+
+
+def _first_existing(df: pd.DataFrame, candidates: list[str]) -> str | None:
+    for candidate in candidates:
+        if candidate in df.columns:
+            return candidate
+    return None
+
+
+
+def _missing_or_blank_count(series: pd.Series) -> int:
+    return int(_missing_or_blank_mask(series).sum())
+
+
+
+def _missing_or_blank_mask(series: pd.Series) -> pd.Series:
+    values = series.astype("string").fillna("").str.strip()
+    return series.isna() | values.eq("") | values.str.lower().isin({"nan", "none", "null", "nat"})
 
 
 
