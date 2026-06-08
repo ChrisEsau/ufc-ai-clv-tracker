@@ -6,6 +6,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from pipeline.modeling.confidence import score_prediction_confidence
 from pipeline.modeling.model_config import get_algorithm, get_model_family, get_model_id, get_prediction_config
 
 
@@ -35,7 +36,6 @@ OPTIONAL_INPUT_COLUMNS = [
     "blue_feature_match",
     "feature_match_type",
 ]
-
 
 
 def format_prediction_outcomes(
@@ -105,7 +105,6 @@ def format_prediction_outcomes(
     raise PredictionFormatterError(
         f"Unsupported prediction formatter type: {formatter_type}"
     )
-
 
 
 def _format_binary_matchup(
@@ -192,7 +191,6 @@ def _format_binary_matchup(
     return pd.DataFrame(rows)
 
 
-
 def _format_binary_prop(
     *,
     fight_df: pd.DataFrame,
@@ -268,7 +266,6 @@ def _format_binary_prop(
     return pd.DataFrame(rows)
 
 
-
 def _format_multiclass(
     *,
     fight_df: pd.DataFrame,
@@ -337,7 +334,6 @@ def _format_multiclass(
     return pd.DataFrame(rows)
 
 
-
 def _build_base_outcome_row(
     *,
     fight_row: pd.Series,
@@ -354,6 +350,11 @@ def _build_base_outcome_row(
     model_confidence: float,
 ) -> dict[str, Any]:
     """Build one canonical prediction outcome row."""
+
+    confidence_payload = score_prediction_confidence(
+        fight_row,
+        model_pick_probability=model_confidence,
+    ).to_dict()
 
     row = {
         "prediction_run_id": prediction_run_id,
@@ -375,8 +376,10 @@ def _build_base_outcome_row(
         "outcome_fighter_id": outcome_fighter_id,
         "outcome_side": str(outcome_side),
         "model_probability": float(model_probability),
+        "model_pick_probability": float(model_confidence),
         "is_model_pick": bool(is_model_pick),
         "model_pick": str(model_pick),
+        # Backward-compatible alias. True trust confidence is stored in confidence_score/confidence_pct.
         "model_confidence": float(model_confidence),
         "passes_model_data_quality": bool(fight_row.get("passes_model_data_quality", True)),
         "passes_feature_validation": bool(fight_row.get("passes_feature_validation", True)),
@@ -388,9 +391,9 @@ def _build_base_outcome_row(
         "blue_feature_match": fight_row.get("blue_feature_match"),
         "feature_match_type": fight_row.get("feature_match_type"),
     }
+    row.update(confidence_payload)
 
     return row
-
 
 
 def _resolve_matchup_outcome_fighter_id(fight_row: pd.Series, *, outcome_side: str):
@@ -407,14 +410,12 @@ def _resolve_matchup_outcome_fighter_id(fight_row: pd.Series, *, outcome_side: s
     return None
 
 
-
 def _validate_fight_df(fight_df: pd.DataFrame) -> None:
     missing_columns = [column for column in REQUIRED_INPUT_COLUMNS if column not in fight_df.columns]
     if missing_columns:
         raise PredictionFormatterError(
             f"Fight dataframe missing required formatter columns: {missing_columns}"
         )
-
 
 
 def _validate_binary_probabilities(probabilities: np.ndarray, expected_rows: int) -> None:
@@ -431,7 +432,6 @@ def _validate_binary_probabilities(probabilities: np.ndarray, expected_rows: int
 
     if np.any(probabilities < 0) or np.any(probabilities > 1):
         raise PredictionFormatterError("Probabilities must be between 0 and 1.")
-
 
 
 def _resolve_label(fight_row: pd.Series, *, label_source: str) -> str:
