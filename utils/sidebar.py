@@ -6,7 +6,7 @@ import streamlit as st
 from utils.betting_board_artifacts import load_upcoming_events
 from utils.bankroll_artifacts import load_bet_ledger
 from utils.data_loader import load_parquet
-from pipeline.common.paths import BETTING_BOARD_PATH, MARKET_SNAPSHOTS_PATH
+from pipeline.common.paths import BETTING_OUTCOMES_PATH, MARKET_SNAPSHOTS_PATH
 from pipeline.common.risk_settings import load_risk_settings
 
 NAV_ITEMS = [
@@ -23,6 +23,25 @@ def _sidebar_section(label: str, compact: bool = False) -> None:
     st.sidebar.markdown(
         f'<div class="sidebar-section{compact_class}">{label}</div>', unsafe_allow_html=True
     )
+
+
+def _market_display(value) -> str:
+    key = str(value or "").strip().lower()
+    return {
+        "moneyline": "Moneyline",
+        "h2h": "Moneyline",
+        "method": "Method of Victory",
+        "goes_distance": "Goes Distance",
+        "totals": "Totals",
+        "round": "Round Props",
+    }.get(key, str(value or "Unknown").replace("_", " ").title())
+
+
+def _betting_outcomes() -> pd.DataFrame:
+    outcomes = load_parquet(BETTING_OUTCOMES_PATH)
+    if outcomes is None or outcomes.empty:
+        return pd.DataFrame()
+    return outcomes.copy()
 
 
 def _betting_board_event_names() -> list[str]:
@@ -49,9 +68,9 @@ def _betting_board_event_names() -> list[str]:
                 if pd.isna(current_date) or (not pd.isna(parsed_date) and parsed_date < current_date):
                     event_dates[name] = parsed_date
 
-    board = load_parquet(BETTING_BOARD_PATH)
-    if board is not None and not board.empty and "event_name" in board.columns:
-        for name in board["event_name"].dropna().astype(str):
+    outcomes = _betting_outcomes()
+    if not outcomes.empty and "event_name" in outcomes.columns:
+        for name in outcomes["event_name"].dropna().astype(str):
             clean_name = name.strip()
             if clean_name and clean_name not in event_dates:
                 event_dates[clean_name] = pd.NaT
@@ -77,6 +96,22 @@ def _betting_board_date_bounds() -> tuple:
     return (min(dates), max(dates))
 
 
+def _betting_board_market_types() -> list[str]:
+    outcomes = _betting_outcomes()
+    if outcomes.empty or "market_key" not in outcomes.columns:
+        return ["All Markets"]
+    markets = sorted({_market_display(value) for value in outcomes["market_key"].dropna() if str(value).strip()})
+    return ["All Markets", *markets]
+
+
+def _betting_board_bookmakers() -> list[str]:
+    outcomes = _betting_outcomes()
+    if outcomes.empty or "bookmaker" not in outcomes.columns:
+        return ["All Books"]
+    books = sorted({str(book).strip() for book in outcomes["bookmaker"].dropna() if str(book).strip()})
+    return ["All Books", *books]
+
+
 def _render_betting_board_filters() -> None:
     _sidebar_section("Filters", compact=True)
     risk_settings = load_risk_settings()
@@ -87,6 +122,24 @@ def _render_betting_board_filters() -> None:
         "Event",
         event_names,
         key="bb_filter_event",
+    )
+
+    market_types = _betting_board_market_types()
+    if st.session_state.get("bb_filter_market_type") not in market_types:
+        st.session_state["bb_filter_market_type"] = "All Markets"
+    st.sidebar.selectbox(
+        "Market Type",
+        market_types,
+        key="bb_filter_market_type",
+    )
+
+    bookmakers = _betting_board_bookmakers()
+    if st.session_state.get("bb_filter_bookmaker") not in bookmakers:
+        st.session_state["bb_filter_bookmaker"] = "All Books"
+    st.sidebar.selectbox(
+        "Bookmaker",
+        bookmakers,
+        key="bb_filter_bookmaker",
     )
 
     date_bounds = _betting_board_date_bounds()
@@ -249,6 +302,7 @@ def _render_clv_filters() -> None:
             unsafe_allow_html=True,
         )
     st.sidebar.caption("All times shown in America/Chicago")
+
 
 def render_sidebar():
     """Render persistent left navigation without changing workspace backends."""
