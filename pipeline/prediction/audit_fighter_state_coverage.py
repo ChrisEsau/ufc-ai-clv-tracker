@@ -114,7 +114,7 @@ def _build_live_fighter_rows(live_card: pd.DataFrame) -> pd.DataFrame:
         "red_fighter_id",
     ]].copy()
     red = red.rename(columns={
-        "red_fighter": "fighter_name",
+        "red_fighter": "live_fighter_name",
         "red_fighter_id": "fighter_id",
     })
     red["side"] = "red"
@@ -127,14 +127,14 @@ def _build_live_fighter_rows(live_card: pd.DataFrame) -> pd.DataFrame:
         "blue_fighter_id",
     ]].copy()
     blue = blue.rename(columns={
-        "blue_fighter": "fighter_name",
+        "blue_fighter": "live_fighter_name",
         "blue_fighter_id": "fighter_id",
     })
     blue["side"] = "blue"
 
     fighters = pd.concat([red, blue], ignore_index=True)
     fighters["fighter_id"] = _normalize_id_series(fighters["fighter_id"])
-    fighters["fighter_name"] = fighters["fighter_name"].astype("string").fillna("").str.strip()
+    fighters["live_fighter_name"] = fighters["live_fighter_name"].astype("string").fillna("").str.strip()
 
     return fighters
 
@@ -185,7 +185,9 @@ def _build_fighter_coverage(
         left_on="fighter_id",
         right_on=fighter_id_column,
         how="left",
+        suffixes=("", "_state"),
     )
+    coverage["fighter_name"] = coverage["live_fighter_name"]
     coverage["has_fighter_state"] = coverage[fighter_id_column].notna()
     coverage["missing_reason"] = coverage["has_fighter_state"].map({True: "matched", False: "missing_from_current_fighter_features"})
 
