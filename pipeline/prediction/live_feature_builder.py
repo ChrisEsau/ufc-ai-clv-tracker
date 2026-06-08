@@ -35,6 +35,8 @@ LIVE_CARD_REQUIRED_COLUMNS = [
 
 RED_ID_CANDIDATES = ["red_fighter_id", "r_id", "red_id"]
 BLUE_ID_CANDIDATES = ["blue_fighter_id", "b_id", "blue_id"]
+RED_NAME_CANDIDATES = ["red_fighter", "r_name", "red_name", "fighter_1", "fighter_a"]
+BLUE_NAME_CANDIDATES = ["blue_fighter", "b_name", "blue_name", "fighter_2", "fighter_b"]
 FIGHTER_ID_CANDIDATES = ["fighter_id", "id", "ufcstats_fighter_id"]
 
 
@@ -148,12 +150,59 @@ def _standardize_live_card_columns(live_card_df: pd.DataFrame) -> pd.DataFrame:
     if blue_id_column and blue_id_column != "blue_fighter_id":
         out["blue_fighter_id"] = out[blue_id_column]
 
+    out = _fill_display_name_column(
+        out,
+        target_column="red_fighter",
+        candidates=RED_NAME_CANDIDATES,
+        id_column="red_fighter_id",
+    )
+    out = _fill_display_name_column(
+        out,
+        target_column="blue_fighter",
+        candidates=BLUE_NAME_CANDIDATES,
+        id_column="blue_fighter_id",
+    )
+
     if "r_id" not in out.columns and "red_fighter_id" in out.columns:
         out["r_id"] = out["red_fighter_id"]
 
     if "b_id" not in out.columns and "blue_fighter_id" in out.columns:
         out["b_id"] = out["blue_fighter_id"]
 
+    return out
+
+
+
+def _fill_display_name_column(
+    df: pd.DataFrame,
+    *,
+    target_column: str,
+    candidates: list[str],
+    id_column: str,
+) -> pd.DataFrame:
+    """Fill canonical display-name column from common fallback columns."""
+
+    out = df.copy()
+
+    if target_column not in out.columns:
+        out[target_column] = ""
+
+    target = out[target_column].astype("string").fillna("").str.strip()
+
+    for candidate in candidates:
+        if candidate == target_column or candidate not in out.columns:
+            continue
+
+        candidate_values = out[candidate].astype("string").fillna("").str.strip()
+        target = target.mask(target.eq(""), candidate_values)
+
+    # Final fallback keeps the formatter from crashing while still making missing
+    # name problems visible in outputs/audits.
+    if id_column in out.columns:
+        id_values = out[id_column].astype("string").fillna("").str.strip()
+        target = target.mask(target.eq(""), "fighter_id:" + id_values)
+
+    out[target_column] = target.astype(str)
     return out
 
 
