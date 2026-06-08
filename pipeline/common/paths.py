@@ -115,6 +115,7 @@ MARKET_REGISTRY_PATH = MARKET_CONFIG_DIR / "market_registry.yaml"
 MARKET_OUTCOMES_PATH = MARKET_DIR / "market_outcomes.parquet"
 MARKET_OUTCOME_SNAPSHOTS_PATH = MARKET_DIR / "market_outcome_snapshots.parquet"
 MARKET_OUTCOME_AUDIT_PATH = AUDITS_DIR / "ufc_market_outcome_audit.parquet"
+MARKET_MATCH_AUDIT_V2_PATH = AUDITS_DIR / "ufc_market_match_audit_v2.parquet"
 
 LIVE_FEATURE_AUDIT_PATH = AUDITS_DIR / "ufc_live_feature_audit.parquet"
 LIVE_MATCH_AUDIT_PATH = AUDITS_DIR / "ufc_live_match_audit.parquet"
