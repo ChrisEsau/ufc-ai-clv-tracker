@@ -148,20 +148,26 @@ def build_current_fighter_features(rolling_df):
         long_rows.append(blue_long)
 
     fighter_long_df = pd.DataFrame(long_rows)
+    fighter_long_df = fighter_long_df[fighter_long_df["fighter_id"].astype(str).str.strip().ne("")].copy()
 
+    # Fighter IDs are canonical. Names are display fields only, and UFCStats can
+    # change display names over time (for example suffixes or shortened names).
+    # Grouping by fighter_norm creates duplicate fighter_id rows and multiplies
+    # live-card feature joins, so collapse to the latest row per fighter_id only.
     current_fighter_features = (
         fighter_long_df
-        .sort_values("latest_fight_date")
+        .sort_values(["fighter_id", "latest_fight_date"])
         .groupby(
-            ["fighter_id", "fighter_norm"],
+            "fighter_id",
             as_index=False,
+            group_keys=False,
         )
         .tail(1)
         .reset_index(drop=True)
     )
 
     current_fighter_features["feature_store_updated_at"] = (
-        pd.Timestamp.utcnow().isoformat()
+        pd.Timestamp.now("UTC").isoformat()
     )
 
     return current_fighter_features
