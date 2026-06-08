@@ -4,6 +4,7 @@ import os
 import pandas as pd
 
 from pipeline.common.paths import (
+    AUDITS_DIR,
     LIVE_CARD_PATH,
     SELECTED_LIVE_CARD_EVENT_PATH,
     UPCOMING_FIGHTS_PATH,
@@ -29,10 +30,28 @@ LIVE_CARD_COLUMNS = [
     "weight_class",
 ]
 
+LIVE_CARD_BUILD_AUDIT_PATH = AUDITS_DIR / "ufc_live_card_build_audit.parquet"
+LIVE_CARD_REJECTED_ROWS_PATH = AUDITS_DIR / "ufc_live_card_rejected_rows.parquet"
+
+REQUIRED_FIGHT_COLUMNS = [
+    "fight_id",
+    "red_fighter",
+    "blue_fighter",
+    "red_fighter_id",
+    "blue_fighter_id",
+]
+
+
 
 def _prepare_live_card(upcoming_fights):
-    """Normalize an upcoming-fights slice into the canonical live-card shape."""
+    """Normalize an upcoming-fights slice into the canonical live-card shape.
 
+    This is intentionally strict. Placeholder rows such as ``nan__nan`` should not
+    reach live prediction because they create duplicate fights, blank labels, and
+    zero-filled feature rows.
+    """
+
+    raw_count = len(upcoming_fights)
     live_card = upcoming_fights.copy()
 
     for column in LIVE_CARD_COLUMNS:
@@ -40,11 +59,108 @@ def _prepare_live_card(upcoming_fights):
             live_card[column] = pd.NA
 
     live_card = live_card[LIVE_CARD_COLUMNS]
+    live_card = _normalize_string_columns(live_card)
+
+    invalid_mask = _build_invalid_fight_mask(live_card)
+    rejected_rows = live_card.loc[invalid_mask].copy()
+    live_card = live_card.loc[~invalid_mask].copy()
+
+    duplicate_mask = live_card["fight_id"].duplicated(keep="first") if "fight_id" in live_card.columns else pd.Series(False, index=live_card.index)
+    duplicate_rows = live_card.loc[duplicate_mask].copy()
+    if duplicate_mask.any():
+        live_card = live_card.loc[~duplicate_mask].copy()
+
     sort_columns = [column for column in ["event_date", "event_name", "fight_order"] if column in live_card.columns]
     if sort_columns:
         live_card = live_card.sort_values(sort_columns, na_position="last")
 
-    return live_card.reset_index(drop=True)
+    live_card = live_card.reset_index(drop=True)
+    rejected_rows = rejected_rows.reset_index(drop=True)
+    duplicate_rows = duplicate_rows.reset_index(drop=True)
+
+    _write_live_card_build_audit(
+        raw_count=raw_count,
+        valid_count=len(live_card),
+        rejected_rows=rejected_rows,
+        duplicate_rows=duplicate_rows,
+    )
+
+    if live_card.empty:
+        raise ValueError(
+            "Live card build produced zero valid fights after filtering invalid rows. "
+            f"Rejected rows were written to {LIVE_CARD_REJECTED_ROWS_PATH}."
+        )
+
+    return live_card
+
+
+
+def _normalize_string_columns(df):
+    """Normalize object/string columns and convert obvious placeholder tokens to NA."""
+
+    out = df.copy()
+    placeholder_values = {"", "nan", "none", "null", "nat", "<na>"}
+
+    for column in out.columns:
+        if out[column].dtype == "object" or str(out[column].dtype).startswith("string"):
+            values = out[column].astype("string").str.strip()
+            values = values.mask(values.str.lower().isin(placeholder_values), pd.NA)
+            out[column] = values
+
+    return out
+
+
+
+def _build_invalid_fight_mask(live_card):
+    """Return rows that cannot represent valid upcoming fights."""
+
+    invalid = pd.Series(False, index=live_card.index)
+
+    for column in REQUIRED_FIGHT_COLUMNS:
+        values = live_card[column].astype("string").fillna("").str.strip()
+        invalid = invalid | values.eq("") | values.str.lower().isin({"nan", "none", "null", "nat", "<na>"})
+
+    if "fight_id" in live_card.columns:
+        fight_id_values = live_card["fight_id"].astype("string").fillna("").str.strip().str.lower()
+        invalid = invalid | fight_id_values.eq("nan__nan") | fight_id_values.eq("__")
+
+    return invalid
+
+
+
+def _write_live_card_build_audit(*, raw_count, valid_count, rejected_rows, duplicate_rows):
+    """Write build audit artifacts for live-card QA."""
+
+    AUDITS_DIR.mkdir(parents=True, exist_ok=True)
+
+    audit = pd.DataFrame(
+        [
+            {
+                "raw_rows": raw_count,
+                "valid_rows": valid_count,
+                "invalid_rejected_rows": len(rejected_rows),
+                "duplicate_rejected_rows": len(duplicate_rows),
+                "rejected_rows_path": str(LIVE_CARD_REJECTED_ROWS_PATH),
+            }
+        ]
+    )
+    audit.to_parquet(LIVE_CARD_BUILD_AUDIT_PATH, index=False)
+
+    rejected_frames = []
+    if len(rejected_rows) > 0:
+        rejected = rejected_rows.copy()
+        rejected["reject_reason"] = "missing_required_fight_identity"
+        rejected_frames.append(rejected)
+    if len(duplicate_rows) > 0:
+        duplicates = duplicate_rows.copy()
+        duplicates["reject_reason"] = "duplicate_fight_id"
+        rejected_frames.append(duplicates)
+
+    if rejected_frames:
+        pd.concat(rejected_frames, ignore_index=True).to_parquet(LIVE_CARD_REJECTED_ROWS_PATH, index=False)
+    else:
+        pd.DataFrame(columns=LIVE_CARD_COLUMNS + ["reject_reason"]).to_parquet(LIVE_CARD_REJECTED_ROWS_PATH, index=False)
+
 
 
 def _write_live_card(live_card, status_label):
@@ -65,6 +181,9 @@ def _write_live_card(live_card, status_label):
 
     print(f"{status_label.title().replace('_', ' ')} live card saved: {LIVE_CARD_PATH} ({len(live_card)} rows)")
     print(f"Live-card event metadata saved: {SELECTED_LIVE_CARD_EVENT_PATH} ({len(selected_events)} event rows)")
+    print(f"Live-card build audit saved: {LIVE_CARD_BUILD_AUDIT_PATH}")
+    print(f"Live-card rejected rows saved: {LIVE_CARD_REJECTED_ROWS_PATH}")
+
 
 
 def build_live_card(event_id):
@@ -89,6 +208,7 @@ def build_live_card(event_id):
     return live_card
 
 
+
 def build_all_upcoming_live_card():
     ensure_data_dirs()
 
@@ -103,6 +223,7 @@ def build_all_upcoming_live_card():
     return live_card
 
 
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Build data/predictions/ufc_live_card.parquet from upcoming UFCStats fights.")
     parser.add_argument("--event-id", default=os.getenv("EVENT_ID") or os.getenv("BETTING_EVENT_ID"), help="UFCStats event id to select.")
@@ -112,6 +233,7 @@ def parse_args():
         help="Build the live-card artifact from every fight in the upcoming-fights artifact.",
     )
     return parser.parse_args()
+
 
 
 def main():
