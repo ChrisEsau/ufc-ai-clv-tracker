@@ -159,6 +159,10 @@ def _format_binary_matchup(
                 prediction_timestamp=prediction_timestamp,
                 outcome_label=positive_label,
                 outcome_side=str(positive_config.get("outcome_side", "positive")),
+                outcome_fighter_id=_resolve_matchup_outcome_fighter_id(
+                    fight_row,
+                    outcome_side=str(positive_config.get("outcome_side", "positive")),
+                ),
                 model_probability=positive_probability,
                 is_model_pick=positive_label == model_pick,
                 model_pick=model_pick,
@@ -174,6 +178,10 @@ def _format_binary_matchup(
                 prediction_timestamp=prediction_timestamp,
                 outcome_label=negative_label,
                 outcome_side=str(negative_config.get("outcome_side", "negative")),
+                outcome_fighter_id=_resolve_matchup_outcome_fighter_id(
+                    fight_row,
+                    outcome_side=str(negative_config.get("outcome_side", "negative")),
+                ),
                 model_probability=negative_probability,
                 is_model_pick=negative_label == model_pick,
                 model_pick=model_pick,
@@ -233,6 +241,7 @@ def _format_binary_prop(
                 prediction_timestamp=prediction_timestamp,
                 outcome_label=str(positive_label),
                 outcome_side=str(positive_config.get("outcome_side", "positive")),
+                outcome_fighter_id=positive_config.get("outcome_fighter_id"),
                 model_probability=positive_probability,
                 is_model_pick=str(positive_label) == model_pick,
                 model_pick=model_pick,
@@ -248,6 +257,7 @@ def _format_binary_prop(
                 prediction_timestamp=prediction_timestamp,
                 outcome_label=str(negative_label),
                 outcome_side=str(negative_config.get("outcome_side", "negative")),
+                outcome_fighter_id=negative_config.get("outcome_fighter_id"),
                 model_probability=negative_probability,
                 is_model_pick=str(negative_label) == model_pick,
                 model_pick=model_pick,
@@ -316,6 +326,7 @@ def _format_multiclass(
                     prediction_timestamp=prediction_timestamp,
                     outcome_label=class_label,
                     outcome_side=class_label,
+                    outcome_fighter_id=None,
                     model_probability=probability,
                     is_model_pick=class_label == model_pick,
                     model_pick=model_pick,
@@ -336,6 +347,7 @@ def _build_base_outcome_row(
     prediction_timestamp: str,
     outcome_label: str,
     outcome_side: str,
+    outcome_fighter_id: Any,
     model_probability: float,
     is_model_pick: bool,
     model_pick: str,
@@ -360,6 +372,7 @@ def _build_base_outcome_row(
         "blue_fighter_id": fight_row.get("blue_fighter_id"),
         "market_key": prediction_config.get("market_key"),
         "outcome_label": str(outcome_label),
+        "outcome_fighter_id": outcome_fighter_id,
         "outcome_side": str(outcome_side),
         "model_probability": float(model_probability),
         "is_model_pick": bool(is_model_pick),
@@ -377,6 +390,21 @@ def _build_base_outcome_row(
     }
 
     return row
+
+
+
+def _resolve_matchup_outcome_fighter_id(fight_row: pd.Series, *, outcome_side: str):
+    """Resolve moneyline outcome fighter ID from canonical matchup side."""
+
+    normalized_side = str(outcome_side).strip().lower()
+
+    if normalized_side in {"positive", "red", "r"}:
+        return fight_row.get("red_fighter_id")
+
+    if normalized_side in {"negative", "blue", "b"}:
+        return fight_row.get("blue_fighter_id")
+
+    return None
 
 
 
