@@ -2,8 +2,9 @@ name: Run Market Update
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "*/15 * * * *"
+
+# Scheduled runs are temporarily disabled while Market Pipeline V2 replaces
+# the legacy cron-driven odds, betting, and CLV flow.
 
 permissions:
   contents: write
