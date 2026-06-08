@@ -67,11 +67,13 @@ def build_live_model_features(
 
     live_card_df = pd.read_parquet(live_card_path)
     live_card_df = _standardize_live_card_columns(live_card_df)
+    live_card_df = _deduplicate_columns(live_card_df)
     _validate_live_card(live_card_df)
 
     # Best-case path: a previous pipeline already produced model-ready features.
     if _has_all_columns(live_card_df, feature_columns):
         live_feature_df = _attach_feature_audit_columns(live_card_df.copy(), feature_columns)
+        live_feature_df = _deduplicate_columns(live_feature_df)
         return LiveFeatureBuildResult(
             live_feature_df=live_feature_df,
             feature_audit_df=_build_feature_audit(live_feature_df, feature_columns),
@@ -84,6 +86,7 @@ def build_live_model_features(
         )
 
     current_features_df = pd.read_parquet(current_fighter_features_path)
+    current_features_df = _deduplicate_columns(current_features_df)
     fighter_id_column = _find_first_existing_column(current_features_df, FIGHTER_ID_CANDIDATES)
 
     if fighter_id_column is None:
@@ -100,7 +103,9 @@ def build_live_model_features(
 
     live_feature_df = _assemble_requested_features(joined_df, feature_columns)
     live_feature_df = _attach_feature_audit_columns(live_feature_df, feature_columns)
+    live_feature_df = _deduplicate_columns(live_feature_df)
     feature_audit_df = _build_feature_audit(live_feature_df, feature_columns)
+    feature_audit_df = _deduplicate_columns(feature_audit_df)
 
     return LiveFeatureBuildResult(
         live_feature_df=live_feature_df,
@@ -123,8 +128,11 @@ def write_live_feature_outputs(
     live_feature_output_path.parent.mkdir(parents=True, exist_ok=True)
     feature_audit_path.parent.mkdir(parents=True, exist_ok=True)
 
-    result.live_feature_df.to_parquet(live_feature_output_path, index=False)
-    result.feature_audit_df.to_parquet(feature_audit_path, index=False)
+    live_feature_df = _deduplicate_columns(result.live_feature_df)
+    feature_audit_df = _deduplicate_columns(result.feature_audit_df)
+
+    live_feature_df.to_parquet(live_feature_output_path, index=False)
+    feature_audit_df.to_parquet(feature_audit_path, index=False)
 
 
 
@@ -190,6 +198,7 @@ def _join_current_fighter_features(
         right_on=f"b_state_{fighter_id_column}",
         how="left",
     )
+    out = _deduplicate_columns(out)
 
     out["red_feature_match"] = out[f"r_state_{fighter_id_column}"].notna().map({True: "matched_by_id", False: "missing_by_id"})
     out["blue_feature_match"] = out[f"b_state_{fighter_id_column}"].notna().map({True: "matched_by_id", False: "missing_by_id"})
@@ -208,9 +217,11 @@ def _assemble_requested_features(joined_df: pd.DataFrame, feature_columns: list[
     # Create r_pre_* and b_pre_* aliases from current-fighter-state columns so the
     # existing engineered V5 formulas can be reused rather than duplicated.
     out = _add_prefight_alias_columns(out)
+    out = _deduplicate_columns(out)
 
     # Generic diff assembly for columns such as elo_diff, ewm_elo_diff, and
     # recent_form_elo_diff when matching red/blue state values exist.
+    new_feature_values = {}
     for feature in feature_columns:
         if feature in out.columns:
             continue
@@ -221,15 +232,25 @@ def _assemble_requested_features(joined_df: pd.DataFrame, feature_columns: list[
             blue_value = _resolve_state_series(out, side="b", base_name=base_name)
 
             if red_value is not None and blue_value is not None:
-                out[feature] = red_value - blue_value
+                new_feature_values[feature] = red_value - blue_value
+
+    if new_feature_values:
+        out = pd.concat([out, pd.DataFrame(new_feature_values, index=out.index)], axis=1)
+        out = _deduplicate_columns(out)
 
     # Reuse the existing V5 engineered feature formulas for features such as
     # striking_edge, grappling_edge, chin_risk_diff, etc.
     out = add_v5_engineered_features(out)
+    out = _deduplicate_columns(out)
 
-    missing_features = [feature for feature in feature_columns if feature not in out.columns]
-    for feature in missing_features:
-        out[feature] = 0.0
+    missing_feature_values = {
+        feature: 0.0
+        for feature in feature_columns
+        if feature not in out.columns
+    }
+    if missing_feature_values:
+        out = pd.concat([out, pd.DataFrame(missing_feature_values, index=out.index)], axis=1)
+        out = _deduplicate_columns(out)
 
     return out
 
@@ -237,6 +258,7 @@ def _assemble_requested_features(joined_df: pd.DataFrame, feature_columns: list[
 
 def _add_prefight_alias_columns(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
+    alias_values = {}
 
     for column in list(out.columns):
         if column.startswith("r_state_"):
@@ -244,13 +266,16 @@ def _add_prefight_alias_columns(df: pd.DataFrame) -> pd.DataFrame:
             if base not in {"fighter_id", "id", "ufcstats_fighter_id"}:
                 alias = f"r_pre_{base}"
                 if alias not in out.columns:
-                    out[alias] = out[column]
+                    alias_values[alias] = out[column]
         elif column.startswith("b_state_"):
             base = column.replace("b_state_", "", 1)
             if base not in {"fighter_id", "id", "ufcstats_fighter_id"}:
                 alias = f"b_pre_{base}"
                 if alias not in out.columns:
-                    out[alias] = out[column]
+                    alias_values[alias] = out[column]
+
+    if alias_values:
+        out = pd.concat([out, pd.DataFrame(alias_values, index=out.index)], axis=1)
 
     return out
 
@@ -272,7 +297,7 @@ def _resolve_state_series(df: pd.DataFrame, *, side: str, base_name: str) -> pd.
 
 
 def _attach_feature_audit_columns(df: pd.DataFrame, feature_columns: list[str]) -> pd.DataFrame:
-    out = df.copy()
+    out = _deduplicate_columns(df)
     feature_matrix = out[feature_columns].apply(pd.to_numeric, errors="coerce").fillna(0.0)
 
     out["feature_count_expected"] = len(feature_columns)
@@ -289,7 +314,7 @@ def _attach_feature_audit_columns(df: pd.DataFrame, feature_columns: list[str]) 
     if "feature_match_type" not in out.columns:
         out["feature_match_type"] = "prebuilt_features"
 
-    return out
+    return _deduplicate_columns(out)
 
 
 
@@ -313,7 +338,17 @@ def _build_feature_audit(live_feature_df: pd.DataFrame, feature_columns: list[st
         "passes_model_data_quality",
     ]
 
-    return live_feature_df[[column for column in columns if column in live_feature_df.columns]].copy()
+    df = _deduplicate_columns(live_feature_df)
+    return df[[column for column in columns if column in df.columns]].copy()
+
+
+
+def _deduplicate_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Return a copy with duplicate column names removed, keeping first occurrence."""
+
+    if not df.columns.duplicated().any():
+        return df.copy()
+    return df.loc[:, ~df.columns.duplicated()].copy()
 
 
 
