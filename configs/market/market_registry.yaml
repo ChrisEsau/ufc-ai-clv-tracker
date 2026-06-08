@@ -1,26 +1,90 @@
 # Market Pipeline V2 registry
 
 provider: the_odds_api
-
 source: the_odds_api
 
+# The Odds API sport key for MMA/UFC.
 sport: mma_mixed_martial_arts
 regions: us
 odds_format: american
 
+# Multiple books are supported from the start. The runner should request all
+# configured books and preserve bookmaker identity in every market outcome row.
 bookmakers:
   - DraftKings
 
+# Canonical market keys used by downstream prediction, betting, CLV, and dashboards.
 markets:
   - moneyline
 
+# Provider-specific market keys. Additional prop mappings can be added here
+# without changing downstream artifact schemas.
 market_provider_keys:
   moneyline: h2h
+  goes_distance: totals
+  method: outrights
+  over_under_1_5: totals
+  over_under_2_5: totals
 
+# Core output artifacts. market_outcomes is the latest normalized snapshot;
+# market_outcome_snapshots is the append-only history used by CLV and line movement.
 outputs:
   market_outcomes_path: data/market/market_outcomes.parquet
   market_outcome_snapshots_path: data/market/market_outcome_snapshots.parquet
   market_audit_path: data/audits/ufc_market_outcome_audit.parquet
 
+# Matching should use IDs once a provider row has been linked to a UFCStats fight.
+# Name matching is only the bridge from provider labels to canonical fight/fighter IDs.
 matching:
   min_single_score: 90
+  canonical_fight_key: fight_id
+  carry_fighter_ids: true
+  require_fight_id_for_matched_rows: true
+
+# Required identity fields that should be carried forward when available. These
+# make market_outcomes usable for EV, CLV, line movement, settlement, and audits.
+identity_fields:
+  - event_id
+  - event_name
+  - fight_id
+  - red_fighter
+  - blue_fighter
+  - red_fighter_id
+  - blue_fighter_id
+  - outcome_fighter_id
+
+provider_identity_fields:
+  - provider_event_id
+  - provider_market_key
+  - provider_outcome_label
+  - provider_bookmaker_key
+  - matched_market_name
+  - matched_outcome_name
+
+# Snapshot settings are designed to support both latest market views and historical
+# line movement / CLV calculations.
+snapshots:
+  append_history: true
+  latest_snapshot_overwrite: true
+  duplicate_key:
+    - snapshot_run_id
+    - bookmaker
+    - fight_id
+    - market_key
+    - outcome_label
+
+validation:
+  required_columns:
+    - snapshot_run_id
+    - snapshot_timestamp
+    - source
+    - bookmaker
+    - fight_id
+    - market_key
+    - outcome_label
+    - american_odds
+    - decimal_odds
+    - implied_probability
+    - odds_match_type
+  probability_min: 0.0
+  probability_max: 1.0
