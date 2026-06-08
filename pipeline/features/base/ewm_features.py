@@ -87,8 +87,16 @@ def merge_ewm_features(
     fighter_long_df: pd.DataFrame,
     stat_names: list[str],
 ) -> pd.DataFrame:
-    """Merge r_ewm_* and b_ewm_* columns back into fight-level rolling rows."""
-    rolling_df = rolling_df.copy()
+    """Merge r_ewm_* and b_ewm_* columns back into fight-level rolling rows.
+
+    A stable helper key is preserved through both joins. The previous implementation
+    used ``left_index=True`` for the red merge and then reused the post-merge index
+    for the blue merge. Because pandas can change the index during a merge, the
+    second join could align blue EWM rows against the wrong index and leave many
+    ``b_ewm_*`` values missing.
+    """
+    rolling_df = rolling_df.copy().reset_index(drop=True)
+    rolling_df["_ewm_fight_index"] = rolling_df.index
 
     r_ewm = fighter_long_df[fighter_long_df["corner"] == "r"].copy()
     b_ewm = fighter_long_df[fighter_long_df["corner"] == "b"].copy()
@@ -104,17 +112,17 @@ def merge_ewm_features(
 
     rolling_df = rolling_df.merge(
         r_ewm,
-        left_index=True,
+        left_on="_ewm_fight_index",
         right_on="fight_index",
         how="left",
     ).drop(columns=["fight_index"])
 
     rolling_df = rolling_df.merge(
         b_ewm,
-        left_index=True,
+        left_on="_ewm_fight_index",
         right_on="fight_index",
         how="left",
-    ).drop(columns=["fight_index"])
+    ).drop(columns=["fight_index", "_ewm_fight_index"])
 
     return rolling_df
 
