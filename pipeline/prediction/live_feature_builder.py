@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 import pandas as pd
 
@@ -243,11 +242,15 @@ def _add_prefight_alias_columns(df: pd.DataFrame) -> pd.DataFrame:
         if column.startswith("r_state_"):
             base = column.replace("r_state_", "", 1)
             if base not in {"fighter_id", "id", "ufcstats_fighter_id"}:
-                out.setdefault(f"r_pre_{base}", out[column])
+                alias = f"r_pre_{base}"
+                if alias not in out.columns:
+                    out[alias] = out[column]
         elif column.startswith("b_state_"):
             base = column.replace("b_state_", "", 1)
             if base not in {"fighter_id", "id", "ufcstats_fighter_id"}:
-                out.setdefault(f"b_pre_{base}", out[column])
+                alias = f"b_pre_{base}"
+                if alias not in out.columns:
+                    out[alias] = out[column]
 
     return out
 
