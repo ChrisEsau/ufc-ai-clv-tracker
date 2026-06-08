@@ -99,6 +99,8 @@ MODEL_PREDICTIONS_PATH = PREDICTIONS_DIR / "ufc_model_predictions.parquet"
 LIVE_ACTION_BOARD_PATH = PREDICTIONS_DIR / "ufc_live_action_board.parquet"
 LIVE_WATCHLIST_PATH = PREDICTIONS_DIR / "ufc_live_watchlist.parquet"
 BETTING_BOARD_PATH = PREDICTIONS_DIR / "ufc_betting_board.parquet"
+BETTING_OUTCOMES_PATH = PREDICTIONS_DIR / "betting_outcomes.parquet"
+BETTING_OUTCOMES_AUDIT_PATH = AUDITS_DIR / "ufc_betting_outcomes_audit.parquet"
 OFFICIAL_BETS_PATH = PREDICTIONS_DIR / "ufc_official_bets.parquet"
 
 # Legacy side-based market artifacts.
