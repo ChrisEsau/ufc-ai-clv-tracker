@@ -14,6 +14,7 @@ ROOT_DIR = Path(".")
 
 DATA_DIR = ROOT_DIR / "data"
 MODELS_DIR = ROOT_DIR / "models"
+CONFIGS_DIR = ROOT_DIR / "configs"
 
 MASTER_DIR = DATA_DIR / "master"
 STAGING_DIR = DATA_DIR / "staging"
@@ -27,6 +28,7 @@ MARKET_DIR = DATA_DIR / "market"
 BANKROLL_DIR = DATA_DIR / "bankroll"
 MODEL_LAB_DIR = DATA_DIR / "model_lab"
 DOCS_DIR = ROOT_DIR / "docs"
+MARKET_CONFIG_DIR = CONFIGS_DIR / "market"
 
 
 # ============================================================
@@ -99,6 +101,7 @@ LIVE_WATCHLIST_PATH = PREDICTIONS_DIR / "ufc_live_watchlist.parquet"
 BETTING_BOARD_PATH = PREDICTIONS_DIR / "ufc_betting_board.parquet"
 OFFICIAL_BETS_PATH = PREDICTIONS_DIR / "ufc_official_bets.parquet"
 
+# Legacy side-based market artifacts.
 MARKET_ODDS_PATH = MARKET_DIR / "ufc_market_odds.parquet"
 MARKET_SNAPSHOTS_PATH = MARKET_DIR / "ufc_market_snapshots.parquet"
 NORMALIZED_MARKET_SNAPSHOTS_PATH = MARKET_DIR / "ufc_normalized_market_snapshots.parquet"
@@ -106,6 +109,12 @@ MARKET_MATCH_AUDIT_PATH = MARKET_DIR / "ufc_market_match_audit.parquet"
 CLOSING_LINES_PATH = MARKET_DIR / "ufc_closing_lines.parquet"
 LINE_MOVEMENT_PATH = MARKET_DIR / "ufc_line_movement.parquet"
 CLV_RESULTS_PATH = MARKET_DIR / "ufc_clv_results.parquet"
+
+# Market Pipeline V2 outcome-based artifacts.
+MARKET_REGISTRY_PATH = MARKET_CONFIG_DIR / "market_registry.yaml"
+MARKET_OUTCOMES_PATH = MARKET_DIR / "market_outcomes.parquet"
+MARKET_OUTCOME_SNAPSHOTS_PATH = MARKET_DIR / "market_outcome_snapshots.parquet"
+MARKET_OUTCOME_AUDIT_PATH = AUDITS_DIR / "ufc_market_outcome_audit.parquet"
 
 LIVE_FEATURE_AUDIT_PATH = AUDITS_DIR / "ufc_live_feature_audit.parquet"
 LIVE_MATCH_AUDIT_PATH = AUDITS_DIR / "ufc_live_match_audit.parquet"
@@ -168,5 +177,6 @@ def ensure_data_dirs():
         MODELS_DIR,
         MODEL_DIR,
         DOCS_DIR,
+        MARKET_CONFIG_DIR,
     ]:
         path.mkdir(parents=True, exist_ok=True)
