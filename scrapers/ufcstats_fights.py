@@ -4,8 +4,10 @@ from bs4 import BeautifulSoup
 from scrapers.selenium_core import fetch_html
 
 
+
 def clean_event_detail_text(value):
     return " ".join(str(value).replace("\n", " ").split())
+
 
 
 def parse_event_location(soup):
@@ -18,6 +20,7 @@ def parse_event_location(soup):
             return text.split(":", 1)[1].strip() or None
 
     return None
+
 
 
 def scrape_event_fights(
@@ -41,7 +44,9 @@ def scrape_event_fights(
         "tr.b-fight-details__table-row"
     )
 
-    for idx, row in enumerate(rows):
+    fight_order = 0
+
+    for row in rows:
 
         fight_link = row.select_one(
             "a.b-flag.b-flag_style_green"
@@ -57,29 +62,33 @@ def scrape_event_fights(
             "a.b-link.b-link_style_black"
         )
 
-        red_fighter = None
-        blue_fighter = None
+        # UFCStats event tables include non-fight/header/spacer rows that match
+        # the broad table-row selector. Those rows have no fighter links and were
+        # producing NaN-vs-NaN placeholder fights such as fight_id="nan__nan".
+        # Skip them at the scraper boundary so invalid fights never enter cards.
+        if len(fighter_links) < 2:
+            continue
 
-        red_fighter_url = None
-        blue_fighter_url = None
+        red_fighter = fighter_links[0].get_text(
+            strip=True
+        )
 
-        if len(fighter_links) >= 2:
+        blue_fighter = fighter_links[1].get_text(
+            strip=True
+        )
 
-            red_fighter = fighter_links[0].get_text(
-                strip=True
-            )
+        red_fighter_url = fighter_links[0].get(
+            "href"
+        )
 
-            blue_fighter = fighter_links[1].get_text(
-                strip=True
-            )
+        blue_fighter_url = fighter_links[1].get(
+            "href"
+        )
 
-            red_fighter_url = fighter_links[0].get(
-                "href"
-            )
+        if not red_fighter or not blue_fighter or not red_fighter_url or not blue_fighter_url:
+            continue
 
-            blue_fighter_url = fighter_links[1].get(
-                "href"
-            )
+        fight_order += 1
 
         cols = row.select(
             "td.b-fight-details__table-col"
@@ -117,7 +126,7 @@ def scrape_event_fights(
                 "event_date": event_date,
                 "event_url": event_url,
                 "event_location": event_location,
-                "fight_order": idx + 1,
+                "fight_order": fight_order,
                 "fight_url": fight_url,
                 "red_fighter": red_fighter,
                 "blue_fighter": blue_fighter,
