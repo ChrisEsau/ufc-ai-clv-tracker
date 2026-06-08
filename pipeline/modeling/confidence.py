@@ -7,16 +7,21 @@
 Confidence is intentionally separate from model probability. Probability is the
 model's forecast for an outcome. Confidence measures how much the platform
 trusts that forecast based on feature coverage, feature-family availability,
-fighter history depth, and data-quality flags.
+fighter history depth, data-quality flags, and historical bucket reliability.
 """
 
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
+
+
+DEFAULT_CONFIDENCE_BUCKETS_PATH = Path("models/moneyline/xgboost_v5/confidence_buckets.parquet")
 
 
 @dataclass(frozen=True)
@@ -29,6 +34,10 @@ class PredictionConfidence:
     confidence_family_coverage: float
     confidence_history_depth: float
     confidence_calibration_reliability: float
+    confidence_bucket: str | None
+    confidence_bucket_accuracy: float | None
+    confidence_bucket_fight_count: int | None
+    confidence_bucket_calibration_error: float | None
     confidence_penalty_reason: str
 
     def to_dict(self) -> dict[str, Any]:
@@ -52,6 +61,26 @@ def _as_bool(value, default: bool = True) -> bool:
 
 def _bounded(value: float, low: float = 0.0, high: float = 1.0) -> float:
     return float(min(max(value, low), high))
+
+
+@lru_cache(maxsize=8)
+def load_confidence_buckets(path: str = str(DEFAULT_CONFIDENCE_BUCKETS_PATH)) -> pd.DataFrame:
+    """Load persisted training confidence buckets when available."""
+
+    bucket_path = Path(path)
+    if not bucket_path.exists():
+        return pd.DataFrame()
+
+    try:
+        buckets = pd.read_parquet(bucket_path)
+    except Exception:
+        return pd.DataFrame()
+
+    required = {"bucket_min_prob", "bucket_max_prob", "accuracy"}
+    if not required.issubset(buckets.columns):
+        return pd.DataFrame()
+
+    return buckets.copy()
 
 
 def _numeric_nonzero_ratio(row: pd.Series, columns: list[str]) -> float | None:
@@ -157,15 +186,60 @@ def _data_quality(row: pd.Series) -> float:
     return _bounded(score)
 
 
-def _calibration_reliability(row: pd.Series) -> float:
-    """Placeholder for future bucket-level calibration reliability.
+def _select_confidence_bucket(model_pick_probability: float | None, buckets: pd.DataFrame) -> pd.Series | None:
+    """Select the training confidence bucket matching the pick probability."""
 
-    V1 does not use probability strength as confidence. Until historical bucket
-    calibration artifacts are wired in, this remains neutral and lets data
-    quality / coverage dominate.
+    if model_pick_probability is None or buckets.empty:
+        return None
+
+    pick_probability = _bounded(float(model_pick_probability))
+
+    matches = buckets[
+        (pd.to_numeric(buckets["bucket_min_prob"], errors="coerce") <= pick_probability)
+        & (pick_probability < pd.to_numeric(buckets["bucket_max_prob"], errors="coerce"))
+    ]
+
+    if matches.empty and pick_probability >= 1.0:
+        matches = buckets[pd.to_numeric(buckets["bucket_max_prob"], errors="coerce") >= 1.0]
+
+    if matches.empty:
+        return None
+
+    return matches.iloc[0]
+
+
+def _calibration_reliability(
+    *,
+    model_pick_probability: float | None,
+    confidence_buckets_path: str | Path = DEFAULT_CONFIDENCE_BUCKETS_PATH,
+) -> tuple[float, dict[str, Any]]:
+    """Return historical bucket accuracy for the current pick probability.
+
+    Probability is used only to choose the historical bucket. The reliability
+    signal itself is the bucket's historical accuracy.
     """
 
-    return 0.65
+    buckets = load_confidence_buckets(str(confidence_buckets_path))
+    bucket = _select_confidence_bucket(model_pick_probability, buckets)
+
+    if bucket is None:
+        return 0.65, {
+            "confidence_bucket": None,
+            "confidence_bucket_accuracy": None,
+            "confidence_bucket_fight_count": None,
+            "confidence_bucket_calibration_error": None,
+        }
+
+    accuracy = _bounded(_as_float(bucket.get("accuracy"), default=0.65) or 0.65)
+    fight_count = _as_float(bucket.get("fight_count"), default=None)
+    calibration_error = _as_float(bucket.get("calibration_error"), default=None)
+
+    return accuracy, {
+        "confidence_bucket": bucket.get("bucket"),
+        "confidence_bucket_accuracy": accuracy,
+        "confidence_bucket_fight_count": None if fight_count is None else int(fight_count),
+        "confidence_bucket_calibration_error": calibration_error,
+    }
 
 
 def _tier(score: float) -> str:
@@ -178,14 +252,22 @@ def _tier(score: float) -> str:
     return "Very Low"
 
 
-def score_prediction_confidence(row: pd.Series) -> PredictionConfidence:
+def score_prediction_confidence(
+    row: pd.Series,
+    *,
+    model_pick_probability: float | None = None,
+    confidence_buckets_path: str | Path = DEFAULT_CONFIDENCE_BUCKETS_PATH,
+) -> PredictionConfidence:
     """Score prediction trust from feature quality rather than probability."""
 
     data_quality = _data_quality(row)
     feature_coverage = _feature_completeness(row)
     family_coverage = _family_coverage(row)
     history_depth = _history_depth(row)
-    calibration_reliability = _calibration_reliability(row)
+    calibration_reliability, bucket_metadata = _calibration_reliability(
+        model_pick_probability=model_pick_probability,
+        confidence_buckets_path=confidence_buckets_path,
+    )
 
     raw_score = (
         0.35 * feature_coverage
@@ -227,5 +309,9 @@ def score_prediction_confidence(row: pd.Series) -> PredictionConfidence:
         confidence_family_coverage=family_coverage,
         confidence_history_depth=history_depth,
         confidence_calibration_reliability=calibration_reliability,
+        confidence_bucket=bucket_metadata["confidence_bucket"],
+        confidence_bucket_accuracy=bucket_metadata["confidence_bucket_accuracy"],
+        confidence_bucket_fight_count=bucket_metadata["confidence_bucket_fight_count"],
+        confidence_bucket_calibration_error=bucket_metadata["confidence_bucket_calibration_error"],
         confidence_penalty_reason=";".join(penalty_reasons) if penalty_reasons else "none",
     )
