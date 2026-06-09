@@ -11,8 +11,18 @@ import pandas as pd
 from pipeline.features.base.ewm_features import EWM_SPAN
 
 
+# V5 parity whitelist.
+#
+# These columns intentionally match the 36 base state columns used by the current
+# moneyline_xgb_base model config. Some entries, such as cumulative counts and
+# days_since_last_fight, may be removed from future model configs after parity is
+# proven and feature usefulness is reviewed.
 EWM_STATE_COLUMNS = [
     "elo",
+    "fights",
+    "wins",
+    "losses",
+    "win_pct",
     "kd_avg",
     "kd_absorbed_avg",
     "splm",
@@ -35,6 +45,9 @@ EWM_STATE_COLUMNS = [
     "best_win_elo",
     "worst_loss_elo",
     "avg_fight_time",
+    "win_streak",
+    "loss_streak",
+    "days_since_last_fight",
     "recent_win_pct",
     "recent_splm",
     "recent_sapm",
