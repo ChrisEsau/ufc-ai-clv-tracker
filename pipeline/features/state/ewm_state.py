@@ -11,33 +11,46 @@ import pandas as pd
 from pipeline.features.base.ewm_features import EWM_SPAN
 
 
-STATE_CONTEXT_COLUMNS = {
-    "event_id",
-    "event_name",
-    "fight_id",
-    "date",
-    "division",
-    "title_fight",
-    "total_rounds",
-    "fight_date",
-    "fighter_id",
-    "fighter_name",
-    "corner",
-    "opponent_id",
-    "opponent_name",
-}
+EWM_STATE_COLUMNS = [
+    "elo",
+    "kd_avg",
+    "kd_absorbed_avg",
+    "splm",
+    "sapm",
+    "str_acc",
+    "str_def",
+    "td_avg",
+    "td_acc",
+    "td_def",
+    "sub_avg",
+    "ctrl_per_min",
+    "ctrl_against_per_min",
+    "finish_rate",
+    "ko_rate",
+    "sub_win_rate",
+    "decision_win_rate",
+    "finish_loss_rate",
+    "decision_loss_rate",
+    "avg_opponent_elo",
+    "best_win_elo",
+    "worst_loss_elo",
+    "avg_fight_time",
+    "recent_win_pct",
+    "recent_splm",
+    "recent_sapm",
+    "recent_td_avg",
+    "recent_finish_rate",
+    "recent_avg_fight_time",
+]
 
 
 def get_ewm_state_columns(history_df: pd.DataFrame) -> list[str]:
-    """Return numeric fighter-state columns eligible for EWM enrichment."""
+    """Return whitelisted fighter-state columns available for EWM enrichment."""
 
     return [
         column
-        for column in history_df.columns
-        if column not in STATE_CONTEXT_COLUMNS
-        and pd.api.types.is_numeric_dtype(history_df[column])
-        and not column.startswith("ewm_")
-        and not column.startswith("form_delta_")
+        for column in EWM_STATE_COLUMNS
+        if column in history_df.columns and pd.api.types.is_numeric_dtype(history_df[column])
     ]
 
 
@@ -45,9 +58,9 @@ def add_ewm_state_features(
     history_df: pd.DataFrame,
     span: int = EWM_SPAN,
 ) -> pd.DataFrame:
-    """Add fighter-level EWM and form-delta columns to state history.
+    """Add whitelisted fighter-level EWM and form-delta columns to state history.
 
-    For every eligible numeric fighter-state column ``x``, this adds:
+    For every whitelisted fighter-state column ``x``, this adds:
 
     - ``ewm_x``: fighter-level exponentially weighted mean of ``x``
     - ``form_delta_x``: ``ewm_x - x``
