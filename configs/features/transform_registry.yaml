@@ -10,7 +10,7 @@ status: plugin_contract
 
 plugin_contract:
   required_function: apply
-  signature: apply(red: Series, blue: Series, context: dict | None = None) -> Series
+  signature: "apply(red: Series, blue: Series, context: dict | None = None) -> Series"
   add_new_transform_steps:
     - create a plugin module under pipeline/features/transforms/
     - expose an apply function
