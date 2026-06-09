@@ -1,17 +1,24 @@
 """Generic transform engine for UFC feature views.
 
-This module applies reusable transforms to red/blue fighter feature columns.
-It is intentionally standalone so it can be validated before replacing any
-existing moneyline feature-view logic.
+This module applies reusable red/blue transform plugins to fighter feature
+columns. Transform implementations are resolved from
+``configs/features/transform_registry.yaml`` so new transforms can be added by
+registering a plugin instead of editing this engine.
 """
 
 from __future__ import annotations
 
+import importlib
 from dataclasses import dataclass
-from typing import Iterable
+from functools import lru_cache
+from pathlib import Path
+from typing import Callable, Iterable
 
-import numpy as np
 import pandas as pd
+import yaml
+
+
+DEFAULT_TRANSFORM_REGISTRY_PATH = "configs/features/transform_registry.yaml"
 
 
 @dataclass(frozen=True)
@@ -23,7 +30,13 @@ class TransformResult:
     missing_source_pairs: list[str]
 
 
-SAFE_DENOMINATOR_EPSILON = 1e-9
+@dataclass(frozen=True)
+class TransformPlugin:
+    """Loaded transform plugin metadata."""
+
+    transform_id: str
+    output_suffix: str
+    apply: Callable[[pd.Series, pd.Series, dict | None], pd.Series]
 
 
 def apply_red_blue_transforms(
@@ -33,8 +46,10 @@ def apply_red_blue_transforms(
     *,
     red_prefix: str = "r_pre_",
     blue_prefix: str = "b_pre_",
+    transform_registry_path: str | Path = DEFAULT_TRANSFORM_REGISTRY_PATH,
+    context: dict | None = None,
 ) -> TransformResult:
-    """Apply red/blue transforms to a dataframe.
+    """Apply registered red/blue transform plugins to a dataframe.
 
     Parameters
     ----------
@@ -48,6 +63,10 @@ def apply_red_blue_transforms(
     red_prefix / blue_prefix:
         Source column prefixes. Defaults target prefight state columns like
         ``r_pre_elo`` and ``b_pre_elo``.
+    transform_registry_path:
+        YAML registry describing transform plugin module/function mappings.
+    context:
+        Optional metadata passed through to plugin ``apply`` functions.
 
     Returns
     -------
@@ -62,6 +81,7 @@ def apply_red_blue_transforms(
     new_columns: dict[str, pd.Series] = {}
 
     requested_transforms = [str(transform) for transform in transforms]
+    plugins = load_transform_plugins(tuple(requested_transforms), str(transform_registry_path))
 
     for base_column in [str(column) for column in base_columns]:
         red_col = f"{red_prefix}{base_column}"
@@ -74,22 +94,9 @@ def apply_red_blue_transforms(
         red_values = pd.to_numeric(out[red_col], errors="coerce")
         blue_values = pd.to_numeric(out[blue_col], errors="coerce")
 
-        for transform in requested_transforms:
-            if transform == "red_minus_blue":
-                output_col = f"{base_column}_diff"
-                new_columns[output_col] = red_values - blue_values
-            elif transform == "blue_minus_red":
-                output_col = f"{base_column}_reverse_diff"
-                new_columns[output_col] = blue_values - red_values
-            elif transform == "absolute_gap":
-                output_col = f"{base_column}_abs_gap"
-                new_columns[output_col] = (red_values - blue_values).abs()
-            elif transform == "ratio":
-                output_col = f"{base_column}_ratio"
-                new_columns[output_col] = safe_ratio(red_values, blue_values)
-            else:
-                continue
-
+        for plugin in plugins:
+            output_col = f"{base_column}_{plugin.output_suffix}"
+            new_columns[output_col] = plugin.apply(red_values, blue_values, context)
             generated_columns.append(output_col)
 
     if new_columns:
@@ -103,14 +110,67 @@ def apply_red_blue_transforms(
     )
 
 
-def safe_ratio(numerator: pd.Series, denominator: pd.Series) -> pd.Series:
-    """Return numerator / denominator with safe handling for zero denominators."""
+@lru_cache(maxsize=32)
+def load_transform_plugins(
+    transform_ids: tuple[str, ...],
+    registry_path: str = DEFAULT_TRANSFORM_REGISTRY_PATH,
+) -> list[TransformPlugin]:
+    """Load transform plugins from the transform registry."""
 
-    denominator = pd.to_numeric(denominator, errors="coerce")
-    numerator = pd.to_numeric(numerator, errors="coerce")
+    registry = load_transform_registry(registry_path)
+    transform_registry = registry.get("transforms", {})
+    plugins: list[TransformPlugin] = []
 
-    safe_denominator = denominator.where(denominator.abs() > SAFE_DENOMINATOR_EPSILON, np.nan)
-    return numerator / safe_denominator
+    for transform_id in dedupe_preserve_order(list(transform_ids)):
+        if transform_id not in transform_registry:
+            raise ValueError(f"Transform not found in registry: {transform_id}")
+
+        entry = transform_registry[transform_id]
+        status = str(entry.get("status", "")).lower()
+        plugin_module = entry.get("plugin")
+        function_name = entry.get("function")
+        output_suffix = entry.get("output_suffix")
+
+        if status != "active":
+            raise ValueError(f"Transform is not active: {transform_id} (status={status})")
+        if not plugin_module or not function_name:
+            raise ValueError(f"Transform plugin/function missing for: {transform_id}")
+        if not output_suffix:
+            raise ValueError(f"Transform output_suffix missing for: {transform_id}")
+
+        module = importlib.import_module(str(plugin_module))
+        apply_func = getattr(module, str(function_name), None)
+        if apply_func is None or not callable(apply_func):
+            raise ValueError(
+                f"Transform function is not callable: {plugin_module}.{function_name}"
+            )
+
+        plugins.append(
+            TransformPlugin(
+                transform_id=transform_id,
+                output_suffix=str(output_suffix),
+                apply=apply_func,
+            )
+        )
+
+    return plugins
+
+
+@lru_cache(maxsize=8)
+def load_transform_registry(registry_path: str = DEFAULT_TRANSFORM_REGISTRY_PATH) -> dict:
+    """Load the transform registry YAML."""
+
+    path = Path(registry_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Transform registry not found: {path}")
+
+    with path.open("r", encoding="utf-8") as f:
+        registry = yaml.safe_load(f)
+
+    if not isinstance(registry, dict):
+        raise ValueError(f"Transform registry must be a dictionary: {path}")
+
+    return registry
 
 
 def dedupe_preserve_order(values: Iterable[str]) -> list[str]:
