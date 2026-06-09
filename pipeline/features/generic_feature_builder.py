@@ -46,13 +46,14 @@ def build_generic_features_from_plan(
     Parameters
     ----------
     df:
-        Assembled fight-level dataframe containing red/blue prefight source
-        columns such as ``r_pre_elo`` and ``b_pre_elo``.
+        Assembled fight-level dataframe containing red/blue source columns such
+        as ``r_pre_elo``, ``b_pre_elo``, ``r_ewm_elo``, and ``b_ewm_elo``.
     plan:
         Resolved feature graph plan.
     state_prefix:
-        Fighter-state prefix between side and base feature name. Defaults to
-        ``pre_`` for current moneyline feature-view compatibility.
+        Fighter-state prefix between side and base feature name for ordinary
+        prefight state columns. Defaults to ``pre_`` for current moneyline
+        feature-view compatibility.
     """
 
     out = df.copy()
@@ -65,8 +66,10 @@ def build_generic_features_from_plan(
     for source_prefix, group_specs in grouped_specs.items():
         source_base_columns = [spec.source_base_column for spec in group_specs]
         transforms = [spec.transform for spec in group_specs]
-        red_prefix = f"r_{state_prefix}{source_prefix}"
-        blue_prefix = f"b_{state_prefix}{source_prefix}"
+        red_prefix, blue_prefix = source_side_prefixes(
+            source_prefix=source_prefix,
+            state_prefix=state_prefix,
+        )
 
         temp_source_columns = resolve_temp_source_columns(
             df=out,
@@ -103,6 +106,22 @@ def build_generic_features_from_plan(
         passthrough_columns=available_passthrough,
         missing_source_pairs=dedupe_preserve_order(missing_source_pairs),
     )
+
+
+def source_side_prefixes(source_prefix: str, state_prefix: str = "pre_") -> tuple[str, str]:
+    """Return red/blue source prefixes for an output-source namespace.
+
+    Current moneyline feature-view naming uses ordinary prefight columns like
+    ``r_pre_elo`` but EWM columns are top-level state columns like
+    ``r_ewm_elo``. This function centralizes that source mapping so the builder
+    does not hand-code it throughout the transform loop.
+    """
+
+    if source_prefix == "ewm_":
+        return "r_ewm_", "b_ewm_"
+    if source_prefix == "recent_form_":
+        return "r_pre_recent_", "b_pre_recent_"
+    return f"r_{state_prefix}{source_prefix}", f"b_{state_prefix}{source_prefix}"
 
 
 def resolve_temp_source_columns(
