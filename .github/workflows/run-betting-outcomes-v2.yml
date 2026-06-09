@@ -1,0 +1,54 @@
+name: Run Betting Outcomes V2
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: betting-outcomes-v2-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  run-betting-outcomes-v2:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Sync latest branch state
+        run: |
+          git fetch origin "${GITHUB_REF_NAME}"
+          git pull --ff-only origin "${GITHUB_REF_NAME}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyyaml scikit-learn==1.6.1 xgboost
+
+      - name: Run Betting Outcomes V2
+        run: |
+          python -m pipeline.betting.run_betting_outcomes_v2
+
+      - name: Commit betting outputs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add -f \
+            data/predictions/betting_outcomes.parquet \
+            data/audits/ufc_betting_outcomes_audit.parquet
+
+          git commit -m "Update betting outcomes artifacts" || echo "No changes to commit"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
