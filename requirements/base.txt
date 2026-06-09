@@ -1,0 +1,13 @@
+# Core dependencies for UFC ingestion, feature generation, validation, and utilities.
+
+pandas
+numpy
+pyarrow
+joblib
+PyYAML
+python-dateutil
+tqdm
+requests
+beautifulsoup4
+selenium
+webdriver-manager
