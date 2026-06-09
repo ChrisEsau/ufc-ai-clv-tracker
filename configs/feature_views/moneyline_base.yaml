@@ -51,7 +51,7 @@ contracts:
     - r_pre_elo
     - b_pre_elo
   protected_model_contracts:
-    - configs/models/moneyline_xgb_base.yaml
+    - configs/models/moneyline_xgboost_v5.yaml
 
 validation:
   expected_feature_view_shape:
