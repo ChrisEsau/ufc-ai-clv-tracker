@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import html
-from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -96,7 +95,15 @@ def _kelly_fraction(probability, american_odds) -> float:
 
 def _market_display(value) -> str:
     key = str(value or "").strip().lower()
-    return {"moneyline": "Moneyline", "h2h": "Moneyline", "method": "Method of Victory", "goes_distance": "Goes Distance", "totals": "Totals", "round": "Round Props"}.get(key, str(value or "Unknown").replace("_", " ").title())
+    mapping = {
+        "moneyline": "Moneyline",
+        "h2h": "Moneyline",
+        "method": "Method of Victory",
+        "goes_distance": "Goes Distance",
+        "totals": "Totals",
+        "round": "Round Props",
+    }
+    return mapping.get(key, str(value or "Unknown").replace("_", " ").title())
 
 
 def _status(row: pd.Series, settings) -> str:
@@ -128,13 +135,21 @@ def _enrich(df: pd.DataFrame) -> pd.DataFrame:
     out["american_odds"] = pd.to_numeric(out["american_odds"], errors="coerce")
     out["confidence_pct"] = pd.to_numeric(out["confidence_pct"], errors="coerce")
     if "implied_probability" not in out.columns:
-        out["implied_probability"] = out["american_odds"].apply(lambda x: 1 / _decimal_odds(x) if _decimal_odds(x) else pd.NA)
+        out["implied_probability"] = out["american_odds"].apply(
+            lambda x: 1 / _decimal_odds(x) if _decimal_odds(x) else pd.NA
+        )
     out["implied_probability"] = pd.to_numeric(out["implied_probability"], errors="coerce")
     out["edge"] = out["model_probability"] - out["implied_probability"]
     out["edge_pct"] = out["edge"] * 100
-    out["ev_dollars_at_100"] = out.apply(lambda row: _ev_for_100(row.get("model_probability"), row.get("american_odds")), axis=1)
-    out["full_kelly_fraction"] = out.apply(lambda row: _kelly_fraction(row.get("model_probability"), row.get("american_odds")), axis=1)
-    out["recommended_stake"] = (settings.starting_bankroll * out["full_kelly_fraction"] * _kelly_multiplier()).clip(0, settings.starting_bankroll * settings.max_stake_pct)
+    out["ev_dollars_at_100"] = out.apply(
+        lambda row: _ev_for_100(row.get("model_probability"), row.get("american_odds")), axis=1
+    )
+    out["full_kelly_fraction"] = out.apply(
+        lambda row: _kelly_fraction(row.get("model_probability"), row.get("american_odds")), axis=1
+    )
+    out["recommended_stake"] = (
+        settings.starting_bankroll * out["full_kelly_fraction"] * _kelly_multiplier()
+    ).clip(0, settings.starting_bankroll * settings.max_stake_pct)
     out["recommendation"] = out.apply(lambda row: _status(row, settings), axis=1)
     out["is_bet_candidate"] = out["recommendation"].eq("BET CANDIDATE")
     return out
@@ -151,7 +166,8 @@ def _event_options(events: pd.DataFrame, outcomes: pd.DataFrame) -> list[str]:
     return ["All Events", *sorted(set(n for n in names if n.strip()))]
 
 
-def _apply_filters(df: pd.DataFrame) -> pd.DataFrame:
+def _apply_base_filters(df: pd.DataFrame) -> pd.DataFrame:
+    """Filter by dimensions that do not remove one side of a moneyline fight."""
     if df.empty:
         return df
     out = df.copy()
@@ -164,14 +180,20 @@ def _apply_filters(df: pd.DataFrame) -> pd.DataFrame:
     book = st.session_state.get("bb_filter_bookmaker", "All Books")
     if book != "All Books" and "bookmaker" in out.columns:
         out = out[out["bookmaker"].astype(str) == book]
+    return out.reset_index(drop=True)
+
+
+def _display_filter_best_rows(rows: pd.DataFrame) -> pd.DataFrame:
+    """Apply EV/positive/confidence filters to grouped fight rows, not individual outcomes."""
+    if rows.empty:
+        return rows
     settings = load_risk_settings()
-    lo, hi = st.session_state.get("bb_filter_odds_range", (settings.min_odds, settings.max_odds))
-    out = out[pd.to_numeric(out["american_odds"], errors="coerce").between(lo, hi)]
+    out = rows.copy()
     ev_threshold = float(st.session_state.get("bb_filter_ev_threshold", 50))
     if ev_threshold > 0:
-        out = out[pd.to_numeric(out["ev_dollars_at_100"], errors="coerce") >= ev_threshold]
+        out = out[pd.to_numeric(out["sort_ev"], errors="coerce") >= ev_threshold]
     elif st.session_state.get("bb_filter_positive_ev", False):
-        out = out[pd.to_numeric(out["ev_dollars_at_100"], errors="coerce") > 0]
+        out = out[pd.to_numeric(out["sort_ev"], errors="coerce") > 0]
     min_conf = float(st.session_state.get("bb_filter_min_confidence", settings.min_confidence))
     out = out[pd.to_numeric(out["confidence_pct"], errors="coerce") >= min_conf]
     return out.reset_index(drop=True)
@@ -193,20 +215,34 @@ def _moneyline_rows(outcomes: pd.DataFrame) -> pd.DataFrame:
         red = red.iloc[0]
         blue = blue.iloc[0]
         best_pool = group[group["is_bet_candidate"]]
-        best = (best_pool if not best_pool.empty else group).sort_values("ev_dollars_at_100", ascending=False).iloc[0]
+        best = (best_pool if not best_pool.empty else group).sort_values(
+            "ev_dollars_at_100", ascending=False, na_position="last"
+        ).iloc[0]
         rows.append({
-            "event_name": first.get("event_name"), "fight_id": first.get("fight_id"), "bookmaker": first.get("bookmaker"),
-            "red_fighter": first.get("red_fighter"), "blue_fighter": first.get("blue_fighter"),
-            "red_model_prob": red.get("model_probability"), "blue_model_prob": blue.get("model_probability"),
-            "red_american_odds": red.get("american_odds"), "blue_american_odds": blue.get("american_odds"),
-            "red_implied_prob": red.get("implied_probability"), "blue_implied_prob": blue.get("implied_probability"),
-            "red_edge": red.get("edge"), "blue_edge": blue.get("edge"),
-            "red_ev_dollars": red.get("ev_dollars_at_100"), "blue_ev_dollars": blue.get("ev_dollars_at_100"),
-            "confidence_pct": best.get("confidence_pct"), "recommendation": best.get("recommendation"),
-            "recommended_stake": best.get("recommended_stake"), "is_bet_candidate": bool(best.get("is_bet_candidate", False)),
+            "event_name": first.get("event_name"),
+            "fight_id": first.get("fight_id"),
+            "bookmaker": first.get("bookmaker"),
+            "red_fighter": first.get("red_fighter"),
+            "blue_fighter": first.get("blue_fighter"),
+            "red_model_prob": red.get("model_probability"),
+            "blue_model_prob": blue.get("model_probability"),
+            "red_american_odds": red.get("american_odds"),
+            "blue_american_odds": blue.get("american_odds"),
+            "red_implied_prob": red.get("implied_probability"),
+            "blue_implied_prob": blue.get("implied_probability"),
+            "red_edge": red.get("edge"),
+            "blue_edge": blue.get("edge"),
+            "red_ev_dollars": red.get("ev_dollars_at_100"),
+            "blue_ev_dollars": blue.get("ev_dollars_at_100"),
+            "confidence_pct": best.get("confidence_pct"),
+            "recommendation": best.get("recommendation"),
+            "recommended_stake": best.get("recommended_stake"),
+            "is_bet_candidate": bool(best.get("is_bet_candidate", False)),
             "sort_ev": best.get("ev_dollars_at_100"),
         })
-    return pd.DataFrame(rows).sort_values("sort_ev", ascending=False, na_position="last").reset_index(drop=True) if rows else pd.DataFrame()
+    if not rows:
+        return pd.DataFrame()
+    return pd.DataFrame(rows).sort_values("sort_ev", ascending=False, na_position="last").reset_index(drop=True)
 
 
 def _inject_css() -> None:
@@ -301,6 +337,8 @@ def render_betting_board():
     if updated:
         st.caption(f"Last Updated: {updated}")
     enriched = _enrich(outcomes)
-    filtered = _apply_filters(enriched)
-    _render_kpis(filtered)
-    _render_table(_moneyline_rows(filtered))
+    dimension_filtered = _apply_base_filters(enriched)
+    moneyline_rows = _moneyline_rows(dimension_filtered)
+    display_rows = _display_filter_best_rows(moneyline_rows)
+    _render_kpis(dimension_filtered)
+    _render_table(display_rows)
