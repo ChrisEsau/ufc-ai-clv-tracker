@@ -22,6 +22,7 @@ STATE_CONTEXT_COLUMNS = {
     "title_fight",
     "total_rounds",
     "fight_date",
+    "source_row_index",
     "fighter_id",
     "fighter_name",
     "corner",
