@@ -89,6 +89,8 @@ MODEL_SHAP_IMPORTANCE_PATH = MODEL_DIR / "shap_importance.csv"
 
 ROLLING_FEATURES_PATH = FEATURES_DIR / "UFC_enhanced_rolling_features_EWM.parquet"
 CURRENT_FIGHTER_FEATURES_PATH = FEATURES_DIR / "ufc_current_fighter_features.parquet"
+FIGHTER_STATE_HISTORY_PATH = FEATURES_DIR / "fighter_state_history.parquet"
+LATEST_FIGHTER_STATE_PATH = FEATURES_DIR / "latest_fighter_state.parquet"
 
 UPCOMING_EVENTS_PATH = CARDS_DIR / "ufcstats_upcoming_events.parquet"
 UPCOMING_FIGHTS_PATH = CARDS_DIR / "ufcstats_upcoming_fights.parquet"
