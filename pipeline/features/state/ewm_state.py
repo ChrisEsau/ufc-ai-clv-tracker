@@ -77,13 +77,18 @@ def add_ewm_state_features(
 
     - ``ewm_x``: fighter-level exponentially weighted mean of ``x``
     - ``form_delta_x``: ``ewm_x - x``
+
+    Ordering intentionally mirrors the legacy V5 EWM layer, which sorts the
+    temporary fighter-level dataframe by fighter ID and date only. This avoids
+    introducing a new tie-breaker that can change EWM and recent-form parity for
+    fighters with multiple rows on the same event date.
     """
 
     if history_df.empty:
         return history_df.copy()
 
     out = history_df.copy()
-    sort_columns = [column for column in ["fighter_id", "fight_date", "fight_id"] if column in out.columns]
+    sort_columns = [column for column in ["fighter_id", "fight_date"] if column in out.columns]
     out = out.sort_values(sort_columns).reset_index(drop=True)
 
     state_columns = get_ewm_state_columns(out)
