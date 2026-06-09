@@ -7,8 +7,8 @@ Run from repo root:
 Pipeline:
 - Load data/master/ufc_master.parquet
 - Reuse rolling feature preparation for date sorting and ID-based targets
-- Build fighter-level prefight state history
-- Add whitelisted fighter-level EWM state features
+- Build fighter-level prefight state history with raw fighter feature plugins
+- Add whitelisted fighter-level EWM state features through the EWM plugin adapter
 - Derive latest fighter state
 - Write data/features/fighter_state_history.parquet
 - Write data/features/latest_fighter_state.parquet
@@ -25,11 +25,9 @@ from pipeline.common.paths import (
     ensure_data_dirs,
 )
 from pipeline.features.run_build_rolling_features import prepare_master_for_rolling
-from pipeline.features.state.ewm_state import add_ewm_state_features, get_ewm_state_columns
-from pipeline.features.state.history_builder import (
-    build_fighter_state_history,
-    build_latest_fighter_state,
-)
+from pipeline.features.state.ewm_state import get_ewm_state_columns
+from pipeline.features.state.history_builder import build_latest_fighter_state
+from pipeline.features.state.plugin_history_builder import build_plugin_fighter_state_history
 
 
 def main() -> None:
@@ -43,6 +41,7 @@ def main() -> None:
     print(f"Master path        : {MASTER_PATH}")
     print(f"History output path: {FIGHTER_STATE_HISTORY_PATH}")
     print(f"Latest output path : {LATEST_FIGHTER_STATE_PATH}")
+    print("Builder            : plugin_history_builder")
 
     master_df = pd.read_parquet(MASTER_PATH)
     print(f"Master shape       : {master_df.shape}")
@@ -50,9 +49,9 @@ def main() -> None:
     prepared_df = prepare_master_for_rolling(master_df)
     print(f"Prepared shape     : {prepared_df.shape}")
 
-    history_df = build_fighter_state_history(prepared_df)
-    ewm_source_columns = get_ewm_state_columns(history_df)
-    history_df = add_ewm_state_features(history_df)
+    base_history_df = build_plugin_fighter_state_history(prepared_df, add_ewm=False)
+    ewm_source_columns = get_ewm_state_columns(base_history_df)
+    history_df = build_plugin_fighter_state_history(prepared_df, add_ewm=True)
     latest_df = build_latest_fighter_state(history_df)
 
     expected_history_rows = len(prepared_df) * 2
