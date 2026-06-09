@@ -65,31 +65,33 @@ def build_generic_features_from_plan(
     for source_prefix, group_specs in grouped_specs.items():
         source_base_columns = [spec.source_base_column for spec in group_specs]
         transforms = [spec.transform for spec in group_specs]
+        red_prefix = f"r_{state_prefix}{source_prefix}"
+        blue_prefix = f"b_{state_prefix}{source_prefix}"
 
-        transform_result = apply_red_blue_transforms(
+        temp_source_columns = resolve_temp_source_columns(
             df=out,
             base_columns=source_base_columns,
+            red_prefix=red_prefix,
+            blue_prefix=blue_prefix,
+        )
+        temp_df = out[temp_source_columns].copy() if temp_source_columns else pd.DataFrame(index=out.index)
+
+        transform_result = apply_red_blue_transforms(
+            df=temp_df,
+            base_columns=source_base_columns,
             transforms=transforms,
-            red_prefix=f"r_{state_prefix}{source_prefix}",
-            blue_prefix=f"b_{state_prefix}{source_prefix}",
+            red_prefix=red_prefix,
+            blue_prefix=blue_prefix,
         )
 
-        out = transform_result.dataframe
         missing_source_pairs.extend(transform_result.missing_source_pairs)
 
         rename_map = build_generated_column_rename_map(group_specs)
-        existing_renames = {
-            source: target
-            for source, target in rename_map.items()
-            if source in out.columns and source != target
-        }
-        if existing_renames:
-            out = out.drop(columns=[target for target in existing_renames.values() if target in out.columns])
-            out = out.rename(columns=existing_renames)
-
-        generated_columns.extend([
-            spec_to_output_column(spec) for spec in group_specs if spec_to_output_column(spec) in out.columns
-        ])
+        for source_column, target_column in rename_map.items():
+            if source_column not in transform_result.dataframe.columns:
+                continue
+            out[target_column] = transform_result.dataframe[source_column]
+            generated_columns.append(target_column)
 
     available_passthrough = [
         column for column in plan.passthrough_feature_columns if column in out.columns
@@ -103,6 +105,25 @@ def build_generic_features_from_plan(
     )
 
 
+def resolve_temp_source_columns(
+    df: pd.DataFrame,
+    base_columns: Iterable[str],
+    red_prefix: str,
+    blue_prefix: str,
+) -> list[str]:
+    """Return source columns needed for an isolated transform-engine call."""
+
+    columns: list[str] = []
+    for base_column in base_columns:
+        red_col = f"{red_prefix}{base_column}"
+        blue_col = f"{blue_prefix}{base_column}"
+        if red_col in df.columns:
+            columns.append(red_col)
+        if blue_col in df.columns:
+            columns.append(blue_col)
+    return dedupe_preserve_order(columns)
+
+
 def infer_feature_transform_specs(generated_columns: Iterable[str]) -> list[FeatureTransformSpec]:
     """Infer transform specs from generated feature names."""
 
@@ -114,7 +135,7 @@ def infer_feature_transform_specs(generated_columns: Iterable[str]) -> list[Feat
         if transform is None or output_base_column is None:
             continue
 
-        source_prefix, source_base_column = split_output_base_column(output_base_column)
+        _, source_base_column = split_output_base_column(output_base_column)
         specs.append(
             FeatureTransformSpec(
                 source_base_column=source_base_column,
