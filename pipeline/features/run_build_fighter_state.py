@@ -8,6 +8,7 @@ Pipeline:
 - Load data/master/ufc_master.parquet
 - Reuse rolling feature preparation for date sorting and ID-based targets
 - Build fighter-level prefight state history
+- Add whitelisted fighter-level EWM state features
 - Derive latest fighter state
 - Write data/features/fighter_state_history.parquet
 - Write data/features/latest_fighter_state.parquet
@@ -24,6 +25,7 @@ from pipeline.common.paths import (
     ensure_data_dirs,
 )
 from pipeline.features.run_build_rolling_features import prepare_master_for_rolling
+from pipeline.features.state.ewm_state import add_ewm_state_features, get_ewm_state_columns
 from pipeline.features.state.history_builder import (
     build_fighter_state_history,
     build_latest_fighter_state,
@@ -49,11 +51,15 @@ def main() -> None:
     print(f"Prepared shape     : {prepared_df.shape}")
 
     history_df = build_fighter_state_history(prepared_df)
+    ewm_source_columns = get_ewm_state_columns(history_df)
+    history_df = add_ewm_state_features(history_df)
     latest_df = build_latest_fighter_state(history_df)
 
     expected_history_rows = len(prepared_df) * 2
     print(f"History shape      : {history_df.shape}")
     print(f"Expected rows      : {expected_history_rows}")
+    print(f"EWM source columns : {len(ewm_source_columns)}")
+    print(f"EWM added columns  : {len(ewm_source_columns) * 2}")
     print(f"Latest shape       : {latest_df.shape}")
     print(f"Unique fighters    : {history_df['fighter_id'].nunique() if not history_df.empty else 0}")
 
