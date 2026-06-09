@@ -12,7 +12,41 @@ Is the model calibrated?
 Which features matter?
 What changes improve ROI?
 Is the model stable over recent UFC eras?
+Which model configuration actually makes money?
 ```
+
+---
+
+## Current Project State (June 2026)
+
+The fighter-state refactor has been validated and is now considered the canonical foundation for future model development.
+
+Validated results:
+
+```text
+✓ Fighter-state architecture implemented
+✓ Moneyline feature view implemented
+✓ 124/124 V5 model features present
+✓ 16/16 engineered features present
+✓ End-to-end XGBoost training successful
+✓ Refactor model metrics approximately equal to legacy model metrics
+```
+
+Canonical architecture:
+
+```text
+ufc_master.parquet
+        ↓
+fighter_state_history.parquet
+        ↓
+moneyline_feature_view.parquet
+        ↓
+training
+        ↓
+evaluation
+```
+
+The legacy rolling feature artifact remains available for historical reference but should no longer be considered the long-term source of truth.
 
 ---
 
@@ -26,17 +60,20 @@ Is the model stable over recent UFC eras?
 * Analyze feature importance
 * Evaluate ROI by threshold
 * Support ensemble modeling
+* Maintain experiment history
+* Identify profitable feature/model combinations
 
 ---
 
 ## Primary Inputs
 
 * data/master/ufc_master.parquet
-* historical feature stores
-* training feature registry
-* model artifacts under `models/UFC_Model_v5_Experiment/`
+* fighter-state artifacts
+* feature-view artifacts
+* model configuration YAMLs
 * market odds history
 * bet result history
+* CLV history
 
 ---
 
@@ -48,25 +85,7 @@ Is the model stable over recent UFC eras?
 * Backtest results
 * ROI summaries
 * Model comparison tables
-
----
-
-## Current Model Direction
-
-The platform is moving toward V5 model development.
-
-Priority areas:
-
-```text
-1. V5 model development
-2. Prop bet engine
-3. Advanced market analytics
-4. Closing line value tracking
-5. Recent-era validation
-6. Confidence-weighted staking
-7. Market-aware features
-8. Ensemble modeling
-```
+* Experiment registry
 
 ---
 
@@ -81,132 +100,158 @@ Priority areas:
 * Flat bet profit
 * Kelly bet profit
 * Beat closing line rate
+* Bet volume
 
 ---
 
-## Feature Stores
+## Canonical Feature Architecture
 
-Historical point-in-time feature store:
+Current canonical feature artifacts:
 
 ```text
-data/features/UFC_enhanced_rolling_features_EWM.parquet
+data/features/fighter_state_history.parquet
+data/features/latest_fighter_state.parquet
+data/features/moneyline_feature_view.parquet
 ```
 
-Live fighter-state feature store:
+Future direction:
 
 ```text
-data/features/ufc_current_fighter_features.parquet
+feature_view.yaml
+        ↓
+generic feature-view engine
+        ↓
+moneyline view
+KO/TKO view
+submission view
+decision view
+distance view
+custom experiment views
+```
+
+The generic feature-view engine is the primary remaining architecture project for Model Lab support.
+
+---
+
+## Model Lab Vision
+
+The dashboard should become a configuration-driven experiment platform.
+
+Users should be able to select:
+
+```text
+Bet Type
+  - Moneyline
+  - KO/TKO
+  - Submission
+  - Decision
+  - Goes Distance
+  - Round Props
+
+Feature View
+  - Base
+  - EWM Heavy
+  - Recent Form
+  - Custom
+
+Model Family
+  - XGBoost
+  - Random Forest
+  - Logistic Regression
+  - Neural Network
+  - Ensemble
+
+Split Strategy
+  - Temporal
+  - Walkforward
+  - Rolling Window
+
+Calibration
+  - None
+  - Isotonic
+  - Platt
+```
+
+The dashboard should generate configuration files, not contain model logic.
+
+```text
+Dashboard
+      ↓
+experiment YAML
+      ↓
+pipeline execution
+      ↓
+artifacts
+      ↓
+leaderboard
 ```
 
 ---
 
-## Future Enhancements
+## Model Registry
 
-* Model comparison dashboard
-* Calibration dashboard
-* Automated retraining
-* Feature drift monitoring
-* Recent-era validation panel
-* Prop model lab
-* Ensemble model selector
+Every experiment should automatically generate a registry record.
+
+Recommended artifact:
+
+```text
+data/model_registry/model_runs.parquet
+```
+
+Recommended fields:
+
+```text
+experiment_id
+model_id
+feature_view_id
+feature_count
+accuracy
+roc_auc
+log_loss
+brier
+roi
+clv
+bet_count
+created_at
+```
+
+This registry becomes the source for Model Lab leaderboards.
 
 ---
 
-## Current Paused State
-
-Model Lab work is intentionally paused while development focus moves to the Betting Board.
-
-Completed state before pause:
-
-* The Model Lab tab is a read-only diagnostics workspace, not a training or promotion control surface.
-* Production model artifacts are loaded from `models/UFC_Model_v5_Experiment/` through `pipeline.common.paths`.
-* Feature artifacts are loaded from `data/features/` through `pipeline.common.paths`.
-* Prediction and audit artifacts are loaded from `data/predictions/` and `data/audits/` through `pipeline.common.paths`.
-* The Streamlit tab currently surfaces artifact readiness, production model metadata, quality summary metrics, SHAP feature importance, and live prediction audit summaries.
-
-No automated retraining, model promotion, rollback, or backtest generation should be added to the Model Lab until Betting Board work is complete.
-
----
-
-## Implemented Model Lab Dashboard Sections
-
-Current sections:
+## Future Dashboard Sections
 
 ```text
 Model Artifact Status
 Model Quality
 Feature Importance
 Live Prediction Audit
-```
 
-Current behavior:
-
-* `Model Artifact Status` verifies expected production artifacts and shows their canonical paths.
-* `Model Quality` displays existing quality-summary metrics such as calibrated accuracy, ROC-AUC, log loss, threshold, train fights, and test fights.
-* `Feature Importance` reads the existing SHAP importance CSV and displays ranked feature importance.
-* `Live Prediction Audit` reads the latest model prediction and live audit parquet files to summarize data-quality and feature-match readiness.
-
-These sections are viewers only. Any future button in Model Lab should dispatch a workflow and read committed artifacts back from `data/model_lab/`; the dashboard should not perform training or backtesting inline.
-
----
-
-## Deferred Phase 2 Plan
-
-When Model Lab work resumes, the recommended Phase 2 is to build a reproducible evaluation layer before any retraining or model promotion.
-
-Recommended artifacts:
-
-```text
-data/model_lab/model_lab_run_manifest.parquet
-data/model_lab/model_backtest_results.parquet
-data/model_lab/model_threshold_sweep.parquet
-data/model_lab/model_calibration_bins.parquet
-data/model_lab/model_recent_era_validation.parquet
-data/model_lab/model_feature_drift.parquet
-data/model_lab/model_comparison_summary.parquet
-```
-
-Recommended package layout:
-
-```text
-pipeline/model_lab/__init__.py
-pipeline/model_lab/run_model_backtest.py
-pipeline/model_lab/run_threshold_sweep.py
-pipeline/model_lab/run_calibration_report.py
-pipeline/model_lab/run_recent_era_validation.py
-pipeline/model_lab/run_feature_drift_report.py
-```
-
-Recommended dashboard sections after Phase 2:
-
-```text
 Backtest Results
 Threshold / ROI Sweep
 Calibration Report
 Recent-Era Validation
 Feature Drift
-Model Lab Run History
+Experiment Registry
+Model Leaderboard
 ```
-
-Recommended workflow:
-
-```text
-.github/workflows/run-model-lab-backtest.yml
-```
-
-The workflow should run model-lab pipeline modules, commit generated `data/model_lab/*.parquet` artifacts with `git add -f`, and allow Streamlit to display workflow status using the existing GitHub Actions helpers.
 
 ---
 
-## Deferred Model Lab Guardrails
+## Guiding Principle
 
-Do not implement these until after Betting Board improvements are stable:
+The goal of Model Lab is not to find the model with the highest ROC-AUC.
 
-* Automated retraining.
-* Production model replacement.
-* Model promotion / rollback controls.
-* Ensemble model selection.
-* Prop model lab.
-* Market-aware feature retraining.
+The goal is to identify:
 
-The first future Model Lab implementation should be historical evaluation of the current frozen production model, not a new training loop.
+```text
+Feature sets
+Model families
+Bet types
+Thresholds
+Staking approaches
+```
+
+that maximize long-term betting performance while maintaining calibration and robustness.
+
+Model Lab should evolve the UFC platform from a single-model workflow into a repeatable research platform capable of rapidly discovering and validating new edges.
