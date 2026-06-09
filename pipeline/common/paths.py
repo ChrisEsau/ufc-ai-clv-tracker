@@ -91,6 +91,7 @@ ROLLING_FEATURES_PATH = FEATURES_DIR / "UFC_enhanced_rolling_features_EWM.parque
 CURRENT_FIGHTER_FEATURES_PATH = FEATURES_DIR / "ufc_current_fighter_features.parquet"
 FIGHTER_STATE_HISTORY_PATH = FEATURES_DIR / "fighter_state_history.parquet"
 LATEST_FIGHTER_STATE_PATH = FEATURES_DIR / "latest_fighter_state.parquet"
+MONEYLINE_FEATURE_VIEW_PATH = FEATURES_DIR / "moneyline_feature_view.parquet"
 
 UPCOMING_EVENTS_PATH = CARDS_DIR / "ufcstats_upcoming_events.parquet"
 UPCOMING_FIGHTS_PATH = CARDS_DIR / "ufcstats_upcoming_fights.parquet"
