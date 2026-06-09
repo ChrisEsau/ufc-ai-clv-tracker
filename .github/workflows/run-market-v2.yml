@@ -1,0 +1,58 @@
+name: Run Market V2
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: market-v2-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  run-market-v2:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Sync latest branch state
+        run: |
+          git fetch origin "${GITHUB_REF_NAME}"
+          git pull --ff-only origin "${GITHUB_REF_NAME}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyyaml scikit-learn==1.6.1 xgboost
+
+      - name: Run Market V2
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        run: |
+          python -m pipeline.market.run_market_update_v2
+
+      - name: Commit market outputs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add -f \
+            data/market/market_outcomes.parquet \
+            data/market/market_outcome_snapshots.parquet \
+            data/audits/ufc_market_outcome_audit.parquet \
+            data/audits/ufc_market_match_audit_v2.parquet
+
+          git commit -m "Update market v2 artifacts" || echo "No changes to commit"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
