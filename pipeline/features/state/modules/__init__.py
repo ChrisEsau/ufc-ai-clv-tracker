@@ -1,0 +1,1 @@
+"""Fighter-state feature modules."""
