@@ -40,7 +40,7 @@ def _corner_stats(row: pd.Series, prefix: str) -> dict[str, float]:
     }
 
 
-def _context_payload(row: pd.Series) -> dict[str, Any]:
+def _context_payload(row: pd.Series, source_row_index: int) -> dict[str, Any]:
     """Return stable fight context columns for a fighter-state snapshot."""
 
     payload = {}
@@ -48,11 +48,13 @@ def _context_payload(row: pd.Series) -> dict[str, Any]:
         if column in row.index:
             payload[column] = row[column]
     payload["fight_date"] = row["date"]
+    payload["source_row_index"] = source_row_index
     return payload
 
 
 def _snapshot_row(
     row: pd.Series,
+    source_row_index: int,
     fighter_id: str,
     fighter_name: Any,
     corner: str,
@@ -60,7 +62,7 @@ def _snapshot_row(
 ) -> dict[str, Any]:
     """Build one fighter-level prefight snapshot row."""
 
-    snapshot = _context_payload(row)
+    snapshot = _context_payload(row, source_row_index=source_row_index)
     snapshot.update(
         {
             "fighter_id": fighter_id,
@@ -91,7 +93,7 @@ def build_fighter_state_history(df: pd.DataFrame) -> pd.DataFrame:
     fighter_state: defaultdict[str, dict[str, Any]] = defaultdict(module.initial_state)
     snapshot_rows: list[dict[str, Any]] = []
 
-    for _, row in df.iterrows():
+    for source_row_index, row in df.reset_index(drop=True).iterrows():
         fight_date = row["date"]
         fight_time_sec = row["match_time_sec"]
 
@@ -104,6 +106,7 @@ def build_fighter_state_history(df: pd.DataFrame) -> pd.DataFrame:
         snapshot_rows.append(
             _snapshot_row(
                 row=row,
+                source_row_index=source_row_index,
                 fighter_id=r_id,
                 fighter_name=row.get("r_name"),
                 corner="red",
@@ -113,6 +116,7 @@ def build_fighter_state_history(df: pd.DataFrame) -> pd.DataFrame:
         snapshot_rows.append(
             _snapshot_row(
                 row=row,
+                source_row_index=source_row_index,
                 fighter_id=b_id,
                 fighter_name=row.get("b_name"),
                 corner="blue",
@@ -167,6 +171,6 @@ def build_latest_fighter_state(history_df: pd.DataFrame) -> pd.DataFrame:
     if history_df.empty:
         return history_df.copy()
 
-    sort_columns = [column for column in ["fighter_id", "fight_date", "fight_id"] if column in history_df.columns]
+    sort_columns = [column for column in ["fighter_id", "fight_date", "source_row_index", "fight_id"] if column in history_df.columns]
     latest = history_df.sort_values(sort_columns).groupby("fighter_id", as_index=False).tail(1)
     return latest.reset_index(drop=True)
