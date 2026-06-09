@@ -1,0 +1,244 @@
+# UFC Feature Bundle Registry
+#
+# Purpose:
+#   Defines reusable feature bundles for Model Lab experiments and generic
+#   feature-view construction. Bundles group feature families by fight logic,
+#   not by model artifact. Model configs still decide the final column list.
+
+registry_name: ufc_feature_bundles
+version: 1
+status: draft_contract
+
+bundle_rules:
+  model_inputs_are_selected_in_model_config: true
+  bundles_define_candidate_feature_families: true
+  feature_views_may_include_multiple_bundles: true
+  transforms_are_applied_after_raw_bundle_selection: true
+
+bundles:
+
+  core_state:
+    description: Core point-in-time fighter quality and record state.
+    source_layer: fighter_state
+    candidate_columns:
+      - elo
+      - fights
+      - wins
+      - losses
+      - win_pct
+      - avg_opponent_elo
+      - best_win_elo
+      - worst_loss_elo
+      - win_streak
+      - loss_streak
+      - days_since_last_fight
+    recommended_transforms:
+      - red_minus_blue
+      - absolute_gap
+    markets:
+      - moneyline
+      - props
+
+  striking:
+    description: Standup volume, efficiency, defense, and damage indicators.
+    source_layer: fighter_state
+    candidate_columns:
+      - kd_avg
+      - kd_absorbed_avg
+      - splm
+      - sapm
+      - str_acc
+      - str_def
+    recommended_transforms:
+      - red_minus_blue
+      - ratio
+      - absolute_gap
+    markets:
+      - moneyline
+      - ko_tko
+      - decision
+
+  grappling:
+    description: Takedown, control, and submission activity indicators.
+    source_layer: fighter_state
+    candidate_columns:
+      - td_avg
+      - td_acc
+      - td_def
+      - sub_avg
+      - ctrl_per_min
+      - ctrl_against_per_min
+    recommended_transforms:
+      - red_minus_blue
+      - ratio
+      - absolute_gap
+    markets:
+      - moneyline
+      - submission
+      - decision
+
+  finish_profile:
+    description: Finish and method tendency state.
+    source_layer: fighter_state
+    candidate_columns:
+      - finish_rate
+      - ko_rate
+      - sub_win_rate
+      - decision_win_rate
+      - finish_loss_rate
+      - decision_loss_rate
+      - avg_fight_time
+    recommended_transforms:
+      - red_minus_blue
+      - absolute_gap
+    markets:
+      - moneyline
+      - ko_tko
+      - submission
+      - decision
+      - goes_distance
+      - rounds
+
+  recent_form:
+    description: Short-horizon recent performance and pace signals.
+    source_layer: fighter_state
+    candidate_columns:
+      - recent_win_pct
+      - recent_splm
+      - recent_sapm
+      - recent_td_avg
+      - recent_finish_rate
+      - recent_avg_fight_time
+    recommended_transforms:
+      - red_minus_blue
+      - absolute_gap
+    markets:
+      - moneyline
+      - props
+
+  ewm_state:
+    description: Exponentially weighted fighter-state signals.
+    source_layer: fighter_state
+    source_prefix: ewm_
+    candidate_columns:
+      - elo
+      - fights
+      - wins
+      - losses
+      - win_pct
+      - kd_avg
+      - kd_absorbed_avg
+      - splm
+      - sapm
+      - str_acc
+      - str_def
+      - td_avg
+      - td_acc
+      - td_def
+      - sub_avg
+      - ctrl_per_min
+      - ctrl_against_per_min
+      - finish_rate
+      - ko_rate
+      - sub_win_rate
+      - decision_win_rate
+      - finish_loss_rate
+      - decision_loss_rate
+      - avg_opponent_elo
+      - best_win_elo
+      - worst_loss_elo
+      - avg_fight_time
+      - win_streak
+      - loss_streak
+      - days_since_last_fight
+      - recent_win_pct
+      - recent_splm
+      - recent_sapm
+      - recent_td_avg
+      - recent_finish_rate
+      - recent_avg_fight_time
+    recommended_transforms:
+      - red_minus_blue
+    markets:
+      - moneyline
+      - props
+
+  physical:
+    description: Physical matchup characteristics.
+    source_layer: prepared_fights
+    candidate_columns:
+      - age
+      - height
+      - reach
+      - weight
+    recommended_transforms:
+      - red_minus_blue
+      - ratio
+      - absolute_gap
+    markets:
+      - moneyline
+      - props
+
+  engineered_matchup:
+    description: Existing V5 engineered matchup features.
+    source_layer: engineered
+    candidate_columns:
+      - age_diff
+      - height_diff
+      - reach_diff
+      - weight_diff
+      - striking_edge
+      - grappling_edge
+      - finish_volatility
+      - wrestling_pressure_vs_defense
+      - reach_striking_combo
+      - chin_risk_diff
+      - experience_ratio_diff
+      - aggression_index_diff
+      - age_squared_diff
+      - pressure_striking_adv_diff
+      - wrestling_mismatch_diff
+      - submission_mismatch_diff
+    recommended_transforms: []
+    markets:
+      - moneyline
+      - props
+
+  market_odds:
+    description: Timestamped market information for market-aware models. Must be point-in-time only.
+    source_layer: market
+    candidate_columns:
+      - opening_implied_prob
+      - current_implied_prob
+      - closing_implied_prob
+      - line_move
+      - book_count
+      - best_price
+      - market_spread
+    recommended_transforms:
+      - market_gap
+      - absolute_gap
+    leakage_warning: closing odds must not be used for pre-fight prediction training unless modeling CLV after the fact.
+    markets:
+      - moneyline
+      - props
+      - clv
+
+  archetype:
+    description: Fighter style or archetype scores, such as striker, grappler, wrestler, pressure fighter, or durability profile.
+    source_layer: archetype
+    candidate_columns:
+      - striker_score
+      - grappler_score
+      - wrestler_score
+      - submission_score
+      - pressure_score
+      - durability_score
+      - pace_score
+    recommended_transforms:
+      - red_minus_blue
+      - style_matchup
+      - interaction
+    markets:
+      - moneyline
+      - props
