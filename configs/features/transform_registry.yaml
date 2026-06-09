@@ -1,0 +1,51 @@
+# UFC Transform Registry
+#
+# Purpose:
+#   Defines reusable transforms that convert raw fighter, market, and archetype
+#   features into model-ready features.
+
+registry_name: ufc_transform_registry
+version: 1
+status: draft_contract
+
+transforms:
+
+  red_minus_blue:
+    description: Red feature minus blue feature.
+    output_example: elo_diff
+
+  blue_minus_red:
+    description: Blue feature minus red feature.
+    output_example: elo_reverse_diff
+
+  ratio:
+    description: Red divided by blue using safe denominator handling.
+    output_example: splm_ratio
+
+  absolute_gap:
+    description: Absolute difference between red and blue values.
+    output_example: elo_abs_gap
+
+  interaction:
+    description: Multiplicative interaction between two features.
+    output_example: elo_x_splm
+
+  percentile:
+    description: Percentile rank within historical population.
+
+  zscore:
+    description: Standardized score using historical distribution.
+
+  style_matchup:
+    description: Style interaction transform used for archetype systems.
+    output_example: striker_vs_grappler
+
+  market_gap:
+    description: Difference between model probability and market probability.
+    output_example: model_market_gap
+
+transform_rules:
+  transforms_should_be_reusable_across_markets: true
+  transforms_should_not_be_duplicated_in_feature_views: true
+  feature_views_should_select_transforms_not_reimplement_them: true
+  model_configs_should_select_final_columns_not_define_transforms: true
