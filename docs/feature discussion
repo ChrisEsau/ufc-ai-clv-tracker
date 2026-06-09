@@ -1,0 +1,322 @@
+UFC Feature Builder V2 Architecture
+
+Status
+
+Draft architecture proposal.
+
+Not approved for implementation.
+
+Purpose is to document the long-term feature engineering direction discussed during development of Prediction V2.
+
+⸻
+
+Problem Statement
+
+The current UFC feature pipeline is largely organized around a single rolling feature warehouse.
+
+Current flow:
+
+ufc_master.parquet
+        ↓
+run_build_rolling_features.py
+        ↓
+UFC_enhanced_rolling_features_EWM.parquet
+        ↓
+model training
+
+This architecture works but creates several limitations:
+
+* New models may require different features.
+* Adding a feature often requires rebuilding large datasets.
+* Feature lineage is difficult to trace.
+* Live prediction debugging is difficult.
+* Feature-family failures can be hidden inside large artifacts.
+
+Example:
+
+V5 requires ELO
+V6 requires ELO + Altitude
+V7 requires Market Features only
+
+Under the current architecture, feature generation remains tightly coupled to model requirements.
+
+⸻
+
+Design Goals
+
+The V2 architecture should:
+
+1. Be model agnostic.
+2. Support independent feature families.
+3. Support feature experimentation.
+4. Support feature-family auditing.
+5. Support live and training parity.
+6. Allow rapid feature expansion.
+7. Use fighter IDs rather than fighter names.
+8. Preserve reproducibility.
+
+⸻
+
+Core Principle
+
+Feature generation should be independent of model training.
+
+Instead of:
+
+Model
+    ↓
+Required Features
+
+We move toward:
+
+Feature Warehouse
+    ↓
+Model selects features
+
+⸻
+
+Proposed Architecture
+
+ufc_master.parquet
+        ↓
+Feature Family Builders
+        ↓
+base_features.parquet
+elo_features.parquet
+ewm_features.parquet
+recent_form_features.parquet
+market_features.parquet
+altitude_features.parquet
+travel_features.parquet
+        ↓
+Feature Registry
+        ↓
+Feature Assembler
+        ↓
+Training Dataset
+        ↓
+Model Training
+
+⸻
+
+Feature Families
+
+Base
+
+Examples:
+
+* wins
+* losses
+* fights
+* win_pct
+* age
+* height
+* reach
+
+Artifact:
+
+base_features.parquet
+
+⸻
+
+ELO
+
+Examples:
+
+* elo
+* best_win_elo
+* worst_loss_elo
+* avg_opponent_elo
+
+Artifact:
+
+elo_features.parquet
+
+⸻
+
+EWM
+
+Examples:
+
+* ewm_elo
+* ewm_splm
+* ewm_sapm
+* ewm_td_avg
+* ewm_win_pct
+
+Artifact:
+
+ewm_features.parquet
+
+⸻
+
+Recent Form
+
+Examples:
+
+* recent_win_pct
+* recent_finish_rate
+* recent_splm
+* recent_sapm
+
+Artifact:
+
+recent_form_features.parquet
+
+⸻
+
+Market
+
+Future examples:
+
+* opening_odds
+* closing_odds
+* implied_probability
+* market_movement
+* steam_flags
+
+Artifact:
+
+market_features.parquet
+
+⸻
+
+Feature Registry
+
+The registry becomes the source of truth.
+
+Example:
+
+feature_family: ewm
+features:
+  - ewm_elo
+  - ewm_splm
+  - ewm_sapm
+  - ewm_td_avg
+
+Purpose:
+
+* Documentation
+* Auditing
+* Validation
+* Feature discovery
+
+⸻
+
+Model Configuration
+
+Models should declare required features.
+
+Example:
+
+model_id: moneyline_xgboost_v6
+feature_families:
+  - base
+  - elo
+  - ewm
+features:
+  - elo_diff
+  - ewm_elo_diff
+  - reach_diff
+
+The model does not generate features.
+
+The model selects features.
+
+⸻
+
+Fighter State Architecture
+
+Live prediction requires a fighter-state layer.
+
+Proposed flow:
+
+Historical Features
+        ↓
+fighter_state.parquet
+        ↓
+Live Card
+        ↓
+Feature Assembly
+        ↓
+Prediction
+
+The fighter-state store should use fighter IDs as the primary key.
+
+Never fighter names.
+
+⸻
+
+Feature Auditing
+
+Every feature family should expose:
+
+* feature count
+* non-null count
+* non-zero count
+* completeness score
+
+Example:
+
+EWM
+32 features
+30 populated
+2 missing
+93.8% completeness
+
+This helps identify failures quickly.
+
+⸻
+
+Confidence Integration
+
+Future confidence scoring may use:
+
+* feature completeness
+* fighter-state completeness
+* feature-family availability
+* historical calibration
+
+Confidence should be separate from model probability.
+
+⸻
+
+Expected Benefits
+
+* Easier experimentation
+* Faster feature development
+* Better debugging
+* Cleaner training pipeline
+* Cleaner live prediction pipeline
+* Easier future expansion
+
+Examples:
+
+* altitude
+* travel
+* judging tendencies
+* market features
+* camp features
+* short-notice features
+
+can all be added without redesigning the training pipeline.
+
+⸻
+
+Current Investigation Context
+
+During Prediction V2 development an issue was discovered where:
+
+EWM family
+32 features
+0 nonzero
+
+for certain live predictions.
+
+This reinforced the need for:
+
+* feature-family auditing
+* modular feature architecture
+* clear feature lineage
+
+The issue remains under investigation.
