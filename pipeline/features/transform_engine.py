@@ -52,8 +52,8 @@ def apply_red_blue_transforms(
     Returns
     -------
     TransformResult
-        Copy of the input dataframe with generated columns appended, plus
-        generated-column and missing-source summaries.
+        Copy of the input dataframe with generated columns appended or
+        overwritten, plus generated-column and missing-source summaries.
     """
 
     out = df.copy()
@@ -93,6 +93,7 @@ def apply_red_blue_transforms(
             generated_columns.append(output_col)
 
     if new_columns:
+        out = out.drop(columns=[column for column in new_columns if column in out.columns])
         out = pd.concat([out, pd.DataFrame(new_columns, index=out.index)], axis=1)
 
     return TransformResult(
