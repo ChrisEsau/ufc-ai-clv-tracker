@@ -1,0 +1,67 @@
+# Moneyline Base Feature View
+#
+# Purpose:
+#   Defines how to build the canonical moneyline feature-view parquet from
+#   fighter-state artifacts. Model configs decide which columns to train on;
+#   this config decides which reusable columns are available in the view.
+
+view_id: moneyline_base
+view_family: moneyline
+version: 1
+status: canonical
+
+inputs:
+  master_path: data/master/ufc_master.parquet
+  fighter_state_history_path: data/features/fighter_state_history.parquet
+
+output:
+  feature_view_path: data/features/moneyline_feature_view.parquet
+
+builder:
+  module: pipeline.features.views.moneyline
+  function: build_moneyline_feature_view
+  runner: pipeline.features.run_build_moneyline_view
+
+join:
+  fight_key: fight_id
+  red_fighter_key: r_id
+  blue_fighter_key: b_id
+  fighter_state_key: fighter_id
+
+include:
+  prepared_fight_columns: true
+  prefight_state: true
+  ewm_state: true
+  recent_form_state: true
+  red_blue_differentials: true
+  engineered_features:
+    enabled: true
+    function: ufc_feature_engineering.add_v5_engineered_features
+    registry_function: ufc_feature_engineering.get_engineered_feature_list
+
+contracts:
+  expected_rows_match_prepared_fights: true
+  require_no_missing_state_matches: true
+  required_columns:
+    - fight_id
+    - date
+    - target
+    - r_id
+    - b_id
+    - r_pre_elo
+    - b_pre_elo
+  protected_model_contracts:
+    - configs/models/moneyline_xgb_base.yaml
+
+validation:
+  expected_feature_view_shape:
+    rows_source: prepared_fights
+    columns_current: 483
+  expected_current_model_feature_count: 124
+  allow_extra_columns: true
+
+notes:
+  - This config mirrors the current hardcoded moneyline feature view.
+  - The first generic feature-view builder should reproduce this output before replacing the current runner.
+  - Do not duplicate the 124 model feature list here; that remains in the model config.
+  - Future prop views should reuse this config shape with market-specific labels and feature families.
