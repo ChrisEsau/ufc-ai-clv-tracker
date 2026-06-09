@@ -120,9 +120,7 @@ def _status(row: pd.Series, settings) -> str:
 
 
 def _kelly_multiplier() -> float:
-    if st.session_state.get("bb_kelly_mode") == "1/4 Kelly":
-        return 0.25
-    return load_risk_settings().kelly_fraction
+    return 0.25 if st.session_state.get("bb_kelly_mode") == "1/4 Kelly" else 0.50
 
 
 def _enrich(df: pd.DataFrame) -> pd.DataFrame:
