@@ -8,12 +8,19 @@ Run from repo root:
 
     python -m pipeline.features.feature_graph \
         --feature-view-config configs/feature_views/moneyline_base.yaml
+
+Optional JSON export:
+
+    python -m pipeline.features.feature_graph \
+        --feature-view-config configs/feature_views/moneyline_base.yaml \
+        --output data/features/feature_graph_moneyline_base.json
 """
 
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
+import json
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
@@ -69,6 +76,11 @@ def parse_args() -> argparse.Namespace:
         "--transform-registry",
         default=DEFAULT_TRANSFORM_REGISTRY,
         help="Path to transform registry YAML.",
+    )
+    parser.add_argument(
+        "--output",
+        default=None,
+        help="Optional JSON output path for the resolved graph plan.",
     )
     return parser.parse_args()
 
@@ -254,6 +266,32 @@ def dedupe_preserve_order(values: list[str]) -> list[str]:
     return output
 
 
+def feature_graph_plan_to_dict(plan: FeatureGraphPlan) -> dict[str, Any]:
+    """Serialize a feature graph plan to a plain dictionary."""
+
+    payload = asdict(plan)
+    payload["counts"] = {
+        "selected_bundles": len(plan.selected_bundles),
+        "selected_transforms": len(plan.selected_transforms),
+        "raw_feature_columns": len(plan.raw_feature_columns),
+        "generated_feature_columns": len(plan.generated_feature_columns),
+        "passthrough_feature_columns": len(plan.passthrough_feature_columns),
+    }
+    return payload
+
+
+def write_feature_graph_plan(plan: FeatureGraphPlan, output_path: str | Path) -> Path:
+    """Write a feature graph plan to JSON."""
+
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(feature_graph_plan_to_dict(plan), indent=2),
+        encoding="utf-8",
+    )
+    return path
+
+
 def print_feature_graph_plan(plan: FeatureGraphPlan) -> None:
     """Print a compact feature graph plan summary."""
 
@@ -295,6 +333,10 @@ def main() -> None:
         transform_registry_path=args.transform_registry,
     )
     print_feature_graph_plan(plan)
+
+    if args.output:
+        output_path = write_feature_graph_plan(plan, args.output)
+        print(f"Wrote feature graph plan: {output_path}")
 
 
 if __name__ == "__main__":
