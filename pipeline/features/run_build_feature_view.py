@@ -79,11 +79,15 @@ def validate_feature_view_config(config: dict[str, Any], config_path: Path) -> N
         raise ValueError(f"Feature-view config missing output.feature_view_path: {config_path}")
 
 
-def main() -> None:
-    """Build a feature view from YAML config."""
+def build_feature_view_from_config(config_path: str | Path = DEFAULT_CONFIG_PATH) -> Path:
+    """Build a feature view from a YAML config and return the output path.
 
-    args = parse_args()
-    config_path = Path(args.config)
+    This callable entry point lets training and future Model Lab workflows build
+    the configured feature view before loading model features, without shelling
+    out to the CLI.
+    """
+
+    config_path = Path(config_path)
     config = load_feature_view_config(config_path)
 
     ensure_data_dirs()
@@ -153,6 +157,15 @@ def main() -> None:
     print(f"Feature view shape: {feature_view_df.shape}")
     print(f"Saved feature view: {feature_view_path}")
     print("DONE")
+
+    return feature_view_path
+
+
+def main() -> None:
+    """Build a feature view from YAML config."""
+
+    args = parse_args()
+    build_feature_view_from_config(args.config)
 
 
 def validate_feature_view_output(
