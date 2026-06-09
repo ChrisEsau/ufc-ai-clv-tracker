@@ -1,0 +1,188 @@
+# UFC Raw Fighter Feature Registry
+#
+# Purpose:
+#   Documents and registers fighter-specific feature calculations that create
+#   point-in-time fighter state columns from ufc_master.parquet. This is the
+#   source-of-truth contract for calculated fighter-state features.
+
+registry_name: ufc_raw_fighter_feature_registry
+version: 1
+status: plugin_contract
+
+plugin_contract:
+  required_function: calculate
+  signature: "calculate(fighter_history: DataFrame, fight_row: Series, context: dict | None = None) -> dict"
+  add_new_raw_feature_steps:
+    - create a plugin module under pipeline/features/raw_fighter_features/
+    - expose a calculate function
+    - register output columns here
+    - rebuild fighter_state_history
+    - add outputs to feature bundles if they should be available to models
+
+source_layers:
+  master:
+    description: Raw fight facts from data/master/ufc_master.parquet.
+  fighter_state_history:
+    description: Point-in-time calculated fighter features before each fight.
+  feature_view:
+    description: Matchup-level transformed model features.
+
+feature_groups:
+
+  identity_and_context:
+    description: Columns copied or mapped from master for traceability and joins.
+    source_layer: master
+    status: active_existing
+    output_columns:
+      - fight_id
+      - fighter_id
+      - fighter_name
+      - opponent_id
+      - opponent_name
+      - fight_date
+      - event_name
+
+  physical_profile:
+    description: Fighter physical attributes copied from master/profile enrichment.
+    source_layer: master
+    status: active_existing
+    output_columns:
+      - age
+      - height
+      - reach
+      - weight
+
+  record_state:
+    description: Point-in-time career record before each fight.
+    source_layer: calculated
+    plugin: null
+    function: null
+    status: active_existing_legacy
+    output_columns:
+      - fights
+      - wins
+      - losses
+      - win_pct
+      - win_streak
+      - loss_streak
+      - days_since_last_fight
+
+  elo_state:
+    description: Point-in-time Elo and opponent quality state.
+    source_layer: calculated
+    plugin: null
+    function: null
+    status: active_existing_legacy
+    output_columns:
+      - elo
+      - avg_opponent_elo
+      - best_win_elo
+      - worst_loss_elo
+
+  striking_rates:
+    description: Point-in-time striking volume, accuracy, defense, and knockdown rates.
+    source_layer: calculated
+    plugin: null
+    function: null
+    status: active_existing_legacy
+    output_columns:
+      - kd_avg
+      - kd_absorbed_avg
+      - splm
+      - sapm
+      - str_acc
+      - str_def
+
+  grappling_rates:
+    description: Point-in-time grappling and control rates.
+    source_layer: calculated
+    plugin: null
+    function: null
+    status: active_existing_legacy
+    output_columns:
+      - td_avg
+      - td_acc
+      - td_def
+      - sub_avg
+      - ctrl_per_min
+      - ctrl_against_per_min
+
+  finish_profile:
+    description: Point-in-time method and fight-duration tendencies.
+    source_layer: calculated
+    plugin: null
+    function: null
+    status: active_existing_legacy
+    output_columns:
+      - finish_rate
+      - ko_rate
+      - sub_win_rate
+      - decision_win_rate
+      - finish_loss_rate
+      - decision_loss_rate
+      - avg_fight_time
+
+  recent_form:
+    description: Short-horizon recent fighter state.
+    source_layer: calculated
+    plugin: null
+    function: null
+    status: active_existing_legacy
+    output_columns:
+      - recent_win_pct
+      - recent_splm
+      - recent_sapm
+      - recent_td_avg
+      - recent_finish_rate
+      - recent_avg_fight_time
+
+  ewm_state:
+    description: Exponentially weighted state features calculated from historical fighter state.
+    source_layer: calculated
+    plugin: null
+    function: null
+    status: active_existing_legacy
+    output_columns:
+      - ewm_elo
+      - ewm_fights
+      - ewm_wins
+      - ewm_losses
+      - ewm_win_pct
+      - ewm_kd_avg
+      - ewm_kd_absorbed_avg
+      - ewm_splm
+      - ewm_sapm
+      - ewm_str_acc
+      - ewm_str_def
+      - ewm_td_avg
+      - ewm_td_acc
+      - ewm_td_def
+      - ewm_sub_avg
+      - ewm_ctrl_per_min
+      - ewm_ctrl_against_per_min
+      - ewm_finish_rate
+      - ewm_ko_rate
+      - ewm_sub_win_rate
+      - ewm_decision_win_rate
+      - ewm_finish_loss_rate
+      - ewm_decision_loss_rate
+      - ewm_avg_opponent_elo
+      - ewm_best_win_elo
+      - ewm_worst_loss_elo
+      - ewm_avg_fight_time
+      - ewm_win_streak
+      - ewm_loss_streak
+      - ewm_days_since_last_fight
+      - ewm_recent_win_pct
+      - ewm_recent_splm
+      - ewm_recent_sapm
+      - ewm_recent_td_avg
+      - ewm_recent_finish_rate
+      - ewm_recent_avg_fight_time
+
+registry_rules:
+  master_columns_are_raw_facts: true
+  calculated_features_must_be_point_in_time: true
+  calculated_features_must_not_use_current_fight_outcome: true
+  new_calculated_features_should_use_plugins: true
+  feature_bundles_reference_registered_outputs: true
