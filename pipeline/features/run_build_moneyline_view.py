@@ -20,6 +20,7 @@ from pipeline.common.paths import (
 )
 from pipeline.features.run_build_rolling_features import prepare_master_for_rolling
 from pipeline.features.views.moneyline import build_moneyline_feature_view
+from ufc_feature_engineering import add_v5_engineered_features, get_engineered_feature_list
 
 
 def main() -> None:
@@ -47,9 +48,21 @@ def main() -> None:
         prepared_fights_df=prepared_df,
         fighter_state_history_df=fighter_state_history_df,
     )
+    moneyline_df = add_v5_engineered_features(moneyline_df)
+
+    engineered_features = get_engineered_feature_list()
+    missing_engineered_features = [
+        column for column in engineered_features if column not in moneyline_df.columns
+    ]
+    if missing_engineered_features:
+        raise ValueError(
+            "Moneyline feature view missing engineered features: "
+            f"{missing_engineered_features}"
+        )
 
     print(f"Moneyline view shape    : {moneyline_df.shape}")
     print(f"Unique fights           : {moneyline_df['fight_id'].nunique() if not moneyline_df.empty else 0}")
+    print(f"Engineered features     : {len(engineered_features)}")
 
     if len(moneyline_df) != len(prepared_df):
         raise ValueError(
