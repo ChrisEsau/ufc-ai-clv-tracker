@@ -1,0 +1,41 @@
+# UFC AI CLV Tracker - Workspace Requirements
+#
+# Purpose:
+# Complete dependency set for local/Codex development of the V2 pipeline,
+# including dashboard, data maintenance, scraping, feature engineering,
+# model training, prediction, market update, and betting outcomes.
+#
+# Install from repo root:
+#   python -m pip install --upgrade pip
+#   python -m pip install -r requirements/requirements-workspace.txt
+
+# Core data stack
+pandas
+numpy
+pyarrow
+scipy
+
+# Machine learning / model artifacts
+scikit-learn
+xgboost
+joblib
+
+# Configuration / serialization
+PyYAML
+
+# Dashboard / visualization
+streamlit
+plotly
+
+# HTTP / scraping
+requests
+beautifulsoup4
+lxml
+selenium
+webdriver-manager
+
+# Fuzzy/entity matching
+rapidfuzz
+
+# Testing / developer utilities
+pytest
