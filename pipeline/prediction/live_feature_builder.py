@@ -332,11 +332,36 @@ def _add_prefight_alias_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _resolve_state_series(df: pd.DataFrame, *, side: str, base_name: str) -> pd.Series | None:
+    """Resolve a side-specific source series for live red/blue diff assembly.
+
+    The training feature view maps fighter-state columns to model feature names
+    in pipeline.features.views.moneyline._prefixed_state_frame():
+
+    * regular state columns use pre-fight aliases, e.g. elo -> r_pre_elo.
+    * EWM state columns keep the ewm_* prefix, e.g. ewm_elo -> r_ewm_elo.
+    * form-delta state columns become recent-form aliases, e.g.
+      form_delta_elo -> r_recent_form_elo.
+
+    Live feature assembly joins latest_fighter_state.parquet with r_state_ and
+    b_state_ prefixes, so recent_form_* model features must resolve back to the
+    underlying form_delta_* state columns.
+    """
+
     candidates = [
         f"{side}_state_{base_name}",
         f"{side}_pre_{base_name}",
         f"{side}_{base_name}",
     ]
+
+    if base_name.startswith("recent_form_"):
+        form_delta_name = base_name.replace("recent_form_", "form_delta_", 1)
+        candidates.extend(
+            [
+                f"{side}_state_{form_delta_name}",
+                f"{side}_pre_{form_delta_name}",
+                f"{side}_{form_delta_name}",
+            ]
+        )
 
     for candidate in candidates:
         if candidate in df.columns:
