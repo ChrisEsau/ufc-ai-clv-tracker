@@ -103,14 +103,27 @@ artifacts:
   save_model_card: true
 
 prediction:
-  format: binary_fight_prop
+  format: binary_prop
   market_key: goes_distance
-  prediction_type: binary_fight_prop
+  prediction_type: binary_prop
+
+  # Positive class is the historical target target_goes_distance == 1.
   positive_class: goes_distance
   negative_class: inside_distance
+
+  outcomes:
+    positive:
+      label: goes_distance
+      outcome_side: positive
+      outcome_fighter_id:
+    negative:
+      label: inside_distance
+      outcome_side: negative
+      outcome_fighter_id:
 
 notes:
   - First prop-market training config.
   - Feature list is intentionally compact and should be reviewed after initial backtest metrics.
   - Symmetry is disabled because this is a fight-level target, not a side-level target.
   - total_rounds and title_fight are fight-context features and must come from the live card at prediction time.
+  - Prediction format uses the existing binary_prop adapter/formatter contract.
