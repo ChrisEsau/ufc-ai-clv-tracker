@@ -1,0 +1,30 @@
+name: Run V2 Validation Chain
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_id:
+        required: false
+        default: moneyline_xgboost_v5
+
+permissions:
+  contents: write
+
+jobs:
+  run-v2-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/requirements-workspace.txt
+      - run: python -m pipeline.features.run_build_fighter_state
+      - run: python -m pipeline.features.run_build_feature_view --config configs/feature_views/moneyline_base.yaml
+      - run: python -m pipeline.modeling.run_prediction --model-id "${{ inputs.model_id }}"
+      - env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        run: python -m pipeline.market.run_market_update_v2
+      - run: python -m pipeline.betting.run_betting_outcomes_v2
