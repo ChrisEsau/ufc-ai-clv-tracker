@@ -14,8 +14,12 @@ bookmakers:
   - DraftKings
 
 # Canonical market keys used by downstream prediction, betting, CLV, and dashboards.
+# NOTE: goes_distance is currently requested for provider diagnostics only. The
+# normalized market_outcomes artifact remains moneyline-only until provider
+# market semantics are verified from raw API output.
 markets:
   - moneyline
+  - goes_distance
 
 # Provider-specific market keys. Additional prop mappings can be added here
 # without changing downstream artifact schemas.
@@ -32,6 +36,7 @@ outputs:
   market_outcomes_path: data/market/market_outcomes.parquet
   market_outcome_snapshots_path: data/market/market_outcome_snapshots.parquet
   market_audit_path: data/audits/ufc_market_outcome_audit.parquet
+  provider_market_diagnostic_path: data/market/provider_market_diagnostic.parquet
 
 # Matching should use IDs once a provider row has been linked to a UFCStats fight.
 # Name matching is only the bridge from provider labels to canonical fight/fighter IDs.
