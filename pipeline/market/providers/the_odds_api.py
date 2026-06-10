@@ -70,6 +70,60 @@ def fetch_odds(api_key: str, config: dict) -> list[dict]:
     )
 
 
+def flatten_provider_market_diagnostics(
+    odds_json: Iterable[dict],
+    bookmakers: Iterable[str] | None = None,
+) -> pd.DataFrame:
+    """Flatten every returned provider market/outcome for inspection.
+
+    This diagnostic artifact is intentionally raw. It is used to verify what The
+    Odds API returns for configured non-moneyline markets before those markets
+    are mapped into canonical UFC market_outcomes rows.
+    """
+
+    bookmaker_filter = set(bookmakers or [])
+    rows = []
+
+    for event in odds_json:
+        provider_event_id = event.get("id")
+        event_name = f"{event.get('home_team', '')} vs {event.get('away_team', '')}".strip()
+        commence_time = event.get("commence_time")
+
+        for bookmaker in event.get("bookmakers", []):
+            bookmaker_title = bookmaker.get("title")
+            bookmaker_key = bookmaker.get("key")
+
+            if bookmaker_filter and bookmaker_title not in bookmaker_filter:
+                continue
+
+            for market in bookmaker.get("markets", []):
+                provider_market_key = market.get("key")
+                provider_market_last_update = market.get("last_update")
+
+                for outcome in market.get("outcomes", []):
+                    price = outcome.get("price")
+                    rows.append(
+                        {
+                            "source": "the_odds_api",
+                            "provider_event_id": provider_event_id,
+                            "event_name": event_name,
+                            "commence_time": commence_time,
+                            "provider_bookmaker_key": bookmaker_key,
+                            "bookmaker": bookmaker_title,
+                            "provider_market_key": provider_market_key,
+                            "provider_market_last_update": provider_market_last_update,
+                            "provider_outcome_label": outcome.get("name"),
+                            "provider_outcome_description": outcome.get("description"),
+                            "price": price,
+                            "decimal_odds": american_to_decimal(price),
+                            "implied_probability": american_to_implied_prob(price),
+                            "point": outcome.get("point"),
+                        }
+                    )
+
+    return pd.DataFrame(rows)
+
+
 def flatten_moneyline_odds(
     odds_json: Iterable[dict],
     bookmakers: Iterable[str] | None = None,
