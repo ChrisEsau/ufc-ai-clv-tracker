@@ -3,6 +3,11 @@ from datetime import datetime, timezone
 
 import pandas as pd
 
+from pipeline.common.fight_context import (
+    clean_division,
+    title_fight_flag,
+    total_rounds_from_time_format,
+)
 from pipeline.common.paths import (
     UPCOMING_EVENTS_PATH,
     UPCOMING_FIGHTS_PATH,
@@ -34,6 +39,17 @@ def normalize_upcoming_fights(fights, event_row, run_id, run_timestamp):
     normalized["event_location"] = event_row.get("ufcstats_event_location")
     normalized["event_url"] = event_row["ufcstats_event_url"]
     normalized["event_state"] = "upcoming"
+
+    weight_class = normalized["weight_class"] if "weight_class" in normalized.columns else pd.Series(pd.NA, index=normalized.index)
+    time_format = normalized["time_format"] if "time_format" in normalized.columns else pd.Series(pd.NA, index=normalized.index)
+
+    normalized["division"] = weight_class.apply(clean_division)
+    normalized["title_fight"] = weight_class.apply(title_fight_flag)
+    normalized["total_rounds"] = [
+        total_rounds_from_time_format(value, title_fight)
+        for value, title_fight in zip(time_format, normalized["title_fight"])
+    ]
+
     normalized["red_fighter_id"] = normalized["red_fighter_url"].apply(extract_id_from_url)
     normalized["blue_fighter_id"] = normalized["blue_fighter_url"].apply(extract_id_from_url)
     normalized["fight_id"] = normalized.apply(
