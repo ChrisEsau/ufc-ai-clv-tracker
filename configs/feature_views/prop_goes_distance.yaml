@@ -1,0 +1,119 @@
+# Goes Distance Prop Feature View
+#
+# Purpose:
+#   Defines the first prop-market feature view for the V2 feature graph.
+#   This config is intentionally added before code changes so the current
+#   generic feature-view runner can be tested against the desired prop contract.
+#
+# Scope:
+#   Fight-level binary market.
+#   Positive outcome: fight goes to decision / final bell.
+#   Negative outcome: fight ends inside distance.
+
+view_id: prop_goes_distance
+view_family: prop
+market_key: goes_distance
+version: 1
+status: draft
+
+inputs:
+  master_path: data/master/ufc_master.parquet
+  fighter_state_history_path: data/features/fighter_state_history.parquet
+
+output:
+  feature_view_path: data/features/prop_goes_distance_feature_view.parquet
+
+builder:
+  # Target architecture: this should eventually be consumed by the generic
+  # feature-view runner, not a market-specific prop script.
+  runner: pipeline.features.run_build_feature_view
+  base_view_builder:
+    module: pipeline.features.views.moneyline
+    function: build_moneyline_feature_view
+
+join:
+  fight_key: fight_id
+  red_fighter_key: r_id
+  blue_fighter_key: b_id
+  fighter_state_key: fighter_id
+
+market:
+  market_family: prop
+  market_key: goes_distance
+  outcome_grain: fight
+  outcome_labels:
+    positive: goes_distance
+    negative: inside_distance
+
+label:
+  target_column: target_goes_distance
+  source_columns:
+    - method
+  positive_rule:
+    column: method
+    equals: Decision
+  negative_rule:
+    column: method
+    not_equals: Decision
+
+include:
+  prepared_fight_columns: true
+  fight_context:
+    enabled: true
+    columns:
+      - total_rounds
+      - title_fight
+      - division
+  bundles:
+    - core_state
+    - finish_profile
+    - durability
+    - recent_form
+    - ewm_state
+    - fight_context
+  prefight_state: true
+  ewm_state: true
+  recent_form_state: true
+  transforms:
+    - red_minus_blue
+    - absolute_gap
+  engineered_features:
+    enabled: true
+    function: ufc_feature_engineering.add_v5_engineered_features
+    registry_function: ufc_feature_engineering.get_engineered_feature_list
+
+contracts:
+  expected_rows_match_prepared_fights: true
+  require_no_missing_state_matches: true
+  required_columns:
+    - fight_id
+    - date
+    - method
+    - target_goes_distance
+    - r_id
+    - b_id
+    - total_rounds
+    - title_fight
+    - r_pre_elo
+    - b_pre_elo
+    - avg_fight_time_diff
+    - finish_rate_diff
+    - finish_loss_rate_diff
+    - decision_win_rate_diff
+    - decision_loss_rate_diff
+    - recent_form_avg_fight_time_diff
+    - ewm_avg_fight_time_diff
+
+validation:
+  expected_feature_view_shape:
+    rows_source: prepared_fights
+  allow_extra_columns: true
+  target_distribution:
+    min_positive_rate: 0.15
+    max_positive_rate: 0.65
+
+notes:
+  - This is config-only scaffolding for the first prop-market vertical slice.
+  - The current generic feature-view runner may reject view_family=prop; that is expected if prop support has not been wired yet.
+  - The moneyline feature-view builder is referenced only as a temporary base-state join strategy, not as a moneyline model dependency.
+  - Model configs select exact training columns; this feature-view config defines available candidate columns and the prop target.
