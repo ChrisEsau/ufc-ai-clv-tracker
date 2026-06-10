@@ -1,0 +1,25 @@
+name: Run Train Model V2
+
+on:
+  workflow_dispatch:
+    inputs:
+      config_path:
+        required: false
+        default: configs/models/moneyline_xgboost_v5.yaml
+
+permissions:
+  contents: write
+
+jobs:
+  train-model-v2:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/requirements-workspace.txt
+      - run: |
+          python -m pipeline.training.run_train_model --config "${{ inputs.config_path }}"
