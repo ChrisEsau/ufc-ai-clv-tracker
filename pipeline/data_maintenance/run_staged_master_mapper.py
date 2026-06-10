@@ -1,8 +1,12 @@
 import pandas as pd
 import numpy as np
-import re
 from datetime import datetime, timezone
 
+from pipeline.common.fight_context import (
+    clean_division,
+    title_fight_flag,
+    total_rounds_from_time_format,
+)
 from pipeline.common.paths import (
     STAGED_FIGHT_DETAILS_PATH,
     MASTER_PATH,
@@ -11,66 +15,12 @@ from pipeline.common.paths import (
 )
 
 
-def clean_string(value):
-    if pd.isna(value):
-        return None
-
-    value = str(value).strip()
-
-    if value.lower() in {"", "nan", "none", "nat", "<na>"}:
-        return None
-
-    return value
-
-
 def first_existing_series(df, column_names, default=None):
     for column_name in column_names:
         if column_name in df.columns:
             return df[column_name]
 
     return pd.Series(default, index=df.index)
-
-
-def clean_division(value):
-    value = clean_string(value)
-
-    if value is None:
-        return None
-
-    value = re.sub(r"\btitle\s+bout\b", "", value, flags=re.IGNORECASE)
-    value = re.sub(r"\btitle\b", "", value, flags=re.IGNORECASE)
-    value = " ".join(value.replace("\n", " ").split())
-
-    return value.lower() if value else None
-
-
-def title_fight_flag(value):
-    value = clean_string(value)
-
-    if value is None:
-        return 0
-
-    return int("title" in value.lower())
-
-
-def total_rounds_from_time_format(value, title_fight=0):
-    value = clean_string(value)
-
-    if value is not None:
-        match = re.search(r"(\d+)\s*rnd", value, flags=re.IGNORECASE)
-
-        if match:
-            return int(match.group(1))
-
-        rounds = re.search(r"\(([^)]*)\)", value)
-
-        if rounds:
-            round_count = len([part for part in rounds.group(1).split("-") if part])
-
-            if round_count > 0:
-                return round_count
-
-    return 5 if int(title_fight or 0) == 1 else 3
 
 
 def safe_pct(num, den):
