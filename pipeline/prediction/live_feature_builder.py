@@ -40,7 +40,6 @@ BLUE_NAME_CANDIDATES = ["blue_fighter", "b_name", "blue_name", "fighter_2", "fig
 FIGHTER_ID_CANDIDATES = ["fighter_id", "id", "ufcstats_fighter_id"]
 
 
-
 def build_live_model_features(
     *,
     feature_columns: list[str],
@@ -49,13 +48,15 @@ def build_live_model_features(
 ) -> LiveFeatureBuildResult:
     """Build model-ready live features for Prediction V2.
 
-    MVP behavior:
+    Current bridge behavior:
     1. If the live card already contains all requested model features, return it.
     2. Otherwise, join current fighter features by fighter IDs and assemble common
        V5 differential/engineered features.
+    3. Fail loudly if any required model-contract feature cannot be assembled.
 
-    This is intentionally a bridge implementation. Feature Builder V2 should later
-    replace this with a shared training/live feature plugin system.
+    This is intentionally still a bridge implementation. Feature Builder V2 should
+    later replace this with shared training/live feature-view logic. Until then,
+    missing model-contract features must never be silently fabricated as zeros.
     """
 
     live_card_path = Path(live_card_path)
@@ -115,7 +116,6 @@ def build_live_model_features(
     )
 
 
-
 def write_live_feature_outputs(
     result: LiveFeatureBuildResult,
     *,
@@ -135,7 +135,6 @@ def write_live_feature_outputs(
 
     live_feature_df.to_parquet(live_feature_output_path, index=False)
     feature_audit_df.to_parquet(feature_audit_path, index=False)
-
 
 
 def _standardize_live_card_columns(live_card_df: pd.DataFrame) -> pd.DataFrame:
@@ -172,7 +171,6 @@ def _standardize_live_card_columns(live_card_df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-
 def _fill_display_name_column(
     df: pd.DataFrame,
     *,
@@ -206,7 +204,6 @@ def _fill_display_name_column(
     return out
 
 
-
 def _validate_live_card(live_card_df: pd.DataFrame) -> None:
     missing = [column for column in LIVE_CARD_REQUIRED_COLUMNS if column not in live_card_df.columns]
     if missing:
@@ -216,7 +213,6 @@ def _validate_live_card(live_card_df: pd.DataFrame) -> None:
         raise LiveFeatureBuilderError(
             "Live card must include fighter IDs. Names are display-only; feature joins use IDs."
         )
-
 
 
 def _join_current_fighter_features(
@@ -249,15 +245,20 @@ def _join_current_fighter_features(
     )
     out = _deduplicate_columns(out)
 
-    out["red_feature_match"] = out[f"r_state_{fighter_id_column}"].notna().map({True: "matched_by_id", False: "missing_by_id"})
-    out["blue_feature_match"] = out[f"b_state_{fighter_id_column}"].notna().map({True: "matched_by_id", False: "missing_by_id"})
+    out["red_feature_match"] = out[f"r_state_{fighter_id_column}"].notna().map(
+        {True: "matched_by_id", False: "missing_by_id"}
+    )
+    out["blue_feature_match"] = out[f"b_state_{fighter_id_column}"].notna().map(
+        {True: "matched_by_id", False: "missing_by_id"}
+    )
     out["feature_match_type"] = out.apply(
-        lambda row: "both_matched" if row["red_feature_match"] == "matched_by_id" and row["blue_feature_match"] == "matched_by_id" else "missing_fighter_features",
+        lambda row: "both_matched"
+        if row["red_feature_match"] == "matched_by_id" and row["blue_feature_match"] == "matched_by_id"
+        else "missing_fighter_features",
         axis=1,
     )
 
     return out
-
 
 
 def _assemble_requested_features(joined_df: pd.DataFrame, feature_columns: list[str]) -> pd.DataFrame:
@@ -292,17 +293,18 @@ def _assemble_requested_features(joined_df: pd.DataFrame, feature_columns: list[
     out = add_v5_engineered_features(out)
     out = _deduplicate_columns(out)
 
-    missing_feature_values = {
-        feature: 0.0
-        for feature in feature_columns
-        if feature not in out.columns
-    }
-    if missing_feature_values:
-        out = pd.concat([out, pd.DataFrame(missing_feature_values, index=out.index)], axis=1)
-        out = _deduplicate_columns(out)
+    missing_features = _get_missing_feature_columns(out, feature_columns)
+    if missing_features:
+        raise LiveFeatureBuilderError(
+            "Live feature build failed because required model-contract features "
+            "could not be assembled. Missing features must be fixed upstream; "
+            "they are no longer silently filled with 0.0. "
+            f"Missing count: {len(missing_features)}. "
+            f"Missing summary: {_summarize_missing_features(missing_features)}. "
+            f"Missing features: {missing_features}"
+        )
 
     return out
-
 
 
 def _add_prefight_alias_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -329,7 +331,6 @@ def _add_prefight_alias_columns(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-
 def _resolve_state_series(df: pd.DataFrame, *, side: str, base_name: str) -> pd.Series | None:
     candidates = [
         f"{side}_state_{base_name}",
@@ -344,9 +345,15 @@ def _resolve_state_series(df: pd.DataFrame, *, side: str, base_name: str) -> pd.
     return None
 
 
-
 def _attach_feature_audit_columns(df: pd.DataFrame, feature_columns: list[str]) -> pd.DataFrame:
     out = _deduplicate_columns(df)
+    missing_features = _get_missing_feature_columns(out, feature_columns)
+    if missing_features:
+        raise LiveFeatureBuilderError(
+            "Cannot attach live feature audit columns because required model-contract "
+            f"features are missing: {missing_features}"
+        )
+
     feature_matrix = out[feature_columns].apply(pd.to_numeric, errors="coerce").fillna(0.0)
 
     out["feature_count_expected"] = len(feature_columns)
@@ -354,7 +361,11 @@ def _attach_feature_audit_columns(df: pd.DataFrame, feature_columns: list[str]) 
     out["nonzero_feature_count"] = (feature_matrix != 0).sum(axis=1)
     out["zero_feature_pct"] = 1.0 - (out["nonzero_feature_count"] / len(feature_columns))
     out["passes_feature_validation"] = out["feature_count_actual"] == out["feature_count_expected"]
-    out["passes_model_data_quality"] = out.get("feature_match_type", "unknown").ne("missing_fighter_features") if isinstance(out.get("feature_match_type"), pd.Series) else True
+    out["passes_model_data_quality"] = (
+        out.get("feature_match_type", "unknown").ne("missing_fighter_features")
+        if isinstance(out.get("feature_match_type"), pd.Series)
+        else True
+    )
 
     if "red_feature_match" not in out.columns:
         out["red_feature_match"] = "prebuilt_features"
@@ -364,7 +375,6 @@ def _attach_feature_audit_columns(df: pd.DataFrame, feature_columns: list[str]) 
         out["feature_match_type"] = "prebuilt_features"
 
     return _deduplicate_columns(out)
-
 
 
 def _build_feature_audit(live_feature_df: pd.DataFrame, feature_columns: list[str]) -> pd.DataFrame:
@@ -391,6 +401,54 @@ def _build_feature_audit(live_feature_df: pd.DataFrame, feature_columns: list[st
     return df[[column for column in columns if column in df.columns]].copy()
 
 
+def _get_missing_feature_columns(df: pd.DataFrame, feature_columns: list[str]) -> list[str]:
+    """Return required model features that are absent from the live feature frame."""
+
+    return [feature for feature in feature_columns if feature not in df.columns]
+
+
+def _summarize_missing_features(missing_features: list[str]) -> dict[str, int]:
+    """Group missing model features by family to make failure messages actionable."""
+
+    summary = {
+        "ewm": 0,
+        "recent_form": 0,
+        "engineered": 0,
+        "base_diff": 0,
+        "other": 0,
+    }
+
+    for feature in missing_features:
+        if feature.startswith("ewm_"):
+            summary["ewm"] += 1
+        elif feature.startswith("recent_form_"):
+            summary["recent_form"] += 1
+        elif feature in {
+            "age_diff",
+            "height_diff",
+            "reach_diff",
+            "weight_diff",
+            "striking_edge",
+            "grappling_edge",
+            "finish_volatility",
+            "wrestling_pressure_vs_defense",
+            "reach_striking_combo",
+            "chin_risk_diff",
+            "experience_ratio_diff",
+            "aggression_index_diff",
+            "age_squared_diff",
+            "pressure_striking_adv_diff",
+            "wrestling_mismatch_diff",
+            "submission_mismatch_diff",
+        }:
+            summary["engineered"] += 1
+        elif feature.endswith("_diff"):
+            summary["base_diff"] += 1
+        else:
+            summary["other"] += 1
+
+    return {family: count for family, count in summary.items() if count > 0}
+
 
 def _deduplicate_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Return a copy with duplicate column names removed, keeping first occurrence."""
@@ -400,10 +458,8 @@ def _deduplicate_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df.loc[:, ~df.columns.duplicated()].copy()
 
 
-
 def _has_all_columns(df: pd.DataFrame, columns: list[str]) -> bool:
     return all(column in df.columns for column in columns)
-
 
 
 def _find_first_existing_column(df: pd.DataFrame, candidates: list[str]) -> str | None:
