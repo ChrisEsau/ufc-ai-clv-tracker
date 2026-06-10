@@ -20,11 +20,13 @@ feature_sources:
 
 features:
   selection_mode: explicit
-  expected_feature_count: 17
+  expected_feature_count: 15
   allow_unsafe_features: false
 
   # Initial compact fight-level distance model contract.
-  # This intentionally uses existing V2 feature-view columns only.
+  # This intentionally uses existing V2 live-builder-compatible columns only.
+  # Fight-context features such as total_rounds/title_fight should be added later
+  # through explicit live feature support rather than kept as missing contract fields.
   feature_columns:
     - avg_fight_time_diff
     - finish_rate_diff
@@ -41,8 +43,6 @@ features:
     - experience_ratio_diff
     - age_diff
     - fights_diff
-    - total_rounds
-    - title_fight
 
 data:
   # NOTE: key name retained for training-runner compatibility.
@@ -112,3 +112,4 @@ notes:
   - First prop-market training config.
   - Feature list is intentionally compact and should be reviewed after initial backtest metrics.
   - Symmetry is disabled because this is a fight-level target, not a side-level target.
+  - total_rounds and title_fight were removed from V1 until live fight-context support is added.
