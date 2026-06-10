@@ -67,6 +67,387 @@ fight_id + market_key + outcome_fighter_id
 `outcome_label` is display/context only and should not be the primary join key.
 
 ---
+# Architecture Validation Update (2026-06-10)
+
+## Executive Summary
+
+The V2 architecture has been successfully validated end-to-end.
+
+The following workflow has been executed successfully:
+
+```text
+ufc_master.parquet
+        ↓
+fighter_state_history.parquet
+        ↓
+latest_fighter_state.parquet
+        ↓
+moneyline_feature_view.parquet
+        ↓
+model training
+        ↓
+live feature generation
+        ↓
+model_outcomes.parquet
+        ↓
+market_outcomes.parquet
+        ↓
+betting_outcomes.parquet
+```
+
+The V2 architecture should now be considered:
+
+```text
+STATUS: OPERATIONAL
+```
+
+Architecture validation is no longer a blocking item.
+
+---
+
+# Changes Implemented During Validation
+
+## Training Configuration Migrated
+
+File:
+
+```text
+configs/models/moneyline_xgboost_v5.yaml
+```
+
+Changed from:
+
+```text
+data/features/UFC_enhanced_rolling_features_EWM.parquet
+```
+
+to:
+
+```text
+data/features/moneyline_feature_view.parquet
+```
+
+Training now consumes the V2 feature-view architecture.
+
+Status:
+
+```text
+RESOLVED
+```
+
+---
+
+## Fighter State Migration Completed
+
+File:
+
+```text
+pipeline/common/paths.py
+```
+
+Changed:
+
+```text
+CURRENT_FIGHTER_FEATURES_PATH
+```
+
+from:
+
+```text
+data/features/ufc_current_fighter_features.parquet
+```
+
+to:
+
+```text
+data/features/latest_fighter_state.parquet
+```
+
+Live feature generation now uses the fighter-state architecture.
+
+Status:
+
+```text
+RESOLVED
+```
+
+---
+
+## Path Registry Repaired
+
+Several V2 modules failed due to missing path constants and helper functions in:
+
+```text
+pipeline/common/paths.py
+```
+
+Missing items included:
+
+```text
+ensure_data_dirs
+DATASET_STATUS_PATH
+LIVE_FEATURE_AUDIT_PATH
+MARKET_MATCH_AUDIT_V2_PATH
+```
+
+The path registry was restored.
+
+Status:
+
+```text
+RESOLVED
+```
+
+---
+
+## Workspace Requirements Added
+
+File created:
+
+```text
+requirements/requirements-workspace.txt
+```
+
+Purpose:
+
+Complete dependency installation for:
+
+* dashboard
+* feature generation
+* training
+* prediction
+* market pipeline
+* betting outcomes
+* scraping
+
+Status:
+
+```text
+RESOLVED
+```
+
+---
+
+## GitHub Actions Coverage Expanded
+
+New workflows added:
+
+```text
+.github/workflows/run-build-fighter-state-v2.yml
+.github/workflows/run-build-feature-view-v2.yml
+.github/workflows/run-train-model-v2.yml
+.github/workflows/run-v2-validation-chain.yml
+```
+
+GitHub Actions can now launch:
+
+```text
+fighter-state generation
+feature-view generation
+model training
+full V2 validation chain
+```
+
+Status:
+
+```text
+RESOLVED
+```
+
+---
+
+# Resolved Issues
+
+## EWM Feature Population
+
+Previous concern:
+
+```text
+ewm_* features appearing as zero or missing
+```
+
+Validation results:
+
+```text
+fighter-state build successful
+feature-view build successful
+training successful
+prediction successful
+```
+
+EWM feature population should no longer be treated as an active issue.
+
+Status:
+
+```text
+RESOLVED
+```
+
+---
+
+## Feature View Architecture Validation
+
+Previous concern:
+
+Feature-view architecture existed but had not been validated through training and prediction.
+
+Validation results:
+
+```text
+fighter_state_history
+    ↓
+moneyline_feature_view
+    ↓
+training
+    ↓
+prediction
+```
+
+completed successfully.
+
+Status:
+
+```text
+RESOLVED
+```
+
+---
+
+## Market Pipeline V2 Validation
+
+Validation results:
+
+```text
+market_outcomes.parquet generated
+market matching successful
+market audit generated
+```
+
+Status:
+
+```text
+RESOLVED
+```
+
+---
+
+## Betting Outcomes V2 Validation
+
+Validation results:
+
+```text
+betting_outcomes.parquet generated
+bet candidates created
+validation passed
+```
+
+Status:
+
+```text
+RESOLVED
+```
+
+---
+
+# Accepted Conditions (No Action Required)
+
+## Historical Missing Winner IDs
+
+Approximately 147 historical rows are excluded from fighter-state generation due to missing winner information.
+
+Current assessment:
+
+```text
+Accepted historical data condition
+```
+
+No action planned.
+
+---
+
+## Selenium / ChromeDriver Codespaces Failure
+
+Observed only when running scraping workflows inside Codespaces.
+
+Current operating model:
+
+```text
+Scraping is performed through Data Maintenance dashboard workflows.
+```
+
+Not considered a V2 architecture issue.
+
+No action planned.
+
+---
+
+# Remaining Work
+
+The project is no longer blocked by architecture validation.
+
+Remaining work is primarily cleanup and modernization.
+
+## Documentation Cleanup
+
+Still recommended:
+
+```text
+Archive superseded documentation
+Update artifact registry
+Update data-flow documentation
+Update workflow registry
+```
+
+---
+
+## Legacy Cleanup
+
+Still recommended:
+
+```text
+Archive legacy workflows
+Archive legacy root scripts
+Remove obsolete implementation plans
+```
+
+Reference:
+
+```text
+docs/REPO_ARCHIVE_CANDIDATE_PLAN.md
+```
+
+---
+
+## Dashboard Modernization
+
+Still recommended:
+
+```text
+Review CLV tab
+Review Model Lab tab
+Review Bankroll artifacts
+Remove legacy compatibility layers where possible
+```
+
+---
+
+# Current Project Status
+
+```text
+V2 Architecture: OPERATIONAL
+Pipeline Validation: COMPLETE
+Feature View Migration: COMPLETE
+Training Migration: COMPLETE
+Prediction Validation: COMPLETE
+Market Validation: COMPLETE
+Betting Outcomes Validation: COMPLETE
+
+Current Focus:
+Documentation Cleanup
+Legacy Cleanup
+Dashboard Cleanup
+Future Research Roadmap
+```
 
 ## Current Architectural Status
 
