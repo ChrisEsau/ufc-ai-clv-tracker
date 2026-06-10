@@ -50,6 +50,7 @@ jobs:
           git add -f \
             data/market/market_outcomes.parquet \
             data/market/market_outcome_snapshots.parquet \
+            data/market/provider_market_diagnostic.parquet \
             data/audits/ufc_market_outcome_audit.parquet \
             data/audits/ufc_market_match_audit_v2.parquet
 
