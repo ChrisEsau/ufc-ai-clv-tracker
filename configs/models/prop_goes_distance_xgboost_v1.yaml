@@ -1,0 +1,54 @@
+# Goes Distance Prop Model
+#
+# Purpose:
+#   First prop-market model contract.
+#   Config-only scaffolding to validate the existing V2 training framework.
+
+model_id: prop_goes_distance_xgboost_v1
+model_family: prop
+market_key: goes_distance
+version: 1
+status: draft
+
+feature_view:
+  config_path: configs/feature_views/prop_goes_distance.yaml
+  feature_view_path: data/features/prop_goes_distance_feature_view.parquet
+
+training:
+  target_column: target_goes_distance
+  train_split: 0.70
+  validation_split: 0.15
+  test_split: 0.15
+  temporal_split: true
+
+model:
+  algorithm: xgboost
+  objective: binary:logistic
+  eval_metric: logloss
+
+artifacts:
+  artifact_dir: models/props/goes_distance_xgboost_v1
+  model_path: models/props/goes_distance_xgboost_v1/model.joblib
+  calibrated_model_path: models/props/goes_distance_xgboost_v1/calibrated_model.joblib
+  feature_columns_path: models/props/goes_distance_xgboost_v1/feature_columns.joblib
+  metrics_path: models/props/goes_distance_xgboost_v1/metrics.json
+
+prediction:
+  market_key: goes_distance
+  positive_outcome_label: goes_distance
+  negative_outcome_label: inside_distance
+
+feature_contract:
+  strategy: bundle_driven
+  candidate_feature_families:
+    - core_state
+    - finish_profile
+    - durability
+    - recent_form
+    - ewm_state
+    - fight_context
+
+notes:
+  - Config-only scaffold.
+  - No feature list is locked yet.
+  - Initial goal is to determine how much of the existing training framework can be reused unchanged.
