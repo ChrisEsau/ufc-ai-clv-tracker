@@ -1,54 +1,114 @@
-# Goes Distance Prop Model
+# Goes Distance Prop XGBoost V1 model configuration.
 #
 # Purpose:
-#   First prop-market model contract.
-#   Config-only scaffolding to validate the existing V2 training framework.
+#   First prop-market model contract for the V2 pipeline.
+#   This config intentionally follows the existing generic trainer schema used by
+#   configs/models/moneyline_xgboost_v5.yaml so we can test trainer reuse before
+#   introducing prop-specific training code.
 
 model_id: prop_goes_distance_xgboost_v1
 model_family: prop
 market_key: goes_distance
+artifact_name: goes_distance_xgboost_v1
 version: 1
 status: draft
 
-feature_view:
-  config_path: configs/feature_views/prop_goes_distance.yaml
-  feature_view_path: data/features/prop_goes_distance_feature_view.parquet
+algorithm: xgboost
 
-training:
+feature_sources:
+  - prop_goes_distance_feature_view
+
+features:
+  selection_mode: explicit
+  expected_feature_count: 17
+  allow_unsafe_features: false
+
+  # Initial compact fight-level distance model contract.
+  # This intentionally uses existing V2 feature-view columns only.
+  feature_columns:
+    - avg_fight_time_diff
+    - finish_rate_diff
+    - finish_loss_rate_diff
+    - decision_win_rate_diff
+    - decision_loss_rate_diff
+    - recent_form_avg_fight_time_diff
+    - ewm_avg_fight_time_diff
+    - ewm_finish_rate_diff
+    - ewm_finish_loss_rate_diff
+    - ewm_decision_win_rate_diff
+    - ewm_decision_loss_rate_diff
+    - finish_volatility
+    - experience_ratio_diff
+    - age_diff
+    - fights_diff
+    - total_rounds
+    - title_fight
+
+data:
+  # NOTE: key name retained for training-runner compatibility.
+  rolling_features_path: data/features/prop_goes_distance_feature_view.parquet
   target_column: target_goes_distance
-  train_split: 0.70
-  validation_split: 0.15
-  test_split: 0.15
-  temporal_split: true
+  date_column: date
 
-model:
-  algorithm: xgboost
-  objective: binary:logistic
+split:
+  mode: train_calibration_test
+  train_end_date: "2022-12-31"
+  calibration_end_date: "2023-12-31"
+
+symmetry:
+  # Goes-distance is a fight-level target. Red/blue swapping should not create
+  # an additional independent training example.
+  enabled: false
+  mode: none
+
+calibration:
+  enabled: true
+  method: isotonic
+
+params:
+  n_estimators: 400
+  max_depth: 3
+  learning_rate: 0.03
+  subsample: 0.8
+  colsample_bytree: 0.8
+  random_state: 42
   eval_metric: logloss
 
+metrics:
+  threshold_min: 0.30
+  threshold_max: 0.70
+  threshold_step: 0.01
+  confidence_bucket_edges:
+    - 0.50
+    - 0.55
+    - 0.60
+    - 0.65
+    - 0.70
+    - 0.75
+    - 0.80
+    - 0.85
+    - 0.90
+    - 0.95
+    - 1.00
+
 artifacts:
-  artifact_dir: models/props/goes_distance_xgboost_v1
-  model_path: models/props/goes_distance_xgboost_v1/model.joblib
-  calibrated_model_path: models/props/goes_distance_xgboost_v1/calibrated_model.joblib
-  feature_columns_path: models/props/goes_distance_xgboost_v1/feature_columns.joblib
-  metrics_path: models/props/goes_distance_xgboost_v1/metrics.json
+  output_dir: models/props/goes_distance_xgboost_v1
+  save_raw_model: true
+  save_calibrated_model: true
+  save_feature_columns: true
+  save_metrics: true
+  save_threshold_sweep: true
+  save_confidence_buckets: true
+  save_model_card: true
 
 prediction:
+  format: binary_fight_prop
   market_key: goes_distance
-  positive_outcome_label: goes_distance
-  negative_outcome_label: inside_distance
-
-feature_contract:
-  strategy: bundle_driven
-  candidate_feature_families:
-    - core_state
-    - finish_profile
-    - durability
-    - recent_form
-    - ewm_state
-    - fight_context
+  prediction_type: binary_fight_prop
+  positive_class: goes_distance
+  negative_class: inside_distance
 
 notes:
-  - Config-only scaffold.
-  - No feature list is locked yet.
-  - Initial goal is to determine how much of the existing training framework can be reused unchanged.
+  - First prop-market training config.
+  - Feature list is intentionally compact and should be reviewed after initial backtest metrics.
+  - Symmetry is disabled because this is a fight-level target, not a side-level target.
