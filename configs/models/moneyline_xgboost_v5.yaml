@@ -11,7 +11,7 @@ artifact_name: xgboost_v5
 algorithm: xgboost
 
 feature_sources:
-  - rolling_moneyline_v5
+  - moneyline_feature_view
 
 features:
   selection_mode: explicit
@@ -19,8 +19,8 @@ features:
   allow_unsafe_features: false
 
   # Explicit model input contract.
-  # These columns are expected to already exist in the rolling feature warehouse:
-  # data/features/UFC_enhanced_rolling_features_EWM.parquet
+  # These columns are expected to already exist in the moneyline feature view:
+  # data/features/moneyline_feature_view.parquet
   feature_columns:
     # Career / prefight red-minus-blue differentials: 36
     - elo_diff
@@ -155,7 +155,8 @@ features:
     - submission_mismatch_diff
 
 data:
-  rolling_features_path: data/features/UFC_enhanced_rolling_features_EWM.parquet
+  # NOTE: key name retained for training-runner compatibility.
+  rolling_features_path: data/features/moneyline_feature_view.parquet
   target_column: target
   date_column: date
 
