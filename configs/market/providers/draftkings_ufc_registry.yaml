@@ -1,0 +1,78 @@
+provider: draftkings_public
+bookmaker: DraftKings
+sport: mma
+league: ufc
+sport_id: "43"
+league_id: "9034"
+site: US-KS-SB
+base_url: "https://sportsbook-nash.draftkings.com/sites/US-KS-SB/api/sportscontent"
+
+endpoints:
+  event: "/pagedata/event/v1/events"
+  event_subcategory_markets: "/controldata/event/eventSubcategory/v1/markets"
+
+subcategories:
+  - subcategory_id: "13025"
+    name: "Main Lines"
+    family: main_lines
+    outcome_type: mixed
+
+  - subcategory_id: "13179"
+    name: "Alternate Total Rounds"
+    family: alternate_total_rounds
+    outcome_type: fight_line
+
+  - subcategory_id: "16272"
+    name: "Alternate Point Spread"
+    family: alternate_point_spread
+    outcome_type: fighter_line
+
+  - subcategory_id: "17644"
+    name: "Fight to Go the Distance"
+    family: goes_distance
+    outcome_type: fight
+
+  - subcategory_id: "18911"
+    name: "Fighter Method Props"
+    family: fighter_method_props
+    outcome_type: fighter
+
+  - subcategory_id: "6437"
+    name: "Exact Method of Victory"
+    family: exact_method
+    outcome_type: fight
+
+  - subcategory_id: "5735"
+    name: "Round and Method"
+    family: round_method
+    outcome_type: mixed
+
+  - subcategory_id: "15122"
+    name: "Finish Only"
+    family: finish_only_moneyline
+    outcome_type: fighter
+
+  - subcategory_id: "15123"
+    name: "Decision Only"
+    family: decision_only_moneyline
+    outcome_type: fighter
+
+  - subcategory_id: "15124"
+    name: "Round 1 Only"
+    family: round_1_only_moneyline
+    outcome_type: fighter
+
+  - subcategory_id: "15125"
+    name: "Submission Only"
+    family: submission_only_moneyline
+    outcome_type: fighter
+
+  - subcategory_id: "15126"
+    name: "KO TKO DQ Only"
+    family: ko_tko_only_moneyline
+    outcome_type: fighter
+
+  - subcategory_id: "19390"
+    name: "Fighter Significant Strikes Total"
+    family: fighter_sig_strikes_total
+    outcome_type: fighter_line
