@@ -101,36 +101,221 @@ Feature generation should be independent from model training.
 
 3. Model Training
 
+Current State
+
+The V2 training framework is now operational and no longer relies exclusively on notebook execution.
+
+Training is launched through a dedicated training runner.
+
+Entrypoint
+
+Command:
+
+python -m pipeline.training.run_train_model `
+    --config configs/models/moneyline_xgboost_v5.yaml
+
+Primary runner:
+
+pipeline/training/run_train_model.py
+
+⸻
+
 Inputs
 
-* Historical feature dataset
-* Model config
-* Feature selection list
+Training consumes:
+
+* Historical feature warehouse
+* Model configuration
+* Explicit feature contract
 * Outcome labels
-* Validation configuration
+* Temporal split configuration
 
-Configs
+Current feature warehouse:
 
-* configs/models/model_registry.yaml
-* configs/models/moneyline_xgboost_v5.yaml
+data/features/UFC_enhanced_rolling_features_EWM.parquet
 
-Outputs
+Current warehouse shape:
+
+8574 rows
+483 columns
+
+⸻
+
+Current Training Architecture
+
+Training modules:
+
+pipeline/training/
+feature_selection.py
+symmetry.py
+temporal_split.py
+model_training.py
+calibration.py
+metrics.py
+run_train_model.py
+algorithms/
+    xgboost_trainer.py
+
+Execution flow:
+
+Load Model Config
+        ↓
+Load Feature Warehouse
+        ↓
+Resolve Explicit Feature Contract
+        ↓
+Apply Symmetry
+        ↓
+Temporal Train/Calibration/Test Split
+        ↓
+Train Model
+        ↓
+Probability Calibration
+        ↓
+Metrics / Threshold Analysis
+        ↓
+Confidence Bucket Generation
+        ↓
+Artifact Persistence
+
+⸻
+
+Feature Contract
+
+Current production model:
+
+moneyline_xgboost_v5
+
+Configuration:
+
+configs/models/moneyline_xgboost_v5.yaml
+
+Current feature count:
+
+124
+
+Features are explicitly declared inside the model configuration.
+
+Training does not infer production feature lists from naming conventions.
+
+Models select features from feature warehouses rather than generating features.
+
+⸻
+
+Temporal Split
+
+Current split architecture:
+
+Train       <= 2022
+Calibration = 2023
+Test        >= 2024
+
+Purpose:
+
+* Prevent future leakage
+* Support calibration without contamination
+* Preserve realistic deployment conditions
+
+⸻
+
+Symmetry
+
+Current training pipeline applies fighter-side symmetry augmentation.
+
+Purpose:
+
+* Remove red/blue corner bias
+* Improve model robustness
+* Double training observations
+
+Observed transformation:
+
+8574 rows
+→
+17148 rows
+
+⸻
+
+Calibration
+
+Calibration is a first-class training stage.
+
+Current method:
+
+isotonic
+
+Calibration is fit using calibration rows only and evaluated against an independent test set.
+
+Outputs include:
+
+* Raw probabilities
+* Calibrated probabilities
+* Confidence buckets
+* Calibration diagnostics
+
+⸻
+
+Current Outputs
+
+Model artifacts are written to:
+
+models/moneyline/xgboost_v5/
+
+Current outputs include:
 
 * raw_model.joblib
 * calibrated_model.joblib
 * feature_columns.joblib
+* feature_columns.json
+* metrics.json
+* threshold_sweep.parquet
+* confidence_buckets.parquet
+* model_card.yaml
 
-Model artifacts reside under:
+⸻
 
-models/moneyline/xgboost_v5/
+Current Successful Framework Run
 
-Additional Outputs
+Observed results:
 
-* Calibration buckets
-* Confidence buckets
-* Validation metrics
-* Feature registry
-* Training reports
+Feature dataframe shape: (8574, 483)
+Resolved feature count: 124
+Model dataframe shape: (17148, 483)
+Train rows        : 13874
+Calibration rows  : 1040
+Test rows         : 2234
+Best threshold    : 0.47
+Accuracy          : 0.8075
+ROC-AUC           : 0.8948
+Log loss          : 0.3993
+Brier score       : 0.1324
+
+⸻
+
+Future Training Roadmap
+
+Planned enhancements:
+
+* Model registry
+* Additional algorithm adapters
+* CatBoost support
+* Neural-network support
+* Ensemble support
+* Expanded calibration reporting
+* Automated model comparison
+* Model Lab integration
+
+Guiding principle:
+
+Feature generation is independent from model training.
+Model configs define:
+- algorithm
+- feature contract
+- split strategy
+- calibration strategy
+- hyperparameters
+- artifact locations
+Training code remains model-agnostic.
 
 4. Live Feature Engineering V2
 
