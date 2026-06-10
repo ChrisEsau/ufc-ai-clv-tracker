@@ -1,17 +1,6 @@
 from pathlib import Path
 
-
-# ============================================================
-# ROOT
-# ============================================================
-
 ROOT_DIR = Path(".")
-
-
-# ============================================================
-# DATA DIRECTORIES
-# ============================================================
-
 DATA_DIR = ROOT_DIR / "data"
 MODELS_DIR = ROOT_DIR / "models"
 CONFIGS_DIR = ROOT_DIR / "configs"
@@ -30,37 +19,19 @@ MODEL_LAB_DIR = DATA_DIR / "model_lab"
 DOCS_DIR = ROOT_DIR / "docs"
 MARKET_CONFIG_DIR = CONFIGS_DIR / "market"
 
-
-# ============================================================
-# MASTER
-# ============================================================
-
 MASTER_PATH = MASTER_DIR / "ufc_master.parquet"
-
-
-# ============================================================
-# STAGING ARTIFACTS
-# ============================================================
 
 STAGED_FIGHT_ROWS_PATH = STAGING_DIR / "ufc_staged_fight_rows.parquet"
 STAGED_FIGHT_DETAILS_PATH = STAGING_DIR / "ufc_staged_fight_details.parquet"
 STAGED_FIGHTER_PROFILES_PATH = STAGING_DIR / "ufc_staged_fighter_profiles.parquet"
-
 STAGED_MASTER_ROWS_PATH = STAGING_DIR / "ufc_staged_master_rows.parquet"
 STAGED_MASTER_ROWS_ENRICHED_PATH = STAGING_DIR / "ufc_staged_master_rows_enriched.parquet"
 STAGED_MASTER_ROWS_PROFILED_PATH = STAGING_DIR / "ufc_staged_master_rows_profiled.parquet"
-
 MISSING_EVENTS_PATH = STAGING_DIR / "ufc_missing_events.parquet"
-
-
-# ============================================================
-# AUDITS
-# ============================================================
 
 FIGHT_SCRAPE_AUDIT_PATH = AUDITS_DIR / "ufc_fight_scrape_audit.parquet"
 FIGHT_DETAIL_SCRAPE_AUDIT_PATH = AUDITS_DIR / "ufc_fight_detail_scrape_audit.parquet"
 FIGHTER_PROFILE_SCRAPE_AUDIT_PATH = AUDITS_DIR / "ufc_fighter_profile_scrape_audit.parquet"
-
 MASTER_COLUMN_VALIDATION_PATH = AUDITS_DIR / "ufc_master_column_validation.parquet"
 APPEND_PRECHECK_PATH = AUDITS_DIR / "ufc_append_precheck.parquet"
 APPEND_DUPLICATE_CHECK_PATH = AUDITS_DIR / "ufc_append_duplicate_check.parquet"
@@ -70,14 +41,8 @@ STAGED_MASTER_MAPPING_AUDIT_PATH = AUDITS_DIR / "ufc_staged_master_mapping_audit
 STAGED_DERIVED_STATS_AUDIT_PATH = AUDITS_DIR / "ufc_staged_derived_stats_audit.parquet"
 STAGED_FINAL_REVIEW_PATH = AUDITS_DIR / "ufc_staged_final_review.parquet"
 
-
-# ============================================================
-# MODEL / FEATURE / PREDICTION ARTIFACTS
-# ============================================================
-
 MODEL_VERSION = "UFC_Model_v5_Experiment"
 MODEL_DIR = MODELS_DIR / MODEL_VERSION
-
 MODEL_PRODUCTION_CONFIG_JSON_PATH = MODEL_DIR / "production_config.json"
 MODEL_PRODUCTION_CONFIG_PKL_PATH = MODEL_DIR / "production_config.pkl"
 MODEL_FEATURE_COLUMNS_PATH = MODEL_DIR / "feature_columns.pkl"
@@ -88,7 +53,6 @@ MODEL_QUALITY_SUMMARY_PATH = MODEL_DIR / "model_quality_summary.csv"
 MODEL_SHAP_IMPORTANCE_PATH = MODEL_DIR / "shap_importance.csv"
 
 ROLLING_FEATURES_PATH = FEATURES_DIR / "UFC_enhanced_rolling_features_EWM.parquet"
-# Compatibility alias used by live_feature_builder; now points to fighter-state artifact.
 CURRENT_FIGHTER_FEATURES_PATH = FEATURES_DIR / "latest_fighter_state.parquet"
 FIGHTER_STATE_HISTORY_PATH = FEATURES_DIR / "fighter_state_history.parquet"
 LATEST_FIGHTER_STATE_PATH = FEATURES_DIR / "latest_fighter_state.parquet"
@@ -107,7 +71,6 @@ BETTING_OUTCOMES_PATH = PREDICTIONS_DIR / "betting_outcomes.parquet"
 BETTING_OUTCOMES_AUDIT_PATH = AUDITS_DIR / "ufc_betting_outcomes_audit.parquet"
 OFFICIAL_BETS_PATH = PREDICTIONS_DIR / "ufc_official_bets.parquet"
 
-# Legacy side-based market artifacts.
 MARKET_ODDS_PATH = MARKET_DIR / "ufc_market_odds.parquet"
 MARKET_SNAPSHOTS_PATH = MARKET_DIR / "ufc_market_snapshots.parquet"
 NORMALIZED_MARKET_SNAPSHOTS_PATH = MARKET_DIR / "ufc_normalized_market_snapshots.parquet"
@@ -116,6 +79,54 @@ CLOSING_LINES_PATH = MARKET_DIR / "ufc_closing_lines.parquet"
 LINE_MOVEMENT_PATH = MARKET_DIR / "ufc_line_movement.parquet"
 CLV_RESULTS_PATH = MARKET_DIR / "ufc_clv_results.parquet"
 
-# Market Pipeline V2 outcome-based artifacts.
 MARKET_REGISTRY_PATH = MARKET_CONFIG_DIR / "market_registry.yaml"
 MARKET_OUTCOMES_PATH = MARKET_DIR / "market_outcomes.parquet"
+MARKET_OUTCOME_SNAPSHOTS_PATH = MARKET_DIR / "market_outcome_snapshots.parquet"
+MARKET_OUTCOME_AUDIT_PATH = AUDITS_DIR / "ufc_market_outcome_audit.parquet"
+MARKET_MATCH_AUDIT_V2_PATH = AUDITS_DIR / "ufc_market_match_audit_v2.parquet"
+
+LIVE_FEATURE_AUDIT_PATH = AUDITS_DIR / "ufc_live_feature_audit.parquet"
+LIVE_MATCH_AUDIT_PATH = AUDITS_DIR / "ufc_live_match_audit.parquet"
+LIVE_ODDS_AUDIT_PATH = AUDITS_DIR / "ufc_live_odds_audit.parquet"
+CLV_MARKET_NORMALIZATION_AUDIT_PATH = AUDITS_DIR / "ufc_clv_market_normalization_audit.parquet"
+
+BET_LEDGER_PATH = BANKROLL_DIR / "ufc_bet_ledger.parquet"
+OPEN_BETS_PATH = BANKROLL_DIR / "ufc_open_bets.parquet"
+BANKROLL_SNAPSHOTS_PATH = BANKROLL_DIR / "ufc_bankroll_snapshots.parquet"
+BANKROLL_SETTINGS_PATH = BANKROLL_DIR / "ufc_bankroll_settings.parquet"
+
+DATASET_STATUS_PATH = STATUS_DIR / "ufc_dataset_status.parquet"
+DATASET_EVENT_STATUS_PATH = STATUS_DIR / "ufc_dataset_event_status.parquet"
+UFCSTATS_EVENT_CHECK_PATH = STATUS_DIR / "ufc_ufcstats_event_check.parquet"
+
+INGESTION_PIPELINE_REGISTRY_DOC = DOCS_DIR / "UFC_INGESTION_PIPELINE_REGISTRY.md"
+MASTER_SCHEMA_DOC = DOCS_DIR / "UFC_MASTER_SCHEMA.md"
+PATH_REGISTRY_DOC = DOCS_DIR / "UFC_PATH_REGISTRY.md"
+DM_DASHBOARD_ARCHITECTURE_DOC = DOCS_DIR / "UFC_DM_DASHBOARD_ARCHITECTURE.md"
+PREDICTION_PIPELINE_DOC = DOCS_DIR / "UFC_PREDICTION_PIPELINE.md"
+CLV_TRACKING_DOC = DOCS_DIR / "UFC_CLV_TRACKING.md"
+
+
+def master_backup_path(run_id: str) -> Path:
+    return BACKUPS_DIR / f"ufc_master_backup_{run_id}.parquet"
+
+
+def ensure_data_dirs() -> None:
+    for path in [
+        MASTER_DIR,
+        STAGING_DIR,
+        AUDITS_DIR,
+        STATUS_DIR,
+        BACKUPS_DIR,
+        FEATURES_DIR,
+        PREDICTIONS_DIR,
+        CARDS_DIR,
+        MARKET_DIR,
+        BANKROLL_DIR,
+        MODEL_LAB_DIR,
+        MODELS_DIR,
+        MODEL_DIR,
+        DOCS_DIR,
+        MARKET_CONFIG_DIR,
+    ]:
+        path.mkdir(parents=True, exist_ok=True)
