@@ -88,7 +88,8 @@ MODEL_QUALITY_SUMMARY_PATH = MODEL_DIR / "model_quality_summary.csv"
 MODEL_SHAP_IMPORTANCE_PATH = MODEL_DIR / "shap_importance.csv"
 
 ROLLING_FEATURES_PATH = FEATURES_DIR / "UFC_enhanced_rolling_features_EWM.parquet"
-CURRENT_FIGHTER_FEATURES_PATH = FEATURES_DIR / "ufc_current_fighter_features.parquet"
+# Compatibility alias used by live_feature_builder; now points to fighter-state artifact.
+CURRENT_FIGHTER_FEATURES_PATH = FEATURES_DIR / "latest_fighter_state.parquet"
 FIGHTER_STATE_HISTORY_PATH = FEATURES_DIR / "fighter_state_history.parquet"
 LATEST_FIGHTER_STATE_PATH = FEATURES_DIR / "latest_fighter_state.parquet"
 MONEYLINE_FEATURE_VIEW_PATH = FEATURES_DIR / "moneyline_feature_view.parquet"
@@ -118,71 +119,3 @@ CLV_RESULTS_PATH = MARKET_DIR / "ufc_clv_results.parquet"
 # Market Pipeline V2 outcome-based artifacts.
 MARKET_REGISTRY_PATH = MARKET_CONFIG_DIR / "market_registry.yaml"
 MARKET_OUTCOMES_PATH = MARKET_DIR / "market_outcomes.parquet"
-MARKET_OUTCOME_SNAPSHOTS_PATH = MARKET_DIR / "market_outcome_snapshots.parquet"
-MARKET_OUTCOME_AUDIT_PATH = AUDITS_DIR / "ufc_market_outcome_audit.parquet"
-MARKET_MATCH_AUDIT_V2_PATH = AUDITS_DIR / "ufc_market_match_audit_v2.parquet"
-
-LIVE_FEATURE_AUDIT_PATH = AUDITS_DIR / "ufc_live_feature_audit.parquet"
-LIVE_MATCH_AUDIT_PATH = AUDITS_DIR / "ufc_live_match_audit.parquet"
-LIVE_ODDS_AUDIT_PATH = AUDITS_DIR / "ufc_live_odds_audit.parquet"
-CLV_MARKET_NORMALIZATION_AUDIT_PATH = AUDITS_DIR / "ufc_clv_market_normalization_audit.parquet"
-
-# ============================================================
-# BANKROLL ARTIFACTS
-# ============================================================
-
-BET_LEDGER_PATH = BANKROLL_DIR / "ufc_bet_ledger.parquet"
-OPEN_BETS_PATH = BANKROLL_DIR / "ufc_open_bets.parquet"
-BANKROLL_SNAPSHOTS_PATH = BANKROLL_DIR / "ufc_bankroll_snapshots.parquet"
-BANKROLL_SETTINGS_PATH = BANKROLL_DIR / "ufc_bankroll_settings.parquet"
-
-# ============================================================
-# STATUS
-# ============================================================
-
-DATASET_STATUS_PATH = STATUS_DIR / "ufc_dataset_status.parquet"
-DATASET_EVENT_STATUS_PATH = STATUS_DIR / "ufc_dataset_event_status.parquet"
-UFCSTATS_EVENT_CHECK_PATH = STATUS_DIR / "ufc_ufcstats_event_check.parquet"
-
-# ============================================================
-# DOCS
-# ============================================================
-
-INGESTION_PIPELINE_REGISTRY_DOC = DOCS_DIR / "UFC_INGESTION_PIPELINE_REGISTRY.md"
-MASTER_SCHEMA_DOC = DOCS_DIR / "UFC_MASTER_SCHEMA.md"
-PATH_REGISTRY_DOC = DOCS_DIR / "UFC_PATH_REGISTRY.md"
-DM_DASHBOARD_ARCHITECTURE_DOC = DOCS_DIR / "UFC_DM_DASHBOARD_ARCHITECTURE.md"
-PREDICTION_PIPELINE_DOC = DOCS_DIR / "UFC_PREDICTION_PIPELINE.md"
-CLV_TRACKING_DOC = DOCS_DIR / "UFC_CLV_TRACKING.md"
-
-# ============================================================
-# BACKUPS
-# ============================================================
-
-def master_backup_path(run_id: str) -> Path:
-    return BACKUPS_DIR / f"ufc_master_backup_{run_id}.parquet"
-
-
-# ============================================================
-# HELPERS
-# ============================================================
-
-def ensure_data_dirs():
-    for path in [
-        MASTER_DIR,
-        STAGING_DIR,
-        AUDITS_DIR,
-        STATUS_DIR,
-        BACKUPS_DIR,
-        FEATURES_DIR,
-        PREDICTIONS_DIR,
-        CARDS_DIR,
-        MARKET_DIR,
-        BANKROLL_DIR,
-        MODEL_LAB_DIR,
-        MODELS_DIR,
-        MODEL_DIR,
-        DOCS_DIR,
-        MARKET_CONFIG_DIR,
-    ]:
-        path.mkdir(parents=True, exist_ok=True)
