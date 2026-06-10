@@ -9,6 +9,11 @@ Phase 10A scope:
 - Outcome-based artifacts.
 - ID-based join contract using fight_id + market_key + outcome_fighter_id.
 - Legacy market artifacts remain untouched.
+
+Diagnostic extension:
+- Raw provider market/outcome rows are saved before normalization so newly
+  configured markets can be inspected before they are promoted into canonical
+  market_outcomes.
 """
 
 from __future__ import annotations
@@ -32,7 +37,14 @@ from pipeline.common.paths import (
 from pipeline.market.market_validator import validate_market_outcomes
 from pipeline.market.normalizers.moneyline import ensure_market_outcome_columns, normalize_moneyline_provider_row
 from pipeline.market.outcome_matcher import build_match_audit_row, ensure_match_audit_columns, match_provider_row_to_live_card
-from pipeline.market.providers.the_odds_api import fetch_odds, flatten_moneyline_odds
+from pipeline.market.providers.the_odds_api import (
+    fetch_odds,
+    flatten_moneyline_odds,
+    flatten_provider_market_diagnostics,
+)
+
+
+DEFAULT_PROVIDER_MARKET_DIAGNOSTIC_PATH = Path("data/market/provider_market_diagnostic.parquet")
 
 
 def _load_project_odds_key() -> str | None:
@@ -61,6 +73,11 @@ def _load_market_config(path: Path = MARKET_REGISTRY_PATH) -> dict:
 
     with path.open("r", encoding="utf-8") as file:
         return yaml.safe_load(file) or {}
+
+
+def _provider_market_diagnostic_path(config: dict) -> Path:
+    outputs = config.get("outputs", {}) or {}
+    return Path(outputs.get("provider_market_diagnostic_path") or DEFAULT_PROVIDER_MARKET_DIAGNOSTIC_PATH)
 
 
 def _load_live_card(path: Path = LIVE_CARD_PATH) -> pd.DataFrame:
@@ -153,16 +170,25 @@ def main() -> None:
 
     bookmakers = config.get("bookmakers", []) or []
     min_single_score = float((config.get("matching", {}) or {}).get("min_single_score", 90))
+    provider_diagnostic_path = _provider_market_diagnostic_path(config)
 
     print("Snapshot run ID:", snapshot_run_id)
     print("Live card rows:", len(live_card_df))
     print("Configured bookmakers:", bookmakers)
+    print("Configured canonical markets:", config.get("markets", []))
     print("Minimum single-fighter match score:", min_single_score)
 
     odds_json = fetch_odds(api_key=provider_key, config=config)
+    provider_diagnostic_df = flatten_provider_market_diagnostics(odds_json=odds_json, bookmakers=bookmakers)
     provider_df = flatten_moneyline_odds(odds_json=odds_json, bookmakers=bookmakers)
 
+    provider_diagnostic_path.parent.mkdir(parents=True, exist_ok=True)
+    provider_diagnostic_df.to_parquet(provider_diagnostic_path, index=False)
+
     print("Provider events fetched:", len(odds_json))
+    print("Provider diagnostic rows:", len(provider_diagnostic_df))
+    if "provider_market_key" in provider_diagnostic_df.columns:
+        print("Provider market keys:", provider_diagnostic_df["provider_market_key"].value_counts(dropna=False).to_dict())
     print("Provider moneyline rows:", len(provider_df))
 
     market_df, match_audit_df = _build_market_outcomes(
@@ -193,6 +219,7 @@ def main() -> None:
     print()
     print("========== MARKET V2 SUMMARY ==========")
     print("Provider rows:", len(provider_df))
+    print("Provider diagnostic rows:", len(provider_diagnostic_df))
     print("Matched provider rows:", matched_provider_rows)
     print("Unmatched provider rows:", unmatched_provider_rows)
     print("Market outcome rows:", len(market_df))
@@ -204,6 +231,7 @@ def main() -> None:
     print(MARKET_OUTCOME_SNAPSHOTS_PATH)
     print(MARKET_OUTCOME_AUDIT_PATH)
     print(MARKET_MATCH_AUDIT_V2_PATH)
+    print(provider_diagnostic_path)
 
 
 if __name__ == "__main__":
