@@ -878,7 +878,7 @@ python -m pipeline.betting.run_betting_outcomes_v2
 
 ## Critical
 
-### 1. Training config still points to old rolling feature warehouse
+### 1. Training config still points to old rolling feature warehouse - RESOLVED
 
 Current:
 
@@ -908,7 +908,7 @@ Validate `moneyline_feature_view.parquet` has all 124 configured model features,
 
 ---
 
-### 2. Live feature builder still uses legacy current-fighter feature path
+### 2. Live feature builder still uses legacy current-fighter feature path - RESOLVED
 
 Current live feature bridge expects:
 
