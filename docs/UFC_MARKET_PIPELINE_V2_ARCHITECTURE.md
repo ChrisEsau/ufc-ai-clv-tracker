@@ -70,6 +70,20 @@ The architecture must support:
 
 without redesign.
 
+## 4. Raw Discovery Before Normalization
+
+New sportsbooks or new prop market families should first be captured through a raw discovery layer.
+
+The raw discovery layer should:
+
+- preserve complete provider payloads,
+- flatten all visible markets/selections into diagnostics,
+- classify supported and unsupported markets,
+- avoid writing production `market_outcomes.parquet`,
+- avoid EV, CLV, staking, or betting decisions.
+
+This keeps production Market V2 stable while provider schemas and prop semantics are inspected.
+
 ---
 
 # Pipeline Flow
@@ -81,6 +95,14 @@ Provider API
 → Market Validator
 → market_outcomes.parquet
 
+For raw sportsbook discovery:
+
+Public sportsbook JSON
+→ Provider Discovery Adapter
+→ Raw JSON Snapshot
+→ Diagnostic Market Table
+→ Manual Review / Future Normalizer Mapping
+
 ---
 
 # Repository Structure
@@ -88,10 +110,12 @@ Provider API
 pipeline/market/
 
 - run_market_update_v2.py
+- run_draftkings_discovery.py
 - market_config.py
 - provider_registry.py
 - providers/
   - the_odds_api.py
+  - draftkings_public.py
 - normalizers/
   - moneyline.py
   - goes_distance.py
@@ -132,6 +156,120 @@ Responsibilities:
 
 No matching logic.
 No normalization logic.
+
+---
+
+# DraftKings Market Discovery Layer
+
+## Purpose
+
+The DraftKings discovery layer is an isolated research/diagnostic intake path for capturing all visible DraftKings UFC market payloads before promoting any market family into canonical Market V2 outputs.
+
+It is intentionally separate from:
+
+- `pipeline.market.run_market_update_v2`
+- `data/market/market_outcomes.parquet`
+- `data/market/market_outcome_snapshots.parquet`
+- `pipeline.betting.run_betting_outcomes_v2`
+- CLV, ledger, and dashboard outputs
+
+## Runner
+
+```bash
+python -m pipeline.market.run_draftkings_discovery --url "<public-json-url>"
+```
+
+or:
+
+```bash
+DRAFTKINGS_DISCOVERY_URL="<public-json-url>" \
+python -m pipeline.market.run_draftkings_discovery
+```
+
+## Provider Module
+
+```text
+pipeline/market/providers/draftkings_public.py
+```
+
+Approved scope:
+
+- one read-only public JSON request per run,
+- save raw provider response,
+- flatten discovered markets/selections,
+- flag parlays, boosts, promos, and recognized market families,
+- fail on HTTP errors instead of retry-spamming.
+
+Out of scope:
+
+- login automation,
+- account access,
+- CAPTCHA handling,
+- proxy rotation,
+- IP spoofing,
+- ban evasion,
+- normalization into production Market V2,
+- EV or betting decisions.
+
+## Raw Outputs
+
+```text
+data/market/raw/draftkings/<yyyy-mm-dd>/snapshot_<snapshot_run_id>.json
+data/market/draftkings_market_diagnostic.parquet
+data/market/draftkings_raw_index.parquet
+```
+
+## Diagnostic Grain
+
+One row per discovered provider market selection:
+
+```text
+snapshot_run_id
+snapshot_timestamp
+source
+bookmaker
+provider_event_id
+event_name
+provider_market_id
+raw_market_name
+provider_selection_id
+raw_selection_name
+price_american
+price_decimal
+implied_probability
+line
+is_parlay
+is_boost
+is_promo
+is_supported_market
+supported_market_family
+raw_payload_path
+```
+
+## Discovery Market Families
+
+The discovery layer may classify rows into these families when text/structure allows:
+
+- moneyline
+- goes_distance
+- over_under_rounds
+- ko_tko
+- submission
+- decision
+- exact_round
+- fighter_round_win
+
+Rows that cannot be confidently classified are still preserved for review.
+
+## Promotion Rule
+
+No DraftKings market family should be promoted into `market_outcomes.parquet` until:
+
+1. real payload examples are inspected,
+2. provider market IDs and selection IDs are understood,
+3. a canonical `market_key` and `outcome_key` are defined,
+4. matching behavior is validated against `ufc_live_card.parquet`,
+5. unsupported/parlay/boost/promo rows are explicitly excluded or separately modeled.
 
 ---
 
@@ -256,7 +394,7 @@ Join Keys:
 
 - fight_id
 - market_key
-- outcome_label
+- outcome_fighter_id
 
 Produces:
 
@@ -265,16 +403,20 @@ Produces:
 - stake
 - status
 
+DraftKings discovery diagnostics do not participate in Betting Decision V2 until a market family is promoted into canonical `market_outcomes.parquet` and a matching model outcome exists.
+
 ---
 
 # Dashboard Integration
 
 The dashboard should never consume provider-specific data.
 
-All dashboard views should read:
+All production dashboard views should read:
 
 - market_outcomes.parquet
 - betting_outcomes.parquet
+
+Raw discovery diagnostics may be reviewed manually or in a future diagnostic-only admin view, but should not power Betting Board decisions.
 
 ---
 
@@ -294,6 +436,18 @@ without requiring schema redesign.
 ---
 
 # Current Implementation Plan
+
+## Phase 0
+
+DraftKings Market Discovery
+
+- DraftKings public provider scaffold
+- raw JSON snapshot persistence
+- flattened diagnostic market table
+- raw snapshot index
+- classification flags for parlays, boosts, promos, and supported market families
+- no production Market V2 integration
+- no betting integration
 
 ## Phase 10A
 
