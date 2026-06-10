@@ -28,6 +28,8 @@ LIVE_CARD_COLUMNS = [
     "red_fighter_url",
     "blue_fighter_url",
     "weight_class",
+    "title_fight",
+    "total_rounds",
 ]
 
 LIVE_CARD_BUILD_AUDIT_PATH = AUDITS_DIR / "ufc_live_card_build_audit.parquet"
@@ -60,6 +62,7 @@ def _prepare_live_card(upcoming_fights):
 
     live_card = live_card[LIVE_CARD_COLUMNS]
     live_card = _normalize_string_columns(live_card)
+    live_card = _normalize_fight_context_columns(live_card)
 
     invalid_mask = _build_invalid_fight_mask(live_card)
     rejected_rows = live_card.loc[invalid_mask].copy()
@@ -106,6 +109,45 @@ def _normalize_string_columns(df):
             values = out[column].astype("string").str.strip()
             values = values.mask(values.str.lower().isin(placeholder_values), pd.NA)
             out[column] = values
+
+    return out
+
+
+
+def _normalize_fight_context_columns(df):
+    """Normalize fight-level context columns used by prop models.
+
+    These columns originate from upcoming-fights/live-card data, not fighter state.
+    They intentionally remain nullable when upstream data is missing so downstream
+    model-contract checks fail loudly rather than silently fabricating context.
+    """
+
+    out = df.copy()
+
+    if "total_rounds" in out.columns:
+        out["total_rounds"] = pd.to_numeric(out["total_rounds"], errors="coerce")
+
+    if "title_fight" in out.columns:
+        title = out["title_fight"]
+        if title.dtype == "bool":
+            out["title_fight"] = title.astype("Int64")
+        else:
+            normalized = title.astype("string").str.strip().str.lower()
+            bool_map = {
+                "true": 1,
+                "t": 1,
+                "yes": 1,
+                "y": 1,
+                "1": 1,
+                "false": 0,
+                "f": 0,
+                "no": 0,
+                "n": 0,
+                "0": 0,
+            }
+            mapped = normalized.map(bool_map)
+            numeric = pd.to_numeric(title, errors="coerce")
+            out["title_fight"] = mapped.fillna(numeric).astype("Int64")
 
     return out
 
