@@ -9,10 +9,12 @@ It does not perform UFCStats matching, canonical normalization, EV math,
 CLV calculations, or betting decisions.
 
 Approved scope:
-- fetch a configured DraftKings public JSON URL,
-- save the raw response under data/market/raw/draftkings/,
-- flatten discovered markets/selections into a diagnostic dataframe,
-- flag parlays, boosts, promos, and currently supported market families.
+- build known public DraftKings event/subcategory JSON URLs,
+- fetch public JSON responses,
+- save raw responses under data/market/raw/draftkings/,
+- flatten discovered events/markets/selections into a diagnostic dataframe,
+- attach provider registry metadata when available,
+- flag parlays, boosts, promos, and currently recognized market families.
 
 No bypassing, login automation, proxy rotation, CAPTCHA handling, or ban evasion
 logic belongs in this module.
@@ -26,6 +28,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlencode
 
 import pandas as pd
 import requests
@@ -37,6 +40,9 @@ BOOKMAKER = "DraftKings"
 SOURCE = "draftkings_public"
 DEFAULT_TIMEOUT_SECONDS = 30
 DEFAULT_USER_AGENT = "ufc-ai-clv-tracker/market-discovery"
+DEFAULT_BASE_URL = "https://sportsbook-nash.draftkings.com/sites/US-KS-SB/api/sportscontent"
+EVENT_ENDPOINT = "/pagedata/event/v1/events"
+EVENT_SUBCATEGORY_MARKETS_ENDPOINT = "/controldata/event/eventSubcategory/v1/markets"
 
 RAW_MARKET_COLUMNS = [
     "snapshot_run_id",
@@ -45,19 +51,38 @@ RAW_MARKET_COLUMNS = [
     "bookmaker",
     "provider_event_id",
     "event_name",
+    "event_start_timestamp",
+    "provider_sport_id",
+    "provider_league_id",
+    "provider_subcategory_id",
+    "provider_subcategory_name",
+    "registry_family",
+    "registry_outcome_type",
     "provider_market_id",
     "raw_market_name",
+    "provider_market_type_id",
+    "provider_market_type_name",
+    "provider_market_tags",
     "provider_selection_id",
     "raw_selection_name",
+    "selection_outcome_type",
+    "selection_participant_name",
+    "selection_participant_sdid",
+    "selection_participant_venue_role",
     "price_american",
     "price_decimal",
+    "provider_decimal_odds",
+    "true_odds",
     "implied_probability",
     "line",
+    "bet_percent",
+    "handle_percent",
     "is_parlay",
     "is_boost",
     "is_promo",
     "is_supported_market",
     "supported_market_family",
+    "request_url",
     "raw_payload_path",
 ]
 
@@ -78,11 +103,43 @@ def utc_snapshot() -> tuple[str, str]:
     return now.strftime("draftkings_%Y%m%d_%H%M%S"), now.isoformat()
 
 
+def build_event_url(event_id: str, *, base_url: str = DEFAULT_BASE_URL) -> str:
+    """Build the DraftKings public event metadata URL for one event id."""
+
+    query = urlencode({"eventIds": str(event_id)})
+    return f"{base_url}{EVENT_ENDPOINT}?{query}"
+
+
+def build_event_subcategory_markets_url(
+    event_id: str,
+    subcategory_id: str,
+    *,
+    base_url: str = DEFAULT_BASE_URL,
+) -> str:
+    """Build the DraftKings public market URL for one event/subcategory pair."""
+
+    event_id = str(event_id)
+    subcategory_id = str(subcategory_id)
+    markets_query = (
+        f"$filter=eventId eq '{event_id}' "
+        f"AND clientMetadata/subCategoryId eq '{subcategory_id}' "
+        "AND tags/all(t: t ne 'SportcastBetBuilder') "
+        "and tags/any(t: t eq 'OSB')"
+    )
+    query = urlencode(
+        {
+            "templateVars": f"{event_id},{subcategory_id}",
+            "marketsQuery": markets_query,
+            "entity": "markets",
+        }
+    )
+    return f"{base_url}{EVENT_SUBCATEGORY_MARKETS_ENDPOINT}?{query}"
+
+
 def fetch_public_json(url: str, *, timeout: int = DEFAULT_TIMEOUT_SECONDS) -> dict[str, Any]:
     """Fetch a public DraftKings JSON endpoint.
 
-    The caller must provide a URL discovered manually from a public DraftKings
-    page. This function intentionally makes one normal request and fails on HTTP
+    This function intentionally makes one normal request and fails on HTTP
     errors rather than retrying aggressively.
     """
 
@@ -101,6 +158,8 @@ def save_raw_snapshot(
     raw_root: Path = Path("data/market/raw/draftkings"),
     snapshot_run_id: str | None = None,
     snapshot_timestamp: str | None = None,
+    event_id: str | None = None,
+    subcategory_id: str | None = None,
 ) -> DraftKingsSnapshot:
     """Persist one raw DraftKings payload and return its snapshot metadata."""
 
@@ -111,9 +170,14 @@ def save_raw_snapshot(
 
     date_part = snapshot_timestamp[:10]
     raw_dir = raw_root / date_part
+    if event_id:
+        raw_dir = raw_dir / f"event_{event_id}"
     raw_dir.mkdir(parents=True, exist_ok=True)
 
-    raw_payload_path = raw_dir / f"snapshot_{snapshot_run_id}.json"
+    suffix_parts = [snapshot_run_id]
+    if subcategory_id:
+        suffix_parts.append(f"subcategory_{subcategory_id}")
+    raw_payload_path = raw_dir / f"snapshot_{'_'.join(suffix_parts)}.json"
     raw_payload_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
 
     return DraftKingsSnapshot(
@@ -121,18 +185,6 @@ def save_raw_snapshot(
         snapshot_timestamp=snapshot_timestamp,
         raw_payload_path=raw_payload_path,
     )
-
-
-def _walk_json(value: Any):
-    """Yield every dictionary contained in a nested JSON-like object."""
-
-    if isinstance(value, dict):
-        yield value
-        for child in value.values():
-            yield from _walk_json(child)
-    elif isinstance(value, list):
-        for child in value:
-            yield from _walk_json(child)
 
 
 def _first_present(row: dict[str, Any], keys: list[str]) -> Any:
@@ -145,29 +197,21 @@ def _first_present(row: dict[str, Any], keys: list[str]) -> Any:
     return None
 
 
-def _looks_like_market(row: dict[str, Any]) -> bool:
-    """Heuristic check for a DraftKings market-like dictionary."""
-
-    has_market_name = _first_present(row, ["marketName", "name", "label", "title"]) is not None
-    has_outcomes = any(isinstance(row.get(key), list) for key in ["outcomes", "selections", "participants"])
-    return bool(has_market_name and has_outcomes)
-
-
-def _selection_rows(market: dict[str, Any]) -> list[dict[str, Any]]:
-    """Return provider selection dictionaries from common DraftKings fields."""
-
-    for key in ["outcomes", "selections", "participants"]:
-        value = market.get(key)
-        if isinstance(value, list):
-            return [item for item in value if isinstance(item, dict)]
-    return []
-
-
 def _to_american_odds(value: Any) -> Any:
     """Extract an American odds value from common provider fields."""
 
     if isinstance(value, dict):
         return _first_present(value, ["american", "americanOdds", "oddsAmerican", "displayOdds"])
+    return value
+
+
+def _clean_american_odds(value: Any) -> Any:
+    """Normalize DraftKings unicode minus odds strings for downstream math."""
+
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value.replace("−", "-").strip()
     return value
 
 
@@ -181,7 +225,27 @@ def _market_flags(raw_market_name: Any, raw_selection_name: Any) -> dict[str, An
     is_promo = any(token in text for token in ["promo", "special", "featured"])
 
     supported_market_family = None
-    if any(token in text for token in ["moneyline", "fight winner", "winner"]):
+    if "significant strike" in text:
+        supported_market_family = "fighter_sig_strikes_total"
+    elif "finish only moneyline" in text:
+        supported_market_family = "finish_only_moneyline"
+    elif "decision only moneyline" in text:
+        supported_market_family = "decision_only_moneyline"
+    elif "submission only moneyline" in text:
+        supported_market_family = "submission_only_moneyline"
+    elif "ko/tko/dq only moneyline" in text:
+        supported_market_family = "ko_tko_only_moneyline"
+    elif "round 1 only moneyline" in text:
+        supported_market_family = "round_1_only_moneyline"
+    elif "round and method" in text:
+        supported_market_family = "round_method"
+    elif "exact method" in text:
+        supported_market_family = "exact_method"
+    elif "alternate point spread" in text:
+        supported_market_family = "alternate_point_spread"
+    elif "point spread" in text:
+        supported_market_family = "point_spread"
+    elif any(token in text for token in ["moneyline", "fight winner", "winner"]):
         supported_market_family = "moneyline"
     elif "go" in text and "distance" in text:
         supported_market_family = "goes_distance"
@@ -207,57 +271,106 @@ def _market_flags(raw_market_name: Any, raw_selection_name: Any) -> dict[str, An
     }
 
 
+def _first_participant(selection: dict[str, Any]) -> dict[str, Any]:
+    participants = selection.get("participants")
+    if isinstance(participants, list) and participants and isinstance(participants[0], dict):
+        return participants[0]
+    return {}
+
+
 def flatten_market_diagnostics(
     payload: dict[str, Any],
     *,
     snapshot: DraftKingsSnapshot,
+    request_url: str | None = None,
+    registry_entry: dict[str, Any] | None = None,
 ) -> pd.DataFrame:
-    """Flatten all discovered DraftKings markets/selections for diagnostics.
+    """Flatten DraftKings event/market/selection payloads for diagnostics.
 
-    This is deliberately permissive because DraftKings response shapes can vary.
-    Unknown markets are still preserved in the diagnostic table; canonical
-    normalizers can be added later after real payloads are inspected.
+    Real DraftKings UFC payloads expose top-level arrays:
+
+        events[]
+        markets[]
+        selections[]
+
+    The diagnostic grain is one provider market selection row.
     """
 
+    events = {
+        str(event.get("id")): event
+        for event in payload.get("events", [])
+        if isinstance(event, dict) and event.get("id") is not None
+    }
+    markets = {
+        str(market.get("id")): market
+        for market in payload.get("markets", [])
+        if isinstance(market, dict) and market.get("id") is not None
+    }
+    selections = [
+        selection
+        for selection in payload.get("selections", [])
+        if isinstance(selection, dict)
+    ]
+
     rows: list[dict[str, Any]] = []
+    registry_entry = registry_entry or {}
 
-    for market in _walk_json(payload):
-        if not _looks_like_market(market):
-            continue
+    for selection in selections:
+        market_id = str(selection.get("marketId"))
+        market = markets.get(market_id, {})
+        event_id = str(market.get("eventId") or selection.get("eventId") or "")
+        event = events.get(event_id, {})
 
-        raw_market_name = _first_present(market, ["marketName", "name", "label", "title"])
-        provider_market_id = _first_present(market, ["marketId", "id", "dkMarketId"])
-        provider_event_id = _first_present(market, ["eventId", "eventGroupId", "providerEventId"])
-        event_name = _first_present(market, ["eventName", "name", "eventDescription"])
+        raw_market_name = market.get("name")
+        market_type = market.get("marketType") if isinstance(market.get("marketType"), dict) else {}
+        raw_selection_name = selection.get("label")
+        display_odds = selection.get("displayOdds") if isinstance(selection.get("displayOdds"), dict) else {}
+        price_american = _clean_american_odds(_to_american_odds(display_odds))
+        provider_decimal_odds = display_odds.get("decimal")
+        participant = _first_participant(selection)
+        participant_metadata = participant.get("metadata") if isinstance(participant.get("metadata"), dict) else {}
+        selection_metadata = selection.get("metadata") if isinstance(selection.get("metadata"), dict) else {}
+        flags = _market_flags(raw_market_name, raw_selection_name)
 
-        for selection in _selection_rows(market):
-            raw_selection_name = _first_present(selection, ["label", "name", "outcomeName", "participant", "title"])
-            provider_selection_id = _first_present(selection, ["selectionId", "outcomeId", "id", "dkOutcomeId"])
-            raw_odds = _first_present(selection, ["oddsAmerican", "americanOdds", "displayOdds", "odds"])
-            price_american = _to_american_odds(raw_odds)
-            line = _first_present(selection, ["line", "points", "handicap", "total"])
-            flags = _market_flags(raw_market_name, raw_selection_name)
-
-            rows.append(
-                {
-                    "snapshot_run_id": snapshot.snapshot_run_id,
-                    "snapshot_timestamp": snapshot.snapshot_timestamp,
-                    "source": SOURCE,
-                    "bookmaker": BOOKMAKER,
-                    "provider_event_id": provider_event_id,
-                    "event_name": event_name,
-                    "provider_market_id": provider_market_id,
-                    "raw_market_name": raw_market_name,
-                    "provider_selection_id": provider_selection_id,
-                    "raw_selection_name": raw_selection_name,
-                    "price_american": price_american,
-                    "price_decimal": american_to_decimal(price_american),
-                    "implied_probability": american_to_implied_prob(price_american),
-                    "line": line,
-                    "raw_payload_path": str(snapshot.raw_payload_path),
-                    **flags,
-                }
-            )
+        rows.append(
+            {
+                "snapshot_run_id": snapshot.snapshot_run_id,
+                "snapshot_timestamp": snapshot.snapshot_timestamp,
+                "source": SOURCE,
+                "bookmaker": BOOKMAKER,
+                "provider_event_id": event_id or pd.NA,
+                "event_name": event.get("name"),
+                "event_start_timestamp": event.get("startEventDate"),
+                "provider_sport_id": market.get("sportId") or event.get("sportId"),
+                "provider_league_id": market.get("leagueId") or event.get("leagueId"),
+                "provider_subcategory_id": market.get("subcategoryId") or registry_entry.get("subcategory_id"),
+                "provider_subcategory_name": registry_entry.get("name"),
+                "registry_family": registry_entry.get("family"),
+                "registry_outcome_type": registry_entry.get("outcome_type"),
+                "provider_market_id": market.get("id"),
+                "raw_market_name": raw_market_name,
+                "provider_market_type_id": market_type.get("id"),
+                "provider_market_type_name": market_type.get("name"),
+                "provider_market_tags": market.get("tags"),
+                "provider_selection_id": selection.get("id"),
+                "raw_selection_name": raw_selection_name,
+                "selection_outcome_type": selection.get("outcomeType"),
+                "selection_participant_name": participant.get("name"),
+                "selection_participant_sdid": participant_metadata.get("sdid"),
+                "selection_participant_venue_role": participant.get("venueRole"),
+                "price_american": price_american,
+                "price_decimal": american_to_decimal(price_american),
+                "provider_decimal_odds": provider_decimal_odds,
+                "true_odds": selection.get("trueOdds"),
+                "implied_probability": american_to_implied_prob(price_american),
+                "line": _first_present(selection, ["line", "points", "handicap", "total"]),
+                "bet_percent": selection_metadata.get("betPercent"),
+                "handle_percent": selection_metadata.get("handlePercent"),
+                "request_url": request_url,
+                "raw_payload_path": str(snapshot.raw_payload_path),
+                **flags,
+            }
+        )
 
     return ensure_raw_market_columns(pd.DataFrame(rows))
 
