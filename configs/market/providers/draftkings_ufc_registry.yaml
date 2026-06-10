@@ -1,0 +1,103 @@
+# DraftKings UFC market discovery registry
+#
+# Purpose:
+# - provider-specific discovery configuration only
+# - no betting logic
+# - no Market V2 production normalization
+# - no CLV/staking/dashboard assumptions
+#
+# The discovery runner uses event_id + subcategory_id to fetch DraftKings
+# public event-subcategory market payloads and flatten them into diagnostics.
+
+provider: draftkings_public
+bookmaker: DraftKings
+sport: mma
+league: ufc
+sport_id: "43"
+league_id: "9034"
+site: US-KS-SB
+base_url: "https://sportsbook-nash.draftkings.com/sites/US-KS-SB/api/sportscontent"
+
+endpoints:
+  event: "/pagedata/event/v1/events"
+  event_subcategory_markets: "/controldata/event/eventSubcategory/v1/markets"
+
+# Confirmed from manual DraftKings UFC payload inspection.
+subcategories:
+  - subcategory_id: "13025"
+    name: Main Lines
+    family: main_lines
+    outcome_type: mixed
+    notes: Moneyline, Point Spread, and Total Rounds primary markets.
+
+  - subcategory_id: "13179"
+    name: Alternate Total Rounds
+    family: alternate_total_rounds
+    outcome_type: fight_line
+    notes: Over/Under alternate round totals such as 0.5, 2.5, 3.5, 4.5.
+
+  - subcategory_id: "16272"
+    name: Alternate Point Spread
+    family: alternate_point_spread
+    outcome_type: fighter_line
+    notes: Alternate fighter spread lines. Stored for discovery; not currently prioritized for betting models.
+
+  - subcategory_id: "17644"
+    name: Fight to Go the Distance
+    family: goes_distance
+    outcome_type: fight
+    notes: Yes/No fight-level market.
+
+  - subcategory_id: "18911"
+    name: Fighter Method Props
+    family: fighter_method_props
+    outcome_type: fighter
+    notes: Fighter-specific KO/TKO/DQ, Submission, and Decision markets.
+
+  - subcategory_id: "6437"
+    name: Exact Method of Victory
+    family: exact_method
+    outcome_type: fight
+    notes: Fight-level method market: KO/TKO/DQ, Submission, Decision, Draw.
+
+  - subcategory_id: "5735"
+    name: Round and Method Betting
+    family: round_method
+    outcome_type: mixed
+    notes: Fighter + method + round selections plus To Go the Distance.
+
+  - subcategory_id: "15122"
+    name: Finish Only Moneyline
+    family: finish_only_moneyline
+    outcome_type: fighter
+    notes: Decision no action.
+
+  - subcategory_id: "15123"
+    name: Decision Only Moneyline
+    family: decision_only_moneyline
+    outcome_type: fighter
+    notes: Finish no action.
+
+  - subcategory_id: "15124"
+    name: Round 1 Only Moneyline
+    family: round_1_only_moneyline
+    outcome_type: fighter
+    notes: Any result outside Round 1 no action.
+
+  - subcategory_id: "15125"
+    name: Submission Only Moneyline
+    family: submission_only_moneyline
+    outcome_type: fighter
+    notes: Decision or KO/TKO/DQ no action.
+
+  - subcategory_id: "15126"
+    name: KO/TKO/DQ Only Moneyline
+    family: ko_tko_only_moneyline
+    outcome_type: fighter
+    notes: Decision or Submission no action.
+
+  - subcategory_id: "19390"
+    name: Fighter Significant Strikes O/U
+    family: fighter_sig_strikes_total
+    outcome_type: fighter_line
+    notes: Fighter significant strike total props.
