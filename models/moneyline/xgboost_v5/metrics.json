@@ -1,27 +1,27 @@
 {
   "model_id": "moneyline_xgboost_v5",
   "raw_metrics": {
-    "accuracy": 0.6378378378378379,
-    "log_loss": 0.6467991391281432,
-    "roc_auc": 0.6750949598246896,
-    "brier_score": 0.22754849733822552,
-    "threshold": 0.49,
-    "positive_pick_rate_percent": 52.61261261261261,
-    "negative_pick_rate_percent": 47.38738738738739,
+    "accuracy": 0.6360360360360361,
+    "log_loss": 0.6465014496841842,
+    "roc_auc": 0.6754467981495008,
+    "brier_score": 0.22744308925829929,
+    "threshold": 0.51,
+    "positive_pick_rate_percent": 46.846846846846844,
+    "negative_pick_rate_percent": 53.153153153153156,
     "actual_positive_rate_percent": 50.0,
     "row_count": 2220
   },
   "final_metrics": {
-    "accuracy": 0.6207207207207207,
-    "log_loss": 0.6497456784877452,
-    "roc_auc": 0.6698470091713336,
-    "brier_score": 0.22896160321941675,
-    "threshold": 0.49,
-    "positive_pick_rate_percent": 37.47747747747748,
-    "negative_pick_rate_percent": 62.52252252252253,
+    "accuracy": 0.6346846846846846,
+    "log_loss": 0.6502052885700612,
+    "roc_auc": 0.6652885317750182,
+    "brier_score": 0.22928113089938168,
+    "threshold": 0.48,
+    "positive_pick_rate_percent": 46.44144144144144,
+    "negative_pick_rate_percent": 53.55855855855856,
     "actual_positive_rate_percent": 50.0,
     "row_count": 2220
   },
-  "best_threshold": 0.49,
-  "trained_at_utc": "2026-06-08T15:10:33.086945+00:00"
+  "best_threshold": 0.48,
+  "trained_at_utc": "2026-06-11T19:15:42.023443+00:00"
 }

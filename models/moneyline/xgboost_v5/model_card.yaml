@@ -3,9 +3,9 @@ model_family: moneyline
 artifact_name: xgboost_v5
 algorithm: xgboost
 config_path: configs/models/moneyline_xgboost_v5.yaml
-trained_at_utc: '2026-06-08T15:10:33.095944+00:00'
+trained_at_utc: '2026-06-11T19:15:42.030145+00:00'
 data:
-  rolling_features_path: data/features/UFC_enhanced_rolling_features_EWM.parquet
+  rolling_features_path: data/features/moneyline_feature_view.parquet
   target_column: target
   date_column: date
 split:
@@ -34,13 +34,13 @@ params:
   random_state: 42
   eval_metric: logloss
 metrics:
-  accuracy: 0.6207207207207207
-  log_loss: 0.6497456784877452
-  roc_auc: 0.6698470091713336
-  brier_score: 0.22896160321941675
-  threshold: 0.49
-  positive_pick_rate_percent: 37.47747747747748
-  negative_pick_rate_percent: 62.52252252252253
+  accuracy: 0.6346846846846846
+  log_loss: 0.6502052885700612
+  roc_auc: 0.6652885317750182
+  brier_score: 0.22928113089938168
+  threshold: 0.48
+  positive_pick_rate_percent: 46.44144144144144
+  negative_pick_rate_percent: 53.55855855855856
   actual_positive_rate_percent: 50.0
   row_count: 2220
-best_threshold: 0.49
+best_threshold: 0.48
