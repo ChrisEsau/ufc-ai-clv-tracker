@@ -9,3 +9,4 @@ lxml
 selenium
 webdriver-manager
 joblib
+pyyaml
