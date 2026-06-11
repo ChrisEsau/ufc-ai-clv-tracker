@@ -76,3 +76,47 @@ subcategories:
     name: "Fighter Significant Strikes Total"
     family: fighter_sig_strikes_total
     outcome_type: fighter_line
+
+matching:
+  default_strategy: fighter_name
+
+  strategy_defaults:
+    fighter_markets:
+      strategy: fighter_name
+    fight_markets:
+      strategy: matchup_name
+    event_markets:
+      strategy: event_name
+
+  market_overrides:
+    moneyline:
+      strategy: fighter_name
+    point_spread:
+      strategy: fighter_name
+    win_by_ko_tko_dq:
+      strategy: fighter_name
+    win_by_submission:
+      strategy: fighter_name
+    win_by_decision:
+      strategy: fighter_name
+    finish_only_moneyline:
+      strategy: fighter_name
+    decision_only_moneyline:
+      strategy: fighter_name
+    round_1_only_moneyline:
+      strategy: fighter_name
+    submission_only_moneyline:
+      strategy: fighter_name
+    ko_tko_only_moneyline:
+      strategy: fighter_name
+    fighter_sig_strikes_total:
+      strategy: fighter_name
+
+    goes_distance:
+      strategy: matchup_name
+    total_rounds:
+      strategy: matchup_name
+    exact_method:
+      strategy: matchup_name
+    round_method:
+      strategy: matchup_name

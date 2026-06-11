@@ -16,6 +16,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from pipeline.common.outcome_join import build_outcome_join_key
 from ufc_odds_utils import composite_name_score
 
 
@@ -38,10 +39,16 @@ MARKET_OUTCOME_COLUMNS = [
     "red_fighter_id",
     "blue_fighter_id",
     "market_key",
+    "blue_last_name_token",
+    "red_last_name_token",
+    "provider_matchup_text",
+    "matchup_secondary_confirmed",
+    "matching_strategy",
     "outcome_label",
     "outcome_key",
     "outcome_type",
     "outcome_fighter_id",
+    "outcome_join_key",
     "outcome_fighter_name",
     "side",
     "line",
@@ -69,6 +76,7 @@ MARKET_MATCH_AUDIT_COLUMNS = [
     "provider_market_name",
     "provider_selection_name",
     "market_key",
+    "matching_strategy",
     "outcome_key",
     "fighter_name",
     "matched_fight_id",
@@ -92,6 +100,83 @@ def _safe_str(value: Any) -> str:
     if value is None or pd.isna(value):
         return ""
     return str(value).strip()
+
+
+def _last_name_token(value: Any) -> str:
+    """Return a simple last-name token for secondary matchup confirmation."""
+
+    text = _safe_str(value).lower().replace(".", "").replace(",", "")
+    parts = [part for part in text.split() if part]
+    return parts[-1] if parts else ""
+
+
+def _provider_matchup_text(catalog_row: pd.Series) -> str:
+    """Provider text used for matchup-level confirmation."""
+
+    return " ".join(
+        part
+        for part in [
+            _safe_str(catalog_row.get("event_name")),
+            _safe_str(catalog_row.get("provider_market_name")),
+            _safe_str(catalog_row.get("provider_selection_name")),
+        ]
+        if part
+    ).lower()
+
+
+def _both_fighters_present_in_provider_text(catalog_row: pd.Series, live_row: pd.Series) -> bool:
+    """Confirm both live-card fighter last names appear in provider matchup text."""
+
+    provider_text = _provider_matchup_text(catalog_row)
+    red_last = _last_name_token(live_row.get("red_fighter"))
+    blue_last = _last_name_token(live_row.get("blue_fighter"))
+
+    return bool(red_last and blue_last and red_last in provider_text and blue_last in provider_text)
+
+
+def _matching_strategy(catalog_row: pd.Series) -> str:
+    """Return the configured market matching strategy."""
+
+    strategy = _safe_str(catalog_row.get("matching_strategy")).lower()
+    return strategy or "fighter_name"
+
+
+def _last_name_token(value: Any) -> str:
+    """Return a simple last-name token for secondary matchup confirmation."""
+
+    text = _safe_str(value).lower().replace(".", "").replace(",", "")
+    parts = [part for part in text.split() if part]
+    return parts[-1] if parts else ""
+
+
+def _provider_matchup_text(catalog_row: pd.Series) -> str:
+    """Provider text used for matchup-level confirmation."""
+
+    return " ".join(
+        part
+        for part in [
+            _safe_str(catalog_row.get("event_name")),
+            _safe_str(catalog_row.get("provider_market_name")),
+            _safe_str(catalog_row.get("provider_selection_name")),
+        ]
+        if part
+    ).lower()
+
+
+def _matchup_confirmation_payload(catalog_row: pd.Series, live_row: pd.Series) -> dict[str, Any]:
+    """Return secondary matchup confirmation details for auditability."""
+
+    provider_text = _provider_matchup_text(catalog_row)
+    red_last = _last_name_token(live_row.get("red_fighter"))
+    blue_last = _last_name_token(live_row.get("blue_fighter"))
+    confirmed = bool(red_last and blue_last and red_last in provider_text and blue_last in provider_text)
+
+    return {
+        "matchup_secondary_confirmed": confirmed,
+        "provider_matchup_text": provider_text,
+        "red_last_name_token": red_last,
+        "blue_last_name_token": blue_last,
+    }
 
 
 def _event_score(catalog_row: pd.Series, live_row: pd.Series) -> float:
@@ -132,8 +217,25 @@ def _score_catalog_row_to_live_fight(catalog_row: pd.Series, live_row: pd.Series
     event_score = _event_score(catalog_row, live_row)
     red_score, blue_score = _fighter_scores(catalog_row, live_row)
 
+    strategy = _matching_strategy(catalog_row)
+    matchup_payload = _matchup_confirmation_payload(catalog_row, live_row)
     has_fighter = not np.isnan(red_score) and not np.isnan(blue_score)
-    if has_fighter:
+
+    if strategy == "matchup_name":
+        # Fight-level markets such as goes_distance and total_rounds usually do
+        # not have a fighter-specific selection. Use fuzzy score, but require
+        # secondary confirmation that both live-card fighter last names appear
+        # in provider text before accepting the candidate.
+        if not matchup_payload["matchup_secondary_confirmed"]:
+            match_score = 0.0
+            min_single_score = 0.0
+        else:
+            match_score = event_score
+            min_single_score = event_score
+    elif strategy == "event_name":
+        match_score = event_score
+        min_single_score = event_score
+    elif has_fighter:
         best_fighter_score = max(red_score, blue_score)
         match_score = (event_score + best_fighter_score) / 2 if event_score > 0 else best_fighter_score
         min_single_score = min(event_score if event_score > 0 else best_fighter_score, best_fighter_score)
@@ -148,6 +250,8 @@ def _score_catalog_row_to_live_fight(catalog_row: pd.Series, live_row: pd.Series
         "red_score": red_score,
         "blue_score": blue_score,
         "event_score": event_score,
+        "matching_strategy": strategy,
+        **matchup_payload,
     }
 
 
@@ -185,6 +289,11 @@ def match_canonical_market_row_to_live_card(
         "red_score": best["red_score"],
         "blue_score": best["blue_score"],
         "event_score": best["event_score"],
+        "blue_last_name_token": best.get("blue_last_name_token"),
+        "red_last_name_token": best.get("red_last_name_token"),
+        "provider_matchup_text": best.get("provider_matchup_text"),
+        "matchup_secondary_confirmed": best.get("matchup_secondary_confirmed"),
+        "matching_strategy": best.get("matching_strategy"),
     }
 
 
@@ -230,6 +339,17 @@ def _outcome_label(catalog_row: pd.Series) -> Any:
 def build_market_outcome_row(catalog_row: pd.Series, match: dict[str, Any]) -> dict[str, Any]:
     """Build one production market outcome row from a matched canonical row."""
 
+    outcome_label = _outcome_label(catalog_row)
+    outcome_fighter_id = _outcome_fighter_id(catalog_row, match)
+    outcome_join_key = build_outcome_join_key(
+        market_key=catalog_row.get("market_key"),
+        outcome_label=outcome_label,
+        outcome_fighter_id=outcome_fighter_id,
+        outcome_key=catalog_row.get("outcome_key"),
+        side=catalog_row.get("side"),
+        line=catalog_row.get("line"),
+    )
+
     return {
         "snapshot_run_id": catalog_row.get("snapshot_run_id"),
         "snapshot_timestamp": catalog_row.get("snapshot_timestamp"),
@@ -249,10 +369,12 @@ def build_market_outcome_row(catalog_row: pd.Series, match: dict[str, Any]) -> d
         "red_fighter_id": match.get("red_fighter_id"),
         "blue_fighter_id": match.get("blue_fighter_id"),
         "market_key": catalog_row.get("market_key"),
-        "outcome_label": _outcome_label(catalog_row),
+        "matching_strategy": catalog_row.get("matching_strategy"),
+        "outcome_label": outcome_label,
         "outcome_key": catalog_row.get("outcome_key"),
         "outcome_type": catalog_row.get("outcome_type"),
-        "outcome_fighter_id": _outcome_fighter_id(catalog_row, match),
+        "outcome_fighter_id": outcome_fighter_id,
+        "outcome_join_key": outcome_join_key,
         "outcome_fighter_name": catalog_row.get("fighter_name"),
         "side": catalog_row.get("side"),
         "line": catalog_row.get("line"),
@@ -284,6 +406,7 @@ def build_market_match_audit_row(catalog_row: pd.Series, match: dict[str, Any] |
         "provider_market_name": catalog_row.get("provider_market_name"),
         "provider_selection_name": catalog_row.get("provider_selection_name"),
         "market_key": catalog_row.get("market_key"),
+        "matching_strategy": catalog_row.get("matching_strategy"),
         "outcome_key": catalog_row.get("outcome_key"),
         "fighter_name": catalog_row.get("fighter_name"),
         "matched_fight_id": None,
@@ -318,6 +441,11 @@ def build_market_match_audit_row(catalog_row: pd.Series, match: dict[str, Any] |
                 "red_score": match.get("red_score"),
                 "blue_score": match.get("blue_score"),
                 "event_score": match.get("event_score"),
+                "matching_strategy": match.get("matching_strategy"),
+                "matchup_secondary_confirmed": match.get("matchup_secondary_confirmed"),
+                "provider_matchup_text": match.get("provider_matchup_text"),
+                "red_last_name_token": match.get("red_last_name_token"),
+                "blue_last_name_token": match.get("blue_last_name_token"),
                 "is_matched": True,
             }
         )
