@@ -1,0 +1,19 @@
+[
+  "avg_fight_time_diff",
+  "finish_rate_diff",
+  "finish_loss_rate_diff",
+  "decision_win_rate_diff",
+  "decision_loss_rate_diff",
+  "recent_form_avg_fight_time_diff",
+  "ewm_avg_fight_time_diff",
+  "ewm_finish_rate_diff",
+  "ewm_finish_loss_rate_diff",
+  "ewm_decision_win_rate_diff",
+  "ewm_decision_loss_rate_diff",
+  "finish_volatility",
+  "experience_ratio_diff",
+  "age_diff",
+  "fights_diff",
+  "total_rounds",
+  "title_fight"
+]
