@@ -7,6 +7,10 @@ on:
         description: "Model ID"
         required: false
         default: "moneyline_xgboost_v5"
+      model_family:
+        description: "Model family"
+        required: false
+        default: "moneyline"
 
 permissions:
   contents: write
@@ -43,7 +47,9 @@ jobs:
 
       - name: Run Prediction V2
         run: |
-          python -m pipeline.modeling.run_prediction --model-id "${{ inputs.model_id }}"
+          python -m pipeline.modeling.run_prediction \
+            --model-family "${{ inputs.model_family }}" \
+            --model-id "${{ inputs.model_id }}"
 
       - name: Commit prediction outputs
         run: |
