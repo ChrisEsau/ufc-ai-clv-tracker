@@ -23,6 +23,7 @@ from typing import Any
 
 import pandas as pd
 
+from pipeline.common.outcome_join import build_outcome_join_key
 from pipeline.common.paths import (
     BETTING_OUTCOMES_AUDIT_PATH,
     BETTING_OUTCOMES_PATH,
@@ -187,23 +188,50 @@ def _bet_status(row: pd.Series) -> str:
     return "BET_CANDIDATE"
 
 
+def _backfill_outcome_join_key(df: pd.DataFrame) -> pd.DataFrame:
+    """Add outcome_join_key for older artifacts that predate the V2 join contract."""
+
+    out = df.copy()
+    if "outcome_join_key" not in out.columns:
+        out["outcome_join_key"] = pd.NA
+
+    missing_mask = out["outcome_join_key"].isna() | out["outcome_join_key"].astype(str).str.strip().isin(
+        {"", "nan", "None", "<NA>"}
+    )
+
+    if missing_mask.any():
+        out.loc[missing_mask, "outcome_join_key"] = out.loc[missing_mask].apply(
+            lambda row: build_outcome_join_key(
+                market_key=row.get("market_key"),
+                outcome_label=row.get("outcome_label"),
+                outcome_fighter_id=row.get("outcome_fighter_id"),
+                outcome_key=row.get("outcome_key"),
+                side=row.get("side", row.get("outcome_side")),
+                line=row.get("line"),
+            ),
+            axis=1,
+        )
+
+    return out
+
+
 def _prepare_model_predictions(model_df: pd.DataFrame) -> pd.DataFrame:
-    missing = [column for column in JOIN_KEYS if column not in model_df.columns]
+    out = _backfill_outcome_join_key(model_df)
+    missing = [column for column in JOIN_KEYS if column not in out.columns]
     if missing:
         raise ValueError(f"Model outcomes missing join keys: {missing}")
 
-    out = model_df.copy()
     for column in JOIN_KEYS:
         out[column] = out[column].astype(str)
     return out
 
 
 def _prepare_market_outcomes(market_df: pd.DataFrame) -> pd.DataFrame:
-    missing = [column for column in JOIN_KEYS if column not in market_df.columns]
+    out = _backfill_outcome_join_key(market_df)
+    missing = [column for column in JOIN_KEYS if column not in out.columns]
     if missing:
         raise ValueError(f"Market outcomes missing join keys: {missing}")
 
-    out = market_df.copy()
     for column in JOIN_KEYS:
         out[column] = out[column].astype(str)
 
