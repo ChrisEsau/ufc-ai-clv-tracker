@@ -88,6 +88,8 @@ MARKET_OUTCOME_AUDIT_PATH = AUDITS_DIR / "ufc_market_outcome_audit.parquet"
 MARKET_MATCH_AUDIT_V2_PATH = AUDITS_DIR / "ufc_market_match_audit_v2.parquet"
 DRAFTKINGS_MARKET_DIAGNOSTIC_PATH = MARKET_DIR / "draftkings_market_diagnostic.parquet"
 DRAFTKINGS_RAW_INDEX_PATH = MARKET_DIR / "draftkings_raw_index.parquet"
+CANONICAL_MARKET_CATALOG_PATH = MARKET_DIR / "canonical_market_catalog.parquet"
+CANONICAL_MARKET_AUDIT_PATH = AUDITS_DIR / "canonical_market_catalog_audit.parquet"
 
 LIVE_FEATURE_AUDIT_PATH = AUDITS_DIR / "ufc_live_feature_audit.parquet"
 LIVE_MATCH_AUDIT_PATH = AUDITS_DIR / "ufc_live_match_audit.parquet"
