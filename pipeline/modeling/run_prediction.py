@@ -4,7 +4,9 @@ import argparse
 from datetime import datetime, timezone
 from pathlib import Path
 
-from pipeline.common.paths import PREDICTIONS_DIR
+import pandas as pd
+
+from pipeline.common.paths import LIVE_CARD_PATH, PREDICTIONS_DIR
 from pipeline.modeling.model_config import get_model_id, get_prediction_config, load_model_config
 from pipeline.modeling.model_loader import load_model_bundle
 from pipeline.modeling.model_registry import (
@@ -22,6 +24,7 @@ from pipeline.prediction.live_feature_builder import (
 DEFAULT_MODEL_FAMILY = "moneyline"
 DEFAULT_LIVE_FEATURE_OUTPUT_PATH = PREDICTIONS_DIR / "live_model_features.parquet"
 DEFAULT_MODEL_OUTCOMES_PATH = PREDICTIONS_DIR / "model_outcomes.parquet"
+LIVE_CARD_CONTEXT_COLUMNS = ["total_rounds", "title_fight"]
 
 
 class PredictionRunnerError(RuntimeError):
@@ -93,6 +96,7 @@ def main() -> None:
 
     model_config = load_model_config(config_path, require_prediction=True)
     _validate_model_id_match(model_id=model_id, model_config=model_config)
+    _validate_live_card_context_for_model(model_config=model_config)
 
     model_bundle = load_model_bundle(
         model_config,
@@ -159,6 +163,54 @@ def _validate_model_id_match(*, model_id: str, model_config: dict) -> None:
     if config_model_id != model_id:
         raise PredictionRunnerError(
             f"Registry selected model_id '{model_id}' but config has model_id '{config_model_id}'."
+        )
+
+
+
+def _validate_live_card_context_for_model(*, model_config: dict) -> None:
+    """Fail early when a model requires live-card context that is unavailable.
+
+    Prop models such as goes-distance require fight-level context from the live card
+    rather than fighter-state joins. This preflight keeps the failure clear and
+    actionable before loading model artifacts or assembling features.
+    """
+
+    feature_columns = (model_config.get("features") or {}).get("feature_columns") or []
+    required_context_columns = [
+        column for column in LIVE_CARD_CONTEXT_COLUMNS if column in feature_columns
+    ]
+
+    if not required_context_columns:
+        return
+
+    live_card_path = Path(LIVE_CARD_PATH)
+    if not live_card_path.exists():
+        raise PredictionRunnerError(
+            "Selected model requires live-card fight context, but the live-card "
+            f"artifact does not exist: {live_card_path}. Run refresh upcoming events "
+            "and build live card before prediction."
+        )
+
+    live_card_df = pd.read_parquet(live_card_path)
+    missing_columns = [
+        column for column in required_context_columns if column not in live_card_df.columns
+    ]
+
+    null_columns = []
+    for column in required_context_columns:
+        if column in live_card_df.columns and live_card_df[column].isna().any():
+            null_columns.append(column)
+
+    if missing_columns or null_columns:
+        raise PredictionRunnerError(
+            "Selected model requires live-card fight context that is missing or null. "
+            f"Model ID: {get_model_id(model_config)}. "
+            f"Live card path: {live_card_path}. "
+            f"Required context columns: {required_context_columns}. "
+            f"Missing columns: {missing_columns}. "
+            f"Columns with null values: {null_columns}. "
+            "Run the upcoming-events refresh and live-card build workflows before "
+            "running prop prediction. Do not zero-fill fight-context features."
         )
 
 
