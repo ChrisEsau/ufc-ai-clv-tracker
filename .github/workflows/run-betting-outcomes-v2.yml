@@ -2,6 +2,16 @@ name: Run Betting Outcomes V2
 
 on:
   workflow_dispatch:
+    inputs:
+      model_mode:
+        description: "Model mode: production, all, or single"
+        required: true
+        default: "production"
+        type: choice
+        options:
+          - production
+          - all
+          - single
 
 permissions:
   contents: write
@@ -38,7 +48,8 @@ jobs:
 
       - name: Run Betting Outcomes V2
         run: |
-          python -m pipeline.betting.run_betting_outcomes_v2
+          python -m pipeline.betting.run_betting_outcomes_v2 \
+            --model-mode "${{ github.event.inputs.model_mode }}"
 
       - name: Commit betting outputs
         run: |
