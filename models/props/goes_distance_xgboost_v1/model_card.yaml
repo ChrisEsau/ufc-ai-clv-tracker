@@ -3,7 +3,7 @@ model_family: prop
 artifact_name: goes_distance_xgboost_v1
 algorithm: xgboost
 config_path: configs/models/prop_goes_distance_xgboost_v1.yaml
-trained_at_utc: '2026-06-11T17:33:55.212202+00:00'
+trained_at_utc: '2026-06-11T19:18:29.140781+00:00'
 data:
   rolling_features_path: data/features/prop_goes_distance_feature_view.parquet
   target_column: target_goes_distance
