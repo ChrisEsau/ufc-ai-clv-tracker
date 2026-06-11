@@ -7,7 +7,7 @@
 Betting Outcomes V2 joins prediction outcomes to market outcomes using the
 canonical ID-based key:
 
-    fight_id + market_key + outcome_fighter_id
+    fight_id + market_key + outcome_join_key
 
 The output is market-type agnostic. Moneyline is the first supported market,
 but the schema is designed to also support props such as KO/TKO, submission,
@@ -34,7 +34,7 @@ from pipeline.common.risk_settings import RiskSettings, load_risk_settings
 
 
 MODEL_OUTCOMES_PATH = PREDICTIONS_DIR / "model_outcomes.parquet"
-JOIN_KEYS = ["fight_id", "market_key", "outcome_fighter_id"]
+JOIN_KEYS = ["fight_id", "market_key", "outcome_join_key"]
 
 OUTPUT_COLUMNS = [
     "betting_run_id",
@@ -63,6 +63,7 @@ OUTPUT_COLUMNS = [
     "outcome_label",
     "outcome_display",
     "outcome_fighter_id",
+    "outcome_join_key",
     "outcome_side",
     "model_probability",
     "model_pick_probability",
@@ -258,6 +259,7 @@ def _build_betting_outcomes(
         "market_key",
         "outcome_label",
         "outcome_fighter_id",
+        "outcome_join_key",
         "outcome_side",
         "model_probability",
         "model_pick_probability",

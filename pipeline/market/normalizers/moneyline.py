@@ -19,6 +19,8 @@ from typing import Any
 
 import pandas as pd
 
+from pipeline.common.outcome_join import build_outcome_join_key
+
 
 MARKET_OUTCOME_COLUMNS = [
     "snapshot_run_id",
@@ -42,6 +44,7 @@ MARKET_OUTCOME_COLUMNS = [
     "market_key",
     "outcome_label",
     "outcome_fighter_id",
+    "outcome_join_key",
     "american_odds",
     "decimal_odds",
     "implied_probability",
@@ -87,6 +90,8 @@ def _build_side_outcome_row(
 ) -> dict[str, Any]:
     """Build one canonical moneyline market outcome row for red or blue."""
 
+    market_key = "moneyline"
+
     if side == "red":
         outcome_label = match.get("red_fighter")
         outcome_fighter_id = match.get("red_fighter_id")
@@ -118,6 +123,11 @@ def _build_side_outcome_row(
         "market_key": "moneyline",
         "outcome_label": outcome_label,
         "outcome_fighter_id": outcome_fighter_id,
+        "outcome_join_key": build_outcome_join_key(
+            market_key=market_key,
+            outcome_label=outcome_label,
+            outcome_fighter_id=outcome_fighter_id,
+        ),
         "american_odds": _provider_side_value(provider_row, match, side, "american_odds"),
         "decimal_odds": _provider_side_value(provider_row, match, side, "decimal_odds"),
         "implied_probability": _provider_side_value(provider_row, match, side, "implied_prob"),

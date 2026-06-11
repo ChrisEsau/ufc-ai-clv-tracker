@@ -18,6 +18,7 @@ REQUIRED_MARKET_OUTCOME_COLUMNS = [
     "market_key",
     "outcome_label",
     "outcome_fighter_id",
+    "outcome_join_key",
     "american_odds",
     "decimal_odds",
     "implied_probability",
@@ -29,7 +30,7 @@ DUPLICATE_KEY_COLUMNS = [
     "bookmaker",
     "fight_id",
     "market_key",
-    "outcome_fighter_id",
+    "outcome_join_key",
 ]
 
 AUDIT_COLUMNS = [
