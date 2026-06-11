@@ -93,13 +93,7 @@ def _first_feature_source(model_config: dict[str, Any]) -> str | None:
 
 
 def _feature_view_config_path(model_config: dict[str, Any]) -> Path | None:
-    """Resolve feature-view config path from model config metadata.
-
-    The V2 model config owns model training and prediction paths. The feature-view
-    config is resolved from explicit metadata when available, then from the
-    registered feature source name. Missing paths return None so the dashboard can
-    disable only the feature-view workflow for that model.
-    """
+    """Resolve feature-view config path from model config metadata."""
 
     explicit_path = (
         model_config.get("feature_view_config_path")
@@ -198,7 +192,7 @@ def _dispatch_button(
 def render_model_workflow_launcher() -> None:
     """Render a simple registry-driven Model Lab workflow launcher."""
 
-    with st.expander("🚀 V2 Workflow Launcher", expanded=True):
+    with st.expander("V2 Workflow Launcher", expanded=True):
         st.caption(
             "Select a registered model, then launch V2 feature-view, training, or prediction workflows. "
             "Workflow inputs are resolved from the model registry and model config."
@@ -215,9 +209,8 @@ def render_model_workflow_launcher() -> None:
             st.info("No models are registered in configs/models/model_registry.yaml.")
             return
 
-        selectable_rows = [row for row in model_rows if row.get("dashboard_selectable", True)] or model_rows
-        model_ids = [row["model_id"] for row in selectable_rows]
-        row_by_id = {row["model_id"]: row for row in selectable_rows}
+        model_ids = [row["model_id"] for row in model_rows]
+        row_by_id = {row["model_id"]: row for row in model_rows}
 
         selected_model_id = st.selectbox(
             "Registered model",
@@ -299,7 +292,3 @@ def render_model_workflow_launcher() -> None:
                 help_text="Launch run-prediction-v2.yml.",
                 key=f"run_prediction_{selected_model_id}",
             )
-
-        st.caption(
-            "Requires Streamlit secrets: GITHUB_OWNER, GITHUB_REPO, GITHUB_TOKEN, and optionally GITHUB_BRANCH."
-        )
