@@ -45,6 +45,10 @@ jobs:
           pip install -r requirements.txt
           pip install pyyaml scikit-learn==1.6.1 xgboost
 
+      - name: Build live card
+        run: |
+          python -m pipeline.prediction.run_build_live_card --all-upcoming
+
       - name: Run Prediction V2
         run: |
           python -m pipeline.modeling.run_prediction \
@@ -57,9 +61,13 @@ jobs:
           git config user.email "github-actions@github.com"
 
           git add -f \
+            data/predictions/ufc_live_card.parquet \
+            data/predictions/selected_live_card_event.parquet \
             data/predictions/live_model_features.parquet \
             data/predictions/model_outcomes.parquet \
             data/predictions/by_model/${{ inputs.model_id }}/model_outcomes.parquet \
+            data/audits/ufc_live_card_build_audit.parquet \
+            data/audits/ufc_live_card_rejected_rows.parquet \
             data/audits/ufc_live_feature_audit.parquet
 
           git commit -m "Update prediction artifacts" || echo "No changes to commit"
