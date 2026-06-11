@@ -198,45 +198,30 @@ def _render_betting_outcomes_launcher() -> None:
     st.divider()
     st.subheader("Betting Board / Outcomes")
     st.caption(
-        "Run DraftKings discovery, normalize provider markets, match markets to the live card, "
-        "and rebuild betting_outcomes.parquet for the Betting Board tab."
+        "Rebuild betting_outcomes.parquet from existing market_outcomes.parquet and model outputs. "
+        "This does not scrape DraftKings."
     )
 
-    col_event, col_score = st.columns([2, 1])
-    with col_event:
-        draftkings_event_id = st.text_input(
-            "DraftKings Event ID",
-            value=st.session_state.get("model_lab_draftkings_event_id", "33525834"),
-            key="model_lab_draftkings_event_id",
-            help="DraftKings event ID passed to run-betting-outcomes-v2.yml.",
-        )
-    with col_score:
-        min_match_score = st.number_input(
-            "Min Match Score",
-            min_value=0,
-            max_value=100,
-            value=int(st.session_state.get("model_lab_min_match_score", 65)),
-            step=1,
-            key="model_lab_min_match_score",
-            help="Minimum market matching score passed to the DraftKings market matcher.",
-        )
+    model_mode = st.selectbox(
+        "Model Mode",
+        ["production", "all", "single"],
+        index=0,
+        key="model_lab_betting_model_mode",
+        help=(
+            "production = registry models with status: production; "
+            "all = all non-archived registry models; "
+            "single = canonical data/predictions/model_outcomes.parquet."
+        ),
+    )
 
-    inputs = {
-        "draftkings_event_id": str(draftkings_event_id).strip(),
-        "min_match_score": str(int(min_match_score)),
-    }
-    disabled = not bool(inputs["draftkings_event_id"])
+    inputs = {"model_mode": str(model_mode).strip()}
 
     _dispatch_button(
         label="Run Betting Outcomes / Update Betting Board",
         workflow_file=WORKFLOWS["betting_outcomes"],
         inputs=inputs,
-        disabled=disabled,
-        help_text=(
-            "Enter a DraftKings event ID before launching."
-            if disabled
-            else "Launch run-betting-outcomes-v2.yml."
-        ),
+        disabled=False,
+        help_text="Launch run-betting-outcomes-v2.yml with the selected model mode.",
         key="run_betting_outcomes_v2",
     )
 
