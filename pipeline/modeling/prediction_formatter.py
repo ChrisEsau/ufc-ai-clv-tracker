@@ -6,6 +6,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from pipeline.common.outcome_join import build_outcome_join_key
 from pipeline.modeling.confidence import score_prediction_confidence
 from pipeline.modeling.model_config import get_algorithm, get_model_family, get_model_id, get_prediction_config
 
@@ -356,6 +357,14 @@ def _build_base_outcome_row(
         model_pick_probability=model_confidence,
     ).to_dict()
 
+    market_key = prediction_config.get("market_key")
+    outcome_join_key = build_outcome_join_key(
+        market_key=market_key,
+        outcome_label=outcome_label,
+        outcome_fighter_id=outcome_fighter_id,
+        side=outcome_side,
+    )
+
     row = {
         "prediction_run_id": prediction_run_id,
         "prediction_timestamp": prediction_timestamp,
@@ -371,8 +380,9 @@ def _build_base_outcome_row(
         "blue_fighter": fight_row.get("blue_fighter"),
         "red_fighter_id": fight_row.get("red_fighter_id"),
         "blue_fighter_id": fight_row.get("blue_fighter_id"),
-        "market_key": prediction_config.get("market_key"),
+        "market_key": market_key,
         "outcome_label": str(outcome_label),
+        "outcome_join_key": outcome_join_key,
         "outcome_fighter_id": outcome_fighter_id,
         "outcome_side": str(outcome_side),
         "model_probability": float(model_probability),
