@@ -62,13 +62,14 @@ jobs:
 
           git add -f \
             data/predictions/ufc_live_card.parquet \
-            data/predictions/selected_live_card_event.parquet \
             data/predictions/live_model_features.parquet \
             data/predictions/model_outcomes.parquet \
             data/predictions/by_model/${{ inputs.model_id }}/model_outcomes.parquet \
-            data/audits/ufc_live_card_build_audit.parquet \
-            data/audits/ufc_live_card_rejected_rows.parquet \
             data/audits/ufc_live_feature_audit.parquet
+
+          git add -f data/predictions/selected_live_card_event.parquet 2>/dev/null || true
+          git add -f data/audits/ufc_live_card_build_audit.parquet 2>/dev/null || true
+          git add -f data/audits/ufc_live_card_rejected_rows.parquet 2>/dev/null || true
 
           git commit -m "Update prediction artifacts" || echo "No changes to commit"
           git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
