@@ -66,6 +66,8 @@ fight_id + market_key + outcome_fighter_id
 
 `outcome_label` is display/context only and should not be the primary join key.
 
+
+Current architecture status: Moneyline V2 is stable. Registry-driven market matching is validated. Prop modeling infrastructure is operational but live-card fight-context normalization (title_fight, total_rounds) remains the primary active development item.
 ---
 # Architecture Validation Update (2026-06-10)
 
@@ -493,6 +495,429 @@ These areas still depend heavily on pre-V2 or side-based artifacts:
 - Model Lab artifact readers tied to `UFC_Model_v5_Experiment`
 
 ---
+## June 2026 – Market Pipeline Architecture Lock-In
+
+### Registry-Driven Market Matching (Approved)
+
+The market pipeline now uses a registry-driven matching architecture.
+
+Location:
+
+```text
+configs/market/providers/
+```
+
+Current implementation:
+
+```text
+draftkings_ufc_registry.yaml
+```
+
+The registry is the authoritative mapping layer between sportsbook market names and UFC platform market keys.
+
+Examples:
+
+```text
+Moneyline
+Fight Goes Distance
+Total Rounds
+Alternate Total Rounds
+Method of Victory
+Round and Method
+Win by KO/TKO/DQ
+Win by Submission
+Win by Decision
+```
+
+No sportsbook-specific matching logic should be embedded directly inside downstream betting or dashboard code.
+
+All market normalization must flow through provider registries.
+
+---
+
+### Universal Outcome Join Key Contract (Approved)
+
+A universal outcome join contract now exists between:
+
+```text
+Prediction V2
+Market Matching
+Betting Outcomes V2
+Dashboard
+```
+
+Field:
+
+```text
+outcome_join_key
+```
+
+Examples:
+
+```text
+fighter:<fighter_id>
+fight:goes_distance
+fight:inside_distance
+fighter:<fighter_id>:ko_tko_dq
+fighter:<fighter_id>:submission
+fighter:<fighter_id>:decision
+```
+
+Prediction outputs and market outputs must join exclusively through:
+
+```text
+fight_id
+market_key
+outcome_join_key
+```
+
+No fuzzy matching is permitted downstream of Market Matching.
+
+---
+
+### Secondary Matchup Confirmation Layer (Approved)
+
+A secondary matchup confirmation layer was added to protect against incorrect fuzzy matches.
+
+Primary match:
+
+```text
+composite_name_score()
+```
+
+Secondary confirmation:
+
+```text
+fighter last-name token validation
+```
+
+Example:
+
+Provider text:
+
+```text
+Ilia Topuria vs Justin Gaethje
+Fight To Go The Distance
+```
+
+Live card:
+
+```text
+Ilia Topuria
+Justin Gaethje
+```
+
+Confirmation requires:
+
+```text
+topuria
+gaethje
+```
+
+both exist inside provider matchup text.
+
+Purpose:
+
+* Reduce false-positive fuzzy matches.
+* Permit lower fuzzy thresholds.
+* Increase confidence in matchup-level prop matching.
+
+---
+
+### Approved Match Threshold Strategy
+
+Current operational threshold:
+
+```text
+--min-match-score 65
+```
+
+Reason:
+
+Certain matchup-level props naturally score lower because sportsbook market names contain additional wording:
+
+Examples:
+
+```text
+Fight To Go The Distance
+Exact Method Of Victory
+Round And Method Betting
+Alternate Total Rounds
+```
+
+Observed scores:
+
+```text
+67-69
+```
+
+for valid Topuria/Gaethje matchup props.
+
+Secondary confirmation now acts as the safety layer.
+
+Future policy:
+
+```text
+Match Score >= 65
+AND
+Secondary Confirmation = True
+```
+
+---
+
+### Market Matching Validation Result
+
+Validation completed on:
+
+```text
+UFC Freedom 250
+Ilia Topuria vs Justin Gaethje
+```
+
+Results:
+
+```text
+Catalog Rows: 71
+Matched Rows: 57
+```
+
+All matched rows resolved to:
+
+```text
+Ilia Topuria vs Justin Gaethje
+```
+
+No cross-fight mismatches were observed.
+
+This validated the registry-driven matching architecture.
+
+---
+
+## Prop Modeling Architecture
+
+### Prop Models Are Independent Model Families
+
+Prop models remain independent from moneyline models.
+
+Approved model families:
+
+```text
+moneyline
+goes_distance
+exact_method
+ko_tko_dq
+submission
+decision
+round_method
+```
+
+Each model family owns:
+
+```text
+feature view
+training workflow
+model artifacts
+prediction workflow
+```
+
+Location:
+
+```text
+models/props/
+```
+
+Examples:
+
+```text
+models/props/goes_distance_xgboost_v1/
+```
+
+---
+
+### Workflow Parameterization (Approved)
+
+Workflows remain separate.
+
+Workflows now support runtime configuration through:
+
+```text
+--config
+--model-family
+--model-id
+```
+
+This allows:
+
+```text
+Moneyline training
+Prop training
+Moneyline prediction
+Prop prediction
+```
+
+to execute through the same workflow infrastructure while remaining independent pipelines.
+
+---
+
+## Betting Board V2 Architecture
+
+### Single Unified Betting Table (Approved)
+
+The Betting Board remains a single table.
+
+No separate prop table will be created.
+
+Sidebar filters determine:
+
+```text
+Market Type
+Bookmaker
+```
+
+Supported views:
+
+```text
+Moneyline
+Props
+```
+
+All results display through the same betting board.
+
+---
+
+### Bookmaker Filtering
+
+Bookmaker selection remains authoritative.
+
+Future sportsbooks can be added without dashboard redesign.
+
+Architecture:
+
+```text
+Registry
+    ↓
+Market Matching
+    ↓
+Betting Outcomes
+    ↓
+Sidebar Bookmaker Filter
+```
+
+---
+
+## Prop Prediction Requirements
+
+### Fight Context Features
+
+Prop models may require fight-level context.
+
+Current examples:
+
+```text
+title_fight
+total_rounds
+```
+
+These are not fighter-state features.
+
+They originate from:
+
+```text
+upcoming fights
+live card
+fight metadata
+```
+
+Prediction V2 now intentionally fails when required fight-context features are missing.
+
+Silent zero-filling is prohibited.
+
+Reason:
+
+Fight-context variables materially affect prop probabilities.
+
+Examples:
+
+```text
+Goes Distance
+Method
+Round Props
+```
+
+---
+
+### Live Feature Builder Contract
+
+Prediction V2 remains strict:
+
+```text
+Missing required feature
+    -> Fail
+```
+
+No automatic zero fabrication.
+
+This behavior is intentional and locked.
+
+Missing features must be corrected upstream.
+
+---
+
+## Current Open Items
+
+### Live Card Context Normalization
+
+Current issue under active development:
+
+```text
+title_fight
+total_rounds
+```
+
+must always exist in:
+
+data/predictions/ufc_live_card.parquet
+
+Future implementation should use:
+
+```text
+pipeline.common.fight_context
+```
+
+for canonical normalization.
+
+Examples:
+
+```text
+Title Fight -> 5 rounds
+Non-Title Fight -> 3 rounds
+```
+
+This remains the preferred architecture direction.
+
+---
+
+## Current Recommended Prop Pipeline Run Order
+
+```text
+1. Refresh Upcoming Events
+
+2. Build Live Card
+
+3. Build Features
+
+4. Train Model (if needed)
+
+5. Run Prediction
+
+6. Run Market Matching
+
+7. Run Betting Outcomes V2
+
+8. Open Dashboard
+```
+
+This is the current production sequence for prop-model execution.
 
 ## Source-of-Truth Concepts
 
