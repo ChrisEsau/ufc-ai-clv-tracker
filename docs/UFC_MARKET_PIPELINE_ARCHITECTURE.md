@@ -149,17 +149,59 @@ Recommended Stake
 Status
 ```
 
-### 10. Locked Development Order
+### 10. Registry-Driven Matching Strategy
+Market matching behavior must be provider-registry driven.
+
+No sportsbook-specific matching logic may be hardcoded inside:
+
+```text
+pipeline/market/market_matcher.py
+```
+
+The matcher consumes a strategy resolved from the provider registry. Supported strategy families include:
+
+```text
+fighter_name
+matchup_name
+event_name
+provider_crosswalk
+```
+
+Default intent:
+
+```text
+fighter-specific markets -> fighter_name
+fight-level markets      -> matchup_name
+card/event markets       -> event_name
+```
+
+DraftKings examples:
+
+```text
+moneyline            -> fighter_name
+win_by_ko_tko_dq     -> fighter_name
+win_by_submission    -> fighter_name
+win_by_decision      -> fighter_name
+goes_distance        -> matchup_name
+total_rounds         -> matchup_name
+exact_method         -> matchup_name
+round_method         -> matchup_name
+```
+
+If downstream matcher logic requires sportsbook-specific branching, the abstraction boundary has been violated.
+
+### 11. Locked Development Order
 1. run_normalize_provider_markets.py
 2. canonical_market_catalog.parquet
 3. market_matcher.py
 4. outcome_join_key support across model_outcomes and market_outcomes
-5. run_market_matching.py
-6. market_outcomes.parquet
-7. run_betting_outcomes_v2.py
-8. betting_outcomes.parquet
-9. betting_board_v2.py prop section
-10. Action Board integration
+5. registry-driven matching strategy support
+6. run_market_matching.py
+7. market_outcomes.parquet
+8. run_betting_outcomes_v2.py
+9. betting_outcomes.parquet
+10. betting_board_v2.py prop section
+11. Action Board integration
 
 ## Existing DraftKings Components
 
@@ -182,10 +224,12 @@ Created:
 ```text
 pipeline/market/run_normalize_provider_markets.py
 pipeline/market/market_matcher.py
+pipeline/market/run_market_matching.py
+pipeline/common/outcome_join.py
 ```
 
 Next implementation step:
 
 ```text
-Add outcome_join_key support consistently to model outcomes, market outcomes, and Betting Outcomes V2.
+Add registry-driven matching strategy support so fight-level props such as goes_distance match by matchup text instead of fighter outcome text.
 ```
