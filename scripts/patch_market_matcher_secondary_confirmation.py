@@ -3,6 +3,21 @@ from pathlib import Path
 path = Path("pipeline/market/market_matcher.py")
 s = path.read_text()
 
+# Add market outcome columns.
+if '    "matching_strategy",\n' not in s:
+    s = s.replace(
+        '    "market_key",\n',
+        '    "market_key",\n    "matching_strategy",\n',
+        1,
+    )
+
+if '    "outcome_join_key",\n' not in s:
+    s = s.replace(
+        '    "outcome_fighter_id",\n',
+        '    "outcome_fighter_id",\n    "outcome_join_key",\n',
+        1,
+    )
+
 # Add audit columns.
 for col in [
     '    "matching_strategy",\n',
@@ -12,7 +27,18 @@ for col in [
     '    "blue_last_name_token",\n',
 ]:
     if col not in s:
-        s = s.replace('    "market_key",\n', '    "market_key",\n' + col, 1)
+        # Second occurrence of market_key is MARKET_MATCH_AUDIT_COLUMNS.
+        first = s.find('    "market_key",\n')
+        second = s.find('    "market_key",\n', first + 1)
+        if second >= 0:
+            s = s[:second] + s[second:].replace('    "market_key",\n', '    "market_key",\n' + col, 1)
+
+# Import shared outcome-join helper if missing.
+if "from pipeline.common.outcome_join import build_outcome_join_key" not in s:
+    s = s.replace(
+        "import pandas as pd\n\n",
+        "import pandas as pd\n\nfrom pipeline.common.outcome_join import build_outcome_join_key\n",
+    )
 
 # Add helper functions before _event_score.
 marker = 'def _event_score(catalog_row: pd.Series, live_row: pd.Series) -> float:\n'
@@ -47,14 +73,19 @@ def _matchup_confirmation_payload(catalog_row: pd.Series, live_row: pd.Series) -
     }
 
 
+def _matching_strategy(catalog_row: pd.Series) -> str:
+    strategy = _safe_str(catalog_row.get("matching_strategy")).lower()
+    return strategy or "fighter_name"
+
+
 '''
 if "def _matchup_confirmation_payload(" not in s:
     s = s.replace(marker, helpers + marker)
 
-# Initialize matchup payload.
+# Initialize strategy and confirmation payload.
 s = s.replace(
-    '    strategy = _matching_strategy(catalog_row)\n    has_fighter = not np.isnan(red_score) and not np.isnan(blue_score)\n',
-    '    strategy = _matching_strategy(catalog_row)\n    matchup_payload = _matchup_confirmation_payload(catalog_row, live_row)\n    has_fighter = not np.isnan(red_score) and not np.isnan(blue_score)\n',
+    '    event_score = _event_score(catalog_row, live_row)\n    red_score, blue_score = _fighter_scores(catalog_row, live_row)\n\n    has_fighter = not np.isnan(red_score) and not np.isnan(blue_score)\n',
+    '    event_score = _event_score(catalog_row, live_row)\n    red_score, blue_score = _fighter_scores(catalog_row, live_row)\n    strategy = _matching_strategy(catalog_row)\n    matchup_payload = _matchup_confirmation_payload(catalog_row, live_row)\n\n    has_fighter = not np.isnan(red_score) and not np.isnan(blue_score)\n',
 )
 
 # Add strategy branch if missing.
@@ -80,6 +111,24 @@ for line in [
 ]:
     if line not in s:
         s = s.replace('        "event_score": best["event_score"],\n', '        "event_score": best["event_score"],\n' + line, 1)
+
+# Build outcome_join_key in market outcome rows.
+s = s.replace(
+    'def build_market_outcome_row(catalog_row: pd.Series, match: dict[str, Any]) -> dict[str, Any]:\n    """Build one production market outcome row from a matched canonical row."""\n\n    return {\n',
+    'def build_market_outcome_row(catalog_row: pd.Series, match: dict[str, Any]) -> dict[str, Any]:\n    """Build one production market outcome row from a matched canonical row."""\n\n    outcome_label = _outcome_label(catalog_row)\n    outcome_fighter_id = _outcome_fighter_id(catalog_row, match)\n    outcome_join_key = build_outcome_join_key(\n        market_key=catalog_row.get("market_key"),\n        outcome_label=outcome_label,\n        outcome_fighter_id=outcome_fighter_id,\n        outcome_key=catalog_row.get("outcome_key"),\n        side=catalog_row.get("side"),\n        line=catalog_row.get("line"),\n    )\n\n    return {\n',
+)
+
+s = s.replace('        "outcome_label": _outcome_label(catalog_row),\n', '        "outcome_label": outcome_label,\n')
+s = s.replace(
+    '        "outcome_fighter_id": _outcome_fighter_id(catalog_row, match),\n',
+    '        "outcome_fighter_id": outcome_fighter_id,\n        "outcome_join_key": outcome_join_key,\n',
+)
+if '        "matching_strategy": match.get("matching_strategy", catalog_row.get("matching_strategy")),\n' not in s:
+    s = s.replace(
+        '        "market_key": catalog_row.get("market_key"),\n',
+        '        "market_key": catalog_row.get("market_key"),\n        "matching_strategy": match.get("matching_strategy", catalog_row.get("matching_strategy")),\n',
+        1,
+    )
 
 # Audit unmatched defaults.
 default_audit = '        "market_key": catalog_row.get("market_key"),\n        "outcome_key": catalog_row.get("outcome_key"),\n'
