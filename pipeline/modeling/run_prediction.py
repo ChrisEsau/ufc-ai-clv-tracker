@@ -31,7 +31,6 @@ class PredictionRunnerError(RuntimeError):
     """Raised when the Prediction V2 runner fails."""
 
 
-
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run UFC Prediction V2 and write outcome-level predictions.",
@@ -67,7 +66,6 @@ def parse_args() -> argparse.Namespace:
         help="Use raw_model.joblib when available instead of preferring calibrated_model.joblib.",
     )
     return parser.parse_args()
-
 
 
 def main() -> None:
@@ -141,21 +139,22 @@ def main() -> None:
     print("Prediction V2 complete.")
 
 
-
 def _write_model_scoped_outputs(*, outcome_df, model_config: dict) -> None:
+    """Persist a stable per-model prediction artifact for board aggregation."""
+
+    model_id = get_model_id(model_config)
     prediction_config = get_prediction_config(model_config)
     output_config = prediction_config.get("output", {}) or {}
     path_template = output_config.get("model_scoped_path_template")
 
-    if not path_template:
-        return
+    if path_template:
+        path = Path(str(path_template).format(model_id=model_id))
+    else:
+        path = PREDICTIONS_DIR / "by_model" / model_id / "model_outcomes.parquet"
 
-    model_id = get_model_id(model_config)
-    path = Path(str(path_template).format(model_id=model_id))
     path.parent.mkdir(parents=True, exist_ok=True)
     outcome_df.to_parquet(path, index=False)
     print(f"Model-scoped outcomes output: {path}")
-
 
 
 def _validate_model_id_match(*, model_id: str, model_config: dict) -> None:
@@ -164,7 +163,6 @@ def _validate_model_id_match(*, model_id: str, model_config: dict) -> None:
         raise PredictionRunnerError(
             f"Registry selected model_id '{model_id}' but config has model_id '{config_model_id}'."
         )
-
 
 
 def _validate_live_card_context_for_model(*, model_config: dict) -> None:
@@ -214,10 +212,8 @@ def _validate_live_card_context_for_model(*, model_config: dict) -> None:
         )
 
 
-
 def _make_prediction_run_id() -> str:
     return datetime.now(timezone.utc).strftime("pred_%Y%m%d_%H%M%S")
-
 
 
 if __name__ == "__main__":
