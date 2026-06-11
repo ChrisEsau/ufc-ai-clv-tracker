@@ -39,10 +39,13 @@ from ufc_pipeline_utils import american_to_decimal, american_to_implied_prob
 BOOKMAKER = "DraftKings"
 SOURCE = "draftkings_public"
 DEFAULT_TIMEOUT_SECONDS = 30
-DEFAULT_USER_AGENT = "ufc-ai-clv-tracker/market-discovery"
+DEFAULT_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+)
 DEFAULT_BASE_URL = "https://sportsbook-nash.draftkings.com/sites/US-KS-SB/api/sportscontent"
 EVENT_ENDPOINT = "/pagedata/event/v1/events"
-EVENT_SUBCATEGORY_MARKETS_ENDPOINT = "/controldata/event/eventSubcategory/v1/markets"
+EVENT_SUBCATEGORY_MARKETS_ENDPOINT = "/controldata/league/eventSubcategory/v1/markets"
 
 RAW_MARKET_COLUMNS = [
     "snapshot_run_id",
@@ -116,20 +119,23 @@ def build_event_subcategory_markets_url(
     *,
     base_url: str = DEFAULT_BASE_URL,
 ) -> str:
-    """Build the DraftKings public market URL for one event/subcategory pair."""
+    """Build the DraftKings browser-style market URL for one event/subcategory pair."""
 
     event_id = str(event_id)
     subcategory_id = str(subcategory_id)
     markets_query = (
         f"$filter=eventId eq '{event_id}' "
         f"AND clientMetadata/subCategoryId eq '{subcategory_id}' "
-        "AND tags/all(t: t ne 'SportcastBetBuilder') "
-        "and tags/any(t: t eq 'OSB')"
+        "AND tags/all(t: t ne 'SportcastBetBuilder')"
     )
+    events_query = f"$filter=id in ('{event_id}')"
     query = urlencode(
         {
-            "templateVars": f"{event_id},{subcategory_id}",
+            "isBatchable": "false",
+            "templateVars": subcategory_id,
             "marketsQuery": markets_query,
+            "eventsQuery": events_query,
+            "include": "Events",
             "entity": "markets",
         }
     )
@@ -144,8 +150,23 @@ def fetch_public_json(url: str, *, timeout: int = DEFAULT_TIMEOUT_SECONDS) -> di
     """
 
     headers = {
-        "Accept": "application/json, text/plain, */*",
+        "Accept": "*/*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Cache-Control": "no-cache",
+        "Content-Type": "application/json charset=utf-8",
+        "Origin": "https://sportsbook.draftkings.com",
+        "Pragma": "no-cache",
+        "Referer": "https://sportsbook.draftkings.com/",
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "same-site",
         "User-Agent": DEFAULT_USER_AGENT,
+        "X-Client-Feature": "eventSubcategory",
+        "X-Client-Name": "web",
+        "X-Client-Page": "league",
+        "X-Client-Version": "2624.1.1.11",
+        "X-Client-Widget-Name": "cms",
+        "X-Client-Widget-Version": "2.12.1",
     }
     response = requests.get(url, headers=headers, timeout=timeout)
     response.raise_for_status()
