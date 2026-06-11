@@ -192,11 +192,44 @@ def _event_options(events: pd.DataFrame, outcomes: pd.DataFrame) -> list[str]:
     return ["All Events", *sorted(set(n for n in names if n.strip()))]
 
 
+def _model_mode_options(outcomes: pd.DataFrame) -> list[str]:
+    if outcomes.empty or "model_registry_status" not in outcomes.columns:
+        return ["All"]
+    statuses = {str(value).strip().lower() for value in outcomes["model_registry_status"].dropna() if str(value).strip()}
+    ordered = [label for label in ["Production", "Draft"] if label.lower() in statuses]
+    return ["All", *ordered]
+
+
+def _model_id_options(outcomes: pd.DataFrame) -> list[str]:
+    if outcomes.empty or "model_id" not in outcomes.columns:
+        return ["All Models"]
+    model_ids = sorted({str(value).strip() for value in outcomes["model_id"].dropna() if str(value).strip()})
+    return ["All Models", *model_ids]
+
+
+def _render_model_sidebar_filters(outcomes: pd.DataFrame) -> None:
+    model_modes = _model_mode_options(outcomes)
+    if st.session_state.get("bb_filter_model_mode") not in model_modes:
+        st.session_state["bb_filter_model_mode"] = "All"
+    st.sidebar.selectbox("Model Mode", model_modes, key="bb_filter_model_mode")
+
+    model_ids = _model_id_options(outcomes)
+    if st.session_state.get("bb_filter_model_id") not in model_ids:
+        st.session_state["bb_filter_model_id"] = "All Models"
+    st.sidebar.selectbox("Model ID", model_ids, key="bb_filter_model_id")
+
+
 def _apply_base_filters(df: pd.DataFrame) -> pd.DataFrame:
     """Filter by dimensions that do not remove one side of a moneyline fight."""
     if df.empty:
         return df
     out = df.copy()
+    model_mode = st.session_state.get("bb_filter_model_mode", "All")
+    if model_mode != "All" and "model_registry_status" in out.columns:
+        out = out[out["model_registry_status"].astype(str).str.lower() == model_mode.lower()]
+    model_id = st.session_state.get("bb_filter_model_id", "All Models")
+    if model_id != "All Models" and "model_id" in out.columns:
+        out = out[out["model_id"].astype(str) == model_id]
     event = st.session_state.get("bb_filter_event", "All Events")
     if event != "All Events" and "event_name" in out.columns:
         out = out[out["event_name"].astype(str) == event]
@@ -429,6 +462,7 @@ def render_betting_board():
     if outcomes.empty:
         st.warning(f"No betting outcomes found at `{BETTING_OUTCOMES_PATH}`. Run `python -m pipeline.betting.run_betting_outcomes_v2`.")
         return
+    _render_model_sidebar_filters(outcomes)
     updated = None
     for col in ["betting_timestamp", "snapshot_timestamp", "prediction_timestamp"]:
         if col in outcomes.columns:
