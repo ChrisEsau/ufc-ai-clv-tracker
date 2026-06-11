@@ -2,15 +2,6 @@ name: Run Betting Outcomes V2
 
 on:
   workflow_dispatch:
-    inputs:
-      draftkings_event_id:
-        description: "DraftKings event ID to scrape"
-        required: true
-        default: "33525834"
-      min_match_score:
-        description: "Minimum market matching score"
-        required: true
-        default: "65"
 
 permissions:
   contents: write
@@ -45,42 +36,19 @@ jobs:
           pip install -r requirements.txt
           pip install pyyaml scikit-learn==1.6.1 xgboost
 
-      - name: Run DraftKings discovery
-        run: |
-          python -m pipeline.market.run_draftkings_discovery \
-            --event-id "${{ github.event.inputs.draftkings_event_id }}" \
-            --registry-path configs/market/providers/draftkings_ufc_registry.yaml
-
-      - name: Normalize DraftKings markets
-        run: |
-          python -m pipeline.market.run_normalize_provider_markets \
-            --provider draftkings
-
-      - name: Match DraftKings markets to live card
-        run: |
-          python -m pipeline.market.run_market_matching \
-            --registry-path configs/market/providers/draftkings_ufc_registry.yaml \
-            --min-match-score "${{ github.event.inputs.min_match_score }}"
-
       - name: Run Betting Outcomes V2
         run: |
           python -m pipeline.betting.run_betting_outcomes_v2
 
-      - name: Commit betting and market outputs
+      - name: Commit betting outputs
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
           git add -f \
-            data/market/draftkings_market_diagnostic.parquet \
-            data/market/draftkings_raw_index.parquet \
-            data/market/canonical_market_catalog.parquet \
-            data/market/market_outcomes.parquet \
-            data/audits/canonical_market_catalog_audit.parquet \
-            data/audits/ufc_market_match_audit_v2.parquet \
             data/predictions/betting_outcomes.parquet \
             data/audits/ufc_betting_outcomes_audit.parquet
 
-          git commit -m "Update DraftKings market and betting outcomes artifacts" || echo "No changes to commit"
+          git commit -m "Update betting outcomes artifacts" || echo "No changes to commit"
           git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
           git push origin "HEAD:${GITHUB_REF_NAME}"
