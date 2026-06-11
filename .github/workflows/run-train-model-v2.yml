@@ -4,22 +4,57 @@ on:
   workflow_dispatch:
     inputs:
       config_path:
+        description: "Model training config path"
         required: false
         default: configs/models/moneyline_xgboost_v5.yaml
+      artifact_dir:
+        description: "Model artifact directory to commit"
+        required: false
+        default: models/moneyline/xgboost_v5
 
 permissions:
   contents: write
+
+concurrency:
+  group: train-model-v2-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   train-model-v2:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout repo
+        uses: actions/checkout@v4
         with:
-          python-version: '3.11'
-      - run: |
+          ref: ${{ github.ref_name }}
+
+      - name: Sync latest branch state
+        run: |
+          git fetch origin "${GITHUB_REF_NAME}"
+          git pull --ff-only origin "${GITHUB_REF_NAME}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
           python -m pip install --upgrade pip
           pip install -r requirements/requirements-workspace.txt
-      - run: |
-          python -m pipeline.training.run_train_model --config "${{ inputs.config_path }}"
+
+      - name: Train model
+        run: |
+          python -m pipeline.training.run_train_model \
+            --config "${{ inputs.config_path }}"
+
+      - name: Commit model artifacts
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add -f "${{ inputs.artifact_dir }}"
+
+          git commit -m "Update model training artifacts" || echo "No changes"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
