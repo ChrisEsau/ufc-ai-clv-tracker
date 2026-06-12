@@ -1,0 +1,120 @@
+name: Run DraftKings Diagnostic Flow
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: draftkings-diagnostic-flow-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  run-draftkings-diagnostic-flow:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Sync latest branch state
+        run: |
+          git fetch origin "${GITHUB_REF_NAME}"
+          git pull --ff-only origin "${GITHUB_REF_NAME}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Inspect DraftKings market flow artifacts
+        run: |
+          python - <<'PY'
+          import pandas as pd
+          from pathlib import Path
+
+          paths = {
+              "event_index": Path("data/market/draftkings_event_index.parquet"),
+              "card_matches": Path("data/market/draftkings_event_card_matches.parquet"),
+              "diagnostic": Path("data/market/draftkings_market_diagnostic.parquet"),
+              "canonical_catalog": Path("data/market/canonical_market_catalog.parquet"),
+              "market_outcomes": Path("data/market/market_outcomes.parquet"),
+              "raw_index": Path("data/market/draftkings_raw_index.parquet"),
+          }
+
+          print("=" * 80)
+          print("DRAFTKINGS MARKET FLOW DIAGNOSTIC")
+          print("=" * 80)
+
+          frames = {}
+          for label, path in paths.items():
+              print()
+              print(f"========== {label.upper()} ==========")
+              print("Path:", path)
+              print("Exists:", path.exists())
+              if not path.exists():
+                  continue
+              df = pd.read_parquet(path)
+              frames[label] = df
+              print("Rows:", len(df))
+              print("Columns:", len(df.columns))
+
+              if "provider_event_id" in df.columns:
+                  print("Unique provider_event_id:", df["provider_event_id"].nunique(dropna=True))
+                  print("Provider event counts:")
+                  print(df["provider_event_id"].astype(str).value_counts(dropna=False).head(30).to_string())
+
+              if "is_matched" in df.columns:
+                  print("Matched rows:", int(df["is_matched"].fillna(False).sum()))
+
+              if "market_key" in df.columns:
+                  print("Market key counts:")
+                  print(df["market_key"].value_counts(dropna=False).head(30).to_string())
+
+              if {"market_key", "fight_id"}.issubset(df.columns):
+                  print("Unique fights by market_key:")
+                  print(df.groupby("market_key")["fight_id"].nunique().to_string())
+
+          print()
+          print("========== FLOW CHECK ==========")
+          diagnostic = frames.get("diagnostic", pd.DataFrame())
+          catalog = frames.get("canonical_catalog", pd.DataFrame())
+          market = frames.get("market_outcomes", pd.DataFrame())
+          card = frames.get("card_matches", pd.DataFrame())
+
+          if not card.empty and "is_matched" in card.columns:
+              matched_event_ids = set(card.loc[card["is_matched"].fillna(False), "provider_event_id"].astype(str))
+              print("Matched card provider events:", len(matched_event_ids))
+          else:
+              matched_event_ids = set()
+
+          if not diagnostic.empty and "provider_event_id" in diagnostic.columns:
+              diagnostic_event_ids = set(diagnostic["provider_event_id"].dropna().astype(str))
+              print("Diagnostic provider events:", len(diagnostic_event_ids))
+              if matched_event_ids:
+                  print("Matched events missing from diagnostic:", sorted(matched_event_ids - diagnostic_event_ids))
+          else:
+              diagnostic_event_ids = set()
+
+          if not catalog.empty and "provider_event_id" in catalog.columns:
+              catalog_event_ids = set(catalog["provider_event_id"].dropna().astype(str))
+              print("Canonical catalog provider events:", len(catalog_event_ids))
+              if diagnostic_event_ids:
+                  print("Diagnostic events missing from catalog:", sorted(diagnostic_event_ids - catalog_event_ids))
+          else:
+              catalog_event_ids = set()
+
+          if not market.empty and "provider_event_id" in market.columns:
+              market_event_ids = set(market["provider_event_id"].dropna().astype(str))
+              print("Market outcome provider events:", len(market_event_ids))
+              if catalog_event_ids:
+                  print("Catalog events missing from market outcomes:", sorted(catalog_event_ids - market_event_ids))
+          PY
