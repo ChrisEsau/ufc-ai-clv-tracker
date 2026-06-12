@@ -23,8 +23,8 @@ models:
     - Prediction V2 should format this model as outcome rows, not red/blue canonical
       columns.
   prop_goes_distance_xgboost_v1:
-    display_name: Goes Distance XGBoost V1
-    description: First V2 prop model for fight-level goes-distance probabilities.
+    display_name: Moneyline XGBoost V5 Experiment
+    description: Draft experiment created from moneyline_xgboost_v5.
     model_family: prop
     market_key: goes_distance
     algorithm: xgboost
@@ -33,10 +33,6 @@ models:
     status: draft
     dashboard_selectable: false
     outcome_architecture: true
-    notes:
-    - Fight-level binary prop model with outcomes goes_distance and inside_distance.
-    - Uses data/features/prop_goes_distance_feature_view.parquet.
-    - Symmetry is disabled because the target is fight-level, not red/blue side-level.
   moneyline_xgboost_v5_draft:
     display_name: Moneyline XGBoost V5 Draft
     description: Draft clone of moneyline_xgboost_v5 created from Model Lab.
