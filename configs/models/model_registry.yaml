@@ -1,30 +1,15 @@
-# UFC Model Registry
-#
-# Purpose:
-#   Runtime registry for selecting model configs without hardcoding artifact paths
-#   in prediction, dashboard, Model Lab, CLV, or betting-board code.
-#
-# Selection precedence for future runners:
-#   1. CLI argument, e.g. --model-id moneyline_xgboost_v5
-#   2. Environment variable, e.g. UFC_MODEL_ID=moneyline_xgboost_v5
-#   3. active_models.<model_family>.primary from this registry
-#
-# The registry should point to model config YAML files. It should not duplicate
-# full feature contracts, model parameters, or artifact definitions.
-
 registry_name: ufc_model_registry
 version: 1
-
 active_models:
   moneyline:
     primary: moneyline_xgboost_v5
   prop:
     primary: prop_goes_distance_xgboost_v1
-
 models:
   moneyline_xgboost_v5:
     display_name: Moneyline XGBoost V5
-    description: Current production moneyline model trained from the modular V5 training framework.
+    description: Current production moneyline model trained from the modular V5 training
+      framework.
     model_family: moneyline
     algorithm: xgboost
     config_path: configs/models/moneyline_xgboost_v5.yaml
@@ -33,10 +18,10 @@ models:
     dashboard_selectable: true
     outcome_architecture: true
     notes:
-      - Uses the explicit 124-feature moneyline contract from the model config.
-      - Training target is ID-based: target=1 when winner_id == r_id.
-      - Prediction V2 should format this model as outcome rows, not red/blue canonical columns.
-
+    - Uses the explicit 124-feature moneyline contract from the model config.
+    - Training target is ID-based: target=1 when winner_id == r_id.
+    - Prediction V2 should format this model as outcome rows, not red/blue canonical
+      columns.
   prop_goes_distance_xgboost_v1:
     display_name: Goes Distance XGBoost V1
     description: First V2 prop model for fight-level goes-distance probabilities.
@@ -49,6 +34,22 @@ models:
     dashboard_selectable: false
     outcome_architecture: true
     notes:
-      - Fight-level binary prop model with outcomes goes_distance and inside_distance.
-      - Uses data/features/prop_goes_distance_feature_view.parquet.
-      - Symmetry is disabled because the target is fight-level, not red/blue side-level.
+    - Fight-level binary prop model with outcomes goes_distance and inside_distance.
+    - Uses data/features/prop_goes_distance_feature_view.parquet.
+    - Symmetry is disabled because the target is fight-level, not red/blue side-level.
+  moneyline_xgboost_v5_draft:
+    display_name: Moneyline XGBoost V5 Draft
+    description: Draft clone of moneyline_xgboost_v5 created from Model Lab.
+    model_family: moneyline
+    algorithm: xgboost
+    config_path: configs/models/moneyline_xgboost_v5_draft.yaml
+    artifact_dir: models/moneyline/moneyline_xgboost_v5_draft
+    status: draft
+    dashboard_selectable: false
+    outcome_architecture: true
+    notes:
+    - Uses the explicit 124-feature moneyline contract from the model config.
+    - Training target is ID-based: target=1 when winner_id == r_id.
+    - Prediction V2 should format this model as outcome rows, not red/blue canonical
+      columns.
+    market_key: moneyline
