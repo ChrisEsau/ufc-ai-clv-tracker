@@ -1,0 +1,146 @@
+name: Run Market Match Diagnostic
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: market-match-diagnostic-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  run-market-match-diagnostic:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Sync latest branch state
+        run: |
+          git fetch origin "${GITHUB_REF_NAME}"
+          git pull --ff-only origin "${GITHUB_REF_NAME}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Inspect market match audit
+        run: |
+          python - <<'PY'
+          import pandas as pd
+          from pathlib import Path
+
+          audit_path = Path("data/audits/ufc_market_match_audit_v2.parquet")
+          market_path = Path("data/market/market_outcomes.parquet")
+          catalog_path = Path("data/market/canonical_market_catalog.parquet")
+
+          if not audit_path.exists():
+              raise FileNotFoundError(f"Missing market match audit: {audit_path}")
+
+          audit = pd.read_parquet(audit_path)
+          market = pd.read_parquet(market_path) if market_path.exists() else pd.DataFrame()
+          catalog = pd.read_parquet(catalog_path) if catalog_path.exists() else pd.DataFrame()
+
+          print("=" * 80)
+          print("MARKET MATCH DIAGNOSTIC")
+          print("=" * 80)
+          print("Catalog path:", catalog_path)
+          print("Audit path:", audit_path)
+          print("Market outcomes path:", market_path)
+          print()
+
+          print("========== ROW COUNTS ==========")
+          print("Catalog rows:", len(catalog))
+          print("Audit rows:", len(audit))
+          print("Market outcome rows:", len(market))
+          if not audit.empty and "is_matched" in audit.columns:
+              print("Matched audit rows:", int(audit["is_matched"].fillna(False).sum()))
+              print("Unmatched audit rows:", int((~audit["is_matched"].fillna(False)).sum()))
+          print()
+
+          for label, df in [("CATALOG", catalog), ("AUDIT", audit), ("MARKET_OUTCOMES", market)]:
+              if df.empty:
+                  print(f"========== {label}: EMPTY ==========")
+                  continue
+              print(f"========== {label}: MARKET KEY COUNTS ==========")
+              if "market_key" in df.columns:
+                  print(df["market_key"].value_counts(dropna=False).to_string())
+              else:
+                  print("No market_key column")
+              print()
+
+          if not audit.empty:
+              print("========== AUDIT MATCHED BY MARKET ==========")
+              if {"market_key", "is_matched"}.issubset(audit.columns):
+                  print(pd.crosstab(audit["market_key"], audit["is_matched"].fillna(False)).to_string())
+              print()
+
+              print("========== AUDIT BY STRATEGY ==========")
+              if {"matching_strategy", "is_matched"}.issubset(audit.columns):
+                  print(pd.crosstab(audit["matching_strategy"], audit["is_matched"].fillna(False)).to_string())
+              print()
+
+              print("========== SECONDARY CONFIRMATION ==========")
+              if {"market_key", "matchup_secondary_confirmed"}.issubset(audit.columns):
+                  print(pd.crosstab(audit["market_key"], audit["matchup_secondary_confirmed"].fillna(False)).to_string())
+              print()
+
+              score_cols = [
+                  "market_key",
+                  "provider_event_id",
+                  "provider_market_name",
+                  "provider_selection_name",
+                  "fighter_name",
+                  "outcome_key",
+                  "matching_strategy",
+                  "matchup_secondary_confirmed",
+                  "provider_matchup_text",
+                  "odds_match_score",
+                  "odds_min_single_score",
+                  "is_matched",
+              ]
+              available = [c for c in score_cols if c in audit.columns]
+
+              print("========== LOW / UNMATCHED MONEYLINE + GOES DISTANCE SAMPLE ==========")
+              sample = audit.copy()
+              if "market_key" in sample.columns:
+                  sample = sample[sample["market_key"].isin(["moneyline", "goes_distance"])]
+              if "is_matched" in sample.columns:
+                  sample = sample[~sample["is_matched"].fillna(False)]
+              if "odds_min_single_score" in sample.columns:
+                  sample = sample.sort_values("odds_min_single_score", na_position="first")
+              print(sample[available].head(80).to_string(index=False))
+              print()
+
+          if not market.empty:
+              print("========== MARKET OUTCOMES FIGHTS BY MARKET ==========")
+              if {"market_key", "fight_id"}.issubset(market.columns):
+                  print(market.groupby("market_key")["fight_id"].nunique().to_string())
+              print()
+
+              print("========== MARKET OUTCOMES JOIN KEY SAMPLE ==========")
+              cols = [
+                  "fight_id",
+                  "market_key",
+                  "outcome_join_key",
+                  "outcome_label",
+                  "outcome_fighter_id",
+                  "provider_event_id",
+                  "provider_market_name",
+                  "provider_selection_name",
+                  "american_odds",
+              ]
+              cols = [c for c in cols if c in market.columns]
+              print(market[cols].head(100).to_string(index=False))
+          PY
