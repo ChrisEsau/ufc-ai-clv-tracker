@@ -30,18 +30,36 @@ def _inject_feature_selector_css() -> None:
             opacity: 1 !important;
         }
 
-        /* Dark theme dropdown options. */
+        /* Dark theme dropdown options, including the inactive selected state
+           BaseWeb applies after the mouse leaves the expanded menu. */
+        [data-baseweb="popover"],
+        [data-baseweb="popover"] > div,
+        [data-baseweb="popover"] [data-baseweb="menu"],
         [data-baseweb="popover"] [role="listbox"] {
             background: rgba(7,16,28,.98) !important;
-        }
-        [data-baseweb="popover"] [role="option"] {
-            background: rgba(7,16,28,.98) !important;
+            background-color: rgba(7,16,28,.98) !important;
             color: #ffffff !important;
         }
+        [data-baseweb="popover"] [role="option"],
+        [data-baseweb="popover"] [role="option"] *,
+        [data-baseweb="popover"] li,
+        [data-baseweb="popover"] li * {
+            color: #ffffff !important;
+            background-color: rgba(7,16,28,.98) !important;
+            opacity: 1 !important;
+        }
         [data-baseweb="popover"] [role="option"]:hover,
+        [data-baseweb="popover"] [role="option"]:hover *,
+        [data-baseweb="popover"] [role="option"][aria-selected="true"],
+        [data-baseweb="popover"] [role="option"][aria-selected="true"] *,
+        [data-baseweb="popover"] [role="option"][aria-selected="true"]:not(:hover),
+        [data-baseweb="popover"] [role="option"][aria-selected="true"]:not(:hover) *,
         [data-baseweb="popover"] [aria-selected="true"],
-        [data-baseweb="popover"] [aria-selected="true"]:hover {
+        [data-baseweb="popover"] [aria-selected="true"] *,
+        [data-baseweb="popover"] [data-highlighted="true"],
+        [data-baseweb="popover"] [data-highlighted="true"] * {
             background: rgba(17,31,49,.98) !important;
+            background-color: rgba(17,31,49,.98) !important;
             color: #ffffff !important;
         }
 
