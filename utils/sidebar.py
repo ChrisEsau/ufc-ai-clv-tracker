@@ -17,6 +17,15 @@ NAV_ITEMS = [
     ("Bankroll", "▥", "Ledger and risk"),
 ]
 
+MODEL_LAB_WORKSPACES = [
+    ("Overview", "◎"),
+    ("Configuration", "⚙"),
+    ("Features", "◇"),
+    ("Performance", "▤"),
+    ("Comparison", "⇄"),
+    ("Actions", "↻"),
+]
+
 
 def _sidebar_section(label: str, compact: bool = False) -> None:
     compact_class = " compact" if compact else ""
@@ -118,29 +127,17 @@ def _render_betting_board_filters() -> None:
     event_names = _betting_board_event_names()
     if st.session_state.get("bb_filter_event") not in event_names:
         st.session_state["bb_filter_event"] = "All Events"
-    st.sidebar.selectbox(
-        "Event",
-        event_names,
-        key="bb_filter_event",
-    )
+    st.sidebar.selectbox("Event", event_names, key="bb_filter_event")
 
     market_types = _betting_board_market_types()
     if st.session_state.get("bb_filter_market_type") not in market_types:
         st.session_state["bb_filter_market_type"] = "All Markets"
-    st.sidebar.selectbox(
-        "Market Type",
-        market_types,
-        key="bb_filter_market_type",
-    )
+    st.sidebar.selectbox("Market Type", market_types, key="bb_filter_market_type")
 
     bookmakers = _betting_board_bookmakers()
     if st.session_state.get("bb_filter_bookmaker") not in bookmakers:
         st.session_state["bb_filter_bookmaker"] = "All Books"
-    st.sidebar.selectbox(
-        "Bookmaker",
-        bookmakers,
-        key="bb_filter_bookmaker",
-    )
+    st.sidebar.selectbox("Bookmaker", bookmakers, key="bb_filter_bookmaker")
 
     date_bounds = _betting_board_date_bounds()
     if date_bounds:
@@ -156,33 +153,13 @@ def _render_betting_board_filters() -> None:
         step=10,
         key="bb_filter_odds_range",
     )
-    st.sidebar.selectbox(
-        "EV Threshold ($)",
-        [0, 25, 50, 75, 100, 150, 200],
-        index=2,
-        key="bb_filter_ev_threshold",
-    )
+    st.sidebar.selectbox("EV Threshold ($)", [0, 25, 50, 75, 100, 150, 200], index=2, key="bb_filter_ev_threshold")
     confidence_options = [0, 50, 60, 70, 75, 80, 85, 90]
-    confidence_default = min(
-        range(len(confidence_options)),
-        key=lambda idx: abs(confidence_options[idx] - risk_settings.min_confidence),
-    )
-    st.sidebar.selectbox(
-        "Min Model Confidence (%)",
-        confidence_options,
-        index=confidence_default,
-        key="bb_filter_min_confidence",
-    )
-    st.sidebar.radio(
-        "Kelly Stake Sizing",
-        ["1/2 Kelly", "1/4 Kelly"],
-        index=1 if risk_settings.kelly_fraction <= 0.25 else 0,
-        horizontal=True,
-        key="bb_kelly_mode",
-    )
+    confidence_default = min(range(len(confidence_options)), key=lambda idx: abs(confidence_options[idx] - risk_settings.min_confidence))
+    st.sidebar.selectbox("Min Model Confidence (%)", confidence_options, index=confidence_default, key="bb_filter_min_confidence")
+    st.sidebar.radio("Kelly Stake Sizing", ["1/2 Kelly", "1/4 Kelly"], index=1 if risk_settings.kelly_fraction <= 0.25 else 0, horizontal=True, key="bb_kelly_mode")
     st.sidebar.toggle("Show Only Positive EV", value=True, key="bb_filter_positive_ev")
     st.sidebar.toggle("Hide Fights Without Odds", value=True, key="bb_filter_hide_missing_odds")
-
 
 
 def _clv_snapshots() -> pd.DataFrame:
@@ -190,24 +167,15 @@ def _clv_snapshots() -> pd.DataFrame:
     if snapshots is None or snapshots.empty:
         return pd.DataFrame()
     snapshots = snapshots.copy()
-    snapshots["snapshot_timestamp"] = pd.to_datetime(
-        snapshots.get("snapshot_timestamp"), utc=True, errors="coerce"
-    )
-    snapshots["commence_time"] = pd.to_datetime(
-        snapshots.get("commence_time"), utc=True, errors="coerce"
-    )
+    snapshots["snapshot_timestamp"] = pd.to_datetime(snapshots.get("snapshot_timestamp"), utc=True, errors="coerce")
+    snapshots["commence_time"] = pd.to_datetime(snapshots.get("commence_time"), utc=True, errors="coerce")
     return snapshots
 
 
 def _clv_event_names(snapshots: pd.DataFrame) -> list[str]:
     if snapshots.empty or "event_name" not in snapshots.columns:
         return ["All Events"]
-    event_dates = (
-        snapshots.dropna(subset=["event_name"])
-        .groupby("event_name")["commence_time"]
-        .min()
-        .sort_values(na_position="last")
-    )
+    event_dates = snapshots.dropna(subset=["event_name"]).groupby("event_name")["commence_time"].min().sort_values(na_position="last")
     return ["All Events", *[str(name) for name in event_dates.index if str(name).strip()]]
 
 
@@ -231,13 +199,7 @@ def _clv_books(snapshots: pd.DataFrame) -> list[str]:
 
 def _clv_sidebar_summary(snapshots: pd.DataFrame) -> dict[str, str]:
     if snapshots.empty:
-        return {
-            "Bets Tracked": "0",
-            "Beat Closing Line %": "0.0%",
-            "Average CLV": "+0.0%",
-            "Median CLV": "+0.0%",
-            "Total CLV": "+0.0%",
-        }
+        return {"Bets Tracked": "0", "Beat Closing Line %": "0.0%", "Average CLV": "+0.0%", "Median CLV": "+0.0%", "Total CLV": "+0.0%"}
     grouped = snapshots.sort_values("snapshot_timestamp").groupby(["fight_id", "bookmaker"], dropna=False)
     values = []
     for _, group in grouped:
@@ -297,11 +259,20 @@ def _render_clv_filters() -> None:
     st.sidebar.markdown('<div class="sidebar-divider compact"></div>', unsafe_allow_html=True)
     _sidebar_section("CLV Summary (All-Time)", compact=True)
     for label, value in _clv_sidebar_summary(snapshots).items():
-        st.sidebar.markdown(
-            f'<div class="sidebar-stat-row"><span>{label}</span><strong>{value}</strong></div>',
-            unsafe_allow_html=True,
-        )
+        st.sidebar.markdown(f'<div class="sidebar-stat-row"><span>{label}</span><strong>{value}</strong></div>', unsafe_allow_html=True)
     st.sidebar.caption("All times shown in America/Chicago")
+
+
+def _render_model_lab_navigation() -> None:
+    _sidebar_section("Model Lab Navigation", compact=True)
+    if st.session_state.get("sidebar_model_lab_workspace") not in [name for name, _ in MODEL_LAB_WORKSPACES]:
+        st.session_state["sidebar_model_lab_workspace"] = "Configuration"
+    for workspace, icon in MODEL_LAB_WORKSPACES:
+        active = workspace == st.session_state["sidebar_model_lab_workspace"]
+        if st.sidebar.button(f"{icon}  {workspace}", use_container_width=True, type="primary" if active else "secondary", key=f"sidebar_mlab_{workspace}"):
+            st.session_state["sidebar_model_lab_workspace"] = workspace
+            st.rerun()
+    st.sidebar.caption("Use Configuration to create, edit, delete, and save draft model configs.")
 
 
 def render_sidebar():
@@ -317,9 +288,7 @@ def render_sidebar():
     for page, icon, caption in NAV_ITEMS:
         active = page == st.session_state.page
         label = f"{icon}  {page}"
-        if st.sidebar.button(
-            label, use_container_width=True, type="primary" if active else "secondary"
-        ):
+        if st.sidebar.button(label, use_container_width=True, type="primary" if active else "secondary"):
             st.session_state.page = page
             st.rerun()
 
@@ -331,9 +300,7 @@ def render_sidebar():
     elif page == "Line Movement / CLV":
         _render_clv_filters()
     elif page == "Model Lab":
-        _sidebar_section("Filters", compact=True)
-        st.sidebar.selectbox("Model View", ["Model Performance", "Feature Importance", "Live Prediction Audit"], key="sidebar_model_lab_view")
-        st.sidebar.caption("Read-only diagnostics; no retraining controls are added.")
+        _render_model_lab_navigation()
     elif page == "Data Maintenance":
         _sidebar_section("Filters", compact=True)
         st.sidebar.selectbox("Workflow Area", ["Overview", "Event Discovery", "Pipeline Status", "Data Quality", "Append Approval"], key="sidebar_dm_area")
@@ -357,20 +324,11 @@ def render_sidebar():
             st.session_state["bankroll_dialog"] = "risk"
             st.rerun()
         ledger = load_bet_ledger()
-        st.sidebar.download_button(
-            "⇩  Export Ledger",
-            data="" if ledger.empty else ledger.to_csv(index=False),
-            file_name="ufc_bet_ledger.csv",
-            mime="text/csv",
-            use_container_width=True,
-            disabled=ledger.empty,
-        )
+        st.sidebar.download_button("⇩  Export Ledger", data="" if ledger.empty else ledger.to_csv(index=False), file_name="ufc_bet_ledger.csv", mime="text/csv", use_container_width=True, disabled=ledger.empty)
     if st.sidebar.button("↻  Refresh Data", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
-    st.sidebar.caption(
-        "Workflow-specific actions remain inside the workspaces that consume their artifacts."
-    )
+    st.sidebar.caption("Workflow-specific actions remain inside the workspaces that consume their artifacts.")
 
     st.sidebar.markdown(
         """
