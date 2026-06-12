@@ -1,97 +1,317 @@
-# Goes Distance Prop XGBoost V1 model configuration.
-#
-# Purpose:
-#   First prop-market model contract for the V2 pipeline.
-#   This config intentionally follows the existing generic trainer schema used by
-#   configs/models/moneyline_xgboost_v5.yaml so we can test trainer reuse before
-#   introducing prop-specific training code.
-
 model_id: prop_goes_distance_xgboost_v1
 model_family: prop
 market_key: goes_distance
-artifact_name: goes_distance_xgboost_v1
+artifact_name: prop_goes_distance_xgboost_v1
 version: 1
 status: draft
-
 algorithm: xgboost
-
 feature_sources:
-  - prop_goes_distance_feature_view
-
+- prop_goes_distance_feature_view
 features:
   selection_mode: explicit
-  expected_feature_count: 17
+  expected_feature_count: 251
   allow_unsafe_features: false
-
-  # Initial compact fight-level distance model contract.
-  # Fight-context features are included because training receives them from the
-  # prepared fight row and live prediction should mirror that contract.
   feature_columns:
-    - avg_fight_time_diff
-    - finish_rate_diff
-    - finish_loss_rate_diff
-    - decision_win_rate_diff
-    - decision_loss_rate_diff
-    - recent_form_avg_fight_time_diff
-    - ewm_avg_fight_time_diff
-    - ewm_finish_rate_diff
-    - ewm_finish_loss_rate_diff
-    - ewm_decision_win_rate_diff
-    - ewm_decision_loss_rate_diff
-    - finish_volatility
-    - experience_ratio_diff
-    - age_diff
-    - fights_diff
-    - total_rounds
-    - title_fight
-
+  - avg_opponent_elo_diff
+  - b_body_acc
+  - b_body_atmpted
+  - b_body_landed
+  - b_clinch_acc
+  - b_clinch_atmpted
+  - b_clinch_landed
+  - b_ctrl
+  - b_dist_acc
+  - b_dist_atmpted
+  - b_dist_landed
+  - b_dob
+  - b_draws
+  - b_ground_acc
+  - b_ground_atmpted
+  - b_ground_landed
+  - b_head_acc
+  - b_head_atmpted
+  - b_head_landed
+  - b_kd
+  - b_landed_body_per
+  - b_landed_clinch_per
+  - b_landed_dist_per
+  - b_landed_ground_per
+  - b_landed_head_per
+  - b_landed_leg_per
+  - b_leg_acc
+  - b_leg_atmpted
+  - b_leg_landed
+  - b_name_x
+  - b_name_y
+  - b_nick_name
+  - b_sig_str_acc
+  - b_sig_str_atmpted
+  - b_sig_str_landed
+  - b_splm
+  - b_stance
+  - b_str_acc
+  - b_sub_att
+  - b_sub_avg
+  - b_td_acc
+  - b_td_atmpted
+  - b_td_avg
+  - b_td_avg_acc
+  - b_td_landed
+  - b_total_str_acc
+  - b_total_str_atmpted
+  - b_total_str_landed
+  - best_win_elo_diff
+  - ctrl_against_per_min_diff
+  - ctrl_per_min_diff
+  - elo_diff
+  - kd_avg_diff
+  - match_time_sec
+  - r_body_acc
+  - r_body_atmpted
+  - r_body_landed
+  - r_clinch_acc
+  - r_clinch_atmpted
+  - r_clinch_landed
+  - r_ctrl
+  - r_dist_acc
+  - r_dist_atmpted
+  - r_dist_landed
+  - r_dob
+  - r_draws
+  - r_ground_acc
+  - r_ground_atmpted
+  - r_ground_landed
+  - r_head_acc
+  - r_head_atmpted
+  - r_head_landed
+  - r_kd
+  - r_landed_body_per
+  - r_landed_clinch_per
+  - r_landed_dist_per
+  - r_landed_ground_per
+  - r_landed_head_per
+  - r_landed_leg_per
+  - r_leg_acc
+  - r_leg_atmpted
+  - r_leg_landed
+  - r_name_x
+  - r_name_y
+  - r_nick_name
+  - r_sig_str_acc
+  - r_sig_str_atmpted
+  - r_sig_str_landed
+  - r_splm
+  - r_stance
+  - r_str_acc
+  - r_sub_att
+  - r_sub_avg
+  - r_td_acc
+  - r_td_atmpted
+  - r_td_avg
+  - r_td_avg_acc
+  - r_td_landed
+  - r_total_str_acc
+  - r_total_str_atmpted
+  - r_total_str_landed
+  - recent_splm_diff
+  - recent_td_avg_diff
+  - recent_win_pct_diff
+  - splm_diff
+  - str_acc_diff
+  - sub_avg_diff
+  - td_acc_diff
+  - td_avg_diff
+  - win_pct_diff
+  - winner_id
+  - worst_loss_elo_diff
+  - ewm_avg_fight_time_diff
+  - ewm_avg_opponent_elo_diff
+  - ewm_best_win_elo_diff
+  - ewm_ctrl_against_per_min_diff
+  - ewm_ctrl_per_min_diff
+  - ewm_days_since_last_fight_diff
+  - ewm_decision_loss_rate_diff
+  - ewm_decision_win_rate_diff
+  - ewm_elo_diff
+  - ewm_fights_diff
+  - ewm_finish_loss_rate_diff
+  - ewm_finish_rate_diff
+  - ewm_kd_absorbed_avg_diff
+  - ewm_kd_avg_diff
+  - ewm_ko_rate_diff
+  - ewm_loss_streak_diff
+  - ewm_losses_diff
+  - ewm_recent_avg_fight_time_diff
+  - ewm_recent_finish_rate_diff
+  - ewm_recent_sapm_diff
+  - ewm_recent_splm_diff
+  - ewm_recent_td_avg_diff
+  - ewm_recent_win_pct_diff
+  - ewm_sapm_diff
+  - ewm_splm_diff
+  - ewm_str_acc_diff
+  - ewm_str_def_diff
+  - ewm_sub_avg_diff
+  - ewm_sub_win_rate_diff
+  - ewm_td_acc_diff
+  - ewm_td_avg_diff
+  - ewm_td_def_diff
+  - ewm_win_pct_diff
+  - ewm_win_streak_diff
+  - ewm_wins_diff
+  - ewm_worst_loss_elo_diff
+  - recent_form_avg_fight_time_diff
+  - recent_form_avg_opponent_elo_diff
+  - recent_form_best_win_elo_diff
+  - recent_form_ctrl_against_per_min_diff
+  - recent_form_ctrl_per_min_diff
+  - recent_form_days_since_last_fight_diff
+  - recent_form_decision_loss_rate_diff
+  - recent_form_decision_win_rate_diff
+  - recent_form_elo_diff
+  - recent_form_fights_diff
+  - recent_form_finish_loss_rate_diff
+  - recent_form_finish_rate_diff
+  - recent_form_kd_absorbed_avg_diff
+  - recent_form_kd_avg_diff
+  - recent_form_ko_rate_diff
+  - recent_form_loss_streak_diff
+  - recent_form_losses_diff
+  - recent_form_recent_avg_fight_time_diff
+  - recent_form_recent_finish_rate_diff
+  - recent_form_recent_sapm_diff
+  - recent_form_recent_splm_diff
+  - recent_form_recent_td_avg_diff
+  - recent_form_recent_win_pct_diff
+  - recent_form_sapm_diff
+  - recent_form_splm_diff
+  - recent_form_str_acc_diff
+  - recent_form_str_def_diff
+  - recent_form_sub_avg_diff
+  - recent_form_sub_win_rate_diff
+  - recent_form_td_acc_diff
+  - recent_form_td_avg_diff
+  - recent_form_td_def_diff
+  - recent_form_win_pct_diff
+  - recent_form_win_streak_diff
+  - recent_form_wins_diff
+  - recent_form_worst_loss_elo_diff
+  - avg_fight_time_diff
+  - decision_loss_rate_diff
+  - decision_win_rate_diff
+  - finish_loss_rate_diff
+  - finish_rate_diff
+  - finish_round
+  - finish_volatility
+  - ko_rate_diff
+  - recent_avg_fight_time_diff
+  - recent_finish_rate_diff
+  - sub_win_rate_diff
+  - b_chin_risk
+  - b_sapm
+  - b_str_def
+  - b_td_def
+  - chin_risk_diff
+  - kd_absorbed_avg_diff
+  - r_chin_risk
+  - r_sapm
+  - r_str_def
+  - r_td_def
+  - recent_sapm_diff
+  - sapm_diff
+  - str_def_diff
+  - td_def_diff
+  - b_height
+  - b_reach
+  - b_weight
+  - height_diff
+  - r_height
+  - r_reach
+  - r_weight
+  - reach_diff
+  - reach_striking_combo
+  - weight_diff
+  - age_diff
+  - age_squared_diff
+  - b_age_squared
+  - b_losses
+  - b_wins
+  - days_since_last_fight_diff
+  - fights_diff
+  - loss_streak_diff
+  - losses_diff
+  - r_age_squared
+  - r_losses
+  - r_wins
+  - win_streak_diff
+  - wins_diff
+  - aggression_index_diff
+  - b_aggression_index
+  - b_experience_ratio
+  - b_pressure_striking_adv
+  - b_submission_mismatch
+  - b_wrestling_mismatch
+  - experience_ratio_diff
+  - grappling_edge
+  - pressure_striking_adv_diff
+  - r_aggression_index
+  - r_experience_ratio
+  - r_pressure_striking_adv
+  - r_submission_mismatch
+  - r_wrestling_mismatch
+  - striking_edge
+  - submission_mismatch_diff
+  - wrestling_mismatch_diff
+  - wrestling_pressure_vs_defense
+  selected_bundles:
+  - core_state
+  - ewm_state
+  - recent_form
+  - finish_profile
+  - durability
+  - physical
+  - experience
+  - engineered
+  include_features: []
+  exclude_features: []
 data:
-  # NOTE: key name retained for training-runner compatibility.
   rolling_features_path: data/features/prop_goes_distance_feature_view.parquet
   target_column: target_goes_distance
   date_column: date
-
 split:
   mode: train_calibration_test
-  train_end_date: "2022-12-31"
-  calibration_end_date: "2023-12-31"
-
+  train_end_date: '2022-12-31'
+  calibration_end_date: '2023-12-31'
 symmetry:
-  # Goes-distance is a fight-level target. Red/blue swapping should not create
-  # an additional independent training example.
   enabled: false
   mode: none
-
 calibration:
   enabled: true
-  method: isotonic
-
+  method: sigmoid
 params:
-  n_estimators: 400
-  max_depth: 3
+  n_estimators: 1000
+  max_depth: 4
   learning_rate: 0.03
   subsample: 0.8
   colsample_bytree: 0.8
   random_state: 42
   eval_metric: logloss
-
 metrics:
-  threshold_min: 0.30
-  threshold_max: 0.70
+  threshold_min: 0.3
+  threshold_max: 0.7
   threshold_step: 0.01
   confidence_bucket_edges:
-    - 0.50
-    - 0.55
-    - 0.60
-    - 0.65
-    - 0.70
-    - 0.75
-    - 0.80
-    - 0.85
-    - 0.90
-    - 0.95
-    - 1.00
-
+  - 0.5
+  - 0.55
+  - 0.6
+  - 0.65
+  - 0.7
+  - 0.75
+  - 0.8
+  - 0.85
+  - 0.9
+  - 0.95
+  - 1.0
 artifacts:
   output_dir: models/props/goes_distance_xgboost_v1
   save_raw_model: true
@@ -101,29 +321,29 @@ artifacts:
   save_threshold_sweep: true
   save_confidence_buckets: true
   save_model_card: true
-
 prediction:
   format: binary_prop
   market_key: goes_distance
   prediction_type: binary_prop
-
-  # Positive class is the historical target target_goes_distance == 1.
   positive_class: goes_distance
   negative_class: inside_distance
-
   outcomes:
     positive:
       label: goes_distance
       outcome_side: positive
-      outcome_fighter_id:
+      outcome_fighter_id: null
     negative:
       label: inside_distance
       outcome_side: negative
-      outcome_fighter_id:
-
+      outcome_fighter_id: null
+  probability:
+    clip_low: 0.02
+    clip_high: 0.98
 notes:
-  - First prop-market training config.
-  - Feature list is intentionally compact and should be reviewed after initial backtest metrics.
-  - Symmetry is disabled because this is a fight-level target, not a side-level target.
-  - total_rounds and title_fight are fight-context features and must come from the live card at prediction time.
-  - Prediction format uses the existing binary_prop adapter/formatter contract.
+- First prop-market training config.
+- Feature list is intentionally compact and should be reviewed after initial backtest
+  metrics.
+- Symmetry is disabled because this is a fight-level target, not a side-level target.
+- total_rounds and title_fight are fight-context features and must come from the live
+  card at prediction time.
+- Prediction format uses the existing binary_prop adapter/formatter contract.
