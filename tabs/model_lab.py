@@ -3,10 +3,13 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 
+import requests
 import streamlit as st
 
 import utils.model_lab_workflows as mlw
 
+
+NEW_MODEL_SENTINEL = "__new_model__"
 
 MODEL_LAB_VISUAL_REFINEMENT_CSS = """
 <style>
@@ -65,105 +68,73 @@ def _default_artifact_dir(model_family: str, market_key: str, model_id: str) -> 
     return f"models/{model_family or 'models'}/{model_id}"
 
 
-def _parameter_controls(params: dict[str, Any], *, key_prefix: str) -> dict[str, Any]:
-    st.markdown("##### XGBoost Parameters")
-    c1, c2, c3, c4, c5 = st.columns(5)
-    with c1:
-        n_estimators = st.number_input("N Estimators", value=int(params.get("n_estimators", 500)), min_value=50, step=50, key=f"{key_prefix}_n_estimators")
-    with c2:
-        max_depth = st.number_input("Max Depth", value=int(params.get("max_depth", 4)), min_value=1, max_value=12, step=1, key=f"{key_prefix}_max_depth")
-    with c3:
-        learning_rate = st.number_input("Learning Rate", value=float(params.get("learning_rate", 0.03)), min_value=0.001, max_value=1.0, step=0.01, format="%.3f", key=f"{key_prefix}_learning_rate")
-    with c4:
-        subsample = st.number_input("Subsample", value=float(params.get("subsample", 0.8)), min_value=0.1, max_value=1.0, step=0.05, format="%.2f", key=f"{key_prefix}_subsample")
-    with c5:
-        colsample = st.number_input("Colsample", value=float(params.get("colsample_bytree", 0.8)), min_value=0.1, max_value=1.0, step=0.05, format="%.2f", key=f"{key_prefix}_colsample")
-    return {
-        "n_estimators": int(n_estimators),
-        "max_depth": int(max_depth),
-        "learning_rate": float(learning_rate),
-        "subsample": float(subsample),
-        "colsample_bytree": float(colsample),
-        "random_state": int(params.get("random_state", 42)),
-        "eval_metric": params.get("eval_metric", "logloss"),
-    }
+def _registry_is_active_primary(registry: dict[str, Any], context: dict[str, Any]) -> bool:
+    family = context.get("model_family", "")
+    model_id = context.get("model_id", "")
+    return registry.get("active_models", {}).get(family, {}).get("primary") == model_id
 
 
-def _feature_controls(context: dict[str, Any], *, key_prefix: str) -> dict[str, Any]:
-    available = mlw._available_feature_columns(context)
-    bundle_map = mlw._bundle_map(available)
-    default_bundles = mlw._infer_selected_bundles(context["config"], available)
-    selected = st.multiselect(
-        "Feature Bundles",
-        list(bundle_map.keys()),
-        default=[bundle for bundle in default_bundles if bundle in bundle_map],
-        format_func=lambda key: f"{mlw.BUNDLE_LABELS.get(key, key)} ({len(bundle_map.get(key, []))})",
-        key=f"{key_prefix}_bundles",
-    )
-    include_text = st.text_area("Include Feature Overrides", value="", height=60, key=f"{key_prefix}_include")
-    exclude_text = st.text_area("Exclude Feature Overrides", value="", height=60, key=f"{key_prefix}_exclude")
-    include = mlw._csv_to_list(include_text)
-    exclude = mlw._csv_to_list(exclude_text)
-    resolved = mlw._resolve_features_from_bundles(
-        available_features=available,
-        selected_bundles=selected,
-        include_overrides=include,
-        exclude_overrides=exclude,
-    )
-    if not resolved:
-        resolved = list((context["config"].get("features") or {}).get("feature_columns") or [])
-    st.caption(f"Resolved feature count: {len(resolved):,}")
-    return {"selected_bundles": selected, "include_features": include, "exclude_features": exclude, "resolved_features": resolved}
-
-
-def _apply_manager_updates(config: dict[str, Any], *, model_id: str, display_name: str, model_family: str, market_key: str, artifact_dir: str, params: dict[str, Any], calibration_enabled: bool, calibration_method: str, clip_low: float, clip_high: float, feature_values: dict[str, Any]) -> dict[str, Any]:
-    updated = deepcopy(config)
-    updated["model_id"] = model_id
-    updated["artifact_name"] = model_id
-    updated["display_name"] = display_name
-    updated["model_family"] = model_family
-    updated["market_key"] = market_key
-    updated["status"] = "draft"
-    updated.setdefault("artifacts", {})["output_dir"] = artifact_dir
-    updated["params"] = params
-    updated.setdefault("calibration", {})["enabled"] = bool(calibration_enabled)
-    updated.setdefault("calibration", {})["method"] = calibration_method
-    updated.setdefault("prediction", {}).setdefault("probability", {})["clip_low"] = float(clip_low)
-    updated.setdefault("prediction", {}).setdefault("probability", {})["clip_high"] = float(clip_high)
-    features = updated.setdefault("features", {})
-    features["selection_mode"] = "explicit"
-    features["selected_bundles"] = feature_values["selected_bundles"]
-    features["include_features"] = feature_values["include_features"]
-    features["exclude_features"] = feature_values["exclude_features"]
-    features["feature_columns"] = feature_values["resolved_features"]
-    features["expected_feature_count"] = len(feature_values["resolved_features"])
-    return updated
-
-
-def _save_model_config_and_registry(*, registry: dict[str, Any], model_id: str, config: dict[str, Any], display_name: str, description: str, model_family: str, market_key: str, artifact_dir: str, config_path: str) -> tuple[bool, str]:
-    if not model_id:
-        return False, "Model ID is required."
-    if not (config.get("features") or {}).get("feature_columns"):
-        return False, "Feature selection resolved to zero features."
-
-    updated_registry = deepcopy(registry)
-    entry = updated_registry.setdefault("models", {}).setdefault(model_id, {})
-    entry.update(
+def _build_new_context(template_context: dict[str, Any], *, model_id: str, artifact_dir: str) -> dict[str, Any]:
+    context = deepcopy(template_context)
+    model_id = _safe_model_id(model_id)
+    config = deepcopy(context["config"])
+    config["model_id"] = model_id
+    config["artifact_name"] = model_id
+    config["status"] = "draft"
+    config.setdefault("artifacts", {})["output_dir"] = artifact_dir
+    context.update(
         {
-            "display_name": display_name,
-            "description": description,
-            "model_family": model_family,
-            "market_key": market_key,
-            "algorithm": config.get("algorithm", "xgboost"),
-            "config_path": config_path,
-            "artifact_dir": artifact_dir,
+            "model_id": model_id,
+            "display_name": f"{template_context.get('display_name', template_context['model_id'])} Experiment",
+            "description": f"Draft experiment created from {template_context['model_id']}.",
             "status": "draft",
             "dashboard_selectable": False,
-            "outcome_architecture": True,
+            "config_path": f"configs/models/{model_id}.yaml" if model_id else "",
+            "artifact_dir": artifact_dir,
+            "config": config,
+            "is_new_model": True,
+            "template_model_id": template_context["model_id"],
         }
     )
+    return context
 
-    ok, msg = mlw._github_write_file(config_path, mlw._yaml_dump(config), f"Save model config {model_id} from Model Lab")
+
+def _save_new_or_existing_model(
+    *,
+    context: dict[str, Any],
+    registry: dict[str, Any],
+    form_values: dict[str, Any],
+    feature_values: dict[str, Any],
+) -> tuple[bool, str]:
+    model_id = _safe_model_id(context.get("model_id", ""))
+    if not model_id:
+        return False, "Model ID is required."
+
+    is_new = bool(context.get("is_new_model"))
+    if is_new and model_id in (registry.get("models") or {}):
+        return False, f"Model already exists: {model_id}"
+
+    updated_config = mlw._apply_config_updates(context, form_values, feature_values)
+    updated_config["model_id"] = model_id
+    updated_config["artifact_name"] = model_id
+    updated_config["status"] = "draft"
+    updated_config.setdefault("artifacts", {})["output_dir"] = context["artifact_dir"]
+
+    updated_registry = deepcopy(registry)
+    updated_registry.setdefault("models", {})[model_id] = {
+        "display_name": form_values["display_name"],
+        "description": form_values["description"],
+        "model_family": context["model_family"],
+        "market_key": context["market_key"],
+        "algorithm": context["algorithm"] or updated_config.get("algorithm", "xgboost"),
+        "config_path": context["config_path"],
+        "artifact_dir": context["artifact_dir"],
+        "status": "draft",
+        "dashboard_selectable": bool(form_values["dashboard_selectable"]),
+        "outcome_architecture": True,
+    }
+
+    ok, msg = mlw._github_write_file(context["config_path"], mlw._yaml_dump(updated_config), f"Save draft model config {model_id}")
     if not ok:
         return ok, msg
     ok, msg = mlw._save_registry(updated_registry)
@@ -172,201 +143,173 @@ def _save_model_config_and_registry(*, registry: dict[str, Any], model_id: str, 
     return True, f"Saved draft model {model_id}."
 
 
-def _delete_model_from_registry(*, registry: dict[str, Any], model_id: str) -> tuple[bool, str]:
-    models = registry.get("models") or {}
-    if model_id not in models:
-        return False, f"Model is not registered: {model_id}"
+def _github_delete_file(path: str, message: str) -> tuple[bool, str]:
+    owner, repo, token, branch = mlw.get_github_config()
+    if not owner or not repo or not token:
+        return False, "Missing GitHub Streamlit secrets."
+    ok, _, sha = mlw._github_read_file(path)
+    if not ok:
+        return False, "Could not inspect existing GitHub file before delete."
+    if not sha:
+        return True, f"No config file found at {path}; registry entry can still be removed."
+    response = requests.delete(
+        f"{mlw.GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}",
+        headers=mlw.github_headers(token),
+        json={"message": message, "sha": sha, "branch": branch},
+        timeout=20,
+    )
+    if response.status_code in {200, 201}:
+        return True, f"Deleted {path}."
+    return False, f"GitHub API error {response.status_code}: {response.text}"
 
-    entry = models[model_id]
-    status = str(entry.get("status") or "draft").lower()
+
+def _delete_model(context: dict[str, Any], registry: dict[str, Any]) -> tuple[bool, str]:
+    model_id = context["model_id"]
+    status = str(context.get("status") or "draft").lower()
     if status == "production":
-        return False, "Production models cannot be deleted. Move them out of production or archive them first."
+        return False, "Production models cannot be deleted."
+    if _registry_is_active_primary(registry, context):
+        return False, "Active primary models cannot be deleted. Change active model first."
 
-    updated = deepcopy(registry)
-    updated.get("models", {}).pop(model_id, None)
+    config_path = context.get("config_path", "")
+    if config_path:
+        ok, msg = _github_delete_file(config_path, f"Delete model config {model_id}")
+        if not ok:
+            return ok, msg
 
-    # Remove any active-model pointer that references the deleted model.
-    for family_entry in (updated.get("active_models") or {}).values():
-        if isinstance(family_entry, dict) and family_entry.get("primary") == model_id:
-            family_entry.pop("primary", None)
-
-    ok, msg = mlw._save_registry(updated)
+    updated_registry = deepcopy(registry)
+    updated_registry.get("models", {}).pop(model_id, None)
+    ok, msg = mlw._save_registry(updated_registry)
     if not ok:
         return ok, msg
-    return True, f"Deleted registry entry for {model_id}. Config YAML and trained artifacts were left in the repo for audit/history."
+    return True, f"Deleted model {model_id} from registry and removed config YAML. Artifacts were not deleted."
 
 
-def _show_delete_confirmation(registry: dict[str, Any], model_id: str) -> None:
-    entry = (registry.get("models") or {}).get(model_id, {})
-    status = str(entry.get("status") or "draft").lower()
+def _render_delete_dialog(context: dict[str, Any], registry: dict[str, Any]) -> None:
+    model_id = context["model_id"]
 
     def _dialog_body() -> None:
-        st.warning(f"You are about to delete model `{model_id}` from the model registry.")
-        st.caption("This removes the model from dashboard/runtime selection. It does not delete the config YAML or trained artifacts from the repository.")
-        typed = st.text_input("Type the model ID to confirm", key=f"mlab_delete_confirm_text_{model_id}")
+        st.warning("This removes the registry entry and config YAML. Model artifacts are not deleted.")
+        st.write(f"Model: `{model_id}`")
+        confirmation = st.text_input("Type the model ID to confirm", key=f"delete_confirm_{model_id}")
         c1, c2 = st.columns(2)
         with c1:
-            if st.button("Delete Model", disabled=(typed != model_id or status == "production"), type="primary", use_container_width=True, key=f"mlab_delete_confirm_button_{model_id}"):
-                ok, msg = _delete_model_from_registry(registry=registry, model_id=model_id)
+            if st.button("Cancel", use_container_width=True, key=f"delete_cancel_{model_id}"):
+                st.session_state.pop("mlab_delete_candidate", None)
+                st.rerun()
+        with c2:
+            if st.button("Delete Model", type="primary", disabled=confirmation != model_id, use_container_width=True, key=f"delete_execute_{model_id}"):
+                ok, msg = _delete_model(context, registry)
                 st.success(msg) if ok else st.error(msg)
                 if ok:
                     st.cache_data.clear()
+                    st.session_state.pop("mlab_delete_candidate", None)
                     st.rerun()
-        with c2:
-            if st.button("Cancel", use_container_width=True, key=f"mlab_delete_cancel_{model_id}"):
-                st.rerun()
 
     if hasattr(st, "dialog"):
-        @st.dialog("Confirm Delete Existing Model")
-        def _confirm_dialog() -> None:
+        @st.dialog("Delete Model")
+        def confirm_dialog():
             _dialog_body()
-
-        _confirm_dialog()
+        confirm_dialog()
     else:
-        st.error("Confirm delete")
-        _dialog_body()
-
-
-def _render_model_configuration_manager() -> None:
-    try:
-        registry = mlw.load_model_registry()
-        rows = mlw.get_registered_model_rows(registry)
-    except Exception as exc:
-        st.warning(f"Model Configuration Manager unavailable: {exc}")
-        return
-
-    if not rows:
-        return
-
-    model_ids = [row["model_id"] for row in rows]
-    row_by_id = {row["model_id"]: row for row in rows}
-    with st.expander("Model Configuration Manager", expanded=True):
-        st.caption("Create new draft experiments, edit existing drafts, or delete non-production registry entries. Production models are protected.")
-        mode = st.radio("Mode", ["Create New Model", "Edit Existing Model", "Delete Existing Model"], horizontal=True, key="mlab_manager_mode")
-
-        selected_model_id = st.selectbox(
-            "Model / Template",
-            model_ids,
-            format_func=lambda mid: f"{mid} ({row_by_id[mid].get('status', 'unknown')})",
-            key="mlab_manager_model_select",
-        )
-        context = mlw.resolve_model_workflow_context(registry=registry, model_id=selected_model_id)
-        source_status = str(context.get("status") or "draft").lower()
-
-        if mode == "Delete Existing Model":
-            st.markdown("##### Delete Existing Model")
-            st.caption("Deletes the registry entry only. Config YAML and trained artifacts remain available in the repository for audit/history.")
-            if source_status == "production":
-                st.error("Production models cannot be deleted from Model Lab. Archive or demote them first.")
-            else:
-                st.warning(f"Selected model: `{selected_model_id}` ({source_status})")
-                if st.button("Delete Existing Model", type="primary", use_container_width=True, key="mlab_delete_open_dialog"):
-                    _show_delete_confirmation(registry, selected_model_id)
-            return
-
-        source_config = context["config"]
-        source_params = source_config.get("params") or {}
-        source_probability = (source_config.get("prediction") or {}).get("probability") or {}
-        source_calibration = source_config.get("calibration") or {}
-
-        is_create = mode == "Create New Model"
-        if not is_create and source_status != "draft":
-            st.info("This model is production/archived and is read-only. Switch to Create New Model to create an editable draft experiment from it.")
-            return
-
-        default_model_id = f"{selected_model_id}_exp01" if is_create else selected_model_id
-        raw_model_id = st.text_input("Model ID", value=default_model_id, disabled=not is_create, key=f"mlab_manager_model_id_{mode}")
-        model_id = _safe_model_id(raw_model_id)
-        display_name = st.text_input("Display Name", value=(f"{context.get('display_name', selected_model_id)} Experiment" if is_create else context.get("display_name", selected_model_id)), key=f"mlab_manager_display_{mode}")
-        description = st.text_area("Description", value=(f"Draft experiment created from {selected_model_id}." if is_create else context.get("description", "")), height=68, key=f"mlab_manager_desc_{mode}")
-
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            model_family = st.selectbox("Model Family", ["moneyline", "prop"], index=1 if context.get("model_family") == "prop" else 0, key=f"mlab_manager_family_{mode}")
-        with c2:
-            market_defaults = list(dict.fromkeys([context.get("market_key") or "moneyline", "moneyline", "goes_distance", "win_by_ko_tko_dq", "win_by_submission", "win_by_decision"]))
-            market_key = st.selectbox("Market Key", market_defaults, key=f"mlab_manager_market_{mode}")
-        with c3:
-            artifact_default = _default_artifact_dir(model_family, market_key, model_id or "new_model") if is_create else context.get("artifact_dir", "")
-            artifact_dir = st.text_input("Artifact Dir", value=artifact_default, key=f"mlab_manager_artifact_{mode}")
-
-        params = _parameter_controls(source_params, key_prefix=f"mlab_manager_{mode}")
-        c4, c5, c6, c7 = st.columns(4)
-        with c4:
-            calibration_enabled = st.toggle("Calibration Enabled", value=bool(source_calibration.get("enabled", True)), key=f"mlab_manager_cal_enabled_{mode}")
-        with c5:
-            method_value = str(source_calibration.get("method", "isotonic"))
-            method_options = ["isotonic", "sigmoid", "none"]
-            calibration_method = st.selectbox("Calibration Method", method_options, index=method_options.index(method_value) if method_value in method_options else 0, key=f"mlab_manager_cal_method_{mode}")
-        with c6:
-            clip_low = st.number_input("Clip Low", value=float(source_probability.get("clip_low", 0.02)), min_value=0.0, max_value=0.49, step=0.01, format="%.2f", key=f"mlab_manager_clip_low_{mode}")
-        with c7:
-            clip_high = st.number_input("Clip High", value=float(source_probability.get("clip_high", 0.98)), min_value=0.51, max_value=1.0, step=0.01, format="%.2f", key=f"mlab_manager_clip_high_{mode}")
-
-        feature_values = _feature_controls(context, key_prefix=f"mlab_manager_{mode}")
-        config_path = f"configs/models/{model_id}.yaml" if is_create else context["config_path"]
-        updated_config = _apply_manager_updates(
-            source_config,
-            model_id=model_id,
-            display_name=display_name,
-            model_family=model_family,
-            market_key=market_key,
-            artifact_dir=artifact_dir,
-            params=params,
-            calibration_enabled=calibration_enabled,
-            calibration_method=calibration_method,
-            clip_low=clip_low,
-            clip_high=clip_high,
-            feature_values=feature_values,
-        )
-
-        button_label = "Create New Draft Model" if is_create else "Save Existing Draft Model"
-        if st.button(button_label, type="primary", use_container_width=True, disabled=not bool(model_id and display_name), key=f"mlab_manager_save_{mode}"):
-            if is_create and model_id in (registry.get("models") or {}):
-                st.error(f"Model already exists: {model_id}")
-            else:
-                ok, msg = _save_model_config_and_registry(
-                    registry=registry,
-                    model_id=model_id,
-                    config=updated_config,
-                    display_name=display_name,
-                    description=description,
-                    model_family=model_family,
-                    market_key=market_key,
-                    artifact_dir=artifact_dir,
-                    config_path=config_path,
-                )
-                st.success(msg) if ok else st.error(msg)
-                if ok:
-                    st.cache_data.clear()
-                    st.rerun()
+        with st.expander("Confirm Delete Model", expanded=True):
+            _dialog_body()
 
 
 def _patched_lifecycle_controls(context: dict[str, Any], registry: dict[str, Any]) -> None:
     status = str(context.get("status") or "draft").lower()
     st.markdown("#### Lifecycle")
-    if status == "production":
-        st.info("Production configs are read-only. Use Model Configuration Manager → Create New Model to create an editable draft experiment from this model.")
+    if context.get("is_new_model"):
+        st.info("New model draft. Press Save Draft Configuration to create config YAML and registry entry.")
+    elif status == "production":
+        st.info("Production models are read-only. Select New Model and use this model as a template to tune an experiment.")
     elif status == "draft":
-        st.success("Draft model is editable. Use Model Configuration Manager or the draft editor to update config values.")
-        new_status = st.selectbox("Status", mlw.STATUS_OPTIONS, index=mlw.STATUS_OPTIONS.index(status), key="mlab_status_select")
-        set_active = st.toggle("Make active primary for this family on save", value=False, key="mlab_set_active_primary")
-        if st.button("Update Registry Status", use_container_width=True, key="mlab_update_status"):
-            updated = deepcopy(registry)
-            updated["models"][context["model_id"]]["status"] = new_status
-            if set_active and new_status == "production":
-                updated.setdefault("active_models", {}).setdefault(context["model_family"], {})["primary"] = context["model_id"]
-            ok, msg = mlw._save_registry(updated)
+        st.success("Draft model is editable.")
+    else:
+        st.warning("Archived models are read-only for editing, but can be deleted if not active.")
+
+
+def _render_single_editor() -> None:
+    registry = mlw.load_model_registry()
+    rows = mlw.get_registered_model_rows(registry)
+    if not rows:
+        st.info("No models are registered in configs/models/model_registry.yaml.")
+        return
+
+    row_by_id = {row["model_id"]: row for row in rows}
+    model_options = [NEW_MODEL_SENTINEL] + [row["model_id"] for row in rows]
+    selected = st.selectbox(
+        "Selected Model",
+        model_options,
+        format_func=lambda mid: "New Model" if mid == NEW_MODEL_SENTINEL else mlw._model_label(row_by_id[mid]),
+        key="model_lab_registered_model_id_single_editor",
+    )
+
+    if selected == NEW_MODEL_SENTINEL:
+        template_id = st.selectbox(
+            "Template Model",
+            [row["model_id"] for row in rows],
+            format_func=lambda mid: mlw._model_label(row_by_id[mid]),
+            key="model_lab_template_model_id",
+        )
+        template_context = mlw.resolve_model_workflow_context(registry=registry, model_id=template_id)
+        new_model_id = _safe_model_id(st.text_input("New Model ID", value=f"{template_id}_exp01", key="model_lab_new_model_id"))
+        artifact_dir = st.text_input(
+            "Artifact Directory",
+            value=_default_artifact_dir(template_context["model_family"], template_context["market_key"], new_model_id or "new_model"),
+            key="model_lab_new_artifact_dir",
+        )
+        context = _build_new_context(template_context, model_id=new_model_id, artifact_dir=artifact_dir)
+    else:
+        context = mlw.resolve_model_workflow_context(registry=registry, model_id=selected)
+
+    mlw._render_kpis(context)
+    mlw._render_model_bar(context, registry)
+    mlw._render_registry_table(rows)
+
+    top_left, top_right = st.columns([1.05, 1.45], gap="medium")
+    with top_left:
+        _patched_lifecycle_controls(context, registry)
+        form_values = mlw._render_config_editor(context, registry)
+    with top_right:
+        feature_values = mlw._render_feature_bundle_editor(context)
+        mlw._render_performance(context)
+
+    can_save = context.get("is_new_model") or context.get("status") == "draft"
+    can_delete = (not context.get("is_new_model")) and str(context.get("status") or "").lower() in {"draft", "archived"} and not _registry_is_active_primary(registry, context)
+    save_col, delete_col = st.columns([3, 1])
+    with save_col:
+        if st.button("Save Draft Configuration", type="primary", disabled=not can_save, use_container_width=True, key="mlab_save_draft_config_single"):
+            ok, msg = _save_new_or_existing_model(context=context, registry=registry, form_values=form_values, feature_values=feature_values)
             st.success(msg) if ok else st.error(msg)
             if ok:
                 st.cache_data.clear()
                 st.rerun()
-    else:
-        st.warning("Archived models are read-only. Use Model Configuration Manager → Create New Model to start a new draft experiment.")
+    with delete_col:
+        if st.button("Delete Model", disabled=not can_delete, use_container_width=True, key="mlab_delete_model_button"):
+            st.session_state["mlab_delete_candidate"] = context["model_id"]
+
+    if st.session_state.get("mlab_delete_candidate") == context.get("model_id"):
+        _render_delete_dialog(context, registry)
+
+    bottom_left, bottom_right = st.columns([1.05, 1.35], gap="medium")
+    with bottom_left:
+        if not context.get("is_new_model"):
+            mlw._render_comparison(context, registry, context["model_id"])
+        else:
+            st.info("Save the new draft before comparing it to existing models.")
+    with bottom_right:
+        if not context.get("is_new_model"):
+            mlw._render_actions(context)
+        else:
+            st.info("Save the new draft before running workflows.")
 
 
 def render_model_lab():
     st.markdown(MODEL_LAB_VISUAL_REFINEMENT_CSS, unsafe_allow_html=True)
-    mlw._render_lifecycle_controls = _patched_lifecycle_controls
-    _render_model_configuration_manager()
-    mlw.render_model_workflow_launcher()
+    mlw._inject_css()
+    mlw._render_header()
+    try:
+        _render_single_editor()
+    except Exception as exc:
+        st.error(f"Unable to render Model Lab: {exc}")
