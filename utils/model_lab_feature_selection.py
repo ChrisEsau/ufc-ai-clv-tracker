@@ -15,8 +15,6 @@ def _inject_feature_selector_css() -> None:
     st.markdown(
         """
         <style>
-        /* Keep this CSS intentionally narrow. Do not target global labels,
-           toggles, or all markdown text from this helper. */
         [data-testid="stMultiSelect"] [data-baseweb="tag"] {
             background: linear-gradient(180deg, #2563eb, #1d4ed8) !important;
             background-color: #2563eb !important;
@@ -24,14 +22,29 @@ def _inject_feature_selector_css() -> None:
             color: #ffffff !important;
             box-shadow: 0 0 0 1px rgba(59,130,246,.22) inset !important;
         }
+
         [data-testid="stMultiSelect"] [data-baseweb="tag"] * {
             color: #ffffff !important;
             fill: #ffffff !important;
             opacity: 1 !important;
         }
 
-        /* Dark theme dropdown options, including the inactive selected state
-           BaseWeb applies after the mouse leaves the expanded menu. */
+        /* Remove the dark search-input overlay that appears over the first tag. */
+        [data-testid="stMultiSelect"] input {
+            background: transparent !important;
+            background-color: transparent !important;
+            color: #ffffff !important;
+            caret-color: #ffffff !important;
+            box-shadow: none !important;
+        }
+
+        [data-testid="stMultiSelect"] [data-baseweb="input"],
+        [data-testid="stMultiSelect"] [data-baseweb="input"] > div {
+            background: transparent !important;
+            background-color: transparent !important;
+            box-shadow: none !important;
+        }
+
         [data-baseweb="popover"],
         [data-baseweb="popover"] > div,
         [data-baseweb="popover"] [data-baseweb="menu"],
@@ -40,6 +53,7 @@ def _inject_feature_selector_css() -> None:
             background-color: rgba(7,16,28,.98) !important;
             color: #ffffff !important;
         }
+
         [data-baseweb="popover"] [role="option"],
         [data-baseweb="popover"] [role="option"] *,
         [data-baseweb="popover"] li,
@@ -48,16 +62,13 @@ def _inject_feature_selector_css() -> None:
             background-color: rgba(7,16,28,.98) !important;
             opacity: 1 !important;
         }
+
         [data-baseweb="popover"] [role="option"]:hover,
         [data-baseweb="popover"] [role="option"]:hover *,
         [data-baseweb="popover"] [role="option"][aria-selected="true"],
         [data-baseweb="popover"] [role="option"][aria-selected="true"] *,
-        [data-baseweb="popover"] [role="option"][aria-selected="true"]:not(:hover),
-        [data-baseweb="popover"] [role="option"][aria-selected="true"]:not(:hover) *,
         [data-baseweb="popover"] [aria-selected="true"],
-        [data-baseweb="popover"] [aria-selected="true"] *,
-        [data-baseweb="popover"] [data-highlighted="true"],
-        [data-baseweb="popover"] [data-highlighted="true"] * {
+        [data-baseweb="popover"] [aria-selected="true"] * {
             background: rgba(17,31,49,.98) !important;
             background-color: rgba(17,31,49,.98) !important;
             color: #ffffff !important;
@@ -68,6 +79,7 @@ def _inject_feature_selector_css() -> None:
             color: #f8fafc !important;
             opacity: 1 !important;
         }
+
         details[data-testid="stExpander"] {
             background: linear-gradient(180deg, rgba(9,19,32,.95), rgba(7,16,28,.98)) !important;
             border: 1px solid rgba(51,75,108,.95) !important;
