@@ -3,6 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 
+import pandas as pd
 import requests
 import streamlit as st
 
@@ -62,6 +63,11 @@ def _safe_model_id(value: str) -> str:
     return cleaned.strip("_")
 
 
+def _state_key(context: dict[str, Any]) -> str:
+    base = context.get("model_id") or context.get("template_model_id") or "new_model"
+    return _safe_model_id(base) or "new_model"
+
+
 def _default_artifact_dir(model_family: str, market_key: str, model_id: str) -> str:
     if model_family == "prop":
         return f"models/props/{market_key or 'unknown_market'}/{model_id}"
@@ -97,6 +103,122 @@ def _build_new_context(template_context: dict[str, Any], *, model_id: str, artif
         }
     )
     return context
+
+
+def _render_config_editor(context: dict[str, Any], registry: dict[str, Any]) -> dict[str, Any]:
+    config = deepcopy(context["config"])
+    editable = context.get("is_new_model") or context["status"] in mlw.EDITABLE_STATUSES
+    key = _state_key(context)
+    feature_config = config.setdefault("features", {})
+    split = config.setdefault("split", {})
+    calibration = config.setdefault("calibration", {})
+    params = config.setdefault("params", {})
+    probability = config.setdefault("prediction", {}).setdefault("probability", {})
+
+    st.html("<div class='mlab-card'><div class='mlab-section'><div class='mlab-section-title'>Configuration</div>")
+    if not editable:
+        st.caption("Read-only because this model is not draft.")
+
+    display_name = st.text_input("Display Name", value=str(context.get("display_name") or context["model_id"]), disabled=not editable, key=f"mlab_display_name_{key}")
+    description = st.text_area("Description", value=str(context.get("description") or ""), disabled=not editable, height=72, key=f"mlab_description_{key}")
+
+    c1, c2 = st.columns(2)
+    with c1:
+        train_end = st.text_input("Train End Date", value=str(split.get("train_end_date", "2022-12-31")), disabled=not editable, key=f"mlab_train_end_{key}")
+        cal_end = st.text_input("Calibration End Date", value=str(split.get("calibration_end_date", "2023-12-31")), disabled=not editable, key=f"mlab_cal_end_{key}")
+        calibration_enabled = st.toggle("Calibration Enabled", value=bool(calibration.get("enabled", True)), disabled=not editable, key=f"mlab_cal_enabled_{key}")
+        method_options = ["isotonic", "sigmoid", "none"]
+        method = str(calibration.get("method", "isotonic"))
+        calibration_method = st.selectbox(
+            "Calibration Method",
+            method_options,
+            index=method_options.index(method) if method in method_options else 0,
+            disabled=not editable,
+            key=f"mlab_cal_method_{key}",
+        )
+    with c2:
+        clip_low = st.number_input("Probability Clip Low", value=float(probability.get("clip_low", 0.02)), step=0.01, min_value=0.0, max_value=0.49, disabled=not editable, key=f"mlab_clip_low_{key}")
+        clip_high = st.number_input("Probability Clip High", value=float(probability.get("clip_high", 0.98)), step=0.01, min_value=0.51, max_value=1.0, disabled=not editable, key=f"mlab_clip_high_{key}")
+        expected_count = st.number_input("Expected Feature Count", value=int(feature_config.get("expected_feature_count", len(feature_config.get("feature_columns") or []))), step=1, min_value=1, disabled=not editable, key=f"mlab_expected_count_{key}")
+        dashboard_selectable = st.toggle("Dashboard Selectable", value=bool(context.get("dashboard_selectable", False)), disabled=not editable, key=f"mlab_dashboard_selectable_{key}")
+
+    st.markdown("##### XGBoost Parameters")
+    p1, p2, p3, p4, p5 = st.columns(5)
+    with p1:
+        n_estimators = st.number_input("N Estimators", value=int(params.get("n_estimators", 500)), step=50, min_value=50, disabled=not editable, key=f"mlab_n_estimators_{key}")
+    with p2:
+        max_depth = st.number_input("Max Depth", value=int(params.get("max_depth", 4)), step=1, min_value=1, max_value=12, disabled=not editable, key=f"mlab_max_depth_{key}")
+    with p3:
+        learning_rate = st.number_input("Learning Rate", value=float(params.get("learning_rate", 0.03)), step=0.01, min_value=0.001, max_value=1.0, disabled=not editable, key=f"mlab_learning_rate_{key}")
+    with p4:
+        subsample = st.number_input("Subsample", value=float(params.get("subsample", 0.8)), step=0.05, min_value=0.1, max_value=1.0, disabled=not editable, key=f"mlab_subsample_{key}")
+    with p5:
+        colsample = st.number_input("Colsample", value=float(params.get("colsample_bytree", 0.8)), step=0.05, min_value=0.1, max_value=1.0, disabled=not editable, key=f"mlab_colsample_{key}")
+
+    st.html("</div></div>")
+    return {
+        "display_name": display_name,
+        "description": description,
+        "dashboard_selectable": dashboard_selectable,
+        "train_end_date": train_end,
+        "calibration_end_date": cal_end,
+        "calibration_enabled": calibration_enabled,
+        "calibration_method": calibration_method,
+        "clip_low": clip_low,
+        "clip_high": clip_high,
+        "expected_feature_count": int(expected_count),
+        "params": {
+            "n_estimators": int(n_estimators),
+            "max_depth": int(max_depth),
+            "learning_rate": float(learning_rate),
+            "subsample": float(subsample),
+            "colsample_bytree": float(colsample),
+            "random_state": int(params.get("random_state", 42)),
+            "eval_metric": params.get("eval_metric", "logloss"),
+        },
+    }
+
+
+def _render_feature_bundle_editor(context: dict[str, Any]) -> dict[str, Any]:
+    config = context["config"]
+    editable = context.get("is_new_model") or context["status"] in mlw.EDITABLE_STATUSES
+    key = _state_key(context)
+    current_features = list((config.get("features") or {}).get("feature_columns") or [])
+    available_features = mlw._available_feature_columns(context)
+    bundle_map = mlw._bundle_map(available_features)
+    default_bundles = mlw._infer_selected_bundles(config, available_features)
+
+    st.html("<div class='mlab-card'><div class='mlab-section'><div class='mlab-section-title'>Feature Bundles</div>")
+    selected_bundles = st.multiselect(
+        "Selected Bundles",
+        options=list(bundle_map.keys()),
+        default=[bundle for bundle in default_bundles if bundle in bundle_map],
+        format_func=lambda name: f"{mlw.BUNDLE_LABELS.get(name, name)} ({len(bundle_map.get(name, []))})",
+        disabled=not editable,
+        key=f"mlab_selected_bundles_{key}",
+    )
+    include_text = st.text_area("Include Feature Overrides", value="", disabled=not editable, height=68, key=f"mlab_include_features_{key}")
+    exclude_text = st.text_area("Exclude Feature Overrides", value="", disabled=not editable, height=68, key=f"mlab_exclude_features_{key}")
+    resolved = mlw._resolve_features_from_bundles(
+        available_features=available_features,
+        selected_bundles=selected_bundles,
+        include_overrides=mlw._csv_to_list(include_text),
+        exclude_overrides=mlw._csv_to_list(exclude_text),
+    )
+    if not resolved and current_features:
+        resolved = current_features
+
+    st.caption(f"Resolved features: {len(resolved):,} · Available candidate columns: {len(available_features):,}")
+    st.dataframe(pd.DataFrame({"feature": resolved[:200]}), use_container_width=True, hide_index=True, height=240)
+    if len(resolved) > 200:
+        st.caption(f"Showing first 200 of {len(resolved):,} resolved features.")
+    st.html("</div></div>")
+    return {
+        "selected_bundles": selected_bundles,
+        "include_features": mlw._csv_to_list(include_text),
+        "exclude_features": mlw._csv_to_list(exclude_text),
+        "resolved_features": resolved,
+    }
 
 
 def _save_new_or_existing_model(
@@ -270,9 +392,9 @@ def _render_single_editor() -> None:
     top_left, top_right = st.columns([1.05, 1.45], gap="medium")
     with top_left:
         _patched_lifecycle_controls(context, registry)
-        form_values = mlw._render_config_editor(context, registry)
+        form_values = _render_config_editor(context, registry)
     with top_right:
-        feature_values = mlw._render_feature_bundle_editor(context)
+        feature_values = _render_feature_bundle_editor(context)
         mlw._render_performance(context)
 
     can_save = context.get("is_new_model") or context.get("status") == "draft"
