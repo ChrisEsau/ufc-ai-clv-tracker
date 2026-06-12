@@ -21,10 +21,15 @@ def _safe_model_id(value: str) -> str:
     return cleaned.strip("_")
 
 
-def _default_artifact_dir(model_family: str, market_key: str, model_id: str) -> str:
-    if model_family == "prop":
-        return f"models/props/{market_key or 'unknown_market'}/{model_id}"
-    return f"models/{model_family or 'models'}/{model_id}"
+def _safe_path_key(value: str) -> str:
+    cleaned = "".join(ch.lower() if ch.isalnum() else "_" for ch in str(value or "").strip())
+    while "__" in cleaned:
+        cleaned = cleaned.replace("__", "_")
+    return cleaned.strip("_") or "unknown_market"
+
+
+def _artifact_dir_for_market(model_id: str, market_key: str) -> str:
+    return f"models/{_safe_path_key(market_key)}/{_safe_model_id(model_id)}"
 
 
 def _load_registry_rows() -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, dict[str, Any]]]:
@@ -60,13 +65,16 @@ def _existing_model_selector(
     return mlw.resolve_model_workflow_context(registry=registry, model_id=selected)
 
 
-def _build_new_context(template_context: dict[str, Any], *, model_id: str, artifact_dir: str) -> dict[str, Any]:
+def _build_new_context(template_context: dict[str, Any], *, model_id: str) -> dict[str, Any]:
     model_id = _safe_model_id(model_id)
     context = deepcopy(template_context)
     config = deepcopy(context["config"])
+    market_key = str(context.get("market_key") or config.get("market_key") or "moneyline")
+    artifact_dir = _artifact_dir_for_market(model_id, market_key)
     config["model_id"] = model_id
     config["artifact_name"] = model_id
     config["status"] = "draft"
+    config["market_key"] = market_key
     config.setdefault("artifacts", {})["output_dir"] = artifact_dir
     context.update(
         {
@@ -77,6 +85,7 @@ def _build_new_context(template_context: dict[str, Any], *, model_id: str, artif
             "dashboard_selectable": False,
             "config_path": f"configs/models/{model_id}.yaml" if model_id else "",
             "artifact_dir": artifact_dir,
+            "market_key": market_key,
             "config": config,
             "is_new_model": True,
             "template_model_id": template_context["model_id"],
@@ -98,11 +107,13 @@ def _save_new_or_existing_model(
     if context.get("is_new_model") and model_id in (registry.get("models") or {}):
         return False, f"Model already exists: {model_id}"
 
+    artifact_dir = _artifact_dir_for_market(model_id, context.get("market_key", "moneyline"))
     updated_config = mlw._apply_config_updates(context, form_values, feature_values)
     updated_config["model_id"] = model_id
     updated_config["artifact_name"] = model_id
     updated_config["status"] = "draft"
-    updated_config.setdefault("artifacts", {})["output_dir"] = context["artifact_dir"]
+    updated_config["market_key"] = context.get("market_key", "moneyline")
+    updated_config.setdefault("artifacts", {})["output_dir"] = artifact_dir
 
     updated_registry = deepcopy(registry)
     updated_registry.setdefault("models", {})[model_id] = {
@@ -112,7 +123,7 @@ def _save_new_or_existing_model(
         "market_key": context["market_key"],
         "algorithm": context["algorithm"] or updated_config.get("algorithm", "xgboost"),
         "config_path": context["config_path"],
-        "artifact_dir": context["artifact_dir"],
+        "artifact_dir": artifact_dir,
         "status": "draft",
         "dashboard_selectable": bool(form_values["dashboard_selectable"]),
         "outcome_architecture": True,
@@ -260,16 +271,7 @@ def _render_configuration(registry: dict[str, Any], rows: list[dict[str, Any]], 
         new_model_id = _safe_model_id(
             st.text_input("New Model ID", value=f"{template_id}_exp01", key="model_lab_new_model_id")
         )
-        artifact_dir = st.text_input(
-            "Artifact Directory",
-            value=_default_artifact_dir(
-                template_context["model_family"],
-                template_context["market_key"],
-                new_model_id or "new_model",
-            ),
-            key="model_lab_new_artifact_dir",
-        )
-        context = _build_new_context(template_context, model_id=new_model_id, artifact_dir=artifact_dir)
+        context = _build_new_context(template_context, model_id=new_model_id)
     else:
         st.session_state["mlab_active_model_id"] = selected
         context = mlw.resolve_model_workflow_context(registry=registry, model_id=selected)
