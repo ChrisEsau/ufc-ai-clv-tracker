@@ -51,6 +51,11 @@ jobs:
           python -m pipeline.betting.run_betting_outcomes_v2 \
             --model-mode "${{ github.event.inputs.model_mode }}"
 
+      - name: Run Betting Join Key Diagnostic
+        run: |
+          python -m pipeline.betting.run_betting_join_key_diagnostic \
+            --model-mode "${{ github.event.inputs.model_mode }}"
+
       - name: Commit betting outputs
         run: |
           git config user.name "github-actions"
@@ -58,7 +63,8 @@ jobs:
 
           git add -f \
             data/predictions/betting_outcomes.parquet \
-            data/audits/ufc_betting_outcomes_audit.parquet
+            data/audits/ufc_betting_outcomes_audit.parquet \
+            data/audits/ufc_betting_join_key_diagnostic.parquet
 
           git commit -m "Update betting outcomes artifacts" || echo "No changes to commit"
           git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
