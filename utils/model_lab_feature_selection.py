@@ -15,8 +15,6 @@ def _inject_feature_selector_css() -> None:
     st.markdown(
         """
         <style>
-        /* Multiselect bundle pills. Streamlit/BaseWeb has changed this node
-           between div and span in different releases, so target both. */
         [data-baseweb="tag"],
         div[data-baseweb="tag"],
         span[data-baseweb="tag"],
@@ -32,9 +30,9 @@ def _inject_feature_selector_css() -> None:
             color: #ffffff !important;
             fill: #ffffff !important;
             opacity: 1 !important;
+            background: transparent !important;
         }
 
-        /* Checkboxes and toggles. */
         input[type="checkbox"] {
             accent-color: #2563eb !important;
         }
@@ -46,6 +44,8 @@ def _inject_feature_selector_css() -> None:
         div[data-testid="stToggle"] p {
             color: #f8fafc !important;
             opacity: 1 !important;
+            background: transparent !important;
+            background-color: transparent !important;
         }
         div[data-testid="stCheckbox"] input:checked ~ div,
         div[data-testid="stCheckbox"] input:checked + div,
@@ -54,8 +54,12 @@ def _inject_feature_selector_css() -> None:
             background-color: #2563eb !important;
             border-color: #60a5fa !important;
         }
+        div[data-testid="stToggle"] div,
+        div[data-testid="stToggle"] span,
+        div[data-testid="stToggle"] p {
+            background-image: none !important;
+        }
 
-        /* Form labels and feature expander text. */
         label,
         label p,
         label span,
