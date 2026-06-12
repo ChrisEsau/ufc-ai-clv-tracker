@@ -10,6 +10,8 @@ from tabs.bankroll import render_bankroll
 from tabs.model_lab import render_model_lab
 from tabs.data_maintenance import render_data_maintenance
 from utils.sidebar import render_sidebar
+import utils.model_lab_workflows as model_lab_workflows
+from utils.model_lab_feature_selection import render_feature_checklist
 
 # ============================================================
 # PAGE CONFIG
@@ -17,6 +19,9 @@ from utils.sidebar import render_sidebar
 
 apply_theme()
 
+# Keep existing Model Lab save behavior, but replace the old text override
+# feature selector with the explicit checkbox bundle selector.
+model_lab_workflows._render_feature_bundle_editor = render_feature_checklist
 
 page = render_sidebar()
 
