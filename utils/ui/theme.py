@@ -58,6 +58,42 @@ def apply_theme() -> None:
             background: #05080d;
         }}
 
+        /* Force Streamlit text to stay bright in the dark dashboard. */
+        .stApp,
+        .stApp p,
+        .stApp span,
+        .stApp label,
+        .stApp div,
+        .stApp small,
+        .stApp li,
+        .stApp td,
+        .stApp th,
+        .stApp input,
+        .stApp textarea,
+        .stApp [data-testid="stMarkdownContainer"],
+        .stApp [data-testid="stMarkdownContainer"] *,
+        .stApp [data-testid="stWidgetLabel"],
+        .stApp [data-testid="stWidgetLabel"] *,
+        .stApp [data-testid="stCheckbox"],
+        .stApp [data-testid="stCheckbox"] *,
+        .stApp [data-testid="stToggle"],
+        .stApp [data-testid="stToggle"] * {{
+            color: #ffffff !important;
+            opacity: 1 !important;
+        }}
+
+        .stApp input,
+        .stApp textarea,
+        .stApp input:disabled,
+        .stApp textarea:disabled,
+        .stApp [disabled],
+        .stApp [aria-disabled="true"],
+        .stApp [data-disabled="true"] {{
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
+            opacity: 1 !important;
+        }}
+
         [data-testid="stAppViewContainer"],
         [data-testid="stMain"],
         [data-testid="stMainBlockContainer"],
@@ -115,7 +151,7 @@ def apply_theme() -> None:
         }}
 
         .ufc-kicker {{
-            color: var(--ufc-blue);
+            color: #ffffff !important;
             font-size: 0.72rem;
             font-weight: 800;
             letter-spacing: 0.14em;
@@ -133,13 +169,13 @@ def apply_theme() -> None:
         }}
 
         .ufc-subtitle {{
-            color: var(--ufc-muted);
+            color: #ffffff !important;
             font-size: 0.98rem;
             margin-top: 0.18rem;
         }}
 
         .ufc-updated {{
-            color: var(--ufc-muted);
+            color: #ffffff !important;
             font-size: 0.78rem;
             white-space: nowrap;
             padding-top: 0.35rem;
@@ -160,7 +196,7 @@ def apply_theme() -> None:
         }}
 
         .metric-label {{
-            color: var(--ufc-muted);
+            color: #ffffff !important;
             font-size: 0.70rem;
             font-weight: 800;
             letter-spacing: 0.08em;
@@ -182,7 +218,7 @@ def apply_theme() -> None:
         }}
 
         .metric-subtext {{
-            color: var(--ufc-muted);
+            color: #ffffff !important;
             font-size: 0.78rem;
             margin-top: 0.35rem;
         }}
@@ -196,7 +232,7 @@ def apply_theme() -> None:
         }}
 
         .section-caption {{
-            color: var(--ufc-muted);
+            color: #ffffff !important;
             font-size: 0.84rem;
             margin-bottom: 0.7rem;
         }}
@@ -212,14 +248,14 @@ def apply_theme() -> None:
             border: 1px solid transparent;
             white-space: nowrap;
         }}
-        .status-success {{ color: var(--ufc-green); background: rgba(53, 217, 107, .12); border-color: rgba(53,217,107,.34); }}
-        .status-warning {{ color: var(--ufc-yellow); background: rgba(250, 204, 21, .12); border-color: rgba(250,204,21,.34); }}
-        .status-danger {{ color: var(--ufc-red); background: rgba(239, 68, 68, .12); border-color: rgba(239,68,68,.34); }}
-        .status-info {{ color: var(--ufc-blue); background: rgba(59, 130, 246, .12); border-color: rgba(59,130,246,.34); }}
-        .status-neutral {{ color: #cbd5e1; background: rgba(148, 163, 184, .11); border-color: rgba(148,163,184,.24); }}
+        .status-success {{ color: #ffffff !important; background: rgba(53, 217, 107, .12); border-color: rgba(53,217,107,.34); }}
+        .status-warning {{ color: #ffffff !important; background: rgba(250, 204, 21, .12); border-color: rgba(250,204,21,.34); }}
+        .status-danger {{ color: #ffffff !important; background: rgba(239, 68, 68, .12); border-color: rgba(239,68,68,.34); }}
+        .status-info {{ color: #ffffff !important; background: rgba(59, 130, 246, .12); border-color: rgba(59,130,246,.34); }}
+        .status-neutral {{ color: #ffffff !important; background: rgba(148, 163, 184, .11); border-color: rgba(148,163,184,.24); }}
 
         .sidebar-section {{
-            color: #dbeafe;
+            color: #ffffff !important;
             font-size: 0.72rem;
             font-weight: 900;
             letter-spacing: 0.09em;
@@ -243,18 +279,18 @@ def apply_theme() -> None:
             align-items: center;
             justify-content: space-between;
             gap: .75rem;
-            color: #dbe7f5;
+            color: #ffffff !important;
             font-size: .80rem;
             padding: .34rem 0;
             border-bottom: 1px solid rgba(245,247,251,.08);
         }}
         .sidebar-stat-row strong {{
-            color: #31df63;
+            color: #ffffff !important;
             font-size: .92rem;
         }}
 
         .sidebar-version, .sidebar-note {{
-            color: #dbe7f5;
+            color: #ffffff !important;
             font-size: 0.76rem;
         }}
 
@@ -297,13 +333,13 @@ def apply_theme() -> None:
         section[data-testid="stSidebar"] p,
         section[data-testid="stSidebar"] span,
         section[data-testid="stSidebar"] label {{
-            color: #f5f7fb !important;
+            color: #ffffff !important;
         }}
 
         section[data-testid="stSidebar"] [data-testid="stCaptionContainer"] p,
         section[data-testid="stSidebar"] .sidebar-note,
         section[data-testid="stSidebar"] .sidebar-version {{
-            color: #dbe7f5 !important;
+            color: #ffffff !important;
         }}
 
         div[data-testid="stDataFrame"] {{
@@ -321,12 +357,12 @@ def apply_theme() -> None:
         }}
 
         div[data-testid="stMetricLabel"] p {{
-            color: var(--ufc-muted) !important;
+            color: #ffffff !important;
             font-weight: 800;
         }}
 
         div[data-testid="stMetricValue"] {{
-            color: var(--ufc-text) !important;
+            color: #ffffff !important;
             font-weight: 900;
         }}
 
@@ -341,7 +377,7 @@ def apply_theme() -> None:
             border-radius: 8px !important;
             border: 1px solid rgba(59, 130, 246, 0.55) !important;
             background: linear-gradient(180deg, rgba(20, 65, 135, .76), rgba(18, 48, 96, .78)) !important;
-            color: #eaf2ff !important;
+            color: #ffffff !important;
             font-weight: 800 !important;
         }}
 
@@ -354,11 +390,12 @@ def apply_theme() -> None:
         div[data-baseweb="select"] > div, div[data-baseweb="input"] > div, textarea, input {{
             background-color: rgba(7, 17, 31, 0.9) !important;
             border-color: rgba(38, 54, 74, 0.95) !important;
-            color: var(--ufc-text) !important;
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
         }}
 
         label[data-testid="stWidgetLabel"] {{
-            color: #cbd5e1 !important;
+            color: #ffffff !important;
             font-weight: 800 !important;
             font-size: 0.78rem !important;
         }}
@@ -380,9 +417,9 @@ def apply_theme() -> None:
             box-shadow: 0 0 8px rgba(0, 102, 255, 0.45);
         }}
 
-        .positive {{ color: var(--ufc-green); font-weight: 900; }}
-        .negative {{ color: var(--ufc-red); font-weight: 900; }}
-        .neutral {{ color: #cbd5e1; font-weight: 800; }}
+        .positive {{ color: #ffffff !important; font-weight: 900; }}
+        .negative {{ color: #ffffff !important; font-weight: 900; }}
+        .neutral {{ color: #ffffff !important; font-weight: 800; }}
 
         @media (max-width: 900px) {{
             .block-container {{ padding-left: 0.8rem; padding-right: 0.8rem; }}
