@@ -12,47 +12,12 @@ from tabs.bankroll import render_bankroll
 from tabs.model_lab import render_model_lab
 from tabs.data_maintenance import render_data_maintenance
 from utils.sidebar import render_sidebar
-import utils.model_lab_workflows as model_lab_workflows
-from utils.model_lab_feature_selection import render_feature_checklist
 
 # ============================================================
 # PAGE CONFIG
 # ============================================================
 
 apply_theme()
-
-# Streamlit renders toggle controls as checkbox-like widgets in some versions.
-# Keep this narrow: text only, no label background fills.
-st.markdown(
-    """
-    <style>
-    div[data-testid="stToggle"] label,
-    div[data-testid="stToggle"] label *,
-    div[data-testid="stToggle"] p,
-    div[data-testid="stToggle"] span,
-    div[data-testid="stCheckbox"] label,
-    div[data-testid="stCheckbox"] label *,
-    div[data-testid="stCheckbox"] p,
-    div[data-testid="stCheckbox"] span {
-        color: #f8fafc !important;
-        background: transparent !important;
-        background-color: transparent !important;
-        opacity: 1 !important;
-    }
-    div[data-testid="stToggle"] [role="switch"][aria-checked="true"],
-    div[data-testid="stCheckbox"] [role="switch"][aria-checked="true"],
-    div[data-testid="stCheckbox"] [role="checkbox"][aria-checked="true"] {
-        background-color: #2563eb !important;
-        border-color: #60a5fa !important;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-# Keep existing Model Lab save behavior, but replace the old text override
-# feature selector with the explicit checkbox bundle selector.
-model_lab_workflows._render_feature_bundle_editor = render_feature_checklist
 
 page = render_sidebar()
 
