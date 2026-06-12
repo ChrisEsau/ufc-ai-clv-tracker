@@ -11,6 +11,7 @@ import utils.model_lab_workflows as mlw
 
 
 NEW_MODEL_SENTINEL = "__new_model__"
+WORKSPACES = ["Overview", "Configuration", "Features", "Performance", "Comparison", "Actions"]
 
 MODEL_LAB_VISUAL_REFINEMENT_CSS = """
 <style>
@@ -21,37 +22,33 @@ section.main > div.block-container { padding-top: 1.05rem; }
 }
 .mlab-title { font-size: 2.22rem !important; letter-spacing: -.055em !important; }
 .mlab-subtitle { color: #aebdd2 !important; }
-div[data-testid="stSelectbox"] label, div[data-testid="stTextInput"] label, div[data-testid="stTextArea"] label, div[data-testid="stNumberInput"] label, div[data-testid="stMultiSelect"] label {
-    color: #dbe7f5 !important; font-size: .68rem !important; font-weight: 900 !important; letter-spacing: .035em !important; text-transform: uppercase !important;
-}
-div[data-baseweb="select"] > div, div[data-baseweb="input"] > div, div[data-baseweb="textarea"] > div, div[data-baseweb="base-input"], textarea, input {
-    background-color: rgba(9,19,32,.96) !important; border-color: rgba(56,79,111,.96) !important; color: #f5f7fb !important;
-}
 .mlab-card { border-radius: 13px !important; border: 1px solid rgba(50,75,108,.96) !important; background: linear-gradient(180deg, rgba(18,34,55,.96), rgba(8,17,30,.99)) !important; box-shadow: 0 20px 46px rgba(0,0,0,.31), inset 0 1px 0 rgba(255,255,255,.035) !important; overflow: hidden; }
 .mlab-section { padding: 1rem 1.05rem 1.05rem !important; }
-.mlab-section-title { display: flex; align-items: center; gap: .45rem; color: #f8fafc !important; font-size: .76rem !important; letter-spacing: .08em !important; padding-bottom: .55rem; margin-bottom: .85rem !important; border-bottom: 1px solid rgba(53,76,110,.82); }
-.mlab-section-title::before { content: ""; width: 7px; height: 7px; border-radius: 999px; background: #3b82f6; box-shadow: 0 0 13px rgba(59,130,246,.9); }
-.mlab-kpis { gap: .72rem !important; margin: .82rem 0 .9rem !important; }
-.mlab-kpi { min-height: 94px !important; padding: .95rem .7rem .78rem !important; position: relative; }
-.mlab-kpi::after { content: ""; position: absolute; left: 13%; right: 13%; bottom: 0; height: 2px; background: linear-gradient(90deg, transparent, rgba(59,130,246,.8), transparent); }
-.mlab-label { color: #9fb0c4 !important; font-size: .62rem !important; letter-spacing: .075em !important; }
-.mlab-value { font-size: 1.62rem !important; line-height: 1.05 !important; }
-.mlab-caption { color: #91a3ba !important; }
-.mlab-model-bar { margin-top: .15rem; padding: 1rem 1.1rem !important; background: linear-gradient(90deg, rgba(15,38,68,.98), rgba(8,18,31,.98)) !important; }
-.mlab-model-name { font-size: 1.42rem !important; letter-spacing: -.025em; }
-.mlab-pill { margin-left: .42rem; border: 1px solid rgba(255,255,255,.14); box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
-div[data-testid="stButton"] > button { border-radius: 9px !important; border: 1px solid rgba(59,130,246,.46) !important; background: linear-gradient(180deg, rgba(37,99,235,.95), rgba(29,78,216,.92)) !important; color: #f8fafc !important; font-weight: 900 !important; letter-spacing: .01em !important; box-shadow: 0 10px 24px rgba(0,0,0,.25) !important; }
-div[data-testid="stButton"] > button:hover { border-color: rgba(147,197,253,.78) !important; filter: brightness(1.08); }
-div[data-testid="stButton"] > button:disabled { background: linear-gradient(180deg, rgba(43,57,78,.78), rgba(24,35,51,.9)) !important; border-color: rgba(71,85,105,.5) !important; color: #94a3b8 !important; }
-div[data-testid="stDataFrame"] { border-radius: 10px !important; overflow: hidden; border: 1px solid rgba(43,60,82,.78); }
-details[data-testid="stExpander"] { background: rgba(9,19,32,.72) !important; border: 1px solid rgba(43,60,82,.85) !important; border-radius: 12px !important; }
-details[data-testid="stExpander"] summary { color: #f5f7fb !important; font-weight: 900 !important; }
-div[data-testid="stTabs"] button { color: #dbe7f5 !important; font-weight: 850 !important; }
-div[data-testid="stTabs"] [data-baseweb="tab-highlight"] { background-color: #3b82f6 !important; }
-div[data-testid="stAlert"] { border-radius: 10px !important; border: 1px solid rgba(59,130,246,.24) !important; background: rgba(15,35,60,.72) !important; }
-div[data-testid="stVerticalBlock"] > div:has(.mlab-card) { gap: .55rem !important; }
+.mlab-section-title { display:flex; align-items:center; gap:.45rem; color:#f8fafc !important; font-size:.76rem !important; letter-spacing:.08em !important; padding-bottom:.55rem; margin-bottom:.85rem !important; border-bottom:1px solid rgba(53,76,110,.82); text-transform:uppercase; font-weight:950; }
+.mlab-section-title::before { content:""; width:7px; height:7px; border-radius:999px; background:#3b82f6; box-shadow:0 0 13px rgba(59,130,246,.9); }
+.mlab-kpis { gap:.72rem !important; margin:.82rem 0 .9rem !important; }
+.mlab-kpi { min-height:94px !important; padding:.95rem .7rem .78rem !important; position:relative; }
+.mlab-kpi::after { content:""; position:absolute; left:13%; right:13%; bottom:0; height:2px; background:linear-gradient(90deg, transparent, rgba(59,130,246,.8), transparent); }
+.mlab-label { color:#9fb0c4 !important; font-size:.62rem !important; letter-spacing:.075em !important; }
+.mlab-value { font-size:1.62rem !important; line-height:1.05 !important; }
+.mlab-caption { color:#91a3ba !important; }
+.mlab-model-bar { margin-top:.15rem; padding:1rem 1.1rem !important; background:linear-gradient(90deg, rgba(15,38,68,.98), rgba(8,18,31,.98)) !important; }
+.mlab-model-name { font-size:1.42rem !important; letter-spacing:-.025em; }
+.mlab-pill { margin-left:.42rem; border:1px solid rgba(255,255,255,.14); box-shadow:inset 0 1px 0 rgba(255,255,255,.06); }
+.mlab-workspace-title { color:#f8fafc; font-size:1.35rem; font-weight:950; text-transform:uppercase; letter-spacing:-.025em; margin:.1rem 0 .75rem; }
+.mlab-nav-note { color:#91a3ba; font-size:.78rem; margin-top:.65rem; line-height:1.35; }
+div[data-testid="stButton"] > button { border-radius:9px !important; border:1px solid rgba(59,130,246,.46) !important; background:linear-gradient(180deg, rgba(37,99,235,.95), rgba(29,78,216,.92)) !important; color:#f8fafc !important; font-weight:900 !important; box-shadow:0 10px 24px rgba(0,0,0,.25) !important; }
+div[data-testid="stButton"] > button:disabled { background:linear-gradient(180deg, rgba(43,57,78,.78), rgba(24,35,51,.9)) !important; border-color:rgba(71,85,105,.5) !important; color:#94a3b8 !important; }
+div[data-testid="stDataFrame"] { border-radius:10px !important; overflow:hidden; border:1px solid rgba(43,60,82,.78); }
+details[data-testid="stExpander"] { background:rgba(9,19,32,.72) !important; border:1px solid rgba(43,60,82,.85) !important; border-radius:12px !important; }
+div[data-testid="stSelectbox"] label, div[data-testid="stTextInput"] label, div[data-testid="stTextArea"] label, div[data-testid="stNumberInput"] label, div[data-testid="stMultiSelect"] label {
+    color:#dbe7f5 !important; font-size:.68rem !important; font-weight:900 !important; letter-spacing:.035em !important; text-transform:uppercase !important;
+}
+div[data-baseweb="select"] > div, div[data-baseweb="input"] > div, div[data-baseweb="textarea"] > div, div[data-baseweb="base-input"], textarea, input {
+    background-color:rgba(9,19,32,.96) !important; border-color:rgba(56,79,111,.96) !important; color:#f5f7fb !important;
+}
+div[role="radiogroup"] label { background:rgba(12,25,42,.75); border:1px solid rgba(43,60,82,.8); border-radius:9px; padding:.3rem .45rem; margin-bottom:.35rem; }
 hr { border-color: rgba(43,60,82,.7) !important; }
-@media (max-width: 1200px) { .mlab-title { font-size: 1.75rem !important; } .mlab-model-name { font-size: 1.12rem !important; } }
 </style>
 """
 
@@ -64,8 +61,7 @@ def _safe_model_id(value: str) -> str:
 
 
 def _state_key(context: dict[str, Any]) -> str:
-    base = context.get("model_id") or context.get("template_model_id") or "new_model"
-    return _safe_model_id(base) or "new_model"
+    return _safe_model_id(context.get("model_id") or context.get("template_model_id") or "new_model") or "new_model"
 
 
 def _default_artifact_dir(model_family: str, market_key: str, model_id: str) -> str:
@@ -75,9 +71,39 @@ def _default_artifact_dir(model_family: str, market_key: str, model_id: str) -> 
 
 
 def _registry_is_active_primary(registry: dict[str, Any], context: dict[str, Any]) -> bool:
-    family = context.get("model_family", "")
-    model_id = context.get("model_id", "")
-    return registry.get("active_models", {}).get(family, {}).get("primary") == model_id
+    return registry.get("active_models", {}).get(context.get("model_family", ""), {}).get("primary") == context.get("model_id", "")
+
+
+def _load_registry_rows() -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, dict[str, Any]]]:
+    registry = mlw.load_model_registry()
+    rows = mlw.get_registered_model_rows(registry)
+    return registry, rows, {row["model_id"]: row for row in rows}
+
+
+def _current_existing_context(registry: dict[str, Any], rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if not rows:
+        return None
+    ids = [row["model_id"] for row in rows]
+    selected = st.session_state.get("mlab_active_model_id")
+    if selected not in ids:
+        selected = ids[0]
+        st.session_state["mlab_active_model_id"] = selected
+    return mlw.resolve_model_workflow_context(registry=registry, model_id=selected)
+
+
+def _existing_model_selector(registry: dict[str, Any], rows: list[dict[str, Any]], row_by_id: dict[str, dict[str, Any]], *, key: str) -> dict[str, Any]:
+    ids = [row["model_id"] for row in rows]
+    current = st.session_state.get("mlab_active_model_id", ids[0])
+    index = ids.index(current) if current in ids else 0
+    selected = st.selectbox(
+        "Active Model",
+        ids,
+        index=index,
+        format_func=lambda mid: mlw._model_label(row_by_id[mid]),
+        key=key,
+    )
+    st.session_state["mlab_active_model_id"] = selected
+    return mlw.resolve_model_workflow_context(registry=registry, model_id=selected)
 
 
 def _build_new_context(template_context: dict[str, Any], *, model_id: str, artifact_dir: str) -> dict[str, Any]:
@@ -88,24 +114,22 @@ def _build_new_context(template_context: dict[str, Any], *, model_id: str, artif
     config["artifact_name"] = model_id
     config["status"] = "draft"
     config.setdefault("artifacts", {})["output_dir"] = artifact_dir
-    context.update(
-        {
-            "model_id": model_id,
-            "display_name": f"{template_context.get('display_name', template_context['model_id'])} Experiment",
-            "description": f"Draft experiment created from {template_context['model_id']}.",
-            "status": "draft",
-            "dashboard_selectable": False,
-            "config_path": f"configs/models/{model_id}.yaml" if model_id else "",
-            "artifact_dir": artifact_dir,
-            "config": config,
-            "is_new_model": True,
-            "template_model_id": template_context["model_id"],
-        }
-    )
+    context.update({
+        "model_id": model_id,
+        "display_name": f"{template_context.get('display_name', template_context['model_id'])} Experiment",
+        "description": f"Draft experiment created from {template_context['model_id']}.",
+        "status": "draft",
+        "dashboard_selectable": False,
+        "config_path": f"configs/models/{model_id}.yaml" if model_id else "",
+        "artifact_dir": artifact_dir,
+        "config": config,
+        "is_new_model": True,
+        "template_model_id": template_context["model_id"],
+    })
     return context
 
 
-def _render_config_editor(context: dict[str, Any], registry: dict[str, Any]) -> dict[str, Any]:
+def _render_config_editor(context: dict[str, Any]) -> dict[str, Any]:
     config = deepcopy(context["config"])
     editable = context.get("is_new_model") or context["status"] in mlw.EDITABLE_STATUSES
     key = _state_key(context)
@@ -118,30 +142,21 @@ def _render_config_editor(context: dict[str, Any], registry: dict[str, Any]) -> 
     st.html("<div class='mlab-card'><div class='mlab-section'><div class='mlab-section-title'>Configuration</div>")
     if not editable:
         st.caption("Read-only because this model is not draft.")
-
     display_name = st.text_input("Display Name", value=str(context.get("display_name") or context["model_id"]), disabled=not editable, key=f"mlab_display_name_{key}")
     description = st.text_area("Description", value=str(context.get("description") or ""), disabled=not editable, height=72, key=f"mlab_description_{key}")
-
     c1, c2 = st.columns(2)
     with c1:
         train_end = st.text_input("Train End Date", value=str(split.get("train_end_date", "2022-12-31")), disabled=not editable, key=f"mlab_train_end_{key}")
         cal_end = st.text_input("Calibration End Date", value=str(split.get("calibration_end_date", "2023-12-31")), disabled=not editable, key=f"mlab_cal_end_{key}")
         calibration_enabled = st.toggle("Calibration Enabled", value=bool(calibration.get("enabled", True)), disabled=not editable, key=f"mlab_cal_enabled_{key}")
-        method_options = ["isotonic", "sigmoid", "none"]
+        options = ["isotonic", "sigmoid", "none"]
         method = str(calibration.get("method", "isotonic"))
-        calibration_method = st.selectbox(
-            "Calibration Method",
-            method_options,
-            index=method_options.index(method) if method in method_options else 0,
-            disabled=not editable,
-            key=f"mlab_cal_method_{key}",
-        )
+        calibration_method = st.selectbox("Calibration Method", options, index=options.index(method) if method in options else 0, disabled=not editable, key=f"mlab_cal_method_{key}")
     with c2:
         clip_low = st.number_input("Probability Clip Low", value=float(probability.get("clip_low", 0.02)), step=0.01, min_value=0.0, max_value=0.49, disabled=not editable, key=f"mlab_clip_low_{key}")
         clip_high = st.number_input("Probability Clip High", value=float(probability.get("clip_high", 0.98)), step=0.01, min_value=0.51, max_value=1.0, disabled=not editable, key=f"mlab_clip_high_{key}")
         expected_count = st.number_input("Expected Feature Count", value=int(feature_config.get("expected_feature_count", len(feature_config.get("feature_columns") or []))), step=1, min_value=1, disabled=not editable, key=f"mlab_expected_count_{key}")
         dashboard_selectable = st.toggle("Dashboard Selectable", value=bool(context.get("dashboard_selectable", False)), disabled=not editable, key=f"mlab_dashboard_selectable_{key}")
-
     st.markdown("##### XGBoost Parameters")
     p1, p2, p3, p4, p5 = st.columns(5)
     with p1:
@@ -154,7 +169,6 @@ def _render_config_editor(context: dict[str, Any], registry: dict[str, Any]) -> 
         subsample = st.number_input("Subsample", value=float(params.get("subsample", 0.8)), step=0.05, min_value=0.1, max_value=1.0, disabled=not editable, key=f"mlab_subsample_{key}")
     with p5:
         colsample = st.number_input("Colsample", value=float(params.get("colsample_bytree", 0.8)), step=0.05, min_value=0.1, max_value=1.0, disabled=not editable, key=f"mlab_colsample_{key}")
-
     st.html("</div></div>")
     return {
         "display_name": display_name,
@@ -168,13 +182,9 @@ def _render_config_editor(context: dict[str, Any], registry: dict[str, Any]) -> 
         "clip_high": clip_high,
         "expected_feature_count": int(expected_count),
         "params": {
-            "n_estimators": int(n_estimators),
-            "max_depth": int(max_depth),
-            "learning_rate": float(learning_rate),
-            "subsample": float(subsample),
-            "colsample_bytree": float(colsample),
-            "random_state": int(params.get("random_state", 42)),
-            "eval_metric": params.get("eval_metric", "logloss"),
+            "n_estimators": int(n_estimators), "max_depth": int(max_depth), "learning_rate": float(learning_rate),
+            "subsample": float(subsample), "colsample_bytree": float(colsample),
+            "random_state": int(params.get("random_state", 42)), "eval_metric": params.get("eval_metric", "logloss"),
         },
     }
 
@@ -187,82 +197,52 @@ def _render_feature_bundle_editor(context: dict[str, Any]) -> dict[str, Any]:
     available_features = mlw._available_feature_columns(context)
     bundle_map = mlw._bundle_map(available_features)
     default_bundles = mlw._infer_selected_bundles(config, available_features)
-
-    st.html("<div class='mlab-card'><div class='mlab-section'><div class='mlab-section-title'>Feature Bundles</div>")
+    st.html("<div class='mlab-card'><div class='mlab-section'><div class='mlab-section-title'>Feature Selection</div>")
     selected_bundles = st.multiselect(
-        "Selected Bundles",
-        options=list(bundle_map.keys()),
-        default=[bundle for bundle in default_bundles if bundle in bundle_map],
-        format_func=lambda name: f"{mlw.BUNDLE_LABELS.get(name, name)} ({len(bundle_map.get(name, []))})",
-        disabled=not editable,
+        "Selected Bundles", options=list(bundle_map.keys()), default=[b for b in default_bundles if b in bundle_map],
+        format_func=lambda name: f"{mlw.BUNDLE_LABELS.get(name, name)} ({len(bundle_map.get(name, []))})", disabled=not editable,
         key=f"mlab_selected_bundles_{key}",
     )
     include_text = st.text_area("Include Feature Overrides", value="", disabled=not editable, height=68, key=f"mlab_include_features_{key}")
     exclude_text = st.text_area("Exclude Feature Overrides", value="", disabled=not editable, height=68, key=f"mlab_exclude_features_{key}")
     resolved = mlw._resolve_features_from_bundles(
-        available_features=available_features,
-        selected_bundles=selected_bundles,
-        include_overrides=mlw._csv_to_list(include_text),
-        exclude_overrides=mlw._csv_to_list(exclude_text),
+        available_features=available_features, selected_bundles=selected_bundles,
+        include_overrides=mlw._csv_to_list(include_text), exclude_overrides=mlw._csv_to_list(exclude_text),
     )
     if not resolved and current_features:
         resolved = current_features
-
     st.caption(f"Resolved features: {len(resolved):,} · Available candidate columns: {len(available_features):,}")
     st.dataframe(pd.DataFrame({"feature": resolved[:200]}), use_container_width=True, hide_index=True, height=240)
     if len(resolved) > 200:
         st.caption(f"Showing first 200 of {len(resolved):,} resolved features.")
     st.html("</div></div>")
-    return {
-        "selected_bundles": selected_bundles,
-        "include_features": mlw._csv_to_list(include_text),
-        "exclude_features": mlw._csv_to_list(exclude_text),
-        "resolved_features": resolved,
-    }
+    return {"selected_bundles": selected_bundles, "include_features": mlw._csv_to_list(include_text), "exclude_features": mlw._csv_to_list(exclude_text), "resolved_features": resolved}
 
 
-def _save_new_or_existing_model(
-    *,
-    context: dict[str, Any],
-    registry: dict[str, Any],
-    form_values: dict[str, Any],
-    feature_values: dict[str, Any],
-) -> tuple[bool, str]:
+def _save_new_or_existing_model(*, context: dict[str, Any], registry: dict[str, Any], form_values: dict[str, Any], feature_values: dict[str, Any]) -> tuple[bool, str]:
     model_id = _safe_model_id(context.get("model_id", ""))
     if not model_id:
         return False, "Model ID is required."
-
-    is_new = bool(context.get("is_new_model"))
-    if is_new and model_id in (registry.get("models") or {}):
+    if context.get("is_new_model") and model_id in (registry.get("models") or {}):
         return False, f"Model already exists: {model_id}"
-
     updated_config = mlw._apply_config_updates(context, form_values, feature_values)
     updated_config["model_id"] = model_id
     updated_config["artifact_name"] = model_id
     updated_config["status"] = "draft"
     updated_config.setdefault("artifacts", {})["output_dir"] = context["artifact_dir"]
-
     updated_registry = deepcopy(registry)
     updated_registry.setdefault("models", {})[model_id] = {
-        "display_name": form_values["display_name"],
-        "description": form_values["description"],
-        "model_family": context["model_family"],
-        "market_key": context["market_key"],
+        "display_name": form_values["display_name"], "description": form_values["description"],
+        "model_family": context["model_family"], "market_key": context["market_key"],
         "algorithm": context["algorithm"] or updated_config.get("algorithm", "xgboost"),
-        "config_path": context["config_path"],
-        "artifact_dir": context["artifact_dir"],
-        "status": "draft",
-        "dashboard_selectable": bool(form_values["dashboard_selectable"]),
-        "outcome_architecture": True,
+        "config_path": context["config_path"], "artifact_dir": context["artifact_dir"],
+        "status": "draft", "dashboard_selectable": bool(form_values["dashboard_selectable"]), "outcome_architecture": True,
     }
-
     ok, msg = mlw._github_write_file(context["config_path"], mlw._yaml_dump(updated_config), f"Save draft model config {model_id}")
     if not ok:
         return ok, msg
     ok, msg = mlw._save_registry(updated_registry)
-    if not ok:
-        return ok, msg
-    return True, f"Saved draft model {model_id}."
+    return (ok, msg if not ok else f"Saved draft model {model_id}.")
 
 
 def _github_delete_file(path: str, message: str) -> tuple[bool, str]:
@@ -276,9 +256,7 @@ def _github_delete_file(path: str, message: str) -> tuple[bool, str]:
         return True, f"No config file found at {path}; registry entry can still be removed."
     response = requests.delete(
         f"{mlw.GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}",
-        headers=mlw.github_headers(token),
-        json={"message": message, "sha": sha, "branch": branch},
-        timeout=20,
+        headers=mlw.github_headers(token), json={"message": message, "sha": sha, "branch": branch}, timeout=20,
     )
     if response.status_code in {200, 201}:
         return True, f"Deleted {path}."
@@ -292,53 +270,42 @@ def _delete_model(context: dict[str, Any], registry: dict[str, Any]) -> tuple[bo
         return False, "Production models cannot be deleted."
     if _registry_is_active_primary(registry, context):
         return False, "Active primary models cannot be deleted. Change active model first."
-
     config_path = context.get("config_path", "")
     if config_path:
         ok, msg = _github_delete_file(config_path, f"Delete model config {model_id}")
         if not ok:
             return ok, msg
-
     updated_registry = deepcopy(registry)
     updated_registry.get("models", {}).pop(model_id, None)
     ok, msg = mlw._save_registry(updated_registry)
-    if not ok:
-        return ok, msg
-    return True, f"Deleted model {model_id} from registry and removed config YAML. Artifacts were not deleted."
+    return (ok, msg if not ok else f"Deleted model {model_id}. Artifacts were not deleted.")
 
 
 def _render_delete_dialog(context: dict[str, Any], registry: dict[str, Any]) -> None:
     model_id = context["model_id"]
-
-    def _dialog_body() -> None:
+    def body() -> None:
         st.warning("This removes the registry entry and config YAML. Model artifacts are not deleted.")
         st.write(f"Model: `{model_id}`")
         confirmation = st.text_input("Type the model ID to confirm", key=f"delete_confirm_{model_id}")
         c1, c2 = st.columns(2)
         with c1:
             if st.button("Cancel", use_container_width=True, key=f"delete_cancel_{model_id}"):
-                st.session_state.pop("mlab_delete_candidate", None)
-                st.rerun()
+                st.session_state.pop("mlab_delete_candidate", None); st.rerun()
         with c2:
             if st.button("Delete Model", type="primary", disabled=confirmation != model_id, use_container_width=True, key=f"delete_execute_{model_id}"):
                 ok, msg = _delete_model(context, registry)
                 st.success(msg) if ok else st.error(msg)
                 if ok:
-                    st.cache_data.clear()
-                    st.session_state.pop("mlab_delete_candidate", None)
-                    st.rerun()
-
+                    st.cache_data.clear(); st.session_state.pop("mlab_delete_candidate", None); st.rerun()
     if hasattr(st, "dialog"):
         @st.dialog("Delete Model")
-        def confirm_dialog():
-            _dialog_body()
+        def confirm_dialog(): body()
         confirm_dialog()
     else:
-        with st.expander("Confirm Delete Model", expanded=True):
-            _dialog_body()
+        with st.expander("Confirm Delete Model", expanded=True): body()
 
 
-def _patched_lifecycle_controls(context: dict[str, Any], registry: dict[str, Any]) -> None:
+def _lifecycle_note(context: dict[str, Any]) -> None:
     status = str(context.get("status") or "draft").lower()
     st.markdown("#### Lifecycle")
     if context.get("is_new_model"):
@@ -351,52 +318,34 @@ def _patched_lifecycle_controls(context: dict[str, Any], registry: dict[str, Any
         st.warning("Archived models are read-only for editing, but can be deleted if not active.")
 
 
-def _render_single_editor() -> None:
-    registry = mlw.load_model_registry()
-    rows = mlw.get_registered_model_rows(registry)
-    if not rows:
-        st.info("No models are registered in configs/models/model_registry.yaml.")
-        return
+def _workspace_header(title: str) -> None:
+    st.html(f"<div class='mlab-workspace-title'>{title}</div>")
 
-    row_by_id = {row["model_id"]: row for row in rows}
-    model_options = [NEW_MODEL_SENTINEL] + [row["model_id"] for row in rows]
+
+def _render_configuration(registry: dict[str, Any], rows: list[dict[str, Any]], row_by_id: dict[str, dict[str, Any]]) -> None:
+    _workspace_header("Configuration")
+    options = [NEW_MODEL_SENTINEL] + [row["model_id"] for row in rows]
     selected = st.selectbox(
-        "Selected Model",
-        model_options,
+        "Selected Model", options,
         format_func=lambda mid: "New Model" if mid == NEW_MODEL_SENTINEL else mlw._model_label(row_by_id[mid]),
-        key="model_lab_registered_model_id_single_editor",
+        key="model_lab_config_selected_model",
     )
-
     if selected == NEW_MODEL_SENTINEL:
-        template_id = st.selectbox(
-            "Template Model",
-            [row["model_id"] for row in rows],
-            format_func=lambda mid: mlw._model_label(row_by_id[mid]),
-            key="model_lab_template_model_id",
-        )
+        template_id = st.selectbox("Template Model", [row["model_id"] for row in rows], format_func=lambda mid: mlw._model_label(row_by_id[mid]), key="model_lab_template_model_id")
         template_context = mlw.resolve_model_workflow_context(registry=registry, model_id=template_id)
         new_model_id = _safe_model_id(st.text_input("New Model ID", value=f"{template_id}_exp01", key="model_lab_new_model_id"))
-        artifact_dir = st.text_input(
-            "Artifact Directory",
-            value=_default_artifact_dir(template_context["model_family"], template_context["market_key"], new_model_id or "new_model"),
-            key="model_lab_new_artifact_dir",
-        )
+        artifact_dir = st.text_input("Artifact Directory", value=_default_artifact_dir(template_context["model_family"], template_context["market_key"], new_model_id or "new_model"), key="model_lab_new_artifact_dir")
         context = _build_new_context(template_context, model_id=new_model_id, artifact_dir=artifact_dir)
     else:
+        st.session_state["mlab_active_model_id"] = selected
         context = mlw.resolve_model_workflow_context(registry=registry, model_id=selected)
-
-    mlw._render_kpis(context)
     mlw._render_model_bar(context, registry)
-    mlw._render_registry_table(rows)
-
-    top_left, top_right = st.columns([1.05, 1.45], gap="medium")
-    with top_left:
-        _patched_lifecycle_controls(context, registry)
-        form_values = _render_config_editor(context, registry)
-    with top_right:
+    c1, c2 = st.columns([1.05, 1.45], gap="medium")
+    with c1:
+        _lifecycle_note(context)
+        form_values = _render_config_editor(context)
+    with c2:
         feature_values = _render_feature_bundle_editor(context)
-        mlw._render_performance(context)
-
     can_save = context.get("is_new_model") or context.get("status") == "draft"
     can_delete = (not context.get("is_new_model")) and str(context.get("status") or "").lower() in {"draft", "archived"} and not _registry_is_active_primary(registry, context)
     save_col, delete_col = st.columns([3, 1])
@@ -405,26 +354,46 @@ def _render_single_editor() -> None:
             ok, msg = _save_new_or_existing_model(context=context, registry=registry, form_values=form_values, feature_values=feature_values)
             st.success(msg) if ok else st.error(msg)
             if ok:
-                st.cache_data.clear()
-                st.rerun()
+                st.session_state["mlab_active_model_id"] = context["model_id"]
+                st.cache_data.clear(); st.rerun()
     with delete_col:
         if st.button("Delete Model", disabled=not can_delete, use_container_width=True, key="mlab_delete_model_button"):
             st.session_state["mlab_delete_candidate"] = context["model_id"]
-
     if st.session_state.get("mlab_delete_candidate") == context.get("model_id"):
         _render_delete_dialog(context, registry)
 
-    bottom_left, bottom_right = st.columns([1.05, 1.35], gap="medium")
-    with bottom_left:
-        if not context.get("is_new_model"):
-            mlw._render_comparison(context, registry, context["model_id"])
-        else:
-            st.info("Save the new draft before comparing it to existing models.")
-    with bottom_right:
-        if not context.get("is_new_model"):
-            mlw._render_actions(context)
-        else:
-            st.info("Save the new draft before running workflows.")
+
+def _render_overview(registry: dict[str, Any], rows: list[dict[str, Any]], row_by_id: dict[str, dict[str, Any]]) -> None:
+    _workspace_header("Overview")
+    context = _existing_model_selector(registry, rows, row_by_id, key="mlab_overview_model")
+    mlw._render_kpis(context)
+    mlw._render_model_bar(context, registry)
+    mlw._render_registry_table(rows)
+
+
+def _render_features() -> None:
+    _workspace_header("Features")
+    st.info("Feature and bundle creation workspace coming soon. Model-level bundle selection stays in Configuration.")
+
+
+def _render_performance(registry: dict[str, Any], rows: list[dict[str, Any]], row_by_id: dict[str, dict[str, Any]]) -> None:
+    _workspace_header("Performance")
+    context = _existing_model_selector(registry, rows, row_by_id, key="mlab_performance_model")
+    mlw._render_model_bar(context, registry)
+    mlw._render_performance(context)
+
+
+def _render_comparison(registry: dict[str, Any], rows: list[dict[str, Any]], row_by_id: dict[str, dict[str, Any]]) -> None:
+    _workspace_header("Comparison")
+    context = _existing_model_selector(registry, rows, row_by_id, key="mlab_comparison_model")
+    mlw._render_comparison(context, registry, context["model_id"])
+
+
+def _render_actions(registry: dict[str, Any], rows: list[dict[str, Any]], row_by_id: dict[str, dict[str, Any]]) -> None:
+    _workspace_header("Actions")
+    context = _existing_model_selector(registry, rows, row_by_id, key="mlab_actions_model")
+    mlw._render_model_bar(context, registry)
+    mlw._render_actions(context)
 
 
 def render_model_lab():
@@ -432,6 +401,27 @@ def render_model_lab():
     mlw._inject_css()
     mlw._render_header()
     try:
-        _render_single_editor()
+        registry, rows, row_by_id = _load_registry_rows()
+        if not rows:
+            st.info("No models are registered in configs/models/model_registry.yaml.")
+            return
+        nav_col, workspace_col = st.columns([0.22, 0.78], gap="large")
+        with nav_col:
+            st.html("<div class='mlab-card'><div class='mlab-section'><div class='mlab-section-title'>Model Lab</div>")
+            workspace = st.radio("Workspace", WORKSPACES, index=WORKSPACES.index("Configuration"), key="mlab_workspace_nav", label_visibility="collapsed")
+            st.html("<div class='mlab-nav-note'>Use Configuration to create, edit, delete, and save draft model configs.</div></div></div>")
+        with workspace_col:
+            if workspace == "Overview":
+                _render_overview(registry, rows, row_by_id)
+            elif workspace == "Configuration":
+                _render_configuration(registry, rows, row_by_id)
+            elif workspace == "Features":
+                _render_features()
+            elif workspace == "Performance":
+                _render_performance(registry, rows, row_by_id)
+            elif workspace == "Comparison":
+                _render_comparison(registry, rows, row_by_id)
+            elif workspace == "Actions":
+                _render_actions(registry, rows, row_by_id)
     except Exception as exc:
         st.error(f"Unable to render Model Lab: {exc}")
