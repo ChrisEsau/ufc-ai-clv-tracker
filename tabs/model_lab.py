@@ -7,6 +7,7 @@ import requests
 import streamlit as st
 
 import utils.model_lab_workflows as mlw
+from utils.model_lab_feature_selection import render_feature_checklist
 
 
 NEW_MODEL_SENTINEL = "__new_model__"
@@ -246,7 +247,7 @@ def _render_configuration(registry: dict[str, Any], rows: list[dict[str, Any]], 
             st.info("Production models are read-only. Select New Model and use this model as a template to tune an experiment.")
         form_values = mlw._render_config_editor(context, registry)
     with c2:
-        feature_values = mlw._render_feature_bundle_editor(context)
+        feature_values = render_feature_checklist(context)
 
     can_save = context.get("is_new_model") or context.get("status") == "draft"
     can_delete = (
