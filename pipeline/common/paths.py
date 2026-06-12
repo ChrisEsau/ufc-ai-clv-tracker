@@ -71,6 +71,7 @@ LIVE_WATCHLIST_PATH = PREDICTIONS_DIR / "ufc_live_watchlist.parquet"
 BETTING_BOARD_PATH = PREDICTIONS_DIR / "ufc_betting_board.parquet"
 BETTING_OUTCOMES_PATH = PREDICTIONS_DIR / "betting_outcomes.parquet"
 BETTING_OUTCOMES_AUDIT_PATH = AUDITS_DIR / "ufc_betting_outcomes_audit.parquet"
+BETTING_JOIN_KEY_DIAGNOSTIC_PATH = AUDITS_DIR / "ufc_betting_join_key_diagnostic.parquet"
 OFFICIAL_BETS_PATH = PREDICTIONS_DIR / "ufc_official_bets.parquet"
 
 MARKET_ODDS_PATH = MARKET_DIR / "ufc_market_odds.parquet"
