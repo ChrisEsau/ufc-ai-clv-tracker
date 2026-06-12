@@ -3,14 +3,20 @@ name: Refresh DraftKings Markets
 on:
   workflow_dispatch:
     inputs:
-      draftkings_event_id:
-        description: "DraftKings event ID to scrape"
+      sleep_seconds:
+        description: "Delay between DraftKings requests"
         required: true
-        default: "33525834"
+        default: "3"
+        type: string
+      max_events:
+        description: "Optional limit for testing (blank = all matched events)"
+        required: false
+        type: string
       min_match_score:
         description: "Minimum market matching score"
         required: true
         default: "65"
+        type: string
 
 permissions:
   contents: write
@@ -45,11 +51,16 @@ jobs:
           pip install -r requirements.txt
           pip install pyyaml scikit-learn==1.6.1 xgboost
 
-      - name: Run DraftKings discovery
+      - name: Run matched DraftKings discovery
         run: |
-          python -m pipeline.market.run_draftkings_discovery \
-            --event-id "${{ github.event.inputs.draftkings_event_id }}" \
-            --registry-path configs/market/providers/draftkings_ufc_registry.yaml
+          if [ -n "${{ github.event.inputs.max_events }}" ]; then
+            python -m pipeline.market.run_draftkings_matched_discovery \
+              --sleep-seconds "${{ github.event.inputs.sleep_seconds }}" \
+              --max-events "${{ github.event.inputs.max_events }}"
+          else
+            python -m pipeline.market.run_draftkings_matched_discovery \
+              --sleep-seconds "${{ github.event.inputs.sleep_seconds }}"
+          fi
 
       - name: Normalize DraftKings markets
         run: |
