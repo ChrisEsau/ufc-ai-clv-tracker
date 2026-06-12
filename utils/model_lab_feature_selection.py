@@ -15,9 +15,8 @@ def _inject_feature_selector_css() -> None:
     st.markdown(
         """
         <style>
-        [data-baseweb="tag"],
-        div[data-baseweb="tag"],
-        span[data-baseweb="tag"],
+        /* Keep this CSS intentionally narrow. Do not target global labels,
+           toggles, or all markdown text from this helper. */
         [data-testid="stMultiSelect"] [data-baseweb="tag"] {
             background: linear-gradient(180deg, #2563eb, #1d4ed8) !important;
             background-color: #2563eb !important;
@@ -25,49 +24,13 @@ def _inject_feature_selector_css() -> None:
             color: #ffffff !important;
             box-shadow: 0 0 0 1px rgba(59,130,246,.22) inset !important;
         }
-        [data-baseweb="tag"] *,
         [data-testid="stMultiSelect"] [data-baseweb="tag"] * {
             color: #ffffff !important;
             fill: #ffffff !important;
             opacity: 1 !important;
-            background: transparent !important;
         }
-
-        input[type="checkbox"] {
-            accent-color: #2563eb !important;
-        }
-        div[data-testid="stCheckbox"] label,
-        div[data-testid="stCheckbox"] label *,
-        div[data-testid="stCheckbox"] p,
-        div[data-testid="stToggle"] label,
-        div[data-testid="stToggle"] label *,
-        div[data-testid="stToggle"] p {
-            color: #f8fafc !important;
-            opacity: 1 !important;
-            background: transparent !important;
-            background-color: transparent !important;
-        }
-        div[data-testid="stCheckbox"] input:checked ~ div,
-        div[data-testid="stCheckbox"] input:checked + div,
-        div[data-testid="stToggle"] input:checked ~ div,
-        div[data-testid="stToggle"] input:checked + div {
-            background-color: #2563eb !important;
-            border-color: #60a5fa !important;
-        }
-        div[data-testid="stToggle"] div,
-        div[data-testid="stToggle"] span,
-        div[data-testid="stToggle"] p {
-            background-image: none !important;
-        }
-
-        label,
-        label p,
-        label span,
-        div[data-testid="stMarkdownContainer"] p,
         details[data-testid="stExpander"] summary,
-        details[data-testid="stExpander"] summary *,
-        details[data-testid="stExpander"] p,
-        details[data-testid="stExpander"] span {
+        details[data-testid="stExpander"] summary * {
             color: #f8fafc !important;
             opacity: 1 !important;
         }
