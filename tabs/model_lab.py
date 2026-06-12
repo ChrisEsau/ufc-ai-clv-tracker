@@ -1,6 +1,12 @@
 import streamlit as st
 
-from utils.model_lab_workflows import render_model_workflow_launcher
+from utils.model_lab_workflows import (
+    _clone_model_to_draft,
+    get_registered_model_rows,
+    load_model_registry,
+    render_model_workflow_launcher,
+    resolve_model_workflow_context,
+)
 
 
 MODEL_LAB_VISUAL_REFINEMENT_CSS = """
@@ -225,6 +231,60 @@ hr {
 """
 
 
+def _safe_model_id(value: str) -> str:
+    cleaned = "".join(ch.lower() if ch.isalnum() else "_" for ch in str(value or "").strip())
+    while "__" in cleaned:
+        cleaned = cleaned.replace("__", "_")
+    return cleaned.strip("_")
+
+
+def _render_create_model_panel():
+    try:
+        registry = load_model_registry()
+        rows = get_registered_model_rows(registry)
+    except Exception as exc:
+        st.warning(f"Create model panel unavailable: {exc}")
+        return
+
+    if not rows:
+        return
+
+    model_ids = [row["model_id"] for row in rows]
+    row_by_id = {row["model_id"]: row for row in rows}
+
+    with st.expander("Create New Draft Model", expanded=False):
+        st.caption(
+            "Create a new editable draft from an existing model config. "
+            "The source model remains unchanged and training is not run automatically."
+        )
+        template_model_id = st.selectbox(
+            "Template Model",
+            model_ids,
+            format_func=lambda mid: f"{mid} ({row_by_id[mid].get('status', 'unknown')})",
+            key="mlab_create_template_model",
+        )
+        raw_model_id = st.text_input(
+            "New Draft Model ID",
+            value=f"{template_model_id}_draft",
+            help="Use snake_case. The new config is saved under configs/models/.",
+            key="mlab_create_model_id",
+        )
+        model_id = _safe_model_id(raw_model_id)
+        st.caption(f"Normalized model_id: `{model_id or '—'}`")
+
+        if st.button("Create Draft Model", disabled=not bool(model_id), use_container_width=True, key="mlab_create_model_button"):
+            try:
+                context = resolve_model_workflow_context(registry=registry, model_id=template_model_id)
+                ok, msg = _clone_model_to_draft(context=context, registry=registry, clone_id=model_id)
+            except Exception as exc:
+                ok, msg = False, str(exc)
+            st.success(msg) if ok else st.error(msg)
+            if ok:
+                st.cache_data.clear()
+                st.rerun()
+
+
 def render_model_lab():
     st.markdown(MODEL_LAB_VISUAL_REFINEMENT_CSS, unsafe_allow_html=True)
+    _render_create_model_panel()
     render_model_workflow_launcher()
