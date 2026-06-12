@@ -12,6 +12,19 @@ from utils.model_lab_feature_selection import render_feature_checklist
 
 NEW_MODEL_SENTINEL = "__new_model__"
 WORKSPACES = ["Overview", "Configuration", "Features", "Performance", "Comparison", "Actions"]
+MARKET_OPTIONS = {
+    "moneyline": ["moneyline"],
+    "prop": [
+        "goes_distance",
+        "inside_distance",
+        "ko_tko",
+        "submission",
+        "decision",
+        "over_1_5",
+        "over_2_5",
+        "over_3_5",
+    ],
+}
 
 
 def _safe_model_id(value: str) -> str:
@@ -30,6 +43,24 @@ def _safe_path_key(value: str) -> str:
 
 def _artifact_dir_for_market(model_id: str, market_key: str) -> str:
     return f"models/{_safe_path_key(market_key)}/{_safe_model_id(model_id)}"
+
+
+def _default_market_family(context: dict[str, Any]) -> str:
+    family = str(context.get("model_family") or "moneyline").strip().lower()
+    return family if family in MARKET_OPTIONS else "moneyline"
+
+
+def _default_market_key(context: dict[str, Any], market_family: str) -> str:
+    config = context.get("config") or {}
+    prediction = config.get("prediction") or {}
+    key = str(
+        context.get("market_key")
+        or config.get("market_key")
+        or prediction.get("market_key")
+        or "moneyline"
+    ).strip().lower()
+    options = MARKET_OPTIONS.get(market_family, MARKET_OPTIONS["moneyline"])
+    return key if key in options else options[0]
 
 
 def _load_registry_rows() -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, dict[str, Any]]]:
@@ -65,16 +96,25 @@ def _existing_model_selector(
     return mlw.resolve_model_workflow_context(registry=registry, model_id=selected)
 
 
-def _build_new_context(template_context: dict[str, Any], *, model_id: str) -> dict[str, Any]:
+def _build_new_context(
+    template_context: dict[str, Any],
+    *,
+    model_id: str,
+    market_family: str,
+    market_key: str,
+) -> dict[str, Any]:
     model_id = _safe_model_id(model_id)
+    market_family = str(market_family or "moneyline").strip().lower()
+    market_key = str(market_key or "moneyline").strip().lower()
     context = deepcopy(template_context)
     config = deepcopy(context["config"])
-    market_key = str(context.get("market_key") or config.get("market_key") or "moneyline")
     artifact_dir = _artifact_dir_for_market(model_id, market_key)
     config["model_id"] = model_id
+    config["model_family"] = market_family
+    config["market_key"] = market_key
     config["artifact_name"] = model_id
     config["status"] = "draft"
-    config["market_key"] = market_key
+    config.setdefault("prediction", {})["market_key"] = market_key
     config.setdefault("artifacts", {})["output_dir"] = artifact_dir
     context.update(
         {
@@ -85,6 +125,7 @@ def _build_new_context(template_context: dict[str, Any], *, model_id: str) -> di
             "dashboard_selectable": False,
             "config_path": f"configs/models/{model_id}.yaml" if model_id else "",
             "artifact_dir": artifact_dir,
+            "model_family": market_family,
             "market_key": market_key,
             "config": config,
             "is_new_model": True,
@@ -107,20 +148,24 @@ def _save_new_or_existing_model(
     if context.get("is_new_model") and model_id in (registry.get("models") or {}):
         return False, f"Model already exists: {model_id}"
 
-    artifact_dir = _artifact_dir_for_market(model_id, context.get("market_key", "moneyline"))
+    market_family = str(context.get("model_family") or "moneyline").strip().lower()
+    market_key = str(context.get("market_key") or "moneyline").strip().lower()
+    artifact_dir = _artifact_dir_for_market(model_id, market_key)
     updated_config = mlw._apply_config_updates(context, form_values, feature_values)
     updated_config["model_id"] = model_id
+    updated_config["model_family"] = market_family
+    updated_config["market_key"] = market_key
     updated_config["artifact_name"] = model_id
     updated_config["status"] = "draft"
-    updated_config["market_key"] = context.get("market_key", "moneyline")
+    updated_config.setdefault("prediction", {})["market_key"] = market_key
     updated_config.setdefault("artifacts", {})["output_dir"] = artifact_dir
 
     updated_registry = deepcopy(registry)
     updated_registry.setdefault("models", {})[model_id] = {
         "display_name": form_values["display_name"],
         "description": form_values["description"],
-        "model_family": context["model_family"],
-        "market_key": context["market_key"],
+        "model_family": market_family,
+        "market_key": market_key,
         "algorithm": context["algorithm"] or updated_config.get("algorithm", "xgboost"),
         "config_path": context["config_path"],
         "artifact_dir": artifact_dir,
@@ -271,7 +316,33 @@ def _render_configuration(registry: dict[str, Any], rows: list[dict[str, Any]], 
         new_model_id = _safe_model_id(
             st.text_input("New Model ID", value=f"{template_id}_exp01", key="model_lab_new_model_id")
         )
-        context = _build_new_context(template_context, model_id=new_model_id)
+        default_family = _default_market_family(template_context)
+        family_options = list(MARKET_OPTIONS.keys())
+        family_index = family_options.index(default_family) if default_family in family_options else 0
+        c_family, c_key = st.columns(2)
+        with c_family:
+            market_family = st.selectbox(
+                "Market Family",
+                family_options,
+                index=family_index,
+                key="model_lab_new_market_family",
+            )
+        key_options = MARKET_OPTIONS.get(market_family, MARKET_OPTIONS["moneyline"])
+        default_key = _default_market_key(template_context, market_family)
+        key_index = key_options.index(default_key) if default_key in key_options else 0
+        with c_key:
+            market_key = st.selectbox(
+                "Market Key",
+                key_options,
+                index=key_index,
+                key="model_lab_new_market_key",
+            )
+        context = _build_new_context(
+            template_context,
+            model_id=new_model_id,
+            market_family=market_family,
+            market_key=market_key,
+        )
     else:
         st.session_state["mlab_active_model_id"] = selected
         context = mlw.resolve_model_workflow_context(registry=registry, model_id=selected)
