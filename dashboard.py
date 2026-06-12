@@ -3,6 +3,8 @@
 # ============================================================
 
 
+import streamlit as st
+
 from utils.theme import apply_theme
 from tabs.betting_board_v2 import render_betting_board
 from tabs.line_movement import render_line_movement
@@ -18,6 +20,31 @@ from utils.model_lab_feature_selection import render_feature_checklist
 # ============================================================
 
 apply_theme()
+
+# Model Lab toggle polish. Keep this narrow: only Streamlit toggle widgets.
+st.markdown(
+    """
+    <style>
+    div[data-testid="stToggle"] label,
+    div[data-testid="stToggle"] label *,
+    div[data-testid="stToggle"] p,
+    div[data-testid="stToggle"] span {
+        color: #f8fafc !important;
+        background: transparent !important;
+        background-color: transparent !important;
+        opacity: 1 !important;
+    }
+    div[data-testid="stToggle"] [role="switch"][aria-checked="true"] {
+        background-color: #2563eb !important;
+        border-color: #60a5fa !important;
+    }
+    div[data-testid="stToggle"] [role="switch"][aria-checked="true"] * {
+        background-color: #f8fafc !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 # Keep existing Model Lab save behavior, but replace the old text override
 # feature selector with the explicit checkbox bundle selector.
