@@ -29,6 +29,22 @@ def _inject_feature_selector_css() -> None:
             fill: #ffffff !important;
             opacity: 1 !important;
         }
+
+        /* Dark theme dropdown options. */
+        [data-baseweb="popover"] [role="listbox"] {
+            background: rgba(7,16,28,.98) !important;
+        }
+        [data-baseweb="popover"] [role="option"] {
+            background: rgba(7,16,28,.98) !important;
+            color: #ffffff !important;
+        }
+        [data-baseweb="popover"] [role="option"]:hover,
+        [data-baseweb="popover"] [aria-selected="true"],
+        [data-baseweb="popover"] [aria-selected="true"]:hover {
+            background: rgba(17,31,49,.98) !important;
+            color: #ffffff !important;
+        }
+
         details[data-testid="stExpander"] summary,
         details[data-testid="stExpander"] summary * {
             color: #f8fafc !important;
