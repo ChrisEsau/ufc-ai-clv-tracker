@@ -15,31 +15,57 @@ def _inject_feature_selector_css() -> None:
     st.markdown(
         """
         <style>
-        div[data-baseweb="tag"] {
-            background: linear-gradient(180deg, rgba(37,99,235,.98), rgba(29,78,216,.96)) !important;
-            border: 1px solid rgba(96,165,250,.85) !important;
+        /* Multiselect bundle pills. Streamlit/BaseWeb has changed this node
+           between div and span in different releases, so target both. */
+        [data-baseweb="tag"],
+        div[data-baseweb="tag"],
+        span[data-baseweb="tag"],
+        [data-testid="stMultiSelect"] [data-baseweb="tag"] {
+            background: linear-gradient(180deg, #2563eb, #1d4ed8) !important;
+            background-color: #2563eb !important;
+            border: 1px solid #60a5fa !important;
             color: #ffffff !important;
+            box-shadow: 0 0 0 1px rgba(59,130,246,.22) inset !important;
         }
-        div[data-baseweb="tag"] span,
-        div[data-baseweb="tag"] svg {
+        [data-baseweb="tag"] *,
+        [data-testid="stMultiSelect"] [data-baseweb="tag"] * {
             color: #ffffff !important;
             fill: #ffffff !important;
+            opacity: 1 !important;
+        }
+
+        /* Checkboxes and toggles. */
+        input[type="checkbox"] {
+            accent-color: #2563eb !important;
         }
         div[data-testid="stCheckbox"] label,
-        div[data-testid="stCheckbox"] label span,
+        div[data-testid="stCheckbox"] label *,
         div[data-testid="stCheckbox"] p,
-        details[data-testid="stExpander"] summary,
-        details[data-testid="stExpander"] summary p,
-        details[data-testid="stExpander"] summary span {
+        div[data-testid="stToggle"] label,
+        div[data-testid="stToggle"] label *,
+        div[data-testid="stToggle"] p {
             color: #f8fafc !important;
             opacity: 1 !important;
         }
-        div[data-testid="stCheckbox"] input:checked + div {
+        div[data-testid="stCheckbox"] input:checked ~ div,
+        div[data-testid="stCheckbox"] input:checked + div,
+        div[data-testid="stToggle"] input:checked ~ div,
+        div[data-testid="stToggle"] input:checked + div {
             background-color: #2563eb !important;
             border-color: #60a5fa !important;
         }
-        div[data-testid="stCheckbox"] input[type="checkbox"] {
-            accent-color: #2563eb !important;
+
+        /* Form labels and feature expander text. */
+        label,
+        label p,
+        label span,
+        div[data-testid="stMarkdownContainer"] p,
+        details[data-testid="stExpander"] summary,
+        details[data-testid="stExpander"] summary *,
+        details[data-testid="stExpander"] p,
+        details[data-testid="stExpander"] span {
+            color: #f8fafc !important;
+            opacity: 1 !important;
         }
         details[data-testid="stExpander"] {
             background: linear-gradient(180deg, rgba(9,19,32,.95), rgba(7,16,28,.98)) !important;
