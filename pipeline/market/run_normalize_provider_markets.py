@@ -84,6 +84,14 @@ def _parse_args() -> argparse.Namespace:
         default=str(CANONICAL_MARKET_AUDIT_PATH),
         help="Canonical market catalog audit output path.",
     )
+    parser.add_argument(
+        "--allow-provider-event-drop",
+        action="store_true",
+        help=(
+            "Allow normalization output to contain fewer provider_event_id values "
+            "than the diagnostic input. Default is to fail fast."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -94,6 +102,48 @@ def _safe_json_counts(series: pd.Series) -> str:
         return "{}"
     counts = series.fillna("<NA>").astype(str).value_counts(dropna=False).to_dict()
     return json.dumps(counts, sort_keys=True)
+
+
+def _provider_event_ids(df: pd.DataFrame) -> set[str]:
+    """Return non-empty provider_event_id values for coverage validation."""
+
+    if "provider_event_id" not in df.columns or df.empty:
+        return set()
+    return {
+        str(value).strip()
+        for value in df["provider_event_id"].dropna().astype(str).tolist()
+        if str(value).strip() not in {"", "nan", "None", "<NA>"}
+    }
+
+
+def _validate_provider_event_coverage(
+    *,
+    input_df: pd.DataFrame,
+    output_df: pd.DataFrame,
+    allow_provider_event_drop: bool,
+) -> None:
+    """Fail fast when normalization silently drops provider events.
+
+    Market refresh is intended to preserve all provider_event_id values that have
+    diagnostic rows. A reduction from many events to one event usually means a
+    stale artifact, accidental single-event refresh, or unintended filter.
+    """
+
+    input_events = _provider_event_ids(input_df)
+    output_events = _provider_event_ids(output_df)
+    missing_events = sorted(input_events - output_events)
+
+    print("Provider events in diagnostic input:", len(input_events))
+    print("Provider events in canonical output:", len(output_events))
+    if missing_events:
+        print("Provider events missing after normalization:", missing_events)
+
+    if missing_events and not allow_provider_event_drop:
+        raise RuntimeError(
+            "Provider event coverage dropped during market normalization. "
+            f"Missing provider_event_id values: {missing_events}. "
+            "Use --allow-provider-event-drop only for intentional one-off debugging."
+        )
 
 
 def _build_audit(
@@ -157,6 +207,7 @@ def normalize_provider_markets(
     input_path: Path | None = None,
     output_path: Path = CANONICAL_MARKET_CATALOG_PATH,
     audit_path: Path = CANONICAL_MARKET_AUDIT_PATH,
+    allow_provider_event_drop: bool = False,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Normalize one provider diagnostic artifact into canonical market rows."""
 
@@ -171,6 +222,11 @@ def normalize_provider_markets(
 
     input_df = pd.read_parquet(resolved_input_path)
     output_df = provider_config.normalizer(input_df)
+    _validate_provider_event_coverage(
+        input_df=input_df,
+        output_df=output_df,
+        allow_provider_event_drop=allow_provider_event_drop,
+    )
     audit_df = _build_audit(
         provider_config=provider_config,
         input_df=input_df,
@@ -194,6 +250,7 @@ def main() -> None:
         input_path=Path(args.input_path) if args.input_path else None,
         output_path=Path(args.output_path),
         audit_path=Path(args.audit_path),
+        allow_provider_event_drop=bool(args.allow_provider_event_drop),
     )
 
     print("=" * 80)
