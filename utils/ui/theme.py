@@ -146,7 +146,8 @@ def apply_theme() -> None:
         }}
 
         .ufc-card, .metric-card, .panel {{
-            background: linear-gradient(180deg, rgba(16, 28, 45, 0.92), rgba(13, 23, 39, 0.94));
+            background:
+                linear-gradient(180deg, rgba(16, 28, 45, 0.92), rgba(13, 23, 39, 0.94));
             border: 1px solid rgba(38, 54, 74, 0.96);
             border-radius: 12px;
             box-shadow: 0 18px 40px rgba(0, 0, 0, 0.20);
@@ -225,9 +226,18 @@ def apply_theme() -> None:
             text-transform: uppercase;
             margin: 0.85rem 0 0.35rem;
         }}
-        .sidebar-section.compact {{ margin-top: 0.30rem; }}
-        .sidebar-divider {{ border-top: 1px solid rgba(245, 247, 251, 0.14); height: 1px; margin: 0.40rem 0 0.15rem; }}
-        .sidebar-divider.compact {{ margin-top: 0.35rem; margin-bottom: 0.10rem; }}
+        .sidebar-section.compact {{
+            margin-top: 0.30rem;
+        }}
+        .sidebar-divider {{
+            border-top: 1px solid rgba(245, 247, 251, 0.14);
+            height: 1px;
+            margin: 0.40rem 0 0.15rem;
+        }}
+        .sidebar-divider.compact {{
+            margin-top: 0.35rem;
+            margin-bottom: 0.10rem;
+        }}
         .sidebar-stat-row {{
             display: flex;
             align-items: center;
@@ -238,12 +248,130 @@ def apply_theme() -> None:
             padding: .34rem 0;
             border-bottom: 1px solid rgba(245,247,251,.08);
         }}
-        .sidebar-stat-row strong {{ color: #31df63; font-size: .92rem; }}
-        .sidebar-version, .sidebar-note {{ color: #dbe7f5; font-size: 0.76rem; }}
+        .sidebar-stat-row strong {{
+            color: #31df63;
+            font-size: .92rem;
+        }}
 
-        section.main .mlab-nav-note,
-        section.main div[data-testid="stRadio"] {{
-            display: none !important;
+        .sidebar-version, .sidebar-note {{
+            color: #dbe7f5;
+            font-size: 0.76rem;
+        }}
+
+        section[data-testid="stSidebar"] .stButton {{
+            margin: 0.02rem 0 0.08rem 0;
+        }}
+
+        section[data-testid="stSidebar"] .stButton > button {{
+            min-height: 1.85rem !important;
+            padding: 0.26rem 0.70rem !important;
+            justify-content: flex-start !important;
+            text-align: left !important;
+            border-radius: 8px !important;
+            color: #ffffff !important;
+            font-weight: 800 !important;
+        }}
+
+        section[data-testid="stSidebar"] .stButton > button[kind="secondary"],
+        section[data-testid="stSidebar"] .stButton > button[data-testid="baseButton-secondary"] {{
+            background: rgba(2, 8, 15, 0.94) !important;
+            border: 1px solid rgba(245, 247, 251, 0.18) !important;
+            box-shadow: none !important;
+        }}
+
+        section[data-testid="stSidebar"] .stButton > button[kind="secondary"]:hover,
+        section[data-testid="stSidebar"] .stButton > button[data-testid="baseButton-secondary"]:hover {{
+            background: rgba(16, 28, 45, 0.98) !important;
+            border-color: rgba(245, 247, 251, 0.36) !important;
+            color: #ffffff !important;
+        }}
+
+        section[data-testid="stSidebar"] .stButton > button[kind="primary"],
+        section[data-testid="stSidebar"] .stButton > button[data-testid="baseButton-primary"] {{
+            background: linear-gradient(180deg, rgba(30, 83, 168, 0.96), rgba(20, 65, 135, 0.96)) !important;
+            border: 1px solid rgba(73, 144, 255, 0.98) !important;
+            color: #ffffff !important;
+            box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.18) inset !important;
+        }}
+
+        section[data-testid="stSidebar"] p,
+        section[data-testid="stSidebar"] span,
+        section[data-testid="stSidebar"] label {{
+            color: #f5f7fb !important;
+        }}
+
+        section[data-testid="stSidebar"] [data-testid="stCaptionContainer"] p,
+        section[data-testid="stSidebar"] .sidebar-note,
+        section[data-testid="stSidebar"] .sidebar-version {{
+            color: #dbe7f5 !important;
+        }}
+
+        div[data-testid="stDataFrame"] {{
+            border: 1px solid rgba(38, 54, 74, 0.88);
+            border-radius: 10px;
+            overflow: hidden;
+            background: rgba(13, 23, 39, 0.9);
+        }}
+
+        div[data-testid="stMetric"] {{
+            background: linear-gradient(180deg, rgba(16,28,45,.92), rgba(13,23,39,.95));
+            border: 1px solid rgba(38,54,74,.9);
+            border-radius: 12px;
+            padding: 0.85rem 0.95rem;
+        }}
+
+        div[data-testid="stMetricLabel"] p {{
+            color: var(--ufc-muted) !important;
+            font-weight: 800;
+        }}
+
+        div[data-testid="stMetricValue"] {{
+            color: var(--ufc-text) !important;
+            font-weight: 900;
+        }}
+
+        div[data-testid="stExpander"] {{
+            border: 1px solid rgba(38, 54, 74, 0.92);
+            border-radius: 12px;
+            background: rgba(13, 23, 39, 0.72);
+            overflow: hidden;
+        }}
+
+        .stButton > button, .stDownloadButton > button, .stLinkButton > a {{
+            border-radius: 8px !important;
+            border: 1px solid rgba(59, 130, 246, 0.55) !important;
+            background: linear-gradient(180deg, rgba(20, 65, 135, .76), rgba(18, 48, 96, .78)) !important;
+            color: #eaf2ff !important;
+            font-weight: 800 !important;
+        }}
+
+        .stButton > button:hover, .stDownloadButton > button:hover, .stLinkButton > a:hover {{
+            border-color: rgba(59, 130, 246, 0.95) !important;
+            color: #ffffff !important;
+            box-shadow: 0 0 0 1px rgba(59,130,246,.35);
+        }}
+
+        div[data-baseweb="select"] > div, div[data-baseweb="input"] > div, textarea, input {{
+            background-color: rgba(7, 17, 31, 0.9) !important;
+            border-color: rgba(38, 54, 74, 0.95) !important;
+            color: var(--ufc-text) !important;
+        }}
+
+        label[data-testid="stWidgetLabel"] {{
+            color: #cbd5e1 !important;
+            font-weight: 800 !important;
+            font-size: 0.78rem !important;
+        }}
+
+        .positive {{ color: var(--ufc-green); font-weight: 900; }}
+        .negative {{ color: var(--ufc-red); font-weight: 900; }}
+        .neutral {{ color: #cbd5e1; font-weight: 800; }}
+
+        @media (max-width: 900px) {{
+            .block-container {{ padding-left: 0.8rem; padding-right: 0.8rem; }}
+            .ufc-page-header {{ flex-direction: column; }}
+            .ufc-updated {{ white-space: normal; }}
+            .metric-card {{ min-height: 92px; }}
         }}
         </style>
         """,
