@@ -1,0 +1,68 @@
+name: Run DraftKings Matched Discovery
+
+on:
+  workflow_dispatch:
+    inputs:
+      sleep_seconds:
+        description: "Delay between DraftKings requests"
+        required: true
+        default: "3"
+        type: string
+      max_events:
+        description: "Optional limit for testing (blank = all matched events)"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: draftkings-matched-discovery-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  run-draftkings-matched-discovery:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Sync latest branch state
+        run: |
+          git fetch origin "${GITHUB_REF_NAME}"
+          git pull --ff-only origin "${GITHUB_REF_NAME}"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run matched discovery
+        run: |
+          if [ -n "${{ inputs.max_events }}" ]; then
+            python -m pipeline.market.run_draftkings_matched_discovery \
+              --sleep-seconds "${{ inputs.sleep_seconds }}" \
+              --max-events "${{ inputs.max_events }}"
+          else
+            python -m pipeline.market.run_draftkings_matched_discovery \
+              --sleep-seconds "${{ inputs.sleep_seconds }}"
+          fi
+
+      - name: Commit artifacts
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add -f \
+            data/market/draftkings_market_diagnostic.parquet \
+            data/market/draftkings_raw_index.parquet
+
+          git commit -m "Update DraftKings matched discovery artifacts" || echo "No changes to commit"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
