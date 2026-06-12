@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from pathlib import Path
 from typing import Any
 
 import streamlit as st
@@ -173,6 +172,61 @@ def _save_model_config_and_registry(*, registry: dict[str, Any], model_id: str, 
     return True, f"Saved draft model {model_id}."
 
 
+def _delete_model_from_registry(*, registry: dict[str, Any], model_id: str) -> tuple[bool, str]:
+    models = registry.get("models") or {}
+    if model_id not in models:
+        return False, f"Model is not registered: {model_id}"
+
+    entry = models[model_id]
+    status = str(entry.get("status") or "draft").lower()
+    if status == "production":
+        return False, "Production models cannot be deleted. Move them out of production or archive them first."
+
+    updated = deepcopy(registry)
+    updated.get("models", {}).pop(model_id, None)
+
+    # Remove any active-model pointer that references the deleted model.
+    for family_entry in (updated.get("active_models") or {}).values():
+        if isinstance(family_entry, dict) and family_entry.get("primary") == model_id:
+            family_entry.pop("primary", None)
+
+    ok, msg = mlw._save_registry(updated)
+    if not ok:
+        return ok, msg
+    return True, f"Deleted registry entry for {model_id}. Config YAML and trained artifacts were left in the repo for audit/history."
+
+
+def _show_delete_confirmation(registry: dict[str, Any], model_id: str) -> None:
+    entry = (registry.get("models") or {}).get(model_id, {})
+    status = str(entry.get("status") or "draft").lower()
+
+    def _dialog_body() -> None:
+        st.warning(f"You are about to delete model `{model_id}` from the model registry.")
+        st.caption("This removes the model from dashboard/runtime selection. It does not delete the config YAML or trained artifacts from the repository.")
+        typed = st.text_input("Type the model ID to confirm", key=f"mlab_delete_confirm_text_{model_id}")
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("Delete Model", disabled=(typed != model_id or status == "production"), type="primary", use_container_width=True, key=f"mlab_delete_confirm_button_{model_id}"):
+                ok, msg = _delete_model_from_registry(registry=registry, model_id=model_id)
+                st.success(msg) if ok else st.error(msg)
+                if ok:
+                    st.cache_data.clear()
+                    st.rerun()
+        with c2:
+            if st.button("Cancel", use_container_width=True, key=f"mlab_delete_cancel_{model_id}"):
+                st.rerun()
+
+    if hasattr(st, "dialog"):
+        @st.dialog("Confirm Delete Existing Model")
+        def _confirm_dialog() -> None:
+            _dialog_body()
+
+        _confirm_dialog()
+    else:
+        st.error("Confirm delete")
+        _dialog_body()
+
+
 def _render_model_configuration_manager() -> None:
     try:
         registry = mlw.load_model_registry()
@@ -187,8 +241,8 @@ def _render_model_configuration_manager() -> None:
     model_ids = [row["model_id"] for row in rows]
     row_by_id = {row["model_id"]: row for row in rows}
     with st.expander("Model Configuration Manager", expanded=True):
-        st.caption("Create new draft experiments or edit existing draft configs. Production models are read-only and must be used as templates.")
-        mode = st.radio("Mode", ["Create New Model", "Edit Existing Model"], horizontal=True, key="mlab_manager_mode")
+        st.caption("Create new draft experiments, edit existing drafts, or delete non-production registry entries. Production models are protected.")
+        mode = st.radio("Mode", ["Create New Model", "Edit Existing Model", "Delete Existing Model"], horizontal=True, key="mlab_manager_mode")
 
         selected_model_id = st.selectbox(
             "Model / Template",
@@ -197,13 +251,25 @@ def _render_model_configuration_manager() -> None:
             key="mlab_manager_model_select",
         )
         context = mlw.resolve_model_workflow_context(registry=registry, model_id=selected_model_id)
+        source_status = str(context.get("status") or "draft").lower()
+
+        if mode == "Delete Existing Model":
+            st.markdown("##### Delete Existing Model")
+            st.caption("Deletes the registry entry only. Config YAML and trained artifacts remain available in the repository for audit/history.")
+            if source_status == "production":
+                st.error("Production models cannot be deleted from Model Lab. Archive or demote them first.")
+            else:
+                st.warning(f"Selected model: `{selected_model_id}` ({source_status})")
+                if st.button("Delete Existing Model", type="primary", use_container_width=True, key="mlab_delete_open_dialog"):
+                    _show_delete_confirmation(registry, selected_model_id)
+            return
+
         source_config = context["config"]
         source_params = source_config.get("params") or {}
         source_probability = (source_config.get("prediction") or {}).get("probability") or {}
         source_calibration = source_config.get("calibration") or {}
 
         is_create = mode == "Create New Model"
-        source_status = str(context.get("status") or "draft").lower()
         if not is_create and source_status != "draft":
             st.info("This model is production/archived and is read-only. Switch to Create New Model to create an editable draft experiment from it.")
             return
@@ -229,7 +295,9 @@ def _render_model_configuration_manager() -> None:
         with c4:
             calibration_enabled = st.toggle("Calibration Enabled", value=bool(source_calibration.get("enabled", True)), key=f"mlab_manager_cal_enabled_{mode}")
         with c5:
-            calibration_method = st.selectbox("Calibration Method", ["isotonic", "sigmoid", "none"], index=0, key=f"mlab_manager_cal_method_{mode}")
+            method_value = str(source_calibration.get("method", "isotonic"))
+            method_options = ["isotonic", "sigmoid", "none"]
+            calibration_method = st.selectbox("Calibration Method", method_options, index=method_options.index(method_value) if method_value in method_options else 0, key=f"mlab_manager_cal_method_{mode}")
         with c6:
             clip_low = st.number_input("Clip Low", value=float(source_probability.get("clip_low", 0.02)), min_value=0.0, max_value=0.49, step=0.01, format="%.2f", key=f"mlab_manager_clip_low_{mode}")
         with c7:
