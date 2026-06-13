@@ -6,7 +6,7 @@ feature_sources:
 - moneyline_feature_view
 features:
   selection_mode: explicit
-  expected_feature_count: 124
+  expected_feature_count: 116
   allow_unsafe_features: false
   feature_columns:
   - avg_opponent_elo_diff
@@ -125,14 +125,6 @@ features:
   - losses_diff
   - win_streak_diff
   - wins_diff
-  - aggression_index_diff
-  - experience_ratio_diff
-  - grappling_edge
-  - pressure_striking_adv_diff
-  - striking_edge
-  - submission_mismatch_diff
-  - wrestling_mismatch_diff
-  - wrestling_pressure_vs_defense
   selected_bundles:
   - core_state
   - ewm_state
@@ -141,11 +133,9 @@ features:
   - durability
   - physical
   - experience
-  - engineered
   include_features: []
   exclude_features:
   - match_time_sec
-  - winner_id
   - finish_round
 data:
   rolling_features_path: data/features/moneyline_feature_view.parquet
