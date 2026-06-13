@@ -286,7 +286,7 @@ calibration:
   enabled: true
   method: isotonic
 params:
-  n_estimators: 500
+  n_estimators: 1000
   max_depth: 4
   learning_rate: 0.03
   subsample: 0.8
