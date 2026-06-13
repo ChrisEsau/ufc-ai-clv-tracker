@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import pandas as pd
 
+from pipeline.common.fight_time import repair_elapsed_match_time
 from pipeline.common.paths import MASTER_PATH, ROLLING_FEATURES_PATH, ensure_data_dirs
 from pipeline.features.base.build_rolling_features import build_rolling_base_features
 from pipeline.features.base.ewm_features import add_ewm_feature_layer
@@ -119,6 +120,10 @@ def prepare_master_for_rolling(master_df: pd.DataFrame) -> pd.DataFrame:
     df = master_df.copy()
     df["date"] = pd.to_datetime(df["date"])
     df = df.sort_values(["date", "event_id", "fight_id"]).reset_index(drop=True)
+
+    # Legacy master artifacts may have stored match_time_sec as final-round clock
+    # time only. Feature rates need total elapsed cage time.
+    df = repair_elapsed_match_time(df)
 
     # Canonical target: 1 means the red fighter won, based on stable UFCStats IDs.
     df = add_id_based_target(df)
