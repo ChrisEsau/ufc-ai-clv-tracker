@@ -45,7 +45,7 @@ models:
     dashboard_selectable: false
     outcome_architecture: true
   prop_ko_tko_xgboost_v1:
-    display_name: KO TKO XGBOOST V1
+    display_name: Moneyline XGBoost V5 Experiment
     description: Draft experiment created from moneyline_xgboost_v5.
     model_family: prop
     market_key: ko_tko
