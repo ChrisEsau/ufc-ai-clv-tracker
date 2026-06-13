@@ -8,6 +8,7 @@ from typing import Any
 
 import pandas as pd
 
+from pipeline.common.outcome_join import build_outcome_join_key
 from pipeline.common.paths import AUDITS_DIR, MARKET_DIR, MASTER_PATH, ensure_data_dirs
 
 DEFAULT_INPUT_PATH = Path("ufc-master w odds.csv")
@@ -157,7 +158,12 @@ def add_row(rows: list[dict[str, Any]], row: pd.Series, run_id: str, ts: str, ma
         "event_name": row.get("event_name"),
         "market_key": market_key,
         "bookmaker": "legacy_consensus",
-        "outcome_join_key": str(fighter_id),
+        "outcome_join_key": build_outcome_join_key(
+            market_key=market_key,
+            outcome_fighter_id=fighter_id,
+            outcome_label=label,
+            side=side,
+        ),
         "outcome_fighter_id": fighter_id,
         "outcome_label": label,
         "outcome_side": side,
