@@ -1,0 +1,22 @@
+{
+  "backtest_id": "moneyline_xgboost_v6_dev_moneyline_20260613_184940",
+  "model_id": "moneyline_xgboost_v6_dev",
+  "market_key": "moneyline",
+  "total_bets": 0,
+  "wins": 0,
+  "win_rate": 0.0,
+  "flat_risked": 0.0,
+  "flat_profit": 0.0,
+  "flat_roi": 0.0,
+  "kelly_risked": 0.0,
+  "kelly_profit": 0.0,
+  "kelly_roi": 0.0,
+  "starting_bankroll": 10000.0,
+  "ending_kelly_bankroll": 10000.0,
+  "min_edge": 0.0,
+  "min_confidence": 0.0,
+  "min_odds": -1000.0,
+  "max_odds": 3000.0,
+  "start_date": null,
+  "end_date": null
+}
