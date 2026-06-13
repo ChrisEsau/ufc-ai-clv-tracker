@@ -1,0 +1,66 @@
+name: Run Live Feature Sanity Check
+
+on:
+  workflow_dispatch:
+    inputs:
+      review_only:
+        description: "Only output fights flagged by moneyline sanity checks"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: live-feature-sanity-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  run-live-feature-sanity-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Sync latest branch state
+        run: |
+          git fetch origin "${GITHUB_REF_NAME}"
+          git pull --ff-only origin "${GITHUB_REF_NAME}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyarrow
+
+      - name: Run Live Feature Sanity Check
+        run: |
+          REVIEW_FLAG=""
+          if [ "${{ github.event.inputs.review_only }}" = "true" ]; then
+            REVIEW_FLAG="--review-only"
+          fi
+
+          python -m pipeline.prediction.run_live_feature_sanity_check ${REVIEW_FLAG}
+
+      - name: Commit live feature sanity artifact
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add -f data/audits/ufc_live_feature_sanity_check.parquet
+
+          git commit -m "Update live feature sanity artifact" || echo "No changes to commit"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
