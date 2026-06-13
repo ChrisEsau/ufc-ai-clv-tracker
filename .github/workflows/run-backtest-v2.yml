@@ -1,0 +1,92 @@
+name: Run Backtest V2
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_id:
+        description: "Model ID label for the backtest output"
+        required: true
+        default: "moneyline_xgboost_v6_dev"
+      market_key:
+        description: "Market key to backtest"
+        required: true
+        default: "moneyline"
+      model_outcomes_path:
+        description: "Historical model outcomes parquet path"
+        required: true
+        default: "data/predictions/model_outcomes.parquet"
+      historical_market_path:
+        description: "Historical market outcomes parquet path"
+        required: true
+        default: "data/market/historical_market_outcomes.parquet"
+      min_edge:
+        description: "Minimum model edge"
+        required: false
+        default: "0.00"
+      min_confidence:
+        description: "Minimum confidence score"
+        required: false
+        default: "0.00"
+      flat_stake:
+        description: "Flat stake amount"
+        required: false
+        default: "100"
+      starting_bankroll:
+        description: "Starting bankroll for Kelly simulation"
+        required: false
+        default: "10000"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: run-backtest-v2-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  run-backtest-v2:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Sync latest branch state
+        run: |
+          git fetch origin "${GITHUB_REF_NAME}"
+          git pull --ff-only origin "${GITHUB_REF_NAME}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas pyarrow
+
+      - name: Run Backtest V2
+        run: |
+          python -m pipeline.backtesting.run_backtest_v2 \
+            --model-id "${{ github.event.inputs.model_id }}" \
+            --market-key "${{ github.event.inputs.market_key }}" \
+            --model-outcomes-path "${{ github.event.inputs.model_outcomes_path }}" \
+            --historical-market-path "${{ github.event.inputs.historical_market_path }}" \
+            --min-edge "${{ github.event.inputs.min_edge }}" \
+            --min-confidence "${{ github.event.inputs.min_confidence }}" \
+            --flat-stake "${{ github.event.inputs.flat_stake }}" \
+            --starting-bankroll "${{ github.event.inputs.starting_bankroll }}"
+
+      - name: Commit backtest artifacts
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add -f data/model_lab/backtests
+
+          git commit -m "Update backtest v2 artifacts" || echo "No changes to commit"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
