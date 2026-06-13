@@ -146,11 +146,14 @@ def build_long_audit(selected: pd.DataFrame, include_all_columns: bool) -> pd.Da
     rows = []
     for _, row in selected.iterrows():
         for column in columns:
+            raw_value = row.get(column)
+            numeric_value = pd.to_numeric(pd.Series([raw_value]), errors="coerce").iloc[0]
             rows.append({
-                "fighter_name": row.get(name_col),
-                "fighter_id": row.get("fighter_id", row.get("id", row.get("ufcstats_fighter_id"))),
-                "metric": column,
-                "value": row.get(column),
+                "fighter_name": str(row.get(name_col, "")),
+                "fighter_id": str(row.get("fighter_id", row.get("id", row.get("ufcstats_fighter_id", "")))),
+                "metric": str(column),
+                "value": "" if pd.isna(raw_value) else str(raw_value),
+                "numeric_value": None if pd.isna(numeric_value) else float(numeric_value),
                 "is_ufcstats_like_metric": column in UFCSTATS_LIKE_COLUMNS,
             })
     return pd.DataFrame(rows)
