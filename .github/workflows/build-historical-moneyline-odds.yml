@@ -1,4 +1,4 @@
-name: Build Historical Moneyline Odds
+name: Build Historical Market Outcomes
 
 on:
   workflow_dispatch:
@@ -12,11 +12,11 @@ permissions:
   contents: write
 
 concurrency:
-  group: build-historical-moneyline-odds-${{ github.ref }}
+  group: build-historical-market-outcomes-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  build-historical-moneyline-odds:
+  build-historical-market-outcomes:
     runs-on: ubuntu-latest
 
     steps:
@@ -40,20 +40,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install pandas pyarrow
 
-      - name: Build historical moneyline odds
+      - name: Build historical market outcomes
         run: |
           python -m pipeline.market.run_build_historical_moneyline_odds \
             --input-path "${{ github.event.inputs.input_path }}"
 
-      - name: Commit historical odds artifacts
+      - name: Commit historical market artifacts
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
           git add -f \
             data/market/historical_moneyline_odds.parquet \
+            data/market/historical_market_outcomes.parquet \
             data/audits/ufc_historical_odds_mapping_audit.parquet
 
-          git commit -m "Update historical moneyline odds artifacts" || echo "No changes to commit"
+          git commit -m "Update historical market outcomes artifacts" || echo "No changes to commit"
           git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
           git push origin "HEAD:${GITHUB_REF_NAME}"
