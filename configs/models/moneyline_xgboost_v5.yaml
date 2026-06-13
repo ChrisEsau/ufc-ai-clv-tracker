@@ -1,180 +1,290 @@
-# Base UFC moneyline XGBoost V5 model configuration.
-#
-# This config is the single source of truth for the first production replacement
-# of UFC_model_train_V5_refactored.ipynb. Future models should create their own
-# config files instead of changing the generic training runner.
-
 model_id: moneyline_xgboost_v5
 model_family: moneyline
-artifact_name: xgboost_v5
-
+artifact_name: moneyline_xgboost_v5
 algorithm: xgboost
-
 feature_sources:
-  - moneyline_feature_view
-
+- moneyline_feature_view
 features:
   selection_mode: explicit
   expected_feature_count: 124
   allow_unsafe_features: false
-
-  # Explicit model input contract.
-  # These columns are expected to already exist in the moneyline feature view:
-  # data/features/moneyline_feature_view.parquet
   feature_columns:
-    # Career / prefight red-minus-blue differentials: 36
-    - elo_diff
-    - fights_diff
-    - wins_diff
-    - losses_diff
-    - win_pct_diff
-    - kd_avg_diff
-    - kd_absorbed_avg_diff
-    - splm_diff
-    - sapm_diff
-    - str_acc_diff
-    - str_def_diff
-    - td_avg_diff
-    - td_acc_diff
-    - td_def_diff
-    - sub_avg_diff
-    - ctrl_per_min_diff
-    - ctrl_against_per_min_diff
-    - finish_rate_diff
-    - ko_rate_diff
-    - sub_win_rate_diff
-    - decision_win_rate_diff
-    - finish_loss_rate_diff
-    - decision_loss_rate_diff
-    - avg_opponent_elo_diff
-    - best_win_elo_diff
-    - worst_loss_elo_diff
-    - avg_fight_time_diff
-    - win_streak_diff
-    - loss_streak_diff
-    - days_since_last_fight_diff
-    - recent_win_pct_diff
-    - recent_splm_diff
-    - recent_sapm_diff
-    - recent_td_avg_diff
-    - recent_finish_rate_diff
-    - recent_avg_fight_time_diff
-
-    # EWM red-minus-blue differentials: 36
-    - ewm_elo_diff
-    - ewm_fights_diff
-    - ewm_wins_diff
-    - ewm_losses_diff
-    - ewm_win_pct_diff
-    - ewm_kd_avg_diff
-    - ewm_kd_absorbed_avg_diff
-    - ewm_splm_diff
-    - ewm_sapm_diff
-    - ewm_str_acc_diff
-    - ewm_str_def_diff
-    - ewm_td_avg_diff
-    - ewm_td_acc_diff
-    - ewm_td_def_diff
-    - ewm_sub_avg_diff
-    - ewm_ctrl_per_min_diff
-    - ewm_ctrl_against_per_min_diff
-    - ewm_finish_rate_diff
-    - ewm_ko_rate_diff
-    - ewm_sub_win_rate_diff
-    - ewm_decision_win_rate_diff
-    - ewm_finish_loss_rate_diff
-    - ewm_decision_loss_rate_diff
-    - ewm_avg_opponent_elo_diff
-    - ewm_best_win_elo_diff
-    - ewm_worst_loss_elo_diff
-    - ewm_avg_fight_time_diff
-    - ewm_win_streak_diff
-    - ewm_loss_streak_diff
-    - ewm_days_since_last_fight_diff
-    - ewm_recent_win_pct_diff
-    - ewm_recent_splm_diff
-    - ewm_recent_sapm_diff
-    - ewm_recent_td_avg_diff
-    - ewm_recent_finish_rate_diff
-    - ewm_recent_avg_fight_time_diff
-
-    # Recent-form red-minus-blue differentials: 36
-    - recent_form_elo_diff
-    - recent_form_fights_diff
-    - recent_form_wins_diff
-    - recent_form_losses_diff
-    - recent_form_win_pct_diff
-    - recent_form_kd_avg_diff
-    - recent_form_kd_absorbed_avg_diff
-    - recent_form_splm_diff
-    - recent_form_sapm_diff
-    - recent_form_str_acc_diff
-    - recent_form_str_def_diff
-    - recent_form_td_avg_diff
-    - recent_form_td_acc_diff
-    - recent_form_td_def_diff
-    - recent_form_sub_avg_diff
-    - recent_form_ctrl_per_min_diff
-    - recent_form_ctrl_against_per_min_diff
-    - recent_form_finish_rate_diff
-    - recent_form_ko_rate_diff
-    - recent_form_sub_win_rate_diff
-    - recent_form_decision_win_rate_diff
-    - recent_form_finish_loss_rate_diff
-    - recent_form_decision_loss_rate_diff
-    - recent_form_avg_opponent_elo_diff
-    - recent_form_best_win_elo_diff
-    - recent_form_worst_loss_elo_diff
-    - recent_form_avg_fight_time_diff
-    - recent_form_win_streak_diff
-    - recent_form_loss_streak_diff
-    - recent_form_days_since_last_fight_diff
-    - recent_form_recent_win_pct_diff
-    - recent_form_recent_splm_diff
-    - recent_form_recent_sapm_diff
-    - recent_form_recent_td_avg_diff
-    - recent_form_recent_finish_rate_diff
-    - recent_form_recent_avg_fight_time_diff
-
-    # Engineered matchup features: 16
-    - age_diff
-    - height_diff
-    - reach_diff
-    - weight_diff
-    - striking_edge
-    - grappling_edge
-    - finish_volatility
-    - wrestling_pressure_vs_defense
-    - reach_striking_combo
-    - chin_risk_diff
-    - experience_ratio_diff
-    - aggression_index_diff
-    - age_squared_diff
-    - pressure_striking_adv_diff
-    - wrestling_mismatch_diff
-    - submission_mismatch_diff
-
+  - avg_opponent_elo_diff
+  - best_win_elo_diff
+  - ctrl_against_per_min_diff
+  - ctrl_per_min_diff
+  - elo_diff
+  - kd_avg_diff
+  - recent_splm_diff
+  - recent_td_avg_diff
+  - recent_win_pct_diff
+  - splm_diff
+  - str_acc_diff
+  - sub_avg_diff
+  - td_acc_diff
+  - td_avg_diff
+  - win_pct_diff
+  - worst_loss_elo_diff
+  - ewm_avg_fight_time_diff
+  - ewm_avg_opponent_elo_diff
+  - ewm_best_win_elo_diff
+  - ewm_ctrl_against_per_min_diff
+  - ewm_ctrl_per_min_diff
+  - ewm_days_since_last_fight_diff
+  - ewm_decision_loss_rate_diff
+  - ewm_decision_win_rate_diff
+  - ewm_elo_diff
+  - ewm_fights_diff
+  - ewm_finish_loss_rate_diff
+  - ewm_finish_rate_diff
+  - ewm_kd_absorbed_avg_diff
+  - ewm_kd_avg_diff
+  - ewm_ko_rate_diff
+  - ewm_loss_streak_diff
+  - ewm_losses_diff
+  - ewm_recent_avg_fight_time_diff
+  - ewm_recent_finish_rate_diff
+  - ewm_recent_sapm_diff
+  - ewm_recent_splm_diff
+  - ewm_recent_td_avg_diff
+  - ewm_recent_win_pct_diff
+  - ewm_sapm_diff
+  - ewm_splm_diff
+  - ewm_str_acc_diff
+  - ewm_str_def_diff
+  - ewm_sub_avg_diff
+  - ewm_sub_win_rate_diff
+  - ewm_td_acc_diff
+  - ewm_td_avg_diff
+  - ewm_td_def_diff
+  - ewm_win_pct_diff
+  - ewm_win_streak_diff
+  - ewm_wins_diff
+  - ewm_worst_loss_elo_diff
+  - recent_form_avg_fight_time_diff
+  - recent_form_avg_opponent_elo_diff
+  - recent_form_best_win_elo_diff
+  - recent_form_ctrl_against_per_min_diff
+  - recent_form_ctrl_per_min_diff
+  - recent_form_days_since_last_fight_diff
+  - recent_form_decision_loss_rate_diff
+  - recent_form_decision_win_rate_diff
+  - recent_form_elo_diff
+  - recent_form_fights_diff
+  - recent_form_finish_loss_rate_diff
+  - recent_form_finish_rate_diff
+  - recent_form_kd_absorbed_avg_diff
+  - recent_form_kd_avg_diff
+  - recent_form_ko_rate_diff
+  - recent_form_loss_streak_diff
+  - recent_form_losses_diff
+  - recent_form_recent_avg_fight_time_diff
+  - recent_form_recent_finish_rate_diff
+  - recent_form_recent_sapm_diff
+  - recent_form_recent_splm_diff
+  - recent_form_recent_td_avg_diff
+  - recent_form_recent_win_pct_diff
+  - recent_form_sapm_diff
+  - recent_form_splm_diff
+  - recent_form_str_acc_diff
+  - recent_form_str_def_diff
+  - recent_form_sub_avg_diff
+  - recent_form_sub_win_rate_diff
+  - recent_form_td_acc_diff
+  - recent_form_td_avg_diff
+  - recent_form_td_def_diff
+  - recent_form_win_pct_diff
+  - recent_form_win_streak_diff
+  - recent_form_wins_diff
+  - recent_form_worst_loss_elo_diff
+  - avg_fight_time_diff
+  - decision_loss_rate_diff
+  - decision_win_rate_diff
+  - finish_loss_rate_diff
+  - finish_rate_diff
+  - finish_volatility
+  - ko_rate_diff
+  - recent_avg_fight_time_diff
+  - recent_finish_rate_diff
+  - sub_win_rate_diff
+  - chin_risk_diff
+  - kd_absorbed_avg_diff
+  - recent_sapm_diff
+  - sapm_diff
+  - str_def_diff
+  - td_def_diff
+  - height_diff
+  - reach_diff
+  - reach_striking_combo
+  - weight_diff
+  - age_diff
+  - age_squared_diff
+  - days_since_last_fight_diff
+  - fights_diff
+  - loss_streak_diff
+  - losses_diff
+  - win_streak_diff
+  - wins_diff
+  - aggression_index_diff
+  - experience_ratio_diff
+  - grappling_edge
+  - pressure_striking_adv_diff
+  - striking_edge
+  - submission_mismatch_diff
+  - wrestling_mismatch_diff
+  - wrestling_pressure_vs_defense
+  selected_bundles:
+  - core_state
+  - ewm_state
+  - recent_form
+  - finish_profile
+  - durability
+  - physical
+  - experience
+  - engineered
+  include_features: []
+  exclude_features:
+  - b_body_acc
+  - b_body_atmpted
+  - b_body_landed
+  - b_clinch_acc
+  - b_clinch_atmpted
+  - b_clinch_landed
+  - b_ctrl
+  - b_dist_acc
+  - b_dist_atmpted
+  - b_dist_landed
+  - b_dob
+  - b_draws
+  - b_ground_acc
+  - b_ground_atmpted
+  - b_ground_landed
+  - b_head_acc
+  - b_head_atmpted
+  - b_head_landed
+  - b_kd
+  - b_landed_body_per
+  - b_landed_clinch_per
+  - b_landed_dist_per
+  - b_landed_ground_per
+  - b_landed_head_per
+  - b_landed_leg_per
+  - b_leg_acc
+  - b_leg_atmpted
+  - b_leg_landed
+  - b_name_x
+  - b_name_y
+  - b_nick_name
+  - b_sig_str_acc
+  - b_sig_str_atmpted
+  - b_sig_str_landed
+  - b_splm
+  - b_stance
+  - b_str_acc
+  - b_sub_att
+  - b_sub_avg
+  - b_td_acc
+  - b_td_atmpted
+  - b_td_avg
+  - b_td_avg_acc
+  - b_td_landed
+  - b_total_str_acc
+  - b_total_str_atmpted
+  - b_total_str_landed
+  - match_time_sec
+  - r_body_acc
+  - r_body_atmpted
+  - r_body_landed
+  - r_clinch_acc
+  - r_clinch_atmpted
+  - r_clinch_landed
+  - r_ctrl
+  - r_dist_acc
+  - r_dist_atmpted
+  - r_dist_landed
+  - r_dob
+  - r_draws
+  - r_ground_acc
+  - r_ground_atmpted
+  - r_ground_landed
+  - r_head_acc
+  - r_head_atmpted
+  - r_head_landed
+  - r_kd
+  - r_landed_body_per
+  - r_landed_clinch_per
+  - r_landed_dist_per
+  - r_landed_ground_per
+  - r_landed_head_per
+  - r_landed_leg_per
+  - r_leg_acc
+  - r_leg_atmpted
+  - r_leg_landed
+  - r_name_x
+  - r_name_y
+  - r_nick_name
+  - r_sig_str_acc
+  - r_sig_str_atmpted
+  - r_sig_str_landed
+  - r_splm
+  - r_stance
+  - r_str_acc
+  - r_sub_att
+  - r_sub_avg
+  - r_td_acc
+  - r_td_atmpted
+  - r_td_avg
+  - r_td_avg_acc
+  - r_td_landed
+  - r_total_str_acc
+  - r_total_str_atmpted
+  - r_total_str_landed
+  - winner_id
+  - finish_round
+  - b_chin_risk
+  - b_sapm
+  - b_str_def
+  - b_td_def
+  - r_chin_risk
+  - r_sapm
+  - r_str_def
+  - r_td_def
+  - b_height
+  - b_reach
+  - b_weight
+  - r_height
+  - r_reach
+  - r_weight
+  - b_age_squared
+  - b_losses
+  - b_wins
+  - r_age_squared
+  - r_losses
+  - r_wins
+  - b_aggression_index
+  - b_experience_ratio
+  - b_pressure_striking_adv
+  - b_submission_mismatch
+  - b_wrestling_mismatch
+  - r_aggression_index
+  - r_experience_ratio
+  - r_pressure_striking_adv
+  - r_submission_mismatch
+  - r_wrestling_mismatch
 data:
-  # NOTE: key name retained for training-runner compatibility.
   rolling_features_path: data/features/moneyline_feature_view.parquet
   target_column: target
   date_column: date
-
 split:
-  # Production-safe split.
-  # Model trains through 2022, calibration fits on 2023, final metrics evaluate 2024+.
   mode: train_calibration_test
-  train_end_date: "2022-12-31"
-  calibration_end_date: "2023-12-31"
-
+  train_end_date: '2022-12-31'
+  calibration_end_date: '2023-12-31'
 symmetry:
   enabled: true
   mode: flip_all
-
 calibration:
   enabled: true
   method: isotonic
-
 params:
   n_estimators: 500
   max_depth: 4
@@ -183,26 +293,24 @@ params:
   colsample_bytree: 0.8
   random_state: 42
   eval_metric: logloss
-
 metrics:
-  threshold_min: 0.40
-  threshold_max: 0.60
+  threshold_min: 0.4
+  threshold_max: 0.6
   threshold_step: 0.01
   confidence_bucket_edges:
-    - 0.50
-    - 0.55
-    - 0.60
-    - 0.65
-    - 0.70
-    - 0.75
-    - 0.80
-    - 0.85
-    - 0.90
-    - 0.95
-    - 1.00
-
+  - 0.5
+  - 0.55
+  - 0.6
+  - 0.65
+  - 0.7
+  - 0.75
+  - 0.8
+  - 0.85
+  - 0.9
+  - 0.95
+  - 1.0
 artifacts:
-  output_dir: models/moneyline/xgboost_v5
+  output_dir: models/moneyline/moneyline_xgboost_v5
   save_raw_model: true
   save_calibrated_model: true
   save_feature_columns: true
@@ -210,23 +318,17 @@ artifacts:
   save_threshold_sweep: true
   save_confidence_buckets: true
   save_model_card: true
-
 prediction:
   format: binary_matchup
   market_key: moneyline
   prediction_type: binary_matchup
-
-  # Positive class for the current moneyline model is red-side fighter wins.
   positive_class: red
-
   threshold:
     source: fixed
-    value: 0.50
-
+    value: 0.5
   probability:
     clip_low: 0.02
     clip_high: 0.98
-
   outcomes:
     positive:
       outcome_side: red
@@ -234,18 +336,18 @@ prediction:
     negative:
       outcome_side: blue
       label_source: blue_fighter
-
   output:
     canonical_artifact: model_outcomes
     path: data/predictions/model_outcomes.parquet
     model_scoped_path_template: data/predictions/by_model/{model_id}/model_outcomes.parquet
-
 market:
   source: the_odds_api
   sport: mma_mixed_martial_arts
   regions:
-    - us
+  - us
   bookmakers:
-    - draftkings
+  - draftkings
   markets:
-    - h2h
+  - h2h
+market_key: moneyline
+status: draft
