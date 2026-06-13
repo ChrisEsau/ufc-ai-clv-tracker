@@ -1,0 +1,64 @@
+name: Inspect Historical Odds CSV
+
+on:
+  workflow_dispatch:
+    inputs:
+      input_path:
+        description: "CSV path in repo"
+        required: true
+        default: "ufc-master w odds.csv"
+      preview_rows:
+        description: "Number of preview rows to print/save"
+        required: false
+        default: "25"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: inspect-historical-odds-csv-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  inspect-historical-odds-csv:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Sync latest branch state
+        run: |
+          git fetch origin "${GITHUB_REF_NAME}"
+          git pull --ff-only origin "${GITHUB_REF_NAME}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas pyarrow
+
+      - name: Inspect CSV
+        run: |
+          python -m pipeline.market.run_historical_odds_csv_inspect \
+            --input-path "${{ github.event.inputs.input_path }}" \
+            --preview-rows "${{ github.event.inputs.preview_rows }}"
+
+      - name: Commit inspection artifacts
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add -f \
+            data/audits/ufc_historical_odds_csv_inspect.json \
+            data/audits/ufc_historical_odds_csv_preview.parquet
+
+          git commit -m "Update historical odds CSV inspection artifacts" || echo "No changes to commit"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
