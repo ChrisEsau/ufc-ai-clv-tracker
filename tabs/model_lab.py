@@ -25,6 +25,23 @@ MARKET_OPTIONS = {
         "over_3_5",
     ],
 }
+CONFIG_WIDGET_KEYS = [
+    "mlab_display_name",
+    "mlab_description",
+    "mlab_train_end",
+    "mlab_cal_end",
+    "mlab_cal_enabled",
+    "mlab_cal_method",
+    "mlab_clip_low",
+    "mlab_clip_high",
+    "mlab_expected_count",
+    "mlab_dashboard_selectable",
+    "mlab_n_estimators",
+    "mlab_max_depth",
+    "mlab_learning_rate",
+    "mlab_subsample",
+    "mlab_colsample",
+]
 
 
 def _safe_model_id(value: str) -> str:
@@ -43,6 +60,17 @@ def _safe_path_key(value: str) -> str:
 
 def _artifact_dir_for_market(model_id: str, market_key: str) -> str:
     return f"models/{_safe_path_key(market_key)}/{_safe_model_id(model_id)}"
+
+
+def _clear_config_widget_state_if_model_changed(selected_model_id: str) -> None:
+    """Clear non-model-specific config widget state after changing selected models."""
+
+    previous = st.session_state.get("mlab_config_rendered_model_id")
+    if previous == selected_model_id:
+        return
+    for key in CONFIG_WIDGET_KEYS:
+        st.session_state.pop(key, None)
+    st.session_state["mlab_config_rendered_model_id"] = selected_model_id
 
 
 def _default_market_family(context: dict[str, Any]) -> str:
@@ -392,6 +420,8 @@ def _render_configuration(registry: dict[str, Any], rows: list[dict[str, Any]], 
     else:
         st.session_state["mlab_active_model_id"] = selected
         context = mlw.resolve_model_workflow_context(registry=registry, model_id=selected)
+
+    _clear_config_widget_state_if_model_changed(str(context.get("model_id") or selected))
 
     mlw._render_model_bar(context, registry)
     c1, c2 = st.columns([1.05, 1.45], gap="medium")
