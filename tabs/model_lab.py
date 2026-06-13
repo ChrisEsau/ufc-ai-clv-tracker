@@ -296,6 +296,52 @@ def _inject_model_lab_control_css() -> None:
     )
 
 
+def _render_advanced_configuration(context: dict[str, Any], *, can_delete: bool) -> None:
+    """Render rarely used model metadata and destructive controls above the save action."""
+
+    model_id = str(context.get("model_id") or "new_model")
+    with st.expander("Advanced", expanded=False):
+        st.caption("Technical metadata and destructive actions.")
+
+        meta_left, meta_right = st.columns(2)
+        with meta_left:
+            st.text_input(
+                "Config Path",
+                value=str(context.get("config_path") or ""),
+                disabled=True,
+                key=f"model_lab_adv_config_path_{model_id}",
+            )
+            st.text_input(
+                "Artifact Directory",
+                value=str(context.get("artifact_dir") or ""),
+                disabled=True,
+                key=f"model_lab_adv_artifact_dir_{model_id}",
+            )
+        with meta_right:
+            st.text_input(
+                "Model Family",
+                value=str(context.get("model_family") or ""),
+                disabled=True,
+                key=f"model_lab_adv_model_family_{model_id}",
+            )
+            st.text_input(
+                "Market Key",
+                value=str(context.get("market_key") or ""),
+                disabled=True,
+                key=f"model_lab_adv_market_key_{model_id}",
+            )
+
+        st.divider()
+        st.caption("Danger zone")
+        if st.button(
+            "Delete Model",
+            disabled=not can_delete,
+            use_container_width=True,
+            key=f"model_lab_adv_delete_{model_id}",
+        ):
+            st.session_state["mlab_delete_candidate"] = context["model_id"]
+
+
 def _render_configuration(registry: dict[str, Any], rows: list[dict[str, Any]], row_by_id: dict[str, dict[str, Any]]) -> None:
     st.markdown("## Configuration")
     options = [NEW_MODEL_SENTINEL] + [row["model_id"] for row in rows]
@@ -364,23 +410,22 @@ def _render_configuration(registry: dict[str, Any], rows: list[dict[str, Any]], 
         and str(context.get("status") or "").lower() in {"draft", "archived"}
         and not _active_primary(registry, context)
     )
-    save_col, delete_col = st.columns([3, 1])
-    with save_col:
-        if st.button("Save Draft Configuration", type="primary", disabled=not can_save, use_container_width=True):
-            ok, msg = _save_new_or_existing_model(
-                context=context,
-                registry=registry,
-                form_values=form_values,
-                feature_values=feature_values,
-            )
-            st.success(msg) if ok else st.error(msg)
-            if ok:
-                st.session_state["mlab_active_model_id"] = context["model_id"]
-                st.cache_data.clear()
-                st.rerun()
-    with delete_col:
-        if st.button("Delete Model", disabled=not can_delete, use_container_width=True):
-            st.session_state["mlab_delete_candidate"] = context["model_id"]
+
+    _render_advanced_configuration(context, can_delete=can_delete)
+
+    if st.button("Save Draft Configuration", type="primary", disabled=not can_save, use_container_width=True):
+        ok, msg = _save_new_or_existing_model(
+            context=context,
+            registry=registry,
+            form_values=form_values,
+            feature_values=feature_values,
+        )
+        st.success(msg) if ok else st.error(msg)
+        if ok:
+            st.session_state["mlab_active_model_id"] = context["model_id"]
+            st.cache_data.clear()
+            st.rerun()
+
     if st.session_state.get("mlab_delete_candidate") == context.get("model_id"):
         _render_delete_dialog(context, registry)
 
