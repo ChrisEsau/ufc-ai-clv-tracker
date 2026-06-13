@@ -339,24 +339,12 @@ def _render_advanced_configuration(context: dict[str, Any], *, can_delete: bool)
                 disabled=True,
                 key=f"model_lab_adv_config_path_{model_id}",
             )
+        with meta_right:
             st.text_input(
                 "Artifact Directory",
                 value=str(context.get("artifact_dir") or ""),
                 disabled=True,
                 key=f"model_lab_adv_artifact_dir_{model_id}",
-            )
-        with meta_right:
-            st.text_input(
-                "Model Family",
-                value=str(context.get("model_family") or ""),
-                disabled=True,
-                key=f"model_lab_adv_model_family_{model_id}",
-            )
-            st.text_input(
-                "Market Key",
-                value=str(context.get("market_key") or ""),
-                disabled=True,
-                key=f"model_lab_adv_market_key_{model_id}",
             )
 
         st.divider()
@@ -420,6 +408,27 @@ def _render_configuration(registry: dict[str, Any], rows: list[dict[str, Any]], 
     else:
         st.session_state["mlab_active_model_id"] = selected
         context = mlw.resolve_model_workflow_context(registry=registry, model_id=selected)
+        family_options = list(MARKET_OPTIONS.keys())
+        market_family = _default_market_family(context)
+        key_options = MARKET_OPTIONS.get(market_family, MARKET_OPTIONS["moneyline"])
+        market_key = _default_market_key(context, market_family)
+        c_family, c_key = st.columns(2)
+        with c_family:
+            st.selectbox(
+                "Market Family",
+                family_options,
+                index=family_options.index(market_family) if market_family in family_options else 0,
+                disabled=True,
+                key=f"model_lab_existing_market_family_{context['model_id']}",
+            )
+        with c_key:
+            st.selectbox(
+                "Market Key",
+                key_options,
+                index=key_options.index(market_key) if market_key in key_options else 0,
+                disabled=True,
+                key=f"model_lab_existing_market_key_{context['model_id']}",
+            )
 
     _clear_config_widget_state_if_model_changed(str(context.get("model_id") or selected))
 
