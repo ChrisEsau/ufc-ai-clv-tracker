@@ -1,0 +1,112 @@
+name: Run Full Model Backtest V2
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_config_path:
+        description: "Model config YAML path"
+        required: true
+        default: "configs/models/moneyline_xgboost_v6_dev.yaml"
+      feature_view_path:
+        description: "Historical feature view parquet path"
+        required: true
+        default: "data/features/moneyline_feature_view.parquet"
+      historical_market_path:
+        description: "Historical market outcomes parquet path"
+        required: true
+        default: "data/market/historical_market_outcomes.parquet"
+      market_key:
+        description: "Market key to backtest"
+        required: true
+        default: "moneyline"
+      start_date:
+        description: "Optional start date YYYY-MM-DD"
+        required: false
+        default: ""
+      end_date:
+        description: "Optional end date YYYY-MM-DD"
+        required: false
+        default: ""
+      min_edge:
+        description: "Minimum model edge"
+        required: false
+        default: "0.00"
+      min_confidence:
+        description: "Minimum confidence score"
+        required: false
+        default: "0.00"
+      flat_stake:
+        description: "Flat stake amount"
+        required: false
+        default: "100"
+      starting_bankroll:
+        description: "Starting bankroll for Kelly simulation"
+        required: false
+        default: "10000"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: run-full-model-backtest-v2-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  run-full-model-backtest-v2:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Sync latest branch state
+        run: |
+          git fetch origin "${GITHUB_REF_NAME}"
+          git pull --ff-only origin "${GITHUB_REF_NAME}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pandas pyarrow pyyaml joblib
+
+      - name: Run Full Model Backtest V2
+        run: |
+          START_ARG=""
+          END_ARG=""
+          if [ -n "${{ github.event.inputs.start_date }}" ]; then
+            START_ARG="--start-date ${{ github.event.inputs.start_date }}"
+          fi
+          if [ -n "${{ github.event.inputs.end_date }}" ]; then
+            END_ARG="--end-date ${{ github.event.inputs.end_date }}"
+          fi
+
+          python -m pipeline.backtesting.run_full_model_backtest_v2 \
+            --model-config-path "${{ github.event.inputs.model_config_path }}" \
+            --feature-view-path "${{ github.event.inputs.feature_view_path }}" \
+            --historical-market-path "${{ github.event.inputs.historical_market_path }}" \
+            --market-key "${{ github.event.inputs.market_key }}" \
+            ${START_ARG} \
+            ${END_ARG} \
+            --min-edge "${{ github.event.inputs.min_edge }}" \
+            --min-confidence "${{ github.event.inputs.min_confidence }}" \
+            --flat-stake "${{ github.event.inputs.flat_stake }}" \
+            --starting-bankroll "${{ github.event.inputs.starting_bankroll }}"
+
+      - name: Commit full model backtest artifacts
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add -f data/model_lab/backtests
+
+          git commit -m "Update full model backtest v2 artifacts" || echo "No changes to commit"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
