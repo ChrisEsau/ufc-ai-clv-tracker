@@ -8,9 +8,9 @@ on:
         required: false
         default: configs/models/moneyline_xgboost_v5.yaml
       artifact_dir:
-        description: "Model artifact directory to commit"
+        description: "Optional override for model artifact directory to commit"
         required: false
-        default: models/moneyline/xgboost_v5
+        default: ""
 
 permissions:
   contents: write
@@ -48,12 +48,35 @@ jobs:
           python -m pipeline.training.run_train_model \
             --config "${{ inputs.config_path }}"
 
+      - name: Resolve artifact directory
+        id: artifact_dir
+        run: |
+          if [ -n "${{ inputs.artifact_dir }}" ]; then
+            artifact_dir="${{ inputs.artifact_dir }}"
+          else
+            artifact_dir=$(python - <<'PY'
+          from pathlib import Path
+          import yaml
+
+          config_path = Path("${{ inputs.config_path }}")
+          config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+          output_dir = (config.get("artifacts") or {}).get("output_dir")
+          if not output_dir:
+              raise SystemExit(f"Missing artifacts.output_dir in {config_path}")
+          print(output_dir)
+          PY
+          )
+          fi
+
+          echo "artifact_dir=${artifact_dir}" >> "$GITHUB_OUTPUT"
+          echo "Resolved artifact directory: ${artifact_dir}"
+
       - name: Commit model artifacts
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add -f "${{ inputs.artifact_dir }}"
+          git add -f "${{ steps.artifact_dir.outputs.artifact_dir }}"
 
           git commit -m "Update model training artifacts" || echo "No changes"
           git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
