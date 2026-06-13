@@ -115,6 +115,7 @@ def build_moneyline_model_outcomes(meta: pd.DataFrame, probs: pd.Series, config:
     probs = probs.clip(lower=low, upper=high)
     rows: list[dict[str, Any]] = []
     model_id = str(config["model_id"])
+    market_key = str(config.get("prediction", {}).get("market_key", "moneyline"))
     for i, row in meta.reset_index(drop=True).iterrows():
         red_p = float(probs.iloc[i])
         blue_p = float(1.0 - red_p)
@@ -130,8 +131,8 @@ def build_moneyline_model_outcomes(meta: pd.DataFrame, probs: pd.Series, config:
                 "fight_id": row["fight_id"],
                 "date": row["date"],
                 "event_name": row["event_name"],
-                "market_key": "moneyline",
-                "outcome_join_key": build_outcome_join_key(outcome_fighter_id=fid),
+                "market_key": market_key,
+                "outcome_join_key": build_outcome_join_key(market_key=market_key, outcome_fighter_id=fid, outcome_label=label, side=side),
                 "outcome_fighter_id": fid,
                 "outcome_label": label,
                 "outcome_side": side,
