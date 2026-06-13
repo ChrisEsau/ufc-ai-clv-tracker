@@ -7,6 +7,19 @@ import utils.model_lab_workflows as mlw
 
 
 UNSAFE_FEATURE_PREFIXES = ("r_pre_", "b_pre_", "R_", "B_", "r_", "b_")
+UNSAFE_FEATURE_NAMES = {
+    "winner",
+    "winner_id",
+    "winner_is_red",
+    "winner_is_blue",
+    "red_won",
+    "blue_won",
+    "target",
+    "label",
+    "outcome",
+    "result",
+    "fight_result",
+}
 
 
 def _safe_key(value) -> str:
@@ -15,9 +28,17 @@ def _safe_key(value) -> str:
 
 
 def _is_safe_model_lab_feature(feature: str) -> bool:
-    """Mirror the trainer safety rule so unsafe raw fighter columns never appear in UI bundles."""
+    """Mirror trainer safety and hide target/outcome leakage columns from UI bundles."""
 
-    return not str(feature or "").startswith(UNSAFE_FEATURE_PREFIXES)
+    name = str(feature or "")
+    normalized = name.strip().lower()
+    if name.startswith(UNSAFE_FEATURE_PREFIXES):
+        return False
+    if normalized in UNSAFE_FEATURE_NAMES:
+        return False
+    if normalized.startswith("winner_is"):
+        return False
+    return True
 
 
 def _inject_feature_selector_css() -> None:
