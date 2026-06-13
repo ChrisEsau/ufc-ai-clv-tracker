@@ -75,7 +75,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pandas pyarrow pyyaml joblib
+          pip install pandas pyarrow pyyaml joblib scikit-learn xgboost
 
       - name: Run Full Model Backtest V2
         run: |
