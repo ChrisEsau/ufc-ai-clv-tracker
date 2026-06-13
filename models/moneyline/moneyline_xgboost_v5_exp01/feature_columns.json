@@ -114,13 +114,5 @@
   "loss_streak_diff",
   "losses_diff",
   "win_streak_diff",
-  "wins_diff",
-  "aggression_index_diff",
-  "experience_ratio_diff",
-  "grappling_edge",
-  "pressure_striking_adv_diff",
-  "striking_edge",
-  "submission_mismatch_diff",
-  "wrestling_mismatch_diff",
-  "wrestling_pressure_vs_defense"
+  "wins_diff"
 ]
