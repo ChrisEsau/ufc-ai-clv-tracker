@@ -6,9 +6,18 @@ import streamlit as st
 import utils.model_lab_workflows as mlw
 
 
+UNSAFE_FEATURE_PREFIXES = ("r_pre_", "b_pre_", "R_", "B_", "r_", "b_")
+
+
 def _safe_key(value) -> str:
     cleaned = re.sub(r"[^0-9a-zA-Z_]+", "_", str(value or ""))
     return cleaned.strip("_") or "feature"
+
+
+def _is_safe_model_lab_feature(feature: str) -> bool:
+    """Mirror the trainer safety rule so unsafe raw fighter columns never appear in UI bundles."""
+
+    return not str(feature or "").startswith(UNSAFE_FEATURE_PREFIXES)
 
 
 def _inject_feature_selector_css() -> None:
@@ -98,8 +107,8 @@ def render_feature_checklist(context):
     editable = context.get("is_new_model") or context["status"] in mlw.EDITABLE_STATUSES
     model_key = _safe_key(context.get("model_id") or "new_model")
     feature_config = config.get("features") or {}
-    current = set(feature_config.get("feature_columns") or [])
-    available = mlw._available_feature_columns(context)
+    current = {feature for feature in set(feature_config.get("feature_columns") or []) if _is_safe_model_lab_feature(feature)}
+    available = [feature for feature in mlw._available_feature_columns(context) if _is_safe_model_lab_feature(feature)]
     bundle_map = mlw._bundle_map(available)
     saved = list(feature_config.get("selected_bundles") or [])
     if not saved:
