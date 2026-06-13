@@ -13,6 +13,17 @@ from pipeline.common.paths import AUDITS_DIR, MARKET_DIR, MASTER_PATH, ensure_da
 DEFAULT_INPUT_PATH = Path("ufc-master w odds.csv")
 DEFAULT_OUTPUT_PATH = MARKET_DIR / "historical_moneyline_odds.parquet"
 DEFAULT_AUDIT_PATH = AUDITS_DIR / "ufc_historical_odds_mapping_audit.parquet"
+LEGACY_MAPPING_COLUMNS = [
+    "legacy_row_number",
+    "legacy_date",
+    "legacy_r_name",
+    "legacy_b_name",
+    "legacy_r_norm",
+    "legacy_b_norm",
+    "legacy_r_odds",
+    "legacy_b_odds",
+    "legacy_winner_side",
+]
 
 
 def parse_args() -> argparse.Namespace:
@@ -57,16 +68,16 @@ def require_columns(df: pd.DataFrame, columns: list[str], label: str) -> None:
 def load_legacy(path: Path) -> pd.DataFrame:
     df = pd.read_csv(path, encoding="utf-8-sig")
     require_columns(df, ["R_fighter", "B_fighter", "date", "R_odds", "B_odds", "Winner"], "legacy odds CSV")
-    out = df.copy()
-    out["legacy_row_number"] = range(1, len(out) + 1)
-    out["legacy_date"] = pd.to_datetime(out["date"], errors="coerce").dt.normalize()
-    out["legacy_r_name"] = out["R_fighter"].astype(str)
-    out["legacy_b_name"] = out["B_fighter"].astype(str)
+    out = pd.DataFrame()
+    out["legacy_row_number"] = range(1, len(df) + 1)
+    out["legacy_date"] = pd.to_datetime(df["date"], errors="coerce").dt.normalize()
+    out["legacy_r_name"] = df["R_fighter"].astype(str)
+    out["legacy_b_name"] = df["B_fighter"].astype(str)
     out["legacy_r_norm"] = out["legacy_r_name"].map(normalize_name)
     out["legacy_b_norm"] = out["legacy_b_name"].map(normalize_name)
-    out["legacy_r_odds"] = pd.to_numeric(out["R_odds"], errors="coerce")
-    out["legacy_b_odds"] = pd.to_numeric(out["B_odds"], errors="coerce")
-    out["legacy_winner_side"] = out["Winner"].astype(str).str.strip().str.lower()
+    out["legacy_r_odds"] = pd.to_numeric(df["R_odds"], errors="coerce")
+    out["legacy_b_odds"] = pd.to_numeric(df["B_odds"], errors="coerce")
+    out["legacy_winner_side"] = df["Winner"].astype(str).str.strip().str.lower()
     return out
 
 
@@ -83,7 +94,8 @@ def load_master(path: Path) -> pd.DataFrame:
 
 
 def map_rows(legacy: pd.DataFrame, master: pd.DataFrame) -> pd.DataFrame:
-    direct = legacy.merge(
+    legacy_base = legacy[LEGACY_MAPPING_COLUMNS].copy()
+    direct = legacy_base.merge(
         master,
         left_on=["legacy_date", "legacy_r_norm", "legacy_b_norm"],
         right_on=["master_date", "master_r_norm", "master_b_norm"],
@@ -91,7 +103,7 @@ def map_rows(legacy: pd.DataFrame, master: pd.DataFrame) -> pd.DataFrame:
     )
     direct["mapping_method"] = direct["fight_id"].notna().map(lambda ok: "direct" if ok else "unmatched")
     matched = direct[direct["fight_id"].notna()].copy()
-    unmatched = direct[direct["fight_id"].isna()][legacy.columns].copy()
+    unmatched = direct.loc[direct["fight_id"].isna(), LEGACY_MAPPING_COLUMNS].copy()
     reversed_match = unmatched.merge(
         master,
         left_on=["legacy_date", "legacy_r_norm", "legacy_b_norm"],
