@@ -210,7 +210,7 @@ def _save_new_or_existing_model(
     if not ok:
         return ok, msg
     ok, msg = mlw._save_registry(updated_registry)
-    return (ok, msg if not ok else f"Saved draft model {model_id}.")
+    return (ok, msg if not ok else f"Saved draft model {model_id} to GitHub.")
 
 
 def _github_delete_file(path: str, message: str) -> tuple[bool, str]:
@@ -432,6 +432,14 @@ def _render_configuration(registry: dict[str, Any], rows: list[dict[str, Any]], 
 
     _clear_config_widget_state_if_model_changed(str(context.get("model_id") or selected))
 
+    save_result = st.session_state.pop("mlab_last_save_result", None)
+    if save_result:
+        if save_result.get("ok"):
+            st.success(save_result.get("msg", "Saved."))
+            st.caption("Saved to GitHub. Local/deployed app values may not refresh until the app pulls the new commit or redeploys.")
+        else:
+            st.error(save_result.get("msg", "Save failed."))
+
     mlw._render_model_bar(context, registry)
     c1, c2 = st.columns([1.05, 1.45], gap="medium")
     with c1:
@@ -459,11 +467,11 @@ def _render_configuration(registry: dict[str, Any], rows: list[dict[str, Any]], 
             form_values=form_values,
             feature_values=feature_values,
         )
-        st.success(msg) if ok else st.error(msg)
+        st.session_state["mlab_last_save_result"] = {"ok": ok, "msg": msg}
         if ok:
             st.session_state["mlab_active_model_id"] = context["model_id"]
             st.cache_data.clear()
-            st.rerun()
+        st.rerun()
 
     if st.session_state.get("mlab_delete_candidate") == context.get("model_id"):
         _render_delete_dialog(context, registry)
