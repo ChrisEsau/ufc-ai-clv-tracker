@@ -1,0 +1,74 @@
+name: Run Live Prediction Trace
+
+on:
+  workflow_dispatch:
+    inputs:
+      fighter_a:
+        description: "First fighter name"
+        required: true
+        default: "Michael Chandler"
+      fighter_b:
+        description: "Second fighter name"
+        required: true
+        default: "Mauricio Ruffy"
+      live_features_path:
+        description: "Live model features parquet path"
+        required: true
+        default: "data/predictions/live_model_features.parquet"
+      model_outcomes_path:
+        description: "Model outcomes parquet path"
+        required: true
+        default: "data/predictions/model_outcomes.parquet"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: run-live-prediction-trace-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  run-live-prediction-trace:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Sync latest branch state
+        run: |
+          git fetch origin "${GITHUB_REF_NAME}"
+          git pull --ff-only origin "${GITHUB_REF_NAME}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas pyarrow
+
+      - name: Run live prediction trace
+        run: |
+          python -m pipeline.prediction.run_live_prediction_trace \
+            --fighter-a "${{ github.event.inputs.fighter_a }}" \
+            --fighter-b "${{ github.event.inputs.fighter_b }}" \
+            --live-features-path "${{ github.event.inputs.live_features_path }}" \
+            --model-outcomes-path "${{ github.event.inputs.model_outcomes_path }}"
+
+      - name: Commit live prediction trace artifacts
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add -f \
+            data/audits/ufc_live_prediction_trace.parquet \
+            data/audits/ufc_live_prediction_trace_preview.csv
+
+          git commit -m "Update live prediction trace audit" || echo "No changes to commit"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
