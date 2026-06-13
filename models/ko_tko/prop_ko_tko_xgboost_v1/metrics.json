@@ -1,0 +1,27 @@
+{
+  "model_id": "prop_ko_tko_xgboost_v1",
+  "raw_metrics": {
+    "accuracy": 0.9981981981981982,
+    "log_loss": 0.014092202677441271,
+    "roc_auc": 0.9993710671328808,
+    "brier_score": 0.0020935198294509435,
+    "threshold": 0.53,
+    "positive_pick_rate_percent": 53.06306306306306,
+    "negative_pick_rate_percent": 46.93693693693694,
+    "actual_positive_rate_percent": 53.06306306306306,
+    "row_count": 1110
+  },
+  "final_metrics": {
+    "accuracy": 0.9981981981981982,
+    "log_loss": 0.024386726239356366,
+    "roc_auc": 0.9981930400268517,
+    "brier_score": 0.0023784805376597254,
+    "threshold": 0.52,
+    "positive_pick_rate_percent": 53.06306306306306,
+    "negative_pick_rate_percent": 46.93693693693694,
+    "actual_positive_rate_percent": 53.06306306306306,
+    "row_count": 1110
+  },
+  "best_threshold": 0.52,
+  "trained_at_utc": "2026-06-13T03:13:25.207235+00:00"
+}

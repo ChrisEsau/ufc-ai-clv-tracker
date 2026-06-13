@@ -1,0 +1,46 @@
+model_id: prop_ko_tko_xgboost_v1
+model_family: prop
+artifact_name: prop_ko_tko_xgboost_v1
+algorithm: xgboost
+config_path: configs/models/prop_ko_tko_xgboost_v1.yaml
+trained_at_utc: '2026-06-13T03:13:25.214462+00:00'
+data:
+  rolling_features_path: data/features/prop_goes_distance_feature_view.parquet
+  target_column: target_goes_distance
+  date_column: date
+split:
+  mode: train_calibration_test
+  train_end_date: '2022-12-31'
+  calibration_end_date: '2023-12-31'
+  train_rows: 6813
+  calibration_rows: 504
+  test_rows: 1110
+features:
+  feature_count: 126
+  expected_feature_count: 126
+symmetry:
+  enabled: false
+  mode: none
+calibration:
+  enabled: true
+  method: isotonic
+  calibration_rows: 504
+params:
+  n_estimators: 500
+  max_depth: 4
+  learning_rate: 0.03
+  subsample: 0.8
+  colsample_bytree: 0.8
+  random_state: 42
+  eval_metric: logloss
+metrics:
+  accuracy: 0.9981981981981982
+  log_loss: 0.024386726239356366
+  roc_auc: 0.9981930400268517
+  brier_score: 0.0023784805376597254
+  threshold: 0.52
+  positive_pick_rate_percent: 53.06306306306306
+  negative_pick_rate_percent: 46.93693693693694
+  actual_positive_rate_percent: 53.06306306306306
+  row_count: 1110
+best_threshold: 0.52
