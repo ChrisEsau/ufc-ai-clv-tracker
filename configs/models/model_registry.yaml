@@ -44,14 +44,3 @@ models:
     status: draft
     dashboard_selectable: false
     outcome_architecture: true
-  prop_ko_tko_xgboost_v1:
-    display_name: Moneyline XGBoost V5 Experiment
-    description: Draft experiment created from moneyline_xgboost_v5.
-    model_family: prop
-    market_key: ko_tko
-    algorithm: xgboost
-    config_path: configs/models/prop_ko_tko_xgboost_v1.yaml
-    artifact_dir: models/ko_tko/prop_ko_tko_xgboost_v1
-    status: draft
-    dashboard_selectable: false
-    outcome_architecture: true
