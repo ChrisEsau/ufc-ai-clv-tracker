@@ -34,7 +34,6 @@ CONFIG_WIDGET_KEYS = [
     "mlab_cal_method",
     "mlab_clip_low",
     "mlab_clip_high",
-    "mlab_expected_count",
     "mlab_dashboard_selectable",
     "mlab_n_estimators",
     "mlab_max_depth",
@@ -163,12 +162,158 @@ def _build_new_context(
     return context
 
 
+def _render_config_editor(context: dict[str, Any], registry: dict[str, Any]) -> dict[str, Any]:
+    """Render editable base model configuration.
+
+    Expected feature count is intentionally not editable here; it is derived from
+    the resolved feature list during save.
+    """
+
+    config = deepcopy(context["config"])
+    editable = context["status"] in mlw.EDITABLE_STATUSES or bool(context.get("is_new_model"))
+    split = config.setdefault("split", {})
+    calibration = config.setdefault("calibration", {})
+    params = config.setdefault("params", {})
+    probability = config.setdefault("prediction", {}).setdefault("probability", {})
+
+    st.html("<div class='mlab-card'><div class='mlab-section'><div class='mlab-section-title'>Configuration</div>")
+    if not editable:
+        st.caption("Read-only because this model is not draft.")
+
+    display_name = st.text_input(
+        "Display Name",
+        value=str(context.get("display_name") or context["model_id"]),
+        disabled=not editable,
+        key="mlab_display_name",
+    )
+    description = st.text_area(
+        "Description",
+        value=str(context.get("description") or ""),
+        disabled=not editable,
+        height=72,
+        key="mlab_description",
+    )
+
+    c1, c2 = st.columns(2)
+    with c1:
+        train_end = st.text_input(
+            "Train End Date",
+            value=str(split.get("train_end_date", "2022-12-31")),
+            disabled=not editable,
+            key="mlab_train_end",
+        )
+        cal_end = st.text_input(
+            "Calibration End Date",
+            value=str(split.get("calibration_end_date", "2023-12-31")),
+            disabled=not editable,
+            key="mlab_cal_end",
+        )
+        calibration_enabled = st.toggle(
+            "Calibration Enabled",
+            value=bool(calibration.get("enabled", True)),
+            disabled=not editable,
+            key="mlab_cal_enabled",
+        )
+        calibration_options = ["isotonic", "sigmoid", "none"]
+        calibration_current = str(calibration.get("method", "isotonic"))
+        calibration_method = st.selectbox(
+            "Calibration Method",
+            calibration_options,
+            index=calibration_options.index(calibration_current) if calibration_current in calibration_options else 0,
+            disabled=not editable,
+            key="mlab_cal_method",
+        )
+    with c2:
+        clip_low = st.number_input(
+            "Probability Clip Low",
+            value=float(probability.get("clip_low", 0.02)),
+            step=0.01,
+            min_value=0.0,
+            max_value=0.49,
+            disabled=not editable,
+            key="mlab_clip_low",
+        )
+        clip_high = st.number_input(
+            "Probability Clip High",
+            value=float(probability.get("clip_high", 0.98)),
+            step=0.01,
+            min_value=0.51,
+            max_value=1.0,
+            disabled=not editable,
+            key="mlab_clip_high",
+        )
+        dashboard_selectable = st.toggle(
+            "Dashboard Selectable",
+            value=bool(context.get("dashboard_selectable", False)),
+            disabled=not editable,
+            key="mlab_dashboard_selectable",
+        )
+
+    st.markdown("##### XGBoost Parameters")
+    p1, p2, p3, p4, p5 = st.columns(5)
+    with p1:
+        n_estimators = st.number_input("N Estimators", value=int(params.get("n_estimators", 500)), step=50, min_value=50, disabled=not editable, key="mlab_n_estimators")
+    with p2:
+        max_depth = st.number_input("Max Depth", value=int(params.get("max_depth", 4)), step=1, min_value=1, max_value=12, disabled=not editable, key="mlab_max_depth")
+    with p3:
+        learning_rate = st.number_input("Learning Rate", value=float(params.get("learning_rate", 0.03)), step=0.01, min_value=0.001, max_value=1.0, disabled=not editable, key="mlab_learning_rate")
+    with p4:
+        subsample = st.number_input("Subsample", value=float(params.get("subsample", 0.8)), step=0.05, min_value=0.1, max_value=1.0, disabled=not editable, key="mlab_subsample")
+    with p5:
+        colsample = st.number_input("Colsample", value=float(params.get("colsample_bytree", 0.8)), step=0.05, min_value=0.1, max_value=1.0, disabled=not editable, key="mlab_colsample")
+
+    st.html("</div></div>")
+
+    return {
+        "display_name": display_name,
+        "description": description,
+        "dashboard_selectable": dashboard_selectable,
+        "train_end_date": train_end,
+        "calibration_end_date": cal_end,
+        "calibration_enabled": calibration_enabled,
+        "calibration_method": calibration_method,
+        "clip_low": clip_low,
+        "clip_high": clip_high,
+        "params": {
+            "n_estimators": int(n_estimators),
+            "max_depth": int(max_depth),
+            "learning_rate": float(learning_rate),
+            "subsample": float(subsample),
+            "colsample_bytree": float(colsample),
+            "random_state": int(params.get("random_state", 42)),
+            "eval_metric": params.get("eval_metric", "logloss"),
+        },
+    }
+
+
+def _apply_advanced_config_updates(updated_config: dict[str, Any], advanced_values: dict[str, Any] | None) -> dict[str, Any]:
+    if not advanced_values:
+        return updated_config
+
+    updated_config.setdefault("data", {})["target_column"] = str(advanced_values["target_column"])
+
+    symmetry = updated_config.setdefault("symmetry", {})
+    symmetry["enabled"] = bool(advanced_values["symmetry_enabled"])
+    symmetry["mode"] = str(advanced_values["symmetry_mode"])
+
+    metrics = updated_config.setdefault("metrics", {})
+    metrics["threshold_min"] = float(advanced_values["threshold_min"])
+    metrics["threshold_max"] = float(advanced_values["threshold_max"])
+    metrics["threshold_step"] = float(advanced_values["threshold_step"])
+
+    threshold = updated_config.setdefault("prediction", {}).setdefault("threshold", {})
+    threshold["source"] = str(advanced_values["prediction_threshold_source"])
+    threshold["value"] = float(advanced_values["prediction_threshold_value"])
+    return updated_config
+
+
 def _save_new_or_existing_model(
     *,
     context: dict[str, Any],
     registry: dict[str, Any],
     form_values: dict[str, Any],
     feature_values: dict[str, Any],
+    advanced_values: dict[str, Any] | None = None,
 ) -> tuple[bool, str]:
     model_id = _safe_model_id(context.get("model_id", ""))
     if not model_id:
@@ -180,6 +325,7 @@ def _save_new_or_existing_model(
     market_key = str(context.get("market_key") or "moneyline").strip().lower()
     artifact_dir = _artifact_dir_for_market(model_id, market_key)
     updated_config = mlw._apply_config_updates(context, form_values, feature_values)
+    updated_config = _apply_advanced_config_updates(updated_config, advanced_values)
     updated_config["model_id"] = model_id
     updated_config["model_family"] = market_family
     updated_config["market_key"] = market_key
@@ -324,12 +470,19 @@ def _inject_model_lab_control_css() -> None:
     )
 
 
-def _render_advanced_configuration(context: dict[str, Any], *, can_delete: bool) -> None:
-    """Render rarely used model metadata and destructive controls above the save action."""
+def _render_advanced_configuration(context: dict[str, Any], *, can_delete: bool, editable: bool) -> dict[str, Any]:
+    """Render advanced YAML-backed config fields plus destructive controls."""
 
     model_id = str(context.get("model_id") or "new_model")
+    config = context.get("config") or {}
+    data = config.get("data") or {}
+    symmetry = config.get("symmetry") or {}
+    metrics = config.get("metrics") or {}
+    prediction = config.get("prediction") or {}
+    threshold = prediction.get("threshold") or {}
+
     with st.expander("Advanced", expanded=False):
-        st.caption("Technical metadata and destructive actions.")
+        st.caption("Technical metadata and advanced training configuration.")
 
         meta_left, meta_right = st.columns(2)
         with meta_left:
@@ -348,6 +501,95 @@ def _render_advanced_configuration(context: dict[str, Any], *, can_delete: bool)
             )
 
         st.divider()
+        st.caption("Training data")
+        target_column = st.text_input(
+            "Target Column",
+            value=str(data.get("target_column") or "target"),
+            disabled=not editable,
+            key=f"model_lab_adv_target_column_{model_id}",
+        )
+
+        st.caption("Symmetry")
+        sym_left, sym_right = st.columns(2)
+        with sym_left:
+            symmetry_enabled = st.toggle(
+                "Symmetry Enabled",
+                value=bool(symmetry.get("enabled", False)),
+                disabled=not editable,
+                key=f"model_lab_adv_symmetry_enabled_{model_id}",
+            )
+        with sym_right:
+            symmetry_options = ["flip_all", "none"]
+            current_symmetry_mode = str(symmetry.get("mode") or "none")
+            if current_symmetry_mode not in symmetry_options:
+                symmetry_options.append(current_symmetry_mode)
+            symmetry_mode = st.selectbox(
+                "Symmetry Mode",
+                symmetry_options,
+                index=symmetry_options.index(current_symmetry_mode),
+                disabled=not editable,
+                key=f"model_lab_adv_symmetry_mode_{model_id}",
+            )
+
+        st.caption("Threshold sweep")
+        t1, t2, t3 = st.columns(3)
+        with t1:
+            threshold_min = st.number_input(
+                "Threshold Min",
+                value=float(metrics.get("threshold_min", 0.4)),
+                step=0.01,
+                min_value=0.0,
+                max_value=1.0,
+                disabled=not editable,
+                key=f"model_lab_adv_threshold_min_{model_id}",
+            )
+        with t2:
+            threshold_max = st.number_input(
+                "Threshold Max",
+                value=float(metrics.get("threshold_max", 0.6)),
+                step=0.01,
+                min_value=0.0,
+                max_value=1.0,
+                disabled=not editable,
+                key=f"model_lab_adv_threshold_max_{model_id}",
+            )
+        with t3:
+            threshold_step = st.number_input(
+                "Threshold Step",
+                value=float(metrics.get("threshold_step", 0.01)),
+                step=0.01,
+                min_value=0.01,
+                max_value=1.0,
+                disabled=not editable,
+                key=f"model_lab_adv_threshold_step_{model_id}",
+            )
+
+        st.caption("Prediction threshold")
+        p1, p2 = st.columns(2)
+        with p1:
+            threshold_source_options = ["fixed", "best_sweep", "model_card"]
+            current_threshold_source = str(threshold.get("source") or "fixed")
+            if current_threshold_source not in threshold_source_options:
+                threshold_source_options.append(current_threshold_source)
+            prediction_threshold_source = st.selectbox(
+                "Threshold Source",
+                threshold_source_options,
+                index=threshold_source_options.index(current_threshold_source),
+                disabled=not editable,
+                key=f"model_lab_adv_prediction_threshold_source_{model_id}",
+            )
+        with p2:
+            prediction_threshold_value = st.number_input(
+                "Threshold Value",
+                value=float(threshold.get("value", 0.5)),
+                step=0.01,
+                min_value=0.0,
+                max_value=1.0,
+                disabled=not editable,
+                key=f"model_lab_adv_prediction_threshold_value_{model_id}",
+            )
+
+        st.divider()
         st.caption("Danger zone")
         if st.button(
             "Delete Model",
@@ -356,6 +598,17 @@ def _render_advanced_configuration(context: dict[str, Any], *, can_delete: bool)
             key=f"model_lab_adv_delete_{model_id}",
         ):
             st.session_state["mlab_delete_candidate"] = context["model_id"]
+
+    return {
+        "target_column": target_column,
+        "symmetry_enabled": symmetry_enabled,
+        "symmetry_mode": symmetry_mode,
+        "threshold_min": threshold_min,
+        "threshold_max": threshold_max,
+        "threshold_step": threshold_step,
+        "prediction_threshold_source": prediction_threshold_source,
+        "prediction_threshold_value": prediction_threshold_value,
+    }
 
 
 def _render_configuration(registry: dict[str, Any], rows: list[dict[str, Any]], row_by_id: dict[str, dict[str, Any]]) -> None:
@@ -447,7 +700,7 @@ def _render_configuration(registry: dict[str, Any], rows: list[dict[str, Any]], 
             st.info("New model draft. Press Save Draft Configuration to create config YAML and registry entry.")
         elif context["status"] == "production":
             st.info("Production models are read-only. Select New Model and use this model as a template to tune an experiment.")
-        form_values = mlw._render_config_editor(context, registry)
+        form_values = _render_config_editor(context, registry)
     with c2:
         feature_values = render_feature_checklist(context)
 
@@ -458,7 +711,7 @@ def _render_configuration(registry: dict[str, Any], rows: list[dict[str, Any]], 
         and not _active_primary(registry, context)
     )
 
-    _render_advanced_configuration(context, can_delete=can_delete)
+    advanced_values = _render_advanced_configuration(context, can_delete=can_delete, editable=bool(can_save))
 
     if st.button("Save Draft Configuration", type="primary", disabled=not can_save, use_container_width=True):
         ok, msg = _save_new_or_existing_model(
@@ -466,6 +719,7 @@ def _render_configuration(registry: dict[str, Any], rows: list[dict[str, Any]], 
             registry=registry,
             form_values=form_values,
             feature_values=feature_values,
+            advanced_values=advanced_values,
         )
         st.session_state["mlab_last_save_result"] = {"ok": ok, "msg": msg}
         if ok:
