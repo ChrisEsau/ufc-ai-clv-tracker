@@ -1,0 +1,79 @@
+name: Run Fighter State Audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      fighter_a:
+        description: "First fighter name"
+        required: true
+        default: "Michael Chandler"
+      fighter_b:
+        description: "Second fighter name"
+        required: true
+        default: "Mauricio Ruffy"
+      fighter_state_path:
+        description: "Current fighter-state parquet path"
+        required: true
+        default: "data/features/ufc_current_fighter_features.parquet"
+      include_all_columns:
+        description: "Set true to export every state column"
+        required: false
+        default: "false"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: run-fighter-state-audit-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  run-fighter-state-audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Sync latest branch state
+        run: |
+          git fetch origin "${GITHUB_REF_NAME}"
+          git pull --ff-only origin "${GITHUB_REF_NAME}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas pyarrow
+
+      - name: Run fighter state audit
+        run: |
+          ALL_COLS_FLAG=""
+          if [ "${{ github.event.inputs.include_all_columns }}" = "true" ]; then
+            ALL_COLS_FLAG="--include-all-columns"
+          fi
+
+          python -m pipeline.prediction.run_fighter_state_audit \
+            --fighter-a "${{ github.event.inputs.fighter_a }}" \
+            --fighter-b "${{ github.event.inputs.fighter_b }}" \
+            --fighter-state-path "${{ github.event.inputs.fighter_state_path }}" \
+            ${ALL_COLS_FLAG}
+
+      - name: Commit fighter state audit artifacts
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add -f \
+            data/audits/ufc_fighter_state_profile_audit.parquet \
+            data/audits/ufc_fighter_state_profile_audit_preview.csv
+
+          git commit -m "Update fighter state profile audit" || echo "No changes to commit"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
