@@ -1,0 +1,70 @@
+name: Run Live Feature Formula Parity
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_config_path:
+        description: "Model config YAML path"
+        required: true
+        default: "configs/models/moneyline_xgboost_v6_dev.yaml"
+      fighter_name_contains:
+        description: "Optional fighter-name filter, e.g. Chandler or Ruffy"
+        required: false
+        default: ""
+      top_n:
+        description: "Number of preview rows to print"
+        required: false
+        default: "40"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: run-live-feature-formula-parity-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  run-live-feature-formula-parity:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Sync latest branch state
+        run: |
+          git fetch origin "${GITHUB_REF_NAME}"
+          git pull --ff-only origin "${GITHUB_REF_NAME}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pandas pyarrow pyyaml joblib scikit-learn xgboost
+
+      - name: Run live feature formula parity diagnostic
+        run: |
+          python -m pipeline.prediction.run_live_feature_formula_parity \
+            --model-config-path "${{ github.event.inputs.model_config_path }}" \
+            --fighter-name-contains "${{ github.event.inputs.fighter_name_contains }}" \
+            --top-n "${{ github.event.inputs.top_n }}"
+
+      - name: Commit parity audit artifacts
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add -f \
+            data/audits/ufc_live_feature_formula_parity.parquet \
+            data/audits/ufc_live_feature_formula_parity_preview.csv
+
+          git commit -m "Update live feature formula parity audit" || echo "No changes to commit"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
