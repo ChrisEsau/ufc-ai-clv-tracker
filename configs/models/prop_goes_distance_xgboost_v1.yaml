@@ -287,9 +287,9 @@ symmetry:
   mode: none
 calibration:
   enabled: true
-  method: sigmoid
+  method: isotonic
 params:
-  n_estimators: 1000
+  n_estimators: 500
   max_depth: 4
   learning_rate: 0.03
   subsample: 0.8
@@ -313,7 +313,7 @@ metrics:
   - 0.95
   - 1.0
 artifacts:
-  output_dir: models/props/goes_distance_xgboost_v1
+  output_dir: models/goes_distance/prop_goes_distance_xgboost_v1
   save_raw_model: true
   save_calibrated_model: true
   save_feature_columns: true
