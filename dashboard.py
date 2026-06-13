@@ -19,6 +19,20 @@ from utils.sidebar import render_sidebar
 
 apply_theme()
 
+# The Model Lab feature contract is derived from selected/resolved features.
+# Keep the legacy value available to save logic, but do not render a manual
+# "Expected Feature Count" number input in Configuration.
+_original_number_input = st.number_input
+
+
+def _dashboard_number_input(label, *args, **kwargs):
+    if str(label) == "Expected Feature Count":
+        return kwargs.get("value", 0)
+    return _original_number_input(label, *args, **kwargs)
+
+
+st.number_input = _dashboard_number_input
+
 page = render_sidebar()
 
 if page == "Betting Board":
