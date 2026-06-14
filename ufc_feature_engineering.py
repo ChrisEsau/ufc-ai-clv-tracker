@@ -60,7 +60,8 @@ def add_v5_engineered_features(df):
     """
     Add Champion Clean Set engineered features.
 
-    This intentionally matches the old V4/Champion feature formulas.
+    This intentionally matches the old V4/Champion feature formulas, with
+    additional competition-adjusted interaction features for Model Lab testing.
     """
     out = df.copy()
 
@@ -277,6 +278,33 @@ def add_v5_engineered_features(df):
         - features["b_submission_mismatch"]
     )
 
+    # --------------------------------------------------------
+    # Competition-adjusted matchup credibility
+    # --------------------------------------------------------
+    # Normalize ELO diffs only inside interaction terms so magnitudes stay
+    # interpretable while preserving raw ELO features elsewhere.
+    avg_opp_elo_norm = safe_col(out, "avg_opponent_elo_diff") / 100.0
+    ewm_avg_opp_elo_norm = safe_col(out, "ewm_avg_opponent_elo_diff") / 100.0
+
+    features["striking_edge_x_avg_opp_elo"] = (
+        features["striking_edge"] * avg_opp_elo_norm
+    )
+    features["striking_edge_x_ewm_avg_opp_elo"] = (
+        features["striking_edge"] * ewm_avg_opp_elo_norm
+    )
+    features["grappling_edge_x_avg_opp_elo"] = (
+        features["grappling_edge"] * avg_opp_elo_norm
+    )
+    features["grappling_edge_x_ewm_avg_opp_elo"] = (
+        features["grappling_edge"] * ewm_avg_opp_elo_norm
+    )
+    features["wrestling_mismatch_x_avg_opp_elo"] = (
+        features["wrestling_mismatch_diff"] * avg_opp_elo_norm
+    )
+    features["submission_mismatch_x_avg_opp_elo"] = (
+        features["submission_mismatch_diff"] * avg_opp_elo_norm
+    )
+
     out = add_feature_block(out, features)
 
     return out.copy()
@@ -303,6 +331,12 @@ def get_engineered_feature_list():
         "pressure_striking_adv_diff",
         "wrestling_mismatch_diff",
         "submission_mismatch_diff",
+        "striking_edge_x_avg_opp_elo",
+        "striking_edge_x_ewm_avg_opp_elo",
+        "grappling_edge_x_avg_opp_elo",
+        "grappling_edge_x_ewm_avg_opp_elo",
+        "wrestling_mismatch_x_avg_opp_elo",
+        "submission_mismatch_x_avg_opp_elo",
     ]
 
 
