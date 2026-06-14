@@ -6,7 +6,7 @@ feature_sources:
 - moneyline_feature_view
 features:
   selection_mode: explicit
-  expected_feature_count: 68
+  expected_feature_count: 70
   allow_unsafe_features: false
   feature_columns:
   - avg_fight_time_diff
@@ -77,6 +77,8 @@ features:
   - ewm_win_pct_diff
   - ewm_win_streak_diff
   - ewm_wins_diff
+  - title_fight
+  - total_rounds
   selected_bundles:
   - finish_profile
   - durability
@@ -84,6 +86,7 @@ features:
   - experience
   - engineered
   - ewm_state
+  - fight_context
   include_features: []
   exclude_features:
   - finish_round
@@ -144,7 +147,7 @@ prediction:
   prediction_type: binary_matchup
   positive_class: red
   threshold:
-    source: fixed
+    source: best_sweep
     value: 0.5
   probability:
     clip_low: 0.02
