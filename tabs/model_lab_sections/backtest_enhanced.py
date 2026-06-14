@@ -16,12 +16,9 @@ ExistingModelSelector = Callable[[dict[str, Any], list[dict[str, Any]], dict[str
 
 
 def _split_summary(df: pd.DataFrame, bucket_col: str) -> pd.DataFrame:
-    """Summarize profitability by bucket, split by favorite versus underdog."""
-
     required = {bucket_col, "Favorite/Underdog", "fight_id", "won", "flat_profit", "flat_stake"}
     if df.empty or not required.issubset(df.columns):
         return pd.DataFrame()
-
     temp = df.copy()
     temp["won_numeric"] = pd.to_numeric(temp["won"], errors="coerce")
     grouped = temp.groupby([bucket_col, "Favorite/Underdog"], dropna=False).agg(
@@ -38,11 +35,7 @@ def _split_summary(df: pd.DataFrame, bucket_col: str) -> pd.DataFrame:
 def _style_table(df: pd.DataFrame):
     if df.empty:
         return df
-    return df.style.format({
-        "Win_Rate": "{:.1%}",
-        "Flat_Profit": "${:,.0f}",
-        "Flat_ROI": "{:.1%}",
-    })
+    return df.style.format({"Win_Rate": "{:.1%}", "Flat_Profit": "${:,.0f}", "Flat_ROI": "{:.1%}"})
 
 
 def _render_split_table(title: str, df: pd.DataFrame) -> None:
@@ -57,22 +50,15 @@ def _render_favorite_underdog_splits(artifact_dir: Path) -> None:
     bets = base._load_bet_level_table(artifact_dir)
     if bets.empty:
         return
-
     temp = bets.copy()
     for column in ["edge", "confidence_score", "american_odds", "flat_profit", "flat_stake"]:
         if column in temp.columns:
             temp[column] = pd.to_numeric(temp[column], errors="coerce")
-
     if "american_odds" not in temp.columns:
         return
-
-    temp["Favorite/Underdog"] = temp["american_odds"].apply(
-        lambda odds: "Favorite" if pd.notna(odds) and odds < 0 else "Underdog"
-    )
-
+    temp["Favorite/Underdog"] = temp["american_odds"].apply(lambda odds: "Favorite" if pd.notna(odds) and odds < 0 else "Underdog")
     st.markdown("##### Favorite/Underdog Split Diagnostics")
     st.caption("These tables show whether confidence and edge behave differently for favorites versus underdogs.")
-
     if "confidence_score" in temp.columns:
         temp["Confidence Bucket"] = pd.cut(
             temp["confidence_score"],
@@ -80,11 +66,7 @@ def _render_favorite_underdog_splits(artifact_dir: Path) -> None:
             labels=["≤55%", "55-60%", "60-65%", "65-70%", "70-75%", "75%+"],
             include_lowest=True,
         ).astype(str)
-        _render_split_table(
-            "Favorite/Underdog ROI by Confidence Bucket",
-            _split_summary(temp, "Confidence Bucket"),
-        )
-
+        _render_split_table("Favorite/Underdog ROI by Confidence Bucket", _split_summary(temp, "Confidence Bucket"))
     if "edge" in temp.columns:
         temp["Edge Bucket"] = pd.cut(
             temp["edge"],
@@ -92,10 +74,7 @@ def _render_favorite_underdog_splits(artifact_dir: Path) -> None:
             labels=["≤5%", "5-10%", "10-15%", "15-20%", "20%+"],
             include_lowest=True,
         ).astype(str)
-        _render_split_table(
-            "Favorite/Underdog ROI by Edge Bucket",
-            _split_summary(temp, "Edge Bucket"),
-        )
+        _render_split_table("Favorite/Underdog ROI by Edge Bucket", _split_summary(temp, "Edge Bucket"))
 
 
 def _render_enhanced_diagnostics(artifact_dir: Path) -> None:
@@ -103,32 +82,38 @@ def _render_enhanced_diagnostics(artifact_dir: Path) -> None:
     _render_favorite_underdog_splits(artifact_dir)
 
 
+def _render_lazy_dog_audit(artifact_dir: Path, summary: dict[str, Any], config: dict[str, Any]) -> None:
+    st.markdown("##### Dog Audit")
+    st.info("Dog Audit can be slow because it loads the model and runs SHAP. Click the button below when you want to run it.")
+    audit_key = f"run_dog_audit_{artifact_dir.name}"
+    if st.button("Run Dog Audit", type="primary", use_container_width=True, key=audit_key):
+        st.session_state[audit_key] = True
+    if st.session_state.get(audit_key):
+        render_dog_audit(artifact_dir, summary, config)
+
+
 def _render_latest_results(context: dict[str, Any]) -> None:
     model_id = str(context.get("model_id") or "")
     market_key = str(context.get("market_key") or "moneyline")
     artifact_dir = base._latest_backtest_dir(model_id, market_key)
-
     st.markdown("#### Latest Backtest Results")
     if artifact_dir is None:
         st.info("No backtest artifacts found yet for this model. Run a backtest, then refresh after GitHub Actions commits the artifacts.")
         return
-
     summary = base._read_json(artifact_dir / "backtest_summary.json")
     config = base._read_json(artifact_dir / "backtest_config.json")
     if not summary:
         st.warning(f"Found `{artifact_dir}` but no readable `backtest_summary.json`.")
         return
-
     st.caption(f"Artifact folder: `{artifact_dir}`")
     base._render_summary_cards(summary)
-
     tabs = st.tabs(["Summary", "Diagnostics", "Dog Audit", "Bet Preview", "Config"])
     with tabs[0]:
         base._render_summary_details(summary, artifact_dir)
     with tabs[1]:
         _render_enhanced_diagnostics(artifact_dir)
     with tabs[2]:
-        render_dog_audit(artifact_dir, summary, config)
+        _render_lazy_dog_audit(artifact_dir, summary, config)
     with tabs[3]:
         base._render_artifact_tables(artifact_dir)
     with tabs[4]:
@@ -144,16 +129,13 @@ def _render_run_controls_with_status(context: dict[str, Any]) -> None:
     historical_market_path = base.DEFAULT_HISTORICAL_MARKET_PATH
     market_key = str(context.get("market_key") or "moneyline")
     status_key = f"mlab_backtest_{context['model_id']}"
-
     st.markdown("#### Run New Backtest")
     st.caption("Uses the selected model automatically. Technical paths are hidden unless you open Advanced paths.")
-
     c1, c2 = st.columns(2)
     with c1:
         start_date = st.text_input("Start Date", value="", placeholder="YYYY-MM-DD optional", key=f"mlab_backtest_start_date_{context['model_id']}")
     with c2:
         end_date = st.text_input("End Date", value="", placeholder="YYYY-MM-DD optional", key=f"mlab_backtest_end_date_{context['model_id']}")
-
     p1, p2, p3, p4 = st.columns(4)
     with p1:
         min_edge = st.number_input("Min Edge", value=0.00, step=0.01, min_value=0.0, max_value=1.0, key=f"mlab_backtest_min_edge_{context['model_id']}")
@@ -163,30 +145,16 @@ def _render_run_controls_with_status(context: dict[str, Any]) -> None:
         flat_stake = st.number_input("Flat Stake", value=100, step=25, min_value=1, key=f"mlab_backtest_flat_stake_{context['model_id']}")
     with p4:
         starting_bankroll = st.number_input("Starting Bankroll", value=10000, step=500, min_value=1, key=f"mlab_backtest_starting_bankroll_{context['model_id']}")
-
     with st.expander("Advanced paths", expanded=False):
         model_config_path = st.text_input("Model Config Path", value=model_config_path, key=f"mlab_backtest_config_path_{context['model_id']}")
         feature_view_path = st.text_input("Historical Feature View Path", value=feature_view_path, key=f"mlab_backtest_feature_view_path_{context['model_id']}")
         historical_market_path = st.text_input("Historical Market Outcomes Path", value=historical_market_path, key=f"mlab_backtest_market_path_{context['model_id']}")
         market_key = st.text_input("Market Key", value=market_key, key=f"mlab_backtest_market_key_{context['model_id']}")
-
-    missing = [
-        label
-        for label, value in {
-            "model config path": model_config_path,
-            "feature view path": feature_view_path,
-            "historical market path": historical_market_path,
-            "market key": market_key,
-        }.items()
-        if not value
-    ]
+    missing = [label for label, value in {"model config path": model_config_path, "feature view path": feature_view_path, "historical market path": historical_market_path, "market key": market_key}.items() if not value]
     required_ready = not missing
-
-    status = workflow_status_label(base.WORKFLOW_FILE, status_key, idle_label="Ready")
-    st.caption(f"Status: {status}")
+    st.caption(f"Status: {workflow_status_label(base.WORKFLOW_FILE, status_key, idle_label='Ready')}")
     if missing:
         st.warning("Backtest cannot launch until these fields are populated: " + ", ".join(missing))
-
     if st.button("Run Full Backtest", type="primary", disabled=not required_ready, use_container_width=True, key=f"{status_key}_button"):
         inputs = {
             "model_config_path": str(model_config_path),
@@ -218,10 +186,8 @@ def render_backtest(
     st.markdown("## Backtest")
     context = existing_model_selector(registry, rows, row_by_id)
     mlw._render_model_bar(context, registry)
-
     _render_latest_results(context)
     st.divider()
     _render_run_controls_with_status(context)
-
     with st.expander("GitHub workflow status", expanded=False):
         base._render_latest_run_status()
