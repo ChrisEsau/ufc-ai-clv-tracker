@@ -6,25 +6,9 @@ feature_sources:
 - moneyline_feature_view
 features:
   selection_mode: explicit
-  expected_feature_count: 52
+  expected_feature_count: 68
   allow_unsafe_features: false
   feature_columns:
-  - avg_opponent_elo_diff
-  - best_win_elo_diff
-  - ctrl_against_per_min_diff
-  - ctrl_per_min_diff
-  - elo_diff
-  - kd_avg_diff
-  - recent_splm_diff
-  - recent_td_avg_diff
-  - recent_win_pct_diff
-  - splm_diff
-  - str_acc_diff
-  - sub_avg_diff
-  - td_acc_diff
-  - td_avg_diff
-  - win_pct_diff
-  - worst_loss_elo_diff
   - avg_fight_time_diff
   - decision_loss_rate_diff
   - decision_win_rate_diff
@@ -43,7 +27,6 @@ features:
   - td_def_diff
   - height_diff
   - reach_diff
-  - reach_striking_combo
   - weight_diff
   - age_diff
   - age_squared_diff
@@ -61,17 +44,53 @@ features:
   - submission_mismatch_diff
   - wrestling_mismatch_diff
   - wrestling_pressure_vs_defense
+  - ewm_avg_fight_time_diff
+  - ewm_avg_opponent_elo_diff
+  - ewm_ctrl_against_per_min_diff
+  - ewm_ctrl_per_min_diff
+  - ewm_days_since_last_fight_diff
+  - ewm_decision_loss_rate_diff
+  - ewm_decision_win_rate_diff
+  - ewm_fights_diff
+  - ewm_finish_loss_rate_diff
+  - ewm_finish_rate_diff
+  - ewm_kd_absorbed_avg_diff
+  - ewm_kd_avg_diff
+  - ewm_ko_rate_diff
+  - ewm_loss_streak_diff
+  - ewm_losses_diff
+  - ewm_recent_avg_fight_time_diff
+  - ewm_recent_finish_rate_diff
+  - ewm_recent_sapm_diff
+  - ewm_recent_splm_diff
+  - ewm_recent_td_avg_diff
+  - ewm_recent_win_pct_diff
+  - ewm_sapm_diff
+  - ewm_splm_diff
+  - ewm_str_acc_diff
+  - ewm_str_def_diff
+  - ewm_sub_avg_diff
+  - ewm_sub_win_rate_diff
+  - ewm_td_acc_diff
+  - ewm_td_avg_diff
+  - ewm_td_def_diff
+  - ewm_win_pct_diff
+  - ewm_win_streak_diff
+  - ewm_wins_diff
   selected_bundles:
-  - core_state
   - finish_profile
   - durability
   - physical
   - experience
   - engineered
+  - ewm_state
   include_features: []
   exclude_features:
-  - match_time_sec
   - finish_round
+  - reach_striking_combo
+  - ewm_best_win_elo_diff
+  - ewm_elo_diff
+  - ewm_worst_loss_elo_diff
 data:
   rolling_features_path: data/features/moneyline_feature_view.parquet
   target_column: target
