@@ -11,7 +11,7 @@ from tabs.line_movement import render_line_movement
 from tabs.bankroll import render_bankroll
 from tabs.model_lab_refactored import render_model_lab
 from tabs.data_maintenance import render_data_maintenance
-from utils.sidebar import render_sidebar
+from utils.sidebar_refactored import render_sidebar
 
 # ============================================================
 # PAGE CONFIG
