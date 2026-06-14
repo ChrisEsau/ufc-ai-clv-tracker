@@ -6,6 +6,7 @@ import streamlit as st
 
 from tabs import model_lab as legacy_model_lab
 from tabs.model_lab_sections.actions import render_actions
+from tabs.model_lab_sections.backtest import render_backtest
 from tabs.model_lab_sections.comparison import render_comparison
 from tabs.model_lab_sections.overview import render_overview
 from tabs.model_lab_sections.performance import render_performance
@@ -13,7 +14,7 @@ from tabs.model_lab_sections.styles import inject_model_lab_control_css
 import utils.model_lab_workflows as mlw
 
 
-WORKSPACES = ["Overview", "Configuration", "Features", "Performance", "Comparison", "Actions"]
+WORKSPACES = ["Overview", "Configuration", "Features", "Performance", "Backtest", "Comparison", "Actions"]
 
 
 def _select_existing_model_with_key(key: str):
@@ -77,6 +78,13 @@ def render_model_lab() -> None:
                 rows,
                 row_by_id,
                 existing_model_selector=_select_existing_model_with_key("mlab_performance_model"),
+            )
+        elif workspace == "Backtest":
+            render_backtest(
+                registry,
+                rows,
+                row_by_id,
+                existing_model_selector=_select_existing_model_with_key("mlab_backtest_model"),
             )
         elif workspace == "Comparison":
             render_comparison(
