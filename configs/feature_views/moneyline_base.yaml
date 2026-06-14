@@ -56,7 +56,7 @@ contracts:
 validation:
   expected_feature_view_shape:
     rows_source: prepared_fights
-    columns_current: 483
+    columns_current: 489
   expected_current_model_feature_count: 124
   allow_extra_columns: true
 
