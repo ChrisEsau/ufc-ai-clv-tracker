@@ -141,6 +141,15 @@ def _feature_value_summary(x_losing: pd.DataFrame, x_winning: pd.DataFrame) -> p
     return pd.DataFrame(rows)
 
 
+def _feature_separation_summary(values: pd.DataFrame) -> pd.DataFrame:
+    if values.empty or "avg_delta_losing_minus_winning" not in values.columns:
+        return pd.DataFrame()
+    out = values.copy()
+    out["abs_avg_delta"] = pd.to_numeric(out["avg_delta_losing_minus_winning"], errors="coerce").abs()
+    out = out.sort_values("abs_avg_delta", ascending=False).reset_index(drop=True)
+    return out[["feature", "losing_dog_avg", "winning_dog_avg", "avg_delta_losing_minus_winning", "abs_avg_delta"]]
+
+
 def _format_shap_table(df: pd.DataFrame):
     if df.empty:
         return df
@@ -201,9 +210,14 @@ def render_dog_audit(artifact_dir: Path, summary: dict[str, Any], config_payload
     values = _feature_value_summary(x_losing, x_winning)
     if not values.empty:
         values = values.merge(merged[["feature", "abs_shap_delta_losing_minus_winning"]], on="feature", how="left")
-        values = values.sort_values("abs_shap_delta_losing_minus_winning", ascending=False).head(TOP_N_FEATURES)
+        importance_sorted_values = values.sort_values("abs_shap_delta_losing_minus_winning", ascending=False).head(TOP_N_FEATURES)
         st.markdown("###### Feature Value Comparison")
-        st.dataframe(_format_shap_table(values), use_container_width=True, hide_index=True)
+        st.dataframe(_format_shap_table(importance_sorted_values), use_container_width=True, hide_index=True)
+
+        separation = _feature_separation_summary(values).head(TOP_N_FEATURES)
+        st.markdown("###### Top Feature Separation")
+        st.caption("Sorted by absolute average difference between losing high-edge dogs and winning high-edge dogs.")
+        st.dataframe(_format_shap_table(separation), use_container_width=True, hide_index=True)
 
     with st.expander("Audit assumptions", expanded=False):
         st.write(
