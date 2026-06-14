@@ -6,7 +6,7 @@ feature_sources:
 - moneyline_feature_view
 features:
   selection_mode: explicit
-  expected_feature_count: 84
+  expected_feature_count: 83
   allow_unsafe_features: false
   feature_columns:
   - decision_loss_rate_diff
@@ -37,7 +37,6 @@ features:
   - experience_ratio_diff
   - grappling_edge
   - pressure_striking_adv_diff
-  - striking_edge
   - submission_mismatch_diff
   - wrestling_mismatch_diff
   - wrestling_pressure_vs_defense
@@ -109,6 +108,7 @@ features:
   - recent_avg_fight_time_diff
   - reach_striking_combo
   - days_since_last_fight_diff
+  - striking_edge
   - ewm_avg_fight_time_diff
   - ewm_days_since_last_fight_diff
   - ewm_recent_avg_fight_time_diff
