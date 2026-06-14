@@ -1,0 +1,85 @@
+name: Run Live Model Forensics
+
+on:
+  workflow_dispatch:
+    inputs:
+      fighter_a:
+        description: "First fighter name"
+        required: true
+        default: "Michael Chandler"
+      fighter_b:
+        description: "Second fighter name"
+        required: true
+        default: "Mauricio Ruffy"
+      model_config_path:
+        description: "Model config path"
+        required: true
+        default: "configs/models/moneyline_xgboost_v6_dev.yaml"
+      live_features_path:
+        description: "Live model features parquet path"
+        required: true
+        default: "data/predictions/live_model_features.parquet"
+      model_outcomes_path:
+        description: "Model outcomes parquet path"
+        required: true
+        default: "data/predictions/model_outcomes.parquet"
+      top_n:
+        description: "Number of top rows to print"
+        required: true
+        default: "40"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: run-live-model-forensics-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  run-live-model-forensics:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Sync latest branch state
+        run: |
+          git fetch origin "${GITHUB_REF_NAME}"
+          git pull --ff-only origin "${GITHUB_REF_NAME}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install pandas pyarrow joblib pyyaml scikit-learn xgboost shap
+
+      - name: Run live model forensics
+        run: |
+          python -m pipeline.modeling.run_live_model_forensics \
+            --fighter-a "${{ github.event.inputs.fighter_a }}" \
+            --fighter-b "${{ github.event.inputs.fighter_b }}" \
+            --model-config-path "${{ github.event.inputs.model_config_path }}" \
+            --live-features-path "${{ github.event.inputs.live_features_path }}" \
+            --model-outcomes-path "${{ github.event.inputs.model_outcomes_path }}" \
+            --top-n "${{ github.event.inputs.top_n }}"
+
+      - name: Commit live model forensics artifacts
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add -f \
+            data/audits/ufc_live_model_forensics.parquet \
+            data/audits/ufc_live_model_forensics_preview.csv
+
+          git commit -m "Update live model forensics audit" || echo "No changes to commit"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
