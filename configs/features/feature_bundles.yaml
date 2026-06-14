@@ -180,7 +180,7 @@ bundles:
       - props
 
   engineered_matchup:
-    description: Existing V5 engineered matchup features.
+    description: Existing V5 engineered matchup features plus competition-adjusted interaction features.
     source_layer: engineered
     candidate_columns:
       - age_diff
@@ -199,6 +199,12 @@ bundles:
       - pressure_striking_adv_diff
       - wrestling_mismatch_diff
       - submission_mismatch_diff
+      - striking_edge_x_avg_opp_elo
+      - striking_edge_x_ewm_avg_opp_elo
+      - grappling_edge_x_avg_opp_elo
+      - grappling_edge_x_ewm_avg_opp_elo
+      - wrestling_mismatch_x_avg_opp_elo
+      - submission_mismatch_x_avg_opp_elo
     recommended_transforms: []
     markets:
       - moneyline
@@ -218,27 +224,3 @@ bundles:
     recommended_transforms:
       - market_gap
       - absolute_gap
-    leakage_warning: closing odds must not be used for pre-fight prediction training unless modeling CLV after the fact.
-    markets:
-      - moneyline
-      - props
-      - clv
-
-  archetype:
-    description: Fighter style or archetype scores, such as striker, grappler, wrestler, pressure fighter, or durability profile.
-    source_layer: archetype
-    candidate_columns:
-      - striker_score
-      - grappler_score
-      - wrestler_score
-      - submission_score
-      - pressure_score
-      - durability_score
-      - pace_score
-    recommended_transforms:
-      - red_minus_blue
-      - style_matchup
-      - interaction
-    markets:
-      - moneyline
-      - props
