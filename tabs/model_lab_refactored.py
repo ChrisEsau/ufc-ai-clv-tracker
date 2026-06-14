@@ -6,7 +6,7 @@ import streamlit as st
 
 from tabs import model_lab as legacy_model_lab
 from tabs.model_lab_sections.actions import render_actions
-from tabs.model_lab_sections.backtest import render_backtest
+from tabs.model_lab_sections.backtest_enhanced import render_backtest
 from tabs.model_lab_sections.comparison import render_comparison
 from tabs.model_lab_sections.overview import render_overview
 from tabs.model_lab_sections.performance import render_performance
