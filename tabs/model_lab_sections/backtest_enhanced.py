@@ -7,6 +7,7 @@ import pandas as pd
 import streamlit as st
 
 from tabs.model_lab_sections import backtest as base
+from tabs.model_lab_sections.dog_audit import render_dog_audit
 import utils.model_lab_workflows as mlw
 
 
@@ -120,14 +121,16 @@ def _render_latest_results(context: dict[str, Any]) -> None:
     st.caption(f"Artifact folder: `{artifact_dir}`")
     base._render_summary_cards(summary)
 
-    tabs = st.tabs(["Summary", "Diagnostics", "Bet Preview", "Config"])
+    tabs = st.tabs(["Summary", "Diagnostics", "Dog Audit", "Bet Preview", "Config"])
     with tabs[0]:
         base._render_summary_details(summary, artifact_dir)
     with tabs[1]:
         _render_enhanced_diagnostics(artifact_dir)
     with tabs[2]:
-        base._render_artifact_tables(artifact_dir)
+        render_dog_audit(artifact_dir, summary, config)
     with tabs[3]:
+        base._render_artifact_tables(artifact_dir)
+    with tabs[4]:
         if config:
             st.json(config)
         else:
