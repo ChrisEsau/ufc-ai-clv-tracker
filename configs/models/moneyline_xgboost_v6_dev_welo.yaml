@@ -6,7 +6,7 @@ feature_sources:
 - moneyline_feature_view
 features:
   selection_mode: explicit
-  expected_feature_count: 82
+  expected_feature_count: 90
   allow_unsafe_features: false
   feature_columns:
   - decision_loss_rate_diff
@@ -33,6 +33,20 @@ features:
   - losses_diff
   - win_streak_diff
   - wins_diff
+  - aggression_index_diff
+  - experience_ratio_diff
+  - grappling_edge
+  - grappling_edge_x_avg_opp_elo
+  - grappling_edge_x_ewm_avg_opp_elo
+  - pressure_striking_adv_diff
+  - striking_edge
+  - striking_edge_x_avg_opp_elo
+  - striking_edge_x_ewm_avg_opp_elo
+  - submission_mismatch_diff
+  - submission_mismatch_x_avg_opp_elo
+  - wrestling_mismatch_diff
+  - wrestling_mismatch_x_avg_opp_elo
+  - wrestling_pressure_vs_defense
   - ewm_avg_opponent_elo_diff
   - ewm_best_win_elo_diff
   - ewm_ctrl_against_per_min_diff
@@ -74,6 +88,7 @@ features:
   - ctrl_per_min_diff
   - elo_diff
   - kd_avg_diff
+  - match_time_sec
   - recent_splm_diff
   - recent_td_avg_diff
   - recent_win_pct_diff
@@ -84,22 +99,15 @@ features:
   - td_avg_diff
   - win_pct_diff
   - worst_loss_elo_diff
-  - aggression_index_diff
-  - experience_ratio_diff
-  - grappling_edge
-  - pressure_striking_adv_diff
-  - submission_mismatch_diff
-  - wrestling_mismatch_diff
-  - wrestling_pressure_vs_defense
   selected_bundles:
   - finish_profile
   - durability
   - physical
   - experience
+  - engineered
   - ewm_state
   - fight_context
   - core_state
-  - engineered
   include_features: []
   exclude_features:
   - avg_fight_time_diff
@@ -110,14 +118,6 @@ features:
   - ewm_avg_fight_time_diff
   - ewm_days_since_last_fight_diff
   - ewm_recent_avg_fight_time_diff
-  - match_time_sec
-  - grappling_edge_x_avg_opp_elo
-  - grappling_edge_x_ewm_avg_opp_elo
-  - striking_edge
-  - striking_edge_x_avg_opp_elo
-  - striking_edge_x_ewm_avg_opp_elo
-  - submission_mismatch_x_avg_opp_elo
-  - wrestling_mismatch_x_avg_opp_elo
 data:
   rolling_features_path: data/features/moneyline_feature_view.parquet
   target_column: target
