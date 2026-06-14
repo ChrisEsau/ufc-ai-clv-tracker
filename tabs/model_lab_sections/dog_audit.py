@@ -17,6 +17,24 @@ from tabs.model_lab_sections import backtest as base
 DOG_EDGE_THRESHOLD = 0.10
 MAX_SHAP_ROWS_PER_GROUP = 75
 TOP_N_FEATURES = 30
+DOG_ARCHETYPE_FEATURES = [
+    "avg_opponent_elo_diff",
+    "ewm_avg_opponent_elo_diff",
+    "best_win_elo_diff",
+    "ewm_best_win_elo_diff",
+    "win_pct_diff",
+    "ewm_win_pct_diff",
+    "striking_edge",
+    "grappling_edge",
+    "submission_mismatch_diff",
+    "wrestling_mismatch_diff",
+    "striking_edge_x_avg_opp_elo",
+    "striking_edge_x_ewm_avg_opp_elo",
+    "grappling_edge_x_avg_opp_elo",
+    "grappling_edge_x_ewm_avg_opp_elo",
+    "wrestling_mismatch_x_avg_opp_elo",
+    "submission_mismatch_x_avg_opp_elo",
+]
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -150,6 +168,19 @@ def _feature_separation_summary(values: pd.DataFrame) -> pd.DataFrame:
     return out[["feature", "losing_dog_avg", "winning_dog_avg", "avg_delta_losing_minus_winning", "abs_avg_delta"]]
 
 
+def _dog_archetype_summary(values: pd.DataFrame) -> pd.DataFrame:
+    if values.empty:
+        return pd.DataFrame()
+    out = values[values["feature"].isin(DOG_ARCHETYPE_FEATURES)].copy()
+    if out.empty:
+        return pd.DataFrame()
+    out["abs_avg_delta"] = pd.to_numeric(out["avg_delta_losing_minus_winning"], errors="coerce").abs()
+    return out[["feature", "losing_dog_avg", "winning_dog_avg", "avg_delta_losing_minus_winning", "abs_avg_delta"]].sort_values(
+        "abs_avg_delta",
+        ascending=False,
+    )
+
+
 def _format_shap_table(df: pd.DataFrame):
     if df.empty:
         return df
@@ -213,6 +244,12 @@ def render_dog_audit(artifact_dir: Path, summary: dict[str, Any], config_payload
         importance_sorted_values = values.sort_values("abs_shap_delta_losing_minus_winning", ascending=False).head(TOP_N_FEATURES)
         st.markdown("###### Feature Value Comparison")
         st.dataframe(_format_shap_table(importance_sorted_values), use_container_width=True, hide_index=True)
+
+        archetype = _dog_archetype_summary(values)
+        if not archetype.empty:
+            st.markdown("###### Dog Archetype Summary")
+            st.caption("Focused comparison of competition-quality, matchup, and new quality-adjusted features.")
+            st.dataframe(_format_shap_table(archetype), use_container_width=True, hide_index=True)
 
         separation = _feature_separation_summary(values).head(TOP_N_FEATURES)
         st.markdown("###### Top Feature Separation")
