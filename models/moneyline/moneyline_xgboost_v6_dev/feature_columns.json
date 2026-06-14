@@ -66,5 +66,7 @@
   "ewm_td_def_diff",
   "ewm_win_pct_diff",
   "ewm_win_streak_diff",
-  "ewm_wins_diff"
+  "ewm_wins_diff",
+  "title_fight",
+  "total_rounds"
 ]
