@@ -93,6 +93,46 @@ def _latest_backtest_dir(model_id: str, market_key: str) -> Path | None:
     return sorted(candidates, key=lambda path: path.name)[-1]
 
 
+def _load_bet_level_table(artifact_dir: Path) -> pd.DataFrame:
+    for filename in ["backtest_bets.parquet", "backtest_results.parquet", "bet_results.parquet", "backtest_bets.csv", "backtest_results.csv", "bet_results.csv"]:
+        table = _read_table(artifact_dir / filename)
+        if not table.empty:
+            return table
+    return pd.DataFrame()
+
+
+def _diagnostic_summary(df: pd.DataFrame, group_col: str) -> pd.DataFrame:
+    if df.empty or group_col not in df.columns:
+        return pd.DataFrame()
+    temp = df.copy()
+    temp["won_numeric"] = pd.to_numeric(temp.get("won"), errors="coerce")
+    grouped = temp.groupby(group_col, dropna=False).agg(
+        Bets=("fight_id", "count"),
+        Win_Rate=("won_numeric", "mean"),
+        Flat_Profit=("flat_profit", "sum"),
+        Flat_Risked=("flat_stake", "sum"),
+        Kelly_Profit=("kelly_profit", "sum"),
+        Kelly_Risked=("kelly_stake", "sum"),
+    ).reset_index()
+    grouped["Flat_ROI"] = grouped["Flat_Profit"] / grouped["Flat_Risked"].replace({0: pd.NA})
+    grouped["Kelly_ROI"] = grouped["Kelly_Profit"] / grouped["Kelly_Risked"].replace({0: pd.NA})
+    grouped = grouped.rename(columns={group_col: "Bucket"})
+    return grouped[["Bucket", "Bets", "Win_Rate", "Flat_Profit", "Flat_ROI", "Kelly_Profit", "Kelly_ROI"]]
+
+
+def _style_diagnostic_table(df: pd.DataFrame):
+    if df.empty:
+        return df
+    formatters = {
+        "Win_Rate": "{:.1%}",
+        "Flat_Profit": "${:,.0f}",
+        "Flat_ROI": "{:.1%}",
+        "Kelly_Profit": "${:,.0f}",
+        "Kelly_ROI": "{:.1%}",
+    }
+    return df.style.format({k: v for k, v in formatters.items() if k in df.columns})
+
+
 def _render_summary_cards(summary: dict[str, Any]) -> None:
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Total Bets", _fmt_num(summary.get("total_bets")))
@@ -122,24 +162,98 @@ def _render_summary_details(summary: dict[str, Any], artifact_dir: Path) -> None
     st.dataframe(pd.DataFrame([detail]).T.rename(columns={0: "Value"}), use_container_width=True)
 
 
+def _render_bucket_table(title: str, df: pd.DataFrame) -> None:
+    st.markdown(f"##### {title}")
+    if df.empty:
+        st.info(f"No data available for {title.lower()}.")
+        return
+    st.dataframe(_style_diagnostic_table(df), use_container_width=True, hide_index=True)
+
+
+def _render_diagnostics(artifact_dir: Path) -> None:
+    bets = _load_bet_level_table(artifact_dir)
+    if bets.empty:
+        st.info("No bet-level table found. Diagnostics require `backtest_bets.parquet` from the backtest runner.")
+        return
+
+    required = {"edge", "confidence_score", "american_odds", "won", "flat_profit", "flat_stake"}
+    missing = sorted(required - set(bets.columns))
+    if missing:
+        st.warning(f"Diagnostics are limited because the bet table is missing: {missing}")
+
+    temp = bets.copy()
+    for column in ["edge", "confidence_score", "american_odds", "flat_profit", "flat_stake", "kelly_profit", "kelly_stake"]:
+        if column in temp.columns:
+            temp[column] = pd.to_numeric(temp[column], errors="coerce")
+    if "date" in temp.columns:
+        temp["date"] = pd.to_datetime(temp["date"], errors="coerce")
+
+    if "confidence_score" in temp.columns:
+        temp["Confidence Bucket"] = pd.cut(
+            temp["confidence_score"],
+            bins=[0.0, 0.55, 0.60, 0.65, 0.70, 0.75, 1.01],
+            labels=["≤55%", "55-60%", "60-65%", "65-70%", "70-75%", "75%+"],
+            include_lowest=True,
+        ).astype(str)
+        _render_bucket_table("ROI by Confidence Bucket", _diagnostic_summary(temp, "Confidence Bucket"))
+
+    if "edge" in temp.columns:
+        temp["Edge Bucket"] = pd.cut(
+            temp["edge"],
+            bins=[-10, 0.05, 0.10, 0.15, 0.20, 10],
+            labels=["≤5%", "5-10%", "10-15%", "15-20%", "20%+"],
+            include_lowest=True,
+        ).astype(str)
+        _render_bucket_table("ROI by Edge Bucket", _diagnostic_summary(temp, "Edge Bucket"))
+
+    if "american_odds" in temp.columns:
+        temp["Odds Bucket"] = pd.cut(
+            temp["american_odds"],
+            bins=[-10000, -300, -200, -110, 110, 200, 10000],
+            labels=["≤-300", "-300 to -200", "-200 to -110", "-110 to +110", "+110 to +200", "+200+"],
+            include_lowest=True,
+        ).astype(str)
+        temp["Favorite/Underdog"] = temp["american_odds"].apply(lambda odds: "Favorite" if pd.notna(odds) and odds < 0 else "Underdog")
+        _render_bucket_table("ROI by Odds Bucket", _diagnostic_summary(temp, "Odds Bucket"))
+        _render_bucket_table("Favorites vs Underdogs", _diagnostic_summary(temp, "Favorite/Underdog"))
+
+    if "date" in temp.columns and temp["date"].notna().any():
+        temp["Year"] = temp["date"].dt.year.astype("Int64").astype(str)
+        _render_bucket_table("Yearly Performance", _diagnostic_summary(temp, "Year"))
+
+    if {"edge", "confidence_score"}.issubset(temp.columns):
+        st.markdown("##### Threshold Optimizer")
+        rows: list[dict[str, Any]] = []
+        for edge in [0.05, 0.075, 0.10, 0.125, 0.15]:
+            for confidence in [0.60, 0.65, 0.70, 0.75, 0.80]:
+                subset = temp[(temp["edge"] >= edge) & (temp["confidence_score"] >= confidence)].copy()
+                flat_risked = float(subset["flat_stake"].sum()) if "flat_stake" in subset.columns and not subset.empty else 0.0
+                flat_profit = float(subset["flat_profit"].sum()) if "flat_profit" in subset.columns and not subset.empty else 0.0
+                rows.append({
+                    "Min Edge": edge,
+                    "Min Confidence": confidence,
+                    "Bets": int(len(subset)),
+                    "Win_Rate": float(pd.to_numeric(subset.get("won"), errors="coerce").mean()) if not subset.empty else 0.0,
+                    "Flat_Profit": flat_profit,
+                    "Flat_ROI": flat_profit / flat_risked if flat_risked else 0.0,
+                })
+        optimizer = pd.DataFrame(rows).sort_values(["Flat_ROI", "Bets"], ascending=[False, False]).reset_index(drop=True)
+        st.caption("Sorted by flat ROI. Treat tiny bet counts as unstable.")
+        st.dataframe(
+            optimizer.style.format({"Min Edge": "{:.1%}", "Min Confidence": "{:.0%}", "Win_Rate": "{:.1%}", "Flat_Profit": "${:,.0f}", "Flat_ROI": "{:.1%}"}),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+
 def _render_artifact_tables(artifact_dir: Path) -> None:
-    candidate_files = [
-        "backtest_results.parquet",
-        "backtest_bets.parquet",
-        "bet_results.parquet",
-        "backtest_results.csv",
-        "backtest_bets.csv",
-        "bet_results.csv",
-    ]
-    for filename in candidate_files:
-        path = artifact_dir / filename
-        table = _read_table(path)
-        if not table.empty:
-            st.markdown(f"##### Bet-Level Preview: `{filename}`")
-            st.dataframe(table.head(250), use_container_width=True, hide_index=True)
-            if len(table) > 250:
-                st.caption(f"Showing first 250 of {len(table):,} rows.")
-            return
+    table = _load_bet_level_table(artifact_dir)
+    if not table.empty:
+        st.markdown("##### Bet-Level Preview: `backtest_bets.parquet`")
+        st.dataframe(table.head(250), use_container_width=True, hide_index=True)
+        if len(table) > 250:
+            st.caption(f"Showing first 250 of {len(table):,} rows.")
+        return
     st.info("No bet-level result table was found in the latest backtest artifact folder. The summary/config artifacts are available.")
 
 
@@ -162,12 +276,14 @@ def _render_latest_results(context: dict[str, Any]) -> None:
     st.caption(f"Artifact folder: `{artifact_dir}`")
     _render_summary_cards(summary)
 
-    tabs = st.tabs(["Summary", "Bet Preview", "Config"])
+    tabs = st.tabs(["Summary", "Diagnostics", "Bet Preview", "Config"])
     with tabs[0]:
         _render_summary_details(summary, artifact_dir)
     with tabs[1]:
-        _render_artifact_tables(artifact_dir)
+        _render_diagnostics(artifact_dir)
     with tabs[2]:
+        _render_artifact_tables(artifact_dir)
+    with tabs[3]:
         if config:
             st.json(config)
         else:
@@ -209,77 +325,25 @@ def _render_run_controls(context: dict[str, Any]) -> None:
 
     c1, c2 = st.columns(2)
     with c1:
-        start_date = st.text_input(
-            "Start Date",
-            value="",
-            placeholder="YYYY-MM-DD optional",
-            key=f"mlab_backtest_start_date_{context['model_id']}",
-        )
+        start_date = st.text_input("Start Date", value="", placeholder="YYYY-MM-DD optional", key=f"mlab_backtest_start_date_{context['model_id']}")
     with c2:
-        end_date = st.text_input(
-            "End Date",
-            value="",
-            placeholder="YYYY-MM-DD optional",
-            key=f"mlab_backtest_end_date_{context['model_id']}",
-        )
+        end_date = st.text_input("End Date", value="", placeholder="YYYY-MM-DD optional", key=f"mlab_backtest_end_date_{context['model_id']}")
 
     p1, p2, p3, p4 = st.columns(4)
     with p1:
-        min_edge = st.number_input(
-            "Min Edge",
-            value=0.00,
-            step=0.01,
-            min_value=0.0,
-            max_value=1.0,
-            key=f"mlab_backtest_min_edge_{context['model_id']}",
-        )
+        min_edge = st.number_input("Min Edge", value=0.00, step=0.01, min_value=0.0, max_value=1.0, key=f"mlab_backtest_min_edge_{context['model_id']}")
     with p2:
-        min_confidence = st.number_input(
-            "Min Confidence",
-            value=0.00,
-            step=0.01,
-            min_value=0.0,
-            max_value=1.0,
-            key=f"mlab_backtest_min_confidence_{context['model_id']}",
-        )
+        min_confidence = st.number_input("Min Confidence", value=0.00, step=0.01, min_value=0.0, max_value=1.0, key=f"mlab_backtest_min_confidence_{context['model_id']}")
     with p3:
-        flat_stake = st.number_input(
-            "Flat Stake",
-            value=100,
-            step=25,
-            min_value=1,
-            key=f"mlab_backtest_flat_stake_{context['model_id']}",
-        )
+        flat_stake = st.number_input("Flat Stake", value=100, step=25, min_value=1, key=f"mlab_backtest_flat_stake_{context['model_id']}")
     with p4:
-        starting_bankroll = st.number_input(
-            "Starting Bankroll",
-            value=10000,
-            step=500,
-            min_value=1,
-            key=f"mlab_backtest_starting_bankroll_{context['model_id']}",
-        )
+        starting_bankroll = st.number_input("Starting Bankroll", value=10000, step=500, min_value=1, key=f"mlab_backtest_starting_bankroll_{context['model_id']}")
 
     with st.expander("Advanced paths", expanded=False):
-        model_config_path = st.text_input(
-            "Model Config Path",
-            value=model_config_path,
-            key=f"mlab_backtest_config_path_{context['model_id']}",
-        )
-        feature_view_path = st.text_input(
-            "Historical Feature View Path",
-            value=feature_view_path,
-            key=f"mlab_backtest_feature_view_path_{context['model_id']}",
-        )
-        historical_market_path = st.text_input(
-            "Historical Market Outcomes Path",
-            value=historical_market_path,
-            key=f"mlab_backtest_market_path_{context['model_id']}",
-        )
-        market_key = st.text_input(
-            "Market Key",
-            value=market_key,
-            key=f"mlab_backtest_market_key_{context['model_id']}",
-        )
+        model_config_path = st.text_input("Model Config Path", value=model_config_path, key=f"mlab_backtest_config_path_{context['model_id']}")
+        feature_view_path = st.text_input("Historical Feature View Path", value=feature_view_path, key=f"mlab_backtest_feature_view_path_{context['model_id']}")
+        historical_market_path = st.text_input("Historical Market Outcomes Path", value=historical_market_path, key=f"mlab_backtest_market_path_{context['model_id']}")
+        market_key = st.text_input("Market Key", value=market_key, key=f"mlab_backtest_market_key_{context['model_id']}")
 
     required_ready = all([model_config_path, feature_view_path, historical_market_path, market_key])
     if st.button("Run Full Backtest", type="primary", disabled=not required_ready, use_container_width=True):
