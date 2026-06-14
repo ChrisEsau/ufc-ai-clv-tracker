@@ -170,30 +170,42 @@ def _render_run_controls_with_status(context: dict[str, Any]) -> None:
         historical_market_path = st.text_input("Historical Market Outcomes Path", value=historical_market_path, key=f"mlab_backtest_market_path_{context['model_id']}")
         market_key = st.text_input("Market Key", value=market_key, key=f"mlab_backtest_market_key_{context['model_id']}")
 
-    required_ready = all([model_config_path, feature_view_path, historical_market_path, market_key])
-    action_cols = st.columns([0.35, 0.65], vertical_alignment="center")
-    with action_cols[0]:
-        st.caption(f"Status: {workflow_status_label(base.WORKFLOW_FILE, status_key, idle_label='Ready')}")
-    with action_cols[1]:
-        if st.button("Run Full Backtest", type="primary", disabled=not required_ready, use_container_width=True, key=f"{status_key}_button"):
-            inputs = {
-                "model_config_path": str(model_config_path),
-                "feature_view_path": str(feature_view_path),
-                "historical_market_path": str(historical_market_path),
-                "market_key": str(market_key),
-                "start_date": str(start_date or ""),
-                "end_date": str(end_date or ""),
-                "min_edge": f"{float(min_edge):.4f}",
-                "min_confidence": f"{float(min_confidence):.4f}",
-                "flat_stake": str(int(flat_stake)),
-                "starting_bankroll": str(int(starting_bankroll)),
-            }
-            ok, message = launch_workflow_with_status(base.WORKFLOW_FILE, status_key, inputs=inputs)
-            if ok:
-                st.success(message)
-                st.rerun()
-            else:
-                st.error(message)
+    missing = [
+        label
+        for label, value in {
+            "model config path": model_config_path,
+            "feature view path": feature_view_path,
+            "historical market path": historical_market_path,
+            "market key": market_key,
+        }.items()
+        if not value
+    ]
+    required_ready = not missing
+
+    status = workflow_status_label(base.WORKFLOW_FILE, status_key, idle_label="Ready")
+    st.caption(f"Status: {status}")
+    if missing:
+        st.warning("Backtest cannot launch until these fields are populated: " + ", ".join(missing))
+
+    if st.button("Run Full Backtest", type="primary", disabled=not required_ready, use_container_width=True, key=f"{status_key}_button"):
+        inputs = {
+            "model_config_path": str(model_config_path),
+            "feature_view_path": str(feature_view_path),
+            "historical_market_path": str(historical_market_path),
+            "market_key": str(market_key),
+            "start_date": str(start_date or ""),
+            "end_date": str(end_date or ""),
+            "min_edge": f"{float(min_edge):.4f}",
+            "min_confidence": f"{float(min_confidence):.4f}",
+            "flat_stake": str(int(flat_stake)),
+            "starting_bankroll": str(int(starting_bankroll)),
+        }
+        ok, message = launch_workflow_with_status(base.WORKFLOW_FILE, status_key, inputs=inputs)
+        if ok:
+            st.success(message)
+            st.rerun()
+        else:
+            st.error(message)
 
 
 def render_backtest(
