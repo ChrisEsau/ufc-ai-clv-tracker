@@ -9,6 +9,7 @@ import streamlit as st
 from tabs.model_lab_sections import backtest as base
 from tabs.model_lab_sections.dog_audit import render_dog_audit
 import utils.model_lab_workflows as mlw
+from utils.workflow_status import launch_workflow_with_status, workflow_status_label
 
 
 ExistingModelSelector = Callable[[dict[str, Any], list[dict[str, Any]], dict[str, dict[str, Any]]], dict[str, Any]]
@@ -137,6 +138,64 @@ def _render_latest_results(context: dict[str, Any]) -> None:
             st.info("No readable backtest_config.json found for this run.")
 
 
+def _render_run_controls_with_status(context: dict[str, Any]) -> None:
+    model_config_path = str(context.get("config_path") or "")
+    feature_view_path = base._default_feature_view_path(context)
+    historical_market_path = base.DEFAULT_HISTORICAL_MARKET_PATH
+    market_key = str(context.get("market_key") or "moneyline")
+    status_key = f"mlab_backtest_{context['model_id']}"
+
+    st.markdown("#### Run New Backtest")
+    st.caption("Uses the selected model automatically. Technical paths are hidden unless you open Advanced paths.")
+
+    c1, c2 = st.columns(2)
+    with c1:
+        start_date = st.text_input("Start Date", value="", placeholder="YYYY-MM-DD optional", key=f"mlab_backtest_start_date_{context['model_id']}")
+    with c2:
+        end_date = st.text_input("End Date", value="", placeholder="YYYY-MM-DD optional", key=f"mlab_backtest_end_date_{context['model_id']}")
+
+    p1, p2, p3, p4 = st.columns(4)
+    with p1:
+        min_edge = st.number_input("Min Edge", value=0.00, step=0.01, min_value=0.0, max_value=1.0, key=f"mlab_backtest_min_edge_{context['model_id']}")
+    with p2:
+        min_confidence = st.number_input("Min Confidence", value=0.00, step=0.01, min_value=0.0, max_value=1.0, key=f"mlab_backtest_min_confidence_{context['model_id']}")
+    with p3:
+        flat_stake = st.number_input("Flat Stake", value=100, step=25, min_value=1, key=f"mlab_backtest_flat_stake_{context['model_id']}")
+    with p4:
+        starting_bankroll = st.number_input("Starting Bankroll", value=10000, step=500, min_value=1, key=f"mlab_backtest_starting_bankroll_{context['model_id']}")
+
+    with st.expander("Advanced paths", expanded=False):
+        model_config_path = st.text_input("Model Config Path", value=model_config_path, key=f"mlab_backtest_config_path_{context['model_id']}")
+        feature_view_path = st.text_input("Historical Feature View Path", value=feature_view_path, key=f"mlab_backtest_feature_view_path_{context['model_id']}")
+        historical_market_path = st.text_input("Historical Market Outcomes Path", value=historical_market_path, key=f"mlab_backtest_market_path_{context['model_id']}")
+        market_key = st.text_input("Market Key", value=market_key, key=f"mlab_backtest_market_key_{context['model_id']}")
+
+    required_ready = all([model_config_path, feature_view_path, historical_market_path, market_key])
+    action_cols = st.columns([0.35, 0.65], vertical_alignment="center")
+    with action_cols[0]:
+        st.caption(f"Status: {workflow_status_label(base.WORKFLOW_FILE, status_key, idle_label='Ready')}")
+    with action_cols[1]:
+        if st.button("Run Full Backtest", type="primary", disabled=not required_ready, use_container_width=True, key=f"{status_key}_button"):
+            inputs = {
+                "model_config_path": str(model_config_path),
+                "feature_view_path": str(feature_view_path),
+                "historical_market_path": str(historical_market_path),
+                "market_key": str(market_key),
+                "start_date": str(start_date or ""),
+                "end_date": str(end_date or ""),
+                "min_edge": f"{float(min_edge):.4f}",
+                "min_confidence": f"{float(min_confidence):.4f}",
+                "flat_stake": str(int(flat_stake)),
+                "starting_bankroll": str(int(starting_bankroll)),
+            }
+            ok, message = launch_workflow_with_status(base.WORKFLOW_FILE, status_key, inputs=inputs)
+            if ok:
+                st.success(message)
+                st.rerun()
+            else:
+                st.error(message)
+
+
 def render_backtest(
     registry: dict[str, Any],
     rows: list[dict[str, Any]],
@@ -150,7 +209,7 @@ def render_backtest(
 
     _render_latest_results(context)
     st.divider()
-    base._render_run_controls(context)
+    _render_run_controls_with_status(context)
 
     with st.expander("GitHub workflow status", expanded=False):
         base._render_latest_run_status()
