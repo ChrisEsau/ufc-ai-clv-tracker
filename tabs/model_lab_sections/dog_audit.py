@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import joblib
+import numpy as np
 import pandas as pd
 import streamlit as st
 import yaml
@@ -148,15 +149,38 @@ def _feature_value_summary(x_losing: pd.DataFrame, x_winning: pd.DataFrame) -> p
     rows = []
     features = list(dict.fromkeys(list(x_losing.columns) + list(x_winning.columns)))
     for feature in features:
-        losing_mean = pd.to_numeric(x_losing.get(feature), errors="coerce").mean() if feature in x_losing else pd.NA
-        winning_mean = pd.to_numeric(x_winning.get(feature), errors="coerce").mean() if feature in x_winning else pd.NA
+        losing_series = pd.to_numeric(x_losing.get(feature), errors="coerce") if feature in x_losing else pd.Series(dtype="float64")
+        winning_series = pd.to_numeric(x_winning.get(feature), errors="coerce") if feature in x_winning else pd.Series(dtype="float64")
+        losing_mean = losing_series.mean() if not losing_series.empty else pd.NA
+        winning_mean = winning_series.mean() if not winning_series.empty else pd.NA
+        losing_std = losing_series.std(ddof=0) if len(losing_series.dropna()) else pd.NA
+        winning_std = winning_series.std(ddof=0) if len(winning_series.dropna()) else pd.NA
+        raw_delta = losing_mean - winning_mean if pd.notna(losing_mean) and pd.notna(winning_mean) else pd.NA
         rows.append({
             "feature": feature,
             "losing_dog_avg": losing_mean,
             "winning_dog_avg": winning_mean,
-            "avg_delta_losing_minus_winning": losing_mean - winning_mean if pd.notna(losing_mean) and pd.notna(winning_mean) else pd.NA,
+            "losing_dog_std": losing_std,
+            "winning_dog_std": winning_std,
+            "avg_delta_losing_minus_winning": raw_delta,
         })
     return pd.DataFrame(rows)
+
+
+def _add_standardized_separation(values: pd.DataFrame) -> pd.DataFrame:
+    if values.empty:
+        return values
+    out = values.copy()
+    for column in ["losing_dog_std", "winning_dog_std", "avg_delta_losing_minus_winning"]:
+        if column in out.columns:
+            out[column] = pd.to_numeric(out[column], errors="coerce")
+    out["pooled_std"] = np.sqrt((out["losing_dog_std"] ** 2 + out["winning_dog_std"] ** 2) / 2.0)
+    out["z_separation"] = np.where(
+        out["pooled_std"] > 0,
+        out["avg_delta_losing_minus_winning"].abs() / out["pooled_std"],
+        pd.NA,
+    )
+    return out
 
 
 def _feature_separation_summary(values: pd.DataFrame) -> pd.DataFrame:
@@ -168,6 +192,24 @@ def _feature_separation_summary(values: pd.DataFrame) -> pd.DataFrame:
     return out[["feature", "losing_dog_avg", "winning_dog_avg", "avg_delta_losing_minus_winning", "abs_avg_delta"]]
 
 
+def _standardized_feature_separation_summary(values: pd.DataFrame) -> pd.DataFrame:
+    if values.empty or "z_separation" not in values.columns:
+        return pd.DataFrame()
+    out = values.copy()
+    out = out[pd.to_numeric(out["z_separation"], errors="coerce").notna()]
+    if out.empty:
+        return pd.DataFrame()
+    out = out.sort_values("z_separation", ascending=False).reset_index(drop=True)
+    return out[[
+        "feature",
+        "losing_dog_avg",
+        "winning_dog_avg",
+        "avg_delta_losing_minus_winning",
+        "pooled_std",
+        "z_separation",
+    ]]
+
+
 def _dog_archetype_summary(values: pd.DataFrame) -> pd.DataFrame:
     if values.empty:
         return pd.DataFrame()
@@ -175,8 +217,18 @@ def _dog_archetype_summary(values: pd.DataFrame) -> pd.DataFrame:
     if out.empty:
         return pd.DataFrame()
     out["abs_avg_delta"] = pd.to_numeric(out["avg_delta_losing_minus_winning"], errors="coerce").abs()
-    return out[["feature", "losing_dog_avg", "winning_dog_avg", "avg_delta_losing_minus_winning", "abs_avg_delta"]].sort_values(
+    if "z_separation" not in out.columns:
+        out = _add_standardized_separation(out)
+    return out[[
+        "feature",
+        "losing_dog_avg",
+        "winning_dog_avg",
+        "avg_delta_losing_minus_winning",
         "abs_avg_delta",
+        "pooled_std",
+        "z_separation",
+    ]].sort_values(
+        "z_separation",
         ascending=False,
     )
 
@@ -240,6 +292,7 @@ def render_dog_audit(artifact_dir: Path, summary: dict[str, Any], config_payload
 
     values = _feature_value_summary(x_losing, x_winning)
     if not values.empty:
+        values = _add_standardized_separation(values)
         values = values.merge(merged[["feature", "abs_shap_delta_losing_minus_winning"]], on="feature", how="left")
         importance_sorted_values = values.sort_values("abs_shap_delta_losing_minus_winning", ascending=False).head(TOP_N_FEATURES)
         st.markdown("###### Feature Value Comparison")
@@ -248,13 +301,18 @@ def render_dog_audit(artifact_dir: Path, summary: dict[str, Any], config_payload
         archetype = _dog_archetype_summary(values)
         if not archetype.empty:
             st.markdown("###### Dog Archetype Summary")
-            st.caption("Focused comparison of competition-quality, matchup, and new quality-adjusted features.")
+            st.caption("Focused comparison of competition-quality, matchup, and new quality-adjusted features. Sorted by standardized separation.")
             st.dataframe(_format_shap_table(archetype), use_container_width=True, hide_index=True)
 
         separation = _feature_separation_summary(values).head(TOP_N_FEATURES)
         st.markdown("###### Top Feature Separation")
         st.caption("Sorted by absolute average difference between losing high-edge dogs and winning high-edge dogs.")
         st.dataframe(_format_shap_table(separation), use_container_width=True, hide_index=True)
+
+        standardized = _standardized_feature_separation_summary(values).head(TOP_N_FEATURES)
+        st.markdown("###### Top Feature Separation (Standardized)")
+        st.caption("Sorted by z-separation: absolute average difference divided by pooled standard deviation.")
+        st.dataframe(_format_shap_table(standardized), use_container_width=True, hide_index=True)
 
     with st.expander("Audit assumptions", expanded=False):
         st.write(
