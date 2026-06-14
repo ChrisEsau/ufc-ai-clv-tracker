@@ -124,7 +124,7 @@ symmetry:
   enabled: true
   mode: flip_all
 calibration:
-  enabled: true
+  enabled: false
   method: isotonic
 params:
   n_estimators: 500
