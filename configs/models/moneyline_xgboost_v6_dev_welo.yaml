@@ -6,17 +6,15 @@ feature_sources:
 - moneyline_feature_view
 features:
   selection_mode: explicit
-  expected_feature_count: 90
+  expected_feature_count: 84
   allow_unsafe_features: false
   feature_columns:
-  - avg_fight_time_diff
   - decision_loss_rate_diff
   - decision_win_rate_diff
   - finish_loss_rate_diff
   - finish_rate_diff
   - finish_volatility
   - ko_rate_diff
-  - recent_avg_fight_time_diff
   - recent_finish_rate_diff
   - sub_win_rate_diff
   - chin_risk_diff
@@ -30,7 +28,6 @@ features:
   - weight_diff
   - age_diff
   - age_squared_diff
-  - days_since_last_fight_diff
   - fights_diff
   - loss_streak_diff
   - losses_diff
@@ -44,12 +41,10 @@ features:
   - submission_mismatch_diff
   - wrestling_mismatch_diff
   - wrestling_pressure_vs_defense
-  - ewm_avg_fight_time_diff
   - ewm_avg_opponent_elo_diff
   - ewm_best_win_elo_diff
   - ewm_ctrl_against_per_min_diff
   - ewm_ctrl_per_min_diff
-  - ewm_days_since_last_fight_diff
   - ewm_decision_loss_rate_diff
   - ewm_decision_win_rate_diff
   - ewm_elo_diff
@@ -61,7 +56,6 @@ features:
   - ewm_ko_rate_diff
   - ewm_loss_streak_diff
   - ewm_losses_diff
-  - ewm_recent_avg_fight_time_diff
   - ewm_recent_finish_rate_diff
   - ewm_recent_sapm_diff
   - ewm_recent_splm_diff
@@ -110,8 +104,14 @@ features:
   - core_state
   include_features: []
   exclude_features:
+  - avg_fight_time_diff
   - finish_round
+  - recent_avg_fight_time_diff
   - reach_striking_combo
+  - days_since_last_fight_diff
+  - ewm_avg_fight_time_diff
+  - ewm_days_since_last_fight_diff
+  - ewm_recent_avg_fight_time_diff
 data:
   rolling_features_path: data/features/moneyline_feature_view.parquet
   target_column: target
@@ -124,7 +124,7 @@ symmetry:
   enabled: true
   mode: flip_all
 calibration:
-  enabled: false
+  enabled: true
   method: isotonic
 params:
   n_estimators: 500
