@@ -27,12 +27,13 @@ def _prepare_calibration_frame(bets: pd.DataFrame) -> tuple[pd.DataFrame, str | 
     probability_col = _first_existing_column(
         bets,
         [
-            "confidence_score",
-            "model_prob",
             "model_probability",
+            "predicted_probability",
+            "probability",
+            "model_prob",
             "best_prob",
             "pick_probability",
-            "predicted_probability",
+            "confidence_score",
         ],
     )
     if probability_col is None:
@@ -124,13 +125,16 @@ def render_calibration_audit(artifact_dir: Path) -> None:
     bets = base._load_bet_level_table(artifact_dir)
     temp, probability_col = _prepare_calibration_frame(bets)
     if probability_col is None:
-        st.warning("Calibration Audit could not find a model probability column. Expected one of: confidence_score, model_prob, model_probability, best_prob, pick_probability, predicted_probability.")
+        st.warning("Calibration Audit could not find a model probability column. Expected one of: model_probability, predicted_probability, probability, model_prob, best_prob, pick_probability, confidence_score.")
         return
     if temp.empty:
         st.warning(f"Calibration Audit could not use `{probability_col}` because required rows or columns are missing.")
         return
 
-    st.caption(f"Using `{probability_col}` as model probability.")
+    if probability_col == "confidence_score":
+        st.warning("Using `confidence_score` as a fallback. This is pick-level confidence and may not equal outcome-level probability.")
+    else:
+        st.caption(f"Using `{probability_col}` as outcome-level model probability.")
 
     overall = _calibration_summary(temp, ["Probability Bucket"])
     by_side = _calibration_summary(temp, ["Favorite/Underdog", "Probability Bucket"])
