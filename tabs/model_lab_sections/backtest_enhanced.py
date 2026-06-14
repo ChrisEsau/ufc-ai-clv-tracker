@@ -85,10 +85,8 @@ def _render_enhanced_diagnostics(artifact_dir: Path) -> None:
 def _render_lazy_dog_audit(artifact_dir: Path, summary: dict[str, Any], config: dict[str, Any]) -> None:
     st.markdown("##### Dog Audit")
     st.info("Dog Audit can be slow because it loads the model and runs SHAP. Click the button below when you want to run it.")
-    audit_key = f"run_dog_audit_{artifact_dir.name}"
-    if st.button("Run Dog Audit", type="primary", use_container_width=True, key=audit_key):
-        st.session_state[audit_key] = True
-    if st.session_state.get(audit_key):
+    button_key = f"run_dog_audit_button_{artifact_dir.name}"
+    if st.button("Run Dog Audit", type="primary", use_container_width=True, key=button_key):
         render_dog_audit(artifact_dir, summary, config)
 
 
