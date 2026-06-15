@@ -11,6 +11,7 @@ import utils.model_lab_workflows as mlw
 
 
 FEATURE_BUNDLE_REGISTRY_PATH = Path("configs/features/feature_bundles.yaml")
+FEATURE_REGISTRY_PATH = Path("configs/features/feature_registry.yaml")
 UNSAFE_FEATURE_PREFIXES = ("r_pre_", "b_pre_", "R_", "B_", "r_", "b_")
 UNSAFE_FEATURE_NAMES = {
     "winner",
@@ -33,7 +34,7 @@ def _safe_key(value) -> str:
 
 
 @st.cache_data(show_spinner=False)
-def _load_feature_bundle_registry(path_text: str = str(FEATURE_BUNDLE_REGISTRY_PATH)) -> dict[str, Any]:
+def _load_yaml_registry(path_text: str) -> dict[str, Any]:
     path = Path(path_text)
     if not path.exists():
         return {}
@@ -42,6 +43,20 @@ def _load_feature_bundle_registry(path_text: str = str(FEATURE_BUNDLE_REGISTRY_P
     except Exception:
         return {}
     return payload if isinstance(payload, dict) else {}
+
+
+def _load_feature_bundle_registry(path_text: str = str(FEATURE_BUNDLE_REGISTRY_PATH)) -> dict[str, Any]:
+    return _load_yaml_registry(path_text)
+
+
+def _load_feature_registry(path_text: str = str(FEATURE_REGISTRY_PATH)) -> dict[str, Any]:
+    return _load_yaml_registry(path_text)
+
+
+def _registry_defined_features() -> set[str]:
+    registry = _load_feature_registry()
+    definitions = registry.get("feature_definitions", {}) or {}
+    return {str(feature_id) for feature_id in definitions.keys()}
 
 
 def _bundle_label(bundle_id: str, bundle: dict[str, Any] | None = None) -> str:
@@ -67,19 +82,22 @@ def _is_safe_model_lab_feature(feature: str) -> bool:
     return True
 
 
-def _registry_bundle_map(available: list[str]) -> tuple[dict[str, list[str]], dict[str, str]]:
-    """Resolve feature_bundles.yaml against available feature-view columns.
+def _registry_bundle_map(available: list[str]) -> tuple[dict[str, list[str]], dict[str, str], dict[str, set[str]]]:
+    """Resolve feature_bundles.yaml against available columns and registered features.
 
-    Custom bundles created in the Feature workspace live in feature_bundles.yaml.
-    Only bundle columns that exist in the current feature view and pass safety
-    filtering are exposed in Model Lab Config.
+    A bundle is shown when a candidate column is either already available in the
+    current feature view/model config or exists in feature_registry.yaml. This
+    lets Model Lab experiment with newly registered features before the upstream
+    feature-view builder has been fully migrated.
     """
 
     available_set = set(available)
+    registry_defined = _registry_defined_features()
     registry = _load_feature_bundle_registry()
     bundles = registry.get("bundles", {}) or {}
     resolved: dict[str, list[str]] = {}
     labels: dict[str, str] = {}
+    availability: dict[str, set[str]] = {}
 
     for bundle_id, bundle in bundles.items():
         if not isinstance(bundle, dict):
@@ -88,32 +106,34 @@ def _registry_bundle_map(available: list[str]) -> tuple[dict[str, list[str]], di
         safe_candidates = [
             feature
             for feature in candidates
-            if feature in available_set and _is_safe_model_lab_feature(feature)
+            if _is_safe_model_lab_feature(feature)
+            and (feature in available_set or feature in registry_defined)
         ]
         if safe_candidates:
-            resolved[str(bundle_id)] = sorted(dict.fromkeys(safe_candidates))
-            labels[str(bundle_id)] = _bundle_label(str(bundle_id), bundle)
+            bundle_key = str(bundle_id)
+            resolved[bundle_key] = sorted(dict.fromkeys(safe_candidates))
+            labels[bundle_key] = _bundle_label(bundle_key, bundle)
+            availability[bundle_key] = {feature for feature in safe_candidates if feature in available_set}
 
-    return resolved, labels
+    return resolved, labels, availability
 
 
-def _model_lab_bundle_map(available: list[str]) -> tuple[dict[str, list[str]], dict[str, str]]:
+def _model_lab_bundle_map(available: list[str]) -> tuple[dict[str, list[str]], dict[str, str], dict[str, set[str]]]:
     """Return registry-defined bundles plus legacy inferred bundles as fallback."""
 
-    registry_bundles, registry_labels = _registry_bundle_map(available)
+    registry_bundles, registry_labels, availability = _registry_bundle_map(available)
     legacy_bundles = mlw._bundle_map(available)
 
     combined: dict[str, list[str]] = dict(registry_bundles)
     labels: dict[str, str] = dict(registry_labels)
 
-    # Keep old heuristic bundles available during migration, but do not let them
-    # override real bundle registry definitions with the same ID.
     for bundle_id, features in legacy_bundles.items():
         if bundle_id not in combined:
             combined[bundle_id] = features
             labels[bundle_id] = mlw.BUNDLE_LABELS.get(bundle_id, bundle_id)
+            availability[bundle_id] = set(features)
 
-    return combined, labels
+    return combined, labels, availability
 
 
 def _infer_selected_bundles(config: dict[str, Any], available: list[str], bundle_map: dict[str, list[str]]) -> list[str]:
@@ -148,7 +168,6 @@ def _inject_feature_selector_css() -> None:
             opacity: 1 !important;
         }
 
-        /* Remove the dark search-input overlay that appears over the first tag. */
         [data-testid="stMultiSelect"] input {
             background: transparent !important;
             background-color: transparent !important;
@@ -219,7 +238,8 @@ def render_feature_checklist(context):
     feature_config = config.get("features") or {}
     current = {feature for feature in set(feature_config.get("feature_columns") or []) if _is_safe_model_lab_feature(feature)}
     available = [feature for feature in mlw._available_feature_columns(context) if _is_safe_model_lab_feature(feature)]
-    bundle_map, bundle_labels = _model_lab_bundle_map(available)
+    available_set = set(available)
+    bundle_map, bundle_labels, availability = _model_lab_bundle_map(available)
     saved = list(feature_config.get("selected_bundles") or [])
     if not saved:
         saved = _infer_selected_bundles(config, available, bundle_map)
@@ -238,8 +258,10 @@ def render_feature_checklist(context):
     included = []
     removed = []
     universe = []
+    registry_only = []
     for bundle in selected:
         features = list(bundle_map.get(bundle, []))
+        available_in_bundle = availability.get(bundle, set())
         universe.extend(features)
         label = bundle_labels.get(bundle, bundle)
         with st.expander(f"{label} ({len(features)} features)", expanded=False):
@@ -247,18 +269,28 @@ def render_feature_checklist(context):
             for i, feature in enumerate(features):
                 default = feature in current if bundle in saved_set else True
                 key = f"mlab_feature_{model_key}_{_safe_key(bundle)}_{_safe_key(feature)}"
+                checkbox_label = feature if feature in available_set else f"{feature} ⚠ registry-only"
+                help_text = None if feature in available_in_bundle else "Registered feature, but not currently present in the feature view. Training may require rebuilding/updating the feature view."
                 with cols[i % 3]:
-                    value = st.checkbox(feature, value=default, disabled=not editable, key=key)
+                    value = st.checkbox(checkbox_label, value=default, disabled=not editable, key=key, help=help_text)
                 if value:
                     included.append(feature)
+                    if feature not in available_set:
+                        registry_only.append(feature)
                 else:
                     removed.append(feature)
 
     resolved = list(dict.fromkeys(included))
     removed = list(dict.fromkeys(removed))
+    registry_only = list(dict.fromkeys(registry_only))
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Bundles", len(selected))
     c2.metric("Available", len(list(dict.fromkeys(universe))))
     c3.metric("Included", len(resolved))
     c4.metric("Unchecked", len(removed))
+    if registry_only:
+        st.warning(
+            "Some selected features are registered but not in the current feature view yet: "
+            + ", ".join(registry_only)
+        )
     return {"selected_bundles": selected, "include_features": [], "exclude_features": removed, "resolved_features": resolved}
