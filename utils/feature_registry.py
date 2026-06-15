@@ -8,7 +8,7 @@ from typing import Any
 
 import yaml
 
-FEATURE_REGISTRY_PATH = Path("configs/features/feature_registry.yaml")
+FEATURE_REGISTRY_PATH = Path("configs/features/model_lab_feature_registry.yaml")
 
 FEATURE_TYPES = ["transform", "formula", "pipeline", "base_column"]
 FEATURE_STATUSES = ["draft", "active", "planned", "archived"]
@@ -57,7 +57,7 @@ def dump_yaml(payload: dict[str, Any]) -> str:
 
 def load_feature_registry(path: str | Path = FEATURE_REGISTRY_PATH) -> dict[str, Any]:
     registry = load_yaml(path)
-    registry.setdefault("registry_name", "ufc_master_feature_registry")
+    registry.setdefault("registry_name", "ufc_model_lab_feature_registry")
     registry.setdefault("version", 1)
     registry.setdefault("status", "draft_contract")
     studio = registry.setdefault("model_lab_feature_studio", {})
