@@ -1,1 +1,52 @@
 name: Edit Bankroll Ledger Bet
+
+on:
+  workflow_dispatch:
+    inputs:
+      edit_json:
+        description: "JSON payload for editing one bankroll ledger row"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bankroll-artifacts-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  edit-ledger-row:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install pandas numpy pyarrow
+
+      - name: Edit bankroll ledger row
+        env:
+          EDIT_JSON: ${{ inputs.edit_json }}
+        run: |
+          python -m pipeline.bankroll.run_edit_ledger_bet --edit-json "$EDIT_JSON"
+
+      - name: Commit bankroll ledger artifacts
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add -f \
+            data/bankroll/ufc_bet_ledger.parquet \
+            data/bankroll/ufc_open_bets.parquet \
+            data/bankroll/ufc_bankroll_snapshots.parquet
+
+          git commit -m "Edit bankroll ledger row" || echo "No changes to commit"
+          git push
