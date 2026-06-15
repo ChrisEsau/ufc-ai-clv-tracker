@@ -44,14 +44,14 @@ models:
     status: draft
     dashboard_selectable: false
     outcome_architecture: true
-  moneyline_xgboost_v6_dev:
+  moneyline_xgboost_v6_dev_welo:
     display_name: Moneyline XGBoost V5 Experiment
     description: Draft experiment created from moneyline_xgboost_v5.
     model_family: moneyline
     market_key: moneyline
     algorithm: xgboost
-    config_path: configs/models/moneyline_xgboost_v6_dev.yaml
-    artifact_dir: models/moneyline/moneyline_xgboost_v6_dev
+    config_path: configs/models/moneyline_xgboost_v6_dev_welo.yaml
+    artifact_dir: models/moneyline/moneyline_xgboost_v6_dev_welo
     status: draft
     dashboard_selectable: false
     outcome_architecture: true
