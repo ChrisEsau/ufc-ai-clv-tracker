@@ -21,6 +21,28 @@ def _save_registry_to_github(registry: dict[str, Any]) -> tuple[bool, str]:
     )
 
 
+def _sync_feature_editor_state(selected: str, current: dict[str, Any], is_new: bool) -> None:
+    """Hydrate editable form fields when the selected feature changes."""
+
+    if st.session_state.get("mlab_feature_editor_loaded") == selected:
+        return
+
+    st.session_state["mlab_feature_editor_loaded"] = selected
+    st.session_state["mlab_feature_id"] = "" if is_new else selected
+    st.session_state["mlab_feature_label"] = current.get("label", "" if is_new else selected)
+    st.session_state["mlab_feature_type"] = current.get("type", "formula") if current.get("type", "formula") in fr.FEATURE_TYPES else "formula"
+    st.session_state["mlab_feature_status"] = current.get("status", "draft") if current.get("status", "draft") in fr.FEATURE_STATUSES else "draft"
+    st.session_state["mlab_feature_family"] = current.get("family", "custom")
+    st.session_state["mlab_feature_description"] = current.get("description", "")
+    st.session_state["mlab_feature_inputs"] = "\n".join(str(item) for item in current.get("inputs", []) or [])
+    st.session_state["mlab_feature_leakage_safe"] = bool(current.get("leakage_safe", True))
+    st.session_state["mlab_feature_formula"] = current.get("formula", "")
+    st.session_state["mlab_feature_builder"] = current.get("builder", "")
+    st.session_state["mlab_feature_transform"] = current.get("transform", "red_minus_blue")
+    st.session_state["mlab_feature_source_columns"] = "\n".join(str(item) for item in current.get("source_columns", []) or [])
+    st.session_state["mlab_feature_source_column"] = current.get("source_column", "")
+
+
 def _render_summary(registry: dict[str, Any]) -> None:
     features = fr.feature_map(registry)
     bundles = fr.bundle_map(registry)
@@ -67,60 +89,68 @@ def _render_feature_editor(registry: dict[str, Any]) -> dict[str, Any] | None:
     selected = st.selectbox("Feature", choices, key="mlab_feature_studio_feature_select")
     is_new = selected == "+ Create new feature"
     current = {} if is_new else features.get(selected, {})
+    _sync_feature_editor_state(selected, current, is_new)
 
-    default_id = "" if is_new else selected
-    feature_id = fr.safe_feature_id(st.text_input("Feature ID", value=default_id, key="mlab_feature_id"))
-    label = st.text_input("Label", value=current.get("label", feature_id), key="mlab_feature_label")
-    feature_type = st.selectbox(
-        "Build Type",
-        fr.FEATURE_TYPES,
-        index=fr.FEATURE_TYPES.index(current.get("type", "formula")) if current.get("type", "formula") in fr.FEATURE_TYPES else 1,
-        key="mlab_feature_type",
-    )
-    status = st.selectbox(
-        "Status",
-        fr.FEATURE_STATUSES,
-        index=fr.FEATURE_STATUSES.index(current.get("status", "draft")) if current.get("status", "draft") in fr.FEATURE_STATUSES else 0,
-        key="mlab_feature_status",
-    )
-    family = st.text_input("Family", value=current.get("family", "custom"), key="mlab_feature_family")
-    description = st.text_area("Description", value=current.get("description", ""), key="mlab_feature_description")
-    inputs = fr.csv_to_list(st.text_area("Inputs comma/newline separated", value="\n".join(current.get("inputs", []) or []), key="mlab_feature_inputs"))
+    st.text_input("Feature ID", key="mlab_feature_id")
+    feature_id = fr.safe_feature_id(st.session_state.get("mlab_feature_id", ""))
+    st.text_input("Label", key="mlab_feature_label")
+    feature_type = st.selectbox("Build Type", fr.FEATURE_TYPES, key="mlab_feature_type")
+    st.selectbox("Status", fr.FEATURE_STATUSES, key="mlab_feature_status")
+    st.text_input("Family", key="mlab_feature_family")
+    st.text_area("Description", key="mlab_feature_description")
+    st.text_area("Inputs comma/newline separated", key="mlab_feature_inputs")
 
     payload: dict[str, Any] = {
-        "label": label or feature_id,
-        "type": feature_type,
-        "status": status,
-        "family": family,
-        "description": description,
-        "inputs": inputs,
-        "leakage_safe": st.checkbox("Leakage safe", value=bool(current.get("leakage_safe", True)), key="mlab_feature_leakage_safe"),
+        "label": st.session_state.get("mlab_feature_label") or feature_id,
+        "type": st.session_state.get("mlab_feature_type"),
+        "status": st.session_state.get("mlab_feature_status"),
+        "family": st.session_state.get("mlab_feature_family"),
+        "description": st.session_state.get("mlab_feature_description", ""),
+        "inputs": fr.csv_to_list(st.session_state.get("mlab_feature_inputs", "")),
+        "leakage_safe": st.checkbox("Leakage safe", key="mlab_feature_leakage_safe"),
     }
 
     if feature_type == "formula":
-        payload["formula"] = st.text_area("Formula", value=current.get("formula", ""), key="mlab_feature_formula")
+        st.text_area("Formula", key="mlab_feature_formula")
+        payload["formula"] = st.session_state.get("mlab_feature_formula", "")
         issues = fr.validate_formula_syntax(payload["formula"])
         if issues:
             st.warning("Formula validation: " + "; ".join(issues))
         else:
             st.success("Formula syntax looks valid.")
     elif feature_type == "pipeline":
-        payload["builder"] = st.text_input("Builder path", value=current.get("builder", ""), key="mlab_feature_builder")
+        st.text_input("Builder path", key="mlab_feature_builder")
+        payload["builder"] = st.session_state.get("mlab_feature_builder", "")
     elif feature_type == "transform":
-        payload["transform"] = st.text_input("Transform ID", value=current.get("transform", "red_minus_blue"), key="mlab_feature_transform")
-        payload["source_columns"] = fr.csv_to_list(st.text_area("Source columns", value="\n".join(current.get("source_columns", []) or []), key="mlab_feature_source_columns"))
+        st.text_input("Transform ID", key="mlab_feature_transform")
+        st.text_area("Source columns", key="mlab_feature_source_columns")
+        payload["transform"] = st.session_state.get("mlab_feature_transform", "")
+        payload["source_columns"] = fr.csv_to_list(st.session_state.get("mlab_feature_source_columns", ""))
     else:
-        payload["source_column"] = st.text_input("Source column", value=current.get("source_column", ""), key="mlab_feature_source_column")
+        st.text_input("Source column", key="mlab_feature_source_column")
+        payload["source_column"] = st.session_state.get("mlab_feature_source_column", "")
+
+    # Preserve optional metadata that the editor does not expose yet.
+    for optional_key in ["output_column", "model_input_allowed", "current_moneyline_v5"]:
+        if optional_key in current:
+            payload[optional_key] = current[optional_key]
 
     c1, c2, c3 = st.columns(3)
     with c1:
-        if st.button("Stage Feature Change", use_container_width=True, key="mlab_stage_feature"):
+        if st.button("Save Feature to Registry", use_container_width=True, key="mlab_stage_feature"):
             if not feature_id:
                 st.error("Feature ID is required.")
                 return None
             updated = fr.upsert_feature(registry, feature_id, payload)
             st.session_state["mlab_feature_registry_staged"] = updated
-            st.success(f"Staged feature: {feature_id}")
+            ok, msg = _save_registry_to_github(updated)
+            if ok:
+                st.session_state.pop("mlab_feature_registry_staged", None)
+                st.cache_data.clear()
+                st.success(f"Saved feature: {feature_id}")
+                st.rerun()
+            else:
+                st.error(msg)
             return updated
     with c2:
         if not is_new and st.button("Archive Feature", use_container_width=True, key="mlab_archive_feature"):
@@ -155,7 +185,7 @@ def _render_save_controls(registry: dict[str, Any]) -> None:
 
     c1, c2 = st.columns(2)
     with c1:
-        if st.button("Save Feature Registry to GitHub", use_container_width=True, key="mlab_save_feature_registry"):
+        if st.button("Save Staged Registry to GitHub", use_container_width=True, key="mlab_save_feature_registry"):
             ok, msg = _save_registry_to_github(active_registry)
             if ok:
                 st.success(msg)
