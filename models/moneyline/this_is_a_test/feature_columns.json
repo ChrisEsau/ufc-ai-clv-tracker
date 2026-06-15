@@ -1,3 +1,13 @@
 [
-  "testfeature"
+  "elo_diff",
+  "fights_diff",
+  "kd_absorbed_avg_diff",
+  "kd_avg_diff",
+  "losses_diff",
+  "sapm_diff",
+  "splm_diff",
+  "str_acc_diff",
+  "testfeature",
+  "win_pct_diff",
+  "wins_diff"
 ]
