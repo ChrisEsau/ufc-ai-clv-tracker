@@ -41,10 +41,10 @@ include:
 
 # Optional Model Lab formula feature layer.
 # Keep disabled for canonical parity builds. Enable in an experiment feature-view
-# config and select bundles/features from configs/features/model_lab_feature_registry.yaml.
+# config and select bundles/features from configs/features/feature_registry.yaml.
 model_lab_formula_features:
   enabled: false
-  registry_path: configs/features/model_lab_feature_registry.yaml
+  registry_path: configs/features/feature_registry.yaml
   bundles: []
   features: []
   statuses:
