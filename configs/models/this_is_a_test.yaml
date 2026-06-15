@@ -13,7 +13,17 @@ features:
   selected_bundles:
   - test_bundle
   include_features: []
-  exclude_features: []
+  exclude_features:
+  - elo_diff
+  - fights_diff
+  - kd_absorbed_avg_diff
+  - kd_avg_diff
+  - losses_diff
+  - sapm_diff
+  - splm_diff
+  - str_acc_diff
+  - win_pct_diff
+  - wins_diff
 data:
   rolling_features_path: data/features/moneyline_feature_view.parquet
   target_column: target
