@@ -21,6 +21,14 @@ def _save_registry_to_github(registry: dict[str, Any]) -> tuple[bool, str]:
     )
 
 
+def _save_bundle_registry_to_github(registry: dict[str, Any]) -> tuple[bool, str]:
+    return mlw._github_write_file(
+        str(fr.FEATURE_BUNDLE_REGISTRY_PATH),
+        fr.dump_yaml(registry),
+        "Update Model Lab feature bundle registry",
+    )
+
+
 def _sync_feature_editor_state(selected: str, current: dict[str, Any], is_new: bool) -> None:
     """Hydrate editable form fields when the selected feature changes."""
 
@@ -43,9 +51,32 @@ def _sync_feature_editor_state(selected: str, current: dict[str, Any], is_new: b
     st.session_state["mlab_feature_source_column"] = current.get("source_column", "")
 
 
+def _sync_bundle_editor_state(selected: str, current: dict[str, Any], is_new: bool) -> None:
+    """Hydrate editable bundle fields when the selected bundle changes."""
+
+    if st.session_state.get("mlab_bundle_editor_loaded") == selected:
+        return
+
+    st.session_state["mlab_bundle_editor_loaded"] = selected
+    st.session_state["mlab_bundle_id"] = "" if is_new else selected
+    st.session_state["mlab_bundle_description"] = current.get("description", "")
+    st.session_state["mlab_bundle_source_layer"] = current.get("source_layer", "fighter_state")
+    st.session_state["mlab_bundle_source_prefix"] = current.get("source_prefix", "")
+    st.session_state["mlab_bundle_candidate_columns"] = "\n".join(str(item) for item in current.get("candidate_columns", []) or [])
+    st.session_state["mlab_bundle_markets"] = current.get("markets", []) or []
+    current_transforms = [str(item) for item in current.get("recommended_transforms", []) or []]
+    transform_options = fr.transform_options(include_planned=True)
+    st.session_state["mlab_bundle_recommended_transforms"] = [
+        item for item in current_transforms if item in transform_options
+    ]
+    st.session_state["mlab_bundle_unknown_transforms"] = "\n".join(
+        item for item in current_transforms if item not in transform_options
+    )
+
+
 def _render_summary(registry: dict[str, Any]) -> None:
     features = fr.feature_map(registry)
-    bundles = fr.bundle_map(registry)
+    bundles = fr.bundle_map()
     findings = fr.validate_registry(registry)
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Features", len(features))
@@ -58,11 +89,17 @@ def _render_summary(registry: dict[str, Any]) -> None:
 
 def _render_validation(registry: dict[str, Any]) -> None:
     findings = fr.validate_registry(registry)
-    with st.expander("Validation Results", expanded=bool(findings)):
-        if not findings:
-            st.success("Feature registry validation passed.")
+    bundle_findings = fr.validate_bundle_registry(fr.load_feature_bundle_registry())
+    with st.expander("Validation Results", expanded=bool(findings or bundle_findings)):
+        if not findings and not bundle_findings:
+            st.success("Feature and bundle registry validation passed.")
             return
-        st.dataframe(pd.DataFrame(findings), use_container_width=True, hide_index=True)
+        if findings:
+            st.markdown("**Feature findings**")
+            st.dataframe(pd.DataFrame(findings), use_container_width=True, hide_index=True)
+        if bundle_findings:
+            st.markdown("**Bundle findings**")
+            st.dataframe(pd.DataFrame(bundle_findings), use_container_width=True, hide_index=True)
 
 
 def _render_feature_table(registry: dict[str, Any]) -> None:
@@ -74,9 +111,9 @@ def _render_feature_table(registry: dict[str, Any]) -> None:
     st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
 
-def _render_bundle_table(registry: dict[str, Any]) -> None:
+def _render_bundle_table(bundle_registry: dict[str, Any] | None = None) -> None:
     st.markdown("#### Bundle Library")
-    rows = fr.bundle_rows(registry)
+    rows = fr.bundle_rows(bundle_registry)
     if not rows:
         st.info("No bundle definitions found in configs/features/feature_bundles.yaml.")
         return
@@ -186,10 +223,108 @@ def _render_feature_editor(registry: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
-def _render_bundle_editor(registry: dict[str, Any]) -> None:
-    st.markdown("#### Bundle Registry")
-    st.caption("Bundles are separate from feature families and currently read from configs/features/feature_bundles.yaml. Editing remains disabled during the 10-feature registry test slice.")
-    _render_bundle_table(registry)
+def _render_bundle_editor() -> None:
+    st.markdown("#### Bundle Editor")
+    bundle_registry = fr.load_feature_bundle_registry()
+    bundles = fr.bundle_map(bundle_registry)
+    choices = ["+ Create new bundle"] + sorted(bundles.keys())
+    selected = st.selectbox("Bundle", choices, key="mlab_bundle_select")
+    is_new = selected == "+ Create new bundle"
+    current = {} if is_new else bundles.get(selected, {})
+    _sync_bundle_editor_state(selected, current, is_new)
+
+    st.text_input("Bundle ID", key="mlab_bundle_id")
+    bundle_id = fr.safe_feature_id(st.session_state.get("mlab_bundle_id", ""))
+    st.text_area("Description", key="mlab_bundle_description")
+    st.text_input("Source layer", key="mlab_bundle_source_layer")
+    st.text_input("Source prefix optional", key="mlab_bundle_source_prefix")
+
+    known_candidates = sorted(fr.feature_map(fr.load_feature_registry()).keys())
+    selected_known = st.multiselect(
+        "Registered feature definitions to include",
+        known_candidates,
+        default=[
+            item
+            for item in fr.csv_to_list(st.session_state.get("mlab_bundle_candidate_columns", ""))
+            if item in known_candidates
+        ],
+        key="mlab_bundle_registered_candidates",
+    )
+    manual_candidates = st.text_area(
+        "Candidate columns comma/newline separated",
+        key="mlab_bundle_candidate_columns",
+        help="Use this for raw candidate columns or not-yet-registered generated features.",
+    )
+    candidate_columns = list(dict.fromkeys(selected_known + fr.csv_to_list(manual_candidates)))
+
+    transform_ids = fr.transform_options(include_planned=True)
+    st.multiselect(
+        "Recommended transforms",
+        transform_ids,
+        key="mlab_bundle_recommended_transforms",
+    )
+    unknown_transforms = fr.csv_to_list(st.text_area(
+        "Unknown/custom transforms optional",
+        key="mlab_bundle_unknown_transforms",
+        help="Normally leave empty. Entries here will trigger validation warnings until registered.",
+    ))
+
+    market_options = ["moneyline", "props", "ko_tko", "submission", "decision", "goes_distance", "rounds"]
+    st.multiselect("Markets", market_options, key="mlab_bundle_markets")
+
+    payload: dict[str, Any] = {
+        "description": st.session_state.get("mlab_bundle_description", ""),
+        "source_layer": st.session_state.get("mlab_bundle_source_layer", ""),
+        "candidate_columns": candidate_columns,
+        "recommended_transforms": list(dict.fromkeys(
+            list(st.session_state.get("mlab_bundle_recommended_transforms", []) or []) + unknown_transforms
+        )),
+        "markets": st.session_state.get("mlab_bundle_markets", []) or [],
+    }
+    source_prefix = str(st.session_state.get("mlab_bundle_source_prefix", "")).strip()
+    if source_prefix:
+        payload["source_prefix"] = source_prefix
+
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("Save Bundle to Registry", use_container_width=True, key="mlab_save_bundle"):
+            if not bundle_id:
+                st.error("Bundle ID is required.")
+                return
+            updated = fr.upsert_bundle(bundle_registry, bundle_id, payload)
+            findings = fr.validate_bundle_registry(updated)
+            blocking = [item for item in findings if item.get("level") == "error"]
+            if blocking:
+                st.error("Bundle has validation errors. Fix errors before saving.")
+                st.dataframe(pd.DataFrame(blocking), use_container_width=True, hide_index=True)
+                return
+            ok, msg = _save_bundle_registry_to_github(updated)
+            if ok:
+                st.cache_data.clear()
+                st.success(f"Saved bundle: {bundle_id}")
+                st.rerun()
+            else:
+                st.error(msg)
+    with c2:
+        delete_enabled = not is_new and st.checkbox("Confirm delete bundle", key="mlab_confirm_delete_bundle")
+        if not is_new and st.button("Delete Bundle", disabled=not delete_enabled, use_container_width=True, key="mlab_delete_bundle"):
+            updated = fr.delete_bundle(bundle_registry, selected)
+            ok, msg = _save_bundle_registry_to_github(updated)
+            if ok:
+                st.cache_data.clear()
+                st.warning(f"Deleted bundle: {selected}")
+                st.rerun()
+            else:
+                st.error(msg)
+
+    findings = fr.validate_bundle_registry(bundle_registry)
+    with st.expander("Bundle Validation", expanded=bool(findings)):
+        if findings:
+            st.dataframe(pd.DataFrame(findings), use_container_width=True, hide_index=True)
+        else:
+            st.success("Bundle registry validation passed.")
+
+    _render_bundle_table(bundle_registry)
 
 
 def _render_save_controls(registry: dict[str, Any]) -> None:
@@ -238,13 +373,13 @@ def render_features(
     tab_library, tab_feature, tab_bundle, tab_yaml = st.tabs([
         "Library",
         "Feature Editor",
-        "Bundle Registry",
+        "Bundle Editor",
         "Registry YAML",
     ])
 
     with tab_library:
         _render_feature_table(active_registry)
-        _render_bundle_table(active_registry)
+        _render_bundle_table(fr.load_feature_bundle_registry())
 
     with tab_feature:
         updated = _render_feature_editor(active_registry)
@@ -252,9 +387,12 @@ def render_features(
             active_registry = updated
 
     with tab_bundle:
-        _render_bundle_editor(active_registry)
+        _render_bundle_editor()
 
     with tab_yaml:
+        st.markdown("**Feature Registry**")
         st.code(fr.dump_yaml(active_registry), language="yaml")
+        st.markdown("**Bundle Registry**")
+        st.code(fr.dump_yaml(fr.load_feature_bundle_registry()), language="yaml")
 
     _render_save_controls(active_registry)
