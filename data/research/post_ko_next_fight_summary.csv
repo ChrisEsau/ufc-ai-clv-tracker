@@ -1,0 +1,11 @@
+metric,value
+ko_loss_with_next_fight_count,1948.0
+unique_fighters,1149.0
+won_next_fight_count,874.0
+won_next_fight_rate,0.4486652977412731
+lost_next_fight_count,1074.0
+lost_next_fight_rate,0.5513347022587269
+lost_next_by_ko_tko_count,436.0
+lost_next_by_ko_tko_rate,0.22381930184804927
+avg_days_to_next_fight,268.37731006160163
+median_days_to_next_fight,203.0
