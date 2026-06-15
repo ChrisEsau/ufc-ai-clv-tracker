@@ -29,12 +29,17 @@ def _save_bundle_registry_to_github(registry: dict[str, Any]) -> tuple[bool, str
     )
 
 
-def _sync_feature_editor_state(selected: str, current: dict[str, Any], is_new: bool) -> None:
-    """Hydrate editable form fields when the selected feature changes."""
+def _features_by_family(registry: dict[str, Any]) -> dict[str, list[str]]:
+    grouped: dict[str, list[str]] = {}
+    for feature_id, feature in fr.feature_map(registry).items():
+        family = str((feature or {}).get("family") or "unassigned")
+        grouped.setdefault(family, []).append(str(feature_id))
+    return {family: sorted(features) for family, features in sorted(grouped.items())}
 
+
+def _sync_feature_editor_state(selected: str, current: dict[str, Any], is_new: bool) -> None:
     if st.session_state.get("mlab_feature_editor_loaded") == selected:
         return
-
     st.session_state["mlab_feature_editor_loaded"] = selected
     st.session_state["mlab_feature_id"] = "" if is_new else selected
     st.session_state["mlab_feature_label"] = current.get("label", "" if is_new else selected)
@@ -52,11 +57,8 @@ def _sync_feature_editor_state(selected: str, current: dict[str, Any], is_new: b
 
 
 def _sync_bundle_editor_state(selected: str, current: dict[str, Any], is_new: bool) -> None:
-    """Hydrate editable bundle fields when the selected bundle changes."""
-
     if st.session_state.get("mlab_bundle_editor_loaded") == selected:
         return
-
     st.session_state["mlab_bundle_editor_loaded"] = selected
     st.session_state["mlab_bundle_id"] = "" if is_new else selected
     st.session_state["mlab_bundle_description"] = current.get("description", "")
@@ -66,12 +68,8 @@ def _sync_bundle_editor_state(selected: str, current: dict[str, Any], is_new: bo
     st.session_state["mlab_bundle_markets"] = current.get("markets", []) or []
     current_transforms = [str(item) for item in current.get("recommended_transforms", []) or []]
     transform_options = fr.transform_options(include_planned=True)
-    st.session_state["mlab_bundle_recommended_transforms"] = [
-        item for item in current_transforms if item in transform_options
-    ]
-    st.session_state["mlab_bundle_unknown_transforms"] = "\n".join(
-        item for item in current_transforms if item not in transform_options
-    )
+    st.session_state["mlab_bundle_recommended_transforms"] = [item for item in current_transforms if item in transform_options]
+    st.session_state["mlab_bundle_unknown_transforms"] = "\n".join(item for item in current_transforms if item not in transform_options)
 
 
 def _render_summary(registry: dict[str, Any]) -> None:
@@ -83,7 +81,6 @@ def _render_summary(registry: dict[str, Any]) -> None:
     c2.metric("Bundles", len(bundles))
     c3.metric("Formula", sum(1 for item in features.values() if item.get("type") == "formula"))
     c4.metric("Findings", len(findings))
-
     st.caption("Feature Studio reads canonical feature definitions from feature_registry.yaml and bundles from feature_bundles.yaml.")
 
 
@@ -130,12 +127,7 @@ def _render_transform_selector() -> str:
         return current_transform
     if not current_transform:
         st.session_state["mlab_feature_transform"] = transform_ids[0]
-    st.selectbox(
-        "Transform ID",
-        transform_ids,
-        key="mlab_feature_transform",
-        help="Loaded from configs/features/transform_registry.yaml",
-    )
+    st.selectbox("Transform ID", transform_ids, key="mlab_feature_transform", help="Loaded from configs/features/transform_registry.yaml")
     return str(st.session_state.get("mlab_feature_transform") or "")
 
 
@@ -170,10 +162,7 @@ def _render_feature_editor(registry: dict[str, Any]) -> dict[str, Any] | None:
         st.text_area("Formula", key="mlab_feature_formula")
         payload["formula"] = st.session_state.get("mlab_feature_formula", "")
         issues = fr.validate_formula_syntax(payload["formula"])
-        if issues:
-            st.warning("Formula validation: " + "; ".join(issues))
-        else:
-            st.success("Formula syntax looks valid.")
+        st.warning("Formula validation: " + "; ".join(issues)) if issues else st.success("Formula syntax looks valid.")
     elif feature_type == "pipeline":
         st.text_input("Builder path", key="mlab_feature_builder")
         payload["builder"] = st.session_state.get("mlab_feature_builder", "")
@@ -185,7 +174,6 @@ def _render_feature_editor(registry: dict[str, Any]) -> dict[str, Any] | None:
         st.text_input("Source column", key="mlab_feature_source_column")
         payload["source_column"] = st.session_state.get("mlab_feature_source_column", "")
 
-    # Preserve optional metadata that the editor does not expose yet.
     for optional_key in ["output_column", "model_input_allowed", "current_moneyline_v5"]:
         if optional_key in current:
             payload[optional_key] = current[optional_key]
@@ -197,10 +185,8 @@ def _render_feature_editor(registry: dict[str, Any]) -> dict[str, Any] | None:
                 st.error("Feature ID is required.")
                 return None
             updated = fr.upsert_feature(registry, feature_id, payload)
-            st.session_state["mlab_feature_registry_staged"] = updated
             ok, msg = _save_registry_to_github(updated)
             if ok:
-                st.session_state.pop("mlab_feature_registry_staged", None)
                 st.cache_data.clear()
                 st.success(f"Saved feature: {feature_id}")
                 st.rerun()
@@ -223,9 +209,42 @@ def _render_feature_editor(registry: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
+def _render_family_feature_selector(feature_registry: dict[str, Any], current_candidates: list[str]) -> list[str]:
+    grouped = _features_by_family(feature_registry)
+    if not grouped:
+        st.info("No registered feature definitions available for family selection.")
+        return []
+
+    current_set = set(current_candidates)
+    selected_families = st.multiselect(
+        "Feature Families",
+        list(grouped.keys()),
+        default=[family for family, features in grouped.items() if current_set.intersection(features)],
+        help="Pick families, then check the specific features to include in the bundle.",
+        key="mlab_bundle_selected_families",
+    )
+
+    selected_features: list[str] = []
+    for family in selected_families:
+        features = grouped.get(family, [])
+        with st.expander(f"{family} ({len(features)} features)", expanded=True):
+            cols = st.columns(3)
+            for i, feature_id in enumerate(features):
+                default = feature_id in current_set
+                key = f"mlab_bundle_family_feature_{fr.safe_feature_id(family)}_{fr.safe_feature_id(feature_id)}"
+                label = feature_registry.get("feature_definitions", {}).get(feature_id, {}).get("label", feature_id)
+                with cols[i % 3]:
+                    checked = st.checkbox(str(label), value=default, key=key, help=feature_id)
+                if checked:
+                    selected_features.append(feature_id)
+
+    return list(dict.fromkeys(selected_features))
+
+
 def _render_bundle_editor() -> None:
     st.markdown("#### Bundle Editor")
     bundle_registry = fr.load_feature_bundle_registry()
+    feature_registry = fr.load_feature_registry()
     bundles = fr.bundle_map(bundle_registry)
     choices = ["+ Create new bundle"] + sorted(bundles.keys())
     selected = st.selectbox("Bundle", choices, key="mlab_bundle_select")
@@ -239,30 +258,21 @@ def _render_bundle_editor() -> None:
     st.text_input("Source layer", key="mlab_bundle_source_layer")
     st.text_input("Source prefix optional", key="mlab_bundle_source_prefix")
 
-    known_candidates = sorted(fr.feature_map(fr.load_feature_registry()).keys())
-    selected_known = st.multiselect(
-        "Registered feature definitions to include",
-        known_candidates,
-        default=[
-            item
-            for item in fr.csv_to_list(st.session_state.get("mlab_bundle_candidate_columns", ""))
-            if item in known_candidates
-        ],
-        key="mlab_bundle_registered_candidates",
-    )
+    current_candidates = fr.csv_to_list(st.session_state.get("mlab_bundle_candidate_columns", ""))
+    selected_family_features = _render_family_feature_selector(feature_registry, current_candidates)
+    registered_features = set(fr.feature_map(feature_registry).keys())
+    manual_defaults = [item for item in current_candidates if item not in registered_features]
     manual_candidates = st.text_area(
-        "Candidate columns comma/newline separated",
-        key="mlab_bundle_candidate_columns",
-        help="Use this for raw candidate columns or not-yet-registered generated features.",
+        "Manual extra candidate columns",
+        value="\n".join(manual_defaults),
+        key="mlab_bundle_manual_candidate_columns",
+        help="Optional: raw/generated columns that are not registered as feature definitions yet.",
     )
-    candidate_columns = list(dict.fromkeys(selected_known + fr.csv_to_list(manual_candidates)))
+    candidate_columns = list(dict.fromkeys(selected_family_features + fr.csv_to_list(manual_candidates)))
+    st.caption(f"Bundle candidate count: {len(candidate_columns)}")
 
     transform_ids = fr.transform_options(include_planned=True)
-    st.multiselect(
-        "Recommended transforms",
-        transform_ids,
-        key="mlab_bundle_recommended_transforms",
-    )
+    st.multiselect("Recommended transforms", transform_ids, key="mlab_bundle_recommended_transforms")
     unknown_transforms = fr.csv_to_list(st.text_area(
         "Unknown/custom transforms optional",
         key="mlab_bundle_unknown_transforms",
@@ -276,9 +286,7 @@ def _render_bundle_editor() -> None:
         "description": st.session_state.get("mlab_bundle_description", ""),
         "source_layer": st.session_state.get("mlab_bundle_source_layer", ""),
         "candidate_columns": candidate_columns,
-        "recommended_transforms": list(dict.fromkeys(
-            list(st.session_state.get("mlab_bundle_recommended_transforms", []) or []) + unknown_transforms
-        )),
+        "recommended_transforms": list(dict.fromkeys(list(st.session_state.get("mlab_bundle_recommended_transforms", []) or []) + unknown_transforms)),
         "markets": st.session_state.get("mlab_bundle_markets", []) or [],
     }
     source_prefix = str(st.session_state.get("mlab_bundle_source_prefix", "")).strip()
@@ -323,7 +331,6 @@ def _render_bundle_editor() -> None:
             st.dataframe(pd.DataFrame(findings), use_container_width=True, hide_index=True)
         else:
             st.success("Bundle registry validation passed.")
-
     _render_bundle_table(bundle_registry)
 
 
@@ -370,25 +377,17 @@ def render_features(
     _render_summary(active_registry)
     _render_validation(active_registry)
 
-    tab_library, tab_feature, tab_bundle, tab_yaml = st.tabs([
-        "Library",
-        "Feature Editor",
-        "Bundle Editor",
-        "Registry YAML",
-    ])
+    tab_library, tab_feature, tab_bundle, tab_yaml = st.tabs(["Library", "Feature Editor", "Bundle Editor", "Registry YAML"])
 
     with tab_library:
         _render_feature_table(active_registry)
         _render_bundle_table(fr.load_feature_bundle_registry())
-
     with tab_feature:
         updated = _render_feature_editor(active_registry)
         if updated is not None:
             active_registry = updated
-
     with tab_bundle:
         _render_bundle_editor()
-
     with tab_yaml:
         st.markdown("**Feature Registry**")
         st.code(fr.dump_yaml(active_registry), language="yaml")
