@@ -83,6 +83,25 @@ def _render_bundle_table(registry: dict[str, Any]) -> None:
     st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
 
+def _render_transform_selector() -> str:
+    transform_ids = fr.transform_options(include_planned=True)
+    current_transform = str(st.session_state.get("mlab_feature_transform") or "")
+    if current_transform and current_transform not in transform_ids:
+        transform_ids = [current_transform] + transform_ids
+    if not transform_ids:
+        st.error("No transforms found in configs/features/transform_registry.yaml.")
+        return current_transform
+    if not current_transform:
+        st.session_state["mlab_feature_transform"] = transform_ids[0]
+    st.selectbox(
+        "Transform ID",
+        transform_ids,
+        key="mlab_feature_transform",
+        help="Loaded from configs/features/transform_registry.yaml",
+    )
+    return str(st.session_state.get("mlab_feature_transform") or "")
+
+
 def _render_feature_editor(registry: dict[str, Any]) -> dict[str, Any] | None:
     features = fr.feature_map(registry)
     choices = ["+ Create new feature"] + _feature_options(registry)
@@ -122,9 +141,8 @@ def _render_feature_editor(registry: dict[str, Any]) -> dict[str, Any] | None:
         st.text_input("Builder path", key="mlab_feature_builder")
         payload["builder"] = st.session_state.get("mlab_feature_builder", "")
     elif feature_type == "transform":
-        st.text_input("Transform ID", key="mlab_feature_transform")
+        payload["transform"] = _render_transform_selector()
         st.text_area("Source columns", key="mlab_feature_source_columns")
-        payload["transform"] = st.session_state.get("mlab_feature_transform", "")
         payload["source_columns"] = fr.csv_to_list(st.session_state.get("mlab_feature_source_columns", ""))
     else:
         st.text_input("Source column", key="mlab_feature_source_column")
