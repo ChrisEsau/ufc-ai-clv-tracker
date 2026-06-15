@@ -1,1 +1,122 @@
-PLACEHOLDER
+registry_name: ufc_master_feature_registry
+version: 4
+status: current_moneyline_v5_feature_definitions_generated
+
+source_files:
+  full_inventory: configs/features/full_rolling_feature_inventory.yaml
+  moneyline_v5_contract: configs/features/current_moneyline_v5_features.yaml
+  rolling_preservation_contract: configs/features/rolling_feature_preservation_contract.yaml
+  bundle_registry: configs/features/feature_bundles.yaml
+
+schema_contracts:
+  rolling_feature_store:
+    artifact: data/features/UFC_enhanced_rolling_features_EWM.parquet
+    expected_columns: 483
+    preservation_rule: all_columns_preserved_or_explicitly_deprecated
+  current_moneyline_v5:
+    expected_features: 124
+    selection_rule: all_columns_ending_in_diff_plus_registered_engineered_features
+    protected: true
+
+feature_definition_generation:
+  current_moneyline_v5:
+    enabled: true
+    contract_path: configs/features/current_moneyline_v5_features.yaml
+    generated_feature_count: 124
+    families:
+      career_differentials: true
+      ewm_differentials: true
+      recent_form_differentials: true
+      engineered_moneyline_matchup_features: true
+
+allowed_formula_functions:
+  - abs
+  - min
+  - max
+  - clip
+  - log
+  - sqrt
+  - where
+
+feature_definitions:
+  testfeature:
+    label: THIS IS A TEST FEATURE
+    type: transform
+    status: draft
+    family: custom
+    description: Test feature to check model workflow
+    inputs:
+      - r_pre_sapm
+      - b_pre_sapm
+    leakage_safe: true
+    transform: absolute_gap
+    source_columns:
+      - testfeature_gap
+    output_column: testfeature
+    model_input_allowed: true
+
+feature_layers:
+  metadata:
+    description: Non-model identifiers, event context, fight context, and join keys.
+    model_input_allowed: false
+    preservation_status: protected
+  target_result:
+    description: Historical outcome labels and result fields. Allowed for training/backtesting labels but never live model inputs.
+    model_input_allowed: false
+    preservation_status: protected
+  base:
+    description: Reusable point-in-time fighter and fight state.
+    model_input_allowed: conditionally_via_market_views
+    preservation_status: protected
+  moneyline:
+    description: Symmetry-safe winner-prediction features.
+    model_input_allowed: true
+    preservation_status: protected
+    current_v5_expected_feature_count: 124
+  props:
+    description: Future market-specific prop features and prop labels.
+    model_input_allowed: true
+    preservation_status: future_expansion
+
+feature_families:
+  career_differentials:
+    layer: moneyline
+    model_input_allowed: true
+    ownership: pipeline.features.moneyline
+    current_moneyline_v5: included
+  ewm_differentials:
+    layer: moneyline
+    model_input_allowed: true
+    ownership: pipeline.features.moneyline
+    current_moneyline_v5: included
+  recent_form_differentials:
+    layer: moneyline
+    model_input_allowed: true
+    ownership: pipeline.features.moneyline
+    current_moneyline_v5: included
+  engineered_moneyline_matchup_features:
+    layer: moneyline
+    model_input_allowed: true
+    ownership: pipeline.features.moneyline / feature_engineering
+    current_moneyline_v5: included
+  custom:
+    layer: moneyline
+    model_input_allowed: true
+    ownership: model_lab
+    current_moneyline_v5: false
+
+validation_rules:
+  - full_rolling_feature_inventory_must_have_483_columns
+  - current_moneyline_v5_feature_count_must_equal_124
+  - every_current_moneyline_v5_feature_must_remain_available
+  - raw_red_blue_corner_columns_must_not_enter_moneyline_v5_directly
+  - result_fields_must_not_enter_live_prediction_inputs
+  - no_feature_family_may_be_removed_without_explicit_approval
+  - feature_splits_must_be_lossless
+  - bundle_definitions_must_remain_separate_from_feature_families
+
+notes:
+  - This registry is the feature-definition and ownership source of truth.
+  - Current V5 feature definitions are generated from configs/features/current_moneyline_v5_features.yaml at load time.
+  - Bundles remain separate from families and are defined in configs/features/feature_bundles.yaml.
+  - Feature Studio is a UI over this registry, not a separate data structure.
