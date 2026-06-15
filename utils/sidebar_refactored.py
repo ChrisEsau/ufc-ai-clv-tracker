@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import streamlit as st
-
 from utils import sidebar as legacy_sidebar
 
 
@@ -24,15 +22,7 @@ def _ensure_backtest_workspace() -> None:
 
 
 def render_sidebar():
-    """Render the existing sidebar with modular additions."""
+    """Render the existing sidebar with the modular Model Lab Backtest workspace added."""
 
     _ensure_backtest_workspace()
-    page = legacy_sidebar.render_sidebar()
-
-    if page == "Bankroll":
-        st.sidebar.markdown("---")
-        if st.sidebar.button("Edit Bet", use_container_width=True, key="sidebar_bankroll_edit_bet"):
-            st.session_state["bankroll_dialog"] = "edit"
-            st.rerun()
-
-    return page
+    return legacy_sidebar.render_sidebar()
