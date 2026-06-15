@@ -10,6 +10,7 @@ import yaml
 
 FEATURE_REGISTRY_PATH = Path("configs/features/feature_registry.yaml")
 FEATURE_BUNDLE_REGISTRY_PATH = Path("configs/features/feature_bundles.yaml")
+TRANSFORM_REGISTRY_PATH = Path("configs/features/transform_registry.yaml")
 
 FEATURE_TYPES = ["transform", "formula", "pipeline", "base_column"]
 FEATURE_STATUSES = ["draft", "active", "planned", "archived"]
@@ -79,6 +80,23 @@ def load_feature_bundle_registry(path: str | Path = FEATURE_BUNDLE_REGISTRY_PATH
     registry.setdefault("registry_name", "ufc_feature_bundles")
     registry.setdefault("bundles", {})
     return registry
+
+
+def load_transform_registry(path: str | Path = TRANSFORM_REGISTRY_PATH) -> dict[str, Any]:
+    registry = load_yaml(path)
+    registry.setdefault("registry_name", "ufc_transform_registry")
+    registry.setdefault("transforms", {})
+    return registry
+
+
+def transform_options(*, include_planned: bool = True) -> list[str]:
+    transforms = load_transform_registry().get("transforms", {}) or {}
+    options: list[str] = []
+    for transform_id, transform in transforms.items():
+        status = str((transform or {}).get("status", "active"))
+        if include_planned or status == "active":
+            options.append(str(transform_id))
+    return sorted(options)
 
 
 def save_feature_registry(registry: dict[str, Any], path: str | Path = FEATURE_REGISTRY_PATH) -> None:
@@ -218,6 +236,7 @@ def validate_registry(registry: dict[str, Any]) -> list[dict[str, str]]:
     findings: list[dict[str, str]] = []
     features = feature_map(registry)
     allowed_functions = set(registry.get("allowed_formula_functions") or ALLOWED_FORMULA_FUNCTIONS)
+    valid_transforms = set(transform_options(include_planned=True))
 
     for feature_id, feature in features.items():
         if safe_feature_id(feature_id) != feature_id:
@@ -229,6 +248,8 @@ def validate_registry(registry: dict[str, Any]) -> list[dict[str, str]]:
         for input_name in feature.get("inputs", []) or []:
             if has_blocked_input(str(input_name)):
                 findings.append({"level": "error", "item": feature_id, "message": f"Blocked leakage input: {input_name}"})
+        if feature.get("type") == "transform" and feature.get("transform") not in valid_transforms:
+            findings.append({"level": "error", "item": feature_id, "message": "Transform ID is not registered."})
         if feature.get("type") == "formula":
             formula = str(feature.get("formula") or "")
             formula_issues = validate_formula_syntax(formula, allowed_functions)
