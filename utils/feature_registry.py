@@ -32,7 +32,7 @@ ALLOWED_FORMULA_FUNCTIONS = {"abs", "min", "max", "clip", "log", "sqrt", "where"
 
 
 class FeatureRegistryError(RuntimeError):
-    """Raised when the Model Lab feature registry is invalid."""
+    """Raised when a Model Lab feature or bundle registry operation is invalid."""
 
 
 def safe_feature_id(value: str) -> str:
@@ -78,6 +78,9 @@ def load_feature_registry(path: str | Path = FEATURE_REGISTRY_PATH) -> dict[str,
 def load_feature_bundle_registry(path: str | Path = FEATURE_BUNDLE_REGISTRY_PATH) -> dict[str, Any]:
     registry = load_yaml(path)
     registry.setdefault("registry_name", "ufc_feature_bundles")
+    registry.setdefault("version", 1)
+    registry.setdefault("status", "draft_contract")
+    registry.setdefault("bundle_rules", {})
     registry.setdefault("bundles", {})
     return registry
 
@@ -110,12 +113,10 @@ def feature_map(registry: dict[str, Any]) -> dict[str, dict[str, Any]]:
 
 
 def bundle_map(registry: dict[str, Any] | None = None) -> dict[str, dict[str, Any]]:
-    """Return bundle definitions from the bundle registry.
+    """Return bundle definitions from a bundle registry payload or disk."""
 
-    Bundles remain separate from feature families. The optional registry
-    parameter is accepted for backward compatibility with the existing UI calls.
-    """
-
+    if registry is not None and "bundles" in registry:
+        return registry.setdefault("bundles", {})
     return load_feature_bundle_registry().get("bundles", {}) or {}
 
 
@@ -147,6 +148,7 @@ def bundle_rows(registry: dict[str, Any] | None = None) -> list[dict[str, Any]]:
                 "bundle_id": bundle_id,
                 "description": bundle.get("description", bundle_id),
                 "source_layer": bundle.get("source_layer", ""),
+                "source_prefix": bundle.get("source_prefix", ""),
                 "candidate_count": len(candidate_columns),
                 "candidate_columns": ", ".join(candidate_columns),
                 "recommended_transforms": ", ".join(str(item) for item in bundle.get("recommended_transforms", []) or []),
@@ -226,12 +228,7 @@ def validate_formula_syntax(formula: str, allowed_functions: set[str] | None = N
 
 
 def validate_registry(registry: dict[str, Any]) -> list[dict[str, str]]:
-    """Return validation findings for canonical feature definitions.
-
-    Bundle validation is intentionally light here because bundles are maintained
-    in configs/features/feature_bundles.yaml and may list raw candidate columns
-    that do not yet have individual feature-definition metadata.
-    """
+    """Return validation findings for canonical feature definitions."""
 
     findings: list[dict[str, str]] = []
     features = feature_map(registry)
@@ -270,6 +267,24 @@ def validate_registry(registry: dict[str, Any]) -> list[dict[str, str]]:
     return findings
 
 
+def validate_bundle_registry(registry: dict[str, Any]) -> list[dict[str, str]]:
+    """Return validation findings for the bundle registry."""
+
+    findings: list[dict[str, str]] = []
+    valid_transforms = set(transform_options(include_planned=True))
+    for bundle_id, bundle in bundle_map(registry).items():
+        if safe_feature_id(bundle_id) != bundle_id:
+            findings.append({"level": "error", "item": bundle_id, "message": "Bundle ID should be snake_case."})
+        if not bundle.get("description"):
+            findings.append({"level": "warning", "item": bundle_id, "message": "Bundle has no description."})
+        if not bundle.get("candidate_columns"):
+            findings.append({"level": "warning", "item": bundle_id, "message": "Bundle has no candidate columns."})
+        for transform_id in bundle.get("recommended_transforms", []) or []:
+            if str(transform_id) not in valid_transforms:
+                findings.append({"level": "error", "item": bundle_id, "message": f"Unknown transform: {transform_id}"})
+    return findings
+
+
 def upsert_feature(registry: dict[str, Any], feature_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     updated = deepcopy(registry)
     feature_map(updated)[feature_id] = payload
@@ -290,12 +305,12 @@ def delete_feature(registry: dict[str, Any], feature_id: str) -> dict[str, Any]:
 
 
 def upsert_bundle(registry: dict[str, Any], bundle_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-    raise FeatureRegistryError("Bundle editing is not enabled in the 10-feature registry test slice.")
-
-
-def archive_bundle(registry: dict[str, Any], bundle_id: str) -> dict[str, Any]:
-    raise FeatureRegistryError("Bundle editing is not enabled in the 10-feature registry test slice.")
+    updated = deepcopy(registry)
+    bundle_map(updated)[bundle_id] = payload
+    return updated
 
 
 def delete_bundle(registry: dict[str, Any], bundle_id: str) -> dict[str, Any]:
-    raise FeatureRegistryError("Bundle editing is not enabled in the 10-feature registry test slice.")
+    updated = deepcopy(registry)
+    bundle_map(updated).pop(bundle_id, None)
+    return updated
