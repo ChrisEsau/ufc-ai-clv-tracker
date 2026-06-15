@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
+from typing import Any
 
 import streamlit as st
+import yaml
+
 import utils.model_lab_workflows as mlw
 
 
+FEATURE_BUNDLE_REGISTRY_PATH = Path("configs/features/feature_bundles.yaml")
 UNSAFE_FEATURE_PREFIXES = ("r_pre_", "b_pre_", "R_", "B_", "r_", "b_")
 UNSAFE_FEATURE_NAMES = {
     "winner",
@@ -27,6 +32,27 @@ def _safe_key(value) -> str:
     return cleaned.strip("_") or "feature"
 
 
+@st.cache_data(show_spinner=False)
+def _load_feature_bundle_registry(path_text: str = str(FEATURE_BUNDLE_REGISTRY_PATH)) -> dict[str, Any]:
+    path = Path(path_text)
+    if not path.exists():
+        return {}
+    try:
+        payload = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _bundle_label(bundle_id: str, bundle: dict[str, Any] | None = None) -> str:
+    bundle = bundle or {}
+    if bundle.get("label"):
+        return str(bundle["label"])
+    if bundle.get("description"):
+        return str(bundle["description"])
+    return mlw.BUNDLE_LABELS.get(bundle_id, bundle_id)
+
+
 def _is_safe_model_lab_feature(feature: str) -> bool:
     """Mirror trainer safety and hide target/outcome leakage columns from UI bundles."""
 
@@ -39,6 +65,69 @@ def _is_safe_model_lab_feature(feature: str) -> bool:
     if normalized.startswith("winner_is"):
         return False
     return True
+
+
+def _registry_bundle_map(available: list[str]) -> tuple[dict[str, list[str]], dict[str, str]]:
+    """Resolve feature_bundles.yaml against available feature-view columns.
+
+    Custom bundles created in the Feature workspace live in feature_bundles.yaml.
+    Only bundle columns that exist in the current feature view and pass safety
+    filtering are exposed in Model Lab Config.
+    """
+
+    available_set = set(available)
+    registry = _load_feature_bundle_registry()
+    bundles = registry.get("bundles", {}) or {}
+    resolved: dict[str, list[str]] = {}
+    labels: dict[str, str] = {}
+
+    for bundle_id, bundle in bundles.items():
+        if not isinstance(bundle, dict):
+            continue
+        candidates = [str(item) for item in bundle.get("candidate_columns", []) or []]
+        safe_candidates = [
+            feature
+            for feature in candidates
+            if feature in available_set and _is_safe_model_lab_feature(feature)
+        ]
+        if safe_candidates:
+            resolved[str(bundle_id)] = sorted(dict.fromkeys(safe_candidates))
+            labels[str(bundle_id)] = _bundle_label(str(bundle_id), bundle)
+
+    return resolved, labels
+
+
+def _model_lab_bundle_map(available: list[str]) -> tuple[dict[str, list[str]], dict[str, str]]:
+    """Return registry-defined bundles plus legacy inferred bundles as fallback."""
+
+    registry_bundles, registry_labels = _registry_bundle_map(available)
+    legacy_bundles = mlw._bundle_map(available)
+
+    combined: dict[str, list[str]] = dict(registry_bundles)
+    labels: dict[str, str] = dict(registry_labels)
+
+    # Keep old heuristic bundles available during migration, but do not let them
+    # override real bundle registry definitions with the same ID.
+    for bundle_id, features in legacy_bundles.items():
+        if bundle_id not in combined:
+            combined[bundle_id] = features
+            labels[bundle_id] = mlw.BUNDLE_LABELS.get(bundle_id, bundle_id)
+
+    return combined, labels
+
+
+def _infer_selected_bundles(config: dict[str, Any], available: list[str], bundle_map: dict[str, list[str]]) -> list[str]:
+    feature_config = config.get("features") or {}
+    explicit = feature_config.get("selected_bundles") or feature_config.get("bundles")
+    if isinstance(explicit, list) and explicit:
+        return [str(value) for value in explicit if str(value) in bundle_map]
+
+    current = set(feature_config.get("feature_columns") or [])
+    selected = []
+    for bundle, cols in bundle_map.items():
+        if cols and current.intersection(cols):
+            selected.append(bundle)
+    return selected or list(bundle_map.keys())
 
 
 def _inject_feature_selector_css() -> None:
@@ -130,10 +219,10 @@ def render_feature_checklist(context):
     feature_config = config.get("features") or {}
     current = {feature for feature in set(feature_config.get("feature_columns") or []) if _is_safe_model_lab_feature(feature)}
     available = [feature for feature in mlw._available_feature_columns(context) if _is_safe_model_lab_feature(feature)]
-    bundle_map = mlw._bundle_map(available)
+    bundle_map, bundle_labels = _model_lab_bundle_map(available)
     saved = list(feature_config.get("selected_bundles") or [])
     if not saved:
-        saved = mlw._infer_selected_bundles(config, available)
+        saved = _infer_selected_bundles(config, available, bundle_map)
     saved_set = set(saved)
 
     st.markdown("#### Feature Selection")
@@ -141,7 +230,7 @@ def render_feature_checklist(context):
         "Selected Bundles",
         list(bundle_map.keys()),
         default=[b for b in saved if b in bundle_map],
-        format_func=lambda b: f"{mlw.BUNDLE_LABELS.get(b, b)} ({len(bundle_map.get(b, []))})",
+        format_func=lambda b: f"{bundle_labels.get(b, b)} ({len(bundle_map.get(b, []))})",
         disabled=not editable,
         key=f"mlab_selected_bundles_{model_key}",
     )
@@ -152,7 +241,7 @@ def render_feature_checklist(context):
     for bundle in selected:
         features = list(bundle_map.get(bundle, []))
         universe.extend(features)
-        label = mlw.BUNDLE_LABELS.get(bundle, bundle)
+        label = bundle_labels.get(bundle, bundle)
         with st.expander(f"{label} ({len(features)} features)", expanded=False):
             cols = st.columns(3)
             for i, feature in enumerate(features):
