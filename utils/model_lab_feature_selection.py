@@ -7,11 +7,11 @@ from typing import Any
 import streamlit as st
 import yaml
 
+import utils.feature_registry as fr
 import utils.model_lab_workflows as mlw
 
 
 FEATURE_BUNDLE_REGISTRY_PATH = Path("configs/features/feature_bundles.yaml")
-FEATURE_REGISTRY_PATH = Path("configs/features/feature_registry.yaml")
 UNSAFE_FEATURE_PREFIXES = ("r_pre_", "b_pre_", "R_", "B_", "r_", "b_")
 UNSAFE_FEATURE_NAMES = {
     "winner",
@@ -49,12 +49,8 @@ def _load_feature_bundle_registry(path_text: str = str(FEATURE_BUNDLE_REGISTRY_P
     return _load_yaml_registry(path_text)
 
 
-def _load_feature_registry(path_text: str = str(FEATURE_REGISTRY_PATH)) -> dict[str, Any]:
-    return _load_yaml_registry(path_text)
-
-
 def _registry_defined_features() -> set[str]:
-    registry = _load_feature_registry()
+    registry = fr.load_feature_registry()
     definitions = registry.get("feature_definitions", {}) or {}
     return {str(feature_id) for feature_id in definitions.keys()}
 
@@ -69,8 +65,6 @@ def _bundle_label(bundle_id: str, bundle: dict[str, Any] | None = None) -> str:
 
 
 def _is_safe_model_lab_feature(feature: str) -> bool:
-    """Mirror trainer safety and hide target/outcome leakage columns from UI bundles."""
-
     name = str(feature or "")
     normalized = name.strip().lower()
     if name.startswith(UNSAFE_FEATURE_PREFIXES):
@@ -83,14 +77,6 @@ def _is_safe_model_lab_feature(feature: str) -> bool:
 
 
 def _registry_bundle_map(available: list[str]) -> tuple[dict[str, list[str]], dict[str, str], dict[str, set[str]]]:
-    """Resolve feature_bundles.yaml against available columns and registered features.
-
-    A bundle is shown when a candidate column is either already available in the
-    current feature view/model config or exists in feature_registry.yaml. This
-    lets Model Lab experiment with newly registered features before the upstream
-    feature-view builder has been fully migrated.
-    """
-
     available_set = set(available)
     registry_defined = _registry_defined_features()
     registry = _load_feature_bundle_registry()
@@ -119,8 +105,6 @@ def _registry_bundle_map(available: list[str]) -> tuple[dict[str, list[str]], di
 
 
 def _model_lab_bundle_map(available: list[str]) -> tuple[dict[str, list[str]], dict[str, str], dict[str, set[str]]]:
-    """Return registry-defined bundles plus legacy inferred bundles as fallback."""
-
     registry_bundles, registry_labels, availability = _registry_bundle_map(available)
     legacy_bundles = mlw._bundle_map(available)
 
@@ -161,28 +145,18 @@ def _inject_feature_selector_css() -> None:
             color: #ffffff !important;
             box-shadow: 0 0 0 1px rgba(59,130,246,.22) inset !important;
         }
-
         [data-testid="stMultiSelect"] [data-baseweb="tag"] * {
             color: #ffffff !important;
             fill: #ffffff !important;
             opacity: 1 !important;
         }
-
-        [data-testid="stMultiSelect"] input {
-            background: transparent !important;
-            background-color: transparent !important;
-            color: #ffffff !important;
-            caret-color: #ffffff !important;
-            box-shadow: none !important;
-        }
-
+        [data-testid="stMultiSelect"] input,
         [data-testid="stMultiSelect"] [data-baseweb="input"],
         [data-testid="stMultiSelect"] [data-baseweb="input"] > div {
             background: transparent !important;
             background-color: transparent !important;
             box-shadow: none !important;
         }
-
         [data-baseweb="popover"],
         [data-baseweb="popover"] > div,
         [data-baseweb="popover"] [data-baseweb="menu"],
@@ -191,7 +165,6 @@ def _inject_feature_selector_css() -> None:
             background-color: rgba(7,16,28,.98) !important;
             color: #ffffff !important;
         }
-
         [data-baseweb="popover"] [role="option"],
         [data-baseweb="popover"] [role="option"] *,
         [data-baseweb="popover"] li,
@@ -200,24 +173,11 @@ def _inject_feature_selector_css() -> None:
             background-color: rgba(7,16,28,.98) !important;
             opacity: 1 !important;
         }
-
-        [data-baseweb="popover"] [role="option"]:hover,
-        [data-baseweb="popover"] [role="option"]:hover *,
-        [data-baseweb="popover"] [role="option"][aria-selected="true"],
-        [data-baseweb="popover"] [role="option"][aria-selected="true"] *,
-        [data-baseweb="popover"] [aria-selected="true"],
-        [data-baseweb="popover"] [aria-selected="true"] * {
-            background: rgba(17,31,49,.98) !important;
-            background-color: rgba(17,31,49,.98) !important;
-            color: #ffffff !important;
-        }
-
         details[data-testid="stExpander"] summary,
         details[data-testid="stExpander"] summary * {
             color: #f8fafc !important;
             opacity: 1 !important;
         }
-
         details[data-testid="stExpander"] {
             background: linear-gradient(180deg, rgba(9,19,32,.95), rgba(7,16,28,.98)) !important;
             border: 1px solid rgba(51,75,108,.95) !important;
