@@ -28,6 +28,7 @@ import joblib
 import pandas as pd
 import yaml
 
+from pipeline.features.registry_feature_builder import apply_registry_feature_definitions
 from pipeline.training.calibration import calibrate_model, predict_positive_class_probability
 from pipeline.training.feature_selection import (
     load_model_config,
@@ -163,11 +164,14 @@ def parse_args() -> argparse.Namespace:
 
 
 def load_training_feature_dataframe(config: dict[str, Any]) -> pd.DataFrame:
-    """Load feature dataframe for the configured model.
+    """Load feature dataframe and materialize selected registry-defined features.
 
-    Current implementation supports the existing single rolling feature warehouse.
-    The config is already prepared for future multi-source expansion.
+    Training may be launched before a feature-view artifact has been rebuilt.
+    To keep Model Lab experiments runnable, selected feature columns that are
+    defined in ``feature_registry.yaml`` are materialized in-memory before the
+    feature contract is validated.
     """
+
     data_config = config.get("data", {})
     path = data_config.get("rolling_features_path")
     if not path:
@@ -177,7 +181,29 @@ def load_training_feature_dataframe(config: dict[str, Any]) -> pd.DataFrame:
     if not feature_path.exists():
         raise FileNotFoundError(f"Feature warehouse not found: {feature_path}")
 
-    return pd.read_parquet(feature_path)
+    feature_df = pd.read_parquet(feature_path)
+    selected_features = (config.get("features") or {}).get("feature_columns") or []
+    build_result = apply_registry_feature_definitions(
+        feature_df,
+        selected_features=selected_features,
+        allowed_statuses={"active", "draft"},
+        overwrite_existing=True,
+    )
+
+    if build_result.generated_columns:
+        print(
+            "Registry features materialized: "
+            f"{len(build_result.generated_columns)} ({build_result.generated_columns})"
+        )
+    selected_missing = {
+        feature_id: missing
+        for feature_id, missing in build_result.missing_inputs.items()
+        if feature_id in set(str(item) for item in selected_features)
+    }
+    if selected_missing:
+        print(f"Registry features with missing inputs: {selected_missing}")
+
+    return build_result.dataframe
 
 
 def maybe_apply_symmetry(
