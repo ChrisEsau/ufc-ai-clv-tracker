@@ -13,10 +13,10 @@ from pathlib import Path
 from typing import Any, Iterable
 
 import pandas as pd
-import yaml
 
 from pipeline.features.formula_engine import compute_formula_feature
 from pipeline.features.transform_engine import load_transform_plugins
+from utils.feature_registry import load_feature_registry
 
 DEFAULT_FEATURE_REGISTRY_PATH = "configs/features/feature_registry.yaml"
 DEFAULT_TRANSFORM_REGISTRY_PATH = "configs/features/transform_registry.yaml"
@@ -41,27 +41,6 @@ def apply_registry_feature_definitions(
     allowed_statuses: Iterable[str] | None = None,
     overwrite_existing: bool = True,
 ) -> RegistryFeatureBuildResult:
-    """Apply feature definitions from ``feature_registry.yaml`` to a dataframe.
-
-    Parameters
-    ----------
-    df:
-        Input feature dataframe.
-    registry_path:
-        Path to the canonical feature registry.
-    transform_registry_path:
-        Path to the transform plugin registry.
-    selected_features:
-        Optional set of feature IDs/output columns to build. When omitted, all
-        buildable registry features with an allowed status are considered.
-    allowed_statuses:
-        Feature statuses allowed to materialize. Defaults to active and draft so
-        Model Lab experiments can train before promotion.
-    overwrite_existing:
-        If true, registry definitions may overwrite an existing column of the
-        same output name. This keeps definitions authoritative during migration.
-    """
-
     registry = load_feature_registry(registry_path)
     definitions = registry.get("feature_definitions", {}) or {}
     requested = {str(item) for item in selected_features or [] if str(item).strip()}
@@ -149,11 +128,7 @@ def _apply_transform_feature(
     series = plugin.apply(
         pd.to_numeric(out[red_col], errors="coerce"),
         pd.to_numeric(out[blue_col], errors="coerce"),
-        {
-            "feature_id": feature_id,
-            "output_column": output_column,
-            "definition": definition,
-        },
+        {"feature_id": feature_id, "output_column": output_column, "definition": definition},
     )
     return {"status": "generated", "series": series}
 
@@ -176,19 +151,9 @@ def _apply_formula_feature(
 
     try:
         series = compute_formula_feature(out, formula)
-    except Exception as exc:  # noqa: BLE001 - report definition-level failure clearly
+    except Exception as exc:  # noqa: BLE001
         return {"status": "skipped", "reason": f"formula failed: {exc}"}
     return {"status": "generated", "series": series}
-
-
-def load_feature_registry(path: str | Path = DEFAULT_FEATURE_REGISTRY_PATH) -> dict[str, Any]:
-    path = Path(path)
-    if not path.exists():
-        raise FileNotFoundError(f"Feature registry not found: {path}")
-    payload = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    if not isinstance(payload, dict):
-        raise ValueError(f"Feature registry must be a dictionary: {path}")
-    return payload
 
 
 def dedupe_preserve_order(values: Iterable[str]) -> list[str]:
