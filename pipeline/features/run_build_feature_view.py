@@ -28,7 +28,7 @@ from ufc_feature_engineering import add_v5_engineered_features, get_engineered_f
 
 
 DEFAULT_CONFIG_PATH = "configs/feature_views/moneyline_base.yaml"
-DEFAULT_MODEL_LAB_FEATURE_REGISTRY = "configs/features/model_lab_feature_registry.yaml"
+DEFAULT_MODEL_LAB_FEATURE_REGISTRY = "configs/features/feature_registry.yaml"
 SUPPORTED_VIEW_FAMILIES = {"moneyline", "prop"}
 SUPPORTED_PROP_MARKETS = {"goes_distance"}
 
@@ -147,9 +147,6 @@ def build_feature_view_from_config(config_path: str | Path = DEFAULT_CONFIG_PATH
     fighter_state_history_df = pd.read_parquet(fighter_state_history_path)
     print(f"State shape       : {fighter_state_history_df.shape}")
 
-    # Current reusable base-state join. Moneyline remains the canonical validated
-    # view; the first prop view reuses the same point-in-time fighter-state join
-    # and then adds prop-specific labels/validation.
     feature_view_df = build_moneyline_feature_view(
         prepared_fights_df=prepared_df,
         fighter_state_history_df=fighter_state_history_df,
@@ -201,8 +198,8 @@ def apply_model_lab_formula_features(*, feature_view_df: pd.DataFrame, config: d
     Supported config keys under ``model_lab_formula_features``:
 
     enabled: true
-    registry_path: configs/features/model_lab_feature_registry.yaml
-    bundles: [striking]
+    registry_path: configs/features/feature_registry.yaml
+    bundles: [custom_formula_features]
     features: [striking_pressure_score]
     statuses: [active]
     """
@@ -215,11 +212,11 @@ def apply_model_lab_formula_features(*, feature_view_df: pd.DataFrame, config: d
         formula_config.get("registry_path") or DEFAULT_MODEL_LAB_FEATURE_REGISTRY
     )
     if not registry_path.exists():
-        raise FileNotFoundError(f"Model Lab feature registry not found: {registry_path}")
+        raise FileNotFoundError(f"Feature registry not found: {registry_path}")
 
     registry = yaml.safe_load(registry_path.read_text(encoding="utf-8")) or {}
     if not isinstance(registry, dict):
-        raise ValueError(f"Model Lab feature registry must be a dictionary: {registry_path}")
+        raise ValueError(f"Feature registry must be a dictionary: {registry_path}")
 
     before_columns = set(feature_view_df.columns)
     output_df = apply_formula_features(
