@@ -1,0 +1,46 @@
+model_id: this_is_a_test
+model_family: moneyline
+artifact_name: this_is_a_test
+algorithm: xgboost
+config_path: configs/models/this_is_a_test.yaml
+trained_at_utc: '2026-06-15T19:25:16.954391+00:00'
+data:
+  rolling_features_path: data/features/moneyline_feature_view.parquet
+  target_column: target
+  date_column: date
+split:
+  mode: train_calibration_test
+  train_end_date: '2022-12-31'
+  calibration_end_date: '2023-12-31'
+  train_rows: 13626
+  calibration_rows: 1008
+  test_rows: 2336
+features:
+  feature_count: 1
+  expected_feature_count: 1
+symmetry:
+  enabled: true
+  mode: flip_all
+calibration:
+  enabled: true
+  method: isotonic
+  calibration_rows: 1008
+params:
+  n_estimators: 500
+  max_depth: 4
+  learning_rate: 0.03
+  subsample: 0.8
+  colsample_bytree: 0.8
+  random_state: 42
+  eval_metric: logloss
+metrics:
+  accuracy: 0.5380993150684932
+  log_loss: 0.6961333964654648
+  roc_auc: 0.5419652491086507
+  brier_score: 0.2514075116030222
+  threshold: 0.51
+  positive_pick_rate_percent: 42.08047945205479
+  negative_pick_rate_percent: 57.919520547945204
+  actual_positive_rate_percent: 50.0
+  row_count: 2336
+best_threshold: 0.51
