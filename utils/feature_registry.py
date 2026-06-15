@@ -8,7 +8,7 @@ from typing import Any
 
 import yaml
 
-FEATURE_REGISTRY_PATH = Path("configs/features/model_lab_feature_registry.yaml")
+FEATURE_REGISTRY_PATH = Path("configs/features/feature_registry.yaml")
 
 FEATURE_TYPES = ["transform", "formula", "pipeline", "base_column"]
 FEATURE_STATUSES = ["draft", "active", "planned", "archived"]
@@ -55,12 +55,29 @@ def dump_yaml(payload: dict[str, Any]) -> str:
     return yaml.safe_dump(payload, sort_keys=False, allow_unicode=True)
 
 
+def _default_model_lab_feature_studio() -> dict[str, Any]:
+    return {
+        "rules": {
+            "dashboard_edits_definitions_only": True,
+            "pipeline_computes_feature_values": True,
+            "bundles_contain_features": True,
+            "features_define_build_method": True,
+            "target_columns_are_blocked": True,
+            "preserve_master_feature_families": True,
+            "preserve_current_moneyline_v5_features": True,
+        },
+        "allowed_formula_functions": sorted(ALLOWED_FORMULA_FUNCTIONS),
+        "features": {},
+        "bundles": {},
+    }
+
+
 def load_feature_registry(path: str | Path = FEATURE_REGISTRY_PATH) -> dict[str, Any]:
     registry = load_yaml(path)
-    registry.setdefault("registry_name", "ufc_model_lab_feature_registry")
+    registry.setdefault("registry_name", "ufc_master_feature_registry")
     registry.setdefault("version", 1)
-    registry.setdefault("status", "draft_contract")
-    studio = registry.setdefault("model_lab_feature_studio", {})
+    registry.setdefault("status", "initial_family_registry")
+    studio = registry.setdefault("model_lab_feature_studio", _default_model_lab_feature_studio())
     studio.setdefault("features", {})
     studio.setdefault("bundles", {})
     studio.setdefault("rules", {})
@@ -73,7 +90,7 @@ def save_feature_registry(registry: dict[str, Any], path: str | Path = FEATURE_R
 
 
 def studio_payload(registry: dict[str, Any]) -> dict[str, Any]:
-    return registry.setdefault("model_lab_feature_studio", {"features": {}, "bundles": {}})
+    return registry.setdefault("model_lab_feature_studio", _default_model_lab_feature_studio())
 
 
 def feature_map(registry: dict[str, Any]) -> dict[str, dict[str, Any]]:
