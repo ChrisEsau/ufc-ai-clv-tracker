@@ -139,6 +139,43 @@ def _render_betting_board_filters() -> None:
         st.session_state["bb_filter_bookmaker"] = "All Books"
     st.sidebar.selectbox("Bookmaker", bookmakers, key="bb_filter_bookmaker")
 
+    outcomes = _betting_outcomes()
+
+    model_modes = ["All"]
+    if not outcomes.empty and "model_registry_status" in outcomes.columns:
+        modes = sorted(
+            {
+                str(v).title()
+                for v in outcomes["model_registry_status"].dropna()
+                if str(v).strip()
+            }
+        )
+        model_modes.extend(modes)
+
+    st.sidebar.selectbox(
+        "Model Mode",
+        model_modes,
+        key="bb_filter_model_mode",
+    )
+
+    model_ids = ["All Models"]
+    if not outcomes.empty and "model_id" in outcomes.columns:
+        model_ids.extend(
+            sorted(
+                {
+                    str(v)
+                    for v in outcomes["model_id"].dropna()
+                    if str(v).strip()
+                }
+            )
+        )
+
+    st.sidebar.selectbox(
+        "Model ID",
+        model_ids,
+        key="bb_filter_model_id",
+    )
+    
     date_bounds = _betting_board_date_bounds()
     if date_bounds:
         st.sidebar.date_input("Date Range", value=date_bounds, key="bb_filter_date_range")
