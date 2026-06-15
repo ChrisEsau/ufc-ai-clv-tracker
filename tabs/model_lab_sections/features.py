@@ -31,7 +31,7 @@ def _render_summary(registry: dict[str, Any]) -> None:
     c3.metric("Formula", sum(1 for item in features.values() if item.get("type") == "formula"))
     c4.metric("Findings", len(findings))
 
-    st.caption("Bundles contain features. Features define whether they are transform, formula, pipeline, or base-column backed.")
+    st.caption("Feature Studio reads canonical feature definitions from feature_registry.yaml and bundles from feature_bundles.yaml.")
 
 
 def _render_validation(registry: dict[str, Any]) -> None:
@@ -47,7 +47,7 @@ def _render_feature_table(registry: dict[str, Any]) -> None:
     st.markdown("#### Feature Library")
     rows = fr.feature_rows(registry)
     if not rows:
-        st.info("No Model Lab feature definitions found yet.")
+        st.info("No canonical feature definitions found yet.")
         return
     st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
@@ -56,7 +56,7 @@ def _render_bundle_table(registry: dict[str, Any]) -> None:
     st.markdown("#### Bundle Library")
     rows = fr.bundle_rows(registry)
     if not rows:
-        st.info("No Model Lab bundle definitions found yet.")
+        st.info("No bundle definitions found in configs/features/feature_bundles.yaml.")
         return
     st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
@@ -138,61 +138,10 @@ def _render_feature_editor(registry: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
-def _render_bundle_editor(registry: dict[str, Any]) -> dict[str, Any] | None:
-    bundles = fr.bundle_map(registry)
-    choices = ["+ Create new bundle"] + sorted(bundles.keys())
-    selected = st.selectbox("Bundle", choices, key="mlab_feature_studio_bundle_select")
-    is_new = selected == "+ Create new bundle"
-    current = {} if is_new else bundles.get(selected, {})
-
-    default_id = "" if is_new else selected
-    bundle_id = fr.safe_feature_id(st.text_input("Bundle ID", value=default_id, key="mlab_bundle_id"))
-    label = st.text_input("Bundle Label", value=current.get("label", bundle_id), key="mlab_bundle_label")
-    status = st.selectbox(
-        "Bundle Status",
-        fr.FEATURE_STATUSES,
-        index=fr.FEATURE_STATUSES.index(current.get("status", "draft")) if current.get("status", "draft") in fr.FEATURE_STATUSES else 0,
-        key="mlab_bundle_status",
-    )
-    description = st.text_area("Bundle Description", value=current.get("description", ""), key="mlab_bundle_description")
-    selected_features = st.multiselect(
-        "Bundle Features",
-        _feature_options(registry),
-        default=[item for item in current.get("features", []) or [] if item in fr.feature_map(registry)],
-        key="mlab_bundle_features",
-    )
-
-    payload = {
-        "label": label or bundle_id,
-        "status": status,
-        "description": description,
-        "features": selected_features,
-    }
-
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        if st.button("Stage Bundle Change", use_container_width=True, key="mlab_stage_bundle"):
-            if not bundle_id:
-                st.error("Bundle ID is required.")
-                return None
-            updated = fr.upsert_bundle(registry, bundle_id, payload)
-            st.session_state["mlab_feature_registry_staged"] = updated
-            st.success(f"Staged bundle: {bundle_id}")
-            return updated
-    with c2:
-        if not is_new and st.button("Archive Bundle", use_container_width=True, key="mlab_archive_bundle"):
-            updated = fr.archive_bundle(registry, selected)
-            st.session_state["mlab_feature_registry_staged"] = updated
-            st.warning(f"Staged archive: {selected}")
-            return updated
-    with c3:
-        delete_enabled = not is_new and st.checkbox("Confirm delete bundle", key="mlab_confirm_delete_bundle")
-        if not is_new and st.button("Delete Bundle", disabled=not delete_enabled, use_container_width=True, key="mlab_delete_bundle"):
-            updated = fr.delete_bundle(registry, selected)
-            st.session_state["mlab_feature_registry_staged"] = updated
-            st.error(f"Staged delete: {selected}")
-            return updated
-    return None
+def _render_bundle_editor(registry: dict[str, Any]) -> None:
+    st.markdown("#### Bundle Registry")
+    st.caption("Bundles are separate from feature families and currently read from configs/features/feature_bundles.yaml. Editing remains disabled during the 10-feature registry test slice.")
+    _render_bundle_table(registry)
 
 
 def _render_save_controls(registry: dict[str, Any]) -> None:
@@ -202,7 +151,7 @@ def _render_save_controls(registry: dict[str, Any]) -> None:
     if staged:
         st.info("You have staged feature registry changes. Save to GitHub to persist them.")
     else:
-        st.caption("No staged changes.")
+        st.caption("No staged feature-definition changes.")
 
     c1, c2 = st.columns(2)
     with c1:
@@ -230,7 +179,7 @@ def render_features(
     existing_model_selector,
 ) -> None:
     st.markdown("## Features")
-    st.caption("Create formula, transform, pipeline, and base-column features. Then group them into bundles for model experiments.")
+    st.caption("Feature Studio is the UI over canonical feature definitions and separate bundle definitions.")
 
     loaded = fr.load_feature_registry()
     active_registry = st.session_state.get("mlab_feature_registry_staged") or loaded
@@ -241,7 +190,7 @@ def render_features(
     tab_library, tab_feature, tab_bundle, tab_yaml = st.tabs([
         "Library",
         "Feature Editor",
-        "Bundle Editor",
+        "Bundle Registry",
         "Registry YAML",
     ])
 
@@ -255,9 +204,7 @@ def render_features(
             active_registry = updated
 
     with tab_bundle:
-        updated = _render_bundle_editor(active_registry)
-        if updated is not None:
-            active_registry = updated
+        _render_bundle_editor(active_registry)
 
     with tab_yaml:
         st.code(fr.dump_yaml(active_registry), language="yaml")
