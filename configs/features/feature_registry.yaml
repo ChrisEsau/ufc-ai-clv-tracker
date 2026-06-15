@@ -195,10 +195,13 @@ feature_definitions:
     status: draft
     family: custom
     description: Test feature to check model workflow
-    inputs: []
+    inputs:
+    - r_pre_sapm
+    - b_pre_sapm
     leakage_safe: true
     transform: absolute_gap
-    source_columns: []
+    source_columns:
+    - testfeature_gap
 feature_layers:
   metadata:
     description: Non-model identifiers, event context, fight context, and join keys.
