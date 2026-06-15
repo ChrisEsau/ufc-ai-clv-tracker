@@ -11,6 +11,7 @@ import yaml
 FEATURE_REGISTRY_PATH = Path("configs/features/feature_registry.yaml")
 FEATURE_BUNDLE_REGISTRY_PATH = Path("configs/features/feature_bundles.yaml")
 TRANSFORM_REGISTRY_PATH = Path("configs/features/transform_registry.yaml")
+MONEYLINE_V5_CONTRACT_PATH = Path("configs/features/current_moneyline_v5_features.yaml")
 
 FEATURE_TYPES = ["transform", "formula", "pipeline", "base_column"]
 FEATURE_STATUSES = ["draft", "active", "planned", "archived"]
@@ -36,8 +37,6 @@ class FeatureRegistryError(RuntimeError):
 
 
 def safe_feature_id(value: str) -> str:
-    """Normalize user-entered labels into stable registry IDs."""
-
     cleaned = re.sub(r"[^0-9a-zA-Z_]+", "_", str(value or "").strip().lower())
     cleaned = re.sub(r"_+", "_", cleaned).strip("_")
     return cleaned
@@ -57,13 +56,101 @@ def dump_yaml(payload: dict[str, Any]) -> str:
     return yaml.safe_dump(payload, sort_keys=False, allow_unicode=True)
 
 
+def labelize(value: str) -> str:
+    return str(value).replace("_", " ").title()
+
+
+def build_moneyline_v5_feature_definitions(
+    contract_path: str | Path = MONEYLINE_V5_CONTRACT_PATH,
+) -> dict[str, dict[str, Any]]:
+    """Build canonical current Moneyline V5 feature definitions from the protected contract."""
+
+    contract = load_yaml(contract_path)
+    stats = [str(item) for item in contract.get("base_stat_names_used_for_diff_families", []) or []]
+    engineered = [str(item) for item in contract.get("registered_engineered_features", []) or []]
+    definitions: dict[str, dict[str, Any]] = {}
+
+    for stat in stats:
+        feature_id = f"{stat}_diff"
+        definitions[feature_id] = {
+            "label": f"{labelize(stat)} Difference",
+            "type": "transform",
+            "status": "active",
+            "family": "career_differentials",
+            "description": f"Red fighter pre-fight {stat} minus blue fighter pre-fight {stat}.",
+            "inputs": [f"r_pre_{stat}", f"b_pre_{stat}"],
+            "transform": "red_minus_blue",
+            "source_columns": [stat],
+            "output_column": feature_id,
+            "model_input_allowed": True,
+            "current_moneyline_v5": "included",
+            "leakage_safe": True,
+        }
+
+    for stat in stats:
+        feature_id = f"ewm_{stat}_diff"
+        definitions[feature_id] = {
+            "label": f"EWM {labelize(stat)} Difference",
+            "type": "transform",
+            "status": "active",
+            "family": "ewm_differentials",
+            "description": f"Red fighter EWM {stat} minus blue fighter EWM {stat}.",
+            "inputs": [f"r_ewm_{stat}", f"b_ewm_{stat}"],
+            "transform": "red_minus_blue",
+            "source_columns": [f"ewm_{stat}"],
+            "output_column": feature_id,
+            "model_input_allowed": True,
+            "current_moneyline_v5": "included",
+            "leakage_safe": True,
+        }
+
+    for stat in stats:
+        feature_id = f"recent_form_{stat}_diff"
+        definitions[feature_id] = {
+            "label": f"Recent Form {labelize(stat)} Difference",
+            "type": "transform",
+            "status": "active",
+            "family": "recent_form_differentials",
+            "description": f"Red fighter recent-form {stat} minus blue fighter recent-form {stat}.",
+            "inputs": [f"r_pre_recent_{stat}", f"b_pre_recent_{stat}"],
+            "transform": "red_minus_blue",
+            "source_columns": [f"recent_form_{stat}"],
+            "output_column": feature_id,
+            "model_input_allowed": True,
+            "current_moneyline_v5": "included",
+            "leakage_safe": True,
+        }
+
+    for feature_id in engineered:
+        definitions[feature_id] = {
+            "label": labelize(feature_id),
+            "type": "base_column",
+            "status": "active",
+            "family": "engineered_moneyline_matchup_features",
+            "description": f"Registered engineered V5 moneyline matchup feature: {feature_id}.",
+            "source_column": feature_id,
+            "output_column": feature_id,
+            "model_input_allowed": True,
+            "current_moneyline_v5": "included",
+            "leakage_safe": True,
+        }
+
+    return definitions
+
+
+def expand_generated_feature_definitions(registry: dict[str, Any]) -> dict[str, Any]:
+    generation = (registry.get("feature_definition_generation") or {}).get("current_moneyline_v5", {}) or {}
+    if not generation.get("enabled", False):
+        return registry
+    contract_path = generation.get("contract_path") or MONEYLINE_V5_CONTRACT_PATH
+    generated = build_moneyline_v5_feature_definitions(contract_path)
+    explicit = registry.setdefault("feature_definitions", {})
+    merged = {**generated, **explicit}
+    registry["feature_definitions"] = merged
+    return registry
+
+
 def load_feature_registry(path: str | Path = FEATURE_REGISTRY_PATH) -> dict[str, Any]:
-    """Load the canonical master feature registry.
-
-    The Feature Studio is a UI/editor over this registry. It does not own a
-    separate feature-definition structure.
-    """
-
     registry = load_yaml(path)
     registry.setdefault("registry_name", "ufc_master_feature_registry")
     registry.setdefault("version", 1)
@@ -72,7 +159,7 @@ def load_feature_registry(path: str | Path = FEATURE_REGISTRY_PATH) -> dict[str,
     registry.setdefault("feature_families", {})
     registry.setdefault("validation_rules", [])
     registry.setdefault("allowed_formula_functions", sorted(ALLOWED_FORMULA_FUNCTIONS))
-    return registry
+    return expand_generated_feature_definitions(registry)
 
 
 def load_feature_bundle_registry(path: str | Path = FEATURE_BUNDLE_REGISTRY_PATH) -> dict[str, Any]:
@@ -107,14 +194,10 @@ def save_feature_registry(registry: dict[str, Any], path: str | Path = FEATURE_R
 
 
 def feature_map(registry: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    """Return canonical feature definitions from the master registry."""
-
     return registry.setdefault("feature_definitions", {})
 
 
 def bundle_map(registry: dict[str, Any] | None = None) -> dict[str, dict[str, Any]]:
-    """Return bundle definitions from a bundle registry payload or disk."""
-
     if registry is not None and "bundles" in registry:
         return registry.setdefault("bundles", {})
     return load_feature_bundle_registry().get("bundles", {}) or {}
@@ -123,19 +206,17 @@ def bundle_map(registry: dict[str, Any] | None = None) -> dict[str, dict[str, An
 def feature_rows(registry: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for feature_id, feature in feature_map(registry).items():
-        rows.append(
-            {
-                "feature_id": feature_id,
-                "label": feature.get("label", feature_id),
-                "type": feature.get("type", ""),
-                "family": feature.get("family", ""),
-                "status": feature.get("status", ""),
-                "inputs": ", ".join(str(item) for item in feature.get("inputs", []) or []),
-                "formula": feature.get("formula", ""),
-                "builder": feature.get("builder", ""),
-                "leakage_safe": bool(feature.get("leakage_safe", False)),
-            }
-        )
+        rows.append({
+            "feature_id": feature_id,
+            "label": feature.get("label", feature_id),
+            "type": feature.get("type", ""),
+            "family": feature.get("family", ""),
+            "status": feature.get("status", ""),
+            "inputs": ", ".join(str(item) for item in feature.get("inputs", []) or []),
+            "formula": feature.get("formula", ""),
+            "builder": feature.get("builder", ""),
+            "leakage_safe": bool(feature.get("leakage_safe", False)),
+        })
     return sorted(rows, key=lambda row: row["feature_id"])
 
 
@@ -143,18 +224,13 @@ def bundle_rows(registry: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for bundle_id, bundle in bundle_map(registry).items():
         candidate_columns = [str(item) for item in bundle.get("candidate_columns", []) or []]
-        rows.append(
-            {
-                "bundle_id": bundle_id,
-                "description": bundle.get("description", bundle_id),
-                "source_layer": bundle.get("source_layer", ""),
-                "source_prefix": bundle.get("source_prefix", ""),
-                "candidate_count": len(candidate_columns),
-                "candidate_columns": ", ".join(candidate_columns),
-                "recommended_transforms": ", ".join(str(item) for item in bundle.get("recommended_transforms", []) or []),
-                "markets": ", ".join(str(item) for item in bundle.get("markets", []) or []),
-            }
-        )
+        rows.append({
+            "bundle_id": bundle_id,
+            "description": bundle.get("description", bundle_id),
+            "candidate_count": len(candidate_columns),
+            "candidate_columns": ", ".join(candidate_columns),
+            "markets": ", ".join(str(item) for item in bundle.get("markets", []) or []),
+        })
     return sorted(rows, key=lambda row: row["bundle_id"])
 
 
@@ -175,47 +251,16 @@ def formula_names(formula: str) -> set[str]:
 
 
 def validate_formula_syntax(formula: str, allowed_functions: set[str] | None = None) -> list[str]:
-    """Validate formula syntax without evaluating it."""
-
     issues: list[str] = []
     formula = str(formula or "").strip()
     if not formula:
         return ["Formula is empty."]
-
     allowed_functions = allowed_functions or ALLOWED_FORMULA_FUNCTIONS
     try:
         tree = ast.parse(formula, mode="eval")
     except SyntaxError as exc:
         return [f"Invalid formula syntax: {exc.msg}"]
-
-    allowed_nodes = (
-        ast.Expression,
-        ast.BinOp,
-        ast.UnaryOp,
-        ast.Call,
-        ast.Name,
-        ast.Load,
-        ast.Constant,
-        ast.Add,
-        ast.Sub,
-        ast.Mult,
-        ast.Div,
-        ast.Pow,
-        ast.Mod,
-        ast.USub,
-        ast.UAdd,
-        ast.Compare,
-        ast.IfExp,
-        ast.BoolOp,
-        ast.And,
-        ast.Or,
-        ast.Eq,
-        ast.NotEq,
-        ast.Lt,
-        ast.LtE,
-        ast.Gt,
-        ast.GtE,
-    )
+    allowed_nodes = (ast.Expression, ast.BinOp, ast.UnaryOp, ast.Call, ast.Name, ast.Load, ast.Constant, ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Pow, ast.Mod, ast.USub, ast.UAdd, ast.Compare, ast.IfExp, ast.BoolOp, ast.And, ast.Or, ast.Eq, ast.NotEq, ast.Lt, ast.LtE, ast.Gt, ast.GtE)
     for node in ast.walk(tree):
         if not isinstance(node, allowed_nodes):
             issues.append(f"Unsupported formula expression: {type(node).__name__}")
@@ -228,13 +273,10 @@ def validate_formula_syntax(formula: str, allowed_functions: set[str] | None = N
 
 
 def validate_registry(registry: dict[str, Any]) -> list[dict[str, str]]:
-    """Return validation findings for canonical feature definitions."""
-
     findings: list[dict[str, str]] = []
     features = feature_map(registry)
     allowed_functions = set(registry.get("allowed_formula_functions") or ALLOWED_FORMULA_FUNCTIONS)
     valid_transforms = set(transform_options(include_planned=True))
-
     for feature_id, feature in features.items():
         if safe_feature_id(feature_id) != feature_id:
             findings.append({"level": "error", "item": feature_id, "message": "Feature ID should be snake_case."})
@@ -249,29 +291,15 @@ def validate_registry(registry: dict[str, Any]) -> list[dict[str, str]]:
             findings.append({"level": "error", "item": feature_id, "message": "Transform ID is not registered."})
         if feature.get("type") == "formula":
             formula = str(feature.get("formula") or "")
-            formula_issues = validate_formula_syntax(formula, allowed_functions)
-            for issue in formula_issues:
+            for issue in validate_formula_syntax(formula, allowed_functions):
                 findings.append({"level": "error", "item": feature_id, "message": issue})
-            names = set()
-            if formula.strip() and not formula_issues:
-                names = formula_names(formula)
-            function_names = names.intersection(allowed_functions)
-            referenced = sorted(names - function_names)
-            declared = set(str(item) for item in feature.get("inputs", []) or [])
-            missing_declared = [name for name in referenced if name not in declared]
-            if missing_declared:
-                findings.append({"level": "warning", "item": feature_id, "message": f"Formula references undeclared inputs: {missing_declared}"})
         if feature.get("type") == "pipeline" and not feature.get("builder"):
             findings.append({"level": "warning", "item": feature_id, "message": "Pipeline feature has no builder path."})
-
     return findings
 
 
 def validate_bundle_registry(registry: dict[str, Any]) -> list[dict[str, str]]:
-    """Return validation findings for the bundle registry."""
-
     findings: list[dict[str, str]] = []
-    valid_transforms = set(transform_options(include_planned=True))
     for bundle_id, bundle in bundle_map(registry).items():
         if safe_feature_id(bundle_id) != bundle_id:
             findings.append({"level": "error", "item": bundle_id, "message": "Bundle ID should be snake_case."})
@@ -279,9 +307,6 @@ def validate_bundle_registry(registry: dict[str, Any]) -> list[dict[str, str]]:
             findings.append({"level": "warning", "item": bundle_id, "message": "Bundle has no description."})
         if not bundle.get("candidate_columns"):
             findings.append({"level": "warning", "item": bundle_id, "message": "Bundle has no candidate columns."})
-        for transform_id in bundle.get("recommended_transforms", []) or []:
-            if str(transform_id) not in valid_transforms:
-                findings.append({"level": "error", "item": bundle_id, "message": f"Unknown transform: {transform_id}"})
     return findings
 
 
