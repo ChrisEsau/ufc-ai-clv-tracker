@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
-import streamlit as st
-
 from tabs import model_lab as legacy_model_lab
 from tabs.model_lab_sections.actions import render_actions
 from tabs.model_lab_sections.backtest_enhanced import render_backtest
 from tabs.model_lab_sections.comparison import render_comparison
+from tabs.model_lab_sections.features import render_features
 from tabs.model_lab_sections.overview import render_overview
 from tabs.model_lab_sections.performance import render_performance
 from tabs.model_lab_sections.styles import inject_model_lab_control_css
@@ -33,11 +32,6 @@ def _select_existing_model_with_key(key: str):
         )
 
     return selector
-
-
-def _render_features() -> None:
-    st.markdown("## Features")
-    st.info("Feature and bundle creation workspace coming soon. Model-level bundle selection stays in Configuration.")
 
 
 def render_model_lab() -> None:
@@ -71,7 +65,12 @@ def render_model_lab() -> None:
         elif workspace == "Configuration":
             legacy_model_lab._render_configuration(registry, rows, row_by_id)
         elif workspace == "Features":
-            _render_features()
+            render_features(
+                registry,
+                rows,
+                row_by_id,
+                existing_model_selector=_select_existing_model_with_key("mlab_features_model"),
+            )
         elif workspace == "Performance":
             render_performance(
                 registry,
