@@ -39,6 +39,17 @@ include:
     function: ufc_feature_engineering.add_v5_engineered_features
     registry_function: ufc_feature_engineering.get_engineered_feature_list
 
+# Optional Model Lab formula feature layer.
+# Keep disabled for canonical parity builds. Enable in an experiment feature-view
+# config and select bundles/features from configs/features/model_lab_feature_registry.yaml.
+model_lab_formula_features:
+  enabled: false
+  registry_path: configs/features/model_lab_feature_registry.yaml
+  bundles: []
+  features: []
+  statuses:
+    - active
+
 contracts:
   expected_rows_match_prepared_fights: true
   require_no_missing_state_matches: true
@@ -64,4 +75,5 @@ notes:
   - This config mirrors the current hardcoded moneyline feature view.
   - The first generic feature-view builder should reproduce this output before replacing the current runner.
   - Do not duplicate the 124 model feature list here; that remains in the model config.
+  - Formula features are opt-in and should be enabled in experiment configs, not canonical parity configs.
   - Future prop views should reuse this config shape with market-specific labels and feature families.
