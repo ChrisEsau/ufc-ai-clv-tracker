@@ -948,24 +948,6 @@ def render_bankroll():
     _render_header(ledger)
     _render_kpis(summary, settings)
 
-    action_add, action_settle, action_edit, action_risk = st.columns(4)
-    with action_add:
-        if st.button("Add Bet", use_container_width=True, key="bankroll_action_add"):
-            st.session_state["bankroll_dialog"] = "add"
-            st.rerun()
-    with action_settle:
-        if st.button("Settle Bet", use_container_width=True, key="bankroll_action_settle"):
-            st.session_state["bankroll_dialog"] = "settle"
-            st.rerun()
-    with action_edit:
-        if st.button("Edit Bet", use_container_width=True, key="bankroll_action_edit"):
-            st.session_state["bankroll_dialog"] = "edit"
-            st.rerun()
-    with action_risk:
-        if st.button("Risk Settings", use_container_width=True, key="bankroll_action_risk"):
-            st.session_state["bankroll_dialog"] = "risk"
-            st.rerun()
-
     top_left, top_right = st.columns([1.2, 1])
     with top_left:
         st.html('<div class="bankroll-card"><div class="bankroll-card-title">Bankroll Over Time</div><div class="bankroll-chart-wrap">')
