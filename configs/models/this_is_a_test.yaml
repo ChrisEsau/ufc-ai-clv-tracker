@@ -6,14 +6,9 @@ feature_sources:
 - moneyline_feature_view
 features:
   selection_mode: explicit
-  expected_feature_count: 1
+  expected_feature_count: 11
   allow_unsafe_features: false
   feature_columns:
-  - testfeature
-  selected_bundles:
-  - test_bundle
-  include_features: []
-  exclude_features:
   - elo_diff
   - fights_diff
   - kd_absorbed_avg_diff
@@ -22,8 +17,13 @@ features:
   - sapm_diff
   - splm_diff
   - str_acc_diff
+  - testfeature
   - win_pct_diff
   - wins_diff
+  selected_bundles:
+  - test_bundle
+  include_features: []
+  exclude_features: []
 data:
   rolling_features_path: data/features/moneyline_feature_view.parquet
   target_column: target
