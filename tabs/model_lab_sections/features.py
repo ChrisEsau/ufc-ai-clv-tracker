@@ -112,7 +112,7 @@ def _render_feature_editor(registry: dict[str, Any]) -> dict[str, Any] | None:
     else:
         payload["source_column"] = st.text_input("Source column", value=current.get("source_column", ""), key="mlab_feature_source_column")
 
-    c1, c2 = st.columns(2)
+    c1, c2, c3 = st.columns(3)
     with c1:
         if st.button("Stage Feature Change", use_container_width=True, key="mlab_stage_feature"):
             if not feature_id:
@@ -127,6 +127,13 @@ def _render_feature_editor(registry: dict[str, Any]) -> dict[str, Any] | None:
             updated = fr.archive_feature(registry, selected)
             st.session_state["mlab_feature_registry_staged"] = updated
             st.warning(f"Staged archive: {selected}")
+            return updated
+    with c3:
+        delete_enabled = not is_new and st.checkbox("Confirm delete feature", key="mlab_confirm_delete_feature")
+        if not is_new and st.button("Delete Feature", disabled=not delete_enabled, use_container_width=True, key="mlab_delete_feature"):
+            updated = fr.delete_feature(registry, selected)
+            st.session_state["mlab_feature_registry_staged"] = updated
+            st.error(f"Staged delete: {selected}")
             return updated
     return None
 
@@ -162,7 +169,7 @@ def _render_bundle_editor(registry: dict[str, Any]) -> dict[str, Any] | None:
         "features": selected_features,
     }
 
-    c1, c2 = st.columns(2)
+    c1, c2, c3 = st.columns(3)
     with c1:
         if st.button("Stage Bundle Change", use_container_width=True, key="mlab_stage_bundle"):
             if not bundle_id:
@@ -177,6 +184,13 @@ def _render_bundle_editor(registry: dict[str, Any]) -> dict[str, Any] | None:
             updated = fr.archive_bundle(registry, selected)
             st.session_state["mlab_feature_registry_staged"] = updated
             st.warning(f"Staged archive: {selected}")
+            return updated
+    with c3:
+        delete_enabled = not is_new and st.checkbox("Confirm delete bundle", key="mlab_confirm_delete_bundle")
+        if not is_new and st.button("Delete Bundle", disabled=not delete_enabled, use_container_width=True, key="mlab_delete_bundle"):
+            updated = fr.delete_bundle(registry, selected)
+            st.session_state["mlab_feature_registry_staged"] = updated
+            st.error(f"Staged delete: {selected}")
             return updated
     return None
 
