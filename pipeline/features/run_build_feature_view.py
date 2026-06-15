@@ -21,12 +21,14 @@ import pandas as pd
 import yaml
 
 from pipeline.common.paths import ensure_data_dirs
+from pipeline.features.formula_engine import apply_formula_features
 from pipeline.features.run_build_rolling_features import prepare_master_for_rolling
 from pipeline.features.views.moneyline import build_moneyline_feature_view
 from ufc_feature_engineering import add_v5_engineered_features, get_engineered_feature_list
 
 
 DEFAULT_CONFIG_PATH = "configs/feature_views/moneyline_base.yaml"
+DEFAULT_MODEL_LAB_FEATURE_REGISTRY = "configs/features/model_lab_feature_registry.yaml"
 SUPPORTED_VIEW_FAMILIES = {"moneyline", "prop"}
 SUPPORTED_PROP_MARKETS = {"goes_distance"}
 
@@ -169,6 +171,11 @@ def build_feature_view_from_config(config_path: str | Path = DEFAULT_CONFIG_PATH
             raise ValueError(f"Missing engineered features: {missing_engineered}")
         print(f"Engineered features: {len(engineered_features)}")
 
+    feature_view_df = apply_model_lab_formula_features(
+        feature_view_df=feature_view_df,
+        config=config,
+    )
+
     validate_feature_view_output(
         feature_view_df=feature_view_df,
         prepared_df=prepared_df,
@@ -183,6 +190,36 @@ def build_feature_view_from_config(config_path: str | Path = DEFAULT_CONFIG_PATH
     print("DONE")
 
     return feature_view_path
+
+
+def apply_model_lab_formula_features(*, feature_view_df: pd.DataFrame, config: dict[str, Any]) -> pd.DataFrame:
+    """Optionally apply dashboard-created formula features to a feature view.
+
+    This is intentionally opt-in so existing validated feature-view builds remain
+    unchanged until a config explicitly enables the Model Lab formula layer.
+    """
+
+    formula_config = config.get("model_lab_formula_features", {}) or {}
+    if not formula_config.get("enabled", False):
+        return feature_view_df
+
+    registry_path = Path(
+        formula_config.get("registry_path") or DEFAULT_MODEL_LAB_FEATURE_REGISTRY
+    )
+    if not registry_path.exists():
+        raise FileNotFoundError(f"Model Lab feature registry not found: {registry_path}")
+
+    registry = yaml.safe_load(registry_path.read_text(encoding="utf-8")) or {}
+    if not isinstance(registry, dict):
+        raise ValueError(f"Model Lab feature registry must be a dictionary: {registry_path}")
+
+    before_columns = set(feature_view_df.columns)
+    output_df = apply_formula_features(feature_view_df, registry)
+    added_columns = sorted(set(output_df.columns) - before_columns)
+    print(f"Model Lab formula features: {len(added_columns)}")
+    if added_columns:
+        print(f"Formula columns added: {added_columns}")
+    return output_df
 
 
 def add_prop_labels(*, feature_view_df: pd.DataFrame, config: dict[str, Any]) -> pd.DataFrame:
@@ -317,7 +354,6 @@ def validate_target_distribution(
             f"Target positive rate below minimum for {target_column}: "
             f"{positive_rate:.4f} < {float(min_positive_rate):.4f}"
         )
-
     if max_positive_rate is not None and positive_rate > float(max_positive_rate):
         raise ValueError(
             f"Target positive rate above maximum for {target_column}: "
