@@ -462,7 +462,7 @@ def render_betting_board():
     if outcomes.empty:
         st.warning(f"No betting outcomes found at `{BETTING_OUTCOMES_PATH}`. Run `python -m pipeline.betting.run_betting_outcomes_v2`.")
         return
-    _render_model_sidebar_filters(outcomes)
+    
     updated = None
     for col in ["betting_timestamp", "snapshot_timestamp", "prediction_timestamp"]:
         if col in outcomes.columns:
