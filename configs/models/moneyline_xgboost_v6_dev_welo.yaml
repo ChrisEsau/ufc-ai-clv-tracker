@@ -124,8 +124,8 @@ data:
   date_column: date
 split:
   mode: train_calibration_test
-  train_end_date: '2022-12-31'
-  calibration_end_date: '2023-12-31'
+  train_end_date: '2021-01-01'
+  calibration_end_date: '2024-01-01'
 symmetry:
   enabled: true
   mode: flip_all
