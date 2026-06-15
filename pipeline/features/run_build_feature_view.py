@@ -22,6 +22,7 @@ import yaml
 
 from pipeline.common.paths import ensure_data_dirs
 from pipeline.features.formula_engine import apply_formula_features
+from pipeline.features.registry_feature_builder import apply_registry_feature_definitions
 from pipeline.features.run_build_rolling_features import prepare_master_for_rolling
 from pipeline.features.views.moneyline import build_moneyline_feature_view
 from ufc_feature_engineering import add_v5_engineered_features, get_engineered_feature_list
@@ -167,6 +168,20 @@ def build_feature_view_from_config(config_path: str | Path = DEFAULT_CONFIG_PATH
         if missing_engineered:
             raise ValueError(f"Missing engineered features: {missing_engineered}")
         print(f"Engineered features: {len(engineered_features)}")
+
+    registry_result = apply_registry_feature_definitions(
+        feature_view_df,
+        allowed_statuses={"active", "draft"},
+        overwrite_existing=True,
+    )
+    feature_view_df = registry_result.dataframe
+    if registry_result.generated_columns:
+        print(
+            "Registry features materialized: "
+            f"{len(registry_result.generated_columns)} ({registry_result.generated_columns})"
+        )
+    if registry_result.missing_inputs:
+        print(f"Registry features skipped for missing inputs: {registry_result.missing_inputs}")
 
     feature_view_df = apply_model_lab_formula_features(
         feature_view_df=feature_view_df,
