@@ -208,9 +208,12 @@ def validate_registry(registry: dict[str, Any]) -> list[dict[str, str]]:
                 findings.append({"level": "error", "item": feature_id, "message": f"Blocked leakage input: {input_name}"})
         if feature.get("type") == "formula":
             formula = str(feature.get("formula") or "")
-            for issue in validate_formula_syntax(formula, allowed_functions):
+            formula_issues = validate_formula_syntax(formula, allowed_functions)
+            for issue in formula_issues:
                 findings.append({"level": "error", "item": feature_id, "message": issue})
-            names = formula_names(formula) if formula.strip() else set()
+            names = set()
+            if formula.strip() and not formula_issues:
+                names = formula_names(formula)
             function_names = names.intersection(allowed_functions)
             referenced = sorted(names - function_names)
             declared = set(str(item) for item in feature.get("inputs", []) or [])
@@ -248,6 +251,16 @@ def archive_feature(registry: dict[str, Any], feature_id: str) -> dict[str, Any]
     return updated
 
 
+def delete_feature(registry: dict[str, Any], feature_id: str) -> dict[str, Any]:
+    """Remove a feature and drop it from any bundles that reference it."""
+
+    updated = deepcopy(registry)
+    feature_map(updated).pop(feature_id, None)
+    for bundle in bundle_map(updated).values():
+        bundle["features"] = [item for item in bundle.get("features", []) or [] if item != feature_id]
+    return updated
+
+
 def upsert_bundle(registry: dict[str, Any], bundle_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     updated = deepcopy(registry)
     bundle_map(updated)[bundle_id] = payload
@@ -258,4 +271,10 @@ def archive_bundle(registry: dict[str, Any], bundle_id: str) -> dict[str, Any]:
     updated = deepcopy(registry)
     if bundle_id in bundle_map(updated):
         bundle_map(updated)[bundle_id]["status"] = "archived"
+    return updated
+
+
+def delete_bundle(registry: dict[str, Any], bundle_id: str) -> dict[str, Any]:
+    updated = deepcopy(registry)
+    bundle_map(updated).pop(bundle_id, None)
     return updated
