@@ -205,7 +205,7 @@ prediction:
   prediction_type: binary_matchup
   positive_class: red
   threshold:
-    source: fixed
+    source: best_sweep
     value: 0.5
   probability:
     clip_low: 0.02
