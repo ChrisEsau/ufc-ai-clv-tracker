@@ -197,6 +197,14 @@ def apply_model_lab_formula_features(*, feature_view_df: pd.DataFrame, config: d
 
     This is intentionally opt-in so existing validated feature-view builds remain
     unchanged until a config explicitly enables the Model Lab formula layer.
+
+    Supported config keys under ``model_lab_formula_features``:
+
+    enabled: true
+    registry_path: configs/features/model_lab_feature_registry.yaml
+    bundles: [striking]
+    features: [striking_pressure_score]
+    statuses: [active]
     """
 
     formula_config = config.get("model_lab_formula_features", {}) or {}
@@ -214,7 +222,13 @@ def apply_model_lab_formula_features(*, feature_view_df: pd.DataFrame, config: d
         raise ValueError(f"Model Lab feature registry must be a dictionary: {registry_path}")
 
     before_columns = set(feature_view_df.columns)
-    output_df = apply_formula_features(feature_view_df, registry)
+    output_df = apply_formula_features(
+        feature_view_df,
+        registry,
+        selected_bundles=formula_config.get("bundles") or [],
+        selected_features=formula_config.get("features") or [],
+        allowed_statuses=formula_config.get("statuses") or {"active"},
+    )
     added_columns = sorted(set(output_df.columns) - before_columns)
     print(f"Model Lab formula features: {len(added_columns)}")
     if added_columns:
@@ -312,11 +326,16 @@ def validate_feature_view_output(
 
     expected_shape = validation.get("expected_feature_view_shape", {})
     expected_columns = expected_shape.get("columns_current")
-    if expected_columns is not None and int(expected_columns) != len(feature_view_df.columns):
-        raise ValueError(
-            "Feature-view column count mismatch: "
-            f"expected {expected_columns}, observed {len(feature_view_df.columns)}"
-        )
+    allow_extra_columns = bool(validation.get("allow_extra_columns", False))
+    if expected_columns is not None:
+        observed_columns = len(feature_view_df.columns)
+        expected_columns = int(expected_columns)
+        if observed_columns < expected_columns or (observed_columns != expected_columns and not allow_extra_columns):
+            raise ValueError(
+                "Feature-view column count mismatch: "
+                f"expected {expected_columns}, observed {observed_columns}, "
+                f"allow_extra_columns={allow_extra_columns}"
+            )
 
     target_distribution = validation.get("target_distribution", {}) or {}
     if target_distribution:
