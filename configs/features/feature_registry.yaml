@@ -14,8 +14,8 @@
 #   configs/features/rolling_feature_preservation_contract.yaml
 
 registry_name: ufc_master_feature_registry
-version: 1
-status: initial_family_registry
+version: 2
+status: model_lab_studio_enabled
 
 source_files:
   full_inventory: configs/features/full_rolling_feature_inventory.yaml
@@ -163,8 +163,8 @@ feature_families:
       - finish_round
       - match_time_sec
     notes:
-      - `target` is used for moneyline historical labels.
-      - `method`, `finish_round`, and `match_time_sec` are future prop-label inputs.
+      - target is used for moneyline historical labels.
+      - method, finish_round, and match_time_sec are future prop-label inputs.
       - Must not be used as live prediction inputs.
 
   raw_corner_fight_stats:
@@ -322,7 +322,7 @@ feature_families:
       - submission_mismatch_diff
     notes:
       - These 16 registered engineered features are explicitly loaded by the current V5 training notebook.
-      - Some also end in `_diff`; current notebook de-duplicates.
+      - Some also end in _diff; current notebook de-duplicates.
 
 prop_candidate_families:
 
@@ -420,6 +420,26 @@ prop_candidate_families:
       - match_time_sec
       - total_rounds
 
+model_lab_feature_studio:
+  rules:
+    dashboard_edits_definitions_only: true
+    pipeline_computes_feature_values: true
+    bundles_contain_features: true
+    features_define_build_method: true
+    target_columns_are_blocked: true
+    preserve_master_feature_families: true
+    preserve_current_moneyline_v5_features: true
+  allowed_formula_functions:
+    - abs
+    - min
+    - max
+    - clip
+    - log
+    - sqrt
+    - where
+  features: {}
+  bundles: {}
+
 validation_rules:
   - full_rolling_feature_inventory_must_have_483_columns
   - current_moneyline_v5_feature_count_must_equal_124
@@ -428,6 +448,7 @@ validation_rules:
   - result_fields_must_not_enter_live_prediction_inputs
   - no_feature_family_may_be_removed_without_explicit_approval
   - feature_splits_must_be_lossless
+  - model_lab_studio_must_use_this_registry_as_single_source_of_truth
 
 migration_guidance:
   recommended_order:
@@ -445,3 +466,4 @@ notes:
   - This registry is the first ownership map; it should evolve as feature builders become code.
   - It does not replace the full inventory. The full inventory remains the source of truth for individual columns.
   - If a feature appears useful for both moneyline and props, keep its base source in the base layer and expose market-specific views separately.
+  - Model Lab uses this registry directly; no separate Model Lab feature registry should be created.
