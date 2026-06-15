@@ -62,14 +62,8 @@ def _sync_bundle_editor_state(selected: str, current: dict[str, Any], is_new: bo
     st.session_state["mlab_bundle_editor_loaded"] = selected
     st.session_state["mlab_bundle_id"] = "" if is_new else selected
     st.session_state["mlab_bundle_description"] = current.get("description", "")
-    st.session_state["mlab_bundle_source_layer"] = current.get("source_layer", "fighter_state")
-    st.session_state["mlab_bundle_source_prefix"] = current.get("source_prefix", "")
     st.session_state["mlab_bundle_candidate_columns"] = "\n".join(str(item) for item in current.get("candidate_columns", []) or [])
     st.session_state["mlab_bundle_markets"] = current.get("markets", []) or []
-    current_transforms = [str(item) for item in current.get("recommended_transforms", []) or []]
-    transform_options = fr.transform_options(include_planned=True)
-    st.session_state["mlab_bundle_recommended_transforms"] = [item for item in current_transforms if item in transform_options]
-    st.session_state["mlab_bundle_unknown_transforms"] = "\n".join(item for item in current_transforms if item not in transform_options)
 
 
 def _render_summary(registry: dict[str, Any]) -> None:
@@ -255,43 +249,19 @@ def _render_bundle_editor() -> None:
     st.text_input("Bundle ID", key="mlab_bundle_id")
     bundle_id = fr.safe_feature_id(st.session_state.get("mlab_bundle_id", ""))
     st.text_area("Description", key="mlab_bundle_description")
-    st.text_input("Source layer", key="mlab_bundle_source_layer")
-    st.text_input("Source prefix optional", key="mlab_bundle_source_prefix")
 
     current_candidates = fr.csv_to_list(st.session_state.get("mlab_bundle_candidate_columns", ""))
-    selected_family_features = _render_family_feature_selector(feature_registry, current_candidates)
-    registered_features = set(fr.feature_map(feature_registry).keys())
-    manual_defaults = [item for item in current_candidates if item not in registered_features]
-    manual_candidates = st.text_area(
-        "Manual extra candidate columns",
-        value="\n".join(manual_defaults),
-        key="mlab_bundle_manual_candidate_columns",
-        help="Optional: raw/generated columns that are not registered as feature definitions yet.",
-    )
-    candidate_columns = list(dict.fromkeys(selected_family_features + fr.csv_to_list(manual_candidates)))
+    candidate_columns = _render_family_feature_selector(feature_registry, current_candidates)
     st.caption(f"Bundle candidate count: {len(candidate_columns)}")
-
-    transform_ids = fr.transform_options(include_planned=True)
-    st.multiselect("Recommended transforms", transform_ids, key="mlab_bundle_recommended_transforms")
-    unknown_transforms = fr.csv_to_list(st.text_area(
-        "Unknown/custom transforms optional",
-        key="mlab_bundle_unknown_transforms",
-        help="Normally leave empty. Entries here will trigger validation warnings until registered.",
-    ))
 
     market_options = ["moneyline", "props", "ko_tko", "submission", "decision", "goes_distance", "rounds"]
     st.multiselect("Markets", market_options, key="mlab_bundle_markets")
 
     payload: dict[str, Any] = {
         "description": st.session_state.get("mlab_bundle_description", ""),
-        "source_layer": st.session_state.get("mlab_bundle_source_layer", ""),
         "candidate_columns": candidate_columns,
-        "recommended_transforms": list(dict.fromkeys(list(st.session_state.get("mlab_bundle_recommended_transforms", []) or []) + unknown_transforms)),
         "markets": st.session_state.get("mlab_bundle_markets", []) or [],
     }
-    source_prefix = str(st.session_state.get("mlab_bundle_source_prefix", "")).strip()
-    if source_prefix:
-        payload["source_prefix"] = source_prefix
 
     c1, c2 = st.columns(2)
     with c1:
