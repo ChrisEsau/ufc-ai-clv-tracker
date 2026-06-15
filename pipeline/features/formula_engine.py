@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import ast
-from typing import Any
+from typing import Any, Iterable
 
 import numpy as np
 import pandas as pd
@@ -98,16 +98,64 @@ def compute_formula_feature(frame: pd.DataFrame, formula: str) -> pd.Series:
     return pd.Series(result, index=frame.index)
 
 
-def apply_formula_features(frame: pd.DataFrame, registry: dict[str, Any]) -> pd.DataFrame:
-    """Apply active formula features from the Model Lab feature registry section."""
+def _resolve_requested_feature_ids(
+    *,
+    registry: dict[str, Any],
+    selected_bundles: Iterable[str] | None = None,
+    selected_features: Iterable[str] | None = None,
+) -> set[str] | None:
+    """Resolve requested feature IDs from explicit features and bundle IDs.
+
+    Returns None when no explicit selection is provided, which means callers want
+    all eligible formula features. A concrete set means formulas are limited to
+    the selected feature IDs.
+    """
+
+    studio = registry.get("model_lab_feature_studio", {}) or {}
+    bundles = studio.get("bundles", {}) or {}
+    requested: set[str] = set(str(item) for item in (selected_features or []) if str(item).strip())
+
+    for bundle_id in selected_bundles or []:
+        bundle = bundles.get(str(bundle_id), {}) or {}
+        requested.update(str(item) for item in bundle.get("features", []) or [] if str(item).strip())
+
+    return requested if requested else None
+
+
+def apply_formula_features(
+    frame: pd.DataFrame,
+    registry: dict[str, Any],
+    *,
+    selected_bundles: Iterable[str] | None = None,
+    selected_features: Iterable[str] | None = None,
+    allowed_statuses: Iterable[str] | None = None,
+) -> pd.DataFrame:
+    """Apply formula features from the Model Lab feature registry section.
+
+    Formula features are computed in registry order so a later formula may depend
+    on an earlier formula. Callers can restrict computation by bundle or explicit
+    feature IDs. By default, only active formulas are materialized into feature
+    views; draft formulas remain editable in Model Lab without changing builds.
+    """
 
     output = frame.copy()
     studio = registry.get("model_lab_feature_studio", {}) or {}
-    for feature_id, feature in (studio.get("features", {}) or {}).items():
-        if feature.get("type") != "formula" or feature.get("status") not in {"active", "draft"}:
+    features = studio.get("features", {}) or {}
+    requested = _resolve_requested_feature_ids(
+        registry=registry,
+        selected_bundles=selected_bundles,
+        selected_features=selected_features,
+    )
+    statuses = set(str(item) for item in (allowed_statuses or {"active"}))
+
+    for feature_id, feature in features.items():
+        feature_id = str(feature_id)
+        if requested is not None and feature_id not in requested:
+            continue
+        if feature.get("type") != "formula" or feature.get("status") not in statuses:
             continue
         formula = feature.get("formula")
         if not formula:
             continue
-        output[str(feature_id)] = compute_formula_feature(output, str(formula))
+        output[feature_id] = compute_formula_feature(output, str(formula))
     return output
