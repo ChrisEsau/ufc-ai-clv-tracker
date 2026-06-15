@@ -8,6 +8,23 @@ on:
         required: true
         default: false
         type: boolean
+      include_same_day_next_fights:
+        description: "Include same-day next fights in modern outputs"
+        required: true
+        default: false
+        type: boolean
+      modern_era_start:
+        description: "Modern-era start date"
+        required: true
+        default: "2005-01-01"
+      recent_era_start:
+        description: "Recent-era start date"
+        required: true
+        default: "2015-01-01"
+      prime_era_start:
+        description: "Prime-era start date"
+        required: true
+        default: "2020-01-01"
 
 permissions:
   contents: write
@@ -44,11 +61,18 @@ jobs:
 
       - name: Run Post-KO Next Fight Study
         run: |
+          EXTRA_ARGS=""
           if [ "${{ github.event.inputs.include_doctor_stoppage }}" = "true" ]; then
-            python -m pipeline.research.run_post_ko_next_fight_study --include-doctor-stoppage
-          else
-            python -m pipeline.research.run_post_ko_next_fight_study
+            EXTRA_ARGS="$EXTRA_ARGS --include-doctor-stoppage"
           fi
+          if [ "${{ github.event.inputs.include_same_day_next_fights }}" = "true" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS --include-same-day-next-fights"
+          fi
+          python -m pipeline.research.run_post_ko_next_fight_study \
+            --modern-era-start "${{ github.event.inputs.modern_era_start }}" \
+            --recent-era-start "${{ github.event.inputs.recent_era_start }}" \
+            --prime-era-start "${{ github.event.inputs.prime_era_start }}" \
+            $EXTRA_ARGS
 
       - name: Upload research artifacts
         uses: actions/upload-artifact@v4
@@ -59,6 +83,13 @@ jobs:
             data/research/post_ko_next_fight_study.csv
             data/research/post_ko_next_fight_summary.csv
             data/research/post_ko_next_fight_bucket_summary.csv
+            data/research/post_ko_next_fight_era_summary.csv
+            data/research/post_ko_next_fight_modern_study.parquet
+            data/research/post_ko_next_fight_modern_study.csv
+            data/research/post_ko_next_fight_modern_summary.csv
+            data/research/post_ko_next_fight_modern_bucket_summary.csv
+            data/research/post_ko_next_fight_age_summary.csv
+            data/research/post_ko_next_fight_ko_count_summary.csv
           if-no-files-found: error
 
       - name: Commit research artifacts
@@ -70,7 +101,14 @@ jobs:
             data/research/post_ko_next_fight_study.parquet \
             data/research/post_ko_next_fight_study.csv \
             data/research/post_ko_next_fight_summary.csv \
-            data/research/post_ko_next_fight_bucket_summary.csv
+            data/research/post_ko_next_fight_bucket_summary.csv \
+            data/research/post_ko_next_fight_era_summary.csv \
+            data/research/post_ko_next_fight_modern_study.parquet \
+            data/research/post_ko_next_fight_modern_study.csv \
+            data/research/post_ko_next_fight_modern_summary.csv \
+            data/research/post_ko_next_fight_modern_bucket_summary.csv \
+            data/research/post_ko_next_fight_age_summary.csv \
+            data/research/post_ko_next_fight_ko_count_summary.csv
 
           git commit -m "Update post-KO next fight research artifacts" || echo "No changes to commit"
           git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
