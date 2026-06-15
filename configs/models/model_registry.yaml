@@ -44,3 +44,14 @@ models:
     status: draft
     dashboard_selectable: false
     outcome_architecture: true
+  this_is_a_test:
+    display_name: Test
+    description: Test
+    model_family: moneyline
+    market_key: moneyline
+    algorithm: xgboost
+    config_path: configs/models/this_is_a_test.yaml
+    artifact_dir: models/moneyline/this_is_a_test
+    status: draft
+    dashboard_selectable: false
+    outcome_architecture: true
