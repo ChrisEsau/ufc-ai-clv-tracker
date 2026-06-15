@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import streamlit as st
+
 from tabs import model_lab as legacy_model_lab
 from tabs.model_lab_sections.actions import render_actions
 from tabs.model_lab_sections.backtest_enhanced import render_backtest
