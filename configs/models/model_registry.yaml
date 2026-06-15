@@ -67,7 +67,7 @@ models:
     dashboard_selectable: false
     outcome_architecture: true
   moneyline_xgboost_v7:
-    display_name: Moneyline XGBoost V7
+    display_name: Moneyline XGBoost V5 Experiment
     description: Draft experiment created from moneyline_xgboost_v5.
     model_family: moneyline
     market_key: moneyline
