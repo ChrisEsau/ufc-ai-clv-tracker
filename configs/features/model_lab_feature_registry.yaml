@@ -1,0 +1,165 @@
+# UFC Model Lab Feature Registry
+#
+# Purpose:
+#   Dashboard-editable registry for feature engineering experiments.
+#   Bundles contain features. Features define how they are built.
+
+registry_name: ufc_model_lab_feature_registry
+version: 1
+status: draft_contract
+
+model_lab_feature_studio:
+  rules:
+    dashboard_edits_definitions_only: true
+    pipeline_computes_feature_values: true
+    bundles_contain_features: true
+    features_define_build_method: true
+    target_columns_are_blocked: true
+  allowed_formula_functions:
+    - abs
+    - min
+    - max
+    - clip
+    - log
+    - sqrt
+    - where
+
+  features:
+    elo_diff:
+      label: Elo Difference
+      type: transform
+      status: active
+      family: core_state
+      description: Red fighter Elo minus blue fighter Elo.
+      inputs:
+        - r_elo
+        - b_elo
+      transform: red_minus_blue
+      source_columns:
+        - elo
+      leakage_safe: true
+
+    splm_diff:
+      label: Significant Strikes Landed Per Minute Difference
+      type: transform
+      status: active
+      family: striking
+      description: Red fighter striking volume minus blue fighter striking volume.
+      inputs:
+        - r_splm
+        - b_splm
+      transform: red_minus_blue
+      source_columns:
+        - splm
+      leakage_safe: true
+
+    sapm_diff:
+      label: Significant Strikes Absorbed Per Minute Difference
+      type: transform
+      status: active
+      family: striking
+      description: Red fighter defensive damage absorption minus blue fighter defensive damage absorption.
+      inputs:
+        - r_sapm
+        - b_sapm
+      transform: red_minus_blue
+      source_columns:
+        - sapm
+      leakage_safe: true
+
+    kd_avg_diff:
+      label: Knockdown Average Difference
+      type: transform
+      status: active
+      family: striking
+      description: Red fighter knockdown average minus blue fighter knockdown average.
+      inputs:
+        - r_kd_avg
+        - b_kd_avg
+      transform: red_minus_blue
+      source_columns:
+        - kd_avg
+      leakage_safe: true
+
+    reach_diff:
+      label: Reach Difference
+      type: transform
+      status: active
+      family: physical
+      description: Red fighter reach minus blue fighter reach.
+      inputs:
+        - r_reach
+        - b_reach
+      transform: red_minus_blue
+      source_columns:
+        - reach
+      leakage_safe: true
+
+    striking_pressure_score:
+      label: Striking Pressure Score
+      type: formula
+      status: draft
+      family: striking
+      description: Example formula feature combining striking volume and knockdown advantage.
+      inputs:
+        - splm_diff
+        - kd_avg_diff
+      formula: "0.6 * splm_diff + 0.4 * kd_avg_diff"
+      leakage_safe: true
+
+    recent_momentum_score:
+      label: Recent Momentum Score
+      type: formula
+      status: draft
+      family: recent_form
+      description: Example formula feature combining recent winning and recent finishing.
+      inputs:
+        - recent_form_win_pct_diff
+        - recent_form_finish_rate_diff
+      formula: "0.7 * recent_form_win_pct_diff + 0.3 * recent_form_finish_rate_diff"
+      leakage_safe: true
+
+    strength_of_schedule:
+      label: Strength Of Schedule
+      type: pipeline
+      status: planned
+      family: recent_form
+      description: Complex point-in-time opponent strength feature built by pipeline code.
+      inputs:
+        - fighter_state_history
+        - opponent_history
+      builder: pipeline.features.recent_form.build_strength_of_schedule
+      leakage_safe: true
+
+  bundles:
+    core_state:
+      label: Core State
+      status: active
+      description: Core point-in-time fighter quality features.
+      features:
+        - elo_diff
+
+    striking:
+      label: Striking
+      status: active
+      description: Striking volume, damage, and pressure features.
+      features:
+        - splm_diff
+        - sapm_diff
+        - kd_avg_diff
+        - striking_pressure_score
+
+    recent_form:
+      label: Recent Form
+      status: draft
+      description: Short-horizon form and recent-performance features.
+      features:
+        - recent_momentum_score
+        - strength_of_schedule
+
+    physical:
+      label: Reach & Physical
+      status: active
+      description: Physical matchup features.
+      features:
+        - reach_diff
