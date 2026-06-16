@@ -10,6 +10,7 @@ import joblib
 import pandas as pd
 import yaml
 
+from pipeline.backtesting.model_outcomes import build_backtest_model_outcomes
 from pipeline.backtesting.run_backtest_v2 import (
     apply_filters,
     bucket_summary,
@@ -18,7 +19,6 @@ from pipeline.backtesting.run_backtest_v2 import (
     summarize,
 )
 from pipeline.common.paths import MARKET_DIR, MODEL_LAB_DIR, MONEYLINE_FEATURE_VIEW_PATH, ensure_data_dirs
-from pipeline.common.outcome_join import build_outcome_join_key
 
 DEFAULT_CONFIG_PATH = Path("configs/models/moneyline_xgboost_v6_dev.yaml")
 DEFAULT_FEATURE_VIEW_PATH = MONEYLINE_FEATURE_VIEW_PATH
@@ -27,7 +27,7 @@ DEFAULT_OUTPUT_ROOT = MODEL_LAB_DIR / "backtests"
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run full V2 model backtest from features + model + historical markets.")
+    parser = argparse.ArgumentParser(description="Run full V2 model backtest from features, model, and historical markets.")
     parser.add_argument("--model-config-path", default=str(DEFAULT_CONFIG_PATH))
     parser.add_argument("--feature-view-path", default=str(DEFAULT_FEATURE_VIEW_PATH))
     parser.add_argument("--historical-market-path", default=str(DEFAULT_MARKET_PATH))
@@ -78,6 +78,13 @@ def predict_positive_probability(model: Any, X: pd.DataFrame) -> pd.Series:
     raise ValueError("Loaded model does not expose predict_proba or predict.")
 
 
+def clip_probabilities(probs: pd.Series, config: dict[str, Any]) -> pd.Series:
+    probability_config = (config.get("prediction") or {}).get("probability", {}) or {}
+    low = float(probability_config.get("clip_low", 0.0))
+    high = float(probability_config.get("clip_high", 1.0))
+    return probs.clip(lower=low, upper=high)
+
+
 def prepare_feature_view(path: Path, config: dict[str, Any], start_date: str | None, end_date: str | None) -> pd.DataFrame:
     if not path.exists():
         raise FileNotFoundError(f"Feature view not found: {path}")
@@ -96,119 +103,6 @@ def prepare_feature_view(path: Path, config: dict[str, Any], start_date: str | N
     return df
 
 
-def build_fight_metadata(df: pd.DataFrame) -> pd.DataFrame:
-    out = pd.DataFrame()
-    out["fight_id"] = df["fight_id"].astype(str)
-    out["date"] = df["date"]
-    out["event_name"] = df["event_name"] if "event_name" in df.columns else pd.NA
-    out["red_fighter"] = df["r_name"] if "r_name" in df.columns else df.get("red_fighter", pd.NA)
-    out["blue_fighter"] = df["b_name"] if "b_name" in df.columns else df.get("blue_fighter", pd.NA)
-    out["red_fighter_id"] = df["r_id"] if "r_id" in df.columns else df.get("red_fighter_id", pd.NA)
-    out["blue_fighter_id"] = df["b_id"] if "b_id" in df.columns else df.get("blue_fighter_id", pd.NA)
-    return out
-
-
-def clipped_probabilities(probs: pd.Series, config: dict[str, Any]) -> pd.Series:
-    clip = config.get("prediction", {}).get("probability", {}) or {}
-    low = float(clip.get("clip_low", 0.0))
-    high = float(clip.get("clip_high", 1.0))
-    return probs.clip(lower=low, upper=high)
-
-
-def build_model_outcomes(meta: pd.DataFrame, probs: pd.Series, config: dict[str, Any], run_id: str, ts: str) -> pd.DataFrame:
-    prediction_config = config.get("prediction", {}) or {}
-    prediction_format = str(prediction_config.get("format", "binary_matchup")).strip().lower()
-    if prediction_format == "binary_prop":
-        return build_binary_prop_model_outcomes(meta, probs, config, run_id, ts)
-    if prediction_format in {"binary_matchup", "moneyline", ""}:
-        return build_moneyline_model_outcomes(meta, probs, config, run_id, ts)
-    raise ValueError(f"Unsupported full-model backtest prediction.format: {prediction_format}")
-
-
-def build_moneyline_model_outcomes(meta: pd.DataFrame, probs: pd.Series, config: dict[str, Any], run_id: str, ts: str) -> pd.DataFrame:
-    probs = clipped_probabilities(probs, config)
-    rows: list[dict[str, Any]] = []
-    model_id = str(config["model_id"])
-    market_key = str(config.get("prediction", {}).get("market_key", "moneyline"))
-    for i, row in meta.reset_index(drop=True).iterrows():
-        red_p = float(probs.iloc[i])
-        blue_p = float(1.0 - red_p)
-        confidence = max(red_p, blue_p)
-        for side, p, fid, label in [
-            ("red", red_p, row["red_fighter_id"], row["red_fighter"]),
-            ("blue", blue_p, row["blue_fighter_id"], row["blue_fighter"]),
-        ]:
-            rows.append({
-                "prediction_run_id": run_id,
-                "prediction_timestamp": ts,
-                "model_id": model_id,
-                "fight_id": row["fight_id"],
-                "date": row["date"],
-                "event_name": row["event_name"],
-                "market_key": market_key,
-                "outcome_join_key": build_outcome_join_key(market_key=market_key, outcome_fighter_id=fid, outcome_label=label, side=side),
-                "outcome_fighter_id": fid,
-                "outcome_label": label,
-                "outcome_side": side,
-                "model_probability": p,
-                "confidence_score": confidence,
-                "is_model_pick": p == confidence,
-            })
-    return pd.DataFrame(rows)
-
-
-def build_binary_prop_model_outcomes(meta: pd.DataFrame, probs: pd.Series, config: dict[str, Any], run_id: str, ts: str) -> pd.DataFrame:
-    probs = clipped_probabilities(probs, config)
-    rows: list[dict[str, Any]] = []
-    model_id = str(config["model_id"])
-    prediction_config = config.get("prediction", {}) or {}
-    market_key = str(prediction_config.get("market_key", config.get("market_key", "")))
-    outcomes = prediction_config.get("outcomes", {}) or {}
-    positive = outcomes.get("positive", {}) or {}
-    negative = outcomes.get("negative", {}) or {}
-    positive_label = str(positive.get("label") or market_key)
-    negative_label = str(negative.get("label") or f"not_{market_key}")
-    positive_side = str(positive.get("outcome_side", "yes"))
-    negative_side = str(negative.get("outcome_side", "no"))
-
-    for i, row in meta.reset_index(drop=True).iterrows():
-        positive_p = float(probs.iloc[i])
-        negative_p = float(1.0 - positive_p)
-        if positive_p >= negative_p:
-            model_pick = positive_label
-            confidence = positive_p
-        else:
-            model_pick = negative_label
-            confidence = negative_p
-
-        for label, side, p in [
-            (positive_label, positive_side, positive_p),
-            (negative_label, negative_side, negative_p),
-        ]:
-            rows.append({
-                "prediction_run_id": run_id,
-                "prediction_timestamp": ts,
-                "model_id": model_id,
-                "fight_id": row["fight_id"],
-                "date": row["date"],
-                "event_name": row["event_name"],
-                "market_key": market_key,
-                "outcome_join_key": build_outcome_join_key(
-                    market_key=market_key,
-                    outcome_label=label,
-                    outcome_fighter_id=None,
-                    side=side,
-                ),
-                "outcome_fighter_id": pd.NA,
-                "outcome_label": label,
-                "outcome_side": side,
-                "model_probability": p,
-                "confidence_score": confidence,
-                "is_model_pick": label == model_pick,
-            })
-    return pd.DataFrame(rows)
-
-
 def main() -> None:
     args = parse_args()
     ensure_data_dirs()
@@ -224,9 +118,14 @@ def main() -> None:
     feature_cols = list(config["features"]["feature_columns"])
     model = joblib.load(model_artifact_path(config))
     X = feature_df[feature_cols].apply(pd.to_numeric, errors="coerce").fillna(0.0)
-    probs = predict_positive_probability(model, X)
-    meta = build_fight_metadata(feature_df)
-    model_outcomes = build_model_outcomes(meta, probs, config, backtest_id, ts)
+    probs = clip_probabilities(predict_positive_probability(model, X), config)
+    model_outcomes = build_backtest_model_outcomes(
+        feature_df=feature_df,
+        probabilities=probs,
+        model_config=config,
+        prediction_run_id=backtest_id,
+        prediction_timestamp=ts,
+    )
 
     market_raw = pd.read_parquet(args.historical_market_path)
     market_raw = market_raw[market_raw["market_key"].astype(str).str.lower() == args.market_key.lower()].copy()
