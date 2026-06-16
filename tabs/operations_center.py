@@ -2,29 +2,36 @@ from __future__ import annotations
 
 import streamlit as st
 
+from tabs.operations_center_sections.autopilot import (
+    render_autopilot_footer,
+    render_autopilot_summary,
+    render_recent_activity_compact,
+    render_review_alerts,
+    render_runbook_progress,
+    render_system_health_compact,
+    render_upcoming_runs,
+)
 from tabs.operations_center_sections.header import render_header
-from tabs.operations_center_sections.model_status import render_model_status
-from tabs.operations_center_sections.operation_cards import render_operation_cards
-from tabs.operations_center_sections.pipeline_status import render_pipeline_status
-from tabs.operations_center_sections.recent_jobs import render_recent_jobs
-from tabs.operations_center_sections.schedules import render_schedules
-from tabs.operations_center_sections.status_summary import render_status_summary
 from tabs.operations_center_sections.styles import inject_operations_css
-from tabs.operations_center_sections.system_status import render_system_status
 
 
 def render_operations_center() -> None:
     inject_operations_css()
     render_header()
-    render_status_summary()
-    render_pipeline_status()
-    render_model_status()
-    render_operation_cards()
+    render_autopilot_summary()
 
-    left, middle, right = st.columns([1, 1.05, 1.1], gap="medium")
+    left, right = st.columns([1.1, 1], gap="medium")
     with left:
-        render_system_status()
-    with middle:
-        render_recent_jobs()
+        render_runbook_progress()
     with right:
-        render_schedules()
+        render_upcoming_runs()
+
+    alerts, health, activity = st.columns([1, 0.8, 1.15], gap="medium")
+    with alerts:
+        render_review_alerts()
+    with health:
+        render_system_health_compact()
+    with activity:
+        render_recent_activity_compact()
+
+    render_autopilot_footer()
