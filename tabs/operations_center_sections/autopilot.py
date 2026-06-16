@@ -74,6 +74,19 @@ def render_autopilot_summary() -> None:
 def render_runbook_progress() -> None:
     state = load_state()
     runbook = get_runbook(str(state.get("runbook_id") or "market_refresh_v2"))
+
+    action_left, action_right = st.columns([1, 2])
+    with action_left:
+        if st.button("Run Next Workflow", key="ops_run_next_workflow", type="primary", use_container_width=True):
+            ok, message, _state = launch_next_workflow(str(runbook.get("runbook_id") or "market_refresh_v2"))
+            if ok:
+                st.success(message)
+            else:
+                st.error(message)
+            st.rerun()
+    with action_right:
+        st.caption("Manual validation mode: launches one mapped GitHub workflow at a time.")
+
     rows = []
     for idx, step in enumerate(runbook.get("steps", [])):
         stamp, status_label, tone = _step_state(idx, state)
@@ -106,14 +119,6 @@ def render_runbook_progress() -> None:
         f'<div class="ops-panel-note">{_escape(note)}</div>'
         '</div>'
     )
-
-    if st.button("Run Next Workflow", key="ops_run_next_workflow", type="primary"):
-        ok, message, _state = launch_next_workflow(str(runbook.get("runbook_id") or "market_refresh_v2"))
-        if ok:
-            st.success(message)
-        else:
-            st.error(message)
-        st.rerun()
 
 
 def render_upcoming_runs() -> None:
