@@ -12,7 +12,7 @@ RunbookSpec = dict[str, Any]
 MARKET_REFRESH_V2: RunbookSpec = {
     "runbook_id": "market_refresh_v2",
     "display_name": "Market Refresh",
-    "description": "Refresh upcoming UFC events, production predictions, DraftKings markets, and betting outcomes.",
+    "description": "Refresh upcoming UFC events, feature state, production predictions, DraftKings markets, and betting outcomes.",
     "steps": [
         {
             "step_id": "refresh_upcoming_events",
@@ -31,9 +31,9 @@ MARKET_REFRESH_V2: RunbookSpec = {
             ],
         },
         {
-            "step_id": "run_predictions",
-            "display_name": "Run Predictions",
-            "description": "Refresh fighter state and generate production model outcome predictions.",
+            "step_id": "build_fighter_state",
+            "display_name": "Build Fighter State",
+            "description": "Rebuild historical fighter-state artifacts from the master database.",
             "workflows": [
                 {
                     "workflow_file": "run-build-fighter-state-v2.yml",
@@ -44,6 +44,31 @@ MARKET_REFRESH_V2: RunbookSpec = {
                         "data/features/latest_fighter_state.parquet",
                     ],
                 },
+            ],
+        },
+        {
+            "step_id": "build_feature_view",
+            "display_name": "Build Feature View",
+            "description": "Build the production model feature view used by training and prediction validation.",
+            "workflows": [
+                {
+                    "workflow_file": "run-build-feature-view-v2.yml",
+                    "display_name": "Build Feature View V2",
+                    "inputs": {
+                        "config_path": "configs/feature_views/moneyline_base.yaml",
+                        "output_path": "data/features/moneyline_feature_view.parquet",
+                    },
+                    "outputs": [
+                        "data/features/moneyline_feature_view.parquet",
+                    ],
+                },
+            ],
+        },
+        {
+            "step_id": "run_predictions",
+            "display_name": "Run Predictions",
+            "description": "Generate production model outcome predictions for the current live card.",
+            "workflows": [
                 {
                     "workflow_file": "run-prediction-v2.yml",
                     "display_name": "Run Prediction V2",
