@@ -1,6 +1,6 @@
 registry_name: ufc_master_feature_registry
-version: 4
-status: current_moneyline_v5_feature_definitions_generated
+version: 5
+status: current_moneyline_v5_plus_goes_distance_v1_definitions
 
 source_files:
   full_inventory: configs/features/full_rolling_feature_inventory.yaml
@@ -55,6 +55,178 @@ feature_definitions:
     output_column: testfeature
     model_input_allowed: true
 
+  combined_finish_rate:
+    label: Combined Finish Rate
+    type: transform
+    status: active
+    family: goes_distance_core_v1
+    description: Sum of both fighters' point-in-time finish win rates.
+    inputs:
+      - r_pre_finish_rate
+      - b_pre_finish_rate
+    leakage_safe: true
+    transform: pair_sum
+    source_columns:
+      - finish_rate
+    output_column: combined_finish_rate
+    model_input_allowed: true
+
+  combined_finish_loss_rate:
+    label: Combined Finish Loss Rate
+    type: transform
+    status: active
+    family: goes_distance_core_v1
+    description: Sum of both fighters' point-in-time finish loss rates.
+    inputs:
+      - r_pre_finish_loss_rate
+      - b_pre_finish_loss_rate
+    leakage_safe: true
+    transform: pair_sum
+    source_columns:
+      - finish_loss_rate
+    output_column: combined_finish_loss_rate
+    model_input_allowed: true
+
+  combined_finish_pressure:
+    label: Combined Finish Pressure
+    type: formula
+    status: active
+    family: goes_distance_core_v1
+    description: Combined finishing ability plus combined finish vulnerability.
+    inputs:
+      - combined_finish_rate
+      - combined_finish_loss_rate
+    formula: combined_finish_rate + combined_finish_loss_rate
+    output_column: combined_finish_pressure
+    model_input_allowed: true
+    leakage_safe: true
+
+  combined_avg_fight_time:
+    label: Combined Average Fight Time
+    type: transform
+    status: active
+    family: goes_distance_core_v1
+    description: Average of both fighters' point-in-time average fight duration.
+    inputs:
+      - r_pre_avg_fight_time
+      - b_pre_avg_fight_time
+    leakage_safe: true
+    transform: pair_average
+    source_columns:
+      - avg_fight_time
+    output_column: combined_avg_fight_time
+    model_input_allowed: true
+
+  combined_ewm_finish_rate:
+    label: Combined EWM Finish Rate
+    type: transform
+    status: active
+    family: goes_distance_core_v1
+    description: Sum of both fighters' EWM finish rates.
+    inputs:
+      - r_ewm_finish_rate
+      - b_ewm_finish_rate
+    leakage_safe: true
+    transform: pair_sum
+    source_columns:
+      - ewm_finish_rate
+    output_column: combined_ewm_finish_rate
+    model_input_allowed: true
+
+  combined_ewm_finish_loss_rate:
+    label: Combined EWM Finish Loss Rate
+    type: transform
+    status: active
+    family: goes_distance_core_v1
+    description: Sum of both fighters' EWM finish loss rates.
+    inputs:
+      - r_ewm_finish_loss_rate
+      - b_ewm_finish_loss_rate
+    leakage_safe: true
+    transform: pair_sum
+    source_columns:
+      - ewm_finish_loss_rate
+    output_column: combined_ewm_finish_loss_rate
+    model_input_allowed: true
+
+  combined_ewm_finish_pressure:
+    label: Combined EWM Finish Pressure
+    type: formula
+    status: active
+    family: goes_distance_core_v1
+    description: Recent weighted finishing ability plus recent weighted finish vulnerability.
+    inputs:
+      - combined_ewm_finish_rate
+      - combined_ewm_finish_loss_rate
+    formula: combined_ewm_finish_rate + combined_ewm_finish_loss_rate
+    output_column: combined_ewm_finish_pressure
+    model_input_allowed: true
+    leakage_safe: true
+
+  combined_ewm_avg_fight_time:
+    label: Combined EWM Average Fight Time
+    type: transform
+    status: active
+    family: goes_distance_core_v1
+    description: Average of both fighters' EWM average fight duration.
+    inputs:
+      - r_ewm_avg_fight_time
+      - b_ewm_avg_fight_time
+    leakage_safe: true
+    transform: pair_average
+    source_columns:
+      - ewm_avg_fight_time
+    output_column: combined_ewm_avg_fight_time
+    model_input_allowed: true
+
+  older_fighter_age:
+    label: Older Fighter Age
+    type: transform
+    status: active
+    family: goes_distance_core_v1
+    description: Age of the older fighter in the matchup.
+    inputs:
+      - r_age
+      - b_age
+    leakage_safe: true
+    transform: pair_max
+    source_columns:
+      - age
+    output_column: older_fighter_age
+    model_input_allowed: true
+
+  reach_mismatch_abs:
+    label: Absolute Reach Mismatch
+    type: transform
+    status: active
+    family: goes_distance_core_v1
+    description: Absolute reach difference between fighters.
+    inputs:
+      - r_reach
+      - b_reach
+    leakage_safe: true
+    transform: absolute_gap
+    source_columns:
+      - reach
+    output_column: reach_mismatch_abs
+    model_input_allowed: true
+
+  height_mismatch_abs:
+    label: Absolute Height Mismatch
+    type: transform
+    status: active
+    family: goes_distance_core_v1
+    description: Absolute height difference between fighters.
+    inputs:
+      - r_height
+      - b_height
+    leakage_safe: true
+    transform: absolute_gap
+    source_columns:
+      - height
+    output_column: height_mismatch_abs
+    model_input_allowed: true
+
 feature_layers:
   metadata:
     description: Non-model identifiers, event context, fight context, and join keys.
@@ -99,6 +271,11 @@ feature_families:
     model_input_allowed: true
     ownership: pipeline.features.moneyline / feature_engineering
     current_moneyline_v5: included
+  goes_distance_core_v1:
+    layer: props
+    model_input_allowed: true
+    ownership: model_lab / prop_features
+    current_moneyline_v5: false
   custom:
     layer: moneyline
     model_input_allowed: true
