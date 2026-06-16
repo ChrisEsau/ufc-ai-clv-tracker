@@ -40,27 +40,30 @@ def _run_action(action: OperationAction) -> None:
         st.error(msg)
 
 
-def _render_group(group: OperationGroup) -> None:
+def _render_group_header(group: OperationGroup) -> None:
     st.html(
-        '<div class="ops-card">'
         '<div class="ops-group-header">'
         f'<div class="ops-group-title">{_escape(group.icon)}&nbsp;&nbsp;{_escape(group.title)}</div>'
         f'<div class="ops-group-subtitle">{_escape(group.subtitle)}</div>'
         '</div>'
     )
-    for idx, action in enumerate(group.actions):
-        status_text, status_class = _status_label(action)
-        cols = st.columns([1.8, .55, .42])
+
+
+def _render_action(group: OperationGroup, action: OperationAction, idx: int) -> None:
+    status_text, status_class = _status_label(action)
+    dot_class = "ops-dot" if status_class == "success" else f"ops-dot {status_class}"
+
+    with st.container(border=False):
+        cols = st.columns([3.2, 1.0], gap="small")
         with cols[0]:
             st.html(
-                '<div class="ops-action-row" style="grid-template-columns:1fr; border-bottom:0; padding:.35rem .2rem;">'
-                f'<div><strong>{_escape(action.label)}</strong><div class="ops-action-desc">{_escape(action.description)}</div></div>'
+                '<div class="ops-action-copy">'
+                f'<div class="ops-action-title">{_escape(action.label)}</div>'
+                f'<div class="ops-action-desc">{_escape(action.description)}</div>'
+                f'<div class="ops-action-status"><span class="{dot_class}"></span>{_escape(status_text)}</div>'
                 '</div>'
             )
         with cols[1]:
-            dot_class = "ops-dot" if status_class == "success" else f"ops-dot {status_class}"
-            st.html(f'<div style="padding-top:.55rem;"><span class="{dot_class}"></span><span class="ops-kpi-caption">{_escape(status_text)}</span></div>')
-        with cols[2]:
             st.button(
                 "Run",
                 key=f"ops_run_{group.title}_{idx}_{action.label}",
@@ -69,11 +72,19 @@ def _render_group(group: OperationGroup) -> None:
                 on_click=_run_action,
                 args=(action,),
             )
-    st.html(f'<div class="ops-link">View {_escape(group.title.replace(" Operations", ""))} Logs →</div></div>')
+        st.html('<div class="ops-action-divider"></div>')
+
+
+def _render_group(group: OperationGroup) -> None:
+    with st.container(border=True):
+        _render_group_header(group)
+        for idx, action in enumerate(group.actions):
+            _render_action(group, action, idx)
+        st.html(f'<div class="ops-link">View {_escape(group.title.replace(" Operations", ""))} Logs →</div>')
 
 
 def render_operation_cards() -> None:
-    cols = st.columns(len(OPERATION_GROUPS))
+    cols = st.columns(len(OPERATION_GROUPS), gap="medium")
     for col, group in zip(cols, OPERATION_GROUPS):
         with col:
             _render_group(group)
