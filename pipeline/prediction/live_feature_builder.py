@@ -10,6 +10,7 @@ from pipeline.common.paths import (
     LIVE_CARD_PATH,
     LIVE_FEATURE_AUDIT_PATH,
 )
+from pipeline.features.shared_registry_features import materialize_model_lab_registry_features
 from ufc_feature_engineering import add_v5_engineered_features
 
 
@@ -46,18 +47,7 @@ def build_live_model_features(
     live_card_path: str | Path = LIVE_CARD_PATH,
     current_fighter_features_path: str | Path = CURRENT_FIGHTER_FEATURES_PATH,
 ) -> LiveFeatureBuildResult:
-    """Build model-ready live features for Prediction V2.
-
-    Current bridge behavior:
-    1. If the live card already contains all requested model features, return it.
-    2. Otherwise, join current fighter features by fighter IDs and assemble common
-       V5 differential/engineered features.
-    3. Fail loudly if any required model-contract feature cannot be assembled.
-
-    This is intentionally still a bridge implementation. Feature Builder V2 should
-    later replace this with shared training/live feature-view logic. Until then,
-    missing model-contract features must never be silently fabricated as zeros.
-    """
+    """Build model-ready live features for Prediction V2."""
 
     live_card_path = Path(live_card_path)
     current_fighter_features_path = Path(current_fighter_features_path)
@@ -73,7 +63,6 @@ def build_live_model_features(
     live_card_df = _deduplicate_columns(live_card_df)
     _validate_live_card(live_card_df)
 
-    # Best-case path: a previous pipeline already produced model-ready features.
     if _has_all_columns(live_card_df, feature_columns):
         live_feature_df = _attach_feature_audit_columns(live_card_df.copy(), feature_columns)
         live_feature_df = _deduplicate_columns(live_feature_df)
@@ -178,8 +167,6 @@ def _fill_display_name_column(
     candidates: list[str],
     id_column: str,
 ) -> pd.DataFrame:
-    """Fill canonical display-name column from common fallback columns."""
-
     out = df.copy()
 
     if target_column not in out.columns:
@@ -190,12 +177,9 @@ def _fill_display_name_column(
     for candidate in candidates:
         if candidate == target_column or candidate not in out.columns:
             continue
-
         candidate_values = out[candidate].astype("string").fillna("").str.strip()
         target = target.mask(target.eq(""), candidate_values)
 
-    # Final fallback keeps the formatter from crashing while still making missing
-    # name problems visible in outputs/audits.
     if id_column in out.columns:
         id_values = out[id_column].astype("string").fillna("").str.strip()
         target = target.mask(target.eq(""), "fighter_id:" + id_values)
@@ -263,24 +247,17 @@ def _join_current_fighter_features(
 
 def _assemble_requested_features(joined_df: pd.DataFrame, feature_columns: list[str]) -> pd.DataFrame:
     out = joined_df.copy()
-
-    # Create r_pre_* and b_pre_* aliases from current-fighter-state columns so the
-    # existing engineered V5 formulas can be reused rather than duplicated.
     out = _add_prefight_alias_columns(out)
     out = _deduplicate_columns(out)
 
-    # Generic diff assembly for columns such as elo_diff, ewm_elo_diff, and
-    # recent_form_elo_diff when matching red/blue state values exist.
     new_feature_values = {}
     for feature in feature_columns:
         if feature in out.columns:
             continue
-
         if feature.endswith("_diff"):
             base_name = feature[: -len("_diff")]
             red_value = _resolve_state_series(out, side="r", base_name=base_name)
             blue_value = _resolve_state_series(out, side="b", base_name=base_name)
-
             if red_value is not None and blue_value is not None:
                 new_feature_values[feature] = red_value - blue_value
 
@@ -288,19 +265,27 @@ def _assemble_requested_features(joined_df: pd.DataFrame, feature_columns: list[
         out = pd.concat([out, pd.DataFrame(new_feature_values, index=out.index)], axis=1)
         out = _deduplicate_columns(out)
 
-    # Reuse the existing V5 engineered feature formulas for features such as
-    # striking_edge, grappling_edge, chin_risk_diff, etc.
     out = add_v5_engineered_features(out)
     out = _deduplicate_columns(out)
 
+    registry_result = materialize_model_lab_registry_features(
+        out,
+        selected_features=feature_columns,
+        allowed_statuses={"active", "draft"},
+        overwrite_existing=True,
+    )
+    out = _deduplicate_columns(registry_result.dataframe)
+
     missing_features = _get_missing_feature_columns(out, feature_columns)
     if missing_features:
+        missing_registry_inputs = registry_result.registry_result.missing_inputs
         raise LiveFeatureBuilderError(
             "Live feature build failed because required model-contract features "
             "could not be assembled. Missing features must be fixed upstream; "
             "they are no longer silently filled with 0.0. "
             f"Missing count: {len(missing_features)}. "
             f"Missing summary: {_summarize_missing_features(missing_features)}. "
+            f"Registry missing inputs: {missing_registry_inputs}. "
             f"Missing features: {missing_features}"
         )
 
@@ -313,17 +298,9 @@ def _add_prefight_alias_columns(df: pd.DataFrame) -> pd.DataFrame:
 
     for column in list(out.columns):
         if column.startswith("r_state_"):
-            base = column.replace("r_state_", "", 1)
-            if base not in {"fighter_id", "id", "ufcstats_fighter_id"}:
-                alias = f"r_pre_{base}"
-                if alias not in out.columns:
-                    alias_values[alias] = out[column]
+            _add_state_aliases(alias_values, out, column, "r")
         elif column.startswith("b_state_"):
-            base = column.replace("b_state_", "", 1)
-            if base not in {"fighter_id", "id", "ufcstats_fighter_id"}:
-                alias = f"b_pre_{base}"
-                if alias not in out.columns:
-                    alias_values[alias] = out[column]
+            _add_state_aliases(alias_values, out, column, "b")
 
     if alias_values:
         out = pd.concat([out, pd.DataFrame(alias_values, index=out.index)], axis=1)
@@ -331,22 +308,23 @@ def _add_prefight_alias_columns(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def _add_state_aliases(alias_values: dict[str, pd.Series], df: pd.DataFrame, column: str, side: str) -> None:
+    base = column.replace(f"{side}_state_", "", 1)
+    if base in {"fighter_id", "id", "ufcstats_fighter_id"}:
+        return
+
+    aliases = [f"{side}_pre_{base}"]
+    if base.startswith("ewm_"):
+        aliases.append(f"{side}_{base}")
+    if base.startswith("form_delta_"):
+        aliases.append(f"{side}_recent_form_{base.replace('form_delta_', '', 1)}")
+
+    for alias in aliases:
+        if alias not in df.columns and alias not in alias_values:
+            alias_values[alias] = df[column]
+
+
 def _resolve_state_series(df: pd.DataFrame, *, side: str, base_name: str) -> pd.Series | None:
-    """Resolve a side-specific source series for live red/blue diff assembly.
-
-    The training feature view maps fighter-state columns to model feature names
-    in pipeline.features.views.moneyline._prefixed_state_frame():
-
-    * regular state columns use pre-fight aliases, e.g. elo -> r_pre_elo.
-    * EWM state columns keep the ewm_* prefix, e.g. ewm_elo -> r_ewm_elo.
-    * form-delta state columns become recent-form aliases, e.g.
-      form_delta_elo -> r_recent_form_elo.
-
-    Live feature assembly joins latest_fighter_state.parquet with r_state_ and
-    b_state_ prefixes, so recent_form_* model features must resolve back to the
-    underlying form_delta_* state columns.
-    """
-
     candidates = [
         f"{side}_state_{base_name}",
         f"{side}_pre_{base_name}",
@@ -427,14 +405,10 @@ def _build_feature_audit(live_feature_df: pd.DataFrame, feature_columns: list[st
 
 
 def _get_missing_feature_columns(df: pd.DataFrame, feature_columns: list[str]) -> list[str]:
-    """Return required model features that are absent from the live feature frame."""
-
     return [feature for feature in feature_columns if feature not in df.columns]
 
 
 def _summarize_missing_features(missing_features: list[str]) -> dict[str, int]:
-    """Group missing model features by family to make failure messages actionable."""
-
     summary = {
         "ewm": 0,
         "recent_form": 0,
@@ -476,8 +450,6 @@ def _summarize_missing_features(missing_features: list[str]) -> dict[str, int]:
 
 
 def _deduplicate_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Return a copy with duplicate column names removed, keeping first occurrence."""
-
     if not df.columns.duplicated().any():
         return df.copy()
     return df.loc[:, ~df.columns.duplicated()].copy()
