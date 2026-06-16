@@ -202,8 +202,8 @@ feature_definitions:
     family: goes_distance_core_v1
     description: Absolute reach difference between fighters.
     inputs:
-      - r_reach
-      - b_reach
+      - r_pre_reach
+      - b_pre_reach
     leakage_safe: true
     transform: absolute_gap
     source_columns:
@@ -218,8 +218,8 @@ feature_definitions:
     family: goes_distance_core_v1
     description: Absolute height difference between fighters.
     inputs:
-      - r_height
-      - b_height
+      - r_pre_height
+      - b_pre_height
     leakage_safe: true
     transform: absolute_gap
     source_columns:
