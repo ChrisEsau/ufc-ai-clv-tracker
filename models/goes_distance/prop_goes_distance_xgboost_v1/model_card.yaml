@@ -1,0 +1,46 @@
+model_id: prop_goes_distance_xgboost_v1
+model_family: prop
+artifact_name: prop_goes_distance_xgboost_v1
+algorithm: xgboost
+config_path: configs/models/prop_goes_distance_xgboost_v1.yaml
+trained_at_utc: '2026-06-16T03:59:14.257511+00:00'
+data:
+  rolling_features_path: data/features/prop_goes_distance_feature_view.parquet
+  target_column: target_goes_distance
+  date_column: date
+split:
+  mode: train_calibration_test
+  train_end_date: '2022-12-31'
+  calibration_end_date: '2023-12-31'
+  train_rows: 6813
+  calibration_rows: 504
+  test_rows: 1168
+features:
+  feature_count: 11
+  expected_feature_count: 11
+symmetry:
+  enabled: false
+  mode: none
+calibration:
+  enabled: true
+  method: isotonic
+  calibration_rows: 504
+params:
+  n_estimators: 500
+  max_depth: 4
+  learning_rate: 0.03
+  subsample: 0.8
+  colsample_bytree: 0.8
+  random_state: 42
+  eval_metric: logloss
+metrics:
+  accuracy: 0.598458904109589
+  log_loss: 0.6902431276654978
+  roc_auc: 0.6281507853280106
+  brier_score: 0.24303211995721574
+  threshold: 0.48
+  positive_pick_rate_percent: 48.97260273972603
+  negative_pick_rate_percent: 51.027397260273965
+  actual_positive_rate_percent: 52.140410958904106
+  row_count: 1168
+best_threshold: 0.48

@@ -1,0 +1,27 @@
+{
+  "model_id": "prop_goes_distance_xgboost_v1",
+  "raw_metrics": {
+    "accuracy": 0.5993150684931506,
+    "log_loss": 0.6761361058118397,
+    "roc_auc": 0.622214193184522,
+    "brier_score": 0.24098118066460375,
+    "threshold": 0.5,
+    "positive_pick_rate_percent": 48.03082191780822,
+    "negative_pick_rate_percent": 51.96917808219178,
+    "actual_positive_rate_percent": 52.140410958904106,
+    "row_count": 1168
+  },
+  "final_metrics": {
+    "accuracy": 0.598458904109589,
+    "log_loss": 0.6902431276654978,
+    "roc_auc": 0.6281507853280106,
+    "brier_score": 0.24303211995721574,
+    "threshold": 0.48,
+    "positive_pick_rate_percent": 48.97260273972603,
+    "negative_pick_rate_percent": 51.027397260273965,
+    "actual_positive_rate_percent": 52.140410958904106,
+    "row_count": 1168
+  },
+  "best_threshold": 0.48,
+  "trained_at_utc": "2026-06-16T03:59:14.252126+00:00"
+}
