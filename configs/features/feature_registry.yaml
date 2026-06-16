@@ -186,8 +186,8 @@ feature_definitions:
     family: goes_distance_core_v1
     description: Age of the older fighter in the matchup.
     inputs:
-      - r_age
-      - b_age
+      - r_pre_age
+      - b_pre_age
     leakage_safe: true
     transform: pair_max
     source_columns:
