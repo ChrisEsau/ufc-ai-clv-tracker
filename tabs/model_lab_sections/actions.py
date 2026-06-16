@@ -45,8 +45,16 @@ def _render_actions_with_status(context: dict[str, Any]) -> None:
         "model_id": context["model_id"],
     }
 
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3, c4, c5 = st.columns(5)
     with c1:
+        _dispatch_button_with_status(
+            "Build Fighter State",
+            "run-build-fighter-state-v2.yml",
+            {},
+            False,
+            f"mlab_fighter_state_{context['model_id']}",
+        )
+    with c2:
         _dispatch_button_with_status(
             "Build Feature View",
             mlw.WORKFLOWS["feature_view"],
@@ -54,7 +62,7 @@ def _render_actions_with_status(context: dict[str, Any]) -> None:
             not bool(feature_inputs["config_path"] and feature_inputs["output_path"]),
             f"mlab_build_{context['model_id']}",
         )
-    with c2:
+    with c3:
         _dispatch_button_with_status(
             "Train Model",
             mlw.WORKFLOWS["training"],
@@ -62,7 +70,7 @@ def _render_actions_with_status(context: dict[str, Any]) -> None:
             not bool(training_inputs["config_path"] and training_inputs["artifact_dir"]),
             f"mlab_train_{context['model_id']}",
         )
-    with c3:
+    with c4:
         _dispatch_button_with_status(
             "Run Predictions",
             mlw.WORKFLOWS["prediction"],
@@ -70,7 +78,7 @@ def _render_actions_with_status(context: dict[str, Any]) -> None:
             not bool(prediction_inputs["model_family"] and prediction_inputs["model_id"]),
             f"mlab_predict_{context['model_id']}",
         )
-    with c4:
+    with c5:
         model_mode = st.selectbox("Betting Mode", ["production", "all", "single"], key="mlab_betting_mode")
         _dispatch_button_with_status(
             "Run Outcomes",
