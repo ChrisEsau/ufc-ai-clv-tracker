@@ -1,5 +1,5 @@
 registry_name: ufc_feature_bundles
-version: 1
+version: 2
 status: draft_contract
 bundle_rules:
   model_inputs_are_selected_in_model_config: true
@@ -163,8 +163,7 @@ bundles:
     - moneyline
     - props
   engineered_matchup:
-    description: Existing V5 engineered matchup features plus competition-adjusted
-      interaction features.
+    description: Existing V5 engineered matchup features plus competition-adjusted interaction features.
     source_layer: engineered
     candidate_columns:
     - age_diff
@@ -194,8 +193,7 @@ bundles:
     - moneyline
     - props
   market_odds:
-    description: Timestamped market information for market-aware models. Must be point-in-time
-      only.
+    description: Timestamped market information for market-aware models. Must be point-in-time only.
     source_layer: market
     candidate_columns:
     - opening_implied_prob
@@ -251,3 +249,20 @@ bundles:
     - recent_form_worst_loss_elo_diff
     markets:
     - moneyline
+  goes_distance_core_v1:
+    description: Core V1 Goes Distance features built from finish tendency, fight duration, durability, and physical mismatch signals.
+    candidate_columns:
+    - combined_finish_rate
+    - combined_finish_loss_rate
+    - combined_finish_pressure
+    - combined_avg_fight_time
+    - combined_ewm_finish_rate
+    - combined_ewm_finish_loss_rate
+    - combined_ewm_finish_pressure
+    - combined_ewm_avg_fight_time
+    - older_fighter_age
+    - reach_mismatch_abs
+    - height_mismatch_abs
+    markets:
+    - goes_distance
+    - props
