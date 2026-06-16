@@ -108,11 +108,25 @@ def build_fight_metadata(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-def build_moneyline_model_outcomes(meta: pd.DataFrame, probs: pd.Series, config: dict[str, Any], run_id: str, ts: str) -> pd.DataFrame:
+def clipped_probabilities(probs: pd.Series, config: dict[str, Any]) -> pd.Series:
     clip = config.get("prediction", {}).get("probability", {}) or {}
     low = float(clip.get("clip_low", 0.0))
     high = float(clip.get("clip_high", 1.0))
-    probs = probs.clip(lower=low, upper=high)
+    return probs.clip(lower=low, upper=high)
+
+
+def build_model_outcomes(meta: pd.DataFrame, probs: pd.Series, config: dict[str, Any], run_id: str, ts: str) -> pd.DataFrame:
+    prediction_config = config.get("prediction", {}) or {}
+    prediction_format = str(prediction_config.get("format", "binary_matchup")).strip().lower()
+    if prediction_format == "binary_prop":
+        return build_binary_prop_model_outcomes(meta, probs, config, run_id, ts)
+    if prediction_format in {"binary_matchup", "moneyline", ""}:
+        return build_moneyline_model_outcomes(meta, probs, config, run_id, ts)
+    raise ValueError(f"Unsupported full-model backtest prediction.format: {prediction_format}")
+
+
+def build_moneyline_model_outcomes(meta: pd.DataFrame, probs: pd.Series, config: dict[str, Any], run_id: str, ts: str) -> pd.DataFrame:
+    probs = clipped_probabilities(probs, config)
     rows: list[dict[str, Any]] = []
     model_id = str(config["model_id"])
     market_key = str(config.get("prediction", {}).get("market_key", "moneyline"))
@@ -143,6 +157,58 @@ def build_moneyline_model_outcomes(meta: pd.DataFrame, probs: pd.Series, config:
     return pd.DataFrame(rows)
 
 
+def build_binary_prop_model_outcomes(meta: pd.DataFrame, probs: pd.Series, config: dict[str, Any], run_id: str, ts: str) -> pd.DataFrame:
+    probs = clipped_probabilities(probs, config)
+    rows: list[dict[str, Any]] = []
+    model_id = str(config["model_id"])
+    prediction_config = config.get("prediction", {}) or {}
+    market_key = str(prediction_config.get("market_key", config.get("market_key", "")))
+    outcomes = prediction_config.get("outcomes", {}) or {}
+    positive = outcomes.get("positive", {}) or {}
+    negative = outcomes.get("negative", {}) or {}
+    positive_label = str(positive.get("label") or market_key)
+    negative_label = str(negative.get("label") or f"not_{market_key}")
+    positive_side = str(positive.get("outcome_side", "yes"))
+    negative_side = str(negative.get("outcome_side", "no"))
+
+    for i, row in meta.reset_index(drop=True).iterrows():
+        positive_p = float(probs.iloc[i])
+        negative_p = float(1.0 - positive_p)
+        if positive_p >= negative_p:
+            model_pick = positive_label
+            confidence = positive_p
+        else:
+            model_pick = negative_label
+            confidence = negative_p
+
+        for label, side, p in [
+            (positive_label, positive_side, positive_p),
+            (negative_label, negative_side, negative_p),
+        ]:
+            rows.append({
+                "prediction_run_id": run_id,
+                "prediction_timestamp": ts,
+                "model_id": model_id,
+                "fight_id": row["fight_id"],
+                "date": row["date"],
+                "event_name": row["event_name"],
+                "market_key": market_key,
+                "outcome_join_key": build_outcome_join_key(
+                    market_key=market_key,
+                    outcome_label=label,
+                    outcome_fighter_id=None,
+                    side=side,
+                ),
+                "outcome_fighter_id": pd.NA,
+                "outcome_label": label,
+                "outcome_side": side,
+                "model_probability": p,
+                "confidence_score": confidence,
+                "is_model_pick": label == model_pick,
+            })
+    return pd.DataFrame(rows)
+
+
 def main() -> None:
     args = parse_args()
     ensure_data_dirs()
@@ -160,7 +226,7 @@ def main() -> None:
     X = feature_df[feature_cols].apply(pd.to_numeric, errors="coerce").fillna(0.0)
     probs = predict_positive_probability(model, X)
     meta = build_fight_metadata(feature_df)
-    model_outcomes = build_moneyline_model_outcomes(meta, probs, config, backtest_id, ts)
+    model_outcomes = build_model_outcomes(meta, probs, config, backtest_id, ts)
 
     market_raw = pd.read_parquet(args.historical_market_path)
     market_raw = market_raw[market_raw["market_key"].astype(str).str.lower() == args.market_key.lower()].copy()
@@ -171,6 +237,7 @@ def main() -> None:
     summary = summarize(scored, args, backtest_id)
     summary.update({
         "mode": "full_model",
+        "prediction_format": str((config.get("prediction") or {}).get("format", "binary_matchup")),
         "feature_rows": int(len(feature_df)),
         "historical_model_outcome_rows": int(len(model_outcomes)),
         "joined_rows": int(len(joined)),
@@ -184,6 +251,7 @@ def main() -> None:
     (output_dir / "backtest_config.json").write_text(json.dumps(config_payload, indent=2, default=str), encoding="utf-8")
     (output_dir / "backtest_summary.json").write_text(json.dumps(summary, indent=2, default=str), encoding="utf-8")
     model_outcomes.to_parquet(output_dir / "historical_model_outcomes.parquet", index=False)
+    joined.to_parquet(output_dir / "joined_model_market_rows.parquet", index=False)
     scored.to_parquet(output_dir / "backtest_bets.parquet", index=False)
     buckets.to_parquet(output_dir / "backtest_bucket_summary.parquet", index=False)
 
@@ -198,6 +266,7 @@ def main() -> None:
     print("Backtest ID:", backtest_id)
     print("Start date:", args.start_date)
     print("End date:", args.end_date)
+    print("Prediction format:", str((config.get("prediction") or {}).get("format", "binary_matchup")))
     print("Feature rows:", len(feature_df))
     print("Model outcome rows:", len(model_outcomes))
     print("Market rows:", len(market))
