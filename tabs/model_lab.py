@@ -7,6 +7,7 @@ import requests
 import streamlit as st
 
 import utils.model_lab_workflows as mlw
+from utils.github_actions import trigger_workflow
 from utils.model_lab_feature_selection import render_feature_checklist
 
 
@@ -24,6 +25,13 @@ MARKET_OPTIONS = {
         "over_2_5",
         "over_3_5",
     ],
+}
+ACTION_WORKFLOWS = {
+    "fighter_state": "run-build-fighter-state-v2.yml",
+    "feature_view": "run-build-feature-view-v2.yml",
+    "training": "run-train-model-v2.yml",
+    "prediction": "run-prediction-v2.yml",
+    "betting_outcomes": "run-betting-outcomes-v2.yml",
 }
 CONFIG_WIDGET_KEYS = [
     "mlab_display_name",
@@ -757,11 +765,73 @@ def _render_comparison(registry: dict[str, Any], rows: list[dict[str, Any]], row
     mlw._render_comparison(context, registry, context["model_id"])
 
 
+def _dispatch_action(label: str, workflow_file: str, inputs: dict[str, str], disabled: bool, key: str) -> None:
+    if st.button(label, disabled=disabled, use_container_width=True, key=key):
+        ok, message = trigger_workflow(workflow_file, inputs=inputs)
+        st.success(message) if ok else st.error(message)
+
+
 def _render_actions(registry: dict[str, Any], rows: list[dict[str, Any]], row_by_id: dict[str, dict[str, Any]]) -> None:
     st.markdown("## Actions")
     context = _existing_model_selector(registry, rows, row_by_id, key="mlab_actions_model")
     mlw._render_model_bar(context, registry)
-    mlw._render_actions(context)
+
+    st.html("<div class='mlab-card'><div class='mlab-section'><div class='mlab-section-title'>Actions & Workflows</div>")
+    feature_inputs = {
+        "config_path": context.get("feature_view_config_path", ""),
+        "output_path": context.get("feature_view_output_path", ""),
+    }
+    training_inputs = {
+        "config_path": context["config_path"],
+        "artifact_dir": context["artifact_dir"],
+    }
+    prediction_inputs = {
+        "model_family": context["model_family"],
+        "model_id": context["model_id"],
+    }
+    c1, c2, c3, c4, c5 = st.columns(5)
+    with c1:
+        _dispatch_action(
+            "Build Fighter State",
+            ACTION_WORKFLOWS["fighter_state"],
+            {},
+            False,
+            f"mlab_fighter_state_{context['model_id']}",
+        )
+    with c2:
+        _dispatch_action(
+            "Build Feature View",
+            ACTION_WORKFLOWS["feature_view"],
+            feature_inputs,
+            not bool(feature_inputs["config_path"] and feature_inputs["output_path"]),
+            f"mlab_build_{context['model_id']}",
+        )
+    with c3:
+        _dispatch_action(
+            "Train Model",
+            ACTION_WORKFLOWS["training"],
+            training_inputs,
+            not bool(training_inputs["config_path"] and training_inputs["artifact_dir"]),
+            f"mlab_train_{context['model_id']}",
+        )
+    with c4:
+        _dispatch_action(
+            "Run Predictions",
+            ACTION_WORKFLOWS["prediction"],
+            prediction_inputs,
+            not bool(prediction_inputs["model_family"] and prediction_inputs["model_id"]),
+            f"mlab_predict_{context['model_id']}",
+        )
+    with c5:
+        model_mode = st.selectbox("Betting Mode", ["production", "all", "single"], key="mlab_betting_mode")
+        _dispatch_action(
+            "Run Outcomes",
+            ACTION_WORKFLOWS["betting_outcomes"],
+            {"model_mode": model_mode},
+            False,
+            f"mlab_outcomes_{context['model_id']}",
+        )
+    st.html("</div></div>")
 
 
 def render_model_lab():
