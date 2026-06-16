@@ -70,16 +70,4 @@ OPERATION_GROUPS: tuple[OperationGroup, ...] = (
             OperationAction("Append To Master", "Use the existing Data Maintenance append gate.", None, "data", enabled=False),
         ),
     ),
-    OperationGroup(
-        title="System Operations",
-        icon="⚙️",
-        subtitle="Utility checks and maintenance placeholders.",
-        status_key="system",
-        actions=(
-            OperationAction("System Health Check", "System status placeholder.", None, "system", enabled=False),
-            OperationAction("Storage Optimization", "Storage maintenance placeholder.", None, "system", enabled=False),
-            OperationAction("Backup Verification", "Backup verification placeholder.", None, "system", enabled=False),
-            OperationAction("Clear Cache", "Use the global refresh action for now.", None, "system", enabled=False),
-        ),
-    ),
 )
