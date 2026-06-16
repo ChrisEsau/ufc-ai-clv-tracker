@@ -67,7 +67,7 @@ OPERATION_GROUPS: tuple[OperationGroup, ...] = (
             OperationAction("Run Dataset Status", "Refresh master dataset health.", "run-dataset-status.yml", "data"),
             OperationAction("Discover New Events", "Find UFCStats events missing from master.", "run-ufcstats-event-check.yml", "data"),
             OperationAction("Validate Staged Data", "Run append precheck and final review.", "run-append-precheck-validation.yml", "data"),
-            OperationAction("Append To Master", "Append reviewed staged rows to master.", "run-append-staged-to-master.yml", "data"),
+            OperationAction("Append To Master", "Use the existing Data Maintenance append gate.", None, "data", enabled=False),
         ),
     ),
     OperationGroup(
