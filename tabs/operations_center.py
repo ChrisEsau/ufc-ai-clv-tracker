@@ -11,12 +11,14 @@ from tabs.operations_center_sections.autopilot import (
     render_system_health_compact,
     render_upcoming_runs,
 )
+from tabs.operations_center_sections.autopilot_styles import inject_autopilot_css
 from tabs.operations_center_sections.header import render_header
 from tabs.operations_center_sections.styles import inject_operations_css
 
 
 def render_operations_center() -> None:
     inject_operations_css()
+    inject_autopilot_css()
     render_header()
     render_autopilot_summary()
 
