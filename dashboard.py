@@ -11,6 +11,7 @@ from tabs.line_movement import render_line_movement
 from tabs.bankroll import render_bankroll
 from tabs.model_lab_refactored import render_model_lab
 from tabs.data_maintenance import render_data_maintenance
+from tabs.operations_center import render_operations_center
 from utils.sidebar_refactored import render_sidebar
 
 # ============================================================
@@ -31,3 +32,5 @@ elif page == "Model Lab":
     render_model_lab()
 elif page == "Data Maintenance":
     render_data_maintenance()
+elif page == "Operations Center":
+    render_operations_center()
