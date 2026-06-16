@@ -18,6 +18,7 @@ from pipeline.features.raw_fighter_features import (
     ewm_state,
     finish_profile,
     grappling_rates,
+    physical_profile,
     recent_form,
     record_state,
     striking_rates,
@@ -25,6 +26,7 @@ from pipeline.features.raw_fighter_features import (
 from pipeline.features.state.history_builder import SNAPSHOT_CONTEXT_COLUMNS
 
 BASE_PLUGINS = [
+    physical_profile,
     record_state,
     elo_state,
     striking_rates,
@@ -110,7 +112,7 @@ def calculate_all(
             plugin.calculate(
                 fighter_history=pd.DataFrame(),
                 fight_row=row,
-                context={"state": states[name][fighter_id]},
+                context={"state": states[name][fighter_id], "fighter_id": fighter_id},
             )
         )
     return features
