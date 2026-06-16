@@ -23,7 +23,7 @@ models:
     - Prediction V2 should format this model as outcome rows, not red/blue canonical
       columns.
   prop_goes_distance_xgboost_v1:
-    display_name: Moneyline XGBoost V5 Experiment
+    display_name: Goes th distance v1
     description: Draft experiment created from moneyline_xgboost_v5.
     model_family: prop
     market_key: goes_distance
