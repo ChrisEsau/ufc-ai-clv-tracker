@@ -40,8 +40,19 @@ def _run_action(action: OperationAction) -> None:
         st.error(msg)
 
 
+def _accent_class(group: OperationGroup) -> str:
+    return {
+        "market": "market",
+        "predictions": "prediction",
+        "model": "model",
+        "data": "data",
+    }.get(group.status_key, "neutral")
+
+
 def _render_group_header(group: OperationGroup) -> None:
+    accent = _accent_class(group)
     st.html(
+        f'<div class="ops-group-accent {accent}"></div>'
         '<div class="ops-group-header">'
         f'<div class="ops-group-title">{_escape(group.icon)}&nbsp;&nbsp;{_escape(group.title)}</div>'
         f'<div class="ops-group-subtitle">{_escape(group.subtitle)}</div>'
