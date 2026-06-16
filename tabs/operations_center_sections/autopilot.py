@@ -6,6 +6,7 @@ import streamlit as st
 
 from utils.operations_runbook_registry import get_runbook
 from utils.operations_runbook_state import load_state
+from utils.operations_workflow_launcher import launch_next_workflow
 
 
 def _escape(value) -> str:
@@ -91,7 +92,7 @@ def render_runbook_progress() -> None:
             '</div>'
         )
 
-    note = "Runbook registry loaded. Workflow launching is not wired yet."
+    note = "Runbook registry loaded. Use Run Next Workflow to launch one mapped workflow."
     if state.get("current_workflow_file"):
         note = f"Current workflow: {state.get('current_workflow_file')}"
     if state.get("error"):
@@ -105,6 +106,14 @@ def render_runbook_progress() -> None:
         f'<div class="ops-panel-note">{_escape(note)}</div>'
         '</div>'
     )
+
+    if st.button("Run Next Workflow", key="ops_run_next_workflow", type="primary"):
+        ok, message, _state = launch_next_workflow(str(runbook.get("runbook_id") or "market_refresh_v2"))
+        if ok:
+            st.success(message)
+        else:
+            st.error(message)
+        st.rerun()
 
 
 def render_upcoming_runs() -> None:
@@ -194,7 +203,7 @@ def render_recent_activity_compact() -> None:
 def render_autopilot_footer() -> None:
     st.html(
         '<div class="ops-card ops-footer">'
-        '<div>Operations Center is reading the Market Refresh registry. Workflow launch controls are pending.</div>'
+        '<div>Operations Center is reading the Market Refresh registry. Workflow launch controls are in manual validation mode.</div>'
         '<button class="ops-settings-button">Autopilot Settings</button>'
         '</div>'
     )
