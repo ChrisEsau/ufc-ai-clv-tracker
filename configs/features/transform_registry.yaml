@@ -5,7 +5,7 @@
 #   archetype features into model-ready features.
 
 registry_name: ufc_transform_registry
-version: 2
+version: 3
 status: plugin_contract
 
 plugin_contract:
@@ -48,6 +48,38 @@ transforms:
     output_suffix: abs_gap
     output_example: elo_abs_gap
     plugin: pipeline.features.transforms.absolute_gap
+    function: apply
+    status: active
+
+  pair_sum:
+    description: Red feature plus blue feature.
+    output_suffix: pair_sum
+    output_example: combined_finish_rate
+    plugin: pipeline.features.transforms.pair_sum
+    function: apply
+    status: active
+
+  pair_average:
+    description: Average of red and blue feature values.
+    output_suffix: pair_avg
+    output_example: combined_avg_fight_time
+    plugin: pipeline.features.transforms.pair_average
+    function: apply
+    status: active
+
+  pair_max:
+    description: Row-wise maximum of red and blue feature values.
+    output_suffix: pair_max
+    output_example: oldest_fighter_age
+    plugin: pipeline.features.transforms.pair_max
+    function: apply
+    status: active
+
+  pair_min:
+    description: Row-wise minimum of red and blue feature values.
+    output_suffix: pair_min
+    output_example: youngest_fighter_age
+    plugin: pipeline.features.transforms.pair_min
     function: apply
     status: active
 
