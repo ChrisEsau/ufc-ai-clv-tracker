@@ -4,10 +4,13 @@ import html
 
 import streamlit as st
 
+from utils.github_actions import trigger_workflow
 from utils.operations_runbook_registry import get_runbook
 from utils.operations_runbook_state import load_state
-from utils.operations_workflow_launcher import launch_next_workflow
-from utils.operations_workflow_monitor import refresh_active_workflow_status
+from utils.operations_status_writer import read_status
+
+
+ORCHESTRATOR_WORKFLOW_FILE = "run-market-refresh-orchestrator.yml"
 
 
 def _escape(value) -> str:
@@ -37,53 +40,30 @@ def _tone_for_status(status: str) -> str:
     return "purple"
 
 
-def _step_state(step_index: int, state: dict) -> tuple[str, str, str]:
-    status = str(state.get("status") or "idle").lower()
-    current_index = state.get("current_step_index")
+def _step_state(step_index: int, status: dict) -> tuple[str, str, str]:
+    run_status = str(status.get("status") or "idle").lower()
+    current_index = status.get("step_index")
+    if not isinstance(current_index, int):
+        return "—", "Waiting", "waiting"
 
-    if status == "failed" and current_index == step_index:
+    if run_status == "failed" and current_index == step_index:
         return "Failed", "Failed", "failed"
-    if status == "running" and current_index == step_index:
+    if run_status == "running" and current_index == step_index:
         return "Running", "In Progress", "progress"
-    if status == "completed":
-        return "Complete", "Complete", "complete"
-    if isinstance(current_index, int) and step_index < current_index:
+    if run_status == "completed" or step_index < current_index:
         return "Complete", "Complete", "complete"
     return "—", "Waiting", "waiting"
 
 
-def render_autopilot_summary() -> None:
-    state = load_state()
-    runbook = get_runbook(str(state.get("runbook_id") or "market_refresh_v2"))
-    status = str(state.get("status") or "idle").title()
-    tone = _tone_for_status(status)
-    current_step = str(state.get("current_step_id") or "No active step")
-    if current_step != "No active step":
-        step_lookup = {step["step_id"]: step["display_name"] for step in runbook.get("steps", [])}
-        current_step = step_lookup.get(current_step, current_step)
-
-    cards = [
-        ("Autopilot Status", status, "Operations state", "BOT", tone),
-        ("Current Runbook", runbook.get("display_name", "Market Refresh"), current_step, "CAL", "info"),
-        ("Next Scheduled Run", "Not scheduled", "Manual runbook mode", "CLK", "purple"),
-        ("Last Completed Run", state.get("completed_at") or "—", "Runbook completion", "OK", "success"),
-        ("Alerts Requiring Review", "—", "Alert engine pending", "ALR", "warning"),
-    ]
-    st.html('<div class="ops-auto-grid">' + ''.join(_status_card(*card) for card in cards) + '</div>')
-
-
-def _handle_run_button(runbook_id: str) -> None:
-    state = load_state()
-    if state.get("current_workflow_file"):
-        ok, message, refreshed_state = refresh_active_workflow_status()
-        if not ok:
-            st.warning(message)
-            st.rerun()
-        if refreshed_state.get("current_workflow_conclusion") != "success":
-            st.info(message)
-            st.rerun()
-
-    ok, message, _state = launch_next_workflow(runbook_id)
+def _launch_market_refresh() -> None:
+    inputs = {
+        "mode": "test",
+        "max_upcoming_events": "",
+        "max_draftkings_events": "5",
+        "model_id": "moneyline_xgboost_v5",
+        "model_mode": "production",
+    }
+    ok, message = trigger_workflow(ORCHESTRATOR_WORKFLOW_FILE, inputs=inputs)
     if ok:
         st.success(message)
     else:
@@ -91,26 +71,45 @@ def _handle_run_button(runbook_id: str) -> None:
     st.rerun()
 
 
+def render_autopilot_summary() -> None:
+    status = read_status()
+    runbook = get_runbook(str(status.get("runbook_id") or "market_refresh_v2"))
+    status_label = str(status.get("status") or "idle").title()
+    tone = _tone_for_status(status_label)
+    current_step = status.get("current_step_name") or "No active step"
+    current_substep = status.get("current_substep_name") or status.get("message") or "Orchestrator idle"
+
+    cards = [
+        ("Autopilot Status", status_label, current_substep, "BOT", tone),
+        ("Current Runbook", runbook.get("display_name", "Market Refresh"), current_step, "CAL", "info"),
+        ("Next Scheduled Run", "Not scheduled", "Manual test launch mode", "CLK", "purple"),
+        ("Last Completed Run", status.get("completed_at") or "—", "Market Refresh completion", "OK", "success"),
+        ("Alerts Requiring Review", "—", "Alert engine pending", "ALR", "warning"),
+    ]
+    st.html('<div class="ops-auto-grid">' + ''.join(_status_card(*card) for card in cards) + '</div>')
+
+
 def render_runbook_progress() -> None:
-    state = load_state()
-    runbook = get_runbook(str(state.get("runbook_id") or "market_refresh_v2"))
+    legacy_state = load_state()
+    status = read_status()
+    runbook = get_runbook(str(status.get("runbook_id") or legacy_state.get("runbook_id") or "market_refresh_v2"))
 
     action_left, action_right = st.columns([1, 2])
     with action_left:
-        if st.button("Run Next Workflow", key="ops_run_next_workflow", type="primary", use_container_width=True):
-            _handle_run_button(str(runbook.get("runbook_id") or "market_refresh_v2"))
+        if st.button("Run Market Refresh", key="ops_run_market_refresh", type="primary", use_container_width=True):
+            _launch_market_refresh()
     with action_right:
-        st.caption("Button checks the active workflow status first; if complete, it launches the next mapped workflow.")
+        st.caption("Launches the GitHub Market Refresh orchestrator in test mode. DraftKings discovery is limited to 5 matched events.")
 
     rows = []
-    for idx, step in enumerate(runbook.get("steps", [])):
-        stamp, status_label, tone = _step_state(idx, state)
+    for idx, step in enumerate(runbook.get("steps", []), start=1):
+        stamp, status_label, tone = _step_state(idx, status)
         workflow_count = len(step.get("workflows", []))
         workflow_label = f"{workflow_count} workflow" if workflow_count == 1 else f"{workflow_count} workflows"
         desc = f"{step.get('description', '')} ({workflow_label})"
         rows.append(
             f'<div class="ops-runbook-row {tone}">'
-            f'<div class="ops-runbook-num {tone}">{idx + 1}</div>'
+            f'<div class="ops-runbook-num {tone}">{idx}</div>'
             '<div class="ops-runbook-main">'
             f'<div class="ops-runbook-title">{_escape(step.get("display_name"))}</div>'
             f'<div class="ops-runbook-desc">{_escape(desc)}</div>'
@@ -120,15 +119,11 @@ def render_runbook_progress() -> None:
             '</div>'
         )
 
-    note = "Runbook registry loaded. Use Run Next Workflow to launch or advance one mapped workflow."
-    if state.get("current_workflow_file"):
-        note = f"Current workflow: {state.get('current_workflow_file')}"
-    if state.get("current_workflow_status"):
-        note += f" | GitHub status: {state.get('current_workflow_status')}"
-    if state.get("current_workflow_conclusion"):
-        note += f" / {state.get('current_workflow_conclusion')}"
-    if state.get("error"):
-        note = f"Error: {state.get('error')}"
+    note = status.get("message") or "Market Refresh orchestrator ready."
+    if status.get("current_substep_name"):
+        note = f"Current substep: {status.get('current_substep_name')}"
+    if status.get("error"):
+        note = f"Error: {status.get('error')}"
 
     st.html(
         '<div class="ops-card ops-panel">'
@@ -142,7 +137,7 @@ def render_runbook_progress() -> None:
 
 def render_upcoming_runs() -> None:
     runs = [
-        ("Market Refresh", "Manual mode", "Runbook registry ready; scheduler not wired", "Ready"),
+        ("Market Refresh", "Manual test mode", "Runs the GitHub orchestrator workflow", "Ready"),
         ("Monday Reset", "Future", "Weekly settlement and ingestion runbook", "Planned"),
         ("Fight Day Monitor", "Future", "Increased refresh cadence and final snapshots", "Planned"),
     ]
@@ -190,7 +185,7 @@ def render_review_alerts() -> None:
 
 
 def render_system_health_compact() -> None:
-    rows = ["Runbook Registry", "Runbook State", "GitHub Workflows", "Artifact Checks"]
+    rows = ["Runbook Registry", "Orchestrator Workflow", "Status File", "Artifact Checks"]
     html_rows = ''.join(
         f'<div class="ops-health-row"><span>OK {_escape(row)}</span><span class="ops-green">Ready</span><span>—</span></div>'
         for row in rows
@@ -198,16 +193,16 @@ def render_system_health_compact() -> None:
     st.html(
         '<div class="ops-card ops-panel">'
         '<div class="ops-panel-header"><div class="ops-panel-title">System Health</div><div class="ops-link-inline">View Details</div></div>'
-        + html_rows + '<div class="ops-health-footer">Workflow execution pending</div></div>'
+        + html_rows + '<div class="ops-health-footer">Orchestrator launch mode active</div></div>'
     )
 
 
 def render_recent_activity_compact() -> None:
-    state = load_state()
+    status = read_status()
     rows = [
-        ("STATE", f"Runbook state: {state.get('status', 'idle')}", state.get("updated_at") or "—"),
-        ("WF", f"Active workflow: {state.get('current_workflow_file') or 'none'}", state.get("current_workflow_status") or "—"),
-        ("NEXT", "Next: auto-advance after status refresh validation", "—"),
+        ("STATE", f"Market Refresh: {status.get('status', 'idle')}", status.get("updated_at") or "—"),
+        ("STEP", f"Step: {status.get('current_step_name') or 'none'}", status.get("current_substep_name") or "—"),
+        ("NEXT", "Next: dashboard auto-refresh from orchestrator status", "—"),
     ]
     html_rows = ''.join(
         '<div class="ops-activity-row">'
@@ -225,7 +220,7 @@ def render_recent_activity_compact() -> None:
 def render_autopilot_footer() -> None:
     st.html(
         '<div class="ops-card ops-footer">'
-        '<div>Operations Center is reading the Market Refresh registry. Workflow launch controls are in manual validation mode.</div>'
+        '<div>Operations Center now launches the GitHub Market Refresh orchestrator. Streamlit reads status from data/status/market_refresh_status.json.</div>'
         '<button class="ops-settings-button">Autopilot Settings</button>'
         '</div>'
     )
