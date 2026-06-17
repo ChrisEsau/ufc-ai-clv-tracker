@@ -1,5 +1,5 @@
 {
-  "completed_at": "2026-06-17T02:40:34.353801+00:00",
+  "completed_at": "2026-06-17T12:11:05.199451+00:00",
   "current_step_id": "build_betting_outcomes",
   "current_step_name": "Build Betting Outcomes",
   "current_substep_id": "run_betting_join_key_diagnostic",
@@ -13,7 +13,7 @@
       "step_name": null,
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-06-17T02:34:44.141134+00:00"
+      "timestamp": "2026-06-17T12:05:25.988414+00:00"
     },
     {
       "event": "step_started",
@@ -22,7 +22,7 @@
       "step_name": "Refresh Upcoming Events",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-06-17T02:34:44.141625+00:00"
+      "timestamp": "2026-06-17T12:05:25.988927+00:00"
     },
     {
       "event": "substep_started",
@@ -31,7 +31,7 @@
       "step_name": "Refresh Upcoming Events",
       "substep_id": "refresh_ufcstats_upcoming_events",
       "substep_name": "Refresh UFCStats Upcoming Events",
-      "timestamp": "2026-06-17T02:34:44.142000+00:00"
+      "timestamp": "2026-06-17T12:05:25.989327+00:00"
     },
     {
       "event": "substep_completed",
@@ -40,7 +40,7 @@
       "step_name": "Refresh Upcoming Events",
       "substep_id": "refresh_ufcstats_upcoming_events",
       "substep_name": "Refresh UFCStats Upcoming Events",
-      "timestamp": "2026-06-17T02:36:05.195343+00:00"
+      "timestamp": "2026-06-17T12:06:41.800735+00:00"
     },
     {
       "event": "step_completed",
@@ -49,7 +49,7 @@
       "step_name": "Refresh Upcoming Events",
       "substep_id": "refresh_ufcstats_upcoming_events",
       "substep_name": "Refresh UFCStats Upcoming Events",
-      "timestamp": "2026-06-17T02:36:05.195799+00:00"
+      "timestamp": "2026-06-17T12:06:41.801142+00:00"
     },
     {
       "event": "step_started",
@@ -58,7 +58,7 @@
       "step_name": "Run Predictions",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-06-17T02:36:05.196290+00:00"
+      "timestamp": "2026-06-17T12:06:41.801659+00:00"
     },
     {
       "event": "substep_started",
@@ -67,7 +67,7 @@
       "step_name": "Run Predictions",
       "substep_id": "build_fighter_state",
       "substep_name": "Build Fighter State V2",
-      "timestamp": "2026-06-17T02:36:05.196716+00:00"
+      "timestamp": "2026-06-17T12:06:41.802543+00:00"
     },
     {
       "event": "substep_completed",
@@ -76,7 +76,7 @@
       "step_name": "Run Predictions",
       "substep_id": "build_fighter_state",
       "substep_name": "Build Fighter State V2",
-      "timestamp": "2026-06-17T02:36:51.148462+00:00"
+      "timestamp": "2026-06-17T12:07:28.041613+00:00"
     },
     {
       "event": "substep_started",
@@ -85,7 +85,7 @@
       "step_name": "Run Predictions",
       "substep_id": "build_feature_view",
       "substep_name": "Build Feature View V2",
-      "timestamp": "2026-06-17T02:36:51.148960+00:00"
+      "timestamp": "2026-06-17T12:07:28.042072+00:00"
     },
     {
       "event": "substep_completed",
@@ -94,7 +94,7 @@
       "step_name": "Run Predictions",
       "substep_id": "build_feature_view",
       "substep_name": "Build Feature View V2",
-      "timestamp": "2026-06-17T02:36:52.077788+00:00"
+      "timestamp": "2026-06-17T12:07:28.998466+00:00"
     },
     {
       "event": "substep_started",
@@ -103,7 +103,7 @@
       "step_name": "Run Predictions",
       "substep_id": "build_live_card",
       "substep_name": "Build Live Card",
-      "timestamp": "2026-06-17T02:36:52.078245+00:00"
+      "timestamp": "2026-06-17T12:07:28.998923+00:00"
     },
     {
       "event": "substep_completed",
@@ -112,7 +112,7 @@
       "step_name": "Run Predictions",
       "substep_id": "build_live_card",
       "substep_name": "Build Live Card",
-      "timestamp": "2026-06-17T02:36:52.499874+00:00"
+      "timestamp": "2026-06-17T12:07:29.442831+00:00"
     },
     {
       "event": "substep_started",
@@ -121,7 +121,7 @@
       "step_name": "Run Predictions",
       "substep_id": "run_prediction_v2",
       "substep_name": "Run Prediction V2",
-      "timestamp": "2026-06-17T02:36:52.500352+00:00"
+      "timestamp": "2026-06-17T12:07:29.443342+00:00"
     },
     {
       "event": "substep_completed",
@@ -130,7 +130,7 @@
       "step_name": "Run Predictions",
       "substep_id": "run_prediction_v2",
       "substep_name": "Run Prediction V2",
-      "timestamp": "2026-06-17T02:36:59.876333+00:00"
+      "timestamp": "2026-06-17T12:07:37.129536+00:00"
     },
     {
       "event": "step_completed",
@@ -139,7 +139,7 @@
       "step_name": "Run Predictions",
       "substep_id": "run_prediction_v2",
       "substep_name": "Run Prediction V2",
-      "timestamp": "2026-06-17T02:36:59.876878+00:00"
+      "timestamp": "2026-06-17T12:07:37.130019+00:00"
     },
     {
       "event": "step_started",
@@ -148,7 +148,7 @@
       "step_name": "Get Market Odds",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-06-17T02:36:59.877342+00:00"
+      "timestamp": "2026-06-17T12:07:37.130512+00:00"
     },
     {
       "event": "substep_started",
@@ -157,7 +157,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "draftkings_event_index",
       "substep_name": "Build DraftKings Event Index",
-      "timestamp": "2026-06-17T02:36:59.877844+00:00"
+      "timestamp": "2026-06-17T12:07:37.130955+00:00"
     },
     {
       "event": "substep_completed",
@@ -166,7 +166,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "draftkings_event_index",
       "substep_name": "Build DraftKings Event Index",
-      "timestamp": "2026-06-17T02:37:00.700768+00:00"
+      "timestamp": "2026-06-17T12:07:37.903453+00:00"
     },
     {
       "event": "substep_started",
@@ -175,7 +175,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "draftkings_card_filter",
       "substep_name": "Match DraftKings Events To Card",
-      "timestamp": "2026-06-17T02:37:00.701315+00:00"
+      "timestamp": "2026-06-17T12:07:37.903976+00:00"
     },
     {
       "event": "substep_completed",
@@ -184,7 +184,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "draftkings_card_filter",
       "substep_name": "Match DraftKings Events To Card",
-      "timestamp": "2026-06-17T02:37:01.600088+00:00"
+      "timestamp": "2026-06-17T12:07:38.829151+00:00"
     },
     {
       "event": "substep_started",
@@ -193,7 +193,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "draftkings_matched_discovery",
       "substep_name": "Discover DraftKings Markets",
-      "timestamp": "2026-06-17T02:37:01.600684+00:00"
+      "timestamp": "2026-06-17T12:07:38.829724+00:00"
     },
     {
       "event": "substep_completed",
@@ -202,7 +202,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "draftkings_matched_discovery",
       "substep_name": "Discover DraftKings Markets",
-      "timestamp": "2026-06-17T02:40:31.903521+00:00"
+      "timestamp": "2026-06-17T12:11:02.635787+00:00"
     },
     {
       "event": "substep_started",
@@ -211,7 +211,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "draftkings_normalize_markets",
       "substep_name": "Normalize DraftKings Markets",
-      "timestamp": "2026-06-17T02:40:31.904092+00:00"
+      "timestamp": "2026-06-17T12:11:02.636663+00:00"
     },
     {
       "event": "substep_completed",
@@ -220,7 +220,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "draftkings_normalize_markets",
       "substep_name": "Normalize DraftKings Markets",
-      "timestamp": "2026-06-17T02:40:32.323617+00:00"
+      "timestamp": "2026-06-17T12:11:03.083399+00:00"
     },
     {
       "event": "substep_started",
@@ -229,7 +229,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "draftkings_match_markets",
       "substep_name": "Match DraftKings Markets To Live Card",
-      "timestamp": "2026-06-17T02:40:32.324185+00:00"
+      "timestamp": "2026-06-17T12:11:03.084001+00:00"
     },
     {
       "event": "substep_completed",
@@ -238,7 +238,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "draftkings_match_markets",
       "substep_name": "Match DraftKings Markets To Live Card",
-      "timestamp": "2026-06-17T02:40:33.299060+00:00"
+      "timestamp": "2026-06-17T12:11:04.083536+00:00"
     },
     {
       "event": "step_completed",
@@ -247,7 +247,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "draftkings_match_markets",
       "substep_name": "Match DraftKings Markets To Live Card",
-      "timestamp": "2026-06-17T02:40:33.299679+00:00"
+      "timestamp": "2026-06-17T12:11:04.084136+00:00"
     },
     {
       "event": "step_started",
@@ -256,7 +256,7 @@
       "step_name": "Build Betting Outcomes",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-06-17T02:40:33.300235+00:00"
+      "timestamp": "2026-06-17T12:11:04.084800+00:00"
     },
     {
       "event": "substep_started",
@@ -265,7 +265,7 @@
       "step_name": "Build Betting Outcomes",
       "substep_id": "run_betting_outcomes_v2",
       "substep_name": "Run Betting Outcomes V2",
-      "timestamp": "2026-06-17T02:40:33.300877+00:00"
+      "timestamp": "2026-06-17T12:11:04.085376+00:00"
     },
     {
       "event": "substep_completed",
@@ -274,7 +274,7 @@
       "step_name": "Build Betting Outcomes",
       "substep_id": "run_betting_outcomes_v2",
       "substep_name": "Run Betting Outcomes V2",
-      "timestamp": "2026-06-17T02:40:33.797361+00:00"
+      "timestamp": "2026-06-17T12:11:04.607780+00:00"
     },
     {
       "event": "substep_started",
@@ -283,7 +283,7 @@
       "step_name": "Build Betting Outcomes",
       "substep_id": "run_betting_join_key_diagnostic",
       "substep_name": "Run Betting Join Key Diagnostic",
-      "timestamp": "2026-06-17T02:40:33.798000+00:00"
+      "timestamp": "2026-06-17T12:11:04.608447+00:00"
     },
     {
       "event": "substep_completed",
@@ -292,7 +292,7 @@
       "step_name": "Build Betting Outcomes",
       "substep_id": "run_betting_join_key_diagnostic",
       "substep_name": "Run Betting Join Key Diagnostic",
-      "timestamp": "2026-06-17T02:40:34.352447+00:00"
+      "timestamp": "2026-06-17T12:11:05.198140+00:00"
     },
     {
       "event": "step_completed",
@@ -301,7 +301,7 @@
       "step_name": "Build Betting Outcomes",
       "substep_id": "run_betting_join_key_diagnostic",
       "substep_name": "Run Betting Join Key Diagnostic",
-      "timestamp": "2026-06-17T02:40:34.353143+00:00"
+      "timestamp": "2026-06-17T12:11:05.198831+00:00"
     },
     {
       "event": "runbook_completed",
@@ -310,17 +310,17 @@
       "step_name": "Build Betting Outcomes",
       "substep_id": "run_betting_join_key_diagnostic",
       "substep_name": "Run Betting Join Key Diagnostic",
-      "timestamp": "2026-06-17T02:40:34.353806+00:00"
+      "timestamp": "2026-06-17T12:11:05.199455+00:00"
     }
   ],
   "message": "Market Refresh completed",
   "mode": "test",
   "runbook_id": "market_refresh_v2",
-  "started_at": "2026-06-17T02:34:44.141129+00:00",
+  "started_at": "2026-06-17T12:05:25.988410+00:00",
   "status": "completed",
   "step_index": 4,
   "step_total": 4,
   "substep_index": 2,
   "substep_total": 2,
-  "updated_at": "2026-06-17T02:40:34.353938+00:00"
+  "updated_at": "2026-06-17T12:11:05.199581+00:00"
 }
