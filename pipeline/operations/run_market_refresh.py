@@ -37,6 +37,10 @@ def _python_module(module: str, *args: str) -> list[str]:
     return [sys.executable, "-m", module, *args]
 
 
+def _is_uncapped(value: object) -> bool:
+    return str(value or "").strip().lower() in {"", "all", "none", "null"}
+
+
 def _validate_outputs(paths: Sequence[str]) -> None:
     missing = [path for path in paths if not Path(path).exists()]
     if missing:
@@ -58,7 +62,7 @@ def build_steps(args: argparse.Namespace) -> list[Step]:
         "--sleep-seconds",
         str(args.draftkings_sleep_seconds),
     )
-    if args.max_draftkings_events:
+    if not _is_uncapped(args.max_draftkings_events):
         matched_discovery_command.extend(["--max-events", str(args.max_draftkings_events)])
 
     return [
@@ -274,7 +278,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the Market Refresh production runbook.")
     parser.add_argument("--mode", choices=["test", "production"], default="test")
     parser.add_argument("--max-upcoming-events", default="", help="Optional max UFCStats upcoming events to refresh.")
-    parser.add_argument("--max-draftkings-events", default="5", help="Optional max matched DraftKings events; blank means all.")
+    parser.add_argument("--max-draftkings-events", default="all", help="Optional max matched DraftKings events; use all/blank for every matched event.")
     parser.add_argument("--draftkings-sleep-seconds", default="3")
     parser.add_argument("--draftkings-card-min-match-score", default="80")
     parser.add_argument("--draftkings-card-min-single-score", default="70")
