@@ -102,9 +102,12 @@ def build_steps(args: argparse.Namespace) -> list[Step]:
                 ),
                 Substep(
                     substep_id="build_live_card",
-                    name="Build Live Card",
-                    command=_python_module("pipeline.prediction.run_build_live_card", "--all-upcoming"),
-                    expected_outputs=["data/predictions/ufc_live_card.parquet"],
+                    name="Build Target Live Card",
+                    command=_python_module("pipeline.prediction.run_build_target_live_card"),
+                    expected_outputs=[
+                        "data/predictions/ufc_live_card.parquet",
+                        "data/cards/ufc_selected_live_card_event.parquet",
+                    ],
                 ),
                 Substep(
                     substep_id="run_prediction_v2",
