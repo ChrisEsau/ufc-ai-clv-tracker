@@ -12,10 +12,12 @@ from pipeline.common.paths import (
     BANKROLL_SNAPSHOTS_PATH,
     CLV_RESULTS_PATH,
     DATASET_STATUS_PATH,
+    SELECTED_LIVE_CARD_EVENT_PATH,
     ensure_data_dirs,
 )
 from pipeline.data_maintenance.run_dataset_status import run_dataset_status
 from pipeline.data_maintenance.run_ingest_missing_events import run_ingest_missing_events
+from pipeline.events.run_set_target_event import run_set_target_event
 from utils.operations_status_writer import (
     complete_runbook,
     complete_step,
@@ -169,6 +171,13 @@ def run_monday_reset(*, mode: str, max_events: int | None, auto_append: bool, ru
             "Refresh Platform Status",
             run_dataset_status,
             [DATASET_STATUS_PATH],
+        )
+        _run_function_step(
+            results,
+            "set_target_event",
+            "Set Target Event",
+            lambda: run_set_target_event(refresh_upcoming=True, max_events=1),
+            [SELECTED_LIVE_CARD_EVENT_PATH],
         )
         _complete_step_status("Completed Refresh Platform Status")
 
