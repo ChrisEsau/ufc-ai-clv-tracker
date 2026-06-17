@@ -9,10 +9,19 @@ from pipeline.common.paths import STATUS_DIR, ensure_data_dirs
 
 
 MARKET_REFRESH_STATUS_PATH = STATUS_DIR / "market_refresh_status.json"
+MONDAY_RESET_STATUS_PATH = STATUS_DIR / "monday_reset_status.json"
+RUNBOOK_STATUS_PATHS: dict[str, Path] = {
+    "market_refresh_v2": MARKET_REFRESH_STATUS_PATH,
+    "monday_reset_v1": MONDAY_RESET_STATUS_PATH,
+}
 
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def status_path_for_runbook(runbook_id: str) -> Path:
+    return RUNBOOK_STATUS_PATHS.get(str(runbook_id), MARKET_REFRESH_STATUS_PATH)
 
 
 def _base_status(runbook_id: str) -> dict[str, Any]:
@@ -38,27 +47,29 @@ def _base_status(runbook_id: str) -> dict[str, Any]:
     }
 
 
-def read_status(path: Path = MARKET_REFRESH_STATUS_PATH) -> dict[str, Any]:
-    if not path.exists():
-        return _base_status("market_refresh_v2")
+def read_status(path: Path | None = None, runbook_id: str = "market_refresh_v2") -> dict[str, Any]:
+    resolved_path = path or status_path_for_runbook(runbook_id)
+    if not resolved_path.exists():
+        return _base_status(runbook_id)
     try:
-        with path.open("r", encoding="utf-8") as file:
+        with resolved_path.open("r", encoding="utf-8") as file:
             status = json.load(file) or {}
     except Exception:
-        return _base_status("market_refresh_v2")
-    merged = _base_status(str(status.get("runbook_id") or "market_refresh_v2"))
+        return _base_status(runbook_id)
+    merged = _base_status(str(status.get("runbook_id") or runbook_id))
     merged.update(status)
     if not isinstance(merged.get("history"), list):
         merged["history"] = []
     return merged
 
 
-def write_status(status: dict[str, Any], path: Path = MARKET_REFRESH_STATUS_PATH) -> dict[str, Any]:
+def write_status(status: dict[str, Any], path: Path | None = None) -> dict[str, Any]:
     ensure_data_dirs()
-    path.parent.mkdir(parents=True, exist_ok=True)
     status = dict(status)
+    resolved_path = path or status_path_for_runbook(str(status.get("runbook_id") or "market_refresh_v2"))
+    resolved_path.parent.mkdir(parents=True, exist_ok=True)
     status["updated_at"] = utc_now_iso()
-    with path.open("w", encoding="utf-8") as file:
+    with resolved_path.open("w", encoding="utf-8") as file:
         json.dump(status, file, indent=2, sort_keys=True)
         file.write("\n")
     return status
@@ -107,8 +118,9 @@ def start_step(
     step_total: int,
     substep_total: int,
     message: str | None = None,
+    runbook_id: str = "market_refresh_v2",
 ) -> dict[str, Any]:
-    status = read_status()
+    status = read_status(runbook_id=runbook_id)
     status.update(
         {
             "status": "running",
@@ -135,8 +147,9 @@ def start_substep(
     substep_index: int,
     substep_total: int,
     message: str | None = None,
+    runbook_id: str = "market_refresh_v2",
 ) -> dict[str, Any]:
-    status = read_status()
+    status = read_status(runbook_id=runbook_id)
     status.update(
         {
             "status": "running",
@@ -152,22 +165,22 @@ def start_substep(
     return write_status(status)
 
 
-def complete_substep(message: str | None = None) -> dict[str, Any]:
-    status = read_status()
+def complete_substep(message: str | None = None, *, runbook_id: str = "market_refresh_v2") -> dict[str, Any]:
+    status = read_status(runbook_id=runbook_id)
     append_history(status, "substep_completed", message or "Substep completed")
     status["message"] = message or "Substep completed"
     return write_status(status)
 
 
-def complete_step(message: str | None = None) -> dict[str, Any]:
-    status = read_status()
+def complete_step(message: str | None = None, *, runbook_id: str = "market_refresh_v2") -> dict[str, Any]:
+    status = read_status(runbook_id=runbook_id)
     append_history(status, "step_completed", message or "Step completed")
     status["message"] = message or "Step completed"
     return write_status(status)
 
 
-def complete_runbook(message: str | None = None) -> dict[str, Any]:
-    status = read_status()
+def complete_runbook(message: str | None = None, *, runbook_id: str = "market_refresh_v2") -> dict[str, Any]:
+    status = read_status(runbook_id=runbook_id)
     status.update(
         {
             "status": "completed",
@@ -180,8 +193,8 @@ def complete_runbook(message: str | None = None) -> dict[str, Any]:
     return write_status(status)
 
 
-def fail_runbook(error: str) -> dict[str, Any]:
-    status = read_status()
+def fail_runbook(error: str, *, runbook_id: str = "market_refresh_v2") -> dict[str, Any]:
+    status = read_status(runbook_id=runbook_id)
     status.update(
         {
             "status": "failed",
