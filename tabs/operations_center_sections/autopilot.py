@@ -83,43 +83,26 @@ def _available_runbooks() -> list[dict]:
     return list_runbooks()
 
 
-def _default_selected_runbook_id(status: dict) -> str:
-    status_runbook_id = str(status.get("runbook_id") or DEFAULT_RUNBOOK_ID)
+def _read_runbook_status(runbook_id: str) -> dict:
+    return read_status(runbook_id=runbook_id)
+
+
+def _default_selected_runbook_id() -> str:
     available_ids = {str(runbook.get("runbook_id")) for runbook in _available_runbooks()}
+    market_status = _read_runbook_status(DEFAULT_RUNBOOK_ID)
+    status_runbook_id = str(market_status.get("runbook_id") or DEFAULT_RUNBOOK_ID)
     if status_runbook_id in available_ids:
         return status_runbook_id
     return DEFAULT_RUNBOOK_ID
 
 
 def _selected_runbook_id() -> str:
-    status = read_status()
     available_ids = [str(runbook.get("runbook_id")) for runbook in _available_runbooks()]
     if "ops_selected_runbook_id" not in st.session_state:
-        st.session_state["ops_selected_runbook_id"] = _default_selected_runbook_id(status)
+        st.session_state["ops_selected_runbook_id"] = _default_selected_runbook_id()
     if st.session_state["ops_selected_runbook_id"] not in available_ids:
         st.session_state["ops_selected_runbook_id"] = DEFAULT_RUNBOOK_ID
     return str(st.session_state["ops_selected_runbook_id"])
-
-
-def _status_for_selected_runbook(status: dict, selected_runbook_id: str) -> dict:
-    if str(status.get("runbook_id") or DEFAULT_RUNBOOK_ID) == selected_runbook_id:
-        return status
-    idle = dict(status)
-    idle.update(
-        {
-            "runbook_id": selected_runbook_id,
-            "status": "idle",
-            "current_step_id": None,
-            "current_step_name": None,
-            "current_substep_id": None,
-            "current_substep_name": None,
-            "message": "Runbook idle",
-            "error": None,
-            "history": [],
-            "completed_at": None,
-        }
-    )
-    return idle
 
 
 def _display_status(status: dict) -> tuple[str, str]:
@@ -151,19 +134,20 @@ def _step_completion_times(status: dict) -> dict[str, str]:
 
 
 def _step_state(step: dict, status: dict, completion_times: dict[str, str]) -> tuple[str, str, str]:
-    if str(step.get("status") or "").lower() == "planned":
-        return "Future", "Planned", "waiting"
-
     display_status, _message = _display_status(status)
     step_id = str(step.get("step_id") or "")
     current_step_id = str(status.get("current_step_id") or "")
 
     if display_status == "completed":
+        if str(step.get("status") or "").lower() == "planned":
+            return completion_times.get(step_id, _format_cst(status.get("completed_at"))), "Complete", "complete"
         return completion_times.get(step_id, _format_cst(status.get("completed_at"))), "Complete", "complete"
     if display_status == "running":
         return "In Progress", "In Progress", "progress"
     if display_status == "failed" and step_id == current_step_id:
         return "Failed", "Failed", "failed"
+    if str(step.get("status") or "").lower() == "planned":
+        return "Future", "Planned", "waiting"
     if step_id in completion_times:
         return completion_times[step_id], "Complete", "complete"
     return "—", "Waiting", "waiting"
@@ -192,8 +176,7 @@ def _launch_selected_runbook(runbook_id: str) -> None:
 
 def render_autopilot_summary() -> None:
     selected_id = _selected_runbook_id()
-    raw_status = read_status()
-    status = _status_for_selected_runbook(raw_status, selected_id)
+    status = _read_runbook_status(selected_id)
     runbook = get_runbook(selected_id)
     display_status, display_message = _display_status(status)
     status_label = display_status.title()
@@ -213,8 +196,6 @@ def render_autopilot_summary() -> None:
 
 def render_runbook_progress() -> None:
     selected_id = _selected_runbook_id()
-    raw_status = read_status()
-    status = _status_for_selected_runbook(raw_status, selected_id)
     runbooks = _available_runbooks()
     runbook_by_id = {str(runbook.get("runbook_id")): runbook for runbook in runbooks}
     runbook_ids = list(runbook_by_id.keys())
@@ -229,7 +210,7 @@ def render_runbook_progress() -> None:
             key="ops_selected_runbook_id",
         )
         runbook = runbook_by_id[selected_id]
-        status = _status_for_selected_runbook(raw_status, selected_id)
+        status = _read_runbook_status(selected_id)
     with action_col:
         button_label = RUNBOOK_LAUNCH_CONFIG.get(selected_id, {}).get("button_label", f"Run {runbook.get('display_name', 'Runbook')}")
         if st.button(button_label, key=f"ops_run_{selected_id}", type="primary", use_container_width=True):
@@ -334,7 +315,7 @@ def render_review_alerts() -> None:
 
 
 def render_system_health_compact() -> None:
-    rows = ["Runbook Registry", "Orchestrator Workflows", "Status File", "Artifact Checks"]
+    rows = ["Runbook Registry", "Orchestrator Workflows", "Status Files", "Artifact Checks"]
     html_rows = ''.join(
         f'<div class="ops-health-row"><span>OK {_escape(row)}</span><span class="ops-green">Ready</span><span>—</span></div>'
         for row in rows
@@ -348,7 +329,7 @@ def render_system_health_compact() -> None:
 
 def render_recent_activity_compact() -> None:
     selected_id = _selected_runbook_id()
-    status = _status_for_selected_runbook(read_status(), selected_id)
+    status = _read_runbook_status(selected_id)
     runbook = get_runbook(selected_id)
     rows = [
         ("STATE", f"{runbook.get('display_name')}: {_display_status(status)[0]}", _format_cst(status.get("updated_at"))),
@@ -371,7 +352,7 @@ def render_recent_activity_compact() -> None:
 def render_autopilot_footer() -> None:
     st.html(
         '<div class="ops-card ops-footer">'
-        '<div>Operations Center launches registered orchestrator runbooks and shows selected runbook status from the local status artifact in CST.</div>'
+        '<div>Operations Center launches registered orchestrator runbooks and shows selected runbook status from each runbook status artifact in CST.</div>'
         '<button class="ops-settings-button">Autopilot Settings</button>'
         '</div>'
     )
