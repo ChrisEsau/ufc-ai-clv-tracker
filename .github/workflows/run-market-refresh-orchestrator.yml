@@ -35,6 +35,15 @@ on:
           - production
           - all
           - single
+      snapshot_model_mode:
+        description: "Model-market snapshot mode"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - production
+          - all
+          - single
 
 permissions:
   contents: write
@@ -75,6 +84,7 @@ jobs:
             --mode "${{ inputs.mode }}"
             --model-id "${{ inputs.model_id }}"
             --model-mode "${{ inputs.model_mode }}"
+            --snapshot-model-mode "${{ inputs.snapshot_model_mode }}"
             --max-draftkings-events "${{ inputs.max_draftkings_events }}"
           )
 
@@ -111,7 +121,9 @@ jobs:
             data/audits/ufc_market_match_audit_v2.parquet \
             data/predictions/betting_outcomes.parquet \
             data/audits/ufc_betting_outcomes_audit.parquet \
-            data/audits/ufc_betting_join_key_diagnostic.parquet || true
+            data/audits/ufc_betting_join_key_diagnostic.parquet \
+            data/snapshots/model_market_snapshots.parquet \
+            data/audits/model_market_snapshot_audit.parquet || true
 
           git add -f data/predictions/by_model/${{ inputs.model_id }}/model_outcomes.parquet 2>/dev/null || true
           git add -f data/predictions/selected_live_card_event.parquet 2>/dev/null || true
