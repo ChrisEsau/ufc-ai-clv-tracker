@@ -3,6 +3,7 @@ from __future__ import annotations
 import html
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 from utils.github_actions import trigger_workflow
 from utils.operations_runbook_registry import get_runbook
@@ -11,6 +12,7 @@ from utils.operations_status_writer import read_status
 
 
 ORCHESTRATOR_WORKFLOW_FILE = "run-market-refresh-orchestrator.yml"
+AUTO_REFRESH_SECONDS = 15
 
 
 def _escape(value) -> str:
@@ -38,6 +40,23 @@ def _tone_for_status(status: str) -> str:
     if normalized == "completed":
         return "success"
     return "purple"
+
+
+def _render_auto_refresh(status: dict) -> None:
+    if str(status.get("status") or "").lower() != "running":
+        return
+    milliseconds = AUTO_REFRESH_SECONDS * 1000
+    components.html(
+        f"""
+        <script>
+        setTimeout(function() {{
+          window.parent.location.reload();
+        }}, {milliseconds});
+        </script>
+        """,
+        height=0,
+    )
+    st.caption(f"Auto-refreshing every {AUTO_REFRESH_SECONDS} seconds while Market Refresh is running.")
 
 
 def _step_state(step_index: int, status: dict) -> tuple[str, str, str]:
@@ -73,6 +92,7 @@ def _launch_market_refresh() -> None:
 
 def render_autopilot_summary() -> None:
     status = read_status()
+    _render_auto_refresh(status)
     runbook = get_runbook(str(status.get("runbook_id") or "market_refresh_v2"))
     status_label = str(status.get("status") or "idle").title()
     tone = _tone_for_status(status_label)
@@ -202,7 +222,7 @@ def render_recent_activity_compact() -> None:
     rows = [
         ("STATE", f"Market Refresh: {status.get('status', 'idle')}", status.get("updated_at") or "—"),
         ("STEP", f"Step: {status.get('current_step_name') or 'none'}", status.get("current_substep_name") or "—"),
-        ("NEXT", "Next: dashboard auto-refresh from orchestrator status", "—"),
+        ("NEXT", "Next: live status push/poll enhancement", "—"),
     ]
     html_rows = ''.join(
         '<div class="ops-activity-row">'
