@@ -95,6 +95,12 @@ jobs:
           git add -f \
             data/status/monday_reset_status.json \
             data/status/ufc_ufcstats_event_check.parquet \
+            data/cards/ufcstats_upcoming_events.parquet \
+            data/cards/ufcstats_upcoming_fights.parquet \
+            data/cards/ufc_selected_live_card_event.parquet \
+            data/predictions/ufc_live_card.parquet \
+            data/audits/ufc_live_card_build_audit.parquet \
+            data/audits/ufc_live_card_rejected_rows.parquet \
             data/staging/ufc_missing_events.parquet \
             data/staging/ufc_staged_fight_rows.parquet \
             data/staging/ufc_staged_fight_details.parquet \
