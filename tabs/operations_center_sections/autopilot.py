@@ -5,7 +5,7 @@ import html
 import streamlit as st
 import streamlit.components.v1 as components
 
-from utils.github_actions import trigger_workflow
+from utils.github_actions import get_latest_workflow_run, trigger_workflow
 from utils.operations_runbook_registry import get_runbook
 from utils.operations_runbook_state import load_state
 from utils.operations_status_writer import read_status
@@ -13,6 +13,7 @@ from utils.operations_status_writer import read_status
 
 ORCHESTRATOR_WORKFLOW_FILE = "run-market-refresh-orchestrator.yml"
 AUTO_REFRESH_SECONDS = 15
+RUNNING_GITHUB_STATUSES = {"queued", "in_progress", "requested", "waiting", "pending"}
 
 
 def _escape(value) -> str:
@@ -31,6 +32,41 @@ def _status_card(label: str, value: str, caption: str, icon: str, tone: str = "s
     )
 
 
+def _latest_orchestrator_run() -> dict | None:
+    ok, _message, latest_run = get_latest_workflow_run(ORCHESTRATOR_WORKFLOW_FILE)
+    if not ok:
+        return None
+    return latest_run
+
+
+def _github_run_status(latest_run: dict | None) -> tuple[str | None, str | None, str | None]:
+    if not latest_run:
+        return None, None, None
+    return (
+        str(latest_run.get("status") or "").lower() or None,
+        str(latest_run.get("conclusion") or "").lower() or None,
+        latest_run.get("html_url"),
+    )
+
+
+def _is_github_running(latest_run: dict | None) -> bool:
+    github_status, conclusion, _url = _github_run_status(latest_run)
+    return bool(github_status in RUNNING_GITHUB_STATUSES or (github_status == "completed" and not conclusion))
+
+
+def _display_status(status: dict, latest_run: dict | None) -> tuple[str, str]:
+    github_status, conclusion, _url = _github_run_status(latest_run)
+    local_status = str(status.get("status") or "idle").lower()
+
+    if _is_github_running(latest_run):
+        return "running", f"GitHub workflow {github_status}"
+    if github_status == "completed" and conclusion == "success":
+        return "completed", "GitHub workflow completed successfully"
+    if github_status == "completed" and conclusion:
+        return "failed", f"GitHub workflow {conclusion}"
+    return local_status, status.get("message") or "Orchestrator idle"
+
+
 def _tone_for_status(status: str) -> str:
     normalized = str(status or "idle").lower()
     if normalized == "running":
@@ -42,8 +78,9 @@ def _tone_for_status(status: str) -> str:
     return "purple"
 
 
-def _render_auto_refresh(status: dict) -> None:
-    if str(status.get("status") or "").lower() != "running":
+def _render_auto_refresh(status: dict, latest_run: dict | None) -> None:
+    display_status, _message = _display_status(status, latest_run)
+    if display_status != "running":
         return
     milliseconds = AUTO_REFRESH_SECONDS * 1000
     components.html(
@@ -59,17 +96,20 @@ def _render_auto_refresh(status: dict) -> None:
     st.caption(f"Auto-refreshing every {AUTO_REFRESH_SECONDS} seconds while Market Refresh is running.")
 
 
-def _step_state(step_index: int, status: dict) -> tuple[str, str, str]:
-    run_status = str(status.get("status") or "idle").lower()
+def _step_state(step_index: int, status: dict, latest_run: dict | None) -> tuple[str, str, str]:
+    display_status, _message = _display_status(status, latest_run)
     current_index = status.get("step_index")
+
+    if display_status == "running" and not isinstance(current_index, int):
+        return "Running", "In Progress", "progress" if step_index == 1 else ("—", "Waiting", "waiting")
     if not isinstance(current_index, int):
         return "—", "Waiting", "waiting"
 
-    if run_status == "failed" and current_index == step_index:
+    if display_status == "failed" and current_index == step_index:
         return "Failed", "Failed", "failed"
-    if run_status == "running" and current_index == step_index:
+    if display_status == "running" and current_index == step_index:
         return "Running", "In Progress", "progress"
-    if run_status == "completed" or step_index < current_index:
+    if display_status == "completed" or step_index < current_index:
         return "Complete", "Complete", "complete"
     return "—", "Waiting", "waiting"
 
@@ -92,12 +132,14 @@ def _launch_market_refresh() -> None:
 
 def render_autopilot_summary() -> None:
     status = read_status()
-    _render_auto_refresh(status)
+    latest_run = _latest_orchestrator_run()
+    _render_auto_refresh(status, latest_run)
     runbook = get_runbook(str(status.get("runbook_id") or "market_refresh_v2"))
-    status_label = str(status.get("status") or "idle").title()
-    tone = _tone_for_status(status_label)
+    display_status, display_message = _display_status(status, latest_run)
+    status_label = display_status.title()
+    tone = _tone_for_status(display_status)
     current_step = status.get("current_step_name") or "No active step"
-    current_substep = status.get("current_substep_name") or status.get("message") or "Orchestrator idle"
+    current_substep = status.get("current_substep_name") or display_message
 
     cards = [
         ("Autopilot Status", status_label, current_substep, "BOT", tone),
@@ -112,6 +154,7 @@ def render_autopilot_summary() -> None:
 def render_runbook_progress() -> None:
     legacy_state = load_state()
     status = read_status()
+    latest_run = _latest_orchestrator_run()
     runbook = get_runbook(str(status.get("runbook_id") or legacy_state.get("runbook_id") or "market_refresh_v2"))
 
     action_left, action_right = st.columns([1, 2])
@@ -119,11 +162,18 @@ def render_runbook_progress() -> None:
         if st.button("Run Market Refresh", key="ops_run_market_refresh", type="primary", use_container_width=True):
             _launch_market_refresh()
     with action_right:
-        st.caption("Launches the GitHub Market Refresh orchestrator in test mode. DraftKings discovery is limited to 5 matched events.")
+        github_status, conclusion, url = _github_run_status(latest_run)
+        status_text = f"GitHub: {github_status or 'not found'}"
+        if conclusion:
+            status_text += f" / {conclusion}"
+        if url:
+            st.caption(f"{status_text} — [Open in GitHub]({url})")
+        else:
+            st.caption("Launches the GitHub Market Refresh orchestrator in test mode. DraftKings discovery is limited to 5 matched events.")
 
     rows = []
     for idx, step in enumerate(runbook.get("steps", []), start=1):
-        stamp, status_label, tone = _step_state(idx, status)
+        stamp, status_label, tone = _step_state(idx, status, latest_run)
         workflow_count = len(step.get("workflows", []))
         workflow_label = f"{workflow_count} workflow" if workflow_count == 1 else f"{workflow_count} workflows"
         desc = f"{step.get('description', '')} ({workflow_label})"
@@ -139,7 +189,8 @@ def render_runbook_progress() -> None:
             '</div>'
         )
 
-    note = status.get("message") or "Market Refresh orchestrator ready."
+    _status_value, message = _display_status(status, latest_run)
+    note = status.get("message") or message
     if status.get("current_substep_name"):
         note = f"Current substep: {status.get('current_substep_name')}"
     if status.get("error"):
@@ -219,10 +270,12 @@ def render_system_health_compact() -> None:
 
 def render_recent_activity_compact() -> None:
     status = read_status()
+    latest_run = _latest_orchestrator_run()
+    github_status, conclusion, _url = _github_run_status(latest_run)
     rows = [
-        ("STATE", f"Market Refresh: {status.get('status', 'idle')}", status.get("updated_at") or "—"),
+        ("STATE", f"Market Refresh: {_display_status(status, latest_run)[0]}", status.get("updated_at") or "—"),
         ("STEP", f"Step: {status.get('current_step_name') or 'none'}", status.get("current_substep_name") or "—"),
-        ("NEXT", "Next: live status push/poll enhancement", "—"),
+        ("GHA", f"GitHub: {github_status or 'not found'}", conclusion or "—"),
     ]
     html_rows = ''.join(
         '<div class="ops-activity-row">'
@@ -240,7 +293,7 @@ def render_recent_activity_compact() -> None:
 def render_autopilot_footer() -> None:
     st.html(
         '<div class="ops-card ops-footer">'
-        '<div>Operations Center now launches the GitHub Market Refresh orchestrator. Streamlit reads status from data/status/market_refresh_status.json.</div>'
+        '<div>Operations Center launches the Market Refresh orchestrator, polls the GitHub run status, and reads completed run details from data/status/market_refresh_status.json.</div>'
         '<button class="ops-settings-button">Autopilot Settings</button>'
         '</div>'
     )
