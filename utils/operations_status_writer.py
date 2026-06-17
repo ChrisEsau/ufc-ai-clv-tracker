@@ -10,9 +10,11 @@ from pipeline.common.paths import STATUS_DIR, ensure_data_dirs
 
 MARKET_REFRESH_STATUS_PATH = STATUS_DIR / "market_refresh_status.json"
 MONDAY_RESET_STATUS_PATH = STATUS_DIR / "monday_reset_status.json"
+FIGHT_DAY_MONITOR_STATUS_PATH = STATUS_DIR / "fight_day_monitor_status.json"
 RUNBOOK_STATUS_PATHS: dict[str, Path] = {
     "market_refresh_v2": MARKET_REFRESH_STATUS_PATH,
     "monday_reset_v1": MONDAY_RESET_STATUS_PATH,
+    "fight_day_monitor_v1": FIGHT_DAY_MONITOR_STATUS_PATH,
 }
 
 
