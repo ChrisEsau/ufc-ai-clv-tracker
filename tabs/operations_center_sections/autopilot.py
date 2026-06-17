@@ -30,11 +30,11 @@ RUNBOOK_LAUNCH_CONFIG = {
     "monday_reset_v1": {
         "workflow_file": "run-monday-reset-orchestrator.yml",
         "button_label": "Run Monday Reset",
-        "caption": "Launches Monday Reset in test mode with max_events=1 and auto_append=false.",
+        "caption": "Launches Monday Reset in production mode with max_events=all and auto_append=true.",
         "inputs": {
-            "mode": "test",
-            "max_events": "1",
-            "auto_append": False,
+            "mode": "production",
+            "max_events": "all",
+            "auto_append": True,
             "skip_bankroll": False,
             "skip_clv": False,
         },
@@ -267,7 +267,7 @@ def render_upcoming_runs() -> None:
         ready = runbook_id in RUNBOOK_LAUNCH_CONFIG
         badge = "Selected" if runbook_id == selected_id else ("Ready" if ready else "Planned")
         badge_class = "info" if ready else "purple"
-        when = "Manual test mode" if ready else "Future"
+        when = "Manual production mode" if runbook_id == "monday_reset_v1" else ("Manual test mode" if ready else "Future")
         rows.append(
             '<div class="ops-upcoming-row">'
             '<div class="ops-upcoming-icon">▣</div>'
