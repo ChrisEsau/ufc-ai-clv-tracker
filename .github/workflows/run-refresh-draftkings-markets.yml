@@ -9,7 +9,7 @@ on:
         default: "3"
         type: string
       max_events:
-        description: "Optional limit for testing (blank = all matched events)"
+        description: "Optional limit for testing (blank/all = all matched events)"
         required: false
         type: string
       min_match_score:
@@ -53,14 +53,18 @@ jobs:
 
       - name: Run matched DraftKings discovery
         run: |
-          if [ -n "${{ github.event.inputs.max_events }}" ]; then
-            python -m pipeline.market.run_draftkings_matched_discovery \
-              --sleep-seconds "${{ github.event.inputs.sleep_seconds }}" \
-              --max-events "${{ github.event.inputs.max_events }}"
-          else
-            python -m pipeline.market.run_draftkings_matched_discovery \
-              --sleep-seconds "${{ github.event.inputs.sleep_seconds }}"
+          ARGS=(--sleep-seconds "${{ github.event.inputs.sleep_seconds }}")
+          MAX_EVENTS="${{ github.event.inputs.max_events }}"
+          MAX_EVENTS_NORMALIZED="$(echo "$MAX_EVENTS" | tr '[:upper:]' '[:lower:]' | xargs)"
+
+          if [ -n "$MAX_EVENTS_NORMALIZED" ] && \
+             [ "$MAX_EVENTS_NORMALIZED" != "all" ] && \
+             [ "$MAX_EVENTS_NORMALIZED" != "none" ] && \
+             [ "$MAX_EVENTS_NORMALIZED" != "null" ]; then
+            ARGS+=(--max-events "$MAX_EVENTS_NORMALIZED")
           fi
+
+          python -m pipeline.market.run_draftkings_matched_discovery "${ARGS[@]}"
 
       - name: Normalize DraftKings markets
         run: |
