@@ -1,0 +1,284 @@
+from __future__ import annotations
+
+import argparse
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Callable, Sequence
+
+import pandas as pd
+
+from pipeline.clv.run_clv_pipeline import main as run_clv_pipeline
+from pipeline.common.paths import (
+    APPEND_AUDIT_PATH,
+    APPEND_PRECHECK_PATH,
+    BANKROLL_SNAPSHOTS_PATH,
+    CLV_RESULTS_PATH,
+    DATASET_STATUS_PATH,
+    MISSING_EVENTS_PATH,
+    STAGED_FINAL_REVIEW_PATH,
+    ensure_data_dirs,
+)
+from pipeline.data_maintenance.run_append_staged_to_master import run_append_staged_to_master
+from pipeline.data_maintenance.run_dataset_status import main as run_dataset_status
+from pipeline.data_maintenance.run_ingest_single_event import run_ingest_single_event
+from pipeline.data_maintenance.run_ufcstats_event_check import main as run_ufcstats_event_check
+from pipeline.bankroll.run_bankroll_status import main as run_bankroll_status
+
+
+@dataclass(frozen=True)
+class StepResult:
+    step_id: str
+    name: str
+    status: str
+    message: str = ""
+    outputs: list[str] = field(default_factory=list)
+
+
+def _path_exists(path: Path | str) -> bool:
+    return Path(path).exists()
+
+
+def _required_outputs(paths: Sequence[Path | str]) -> list[str]:
+    return [str(path) for path in paths if _path_exists(path)]
+
+
+def _normalize_max_events(value: str | int | None) -> int | None:
+    if value is None:
+        return None
+    text = str(value).strip().lower()
+    if text in {"", "none", "null", "all"}:
+        return None
+    parsed = int(text)
+    if parsed < 1:
+        raise ValueError("--max-events must be a positive integer or 'all'.")
+    return parsed
+
+
+def _load_missing_event_ids(max_events: int | None) -> list[str]:
+    if not MISSING_EVENTS_PATH.exists():
+        return []
+    missing = pd.read_parquet(MISSING_EVENTS_PATH)
+    if missing.empty or "ufcstats_event_id" not in missing.columns:
+        return []
+
+    event_ids = (
+        missing["ufcstats_event_id"]
+        .dropna()
+        .astype(str)
+        .str.strip()
+    )
+    event_ids = [event_id for event_id in event_ids if event_id]
+    if max_events is not None:
+        event_ids = event_ids[:max_events]
+    return event_ids
+
+
+def _append_gate_passed() -> tuple[bool, bool]:
+    append_ready = False
+    final_review_pass = False
+
+    if APPEND_PRECHECK_PATH.exists():
+        precheck = pd.read_parquet(APPEND_PRECHECK_PATH)
+        if not precheck.empty and "append_ready" in precheck.columns:
+            append_ready = bool(precheck["append_ready"].iloc[0])
+
+    if STAGED_FINAL_REVIEW_PATH.exists():
+        final_review = pd.read_parquet(STAGED_FINAL_REVIEW_PATH)
+        if not final_review.empty and "final_review_pass" in final_review.columns:
+            final_review_pass = bool(final_review["final_review_pass"].iloc[0])
+
+    return append_ready, final_review_pass
+
+
+def _record(results: list[StepResult], step_id: str, name: str, status: str, message: str = "", outputs: Sequence[Path | str] = ()) -> None:
+    results.append(
+        StepResult(
+            step_id=step_id,
+            name=name,
+            status=status,
+            message=message,
+            outputs=_required_outputs(outputs),
+        )
+    )
+
+
+def _run_named(results: list[StepResult], step_id: str, name: str, fn: Callable[[], object], outputs: Sequence[Path | str]) -> object:
+    print()
+    print(f"========== {name.upper()} ==========")
+    value = fn()
+    _record(results, step_id, name, "complete", outputs=outputs)
+    return value
+
+
+def run_monday_reset(*, mode: str, max_events: int | None, auto_append: bool, run_bankroll: bool, run_clv: bool) -> list[StepResult]:
+    print("=" * 80)
+    print("UFC MONDAY RESET ORCHESTRATOR")
+    print("=" * 80)
+    print("Mode:", mode)
+    print("Max events:", "all" if max_events is None else max_events)
+    print("Auto append:", auto_append)
+    print("Run bankroll:", run_bankroll)
+    print("Run CLV:", run_clv)
+
+    ensure_data_dirs()
+    results: list[StepResult] = []
+
+    _run_named(
+        results,
+        "discover_completed_results",
+        "Discover Completed Results",
+        run_ufcstats_event_check,
+        [MISSING_EVENTS_PATH],
+    )
+
+    event_ids = _load_missing_event_ids(max_events)
+    if not event_ids:
+        _record(
+            results,
+            "ingest_completed_events",
+            "Ingest Completed Events",
+            "skipped",
+            "No missing completed events found.",
+            [MISSING_EVENTS_PATH],
+        )
+    else:
+        print()
+        print("========== INGEST COMPLETED EVENTS ==========")
+        print("Events selected:", len(event_ids))
+        append_ready = False
+        final_review_pass = False
+
+        for idx, event_id in enumerate(event_ids, start=1):
+            print()
+            print(f"[{idx}/{len(event_ids)}] Event ID: {event_id}")
+            append_ready, final_review_pass = run_ingest_single_event(event_id=event_id)
+            if not (append_ready and final_review_pass):
+                raise RuntimeError(
+                    "Stopping Monday Reset before append because staged ingestion gates failed "
+                    f"for event_id={event_id}. append_ready={append_ready}, final_review_pass={final_review_pass}"
+                )
+
+            if auto_append:
+                audit, appended = run_append_staged_to_master()
+                if not appended:
+                    raise RuntimeError(f"Append failed or was refused for event_id={event_id}.")
+                if audit is None or audit.empty or not bool(audit["row_count_pass"].iloc[0]):
+                    raise RuntimeError(f"Append audit row_count_pass failed for event_id={event_id}.")
+            else:
+                print("Auto append disabled. Staged event was validated but not appended.")
+
+        _record(
+            results,
+            "ingest_completed_events",
+            "Ingest Completed Events",
+            "complete",
+            f"Processed {len(event_ids)} event(s).",
+            [APPEND_PRECHECK_PATH, STAGED_FINAL_REVIEW_PATH],
+        )
+
+        append_ready, final_review_pass = _append_gate_passed()
+        if auto_append:
+            _record(
+                results,
+                "append_results_to_master",
+                "Append Results To Master",
+                "complete",
+                "Auto append completed for all selected events.",
+                [APPEND_AUDIT_PATH],
+            )
+        else:
+            _record(
+                results,
+                "append_results_to_master",
+                "Append Results To Master",
+                "skipped",
+                f"Auto append disabled. append_ready={append_ready}, final_review_pass={final_review_pass}",
+                [APPEND_PRECHECK_PATH, STAGED_FINAL_REVIEW_PATH],
+            )
+
+    _run_named(
+        results,
+        "refresh_dataset_status",
+        "Refresh Dataset Status",
+        run_dataset_status,
+        [DATASET_STATUS_PATH],
+    )
+
+    if run_bankroll:
+        _run_named(
+            results,
+            "refresh_bankroll_status",
+            "Refresh Bankroll Status",
+            run_bankroll_status,
+            [BANKROLL_SNAPSHOTS_PATH],
+        )
+    else:
+        _record(results, "refresh_bankroll_status", "Refresh Bankroll Status", "skipped", "run_bankroll=false")
+
+    if run_clv:
+        _run_named(
+            results,
+            "run_clv_tracker",
+            "Run CLV Tracker",
+            run_clv_pipeline,
+            [CLV_RESULTS_PATH],
+        )
+    else:
+        _record(results, "run_clv_tracker", "Run CLV Tracker", "skipped", "run_clv=false")
+
+    _record(
+        results,
+        "model_snapshot_performance",
+        "Model / Snapshot Performance",
+        "planned",
+        "Performance runner not implemented yet.",
+    )
+    _record(
+        results,
+        "archive_reset_week",
+        "Archive / Reset Week",
+        "planned",
+        "Weekly archive/reset runner not implemented yet.",
+    )
+
+    print()
+    print("========== MONDAY RESET SUMMARY ==========")
+    for result in results:
+        suffix = f" - {result.message}" if result.message else ""
+        print(f"{result.status.upper():9} {result.name}{suffix}")
+
+    return results
+
+
+def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run the Monday Reset post-event orchestration flow.")
+    parser.add_argument("--mode", choices=["test", "production"], default="test")
+    parser.add_argument(
+        "--max-events",
+        default="1",
+        help="Maximum missing completed events to ingest. Use 'all' for every missing event.",
+    )
+    parser.add_argument(
+        "--auto-append",
+        action="store_true",
+        help="Append staged rows to master only after append precheck and final review both pass.",
+    )
+    parser.add_argument("--skip-bankroll", action="store_true")
+    parser.add_argument("--skip-clv", action="store_true")
+    return parser.parse_args(argv)
+
+
+def main(argv: Sequence[str] | None = None) -> None:
+    args = parse_args(argv)
+    max_events = _normalize_max_events(args.max_events)
+    run_monday_reset(
+        mode=args.mode,
+        max_events=max_events,
+        auto_append=bool(args.auto_append),
+        run_bankroll=not bool(args.skip_bankroll),
+        run_clv=not bool(args.skip_clv),
+    )
+
+
+if __name__ == "__main__":
+    main()
