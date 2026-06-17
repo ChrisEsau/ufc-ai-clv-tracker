@@ -1,0 +1,134 @@
+name: Run Monday Reset Orchestrator
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Run mode"
+        required: true
+        default: "test"
+        type: choice
+        options:
+          - test
+          - production
+      max_events:
+        description: "Maximum missing completed events to ingest; use all for every missing event"
+        required: true
+        default: "1"
+        type: string
+      auto_append:
+        description: "Append staged rows to master after all hard checks pass"
+        required: true
+        default: false
+        type: boolean
+      skip_bankroll:
+        description: "Skip bankroll status refresh"
+        required: true
+        default: false
+        type: boolean
+      skip_clv:
+        description: "Skip CLV tracker refresh"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: monday-reset-orchestrator-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  run-monday-reset-orchestrator:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Sync latest branch state
+        run: |
+          git fetch origin "${GITHUB_REF_NAME}"
+          git pull --ff-only origin "${GITHUB_REF_NAME}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/requirements-workspace.txt
+          pip install pyyaml scikit-learn==1.6.1 xgboost
+
+      - name: Run Monday Reset orchestrator
+        run: |
+          ARGS=(
+            --mode "${{ inputs.mode }}"
+            --max-events "${{ inputs.max_events }}"
+          )
+
+          if [ "${{ inputs.auto_append }}" = "true" ]; then
+            ARGS+=(--auto-append)
+          fi
+
+          if [ "${{ inputs.skip_bankroll }}" = "true" ]; then
+            ARGS+=(--skip-bankroll)
+          fi
+
+          if [ "${{ inputs.skip_clv }}" = "true" ]; then
+            ARGS+=(--skip-clv)
+          fi
+
+          python -m pipeline.operations.run_monday_reset "${ARGS[@]}"
+
+      - name: Commit Monday Reset artifacts
+        if: always()
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add -f \
+            data/status/ufc_ufcstats_event_check.parquet \
+            data/staging/ufc_missing_events.parquet \
+            data/staging/ufc_staged_fight_rows.parquet \
+            data/staging/ufc_staged_fight_details.parquet \
+            data/staging/ufc_staged_master_rows.parquet \
+            data/staging/ufc_staged_master_rows_enriched.parquet \
+            data/staging/ufc_staged_fighter_profiles.parquet \
+            data/staging/ufc_staged_master_rows_profiled.parquet \
+            data/audits/ufc_fight_scrape_audit.parquet \
+            data/audits/ufc_fight_detail_scrape_audit.parquet \
+            data/audits/ufc_staged_master_mapping_audit.parquet \
+            data/audits/ufc_staged_derived_stats_audit.parquet \
+            data/audits/ufc_fighter_profile_scrape_audit.parquet \
+            data/audits/ufc_master_column_validation.parquet \
+            data/audits/ufc_append_precheck.parquet \
+            data/audits/ufc_append_duplicate_check.parquet \
+            data/audits/ufc_append_required_field_audit.parquet \
+            data/audits/ufc_staged_final_review.parquet \
+            data/audits/ufc_append_audit.parquet \
+            data/status/ufc_dataset_status.parquet \
+            data/status/ufc_dataset_event_status.parquet \
+            data/bankroll/ufc_bankroll_settings.parquet \
+            data/bankroll/ufc_bet_ledger.parquet \
+            data/bankroll/ufc_open_bets.parquet \
+            data/bankroll/ufc_bankroll_snapshots.parquet \
+            data/market/ufc_normalized_market_snapshots.parquet \
+            data/audits/ufc_clv_market_normalization_audit.parquet \
+            data/market/ufc_closing_lines.parquet \
+            data/market/ufc_clv_results.parquet \
+            data/market/ufc_line_movement.parquet || true
+
+          if [ "${{ inputs.auto_append }}" = "true" ]; then
+            git add -f data/master/ufc_master.parquet || true
+            git add -f data/backups/ufc_master_backup_before_append_*.parquet 2>/dev/null || true
+          fi
+
+          git commit -m "Run Monday Reset orchestrator" || echo "No changes to commit"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
