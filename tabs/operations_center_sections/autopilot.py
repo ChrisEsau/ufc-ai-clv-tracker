@@ -7,12 +7,39 @@ from zoneinfo import ZoneInfo
 import streamlit as st
 
 from utils.github_actions import trigger_workflow
-from utils.operations_runbook_registry import get_runbook
+from utils.operations_runbook_registry import get_runbook, list_runbooks
 from utils.operations_status_writer import read_status, start_runbook
 
 
-ORCHESTRATOR_WORKFLOW_FILE = "run-market-refresh-orchestrator.yml"
 CENTRAL_TZ = ZoneInfo("America/Chicago")
+DEFAULT_RUNBOOK_ID = "market_refresh_v2"
+RUNBOOK_LAUNCH_CONFIG = {
+    "market_refresh_v2": {
+        "workflow_file": "run-market-refresh-orchestrator.yml",
+        "button_label": "Run Market Refresh",
+        "caption": "Launches the GitHub Market Refresh orchestrator in test mode.",
+        "inputs": {
+            "mode": "test",
+            "max_upcoming_events": "",
+            "max_draftkings_events": "5",
+            "model_id": "moneyline_xgboost_v5",
+            "model_mode": "production",
+            "snapshot_model_mode": "all",
+        },
+    },
+    "monday_reset_v1": {
+        "workflow_file": "run-monday-reset-orchestrator.yml",
+        "button_label": "Run Monday Reset",
+        "caption": "Launches Monday Reset in test mode with max_events=1 and auto_append=false.",
+        "inputs": {
+            "mode": "test",
+            "max_events": "1",
+            "auto_append": False,
+            "skip_bankroll": False,
+            "skip_clv": False,
+        },
+    },
+}
 
 
 def _escape(value) -> str:
@@ -52,6 +79,49 @@ def _status_card(label: str, value: str, caption: str, icon: str, tone: str = "s
     )
 
 
+def _available_runbooks() -> list[dict]:
+    return list_runbooks()
+
+
+def _default_selected_runbook_id(status: dict) -> str:
+    status_runbook_id = str(status.get("runbook_id") or DEFAULT_RUNBOOK_ID)
+    available_ids = {str(runbook.get("runbook_id")) for runbook in _available_runbooks()}
+    if status_runbook_id in available_ids:
+        return status_runbook_id
+    return DEFAULT_RUNBOOK_ID
+
+
+def _selected_runbook_id() -> str:
+    status = read_status()
+    available_ids = [str(runbook.get("runbook_id")) for runbook in _available_runbooks()]
+    if "ops_selected_runbook_id" not in st.session_state:
+        st.session_state["ops_selected_runbook_id"] = _default_selected_runbook_id(status)
+    if st.session_state["ops_selected_runbook_id"] not in available_ids:
+        st.session_state["ops_selected_runbook_id"] = DEFAULT_RUNBOOK_ID
+    return str(st.session_state["ops_selected_runbook_id"])
+
+
+def _status_for_selected_runbook(status: dict, selected_runbook_id: str) -> dict:
+    if str(status.get("runbook_id") or DEFAULT_RUNBOOK_ID) == selected_runbook_id:
+        return status
+    idle = dict(status)
+    idle.update(
+        {
+            "runbook_id": selected_runbook_id,
+            "status": "idle",
+            "current_step_id": None,
+            "current_step_name": None,
+            "current_substep_id": None,
+            "current_substep_name": None,
+            "message": "Runbook idle",
+            "error": None,
+            "history": [],
+            "completed_at": None,
+        }
+    )
+    return idle
+
+
 def _display_status(status: dict) -> tuple[str, str]:
     local_status = str(status.get("status") or "idle").lower()
     return local_status, status.get("message") or "Orchestrator idle"
@@ -81,6 +151,9 @@ def _step_completion_times(status: dict) -> dict[str, str]:
 
 
 def _step_state(step: dict, status: dict, completion_times: dict[str, str]) -> tuple[str, str, str]:
+    if str(step.get("status") or "").lower() == "planned":
+        return "Future", "Planned", "waiting"
+
     display_status, _message = _display_status(status)
     step_id = str(step.get("step_id") or "")
     current_step_id = str(status.get("current_step_id") or "")
@@ -96,23 +169,20 @@ def _step_state(step: dict, status: dict, completion_times: dict[str, str]) -> t
     return "—", "Waiting", "waiting"
 
 
-def _launch_market_refresh() -> None:
-    inputs = {
-        "mode": "test",
-        "max_upcoming_events": "",
-        "max_draftkings_events": "5",
-        "model_id": "moneyline_xgboost_v5",
-        "model_mode": "production",
-        "snapshot_model_mode": "all",
-    }
-    ok, message = trigger_workflow(ORCHESTRATOR_WORKFLOW_FILE, inputs=inputs)
+def _launch_selected_runbook(runbook_id: str) -> None:
+    config = RUNBOOK_LAUNCH_CONFIG.get(runbook_id)
+    runbook = get_runbook(runbook_id)
+    if not config:
+        st.warning(f"{runbook.get('display_name', runbook_id)} is planned but not wired to a workflow yet.")
+        return
+
+    ok, message = trigger_workflow(config["workflow_file"], inputs=config["inputs"])
     if ok:
-        runbook = get_runbook("market_refresh_v2")
         start_runbook(
-            runbook_id="market_refresh_v2",
-            mode="test",
+            runbook_id=runbook_id,
+            mode=str(config["inputs"].get("mode") or "test"),
             step_total=len(runbook.get("steps", [])),
-            message="Market Refresh launched from Operations Center",
+            message=f"{runbook.get('display_name', runbook_id)} launched from Operations Center",
         )
         st.success(message)
     else:
@@ -121,41 +191,62 @@ def _launch_market_refresh() -> None:
 
 
 def render_autopilot_summary() -> None:
-    status = read_status()
-    runbook = get_runbook(str(status.get("runbook_id") or "market_refresh_v2"))
+    selected_id = _selected_runbook_id()
+    raw_status = read_status()
+    status = _status_for_selected_runbook(raw_status, selected_id)
+    runbook = get_runbook(selected_id)
     display_status, display_message = _display_status(status)
     status_label = display_status.title()
     tone = _tone_for_status(display_status)
-    current_step = status.get("current_step_name") or "No active step"
+    current_step = status.get("current_step_name") or runbook.get("display_name", "No active step")
     current_substep = status.get("current_substep_name") or display_message
 
     cards = [
         ("Autopilot Status", status_label, current_substep, "BOT", tone),
         ("Current Runbook", runbook.get("display_name", "Market Refresh"), current_step, "CAL", "info"),
-        ("Next Scheduled Run", "Not scheduled", "Manual test launch mode", "CLK", "purple"),
-        ("Last Completed Run", _format_cst(status.get("completed_at")), "Market Refresh completion", "OK", "success"),
+        ("Next Scheduled Run", "Not scheduled", "Manual launch mode", "CLK", "purple"),
+        ("Last Completed Run", _format_cst(status.get("completed_at")), f"{runbook.get('display_name', 'Runbook')} completion", "OK", "success"),
         ("Alerts Requiring Review", "—", "Alert engine pending", "ALR", "warning"),
     ]
     st.html('<div class="ops-auto-grid">' + ''.join(_status_card(*card) for card in cards) + '</div>')
 
 
 def render_runbook_progress() -> None:
-    status = read_status()
-    runbook = get_runbook(str(status.get("runbook_id") or "market_refresh_v2"))
+    selected_id = _selected_runbook_id()
+    raw_status = read_status()
+    status = _status_for_selected_runbook(raw_status, selected_id)
+    runbooks = _available_runbooks()
+    runbook_by_id = {str(runbook.get("runbook_id")): runbook for runbook in runbooks}
+    runbook_ids = list(runbook_by_id.keys())
+
+    selector_col, action_col, caption_col = st.columns([1.15, 1, 2])
+    with selector_col:
+        selected_id = st.selectbox(
+            "Current Runbook",
+            options=runbook_ids,
+            index=runbook_ids.index(selected_id) if selected_id in runbook_ids else 0,
+            format_func=lambda rid: runbook_by_id[rid].get("display_name", rid),
+            key="ops_selected_runbook_id",
+        )
+        runbook = runbook_by_id[selected_id]
+        status = _status_for_selected_runbook(raw_status, selected_id)
+    with action_col:
+        button_label = RUNBOOK_LAUNCH_CONFIG.get(selected_id, {}).get("button_label", f"Run {runbook.get('display_name', 'Runbook')}")
+        if st.button(button_label, key=f"ops_run_{selected_id}", type="primary", use_container_width=True):
+            _launch_selected_runbook(selected_id)
+    with caption_col:
+        caption = RUNBOOK_LAUNCH_CONFIG.get(selected_id, {}).get("caption", "This runbook is planned and not wired to an orchestrator workflow yet.")
+        st.caption(f"{caption} Runbook rows are driven only by the local status artifact.")
+
     completion_times = _step_completion_times(status)
-
-    action_left, action_right = st.columns([1, 2])
-    with action_left:
-        if st.button("Run Market Refresh", key="ops_run_market_refresh", type="primary", use_container_width=True):
-            _launch_market_refresh()
-    with action_right:
-        st.caption("Launches the GitHub Market Refresh orchestrator in test mode. Runbook cards are driven only by the local status artifact.")
-
     rows = []
     for idx, step in enumerate(runbook.get("steps", []), start=1):
         stamp, status_label, tone = _step_state(step, status, completion_times)
         workflow_count = len(step.get("workflows", []))
-        workflow_label = f"{workflow_count} workflow" if workflow_count == 1 else f"{workflow_count} workflows"
+        if str(step.get("status") or "").lower() == "planned":
+            workflow_label = "planned"
+        else:
+            workflow_label = f"{workflow_count} workflow" if workflow_count == 1 else f"{workflow_count} workflows"
         desc = f"{step.get('description', '')} ({workflow_label})"
         rows.append(
             f'<div class="ops-runbook-row {tone}">'
@@ -187,25 +278,32 @@ def render_runbook_progress() -> None:
 
 
 def render_upcoming_runs() -> None:
-    runs = [
-        ("Market Refresh", "Manual test mode", "Runs the GitHub orchestrator workflow", "Ready"),
-        ("Monday Reset", "Future", "Weekly settlement and ingestion runbook", "Planned"),
-        ("Fight Day Monitor", "Future", "Increased refresh cadence and final snapshots", "Planned"),
-    ]
+    selected_id = _selected_runbook_id()
+    runbooks = _available_runbooks()
     rows = []
-    for name, when, desc, badge in runs:
-        badge_class = "purple" if badge == "Planned" else "info"
+    for runbook in runbooks:
+        runbook_id = str(runbook.get("runbook_id"))
+        ready = runbook_id in RUNBOOK_LAUNCH_CONFIG
+        badge = "Selected" if runbook_id == selected_id else ("Ready" if ready else "Planned")
+        badge_class = "info" if ready else "purple"
+        when = "Manual test mode" if ready else "Future"
         rows.append(
             '<div class="ops-upcoming-row">'
             '<div class="ops-upcoming-icon">▣</div>'
             '<div class="ops-upcoming-main">'
-            f'<div class="ops-upcoming-title">{_escape(name)}</div>'
-            f'<div class="ops-upcoming-desc">{_escape(desc)}</div>'
+            f'<div class="ops-upcoming-title">{_escape(runbook.get("display_name"))}</div>'
+            f'<div class="ops-upcoming-desc">{_escape(runbook.get("description"))}</div>'
             '</div>'
             f'<div class="ops-upcoming-time">{_escape(when)}</div>'
             f'<div class="ops-mini-badge {badge_class}">{_escape(badge)}</div>'
             '</div>'
         )
+    rows.append(
+        '<div class="ops-upcoming-row">'
+        '<div class="ops-upcoming-icon">▣</div>'
+        '<div class="ops-upcoming-main"><div class="ops-upcoming-title">Fight Day Monitor</div><div class="ops-upcoming-desc">Increased refresh cadence and final snapshots</div></div>'
+        '<div class="ops-upcoming-time">Future</div><div class="ops-mini-badge purple">Planned</div></div>'
+    )
     st.html(
         '<div class="ops-card ops-panel">'
         '<div class="ops-panel-header"><div class="ops-panel-title">Upcoming Runs</div><div class="ops-link-inline">Schedule pending</div></div>'
@@ -236,7 +334,7 @@ def render_review_alerts() -> None:
 
 
 def render_system_health_compact() -> None:
-    rows = ["Runbook Registry", "Orchestrator Workflow", "Status File", "Artifact Checks"]
+    rows = ["Runbook Registry", "Orchestrator Workflows", "Status File", "Artifact Checks"]
     html_rows = ''.join(
         f'<div class="ops-health-row"><span>OK {_escape(row)}</span><span class="ops-green">Ready</span><span>—</span></div>'
         for row in rows
@@ -244,14 +342,16 @@ def render_system_health_compact() -> None:
     st.html(
         '<div class="ops-card ops-panel">'
         '<div class="ops-panel-header"><div class="ops-panel-title">System Health</div><div class="ops-link-inline">View Details</div></div>'
-        + html_rows + '<div class="ops-health-footer">Orchestrator launch mode active</div></div>'
+        + html_rows + '<div class="ops-health-footer">Generic runbook launch mode active</div></div>'
     )
 
 
 def render_recent_activity_compact() -> None:
-    status = read_status()
+    selected_id = _selected_runbook_id()
+    status = _status_for_selected_runbook(read_status(), selected_id)
+    runbook = get_runbook(selected_id)
     rows = [
-        ("STATE", f"Market Refresh: {_display_status(status)[0]}", _format_cst(status.get("updated_at"))),
+        ("STATE", f"{runbook.get('display_name')}: {_display_status(status)[0]}", _format_cst(status.get("updated_at"))),
         ("STEP", f"Step: {status.get('current_step_name') or 'none'}", status.get("current_substep_name") or "—"),
         ("STATUS", status.get("message") or "Orchestrator idle", _format_cst(status.get("completed_at"))),
     ]
@@ -271,7 +371,7 @@ def render_recent_activity_compact() -> None:
 def render_autopilot_footer() -> None:
     st.html(
         '<div class="ops-card ops-footer">'
-        '<div>Operations Center launches the Market Refresh orchestrator and shows runbook status from the local status artifact in CST.</div>'
+        '<div>Operations Center launches registered orchestrator runbooks and shows selected runbook status from the local status artifact in CST.</div>'
         '<button class="ops-settings-button">Autopilot Settings</button>'
         '</div>'
     )
