@@ -39,6 +39,18 @@ RUNBOOK_LAUNCH_CONFIG = {
             "skip_clv": False,
         },
     },
+    "fight_day_monitor_v1": {
+        "workflow_file": "run-fight-day-monitor.yml",
+        "button_label": "Run Fight Day Monitor",
+        "caption": "Refreshes live DraftKings markets, recalculates betting outcomes, captures snapshots, and stores closing lines.",
+        "inputs": {
+            "mode": "production",
+            "max_draftkings_events": "all",
+            "model_mode": "production",
+            "snapshot_model_mode": "all",
+            "official_closing_snapshot": True,
+        },
+    },
 }
 
 
@@ -258,6 +270,14 @@ def render_runbook_progress() -> None:
     )
 
 
+def _manual_mode_label(runbook_id: str, ready: bool) -> str:
+    if not ready:
+        return "Future"
+    if runbook_id in {"monday_reset_v1", "fight_day_monitor_v1"}:
+        return "Manual production mode"
+    return "Manual test mode"
+
+
 def render_upcoming_runs() -> None:
     selected_id = _selected_runbook_id()
     runbooks = _available_runbooks()
@@ -267,7 +287,7 @@ def render_upcoming_runs() -> None:
         ready = runbook_id in RUNBOOK_LAUNCH_CONFIG
         badge = "Selected" if runbook_id == selected_id else ("Ready" if ready else "Planned")
         badge_class = "info" if ready else "purple"
-        when = "Manual production mode" if runbook_id == "monday_reset_v1" else ("Manual test mode" if ready else "Future")
+        when = _manual_mode_label(runbook_id, ready)
         rows.append(
             '<div class="ops-upcoming-row">'
             '<div class="ops-upcoming-icon">▣</div>'
@@ -279,12 +299,6 @@ def render_upcoming_runs() -> None:
             f'<div class="ops-mini-badge {badge_class}">{_escape(badge)}</div>'
             '</div>'
         )
-    rows.append(
-        '<div class="ops-upcoming-row">'
-        '<div class="ops-upcoming-icon">▣</div>'
-        '<div class="ops-upcoming-main"><div class="ops-upcoming-title">Fight Day Monitor</div><div class="ops-upcoming-desc">Increased refresh cadence and final snapshots</div></div>'
-        '<div class="ops-upcoming-time">Future</div><div class="ops-mini-badge purple">Planned</div></div>'
-    )
     st.html(
         '<div class="ops-card ops-panel">'
         '<div class="ops-panel-header"><div class="ops-panel-title">Upcoming Runs</div><div class="ops-link-inline">Schedule pending</div></div>'
