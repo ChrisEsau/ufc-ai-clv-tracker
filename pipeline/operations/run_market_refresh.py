@@ -149,6 +149,12 @@ def build_steps(args: argparse.Namespace) -> list[Step]:
                     expected_outputs=["data/market/draftkings_event_card_matches.parquet"],
                 ),
                 Substep(
+                    substep_id="update_target_event_commence_time",
+                    name="Update Target Event Commence Time",
+                    command=_python_module("pipeline.market.run_update_target_event_commence_time"),
+                    expected_outputs=["data/cards/ufc_selected_live_card_event.parquet"],
+                ),
+                Substep(
                     substep_id="draftkings_matched_discovery",
                     name="Discover DraftKings Markets",
                     command=matched_discovery_command,
