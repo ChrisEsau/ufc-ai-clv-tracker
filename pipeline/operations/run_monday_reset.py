@@ -26,6 +26,7 @@ from utils.operations_status_writer import (
 
 RUNBOOK_ID = "monday_reset_v1"
 INGEST_MISSING_EVENTS_AUDIT_PATH = AUDITS_DIR / "ufc_missing_event_ingestion_audit.parquet"
+BET_SETTLEMENT_AUDIT_PATH = AUDITS_DIR / "ufc_bet_settlement_audit.parquet"
 
 
 @dataclass(frozen=True)
@@ -172,6 +173,13 @@ def run_monday_reset(*, mode: str, max_events: int | None, auto_append: bool, ru
         _complete_step_status("Completed Refresh Platform Status")
 
         _record_step_status("reconcile_performance", "Reconcile Performance", 4, step_total)
+        _run_command_step(
+            results,
+            "settle_open_bets",
+            "Settle Open Bets",
+            _python_module("pipeline.bankroll.run_settle_open_bets"),
+            [BET_SETTLEMENT_AUDIT_PATH],
+        )
         if run_bankroll:
             _run_command_step(
                 results,
