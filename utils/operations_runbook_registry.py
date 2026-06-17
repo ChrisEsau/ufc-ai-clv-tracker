@@ -12,7 +12,7 @@ RunbookSpec = dict[str, Any]
 MARKET_REFRESH_V2: RunbookSpec = {
     "runbook_id": "market_refresh_v2",
     "display_name": "Market Refresh",
-    "description": "Refresh upcoming UFC events, production predictions, DraftKings markets, and betting outcomes.",
+    "description": "Refresh upcoming UFC events, predictions, DraftKings markets, betting outcomes, and model-market snapshots.",
     "steps": [
         {
             "step_id": "refresh_upcoming_events",
@@ -126,7 +126,7 @@ MARKET_REFRESH_V2: RunbookSpec = {
         {
             "step_id": "build_betting_outcomes",
             "display_name": "Build Betting Outcomes",
-            "description": "Join model outcomes to market outcomes and update the betting outcomes artifacts.",
+            "description": "Join production model outcomes to market outcomes and update the active betting outcomes artifacts.",
             "workflows": [
                 {
                     "workflow_file": "run-betting-outcomes-v2.yml",
@@ -138,6 +138,24 @@ MARKET_REFRESH_V2: RunbookSpec = {
                         "data/predictions/betting_outcomes.parquet",
                         "data/audits/ufc_betting_outcomes_audit.parquet",
                         "data/audits/ufc_betting_join_key_diagnostic.parquet",
+                    ],
+                },
+            ],
+        },
+        {
+            "step_id": "capture_snapshots",
+            "display_name": "Capture Snapshots",
+            "description": "Append model-market snapshots for future CLV and model comparison analysis.",
+            "workflows": [
+                {
+                    "workflow_file": "run-market-refresh-orchestrator.yml",
+                    "display_name": "Capture Model-Market Snapshots",
+                    "inputs": {
+                        "snapshot_model_mode": "all",
+                    },
+                    "outputs": [
+                        "data/snapshots/model_market_snapshots.parquet",
+                        "data/audits/model_market_snapshot_audit.parquet",
                     ],
                 },
             ],
