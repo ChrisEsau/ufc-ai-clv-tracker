@@ -17,29 +17,6 @@ AUTO_REFRESH_SECONDS = 15
 RUNNING_GITHUB_STATUSES = {"queued", "in_progress", "requested", "waiting", "pending"}
 CENTRAL_TZ = ZoneInfo("America/Chicago")
 
-ORCHESTRATOR_SUBSTEPS = {
-    "refresh_upcoming_events": [
-        ("refresh_ufcstats_upcoming_events", "Refresh UFCStats Upcoming Events"),
-    ],
-    "run_predictions": [
-        ("build_fighter_state", "Build Fighter State V2"),
-        ("build_feature_view", "Build Feature View V2"),
-        ("build_live_card", "Build Live Card"),
-        ("run_prediction_v2", "Run Prediction V2"),
-    ],
-    "get_market_odds": [
-        ("draftkings_event_index", "Build DraftKings Event Index"),
-        ("draftkings_card_filter", "Match DraftKings Events To Card"),
-        ("draftkings_matched_discovery", "Discover DraftKings Markets"),
-        ("draftkings_normalize_markets", "Normalize DraftKings Markets"),
-        ("draftkings_match_markets", "Match DraftKings Markets To Live Card"),
-    ],
-    "build_betting_outcomes": [
-        ("run_betting_outcomes_v2", "Run Betting Outcomes V2"),
-        ("run_betting_join_key_diagnostic", "Run Betting Join Key Diagnostic"),
-    ],
-}
-
 
 def _fragment(run_every_seconds: int | None = None):
     fragment = getattr(st, "fragment", None)
@@ -56,7 +33,7 @@ def _escape(value) -> str:
     return html.escape(str(value or ""))
 
 
-def _format_central(value) -> str:
+def _format_cst(value) -> str:
     if not value:
         return "—"
     if isinstance(value, str) and value.strip() in {"—", "-"}:
@@ -72,10 +49,7 @@ def _format_central(value) -> str:
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
         central = dt.astimezone(CENTRAL_TZ)
-        try:
-            return central.strftime("%b %-d, %Y %-I:%M %p %Z")
-        except ValueError:
-            return central.strftime("%b %d, %Y %I:%M %p %Z").replace(" 0", " ")
+        return central.strftime("%b %-d, %Y %-I:%M %p CST")
     except Exception:
         return str(value)
 
@@ -164,49 +138,6 @@ def _step_state(step_index: int, status: dict, latest_run: dict | None) -> tuple
     return "—", "Waiting", "waiting"
 
 
-def _substep_state(step_index: int, substep_index: int, substep_id: str, status: dict, latest_run: dict | None) -> tuple[str, str]:
-    display_status, _message = _display_status(status, latest_run)
-    current_step_index = status.get("step_index")
-    current_substep_index = status.get("substep_index")
-    current_substep_id = status.get("current_substep_id")
-
-    if display_status == "completed":
-        return "Complete", "complete"
-    if display_status == "failed" and current_step_index == step_index:
-        if current_substep_id == substep_id or current_substep_index == substep_index:
-            return "Failed", "failed"
-        if isinstance(current_substep_index, int) and substep_index < current_substep_index:
-            return "Complete", "complete"
-        return "Waiting", "waiting"
-    if display_status == "running" and current_step_index == step_index:
-        if current_substep_id == substep_id or current_substep_index == substep_index:
-            return "In Progress", "progress"
-        if isinstance(current_substep_index, int) and substep_index < current_substep_index:
-            return "Complete", "complete"
-        return "Waiting", "waiting"
-    if isinstance(current_step_index, int) and step_index < current_step_index:
-        return "Complete", "complete"
-    return "Waiting", "waiting"
-
-
-def _render_substeps(step_id: str, step_index: int, status: dict, latest_run: dict | None) -> str:
-    substeps = ORCHESTRATOR_SUBSTEPS.get(step_id, [])
-    if not substeps:
-        return ""
-    pieces = ['<div class="ops-substep-list">']
-    for sub_idx, (substep_id, substep_name) in enumerate(substeps, start=1):
-        label, tone = _substep_state(step_index, sub_idx, substep_id, status, latest_run)
-        pieces.append(
-            '<div class="ops-substep-row">'
-            f'<span class="ops-substep-dot {tone}"></span>'
-            f'<span class="ops-substep-name">{_escape(substep_name)}</span>'
-            f'<span class="ops-substep-state {tone}">{_escape(label)}</span>'
-            '</div>'
-        )
-    pieces.append('</div>')
-    return ''.join(pieces)
-
-
 def _launch_market_refresh() -> None:
     inputs = {
         "mode": "test",
@@ -239,7 +170,7 @@ def render_autopilot_summary() -> None:
         ("Autopilot Status", status_label, current_substep, "BOT", tone),
         ("Current Runbook", runbook.get("display_name", "Market Refresh"), current_step, "CAL", "info"),
         ("Next Scheduled Run", "Not scheduled", "Manual test launch mode", "CLK", "purple"),
-        ("Last Completed Run", _format_central(status.get("completed_at")), "Market Refresh completion", "OK", "success"),
+        ("Last Completed Run", _format_cst(status.get("completed_at")), "Market Refresh completion", "OK", "success"),
         ("Alerts Requiring Review", "—", "Alert engine pending", "ALR", "warning"),
     ]
     st.html('<div class="ops-auto-grid">' + ''.join(_status_card(*card) for card in cards) + '</div>')
@@ -268,19 +199,16 @@ def render_runbook_progress() -> None:
 
     rows = []
     for idx, step in enumerate(runbook.get("steps", []), start=1):
-        step_id = str(step.get("step_id") or "")
         stamp, status_label, tone = _step_state(idx, status, latest_run)
-        substeps = ORCHESTRATOR_SUBSTEPS.get(step_id, [])
-        substep_label = f"{len(substeps)} substep" if len(substeps) == 1 else f"{len(substeps)} substeps"
-        desc = f"{step.get('description', '')} ({substep_label})"
-        substep_html = _render_substeps(step_id, idx, status, latest_run)
+        workflow_count = len(step.get("workflows", []))
+        workflow_label = f"{workflow_count} workflow" if workflow_count == 1 else f"{workflow_count} workflows"
+        desc = f"{step.get('description', '')} ({workflow_label})"
         rows.append(
             f'<div class="ops-runbook-row {tone}">'
             f'<div class="ops-runbook-num {tone}">{idx}</div>'
             '<div class="ops-runbook-main">'
             f'<div class="ops-runbook-title">{_escape(step.get("display_name"))}</div>'
             f'<div class="ops-runbook-desc">{_escape(desc)}</div>'
-            f'{substep_html}'
             '</div>'
             f'<div class="ops-runbook-time">{_escape(stamp)}</div>'
             f'<div class="ops-runbook-state {tone}">{_escape(status_label)}</div>'
@@ -372,7 +300,7 @@ def render_recent_activity_compact() -> None:
     latest_run = _latest_orchestrator_run()
     github_status, conclusion, _url = _github_run_status(latest_run)
     rows = [
-        ("STATE", f"Market Refresh: {_display_status(status, latest_run)[0]}", _format_central(status.get("updated_at"))),
+        ("STATE", f"Market Refresh: {_display_status(status, latest_run)[0]}", _format_cst(status.get("updated_at"))),
         ("STEP", f"Step: {status.get('current_step_name') or 'none'}", status.get("current_substep_name") or "—"),
         ("GHA", f"GitHub: {github_status or 'not found'}", conclusion or "—"),
     ]
@@ -392,7 +320,7 @@ def render_recent_activity_compact() -> None:
 def render_autopilot_footer() -> None:
     st.html(
         '<div class="ops-card ops-footer">'
-        '<div>Operations Center launches the Market Refresh orchestrator, refreshes Operations data without a full browser reload, shows orchestrator substeps, and formats times in Central Time.</div>'
+        '<div>Operations Center launches the Market Refresh orchestrator, refreshes Operations data without a full browser reload, and shows times in CST.</div>'
         '<button class="ops-settings-button">Autopilot Settings</button>'
         '</div>'
     )
