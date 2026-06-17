@@ -19,7 +19,7 @@ on:
       max_draftkings_events:
         description: "Optional max matched DraftKings events; blank = all"
         required: false
-        default: "5"
+        default: "all"
         type: string
       model_id:
         description: "Model ID"
