@@ -104,6 +104,7 @@ jobs:
             data/status/market_refresh_status.json \
             data/cards/ufcstats_upcoming_events.parquet \
             data/cards/ufcstats_upcoming_fights.parquet \
+            data/cards/ufc_selected_live_card_event.parquet \
             data/features/fighter_state_history.parquet \
             data/features/latest_fighter_state.parquet \
             data/features/moneyline_feature_view.parquet \
@@ -126,7 +127,6 @@ jobs:
             data/audits/model_market_snapshot_audit.parquet || true
 
           git add -f data/predictions/by_model/${{ inputs.model_id }}/model_outcomes.parquet 2>/dev/null || true
-          git add -f data/predictions/selected_live_card_event.parquet 2>/dev/null || true
           git add -f data/audits/ufc_live_card_build_audit.parquet 2>/dev/null || true
           git add -f data/audits/ufc_live_card_rejected_rows.parquet 2>/dev/null || true
 
