@@ -1,0 +1,123 @@
+name: Run Market Refresh Orchestrator
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Run mode"
+        required: true
+        default: "test"
+        type: choice
+        options:
+          - test
+          - production
+      max_upcoming_events:
+        description: "Optional max UFCStats upcoming events to refresh"
+        required: false
+        default: ""
+        type: string
+      max_draftkings_events:
+        description: "Optional max matched DraftKings events; blank = all"
+        required: false
+        default: "5"
+        type: string
+      model_id:
+        description: "Model ID"
+        required: false
+        default: "moneyline_xgboost_v5"
+        type: string
+      model_mode:
+        description: "Betting outcomes model mode"
+        required: true
+        default: "production"
+        type: choice
+        options:
+          - production
+          - all
+          - single
+
+permissions:
+  contents: write
+
+concurrency:
+  group: market-refresh-orchestrator-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  run-market-refresh-orchestrator:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Sync latest branch state
+        run: |
+          git fetch origin "${GITHUB_REF_NAME}"
+          git pull --ff-only origin "${GITHUB_REF_NAME}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/requirements-workspace.txt
+          pip install pyyaml scikit-learn==1.6.1 xgboost
+
+      - name: Run Market Refresh orchestrator
+        run: |
+          ARGS=(
+            --mode "${{ inputs.mode }}"
+            --model-id "${{ inputs.model_id }}"
+            --model-mode "${{ inputs.model_mode }}"
+            --max-draftkings-events "${{ inputs.max_draftkings_events }}"
+          )
+
+          if [ -n "${{ inputs.max_upcoming_events }}" ]; then
+            ARGS+=(--max-upcoming-events "${{ inputs.max_upcoming_events }}")
+          fi
+
+          python -m pipeline.operations.run_market_refresh "${ARGS[@]}"
+
+      - name: Commit Market Refresh artifacts
+        if: always()
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add -f \
+            data/status/market_refresh_status.json \
+            data/cards/ufcstats_upcoming_events.parquet \
+            data/cards/ufcstats_upcoming_fights.parquet \
+            data/features/fighter_state_history.parquet \
+            data/features/latest_fighter_state.parquet \
+            data/features/moneyline_feature_view.parquet \
+            data/predictions/ufc_live_card.parquet \
+            data/predictions/live_model_features.parquet \
+            data/predictions/model_outcomes.parquet \
+            data/audits/ufc_live_feature_audit.parquet \
+            data/market/draftkings_event_index.parquet \
+            data/market/draftkings_event_card_matches.parquet \
+            data/market/draftkings_market_diagnostic.parquet \
+            data/market/draftkings_raw_index.parquet \
+            data/market/canonical_market_catalog.parquet \
+            data/market/market_outcomes.parquet \
+            data/audits/canonical_market_catalog_audit.parquet \
+            data/audits/ufc_market_match_audit_v2.parquet \
+            data/predictions/betting_outcomes.parquet \
+            data/audits/ufc_betting_outcomes_audit.parquet \
+            data/audits/ufc_betting_join_key_diagnostic.parquet || true
+
+          git add -f data/predictions/by_model/${{ inputs.model_id }}/model_outcomes.parquet 2>/dev/null || true
+          git add -f data/predictions/selected_live_card_event.parquet 2>/dev/null || true
+          git add -f data/audits/ufc_live_card_build_audit.parquet 2>/dev/null || true
+          git add -f data/audits/ufc_live_card_rejected_rows.parquet 2>/dev/null || true
+
+          git commit -m "Run Market Refresh orchestrator" || echo "No changes to commit"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
