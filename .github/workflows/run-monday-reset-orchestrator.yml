@@ -101,6 +101,7 @@ jobs:
             data/staging/ufc_staged_master_rows_enriched.parquet \
             data/staging/ufc_staged_fighter_profiles.parquet \
             data/staging/ufc_staged_master_rows_profiled.parquet \
+            data/audits/ufc_missing_event_ingestion_audit.parquet \
             data/audits/ufc_fight_scrape_audit.parquet \
             data/audits/ufc_fight_detail_scrape_audit.parquet \
             data/audits/ufc_staged_master_mapping_audit.parquet \
