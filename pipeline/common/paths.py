@@ -18,6 +18,7 @@ MARKET_RAW_DIR = MARKET_DIR / "raw"
 DRAFTKINGS_RAW_DIR = MARKET_RAW_DIR / "draftkings"
 BANKROLL_DIR = DATA_DIR / "bankroll"
 MODEL_LAB_DIR = DATA_DIR / "model_lab"
+SNAPSHOTS_DIR = DATA_DIR / "snapshots"
 DOCS_DIR = ROOT_DIR / "docs"
 MARKET_CONFIG_DIR = CONFIGS_DIR / "market"
 
@@ -94,6 +95,9 @@ DRAFTKINGS_EVENT_CARD_MATCH_PATH = MARKET_DIR / "draftkings_event_card_matches.p
 CANONICAL_MARKET_CATALOG_PATH = MARKET_DIR / "canonical_market_catalog.parquet"
 CANONICAL_MARKET_AUDIT_PATH = AUDITS_DIR / "canonical_market_catalog_audit.parquet"
 
+MODEL_MARKET_SNAPSHOTS_PATH = SNAPSHOTS_DIR / "model_market_snapshots.parquet"
+MODEL_MARKET_SNAPSHOT_AUDIT_PATH = AUDITS_DIR / "model_market_snapshot_audit.parquet"
+
 LIVE_FEATURE_AUDIT_PATH = AUDITS_DIR / "ufc_live_feature_audit.parquet"
 LIVE_MATCH_AUDIT_PATH = AUDITS_DIR / "ufc_live_match_audit.parquet"
 LIVE_ODDS_AUDIT_PATH = AUDITS_DIR / "ufc_live_odds_audit.parquet"
@@ -135,6 +139,7 @@ def ensure_data_dirs() -> None:
         DRAFTKINGS_RAW_DIR,
         BANKROLL_DIR,
         MODEL_LAB_DIR,
+        SNAPSHOTS_DIR,
         MODELS_DIR,
         MODEL_DIR,
         DOCS_DIR,
