@@ -203,6 +203,25 @@ def build_steps(args: argparse.Namespace) -> list[Step]:
                 ),
             ],
         ),
+        Step(
+            step_id="capture_snapshots",
+            name="Capture Snapshots",
+            substeps=[
+                Substep(
+                    substep_id="capture_model_market_snapshots",
+                    name="Capture Model-Market Snapshots",
+                    command=_python_module(
+                        "pipeline.snapshots.run_capture_model_market_snapshots",
+                        "--model-mode",
+                        args.snapshot_model_mode,
+                    ),
+                    expected_outputs=[
+                        "data/snapshots/model_market_snapshots.parquet",
+                        "data/audits/model_market_snapshot_audit.parquet",
+                    ],
+                )
+            ],
+        ),
     ]
 
 
@@ -257,6 +276,12 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--model-family", default="moneyline")
     parser.add_argument("--model-id", default="moneyline_xgboost_v5")
     parser.add_argument("--model-mode", choices=["production", "all", "single"], default="production")
+    parser.add_argument(
+        "--snapshot-model-mode",
+        choices=["production", "all", "single"],
+        default="all",
+        help="Models included in append-only model-market snapshots. 'all' includes draft artifacts when present.",
+    )
     return parser.parse_args(argv)
 
 
