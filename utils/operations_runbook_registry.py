@@ -164,8 +164,199 @@ MARKET_REFRESH_V2: RunbookSpec = {
 }
 
 
+MONDAY_RESET_V1: RunbookSpec = {
+    "runbook_id": "monday_reset_v1",
+    "display_name": "Monday Reset",
+    "description": "Post-event settlement, dataset refresh, CLV processing, model monitoring, and weekly reset preparation.",
+    "steps": [
+        {
+            "step_id": "discover_completed_results",
+            "display_name": "Discover Completed Results",
+            "description": "Check UFCStats for completed events missing from the master dataset.",
+            "workflows": [
+                {
+                    "workflow_file": "run-ufcstats-event-check.yml",
+                    "display_name": "Run UFCStats Event Check",
+                    "script": "python -m pipeline.data_maintenance.run_ufcstats_event_check",
+                    "inputs": {},
+                    "outputs": [
+                        "data/status/ufc_ufcstats_event_check.parquet",
+                        "data/staging/ufc_missing_events.parquet",
+                    ],
+                    "validation_artifacts": [
+                        "data/status/ufc_ufcstats_event_check.parquet",
+                    ],
+                },
+            ],
+        },
+        {
+            "step_id": "ingest_completed_event",
+            "display_name": "Ingest Completed Event",
+            "description": "Stage one selected completed event from UFCStats for review. Requires event_id until all-missing-event ingestion is built.",
+            "workflows": [
+                {
+                    "workflow_file": "dm-ingest-single-event.yml",
+                    "display_name": "DM - Ingest Single Event",
+                    "script": "python -m pipeline.data_maintenance.run_ingest_single_event",
+                    "inputs": {
+                        "event_id": "{event_id}",
+                    },
+                    "outputs": [
+                        "data/staging/ufc_staged_fight_rows.parquet",
+                        "data/staging/ufc_staged_fight_details.parquet",
+                        "data/staging/ufc_staged_master_rows.parquet",
+                        "data/staging/ufc_staged_master_rows_enriched.parquet",
+                        "data/staging/ufc_staged_fighter_profiles.parquet",
+                        "data/staging/ufc_staged_master_rows_profiled.parquet",
+                    ],
+                    "validation_artifacts": [
+                        "data/audits/ufc_staged_final_review.parquet",
+                        "data/audits/ufc_append_precheck.parquet",
+                    ],
+                },
+            ],
+        },
+        {
+            "step_id": "validate_append_readiness",
+            "display_name": "Validate Append Readiness",
+            "description": "Run append precheck and staged final review before allowing master append.",
+            "workflows": [
+                {
+                    "workflow_file": "run-append-precheck-validation.yml",
+                    "display_name": "Run Append Precheck Validation",
+                    "script": "python -m pipeline.data_maintenance.run_append_precheck_validation && python -m pipeline.data_maintenance.run_staged_final_review",
+                    "inputs": {},
+                    "outputs": [
+                        "data/audits/ufc_append_precheck.parquet",
+                        "data/audits/ufc_append_duplicate_check.parquet",
+                        "data/audits/ufc_append_required_field_audit.parquet",
+                        "data/audits/ufc_staged_final_review.parquet",
+                    ],
+                    "validation_artifacts": [
+                        "data/audits/ufc_staged_final_review.parquet",
+                    ],
+                },
+            ],
+        },
+        {
+            "step_id": "append_results_to_master",
+            "display_name": "Append Results To Master",
+            "description": "Append reviewed staged event rows into the master dataset. Should remain gated behind append readiness and explicit operator approval.",
+            "workflows": [
+                {
+                    "workflow_file": "run-append-staged-to-master.yml",
+                    "display_name": "Run Append Staged To Master",
+                    "script": "python -m pipeline.data_maintenance.run_append_staged_to_master",
+                    "inputs": {
+                        "run_append": "{run_append}",
+                    },
+                    "outputs": [
+                        "data/master/ufc_master.parquet",
+                        "data/backups/ufc_master_backup_before_append_*.parquet",
+                        "data/audits/ufc_append_audit.parquet",
+                    ],
+                    "validation_artifacts": [
+                        "data/audits/ufc_append_audit.parquet",
+                    ],
+                },
+            ],
+        },
+        {
+            "step_id": "refresh_dataset_status",
+            "display_name": "Refresh Dataset Status",
+            "description": "Rebuild dataset and event-level health status after any result ingestion or append.",
+            "workflows": [
+                {
+                    "workflow_file": "run-dataset-status.yml",
+                    "display_name": "Run Dataset Status",
+                    "script": "python -m pipeline.data_maintenance.run_dataset_status",
+                    "inputs": {},
+                    "outputs": [
+                        "data/status/ufc_dataset_status.parquet",
+                        "data/status/ufc_dataset_event_status.parquet",
+                    ],
+                    "validation_artifacts": [
+                        "data/status/ufc_dataset_status.parquet",
+                    ],
+                },
+            ],
+        },
+        {
+            "step_id": "refresh_bankroll_status",
+            "display_name": "Refresh Bankroll Status",
+            "description": "Recalculate bankroll status, open bets, and bankroll snapshots from the current ledger.",
+            "workflows": [
+                {
+                    "workflow_file": "run-bankroll-status.yml",
+                    "display_name": "Run Bankroll Status",
+                    "script": "python -m pipeline.bankroll.run_bankroll_status",
+                    "inputs": {},
+                    "outputs": [
+                        "data/bankroll/ufc_bankroll_settings.parquet",
+                        "data/bankroll/ufc_bet_ledger.parquet",
+                        "data/bankroll/ufc_open_bets.parquet",
+                        "data/bankroll/ufc_bankroll_snapshots.parquet",
+                    ],
+                    "validation_artifacts": [
+                        "data/bankroll/ufc_bankroll_snapshots.parquet",
+                    ],
+                },
+            ],
+        },
+        {
+            "step_id": "run_clv_tracker",
+            "display_name": "Run CLV Tracker",
+            "description": "Build legacy CLV artifacts from market snapshots and the bankroll ledger.",
+            "workflows": [
+                {
+                    "workflow_file": "run-clv-tracker.yml",
+                    "display_name": "Run UFC CLV Tracker",
+                    "script": "python -m pipeline.clv.run_clv_pipeline",
+                    "inputs": {},
+                    "outputs": [
+                        "data/market/ufc_normalized_market_snapshots.parquet",
+                        "data/audits/ufc_clv_market_normalization_audit.parquet",
+                        "data/market/ufc_closing_lines.parquet",
+                        "data/market/ufc_clv_results.parquet",
+                        "data/market/ufc_line_movement.parquet",
+                    ],
+                    "validation_artifacts": [
+                        "data/market/ufc_clv_results.parquet",
+                    ],
+                },
+            ],
+        },
+        {
+            "step_id": "model_snapshot_performance",
+            "display_name": "Model / Snapshot Performance",
+            "description": "Planned step: score production and draft model predictions, snapshot performance, calibration, and model CLV once performance runners exist.",
+            "status": "planned",
+            "workflows": [],
+            "planned_outputs": [
+                "data/performance/model_prediction_results.parquet",
+                "data/performance/model_performance_summary.parquet",
+                "data/performance/snapshot_performance_summary.parquet",
+                "data/performance/model_clv_summary.parquet",
+            ],
+        },
+        {
+            "step_id": "archive_reset_week",
+            "display_name": "Archive / Reset Week",
+            "description": "Planned step: version weekly artifacts and reset only derived action-board artifacts, never source-of-truth datasets.",
+            "status": "planned",
+            "workflows": [],
+            "planned_outputs": [
+                "data/backups/weekly/<week_id>/",
+                "data/status/monday_reset_status.json",
+            ],
+        },
+    ],
+}
+
+
 RUNBOOKS: dict[str, RunbookSpec] = {
     MARKET_REFRESH_V2["runbook_id"]: MARKET_REFRESH_V2,
+    MONDAY_RESET_V1["runbook_id"]: MONDAY_RESET_V1,
 }
 
 DEFAULT_RUNBOOK_ID = "market_refresh_v2"
