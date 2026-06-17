@@ -5,6 +5,7 @@ from typing import Any, Callable
 import streamlit as st
 
 import utils.model_lab_workflows as mlw
+from tabs.model_lab_sections.lifecycle import render_lifecycle
 from utils.workflow_status import launch_workflow_with_status, workflow_status_label
 
 
@@ -102,3 +103,10 @@ def render_actions(
     context = existing_model_selector(registry, rows, row_by_id)
     mlw._render_model_bar(context, registry)
     _render_actions_with_status(context)
+    st.divider()
+    render_lifecycle(
+        registry,
+        rows,
+        row_by_id,
+        existing_model_selector=existing_model_selector,
+    )
