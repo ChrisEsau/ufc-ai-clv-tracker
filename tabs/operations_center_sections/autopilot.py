@@ -103,6 +103,7 @@ def _launch_market_refresh() -> None:
         "max_draftkings_events": "5",
         "model_id": "moneyline_xgboost_v5",
         "model_mode": "production",
+        "snapshot_model_mode": "all",
     }
     ok, message = trigger_workflow(ORCHESTRATOR_WORKFLOW_FILE, inputs=inputs)
     if ok:
