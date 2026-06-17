@@ -115,6 +115,7 @@ MARKET_REFRESH_V2: RunbookSpec = {
                     "display_name": "Discover DraftKings Markets",
                     "inputs": {
                         "sleep_seconds": "3",
+                        "max_events": "5"
                     },
                     "outputs": [
                         "data/market/draftkings_market_diagnostic.parquet",
