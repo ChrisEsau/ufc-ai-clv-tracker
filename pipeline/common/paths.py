@@ -97,6 +97,9 @@ CANONICAL_MARKET_AUDIT_PATH = AUDITS_DIR / "canonical_market_catalog_audit.parqu
 
 MODEL_MARKET_SNAPSHOTS_PATH = SNAPSHOTS_DIR / "model_market_snapshots.parquet"
 MODEL_MARKET_SNAPSHOT_AUDIT_PATH = AUDITS_DIR / "model_market_snapshot_audit.parquet"
+CLOSING_LINE_SNAPSHOTS_PATH = SNAPSHOTS_DIR / "closing_line_snapshots.parquet"
+CLOSING_LINE_SNAPSHOT_AUDIT_PATH = AUDITS_DIR / "closing_line_snapshot_audit.parquet"
+FIGHT_DAY_MONITOR_STATUS_PATH = STATUS_DIR / "fight_day_monitor_status.json"
 
 LIVE_FEATURE_AUDIT_PATH = AUDITS_DIR / "ufc_live_feature_audit.parquet"
 LIVE_MATCH_AUDIT_PATH = AUDITS_DIR / "ufc_live_match_audit.parquet"
