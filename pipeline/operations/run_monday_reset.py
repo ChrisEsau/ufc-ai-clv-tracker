@@ -7,20 +7,17 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Sequence
 
-import pandas as pd
-
 from pipeline.common.paths import (
-    APPEND_AUDIT_PATH,
-    APPEND_PRECHECK_PATH,
+    AUDITS_DIR,
     BANKROLL_SNAPSHOTS_PATH,
     CLV_RESULTS_PATH,
     DATASET_STATUS_PATH,
-    MISSING_EVENTS_PATH,
-    STAGED_FINAL_REVIEW_PATH,
     ensure_data_dirs,
 )
 from pipeline.data_maintenance.run_dataset_status import run_dataset_status
-from pipeline.data_maintenance.run_ufcstats_event_check import run_ufcstats_event_check
+from pipeline.data_maintenance.run_ingest_missing_events import run_ingest_missing_events
+
+INGEST_MISSING_EVENTS_AUDIT_PATH = AUDITS_DIR / "ufc_missing_event_ingestion_audit.parquet"
 
 
 @dataclass(frozen=True)
@@ -61,51 +58,6 @@ def _normalize_max_events(value: str | int | None) -> int | None:
     return parsed
 
 
-def _load_missing_event_ids(max_events: int | None) -> list[str]:
-    if not MISSING_EVENTS_PATH.exists():
-        return []
-    missing = pd.read_parquet(MISSING_EVENTS_PATH)
-    if missing.empty or "ufcstats_event_id" not in missing.columns:
-        return []
-
-    event_ids = (
-        missing["ufcstats_event_id"]
-        .dropna()
-        .astype(str)
-        .str.strip()
-    )
-    event_ids = [event_id for event_id in event_ids if event_id]
-    if max_events is not None:
-        event_ids = event_ids[:max_events]
-    return event_ids
-
-
-def _append_gate_passed() -> tuple[bool, bool]:
-    append_ready = False
-    final_review_pass = False
-
-    if APPEND_PRECHECK_PATH.exists():
-        precheck = pd.read_parquet(APPEND_PRECHECK_PATH)
-        if not precheck.empty and "append_ready" in precheck.columns:
-            append_ready = bool(precheck["append_ready"].iloc[0])
-
-    if STAGED_FINAL_REVIEW_PATH.exists():
-        final_review = pd.read_parquet(STAGED_FINAL_REVIEW_PATH)
-        if not final_review.empty and "final_review_pass" in final_review.columns:
-            final_review_pass = bool(final_review["final_review_pass"].iloc[0])
-
-    return append_ready, final_review_pass
-
-
-def _append_audit_passed() -> bool:
-    if not APPEND_AUDIT_PATH.exists():
-        return False
-    audit = pd.read_parquet(APPEND_AUDIT_PATH)
-    if audit.empty or "row_count_pass" not in audit.columns:
-        return False
-    return bool(audit["row_count_pass"].iloc[0])
-
-
 def _record(results: list[StepResult], step_id: str, name: str, status: str, message: str = "", outputs: Sequence[Path | str] = ()) -> None:
     results.append(
         StepResult(
@@ -125,11 +77,12 @@ def _run_command_step(results: list[StepResult], step_id: str, name: str, comman
     _record(results, step_id, name, "complete", outputs=outputs)
 
 
-def _run_function_step(results: list[StepResult], step_id: str, name: str, fn: Callable[[], object], outputs: Sequence[Path | str]) -> None:
+def _run_function_step(results: list[StepResult], step_id: str, name: str, fn: Callable[[], object], outputs: Sequence[Path | str]) -> object:
     print()
     print(f"========== {name.upper()} ==========")
-    fn()
+    value = fn()
     _record(results, step_id, name, "complete", outputs=outputs)
+    return value
 
 
 def run_monday_reset(*, mode: str, max_events: int | None, auto_append: bool, run_bankroll: bool, run_clv: bool) -> list[StepResult]:
@@ -145,75 +98,30 @@ def run_monday_reset(*, mode: str, max_events: int | None, auto_append: bool, ru
     ensure_data_dirs()
     results: list[StepResult] = []
 
-    _run_function_step(
+    ingestion_audit = _run_function_step(
         results,
-        "discover_completed_results",
-        "Discover Completed Results",
-        run_ufcstats_event_check,
-        [MISSING_EVENTS_PATH],
+        "ingest_missing_completed_events",
+        "Ingest Missing Completed Events",
+        lambda: run_ingest_missing_events(
+            max_events=max_events,
+            auto_append=auto_append,
+            continue_on_failure=False,
+        ),
+        [INGEST_MISSING_EVENTS_AUDIT_PATH],
     )
 
-    event_ids = _load_missing_event_ids(max_events)
-    if not event_ids:
+    if hasattr(ingestion_audit, "empty") and not ingestion_audit.empty:
+        appended_count = int((ingestion_audit.get("append_status") == "success").sum()) if "append_status" in ingestion_audit.columns else 0
+        ready_not_appended_count = int((ingestion_audit.get("append_status") == "ready_not_appended").sum()) if "append_status" in ingestion_audit.columns else 0
+        skipped_count = int((ingestion_audit.get("stage_status") == "skipped_no_missing_events").sum()) if "stage_status" in ingestion_audit.columns else 0
         _record(
             results,
-            "ingest_completed_events",
-            "Ingest Completed Events",
-            "skipped",
-            "No missing completed events found.",
-            [MISSING_EVENTS_PATH],
+            "append_results_to_master",
+            "Append Results To Master",
+            "complete" if auto_append and appended_count > 0 else "skipped",
+            f"auto_append={auto_append}, appended_events={appended_count}, ready_not_appended={ready_not_appended_count}, skipped={skipped_count}",
+            [INGEST_MISSING_EVENTS_AUDIT_PATH],
         )
-    else:
-        print()
-        print("========== INGEST COMPLETED EVENTS ==========")
-        print("Events selected:", len(event_ids))
-
-        for idx, event_id in enumerate(event_ids, start=1):
-            print()
-            print(f"[{idx}/{len(event_ids)}] Event ID: {event_id}")
-            _run_command(_python_module("pipeline.data_maintenance.run_ingest_single_event", "--event-id", event_id))
-            append_ready, final_review_pass = _append_gate_passed()
-            if not (append_ready and final_review_pass):
-                raise RuntimeError(
-                    "Stopping Monday Reset before append because staged ingestion gates failed "
-                    f"for event_id={event_id}. append_ready={append_ready}, final_review_pass={final_review_pass}"
-                )
-
-            if auto_append:
-                _run_command(_python_module("pipeline.data_maintenance.run_append_staged_to_master"))
-                if not _append_audit_passed():
-                    raise RuntimeError(f"Append audit row_count_pass failed for event_id={event_id}.")
-            else:
-                print("Auto append disabled. Staged event was validated but not appended.")
-
-        _record(
-            results,
-            "ingest_completed_events",
-            "Ingest Completed Events",
-            "complete",
-            f"Processed {len(event_ids)} event(s).",
-            [APPEND_PRECHECK_PATH, STAGED_FINAL_REVIEW_PATH],
-        )
-
-        append_ready, final_review_pass = _append_gate_passed()
-        if auto_append:
-            _record(
-                results,
-                "append_results_to_master",
-                "Append Results To Master",
-                "complete",
-                "Auto append completed for all selected events.",
-                [APPEND_AUDIT_PATH],
-            )
-        else:
-            _record(
-                results,
-                "append_results_to_master",
-                "Append Results To Master",
-                "skipped",
-                f"Auto append disabled. append_ready={append_ready}, final_review_pass={final_review_pass}",
-                [APPEND_PRECHECK_PATH, STAGED_FINAL_REVIEW_PATH],
-            )
 
     _run_function_step(
         results,
