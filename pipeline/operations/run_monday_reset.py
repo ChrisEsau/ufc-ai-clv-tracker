@@ -16,7 +16,15 @@ from pipeline.common.paths import (
 )
 from pipeline.data_maintenance.run_dataset_status import run_dataset_status
 from pipeline.data_maintenance.run_ingest_missing_events import run_ingest_missing_events
+from utils.operations_status_writer import (
+    complete_runbook,
+    complete_step,
+    fail_runbook,
+    start_runbook,
+    start_step,
+)
 
+RUNBOOK_ID = "monday_reset_v1"
 INGEST_MISSING_EVENTS_AUDIT_PATH = AUDITS_DIR / "ufc_missing_event_ingestion_audit.parquet"
 
 
@@ -85,6 +93,21 @@ def _run_function_step(results: list[StepResult], step_id: str, name: str, fn: C
     return value
 
 
+def _record_step_status(step_id: str, step_name: str, step_index: int, step_total: int) -> None:
+    start_step(
+        step_id=step_id,
+        step_name=step_name,
+        step_index=step_index,
+        step_total=step_total,
+        substep_total=1,
+        runbook_id=RUNBOOK_ID,
+    )
+
+
+def _complete_step_status(message: str) -> None:
+    complete_step(message, runbook_id=RUNBOOK_ID)
+
+
 def run_monday_reset(*, mode: str, max_events: int | None, auto_append: bool, run_bankroll: bool, run_clv: bool) -> list[StepResult]:
     print("=" * 80)
     print("UFC MONDAY RESET ORCHESTRATOR")
@@ -97,76 +120,95 @@ def run_monday_reset(*, mode: str, max_events: int | None, auto_append: bool, ru
 
     ensure_data_dirs()
     results: list[StepResult] = []
-
-    ingestion_audit = _run_function_step(
-        results,
-        "ingest_missing_completed_events",
-        "Ingest Missing Completed Events",
-        lambda: run_ingest_missing_events(
-            max_events=max_events,
-            auto_append=auto_append,
-            continue_on_failure=False,
-        ),
-        [INGEST_MISSING_EVENTS_AUDIT_PATH],
+    step_total = 5
+    start_runbook(
+        runbook_id=RUNBOOK_ID,
+        mode=mode,
+        step_total=step_total,
+        message=f"Monday Reset started in {mode} mode",
     )
 
-    if hasattr(ingestion_audit, "empty") and not ingestion_audit.empty:
-        appended_count = int((ingestion_audit.get("append_status") == "success").sum()) if "append_status" in ingestion_audit.columns else 0
-        ready_not_appended_count = int((ingestion_audit.get("append_status") == "ready_not_appended").sum()) if "append_status" in ingestion_audit.columns else 0
-        skipped_count = int((ingestion_audit.get("stage_status") == "skipped_no_missing_events").sum()) if "stage_status" in ingestion_audit.columns else 0
-        _record(
+    try:
+        _record_step_status("process_completed_events", "Process Completed Events", 1, step_total)
+        ingestion_audit = _run_function_step(
             results,
-            "append_results_to_master",
-            "Append Results To Master",
-            "complete" if auto_append and appended_count > 0 else "skipped",
-            f"auto_append={auto_append}, appended_events={appended_count}, ready_not_appended={ready_not_appended_count}, skipped={skipped_count}",
+            "process_completed_events",
+            "Process Completed Events",
+            lambda: run_ingest_missing_events(
+                max_events=max_events,
+                auto_append=auto_append,
+                continue_on_failure=False,
+            ),
             [INGEST_MISSING_EVENTS_AUDIT_PATH],
         )
+        _complete_step_status("Completed Process Completed Events")
 
-    _run_function_step(
-        results,
-        "refresh_dataset_status",
-        "Refresh Dataset Status",
-        run_dataset_status,
-        [DATASET_STATUS_PATH],
-    )
+        _record_step_status("update_master_dataset", "Update Master Dataset", 2, step_total)
+        if hasattr(ingestion_audit, "empty") and not ingestion_audit.empty:
+            appended_count = int((ingestion_audit.get("append_status") == "success").sum()) if "append_status" in ingestion_audit.columns else 0
+            ready_not_appended_count = int((ingestion_audit.get("append_status") == "ready_not_appended").sum()) if "append_status" in ingestion_audit.columns else 0
+            skipped_count = int((ingestion_audit.get("stage_status") == "skipped_no_missing_events").sum()) if "stage_status" in ingestion_audit.columns else 0
+            _record(
+                results,
+                "update_master_dataset",
+                "Update Master Dataset",
+                "complete" if auto_append and appended_count > 0 else "skipped",
+                f"auto_append={auto_append}, appended_events={appended_count}, ready_not_appended={ready_not_appended_count}, skipped={skipped_count}",
+                [INGEST_MISSING_EVENTS_AUDIT_PATH],
+            )
+            _complete_step_status("Completed Update Master Dataset")
+        else:
+            _record(results, "update_master_dataset", "Update Master Dataset", "skipped", "No ingestion audit rows were produced.")
+            _complete_step_status("Skipped Update Master Dataset")
 
-    if run_bankroll:
-        _run_command_step(
+        _record_step_status("refresh_platform_status", "Refresh Platform Status", 3, step_total)
+        _run_function_step(
             results,
-            "refresh_bankroll_status",
-            "Refresh Bankroll Status",
-            _python_module("pipeline.bankroll.run_bankroll_status"),
-            [BANKROLL_SNAPSHOTS_PATH],
+            "refresh_platform_status",
+            "Refresh Platform Status",
+            run_dataset_status,
+            [DATASET_STATUS_PATH],
         )
-    else:
-        _record(results, "refresh_bankroll_status", "Refresh Bankroll Status", "skipped", "run_bankroll=false")
+        _complete_step_status("Completed Refresh Platform Status")
 
-    if run_clv:
-        _run_command_step(
+        _record_step_status("reconcile_performance", "Reconcile Performance", 4, step_total)
+        if run_bankroll:
+            _run_command_step(
+                results,
+                "refresh_bankroll_status",
+                "Refresh Bankroll Status",
+                _python_module("pipeline.bankroll.run_bankroll_status"),
+                [BANKROLL_SNAPSHOTS_PATH],
+            )
+        else:
+            _record(results, "refresh_bankroll_status", "Refresh Bankroll Status", "skipped", "run_bankroll=false")
+
+        if run_clv:
+            _run_command_step(
+                results,
+                "run_clv_tracker",
+                "Run CLV Tracker",
+                _python_module("pipeline.clv.run_clv_pipeline"),
+                [CLV_RESULTS_PATH],
+            )
+        else:
+            _record(results, "run_clv_tracker", "Run CLV Tracker", "skipped", "run_clv=false")
+        _complete_step_status("Completed Reconcile Performance")
+
+        _record_step_status("prepare_next_week", "Prepare Next Week", 5, step_total)
+        _record(
             results,
-            "run_clv_tracker",
-            "Run CLV Tracker",
-            _python_module("pipeline.clv.run_clv_pipeline"),
-            [CLV_RESULTS_PATH],
+            "prepare_next_week",
+            "Prepare Next Week",
+            "planned",
+            "Weekly archive/reset and model performance runners are not implemented yet.",
         )
-    else:
-        _record(results, "run_clv_tracker", "Run CLV Tracker", "skipped", "run_clv=false")
+        _complete_step_status("Completed Prepare Next Week")
 
-    _record(
-        results,
-        "model_snapshot_performance",
-        "Model / Snapshot Performance",
-        "planned",
-        "Performance runner not implemented yet.",
-    )
-    _record(
-        results,
-        "archive_reset_week",
-        "Archive / Reset Week",
-        "planned",
-        "Weekly archive/reset runner not implemented yet.",
-    )
+        complete_runbook("Monday Reset completed", runbook_id=RUNBOOK_ID)
+    except Exception as exc:
+        fail_runbook(str(exc), runbook_id=RUNBOOK_ID)
+        raise
 
     print()
     print("========== MONDAY RESET SUMMARY ==========")
