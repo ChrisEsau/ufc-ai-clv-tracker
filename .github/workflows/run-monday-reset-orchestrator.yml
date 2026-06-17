@@ -93,6 +93,7 @@ jobs:
           git config user.email "github-actions@github.com"
 
           git add -f \
+            data/status/monday_reset_status.json \
             data/status/ufc_ufcstats_event_check.parquet \
             data/staging/ufc_missing_events.parquet \
             data/staging/ufc_staged_fight_rows.parquet \
