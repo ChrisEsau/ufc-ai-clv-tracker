@@ -1,0 +1,117 @@
+name: Run Fight Day Monitor
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Run mode"
+        required: true
+        default: "production"
+        type: choice
+        options:
+          - test
+          - production
+      max_draftkings_events:
+        description: "Optional max matched DraftKings events; blank/all = uncapped"
+        required: false
+        default: "all"
+        type: string
+      model_mode:
+        description: "Betting outcomes model mode"
+        required: true
+        default: "production"
+        type: choice
+        options:
+          - production
+          - all
+          - single
+      snapshot_model_mode:
+        description: "Model-market snapshot mode"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - production
+          - all
+          - single
+      official_closing_snapshot:
+        description: "Flag rows as official closing snapshot"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fight-day-monitor-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  run-fight-day-monitor:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Sync latest branch state
+        run: |
+          git fetch origin "${GITHUB_REF_NAME}"
+          git pull --ff-only origin "${GITHUB_REF_NAME}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/requirements-workspace.txt
+          pip install pyyaml scikit-learn==1.6.1 xgboost
+
+      - name: Run Fight Day Monitor
+        run: |
+          ARGS=(
+            --mode "${{ inputs.mode }}"
+            --model-mode "${{ inputs.model_mode }}"
+            --snapshot-model-mode "${{ inputs.snapshot_model_mode }}"
+            --max-draftkings-events "${{ inputs.max_draftkings_events }}"
+          )
+
+          if [ "${{ inputs.official_closing_snapshot }}" != "true" ]; then
+            ARGS+=(--no-official-closing-snapshot)
+          fi
+
+          python -m pipeline.operations.run_fight_day_monitor "${ARGS[@]}"
+
+      - name: Commit Fight Day Monitor artifacts
+        if: always()
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add -f \
+            data/status/fight_day_monitor_status.json \
+            data/cards/ufc_selected_live_card_event.parquet \
+            data/market/draftkings_event_index.parquet \
+            data/market/draftkings_event_card_matches.parquet \
+            data/market/draftkings_market_diagnostic.parquet \
+            data/market/draftkings_raw_index.parquet \
+            data/market/canonical_market_catalog.parquet \
+            data/market/market_outcomes.parquet \
+            data/audits/canonical_market_catalog_audit.parquet \
+            data/audits/ufc_market_match_audit_v2.parquet \
+            data/predictions/betting_outcomes.parquet \
+            data/audits/ufc_betting_outcomes_audit.parquet \
+            data/snapshots/model_market_snapshots.parquet \
+            data/audits/model_market_snapshot_audit.parquet \
+            data/snapshots/closing_line_snapshots.parquet \
+            data/audits/closing_line_snapshot_audit.parquet || true
+
+          git commit -m "Run Fight Day Monitor" || echo "No changes to commit"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
