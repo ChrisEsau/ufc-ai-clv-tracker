@@ -114,6 +114,7 @@ jobs:
             data/audits/ufc_append_required_field_audit.parquet \
             data/audits/ufc_staged_final_review.parquet \
             data/audits/ufc_append_audit.parquet \
+            data/audits/ufc_bet_settlement_audit.parquet \
             data/status/ufc_dataset_status.parquet \
             data/status/ufc_dataset_event_status.parquet \
             data/bankroll/ufc_bankroll_settings.parquet \
