@@ -108,5 +108,5 @@ def render_actions(
         registry,
         rows,
         row_by_id,
-        existing_model_selector=existing_model_selector,
+        existing_model_selector=lambda _registry, _rows, _row_by_id: context,
     )
