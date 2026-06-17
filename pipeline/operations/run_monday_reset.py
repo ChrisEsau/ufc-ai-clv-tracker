@@ -5,7 +5,7 @@ import subprocess
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Sequence
+from typing import Callable, Sequence
 
 import pandas as pd
 
@@ -19,6 +19,8 @@ from pipeline.common.paths import (
     STAGED_FINAL_REVIEW_PATH,
     ensure_data_dirs,
 )
+from pipeline.data_maintenance.run_dataset_status import run_dataset_status
+from pipeline.data_maintenance.run_ufcstats_event_check import run_ufcstats_event_check
 
 
 @dataclass(frozen=True)
@@ -116,10 +118,17 @@ def _record(results: list[StepResult], step_id: str, name: str, status: str, mes
     )
 
 
-def _run_named(results: list[StepResult], step_id: str, name: str, command: Sequence[str], outputs: Sequence[Path | str]) -> None:
+def _run_command_step(results: list[StepResult], step_id: str, name: str, command: Sequence[str], outputs: Sequence[Path | str]) -> None:
     print()
     print(f"========== {name.upper()} ==========")
     _run_command(command)
+    _record(results, step_id, name, "complete", outputs=outputs)
+
+
+def _run_function_step(results: list[StepResult], step_id: str, name: str, fn: Callable[[], object], outputs: Sequence[Path | str]) -> None:
+    print()
+    print(f"========== {name.upper()} ==========")
+    fn()
     _record(results, step_id, name, "complete", outputs=outputs)
 
 
@@ -136,11 +145,11 @@ def run_monday_reset(*, mode: str, max_events: int | None, auto_append: bool, ru
     ensure_data_dirs()
     results: list[StepResult] = []
 
-    _run_named(
+    _run_function_step(
         results,
         "discover_completed_results",
         "Discover Completed Results",
-        _python_module("pipeline.data_maintenance.run_ufcstats_event_check"),
+        run_ufcstats_event_check,
         [MISSING_EVENTS_PATH],
     )
 
@@ -206,16 +215,16 @@ def run_monday_reset(*, mode: str, max_events: int | None, auto_append: bool, ru
                 [APPEND_PRECHECK_PATH, STAGED_FINAL_REVIEW_PATH],
             )
 
-    _run_named(
+    _run_function_step(
         results,
         "refresh_dataset_status",
         "Refresh Dataset Status",
-        _python_module("pipeline.data_maintenance.run_dataset_status"),
+        run_dataset_status,
         [DATASET_STATUS_PATH],
     )
 
     if run_bankroll:
-        _run_named(
+        _run_command_step(
             results,
             "refresh_bankroll_status",
             "Refresh Bankroll Status",
@@ -226,7 +235,7 @@ def run_monday_reset(*, mode: str, max_events: int | None, auto_append: bool, ru
         _record(results, "refresh_bankroll_status", "Refresh Bankroll Status", "skipped", "run_bankroll=false")
 
     if run_clv:
-        _run_named(
+        _run_command_step(
             results,
             "run_clv_tracker",
             "Run CLV Tracker",
