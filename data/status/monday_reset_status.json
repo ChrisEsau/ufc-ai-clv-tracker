@@ -1,0 +1,128 @@
+{
+  "completed_at": "2026-06-17T16:27:39.447689+00:00",
+  "current_step_id": "prepare_next_week",
+  "current_step_name": "Prepare Next Week",
+  "current_substep_id": null,
+  "current_substep_name": null,
+  "error": null,
+  "history": [
+    {
+      "event": "runbook_started",
+      "message": "Monday Reset started in test mode",
+      "step_id": null,
+      "step_name": null,
+      "substep_id": null,
+      "substep_name": null,
+      "timestamp": "2026-06-17T16:21:13.872870+00:00"
+    },
+    {
+      "event": "step_started",
+      "message": "Started step: Process Completed Events",
+      "step_id": "process_completed_events",
+      "step_name": "Process Completed Events",
+      "substep_id": null,
+      "substep_name": null,
+      "timestamp": "2026-06-17T16:21:13.873205+00:00"
+    },
+    {
+      "event": "step_completed",
+      "message": "Completed Process Completed Events",
+      "step_id": "process_completed_events",
+      "step_name": "Process Completed Events",
+      "substep_id": null,
+      "substep_name": null,
+      "timestamp": "2026-06-17T16:27:38.336257+00:00"
+    },
+    {
+      "event": "step_started",
+      "message": "Started step: Update Master Dataset",
+      "step_id": "update_master_dataset",
+      "step_name": "Update Master Dataset",
+      "substep_id": null,
+      "substep_name": null,
+      "timestamp": "2026-06-17T16:27:38.336663+00:00"
+    },
+    {
+      "event": "step_completed",
+      "message": "Completed Update Master Dataset",
+      "step_id": "update_master_dataset",
+      "step_name": "Update Master Dataset",
+      "substep_id": null,
+      "substep_name": null,
+      "timestamp": "2026-06-17T16:27:38.337627+00:00"
+    },
+    {
+      "event": "step_started",
+      "message": "Started step: Refresh Platform Status",
+      "step_id": "refresh_platform_status",
+      "step_name": "Refresh Platform Status",
+      "substep_id": null,
+      "substep_name": null,
+      "timestamp": "2026-06-17T16:27:38.338001+00:00"
+    },
+    {
+      "event": "step_completed",
+      "message": "Completed Refresh Platform Status",
+      "step_id": "refresh_platform_status",
+      "step_name": "Refresh Platform Status",
+      "substep_id": null,
+      "substep_name": null,
+      "timestamp": "2026-06-17T16:27:38.380739+00:00"
+    },
+    {
+      "event": "step_started",
+      "message": "Started step: Reconcile Performance",
+      "step_id": "reconcile_performance",
+      "step_name": "Reconcile Performance",
+      "substep_id": null,
+      "substep_name": null,
+      "timestamp": "2026-06-17T16:27:38.381309+00:00"
+    },
+    {
+      "event": "step_completed",
+      "message": "Completed Reconcile Performance",
+      "step_id": "reconcile_performance",
+      "step_name": "Reconcile Performance",
+      "substep_id": null,
+      "substep_name": null,
+      "timestamp": "2026-06-17T16:27:39.446243+00:00"
+    },
+    {
+      "event": "step_started",
+      "message": "Started step: Prepare Next Week",
+      "step_id": "prepare_next_week",
+      "step_name": "Prepare Next Week",
+      "substep_id": null,
+      "substep_name": null,
+      "timestamp": "2026-06-17T16:27:39.446804+00:00"
+    },
+    {
+      "event": "step_completed",
+      "message": "Completed Prepare Next Week",
+      "step_id": "prepare_next_week",
+      "step_name": "Prepare Next Week",
+      "substep_id": null,
+      "substep_name": null,
+      "timestamp": "2026-06-17T16:27:39.447240+00:00"
+    },
+    {
+      "event": "runbook_completed",
+      "message": "Monday Reset completed",
+      "step_id": "prepare_next_week",
+      "step_name": "Prepare Next Week",
+      "substep_id": null,
+      "substep_name": null,
+      "timestamp": "2026-06-17T16:27:39.447693+00:00"
+    }
+  ],
+  "message": "Monday Reset completed",
+  "mode": "test",
+  "runbook_id": "monday_reset_v1",
+  "started_at": "2026-06-17T16:21:13.872864+00:00",
+  "status": "completed",
+  "step_index": 5,
+  "step_total": 5,
+  "substep_index": null,
+  "substep_total": 1,
+  "updated_at": "2026-06-17T16:27:39.447814+00:00"
+}
