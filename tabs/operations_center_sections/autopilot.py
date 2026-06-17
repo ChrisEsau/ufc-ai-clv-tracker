@@ -7,6 +7,7 @@ import streamlit as st
 from utils.operations_runbook_registry import get_runbook
 from utils.operations_runbook_state import load_state
 from utils.operations_workflow_launcher import launch_next_workflow
+from utils.operations_workflow_monitor import refresh_active_workflow_status
 
 
 def _escape(value) -> str:
@@ -71,6 +72,25 @@ def render_autopilot_summary() -> None:
     st.html('<div class="ops-auto-grid">' + ''.join(_status_card(*card) for card in cards) + '</div>')
 
 
+def _handle_run_button(runbook_id: str) -> None:
+    state = load_state()
+    if state.get("current_workflow_file"):
+        ok, message, refreshed_state = refresh_active_workflow_status()
+        if not ok:
+            st.warning(message)
+            st.rerun()
+        if refreshed_state.get("current_workflow_conclusion") != "success":
+            st.info(message)
+            st.rerun()
+
+    ok, message, _state = launch_next_workflow(runbook_id)
+    if ok:
+        st.success(message)
+    else:
+        st.error(message)
+    st.rerun()
+
+
 def render_runbook_progress() -> None:
     state = load_state()
     runbook = get_runbook(str(state.get("runbook_id") or "market_refresh_v2"))
@@ -78,14 +98,9 @@ def render_runbook_progress() -> None:
     action_left, action_right = st.columns([1, 2])
     with action_left:
         if st.button("Run Next Workflow", key="ops_run_next_workflow", type="primary", use_container_width=True):
-            ok, message, _state = launch_next_workflow(str(runbook.get("runbook_id") or "market_refresh_v2"))
-            if ok:
-                st.success(message)
-            else:
-                st.error(message)
-            st.rerun()
+            _handle_run_button(str(runbook.get("runbook_id") or "market_refresh_v2"))
     with action_right:
-        st.caption("Manual validation mode: launches one mapped GitHub workflow at a time.")
+        st.caption("Button checks the active workflow status first; if complete, it launches the next mapped workflow.")
 
     rows = []
     for idx, step in enumerate(runbook.get("steps", [])):
@@ -105,9 +120,13 @@ def render_runbook_progress() -> None:
             '</div>'
         )
 
-    note = "Runbook registry loaded. Use Run Next Workflow to launch one mapped workflow."
+    note = "Runbook registry loaded. Use Run Next Workflow to launch or advance one mapped workflow."
     if state.get("current_workflow_file"):
         note = f"Current workflow: {state.get('current_workflow_file')}"
+    if state.get("current_workflow_status"):
+        note += f" | GitHub status: {state.get('current_workflow_status')}"
+    if state.get("current_workflow_conclusion"):
+        note += f" / {state.get('current_workflow_conclusion')}"
     if state.get("error"):
         note = f"Error: {state.get('error')}"
 
@@ -149,9 +168,7 @@ def render_upcoming_runs() -> None:
 
 
 def render_review_alerts() -> None:
-    rows = [
-        ("INFO", "Alert engine pending", "Betting outcomes will feed this panel later", "Pending", "Not wired", "—"),
-    ]
+    rows = [("INFO", "Alert engine pending", "Betting outcomes will feed this panel later", "Pending", "Not wired", "—")]
     html_rows = []
     for level, title, detail, priority, edge, stamp in rows:
         html_rows.append(
@@ -189,8 +206,8 @@ def render_recent_activity_compact() -> None:
     state = load_state()
     rows = [
         ("STATE", f"Runbook state: {state.get('status', 'idle')}", state.get("updated_at") or "—"),
-        ("REG", "Market Refresh registry loaded", "—"),
-        ("NEXT", "Next: workflow launcher", "—"),
+        ("WF", f"Active workflow: {state.get('current_workflow_file') or 'none'}", state.get("current_workflow_status") or "—"),
+        ("NEXT", "Next: auto-advance after status refresh validation", "—"),
     ]
     html_rows = ''.join(
         '<div class="ops-activity-row">'
