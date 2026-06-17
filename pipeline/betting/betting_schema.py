@@ -12,6 +12,8 @@ OUTPUT_COLUMNS = [
     "snapshot_timestamp",
     "model_id",
     "model_family",
+    "model_registry_status",
+    "model_outcomes_path",
     "algorithm",
     "prediction_type",
     "event_id",
