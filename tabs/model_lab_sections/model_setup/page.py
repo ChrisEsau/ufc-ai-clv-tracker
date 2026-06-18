@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from tabs.model_lab_sections.model_setup.identity import render_identity_section
 from tabs.model_lab_sections.model_setup.selectors import render_model_selector
 from tabs.model_lab_sections.model_setup.styles import inject_styles
 from utils.model_lab_setup import model_context, registry_io
@@ -44,6 +45,11 @@ def render_page() -> None:
             return
         context = model_context.resolve_existing_model_context(registry, selected_model_id)
         _render_context_banner(context)
-        st.info("Next: add Model Setup cards for Identity, Training, Behavior, Hyperparameters, and Feature Selection.")
+
+        with st.container(border=True):
+            identity_payload = render_identity_section(context)
+
+        st.session_state["model_setup_identity_payload"] = identity_payload
+        st.info("Next: add Training, Behavior, Hyperparameters, Feature Selection, Validation, and Actions.")
     except Exception as exc:
         st.error(f"Unable to load Model Setup: {exc}")
