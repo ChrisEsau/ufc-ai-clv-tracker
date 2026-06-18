@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from tabs.model_lab_sections.model_setup.behavior import render_behavior_section
 from tabs.model_lab_sections.model_setup.identity import render_identity_section
 from tabs.model_lab_sections.model_setup.selectors import render_model_selector
 from tabs.model_lab_sections.model_setup.styles import inject_styles
@@ -47,16 +48,20 @@ def render_page() -> None:
         context = model_context.resolve_existing_model_context(registry, selected_model_id)
         _render_context_banner(context)
 
-        row1_col1, row1_col2 = st.columns([1.05, 1.0], gap="medium")
+        row1_col1, row1_col2, row1_col3 = st.columns([1.05, 1.0, 1.0], gap="medium")
         with row1_col1:
             with st.container(border=True):
                 identity_payload = render_identity_section(context)
         with row1_col2:
             with st.container(border=True):
                 training_payload = render_training_section(context)
+        with row1_col3:
+            with st.container(border=True):
+                behavior_payload = render_behavior_section(context)
 
         st.session_state["model_setup_identity_payload"] = identity_payload
         st.session_state["model_setup_training_payload"] = training_payload
-        st.info("Next: add Behavior, Hyperparameters, Feature Selection, Validation, and Actions.")
+        st.session_state["model_setup_behavior_payload"] = behavior_payload
+        st.info("Next: add Hyperparameters, Feature Selection, Validation, and Actions.")
     except Exception as exc:
         st.error(f"Unable to load Model Setup: {exc}")
