@@ -147,7 +147,7 @@ def render_page() -> None:
                 validation_result = render_validation_summary(context, registry, payload)
         with row3_col2:
             with st.container(border=True):
-                render_action_bar(context, registry, payload)
+                render_action_bar(context, registry, payload, validation_result)
         st.session_state["model_setup_validation_result"] = validation_result
     except Exception as exc:
         st.error(f"Unable to load Model Setup: {exc}")
