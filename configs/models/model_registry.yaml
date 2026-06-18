@@ -30,8 +30,8 @@ models:
     algorithm: xgboost
     config_path: configs/models/prop_goes_distance_xgboost_v1.yaml
     artifact_dir: models/goes_distance/prop_goes_distance_xgboost_v1
-    status: draft
-    dashboard_selectable: false
+    status: production
+    dashboard_selectable: true
     outcome_architecture: true
   moneyline_xgboost_v7:
     display_name: Moneyline XGBoost V5 Experiment
