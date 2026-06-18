@@ -20,7 +20,6 @@ RUNBOOK_LAUNCH_CONFIG = {
         "caption": "Launches Market Refresh using all production models from the registry.",
         "inputs": {
             "mode": "test",
-            "max_upcoming_events": "",
             "max_draftkings_events": "all",
             "model_mode": "production",
             "snapshot_model_mode": "production",
