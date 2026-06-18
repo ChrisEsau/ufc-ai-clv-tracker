@@ -1,48 +1,64 @@
 {
-  "version": 1,
-  "timezone": "America/Chicago",
-  "window_minutes": 30,
   "schedules": {
-    "monday_reset_v1": {
-      "enabled": false,
-      "display_name": "Monday Reset",
-      "days": ["MON"],
-      "times": ["08:00"],
-      "workflow_file": "run-monday-reset-orchestrator.yml",
+    "fight_day_monitor_v1": {
+      "days": [
+        "SAT"
+      ],
+      "display_name": "Fight Day Monitor",
+      "enabled": true,
       "inputs": {
+        "max_draftkings_events": "all",
         "mode": "production",
-        "max_events": "all",
-        "auto_append": true,
-        "skip_bankroll": false,
-        "skip_clv": false
-      }
+        "model_mode": "production",
+        "official_closing_snapshot": true,
+        "snapshot_model_mode": "production"
+      },
+      "times": [
+        "17:30",
+        "17:55"
+      ],
+      "workflow_file": "run-fight-day-monitor.yml"
     },
     "market_refresh_v2": {
-      "enabled": false,
+      "days": [
+        "TUE",
+        "WED",
+        "THU",
+        "FRI"
+      ],
       "display_name": "Market Refresh",
-      "days": ["FRI", "SAT"],
-      "times": ["09:00", "15:00", "21:00"],
-      "workflow_file": "run-market-refresh-orchestrator.yml",
+      "enabled": true,
       "inputs": {
-        "mode": "production",
         "max_draftkings_events": "all",
+        "mode": "production",
         "model_mode": "production",
         "snapshot_model_mode": "production"
-      }
+      },
+      "times": [
+        "03:00"
+      ],
+      "workflow_file": "run-market-refresh-orchestrator.yml"
     },
-    "fight_day_monitor_v1": {
-      "enabled": false,
-      "display_name": "Fight Day Monitor",
-      "days": ["SAT"],
-      "times": ["17:30", "17:55"],
-      "workflow_file": "run-fight-day-monitor.yml",
+    "monday_reset_v1": {
+      "days": [
+        "MON"
+      ],
+      "display_name": "Monday Reset",
+      "enabled": true,
       "inputs": {
+        "auto_append": true,
+        "max_events": "all",
         "mode": "production",
-        "max_draftkings_events": "all",
-        "model_mode": "production",
-        "snapshot_model_mode": "production",
-        "official_closing_snapshot": true
-      }
+        "skip_bankroll": false,
+        "skip_clv": false
+      },
+      "times": [
+        "05:00"
+      ],
+      "workflow_file": "run-monday-reset-orchestrator.yml"
     }
-  }
+  },
+  "timezone": "America/Chicago",
+  "version": 1,
+  "window_minutes": 30
 }
