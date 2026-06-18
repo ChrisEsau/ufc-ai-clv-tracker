@@ -65,6 +65,14 @@ def build_steps(args: argparse.Namespace) -> list[Step]:
     if not _is_uncapped(args.max_draftkings_events):
         matched_discovery_command.extend(["--max-events", str(args.max_draftkings_events)])
 
+    production_prediction_command = _python_module(
+        "pipeline.modeling.run_production_predictions",
+        "--registry-path",
+        args.model_registry_path,
+    )
+    if bool(args.prefer_raw_model):
+        production_prediction_command.append("--prefer-raw-model")
+
     return [
         Step(
             step_id="refresh_upcoming_events",
@@ -83,7 +91,7 @@ def build_steps(args: argparse.Namespace) -> list[Step]:
         ),
         Step(
             step_id="run_predictions",
-            name="Run Predictions",
+            name="Run All Production Predictions",
             substeps=[
                 Substep(
                     substep_id="build_fighter_state",
@@ -105,28 +113,10 @@ def build_steps(args: argparse.Namespace) -> list[Step]:
                     expected_outputs=[args.feature_view_output],
                 ),
                 Substep(
-                    substep_id="build_live_card",
-                    name="Build Target Live Card",
-                    command=_python_module("pipeline.prediction.run_build_target_live_card"),
-                    expected_outputs=[
-                        "data/predictions/ufc_live_card.parquet",
-                        "data/cards/ufc_selected_live_card_event.parquet",
-                    ],
-                ),
-                Substep(
-                    substep_id="run_prediction_v2",
-                    name="Run Prediction V2",
-                    command=_python_module(
-                        "pipeline.modeling.run_prediction",
-                        "--model-family",
-                        args.model_family,
-                        "--model-id",
-                        args.model_id,
-                    ),
-                    expected_outputs=[
-                        "data/predictions/model_outcomes.parquet",
-                        f"data/predictions/by_model/{args.model_id}/model_outcomes.parquet",
-                    ],
+                    substep_id="run_production_predictions",
+                    name="Run Production Registry Predictions",
+                    command=production_prediction_command,
+                    expected_outputs=["data/audits/production_prediction_audit.parquet"],
                 ),
             ],
         ),
@@ -284,16 +274,16 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--draftkings-card-min-single-score", default="70")
     parser.add_argument("--market-min-match-score", default="65")
     parser.add_argument("--draftkings-registry-path", default="configs/market/providers/draftkings_ufc_registry.yaml")
+    parser.add_argument("--model-registry-path", default="configs/models/model_registry.yaml")
     parser.add_argument("--feature-view-config", default="configs/feature_views/moneyline_base.yaml")
     parser.add_argument("--feature-view-output", default="data/features/moneyline_feature_view.parquet")
-    parser.add_argument("--model-family", default="moneyline")
-    parser.add_argument("--model-id", default="moneyline_xgboost_v5")
     parser.add_argument("--model-mode", choices=["production", "all", "single"], default="production")
+    parser.add_argument("--prefer-raw-model", action="store_true")
     parser.add_argument(
         "--snapshot-model-mode",
         choices=["production", "all", "single"],
-        default="all",
-        help="Models included in append-only model-market snapshots. 'all' includes draft artifacts when present.",
+        default="production",
+        help="Models included in append-only model-market snapshots.",
     )
     return parser.parse_args(argv)
 
