@@ -12,18 +12,12 @@ RunbookSpec = dict[str, Any]
 MARKET_REFRESH_V2: RunbookSpec = {
     "runbook_id": "market_refresh_v2",
     "display_name": "Market Refresh",
-    "description": "Refresh upcoming UFC events, all production model predictions, DraftKings markets, betting outcomes, and model-market snapshots.",
+    "description": "Refresh all production model predictions, DraftKings markets, betting outcomes, and model-market snapshots using the Monday-selected target card.",
     "steps": [
-        {
-            "step_id": "refresh_upcoming_events",
-            "display_name": "Refresh Upcoming Events",
-            "description": "Update upcoming UFCStats event and fight artifacts. Target live-card ownership remains with Monday Reset.",
-            "workflows": [{"workflow_file": "run-refresh-upcoming-events.yml", "display_name": "Refresh UFCStats Upcoming Events", "inputs": {}, "outputs": ["data/cards/ufcstats_upcoming_events.parquet", "data/cards/ufcstats_upcoming_fights.parquet"]}],
-        },
         {
             "step_id": "run_predictions",
             "display_name": "Run All Production Predictions",
-            "description": "Refresh fighter state, rebuild the production feature view, and generate model-scoped outcomes for every registry status=production model.",
+            "description": "Refresh fighter state, rebuild the production feature view, and generate model-scoped outcomes for every registry status=production model. The target live card is owned by Monday Reset.",
             "workflows": [
                 {"workflow_file": "run-build-fighter-state-v2.yml", "display_name": "Build Fighter State V2", "inputs": {}, "outputs": ["data/features/fighter_state_history.parquet", "data/features/latest_fighter_state.parquet"]},
                 {"workflow_file": "run-build-feature-view-v2.yml", "display_name": "Build Feature View V2", "inputs": {"config_path": "configs/feature_views/moneyline_base.yaml", "output_path": "data/features/moneyline_feature_view.parquet"}, "outputs": ["data/features/moneyline_feature_view.parquet"]},
@@ -64,7 +58,7 @@ MONDAY_RESET_V1: RunbookSpec = {
     "steps": [
         {"step_id": "process_completed_events", "display_name": "Process Completed Events", "description": "Discover missing completed events, ingest results, and validate staged fight data.", "workflows": [{"workflow_file": "run-monday-reset-orchestrator.yml", "display_name": "Ingest Missing Completed Events", "inputs": {"max_events": "all", "auto_append": "true"}, "outputs": ["data/audits/ufc_missing_event_ingestion_audit.parquet"]}]},
         {"step_id": "update_master_dataset", "display_name": "Update Master Dataset", "description": "Append validated fight results when auto-append is enabled and all hard gates pass.", "workflows": [{"workflow_file": "run-monday-reset-orchestrator.yml", "display_name": "Gated Master Append", "inputs": {"auto_append": "true"}, "outputs": ["data/master/ufc_master.parquet", "data/audits/ufc_append_audit.parquet"]}]},
-        {"step_id": "refresh_platform_status", "display_name": "Refresh Platform Status", "description": "Rebuild dataset health, event status, and maintenance artifacts after ingestion.", "workflows": [{"workflow_file": "run-monday-reset-orchestrator.yml", "display_name": "Refresh Dataset Status", "inputs": {}, "outputs": ["data/status/ufc_dataset_status.parquet", "data/status/ufc_dataset_event_status.parquet"]}]},
+        {"step_id": "refresh_platform_status", "display_name": "Refresh Platform Status", "description": "Rebuild dataset health, event status, target event, and live-card artifacts after ingestion.", "workflows": [{"workflow_file": "run-monday-reset-orchestrator.yml", "display_name": "Refresh Dataset Status And Target Card", "inputs": {}, "outputs": ["data/status/ufc_dataset_status.parquet", "data/status/ufc_dataset_event_status.parquet", "data/cards/ufc_selected_live_card_event.parquet", "data/predictions/ufc_live_card.parquet"]}]},
         {"step_id": "reconcile_performance", "display_name": "Reconcile Performance", "description": "Update bankroll status, CLV analysis, and future model-performance tracking.", "workflows": [{"workflow_file": "run-monday-reset-orchestrator.yml", "display_name": "Refresh Bankroll And CLV", "inputs": {"skip_bankroll": "false", "skip_clv": "false"}, "outputs": ["data/bankroll/ufc_bankroll_snapshots.parquet", "data/market/ufc_clv_results.parquet", "data/market/ufc_line_movement.parquet"]}]},
         {"step_id": "prepare_next_week", "display_name": "Prepare Next Week", "description": "Planned step: archive completed-week artifacts and prepare the platform for the next UFC cycle.", "status": "planned", "workflows": [], "planned_outputs": ["data/backups/weekly/<week_id>/", "data/status/monday_reset_status.json", "data/performance/model_prediction_results.parquet", "data/performance/model_performance_summary.parquet"]},
     ],
