@@ -12,22 +12,22 @@ RunbookSpec = dict[str, Any]
 MARKET_REFRESH_V2: RunbookSpec = {
     "runbook_id": "market_refresh_v2",
     "display_name": "Market Refresh",
-    "description": "Refresh upcoming UFC events, predictions, DraftKings markets, betting outcomes, and model-market snapshots.",
+    "description": "Refresh upcoming UFC events, all production model predictions, DraftKings markets, betting outcomes, and model-market snapshots.",
     "steps": [
         {
             "step_id": "refresh_upcoming_events",
             "display_name": "Refresh Upcoming Events",
-            "description": "Update upcoming UFCStats event and fight artifacts.",
+            "description": "Update upcoming UFCStats event and fight artifacts. Target live-card ownership remains with Monday Reset.",
             "workflows": [{"workflow_file": "run-refresh-upcoming-events.yml", "display_name": "Refresh UFCStats Upcoming Events", "inputs": {}, "outputs": ["data/cards/ufcstats_upcoming_events.parquet", "data/cards/ufcstats_upcoming_fights.parquet"]}],
         },
         {
             "step_id": "run_predictions",
-            "display_name": "Run Predictions",
-            "description": "Refresh fighter state, rebuild the production feature view, and generate model outcome predictions.",
+            "display_name": "Run All Production Predictions",
+            "description": "Refresh fighter state, rebuild the production feature view, and generate model-scoped outcomes for every registry status=production model.",
             "workflows": [
                 {"workflow_file": "run-build-fighter-state-v2.yml", "display_name": "Build Fighter State V2", "inputs": {}, "outputs": ["data/features/fighter_state_history.parquet", "data/features/latest_fighter_state.parquet"]},
                 {"workflow_file": "run-build-feature-view-v2.yml", "display_name": "Build Feature View V2", "inputs": {"config_path": "configs/feature_views/moneyline_base.yaml", "output_path": "data/features/moneyline_feature_view.parquet"}, "outputs": ["data/features/moneyline_feature_view.parquet"]},
-                {"workflow_file": "run-prediction-v2.yml", "display_name": "Run Prediction V2", "inputs": {"model_family": "moneyline", "model_id": "moneyline_xgboost_v5"}, "outputs": ["data/predictions/ufc_live_card.parquet", "data/predictions/live_model_features.parquet", "data/predictions/model_outcomes.parquet", "data/predictions/by_model/{model_id}/model_outcomes.parquet", "data/audits/ufc_live_feature_audit.parquet"]},
+                {"workflow_file": "run-market-refresh-orchestrator.yml", "display_name": "Run Production Registry Predictions", "inputs": {"model_mode": "production"}, "outputs": ["data/predictions/by_model/moneyline_xgboost_v7/model_outcomes.parquet", "data/predictions/by_model/prop_goes_distance_xgboost_v1/model_outcomes.parquet", "data/audits/production_prediction_audit.parquet", "data/audits/ufc_live_feature_audit.parquet"]},
             ],
         },
         {
@@ -50,8 +50,8 @@ MARKET_REFRESH_V2: RunbookSpec = {
         {
             "step_id": "capture_snapshots",
             "display_name": "Capture Snapshots",
-            "description": "Append model-market snapshots for future CLV and model comparison analysis.",
-            "workflows": [{"workflow_file": "run-market-refresh-orchestrator.yml", "display_name": "Capture Model-Market Snapshots", "inputs": {"snapshot_model_mode": "all"}, "outputs": ["data/snapshots/model_market_snapshots.parquet", "data/audits/model_market_snapshot_audit.parquet"]}],
+            "description": "Append production model-market snapshots for future CLV and model comparison analysis.",
+            "workflows": [{"workflow_file": "run-market-refresh-orchestrator.yml", "display_name": "Capture Model-Market Snapshots", "inputs": {"snapshot_model_mode": "production"}, "outputs": ["data/snapshots/model_market_snapshots.parquet", "data/audits/model_market_snapshot_audit.parquet"]}],
         },
     ],
 }
@@ -85,14 +85,14 @@ FIGHT_DAY_MONITOR_V1: RunbookSpec = {
         {
             "step_id": "recalculate_betting_board",
             "display_name": "Recalculate Betting Board",
-            "description": "Recalculate EV, edge, bet status, and Kelly sizing from current market prices and existing model outputs.",
+            "description": "Recalculate EV, edge, bet status, and Kelly sizing from current market prices and existing production model outputs.",
             "workflows": [{"workflow_file": "run-fight-day-monitor.yml", "display_name": "Run Betting Outcomes V2", "inputs": {"model_mode": "production"}, "outputs": ["data/predictions/betting_outcomes.parquet", "data/audits/ufc_betting_outcomes_audit.parquet"]}],
         },
         {
             "step_id": "capture_model_market_snapshot",
             "display_name": "Capture Snapshot",
-            "description": "Append current model-vs-market state for CLV and model comparison analysis.",
-            "workflows": [{"workflow_file": "run-fight-day-monitor.yml", "display_name": "Capture Model-Market Snapshot", "inputs": {"snapshot_model_mode": "all"}, "outputs": ["data/snapshots/model_market_snapshots.parquet", "data/audits/model_market_snapshot_audit.parquet"]}],
+            "description": "Append current production model-vs-market state for CLV and model comparison analysis.",
+            "workflows": [{"workflow_file": "run-fight-day-monitor.yml", "display_name": "Capture Model-Market Snapshot", "inputs": {"snapshot_model_mode": "production"}, "outputs": ["data/snapshots/model_market_snapshots.parquet", "data/audits/model_market_snapshot_audit.parquet"]}],
         },
         {
             "step_id": "capture_closing_lines",
