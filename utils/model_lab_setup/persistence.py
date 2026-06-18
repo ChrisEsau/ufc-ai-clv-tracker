@@ -11,7 +11,6 @@ from utils.model_lab_setup.registry_io import remove_model_registry_entry, upser
 from utils.model_lab_setup.validators import (
     combine_validation_results,
     validate_delete_allowed,
-    validate_model_id_available,
     validate_model_setup_form,
     validate_save_allowed,
 )
@@ -65,8 +64,6 @@ def save_model_setup(context: dict[str, Any], registry: dict[str, Any], payload:
         validate_save_allowed(context),
         validate_model_setup_form(context, registry, payload),
     )
-    if context.get("is_new_model") or not model_exists:
-        validation = combine_validation_results(validation, validate_model_id_available(registry, model_id))
     if not validation["ok"]:
         return {
             "ok": False,
