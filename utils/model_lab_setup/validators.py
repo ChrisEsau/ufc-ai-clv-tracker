@@ -116,10 +116,6 @@ def validate_model_setup_form(
         validate_probability_settings(behavior),
     ]
 
-    if context.get("is_new_model"):
-        candidate_model_id = str(identity.get("model_id") or context.get("model_id") or "")
-        results.append(validate_model_id_available(registry, candidate_model_id))
-
     if "resolved_feature_count" in features:
         results.append(
             validate_feature_count(
