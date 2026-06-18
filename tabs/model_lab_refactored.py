@@ -9,18 +9,19 @@ from tabs.model_lab_sections.actions import render_actions
 from tabs.model_lab_sections.backtest_enhanced import render_backtest
 from tabs.model_lab_sections.compare import render_compare
 from tabs.model_lab_sections.features import render_features
-from tabs.model_lab_sections.model_setup import render_model_setup
+from tabs.model_lab_sections.model_setup.page import render_page as render_model_setup_page
 from tabs.model_lab_sections.overview import render_overview
 from tabs.model_lab_sections.performance import render_performance
 from tabs.model_lab_sections.styles import inject_model_lab_control_css
 import utils.model_lab_workflows as mlw
 
 
-WORKSPACES = ["Overview", "Model Setup", "Features", "Performance", "Compare", "Backtest", "Actions"]
-DEFAULT_WORKSPACE = "Model Setup"
+WORKSPACES = ["Overview", "Configuration", "Model Setup", "Features", "Performance", "Compare", "Backtest", "Actions"]
+DEFAULT_WORKSPACE = "Configuration"
 LEGACY_WORKSPACE_MAP = {
     "Overview": "Overview",
-    "Configuration": "Model Setup",
+    "Configuration": "Configuration",
+    "Model Setup": "Model Setup",
     "Features": "Features",
     "Performance": "Performance",
     "Comparison": "Compare",
@@ -114,11 +115,7 @@ def _render_workspace_strip() -> str:
 
 
 def render_model_lab() -> None:
-    """Render Model Lab through the internal workspace router.
-
-    This phase leaves the legacy sidebar untouched, but Model Lab now owns its
-    page-level workspace routing through the internal strip.
-    """
+    """Render Model Lab through the internal workspace router."""
 
     mlw._inject_css()
     inject_model_lab_control_css()
@@ -139,8 +136,10 @@ def render_model_lab() -> None:
                 row_by_id,
                 existing_model_selector=_select_existing_model_with_key("mlab_overview_model"),
             )
+        elif workspace == "Configuration":
+            legacy_model_lab._render_configuration(registry, rows, row_by_id)
         elif workspace == "Model Setup":
-            render_model_setup(registry, rows, row_by_id)
+            render_model_setup_page()
         elif workspace == "Features":
             render_features(
                 registry,
