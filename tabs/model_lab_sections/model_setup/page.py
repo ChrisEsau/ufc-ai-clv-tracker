@@ -10,6 +10,7 @@ from tabs.model_lab_sections.model_setup.identity import render_identity_section
 from tabs.model_lab_sections.model_setup.selectors import render_model_selector
 from tabs.model_lab_sections.model_setup.styles import inject_styles
 from tabs.model_lab_sections.model_setup.training import render_training_section
+from tabs.model_lab_sections.model_setup.validation import render_validation_summary
 from utils.model_lab_setup import model_context, registry_io
 
 
@@ -140,7 +141,13 @@ def render_page() -> None:
         st.session_state["model_setup_hyperparameters_payload"] = hyperparameters_payload
         st.session_state["model_setup_feature_payload"] = feature_payload
 
-        with st.container(border=True):
-            render_action_bar(context, registry, payload)
+        row3_col1, row3_col2 = st.columns([1.25, 1.0], gap="medium")
+        with row3_col1:
+            with st.container(border=True):
+                validation_result = render_validation_summary(context, registry, payload)
+        with row3_col2:
+            with st.container(border=True):
+                render_action_bar(context, registry, payload)
+        st.session_state["model_setup_validation_result"] = validation_result
     except Exception as exc:
         st.error(f"Unable to load Model Setup: {exc}")
