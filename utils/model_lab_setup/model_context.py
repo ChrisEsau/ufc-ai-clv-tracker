@@ -5,7 +5,7 @@ from typing import Any
 
 from utils.model_lab_setup.config_io import build_config_path, load_model_config, normalize_model_config
 from utils.model_lab_setup.registry_io import get_model_registry_entry
-from utils.model_lab_setup.versioning import artifact_dir_for_market
+from utils.model_lab_setup.versioning import artifact_dir_for_market, generate_new_model_id
 
 
 EDITABLE_STATUSES = {"draft"}
@@ -54,6 +54,50 @@ def resolve_existing_model_context(registry: dict[str, Any], model_id: str) -> d
         "registry_entry": deepcopy(entry),
         "is_new_model": False,
         **_status_flags(status, is_new_model=False),
+    }
+
+
+def build_new_model_context(
+    registry: dict[str, Any],
+    template_model_id: str,
+    model_family: str,
+    market_key: str,
+) -> dict[str, Any]:
+    """Build a new draft model context from an existing model template."""
+
+    template = resolve_existing_model_context(registry, template_model_id)
+    existing_model_ids = list((registry.get("models") or {}).keys())
+    new_model_id = generate_new_model_id(template_model_id, market_key, existing_model_ids)
+    normalized_family = str(model_family or template.get("model_family") or "moneyline").strip().lower()
+    normalized_market = str(market_key or template.get("market_key") or "moneyline").strip().lower()
+    artifact_dir = artifact_dir_for_market(new_model_id, normalized_market)
+
+    config = deepcopy(template["config"])
+    config["model_id"] = new_model_id
+    config["model_family"] = normalized_family
+    config["market_key"] = normalized_market
+    config["artifact_name"] = new_model_id
+    config["status"] = "draft"
+    config.setdefault("prediction", {})["market_key"] = normalized_market
+    config.setdefault("artifacts", {})["output_dir"] = artifact_dir
+
+    return {
+        "mode": "new",
+        "model_id": new_model_id,
+        "display_name": f"{template.get('display_name') or template_model_id} Experiment",
+        "description": f"Draft experiment created from {template_model_id}.",
+        "status": "draft",
+        "model_family": normalized_family,
+        "market_key": normalized_market,
+        "algorithm": str(template.get("algorithm") or "xgboost"),
+        "config_path": build_config_path(new_model_id),
+        "artifact_dir": artifact_dir,
+        "dashboard_selectable": False,
+        "config": normalize_model_config(config),
+        "registry_entry": {},
+        "is_new_model": True,
+        "template_model_id": template_model_id,
+        **_status_flags("draft", is_new_model=True),
     }
 
 
