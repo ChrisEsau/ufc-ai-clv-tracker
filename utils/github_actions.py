@@ -1,3 +1,5 @@
+import base64
+
 import requests
 import streamlit as st
 
@@ -99,3 +101,59 @@ def get_latest_workflow_run(workflow_file, branch=None):
         return True, "No workflow runs found.", None
 
     return True, "Latest workflow run loaded.", runs[0]
+
+
+def read_repo_text_file(path, branch=None):
+    owner, repo, token, default_branch = get_github_config()
+    if not owner or not repo or not token:
+        return False, "Missing GitHub Streamlit secrets.", None, None
+
+    branch = branch or default_branch
+    url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
+    response = requests.get(
+        url,
+        headers=github_headers(token),
+        params={"ref": branch},
+        timeout=20,
+    )
+    if response.status_code != 200:
+        return False, f"GitHub API error {response.status_code}: {response.text}", None, None
+
+    payload = response.json()
+    encoded = payload.get("content") or ""
+    try:
+        text = base64.b64decode(encoded).decode("utf-8")
+    except Exception as exc:
+        return False, f"Could not decode repo file: {exc}", None, None
+    return True, "Repo file loaded.", text, payload.get("sha")
+
+
+def write_repo_text_file(path, content, message, branch=None, sha=None):
+    owner, repo, token, default_branch = get_github_config()
+    if not owner or not repo or not token:
+        return False, "Missing GitHub Streamlit secrets."
+
+    branch = branch or default_branch
+    if sha is None:
+        ok, msg, _text, fetched_sha = read_repo_text_file(path, branch=branch)
+        if ok:
+            sha = fetched_sha
+
+    url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
+    payload = {
+        "message": message,
+        "content": base64.b64encode(str(content).encode("utf-8")).decode("ascii"),
+        "branch": branch,
+    }
+    if sha:
+        payload["sha"] = sha
+
+    response = requests.put(
+        url,
+        headers=github_headers(token),
+        json=payload,
+        timeout=30,
+    )
+    if response.status_code in [200, 201]:
+        return True, f"Repo file saved: {path}"
+    return False, f"GitHub API error {response.status_code}: {response.text}"
