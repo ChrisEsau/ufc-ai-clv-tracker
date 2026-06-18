@@ -17,14 +17,13 @@ RUNBOOK_LAUNCH_CONFIG = {
     "market_refresh_v2": {
         "workflow_file": "run-market-refresh-orchestrator.yml",
         "button_label": "Run Market Refresh",
-        "caption": "Launches the GitHub Market Refresh orchestrator in test mode.",
+        "caption": "Launches Market Refresh using all production models from the registry.",
         "inputs": {
             "mode": "test",
             "max_upcoming_events": "",
             "max_draftkings_events": "all",
-            "model_id": "moneyline_xgboost_v5",
             "model_mode": "production",
-            "snapshot_model_mode": "all",
+            "snapshot_model_mode": "production",
         },
     },
     "monday_reset_v1": {
@@ -47,7 +46,7 @@ RUNBOOK_LAUNCH_CONFIG = {
             "mode": "production",
             "max_draftkings_events": "all",
             "model_mode": "production",
-            "snapshot_model_mode": "all",
+            "snapshot_model_mode": "production",
             "official_closing_snapshot": True,
         },
     },
