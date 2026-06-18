@@ -3,6 +3,7 @@ from __future__ import annotations
 import streamlit as st
 
 from tabs.model_lab_sections.model_setup.behavior import render_behavior_section
+from tabs.model_lab_sections.model_setup.feature_selection import render_feature_selection_section
 from tabs.model_lab_sections.model_setup.hyperparameters import render_hyperparameters_section
 from tabs.model_lab_sections.model_setup.identity import render_identity_section
 from tabs.model_lab_sections.model_setup.selectors import render_model_selector
@@ -65,12 +66,14 @@ def render_page() -> None:
             with st.container(border=True):
                 hyperparameters_payload = render_hyperparameters_section(context)
         with row2_col2:
-            st.info("Feature Selection card will be added next.")
+            with st.container(border=True):
+                feature_payload = render_feature_selection_section(context)
 
         st.session_state["model_setup_identity_payload"] = identity_payload
         st.session_state["model_setup_training_payload"] = training_payload
         st.session_state["model_setup_behavior_payload"] = behavior_payload
         st.session_state["model_setup_hyperparameters_payload"] = hyperparameters_payload
-        st.info("Next: add Feature Selection, Validation, and Actions.")
+        st.session_state["model_setup_feature_payload"] = feature_payload
+        st.info("Next: add Validation and Actions.")
     except Exception as exc:
         st.error(f"Unable to load Model Setup: {exc}")
