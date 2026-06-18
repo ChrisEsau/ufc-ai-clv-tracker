@@ -36,7 +36,7 @@
       },
       "times": [
         "03:00",
-        "08:00"
+        "15:00"
       ],
       "workflow_file": "run-market-refresh-orchestrator.yml"
     },
