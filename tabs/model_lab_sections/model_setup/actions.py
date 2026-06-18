@@ -8,6 +8,12 @@ from utils.model_lab_setup import model_context, persistence
 from utils.model_lab_setup.validators import validate_delete_allowed
 
 
+def _new_template_model_id(context: dict[str, Any]) -> str:
+    if context.get("is_new_model"):
+        return str(context.get("template_model_id") or st.session_state.get("model_setup_draft_template_model_id") or "")
+    return str(context.get("model_id") or "")
+
+
 def render_action_bar(
     context: dict[str, Any],
     registry: dict[str, Any],
@@ -20,22 +26,25 @@ def render_action_bar(
     delete_validation = validate_delete_allowed(context, registry)
     save_disabled = not bool(full_validation.get("ok"))
     delete_disabled = not delete_validation["ok"] or bool(context.get("is_new_model"))
-    new_disabled = bool(context.get("is_new_model"))
 
     st.markdown("#### Actions")
     c1, c2, c3, c4 = st.columns([1.0, 1.0, 1.0, 2.0])
 
     with c1:
-        if st.button("New", use_container_width=True, disabled=new_disabled, key="model_setup_action_new"):
-            draft_context = model_context.build_new_model_context(
-                registry,
-                str(context.get("model_id") or ""),
-                str(context.get("model_family") or "moneyline"),
-                str(context.get("market_key") or "moneyline"),
-            )
-            st.session_state["model_setup_draft_context"] = draft_context
-            st.session_state["model_setup_draft_template_model_id"] = str(context.get("model_id") or "")
-            st.rerun()
+        if st.button("New", use_container_width=True, key="model_setup_action_new"):
+            template_model_id = _new_template_model_id(context)
+            if not template_model_id:
+                st.error("Unable to determine template model for new draft.")
+            else:
+                draft_context = model_context.build_new_model_context(
+                    registry,
+                    template_model_id,
+                    str(context.get("model_family") or "moneyline"),
+                    str(context.get("market_key") or "moneyline"),
+                )
+                st.session_state["model_setup_draft_context"] = draft_context
+                st.session_state["model_setup_draft_template_model_id"] = template_model_id
+                st.rerun()
 
     with c2:
         if st.button("Save", type="primary", use_container_width=True, disabled=save_disabled, key="model_setup_action_save"):
@@ -56,14 +65,12 @@ def render_action_bar(
             st.session_state["model_setup_delete_requested"] = True
 
     with c4:
-        if new_disabled:
-            st.caption("New disabled: save or change model before preparing another draft.")
-        elif save_disabled:
+        if save_disabled:
             st.caption("Save disabled: " + "; ".join(full_validation.get("errors") or []))
         elif delete_disabled and delete_validation.get("errors"):
             st.caption("Delete disabled: " + "; ".join(delete_validation.get("errors") or []))
         else:
-            st.caption("New prepares an unsaved next version. Save creates or updates the model.")
+            st.caption("New prepares a fresh unsaved next version. Save creates or updates the model.")
 
     if st.session_state.get("model_setup_delete_requested"):
         st.warning("Delete removes the config YAML and registry entry. Artifacts are not deleted.")
