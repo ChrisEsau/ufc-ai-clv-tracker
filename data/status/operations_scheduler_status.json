@@ -3,7 +3,7 @@
   "dispatched_runbooks": [],
   "due_runbooks": [],
   "errors": [],
-  "last_checked_at": "2026-06-18T21:34:26.489994+00:00",
+  "last_checked_at": "2026-06-18T23:48:21.579001+00:00",
   "next_due_runbook": {
     "display_name": "Market Refresh",
     "runbook_id": "market_refresh_v2",
@@ -14,5 +14,5 @@
   "skipped_runbooks": [],
   "status": "completed",
   "timezone": "America/Chicago",
-  "updated_at": "2026-06-18T21:34:26.504096+00:00"
+  "updated_at": "2026-06-18T23:48:21.580109+00:00"
 }
