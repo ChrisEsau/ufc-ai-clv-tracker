@@ -35,7 +35,8 @@
         "snapshot_model_mode": "production"
       },
       "times": [
-        "03:00"
+        "03:00",
+        "08:00"
       ],
       "workflow_file": "run-market-refresh-orchestrator.yml"
     },
