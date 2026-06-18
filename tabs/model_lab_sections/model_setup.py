@@ -15,6 +15,7 @@ from tabs.model_lab_sections.model_setup_behavior import (
 from tabs.model_lab_sections.model_setup_hyperparameters import render_hyperparameters
 from tabs.model_lab_sections import model_setup_feature_selection  # noqa: F401
 from tabs.model_lab_sections import model_setup_advanced  # noqa: F401
+from tabs.model_lab_sections import model_setup_save_actions as save_actions
 import utils.model_lab_workflows as mlw
 
 
@@ -61,13 +62,29 @@ def render_model_setup(
 ) -> None:
     """Render the Model Setup workspace.
 
-    This phase delegates the base configuration editor sections to modular
-    controls while preserving the existing legacy save/delete/advanced flow.
+    This phase delegates base editor and save/delete actions to modular controls
+    while preserving the existing legacy advanced/configuration flow.
     """
 
     original_editor = legacy_model_lab._render_config_editor
+    original_apply_advanced = legacy_model_lab._apply_advanced_config_updates
+    original_save = legacy_model_lab._save_new_or_existing_model
+    original_github_delete = legacy_model_lab._github_delete_file
+    original_delete = legacy_model_lab._delete_model
+    original_delete_dialog = legacy_model_lab._render_delete_dialog
+
     legacy_model_lab._render_config_editor = _render_config_editor
+    legacy_model_lab._apply_advanced_config_updates = save_actions.apply_advanced_config_updates
+    legacy_model_lab._save_new_or_existing_model = save_actions.save_new_or_existing_model
+    legacy_model_lab._github_delete_file = save_actions.github_delete_file
+    legacy_model_lab._delete_model = save_actions.delete_model
+    legacy_model_lab._render_delete_dialog = save_actions.render_delete_dialog
     try:
         legacy_model_lab._render_configuration(registry, rows, row_by_id)
     finally:
         legacy_model_lab._render_config_editor = original_editor
+        legacy_model_lab._apply_advanced_config_updates = original_apply_advanced
+        legacy_model_lab._save_new_or_existing_model = original_save
+        legacy_model_lab._github_delete_file = original_github_delete
+        legacy_model_lab._delete_model = original_delete
+        legacy_model_lab._render_delete_dialog = original_delete_dialog
