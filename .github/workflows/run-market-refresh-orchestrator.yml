@@ -17,14 +17,9 @@ on:
         default: ""
         type: string
       max_draftkings_events:
-        description: "Optional max matched DraftKings events; blank = all"
+        description: "Optional max matched DraftKings events; blank/all = all"
         required: false
         default: "all"
-        type: string
-      model_id:
-        description: "Model ID"
-        required: false
-        default: "moneyline_xgboost_v5"
         type: string
       model_mode:
         description: "Betting outcomes model mode"
@@ -38,7 +33,7 @@ on:
       snapshot_model_mode:
         description: "Model-market snapshot mode"
         required: true
-        default: "all"
+        default: "production"
         type: choice
         options:
           - production
@@ -82,7 +77,6 @@ jobs:
         run: |
           ARGS=(
             --mode "${{ inputs.mode }}"
-            --model-id "${{ inputs.model_id }}"
             --model-mode "${{ inputs.model_mode }}"
             --snapshot-model-mode "${{ inputs.snapshot_model_mode }}"
             --max-draftkings-events "${{ inputs.max_draftkings_events }}"
@@ -111,6 +105,9 @@ jobs:
             data/predictions/ufc_live_card.parquet \
             data/predictions/live_model_features.parquet \
             data/predictions/model_outcomes.parquet \
+            data/predictions/by_model/moneyline_xgboost_v7/model_outcomes.parquet \
+            data/predictions/by_model/prop_goes_distance_xgboost_v1/model_outcomes.parquet \
+            data/audits/production_prediction_audit.parquet \
             data/audits/ufc_live_feature_audit.parquet \
             data/market/draftkings_event_index.parquet \
             data/market/draftkings_event_card_matches.parquet \
@@ -126,7 +123,6 @@ jobs:
             data/snapshots/model_market_snapshots.parquet \
             data/audits/model_market_snapshot_audit.parquet || true
 
-          git add -f data/predictions/by_model/${{ inputs.model_id }}/model_outcomes.parquet 2>/dev/null || true
           git add -f data/audits/ufc_live_card_build_audit.parquet 2>/dev/null || true
           git add -f data/audits/ufc_live_card_rejected_rows.parquet 2>/dev/null || true
 
