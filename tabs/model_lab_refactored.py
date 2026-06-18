@@ -5,6 +5,8 @@ from typing import Any
 import streamlit as st
 
 from tabs import model_lab as legacy_model_lab
+from tabs.model_lab_sections.actions import render_actions
+from tabs.model_lab_sections.backtest_enhanced import render_backtest
 from tabs.model_lab_sections.compare import render_compare
 from tabs.model_lab_sections.features import render_features
 from tabs.model_lab_sections.model_setup import render_model_setup
@@ -14,7 +16,7 @@ from tabs.model_lab_sections.styles import inject_model_lab_control_css
 import utils.model_lab_workflows as mlw
 
 
-WORKSPACES = ["Overview", "Model Setup", "Features", "Performance", "Compare"]
+WORKSPACES = ["Overview", "Model Setup", "Features", "Performance", "Compare", "Backtest", "Actions"]
 DEFAULT_WORKSPACE = "Model Setup"
 LEGACY_WORKSPACE_MAP = {
     "Overview": "Overview",
@@ -23,10 +25,8 @@ LEGACY_WORKSPACE_MAP = {
     "Performance": "Performance",
     "Comparison": "Compare",
     "Compare": "Compare",
-}
-MOVED_WORKSPACE_MESSAGES = {
-    "Backtest": "Backtest execution is moving to Operations Center. Use Model Lab Performance/Compare for model diagnostics.",
-    "Actions": "Workflow actions are moving to Operations Center. Use Model Setup for model configuration.",
+    "Backtest": "Backtest",
+    "Actions": "Actions",
 }
 
 
@@ -62,19 +62,15 @@ def _sync_workspace_from_legacy_sidebar() -> None:
         return
 
     st.session_state["mlab_last_sidebar_workspace_seen"] = legacy_workspace
-    st.session_state.pop("mlab_workspace_notice", None)
 
     if legacy_workspace in LEGACY_WORKSPACE_MAP:
         st.session_state["mlab_active_workspace"] = LEGACY_WORKSPACE_MAP[legacy_workspace]
-    elif legacy_workspace in MOVED_WORKSPACE_MESSAGES:
-        st.session_state["mlab_active_workspace"] = DEFAULT_WORKSPACE
-        st.session_state["mlab_workspace_notice"] = MOVED_WORKSPACE_MESSAGES[legacy_workspace]
     elif st.session_state.get("mlab_active_workspace") not in WORKSPACES:
         st.session_state["mlab_active_workspace"] = DEFAULT_WORKSPACE
 
 
 def _render_workspace_strip() -> str:
-    """Render the approved internal Model Lab workspace navigation strip."""
+    """Render the internal Model Lab workspace navigation strip."""
 
     _sync_workspace_from_legacy_sidebar()
     active = st.session_state.get("mlab_active_workspace", DEFAULT_WORKSPACE)
@@ -112,18 +108,13 @@ def _render_workspace_strip() -> str:
                 key=f"mlab_workspace_{workspace}",
             ):
                 st.session_state["mlab_active_workspace"] = workspace
-                st.session_state.pop("mlab_workspace_notice", None)
                 st.rerun()
-
-    notice = st.session_state.pop("mlab_workspace_notice", None)
-    if notice:
-        st.info(notice)
 
     return str(st.session_state.get("mlab_active_workspace", DEFAULT_WORKSPACE))
 
 
 def render_model_lab() -> None:
-    """Render Model Lab through the approved internal workspace router.
+    """Render Model Lab through the internal workspace router.
 
     This phase leaves the legacy sidebar untouched, but Model Lab now owns its
     page-level workspace routing through the internal strip.
@@ -170,6 +161,20 @@ def render_model_lab() -> None:
                 rows,
                 row_by_id,
                 existing_model_selector=_select_existing_model_with_key("mlab_compare_model"),
+            )
+        elif workspace == "Backtest":
+            render_backtest(
+                registry,
+                rows,
+                row_by_id,
+                existing_model_selector=_select_existing_model_with_key("mlab_backtest_model"),
+            )
+        elif workspace == "Actions":
+            render_actions(
+                registry,
+                rows,
+                row_by_id,
+                existing_model_selector=_select_existing_model_with_key("mlab_actions_model"),
             )
     except Exception as exc:
         st.error(f"Unable to render Model Lab: {exc}")
