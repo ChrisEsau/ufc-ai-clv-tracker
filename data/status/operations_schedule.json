@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "timezone": "America/Chicago",
+  "window_minutes": 30,
+  "schedules": {
+    "monday_reset_v1": {
+      "enabled": false,
+      "display_name": "Monday Reset",
+      "days": ["MON"],
+      "times": ["08:00"],
+      "workflow_file": "run-monday-reset-orchestrator.yml",
+      "inputs": {
+        "mode": "production",
+        "max_events": "all",
+        "auto_append": true,
+        "skip_bankroll": false,
+        "skip_clv": false
+      }
+    },
+    "market_refresh_v2": {
+      "enabled": false,
+      "display_name": "Market Refresh",
+      "days": ["FRI", "SAT"],
+      "times": ["09:00", "15:00", "21:00"],
+      "workflow_file": "run-market-refresh-orchestrator.yml",
+      "inputs": {
+        "mode": "production",
+        "max_draftkings_events": "all",
+        "model_mode": "production",
+        "snapshot_model_mode": "production"
+      }
+    },
+    "fight_day_monitor_v1": {
+      "enabled": false,
+      "display_name": "Fight Day Monitor",
+      "days": ["SAT"],
+      "times": ["17:30", "17:55"],
+      "workflow_file": "run-fight-day-monitor.yml",
+      "inputs": {
+        "mode": "production",
+        "max_draftkings_events": "all",
+        "model_mode": "production",
+        "snapshot_model_mode": "production",
+        "official_closing_snapshot": true
+      }
+    }
+  }
+}
