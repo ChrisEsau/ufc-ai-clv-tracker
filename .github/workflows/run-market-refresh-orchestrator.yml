@@ -11,11 +11,6 @@ on:
         options:
           - test
           - production
-      max_upcoming_events:
-        description: "Optional max UFCStats upcoming events to refresh"
-        required: false
-        default: ""
-        type: string
       max_draftkings_events:
         description: "Optional max matched DraftKings events; blank/all = all"
         required: false
@@ -82,10 +77,6 @@ jobs:
             --max-draftkings-events "${{ inputs.max_draftkings_events }}"
           )
 
-          if [ -n "${{ inputs.max_upcoming_events }}" ]; then
-            ARGS+=(--max-upcoming-events "${{ inputs.max_upcoming_events }}")
-          fi
-
           python -m pipeline.operations.run_market_refresh "${ARGS[@]}"
 
       - name: Commit Market Refresh artifacts
@@ -96,8 +87,6 @@ jobs:
 
           git add -f \
             data/status/market_refresh_status.json \
-            data/cards/ufcstats_upcoming_events.parquet \
-            data/cards/ufcstats_upcoming_fights.parquet \
             data/cards/ufc_selected_live_card_event.parquet \
             data/features/fighter_state_history.parquet \
             data/features/latest_fighter_state.parquet \
