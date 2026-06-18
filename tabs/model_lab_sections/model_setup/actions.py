@@ -5,22 +5,28 @@ from typing import Any
 import streamlit as st
 
 from utils.model_lab_setup import model_context, persistence
-from utils.model_lab_setup.validators import validate_delete_allowed, validate_save_allowed
+from utils.model_lab_setup.validators import validate_delete_allowed
 
 
-def render_action_bar(context: dict[str, Any], registry: dict[str, Any], payload: dict[str, Any]) -> None:
+def render_action_bar(
+    context: dict[str, Any],
+    registry: dict[str, Any],
+    payload: dict[str, Any],
+    validation_result: dict[str, Any] | None = None,
+) -> None:
     """Render New, Save, and Delete actions for Model Setup."""
 
-    save_validation = validate_save_allowed(context)
+    full_validation = validation_result or {"ok": True, "errors": [], "warnings": []}
     delete_validation = validate_delete_allowed(context, registry)
-    save_disabled = not save_validation["ok"]
+    save_disabled = not bool(full_validation.get("ok"))
     delete_disabled = not delete_validation["ok"] or bool(context.get("is_new_model"))
+    new_disabled = bool(context.get("is_new_model"))
 
     st.markdown("#### Actions")
     c1, c2, c3, c4 = st.columns([1.0, 1.0, 1.0, 2.0])
 
     with c1:
-        if st.button("New", use_container_width=True, key="model_setup_action_new"):
+        if st.button("New", use_container_width=True, disabled=new_disabled, key="model_setup_action_new"):
             draft_context = model_context.build_new_model_context(
                 registry,
                 str(context.get("model_id") or ""),
@@ -35,7 +41,9 @@ def render_action_bar(context: dict[str, Any], registry: dict[str, Any], payload
         if st.button("Save", type="primary", use_container_width=True, disabled=save_disabled, key="model_setup_action_save"):
             result = persistence.save_model_setup(context, registry, payload)
             if result.get("ok"):
+                saved_model_id = str(result.get("model_id") or context.get("model_id") or "")
                 st.success(result.get("message") or "Saved model.")
+                st.session_state["model_setup_selected_model_id"] = saved_model_id
                 st.session_state.pop("model_setup_draft_context", None)
                 st.session_state.pop("model_setup_draft_template_model_id", None)
                 st.cache_data.clear()
@@ -48,8 +56,10 @@ def render_action_bar(context: dict[str, Any], registry: dict[str, Any], payload
             st.session_state["model_setup_delete_requested"] = True
 
     with c4:
-        if save_disabled:
-            st.caption("Save disabled: " + "; ".join(save_validation.get("errors") or []))
+        if new_disabled:
+            st.caption("New disabled: save or change model before preparing another draft.")
+        elif save_disabled:
+            st.caption("Save disabled: " + "; ".join(full_validation.get("errors") or []))
         elif delete_disabled and delete_validation.get("errors"):
             st.caption("Delete disabled: " + "; ".join(delete_validation.get("errors") or []))
         else:
