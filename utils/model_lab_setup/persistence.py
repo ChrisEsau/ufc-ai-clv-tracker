@@ -1,27 +1,20 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from pathlib import Path
 from typing import Any
 
+import requests
+
+import utils.model_lab_workflows as mlw
 from utils.model_lab_setup.config_io import build_config_payload_from_form, dump_model_config
-from utils.model_lab_setup.registry_io import (
-    remove_model_registry_entry,
-    save_model_registry,
-    upsert_model_registry_entry,
-)
+from utils.model_lab_setup.registry_io import remove_model_registry_entry, upsert_model_registry_entry
 from utils.model_lab_setup.validators import (
     combine_validation_results,
     validate_delete_allowed,
     validate_model_id_available,
+    validate_model_setup_form,
     validate_save_allowed,
 )
-
-
-def _write_text(path: str, content: str) -> None:
-    target = Path(path)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(content, encoding="utf-8")
 
 
 def _build_registry_entry(context: dict[str, Any], payload: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
@@ -40,21 +33,47 @@ def _build_registry_entry(context: dict[str, Any], payload: dict[str, Any], conf
     }
 
 
-def save_model_setup(context: dict[str, Any], registry: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
-    """Create or update a model config and registry entry.
+def _github_delete_file(path: str, message: str) -> tuple[bool, str]:
+    owner, repo, token, branch = mlw.get_github_config()
+    if not owner or not repo or not token:
+        return False, "Missing GitHub Streamlit secrets."
 
-    Save creates when context model_id is not present in the registry.
-    Save updates when context model_id already exists and is editable.
-    """
+    ok, _, sha = mlw._github_read_file(path)
+    if not ok:
+        return False, "Could not inspect existing GitHub file before delete."
+    if not sha:
+        return True, f"No config file found at {path}; registry entry can still be removed."
+
+    response = requests.delete(
+        f"{mlw.GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}",
+        headers=mlw.github_headers(token),
+        json={"message": message, "sha": sha, "branch": branch},
+        timeout=20,
+    )
+    if response.status_code in {200, 201}:
+        return True, f"Deleted {path}."
+    return False, f"GitHub API error {response.status_code}: {response.text}"
+
+
+def save_model_setup(context: dict[str, Any], registry: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    """Create or update a model config and registry entry on GitHub."""
 
     model_id = str(context.get("model_id") or "")
     model_exists = model_id in (registry.get("models") or {})
 
-    validation = validate_save_allowed(context)
+    validation = combine_validation_results(
+        validate_save_allowed(context),
+        validate_model_setup_form(context, registry, payload),
+    )
     if context.get("is_new_model") or not model_exists:
         validation = combine_validation_results(validation, validate_model_id_available(registry, model_id))
     if not validation["ok"]:
-        return {"ok": False, "message": "; ".join(validation["errors"]), "model_id": model_id, "config_path": str(context.get("config_path") or "")}
+        return {
+            "ok": False,
+            "message": "; ".join(validation["errors"]),
+            "model_id": model_id,
+            "config_path": str(context.get("config_path") or ""),
+        }
 
     config = build_config_payload_from_form(context, payload)
     config_path = str(context.get("config_path") or "")
@@ -64,17 +83,24 @@ def save_model_setup(context: dict[str, Any], registry: dict[str, Any], payload:
     registry_entry = _build_registry_entry(context, payload, config)
     updated_registry = upsert_model_registry_entry(registry, model_id, registry_entry)
 
-    _write_text(config_path, dump_model_config(config))
-    registry_result = save_model_registry(updated_registry)
-    if not registry_result.get("ok"):
-        return {"ok": False, "message": str(registry_result.get("message") or "Registry save failed."), "model_id": model_id, "config_path": config_path}
+    ok, msg = mlw._github_write_file(
+        config_path,
+        dump_model_config(config),
+        f"Save draft model config {model_id}",
+    )
+    if not ok:
+        return {"ok": False, "message": msg, "model_id": model_id, "config_path": config_path}
+
+    ok, msg = mlw._save_registry(updated_registry)
+    if not ok:
+        return {"ok": False, "message": msg, "model_id": model_id, "config_path": config_path}
 
     action = "Created" if not model_exists else "Updated"
-    return {"ok": True, "message": f"{action} model {model_id}.", "model_id": model_id, "config_path": config_path}
+    return {"ok": True, "message": f"{action} model {model_id} on GitHub.", "model_id": model_id, "config_path": config_path}
 
 
 def delete_model_setup(context: dict[str, Any], registry: dict[str, Any]) -> dict[str, Any]:
-    """Delete a model config and registry entry. Artifacts are not deleted."""
+    """Delete a model config and registry entry on GitHub. Artifacts are not deleted."""
 
     model_id = str(context.get("model_id") or "")
     validation = validate_delete_allowed(context, registry)
@@ -83,13 +109,13 @@ def delete_model_setup(context: dict[str, Any], registry: dict[str, Any]) -> dic
 
     config_path = str(context.get("config_path") or "")
     if config_path:
-        target = Path(config_path)
-        if target.exists():
-            target.unlink()
+        ok, msg = _github_delete_file(config_path, f"Delete model config {model_id}")
+        if not ok:
+            return {"ok": False, "message": msg, "model_id": model_id}
 
     updated_registry = remove_model_registry_entry(deepcopy(registry), model_id)
-    registry_result = save_model_registry(updated_registry)
-    if not registry_result.get("ok"):
-        return {"ok": False, "message": str(registry_result.get("message") or "Registry save failed."), "model_id": model_id}
+    ok, msg = mlw._save_registry(updated_registry)
+    if not ok:
+        return {"ok": False, "message": msg, "model_id": model_id}
 
-    return {"ok": True, "message": f"Deleted model {model_id}. Artifacts were not deleted.", "model_id": model_id}
+    return {"ok": True, "message": f"Deleted model {model_id} on GitHub. Artifacts were not deleted.", "model_id": model_id}
