@@ -5,14 +5,8 @@ from typing import Any
 import streamlit as st
 
 
-def render_behavior(
-    calibration: dict[str, Any],
-    probability: dict[str, Any],
-    context: dict[str, Any],
-    *,
-    editable: bool,
-) -> dict[str, Any]:
-    """Render calibration, probability clipping, and dashboard selection controls."""
+def render_calibration_controls(calibration: dict[str, Any], *, editable: bool) -> dict[str, Any]:
+    """Render calibration controls for the left side of the legacy layout."""
 
     calibration_enabled = st.toggle(
         "Calibration Enabled",
@@ -29,6 +23,20 @@ def render_behavior(
         disabled=not editable,
         key="mlab_cal_method",
     )
+    return {
+        "calibration_enabled": calibration_enabled,
+        "calibration_method": calibration_method,
+    }
+
+
+def render_probability_controls(
+    probability: dict[str, Any],
+    context: dict[str, Any],
+    *,
+    editable: bool,
+) -> dict[str, Any]:
+    """Render probability clipping and dashboard selection controls."""
+
     clip_low = st.number_input(
         "Probability Clip Low",
         value=float(probability.get("clip_low", 0.02)),
@@ -54,9 +62,22 @@ def render_behavior(
         key="mlab_dashboard_selectable",
     )
     return {
-        "calibration_enabled": calibration_enabled,
-        "calibration_method": calibration_method,
         "clip_low": clip_low,
         "clip_high": clip_high,
         "dashboard_selectable": dashboard_selectable,
+    }
+
+
+def render_behavior(
+    calibration: dict[str, Any],
+    probability: dict[str, Any],
+    context: dict[str, Any],
+    *,
+    editable: bool,
+) -> dict[str, Any]:
+    """Render all model behavior controls in sequence."""
+
+    return {
+        **render_calibration_controls(calibration, editable=editable),
+        **render_probability_controls(probability, context, editable=editable),
     }
