@@ -53,10 +53,6 @@ def _run_command(command: Sequence[str]) -> None:
 
 
 def build_steps(args: argparse.Namespace) -> list[Step]:
-    refresh_command = _python_module("pipeline.prediction.run_refresh_upcoming_events")
-    if args.max_upcoming_events:
-        refresh_command.extend(["--max-events", str(args.max_upcoming_events)])
-
     matched_discovery_command = _python_module(
         "pipeline.market.run_draftkings_matched_discovery",
         "--sleep-seconds",
@@ -74,21 +70,6 @@ def build_steps(args: argparse.Namespace) -> list[Step]:
         production_prediction_command.append("--prefer-raw-model")
 
     return [
-        Step(
-            step_id="refresh_upcoming_events",
-            name="Refresh Upcoming Events",
-            substeps=[
-                Substep(
-                    substep_id="refresh_ufcstats_upcoming_events",
-                    name="Refresh UFCStats Upcoming Events",
-                    command=refresh_command,
-                    expected_outputs=[
-                        "data/cards/ufcstats_upcoming_events.parquet",
-                        "data/cards/ufcstats_upcoming_fights.parquet",
-                    ],
-                )
-            ],
-        ),
         Step(
             step_id="run_predictions",
             name="Run All Production Predictions",
@@ -267,7 +248,6 @@ def run_market_refresh(args: argparse.Namespace) -> None:
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the Market Refresh production runbook.")
     parser.add_argument("--mode", choices=["test", "production"], default="test")
-    parser.add_argument("--max-upcoming-events", default="", help="Optional max UFCStats upcoming events to refresh.")
     parser.add_argument("--max-draftkings-events", default="all", help="Optional max matched DraftKings events; use all/blank for every matched event.")
     parser.add_argument("--draftkings-sleep-seconds", default="3")
     parser.add_argument("--draftkings-card-min-match-score", default="80")
