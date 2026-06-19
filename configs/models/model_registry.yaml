@@ -41,7 +41,7 @@ models:
     market_key: moneyline
     algorithm: xgboost
     config_path: configs/models/moneyline_xgboost_v8.yaml
-    artifact_dir: models/moneyline/moneyline_xgboost_v5
+    artifact_dir: models/moneyline/moneyline_xgboost_v8
     status: draft
     dashboard_selectable: false
     outcome_architecture: true
