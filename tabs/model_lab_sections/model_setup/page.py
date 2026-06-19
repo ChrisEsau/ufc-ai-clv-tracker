@@ -117,7 +117,7 @@ def render_page() -> None:
         _clear_form_widget_state_if_context_changed(context)
         _render_context_banner(context)
 
-        row1_col1, row1_col2, row1_col3 = st.columns([1.05, 1.0, 1.75], gap="medium")
+        row1_col1, row1_col2, row1_col3, row1_col4 = st.columns([1.25, 0.92, 1.05, 1.25], gap="medium")
         with row1_col1:
             with st.container(border=True):
                 identity_payload = render_identity_section(context)
@@ -127,14 +127,12 @@ def render_page() -> None:
         with row1_col3:
             with st.container(border=True):
                 behavior_payload = render_behavior_section(context)
-
-        row2_col1, row2_col2 = st.columns([0.85, 1.9], gap="medium")
-        with row2_col1:
+        with row1_col4:
             with st.container(border=True):
                 hyperparameters_payload = render_hyperparameters_section(context)
-        with row2_col2:
-            with st.container(border=True):
-                feature_payload = render_feature_selection_section(context)
+
+        with st.container(border=True):
+            feature_payload = render_feature_selection_section(context)
 
         payload = {
             "identity": identity_payload,
