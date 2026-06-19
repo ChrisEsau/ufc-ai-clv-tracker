@@ -17,34 +17,12 @@ def _training_key(context: dict[str, Any], suffix: str) -> str:
 
 
 def render_training_section(context: dict[str, Any]) -> dict[str, Any]:
-    """Render the Training Setup card and return training payload."""
-
     editable = bool(context.get("is_editable"))
     split = (context.get("config") or {}).get("split") or {}
 
-    st.markdown("#### :blue[2.] Training Setup")
-    train_start_date = st.text_input(
-        "Train Start Date",
-        value=str(split.get("train_start_date") or ""),
-        disabled=not editable,
-        key=_training_key(context, "train_start_date"),
-        help="Required for new configs. Existing configs may warn if missing.",
-    )
-    train_end_date = st.text_input(
-        "Train End Date",
-        value=str(split.get("train_end_date") or ""),
-        disabled=not editable,
-        key=_training_key(context, "train_end_date"),
-    )
-    calibration_end_date = st.text_input(
-        "Calibration End Date",
-        value=str(split.get("calibration_end_date") or ""),
-        disabled=not editable,
-        key=_training_key(context, "calibration_end_date"),
-    )
+    st.markdown("#### 2. Training Setup")
+    train_start_date = st.text_input("Train Start Date", value=str(split.get("train_start_date") or ""), disabled=not editable, key=_training_key(context, "train_start_date"))
+    train_end_date = st.text_input("Train End Date", value=str(split.get("train_end_date") or ""), disabled=not editable, key=_training_key(context, "train_end_date"))
+    calibration_end_date = st.text_input("Calibration End Date", value=str(split.get("calibration_end_date") or ""), disabled=not editable, key=_training_key(context, "calibration_end_date"))
 
-    return {
-        "train_start_date": train_start_date,
-        "train_end_date": train_end_date,
-        "calibration_end_date": calibration_end_date,
-    }
+    return {"train_start_date": train_start_date, "train_end_date": train_end_date, "calibration_end_date": calibration_end_date}
