@@ -72,20 +72,25 @@ def _resolve_page_context(registry: dict, selected_model_id: str) -> dict:
 def _render_context_banner(context: dict) -> None:
     summary = model_context.summarize_context_for_ui(context)
     status = summary["status"].upper()
+    algorithm = str(context.get("algorithm") or (context.get("config") or {}).get("algorithm") or "—")
     st.markdown(
         f"""
         <div class="model-setup-shell">
-            <div class="model-setup-banner-left">
-                <div class="model-setup-title">{summary['model_id']} <span class="model-setup-status">{status}</span></div>
-                <div class="model-setup-subtitle">
-                    Family: {summary['family']} &nbsp; · &nbsp;
-                    Market: {summary['market']} &nbsp; · &nbsp;
-                    {summary['editable_label']}
+            <div class="model-setup-banner-main">
+                <div>
+                    <div class="model-setup-kicker">Current Model</div>
+                    <div class="model-setup-title">{summary['model_id']} <span class="model-setup-status">{status}</span></div>
                 </div>
-                <div class="model-setup-note">
-                    Config: {summary['config_path']}<br/>
-                    Artifacts: {summary['artifact_dir']}
+                <div class="model-setup-banner-paths">
+                    <div><span>Config</span>{summary['config_path']}</div>
+                    <div><span>Artifacts</span>{summary['artifact_dir']}</div>
                 </div>
+            </div>
+            <div class="model-setup-meta-grid">
+                <div><span>Family</span>{summary['family']}</div>
+                <div><span>Market</span>{summary['market']}</div>
+                <div><span>Algorithm</span>{algorithm}</div>
+                <div><span>Mode</span>{summary['editable_label']}</div>
             </div>
         </div>
         """,
@@ -140,7 +145,7 @@ def render_page() -> None:
         st.session_state["model_setup_feature_payload"] = feature_payload
 
         st.markdown('<div class="model-setup-footer-spacer"></div>', unsafe_allow_html=True)
-        footer_col1, footer_col2 = st.columns([1.35, 1.0], gap="medium")
+        footer_col1, footer_col2 = st.columns([1.1, 1.0], gap="medium")
         with footer_col1:
             with st.container(border=True):
                 validation_result = render_validation_summary(context, registry, payload)
