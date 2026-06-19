@@ -22,7 +22,7 @@ def render_training_section(context: dict[str, Any]) -> dict[str, Any]:
     editable = bool(context.get("is_editable"))
     split = (context.get("config") or {}).get("split") or {}
 
-    st.markdown("#### 2. Training Setup")
+    st.markdown("#### :blue[2.] Training Setup")
     train_start_date = st.text_input(
         "Train Start Date",
         value=str(split.get("train_start_date") or ""),
