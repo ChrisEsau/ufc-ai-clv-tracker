@@ -157,39 +157,46 @@ def _render_workspace_strip(active: str) -> str:
         .mlab-workspace-strip-caption {
             color: #8fb3db;
             font-size: .68rem;
-            margin: 0 0 .4rem;
+            margin: 0 0 .18rem;
             text-transform: uppercase;
             letter-spacing: .06em;
             font-weight: 900;
         }
         .mlab-workspace-strip-spacer {
-            height: .38rem;
+            height: .2rem;
             border-bottom: 1px solid rgba(43,60,82,.82);
             margin-bottom: .95rem;
         }
-        div[data-testid="stHorizontalBlock"] button {
-            min-height: 2.28rem !important;
-            border-radius: 8px !important;
-            font-weight: 790 !important;
-            letter-spacing: -.01em !important;
-            border: 1px solid rgba(45, 72, 108, .92) !important;
+        div[data-testid="stHorizontalBlock"]:has(button[id^="mlab_workspace_"]) {
+            gap: .75rem !important;
+        }
+        div[data-testid="stHorizontalBlock"] button[id^="mlab_workspace_"] {
+            min-height: 1.95rem !important;
+            border-radius: 0 !important;
+            border: 0 !important;
+            border-bottom: 2px solid transparent !important;
+            background: transparent !important;
             box-shadow: none !important;
-            padding-top: .35rem !important;
-            padding-bottom: .35rem !important;
+            padding: .25rem 0 .38rem !important;
+            color: #9fb0c4 !important;
+            font-weight: 760 !important;
+            letter-spacing: -.01em !important;
+            justify-content: flex-start !important;
         }
-        div[data-testid="stHorizontalBlock"] button[kind="primary"] {
-            background: linear-gradient(180deg, rgba(15, 36, 68, .96), rgba(8, 25, 48, .98)) !important;
+        div[data-testid="stHorizontalBlock"] button[id^="mlab_workspace_"][kind="primary"] {
             color: #5fb7ff !important;
-            border-color: rgba(59, 130, 246, .88) !important;
-            box-shadow: inset 0 -3px 0 #2f9bff !important;
+            border-bottom-color: #2f9bff !important;
+            background: transparent !important;
+            box-shadow: none !important;
         }
-        div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
-            background: linear-gradient(180deg, rgba(8, 22, 41, .72), rgba(6, 17, 31, .84)) !important;
-            color: #dbeafe !important;
+        div[data-testid="stHorizontalBlock"] button[id^="mlab_workspace_"][kind="secondary"] {
+            color: #9fb0c4 !important;
+            background: transparent !important;
         }
-        div[data-testid="stHorizontalBlock"] button:hover {
-            border-color: rgba(96, 165, 250, .9) !important;
-            color: #ffffff !important;
+        div[data-testid="stHorizontalBlock"] button[id^="mlab_workspace_"]:hover {
+            color: #f8fbff !important;
+            border-bottom-color: rgba(96, 165, 250, .55) !important;
+            background: rgba(96, 165, 250, .04) !important;
         }
         @media (max-width: 900px) {
             .mlab-active-header {
