@@ -85,22 +85,6 @@ bundles:
     - decision
     - goes_distance
     - rounds
-  recent_form:
-    description: Short-horizon recent performance and pace signals.
-    source_layer: fighter_state
-    candidate_columns:
-    - recent_win_pct
-    - recent_splm
-    - recent_sapm
-    - recent_td_avg
-    - recent_finish_rate
-    - recent_avg_fight_time
-    recommended_transforms:
-    - red_minus_blue
-    - absolute_gap
-    markets:
-    - moneyline
-    - props
   ewm_state:
     description: Exponentially weighted fighter-state signals.
     source_layer: fighter_state
@@ -163,7 +147,8 @@ bundles:
     - moneyline
     - props
   engineered_matchup:
-    description: Existing V5 engineered matchup features plus competition-adjusted interaction features.
+    description: Existing V5 engineered matchup features plus competition-adjusted
+      interaction features.
     source_layer: engineered
     candidate_columns:
     - age_diff
@@ -193,7 +178,8 @@ bundles:
     - moneyline
     - props
   market_odds:
-    description: Timestamped market information for market-aware models. Must be point-in-time only.
+    description: Timestamped market information for market-aware models. Must be point-in-time
+      only.
     source_layer: market
     candidate_columns:
     - opening_implied_prob
@@ -250,7 +236,8 @@ bundles:
     markets:
     - moneyline
   goes_distance_core_v1:
-    description: Core V1 Goes Distance features built from finish tendency, fight duration, durability, and physical mismatch signals.
+    description: Core V1 Goes Distance features built from finish tendency, fight
+      duration, durability, and physical mismatch signals.
     candidate_columns:
     - combined_finish_rate
     - combined_finish_loss_rate
