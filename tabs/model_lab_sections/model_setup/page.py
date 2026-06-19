@@ -97,15 +97,6 @@ def render_page() -> None:
     """Render the new clean Model Setup workspace."""
 
     inject_styles()
-    st.markdown(
-        """
-        <div class="model-setup-page-title">Model Setup</div>
-        <div class="model-setup-page-caption">
-            Configure model identity, training setup, behavior, hyperparameters, and feature selection.
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
 
     try:
         registry = registry_io.load_model_registry()
