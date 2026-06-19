@@ -80,7 +80,7 @@ def build_config_payload_from_form(context: dict[str, Any], form_payload: dict[s
     hyperparameters = form_payload.get("hyperparameters") or {}
     features = form_payload.get("features") or {}
 
-    model_id = safe_model_id(identity.get("model_id") or context.get("model_id") or "")
+    model_id = safe_model_id(context.get("model_id") or identity.get("model_id") or "")
     model_family = str(identity.get("model_family") or context.get("model_family") or "moneyline").strip().lower()
     market_key = str(identity.get("market_key") or context.get("market_key") or "moneyline").strip().lower()
 
@@ -88,7 +88,7 @@ def build_config_payload_from_form(context: dict[str, Any], form_payload: dict[s
     config["model_family"] = model_family
     config["market_key"] = market_key
     config["artifact_name"] = model_id
-    config["status"] = str(identity.get("status") or context.get("status") or "draft")
+    config["status"] = str(context.get("status") or identity.get("status") or "draft")
 
     split = config.setdefault("split", {})
     split["train_start_date"] = training.get("train_start_date", split.get("train_start_date"))
