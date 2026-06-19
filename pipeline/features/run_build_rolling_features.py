@@ -13,7 +13,7 @@ Pipeline:
 - Build base rolling fighter-state features
 - Add EWM/recent-form features
 - Add engineered moneyline features
-- Validate the 483-column rolling feature contract
+- Validate the 495-column rolling feature contract
 - Write data/features/UFC_enhanced_rolling_features_EWM.parquet
 """
 
@@ -27,7 +27,7 @@ from pipeline.features.base.build_rolling_features import build_rolling_base_fea
 from pipeline.features.base.ewm_features import add_ewm_feature_layer
 from ufc_feature_engineering import add_v5_engineered_features
 
-EXPECTED_ROLLING_COLUMNS = 483
+EXPECTED_ROLLING_COLUMNS = 495
 TARGET_ID_COLUMNS = ["winner_id", "r_id", "b_id"]
 EXAMPLE_CONTEXT_COLUMNS = [
     "event_name",
@@ -132,7 +132,7 @@ def prepare_master_for_rolling(master_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_full_rolling_features(master_df: pd.DataFrame) -> pd.DataFrame:
-    """Build the complete 483-column rolling feature dataframe."""
+    """Build the complete 495-column rolling feature dataframe."""
     df = prepare_master_for_rolling(master_df)
     rolling_df = build_rolling_base_features(df)
     rolling_df = add_ewm_feature_layer(rolling_df)
