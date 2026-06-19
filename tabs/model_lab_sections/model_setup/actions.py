@@ -18,24 +18,20 @@ def _inject_action_styles() -> None:
     st.markdown(
         """
         <style>
-        .model-setup-danger-action {
-            display: block;
-            height: 0;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-        }
-        div[data-testid="stVerticalBlock"]:has(.model-setup-danger-action) div[data-testid="stButton"] button {
+        .st-key-model_setup_action_delete button,
+        .st-key-model_setup_delete_confirm button {
             background: linear-gradient(180deg, rgba(220, 38, 38, 0.98), rgba(153, 27, 27, 0.98)) !important;
             border-color: rgba(248, 113, 113, 0.85) !important;
             color: #ffffff !important;
         }
-        div[data-testid="stVerticalBlock"]:has(.model-setup-danger-action) div[data-testid="stButton"] button:hover {
+        .st-key-model_setup_action_delete button:hover,
+        .st-key-model_setup_delete_confirm button:hover {
             background: linear-gradient(180deg, rgba(239, 68, 68, 1), rgba(185, 28, 28, 1)) !important;
             border-color: rgba(252, 165, 165, 0.95) !important;
             color: #ffffff !important;
         }
-        div[data-testid="stVerticalBlock"]:has(.model-setup-danger-action) div[data-testid="stButton"] button:disabled {
+        .st-key-model_setup_action_delete button:disabled,
+        .st-key-model_setup_delete_confirm button:disabled {
             background: rgba(69, 26, 26, 0.55) !important;
             border-color: rgba(127, 29, 29, 0.8) !important;
             color: rgba(255, 255, 255, 0.48) !important;
@@ -95,7 +91,6 @@ def render_action_bar(
                 st.error(result.get("message") or "Save failed.")
 
     with c3:
-        st.markdown('<span class="model-setup-danger-action"></span>', unsafe_allow_html=True)
         if st.button("Delete", use_container_width=True, disabled=delete_disabled, key="model_setup_action_delete"):
             st.session_state["model_setup_delete_requested"] = True
 
@@ -120,7 +115,6 @@ def render_action_bar(
                 st.session_state.pop("model_setup_delete_confirmation", None)
                 st.rerun()
         with dc2:
-            st.markdown('<span class="model-setup-danger-action"></span>', unsafe_allow_html=True)
             if st.button(
                 "Confirm Delete",
                 use_container_width=True,
