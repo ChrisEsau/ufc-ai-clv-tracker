@@ -1,8 +1,19 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import streamlit as st
+
+
+def _safe_widget_key(value: Any) -> str:
+    cleaned = re.sub(r"[^0-9a-zA-Z_]+", "_", str(value or ""))
+    return cleaned.strip("_") or "model"
+
+
+def _hyperparameter_key(context: dict[str, Any], suffix: str) -> str:
+    model_key = _safe_widget_key(context.get("model_id") or context.get("config_path") or "model")
+    return f"model_setup_hyperparameters_{suffix}_{model_key}"
 
 
 def render_hyperparameters_section(context: dict[str, Any]) -> dict[str, Any]:
@@ -21,7 +32,7 @@ def render_hyperparameters_section(context: dict[str, Any]) -> dict[str, Any]:
             step=50,
             min_value=50,
             disabled=not editable,
-            key="model_setup_hyperparameters_n_estimators",
+            key=_hyperparameter_key(context, "n_estimators"),
         )
     with c2:
         max_depth = st.number_input(
@@ -31,7 +42,7 @@ def render_hyperparameters_section(context: dict[str, Any]) -> dict[str, Any]:
             min_value=1,
             max_value=20,
             disabled=not editable,
-            key="model_setup_hyperparameters_max_depth",
+            key=_hyperparameter_key(context, "max_depth"),
         )
     with c3:
         learning_rate = st.number_input(
@@ -41,7 +52,7 @@ def render_hyperparameters_section(context: dict[str, Any]) -> dict[str, Any]:
             min_value=0.001,
             max_value=1.0,
             disabled=not editable,
-            key="model_setup_hyperparameters_learning_rate",
+            key=_hyperparameter_key(context, "learning_rate"),
         )
 
     c4, c5, c6 = st.columns(3)
@@ -53,7 +64,7 @@ def render_hyperparameters_section(context: dict[str, Any]) -> dict[str, Any]:
             min_value=0.1,
             max_value=1.0,
             disabled=not editable,
-            key="model_setup_hyperparameters_subsample",
+            key=_hyperparameter_key(context, "subsample"),
         )
     with c5:
         colsample_bytree = st.number_input(
@@ -63,7 +74,7 @@ def render_hyperparameters_section(context: dict[str, Any]) -> dict[str, Any]:
             min_value=0.1,
             max_value=1.0,
             disabled=not editable,
-            key="model_setup_hyperparameters_colsample_bytree",
+            key=_hyperparameter_key(context, "colsample_bytree"),
         )
     with c6:
         random_state = st.number_input(
@@ -72,14 +83,14 @@ def render_hyperparameters_section(context: dict[str, Any]) -> dict[str, Any]:
             step=1,
             min_value=0,
             disabled=not editable,
-            key="model_setup_hyperparameters_random_state",
+            key=_hyperparameter_key(context, "random_state"),
         )
 
     eval_metric = st.text_input(
         "Eval Metric",
         value=str(params.get("eval_metric", "logloss")),
         disabled=not editable,
-        key="model_setup_hyperparameters_eval_metric",
+        key=_hyperparameter_key(context, "eval_metric"),
     )
 
     return {
