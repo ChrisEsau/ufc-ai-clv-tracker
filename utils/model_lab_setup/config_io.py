@@ -18,6 +18,7 @@ DEFAULT_SECTIONS: dict[str, Any] = {
     "artifacts": {},
     "data": {},
     "metrics": {},
+    "symmetry": {},
 }
 
 
@@ -58,6 +59,8 @@ def normalize_model_config(config: dict[str, Any]) -> dict[str, Any]:
         prediction["probability"] = {}
     if not isinstance(prediction.get("threshold"), dict):
         prediction["threshold"] = {}
+    if not isinstance(normalized.get("symmetry"), dict):
+        normalized["symmetry"] = {}
     return normalized
 
 
@@ -109,6 +112,12 @@ def build_config_payload_from_form(context: dict[str, Any], form_payload: dict[s
         threshold["source"] = str(behavior["threshold_source"])
     if behavior.get("threshold_value") is not None:
         threshold["value"] = float(behavior["threshold_value"])
+
+    symmetry = config.setdefault("symmetry", {})
+    if "symmetry_enabled" in behavior:
+        symmetry["enabled"] = bool(behavior["symmetry_enabled"])
+    if behavior.get("symmetry_mode") is not None:
+        symmetry["mode"] = str(behavior["symmetry_mode"])
 
     params = hyperparameters.get("params") or {}
     if params:
