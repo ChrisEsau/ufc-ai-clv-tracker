@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import streamlit as st
@@ -22,6 +23,25 @@ ALGORITHM_OPTIONS = ["xgboost", "lightgbm", "random_forest", "logistic_regressio
 
 def _option_index(options: list[str], current: str, default_index: int = 0) -> int:
     return options.index(current) if current in options else default_index
+
+
+def _safe_widget_key(value: Any) -> str:
+    cleaned = re.sub(r"[^0-9a-zA-Z_]+", "_", str(value or ""))
+    return cleaned.strip("_") or "model"
+
+
+def _identity_key(context: dict[str, Any], suffix: str) -> str:
+    """Return a model-scoped key for identity widgets.
+
+    Model Identity contains the highest-visibility fields in Model Setup. Using
+    stable keys across model changes lets Streamlit preserve the previous
+    model's values. Scoping these keys by model_id forces the identity card to
+    hydrate from the newly selected model context while still preserving edits
+    during reruns for the same model.
+    """
+
+    model_key = _safe_widget_key(context.get("model_id") or context.get("config_path") or "model")
+    return f"model_setup_identity_{suffix}_{model_key}"
 
 
 def render_identity_section(context: dict[str, Any]) -> dict[str, Any]:
@@ -50,55 +70,55 @@ def render_identity_section(context: dict[str, Any]) -> dict[str, Any]:
             "Generated Model ID",
             value=str(context.get("model_id") or ""),
             disabled=True,
-            key="model_setup_identity_model_id",
+            key=_identity_key(context, "model_id"),
         )
         model_family = st.selectbox(
             "Family",
             family_options,
             index=_option_index(family_options, current_family),
             disabled=not editable,
-            key="model_setup_identity_family",
+            key=_identity_key(context, "family"),
         )
         algorithm = st.selectbox(
             "Algorithm",
             algorithm_options,
             index=_option_index(algorithm_options, current_algorithm),
             disabled=not editable,
-            key="model_setup_identity_algorithm",
+            key=_identity_key(context, "algorithm"),
         )
     with c2:
         status = st.text_input(
             "Status",
             value=str(context.get("status") or "draft"),
             disabled=True,
-            key="model_setup_identity_status",
+            key=_identity_key(context, "status"),
         )
         market_key = st.selectbox(
             "Market",
             market_options,
             index=_option_index(market_options, current_market),
             disabled=not editable,
-            key="model_setup_identity_market",
+            key=_identity_key(context, "market"),
         )
         dashboard_selectable = st.toggle(
             "Dashboard Selectable",
             value=bool(context.get("dashboard_selectable", False)),
             disabled=not editable,
-            key="model_setup_identity_dashboard_selectable",
+            key=_identity_key(context, "dashboard_selectable"),
         )
 
     display_name = st.text_input(
         "Display Name",
         value=str(context.get("display_name") or context.get("model_id") or ""),
         disabled=not editable,
-        key="model_setup_identity_display_name",
+        key=_identity_key(context, "display_name"),
     )
     description = st.text_area(
         "Description",
         value=str(context.get("description") or ""),
         disabled=not editable,
         height=86,
-        key="model_setup_identity_description",
+        key=_identity_key(context, "description"),
     )
 
     return {
