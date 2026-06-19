@@ -93,11 +93,12 @@ def _render_workspace_header(active: str) -> None:
     st.markdown(
         f"""
         <div class="mlab-active-header">
-            <div>
+            <div class="mlab-active-header-icon">▱</div>
+            <div class="mlab-active-header-copy">
                 <div class="mlab-active-title">{active}</div>
                 <div class="mlab-active-subtitle">{description}</div>
             </div>
-            <div class="mlab-active-loaded">Last Loaded: {now}</div>
+            <div class="mlab-active-loaded">◷&nbsp; Last saved: {now}</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -111,54 +112,76 @@ def _render_workspace_strip(active: str) -> str:
         """
         <style>
         .mlab-active-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 1rem;
-            margin: .1rem 0 .85rem;
-            padding-bottom: .85rem;
+            display: grid;
+            grid-template-columns: 2.35rem minmax(0, 1fr) auto;
+            align-items: start;
+            gap: .9rem;
+            margin: .05rem 0 .9rem;
+            padding: .15rem 0 1rem;
             border-bottom: 1px solid rgba(43,60,82,.92);
+        }
+        .mlab-active-header-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.05rem;
+            height: 2.05rem;
+            border-radius: 9px;
+            color: #9ed0ff;
+            border: 1px solid rgba(96, 165, 250, .62);
+            background: linear-gradient(180deg, rgba(11, 31, 57, .96), rgba(7, 20, 37, .98));
+            font-size: 1.25rem;
+            font-weight: 900;
+            line-height: 1;
         }
         .mlab-active-title {
             color: #f8fbff;
-            font-size: 1.72rem;
+            font-size: 1.85rem;
             font-weight: 950;
             letter-spacing: -.045em;
-            line-height: 1.05;
+            line-height: 1.02;
         }
         .mlab-active-subtitle {
             color: #dbe7f5;
             font-size: .9rem;
-            margin-top: .32rem;
+            margin-top: .34rem;
+            line-height: 1.35;
         }
         .mlab-active-loaded {
-            color: #dbe7f5;
-            font-size: .75rem;
-            font-weight: 760;
+            color: #b9c8da;
+            font-size: .78rem;
+            font-weight: 720;
             white-space: nowrap;
-            padding-top: .1rem;
+            padding-top: .2rem;
         }
         .mlab-workspace-strip-caption {
             color: #8fb3db;
             font-size: .68rem;
-            margin: 0 0 .35rem;
+            margin: 0 0 .4rem;
             text-transform: uppercase;
             letter-spacing: .06em;
             font-weight: 900;
         }
+        .mlab-workspace-strip-spacer {
+            height: .38rem;
+            border-bottom: 1px solid rgba(43,60,82,.82);
+            margin-bottom: .95rem;
+        }
         div[data-testid="stHorizontalBlock"] button {
-            min-height: 2.38rem !important;
+            min-height: 2.28rem !important;
             border-radius: 8px !important;
             font-weight: 790 !important;
             letter-spacing: -.01em !important;
             border: 1px solid rgba(45, 72, 108, .92) !important;
             box-shadow: none !important;
+            padding-top: .35rem !important;
+            padding-bottom: .35rem !important;
         }
         div[data-testid="stHorizontalBlock"] button[kind="primary"] {
             background: linear-gradient(180deg, rgba(15, 36, 68, .96), rgba(8, 25, 48, .98)) !important;
             color: #5fb7ff !important;
-            border-color: rgba(59, 130, 246, .78) !important;
-            box-shadow: inset 0 -2px 0 #2f9bff !important;
+            border-color: rgba(59, 130, 246, .88) !important;
+            box-shadow: inset 0 -3px 0 #2f9bff !important;
         }
         div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
             background: linear-gradient(180deg, rgba(8, 22, 41, .72), rgba(6, 17, 31, .84)) !important;
@@ -167,6 +190,15 @@ def _render_workspace_strip(active: str) -> str:
         div[data-testid="stHorizontalBlock"] button:hover {
             border-color: rgba(96, 165, 250, .9) !important;
             color: #ffffff !important;
+        }
+        @media (max-width: 900px) {
+            .mlab-active-header {
+                grid-template-columns: 2.35rem minmax(0, 1fr);
+            }
+            .mlab-active-loaded {
+                grid-column: 1 / -1;
+                padding-top: 0;
+            }
         }
         </style>
         """,
@@ -186,6 +218,7 @@ def _render_workspace_strip(active: str) -> str:
                 st.session_state["mlab_active_workspace"] = workspace
                 st.rerun()
 
+    st.markdown("<div class='mlab-workspace-strip-spacer'></div>", unsafe_allow_html=True)
     return str(st.session_state.get("mlab_active_workspace", DEFAULT_WORKSPACE))
 
 
