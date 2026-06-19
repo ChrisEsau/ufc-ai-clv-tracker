@@ -6,7 +6,11 @@ from typing import Any
 import requests
 
 import utils.model_lab_workflows as mlw
-from utils.model_lab_setup.config_io import build_config_payload_from_form, dump_model_config
+from utils.model_lab_setup.config_io import (
+    build_config_path,
+    build_config_payload_from_form,
+    dump_model_config,
+)
 from utils.model_lab_setup.registry_io import remove_model_registry_entry, upsert_model_registry_entry
 from utils.model_lab_setup.validators import (
     combine_validation_results,
@@ -16,7 +20,13 @@ from utils.model_lab_setup.validators import (
 )
 
 
-def _build_registry_entry(context: dict[str, Any], payload: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
+def _build_registry_entry(
+    context: dict[str, Any],
+    payload: dict[str, Any],
+    config: dict[str, Any],
+    *,
+    config_path: str,
+) -> dict[str, Any]:
     identity = payload.get("identity") or {}
     return {
         "display_name": str(identity.get("display_name") or context.get("display_name") or config.get("model_id")),
@@ -24,8 +34,8 @@ def _build_registry_entry(context: dict[str, Any], payload: dict[str, Any], conf
         "model_family": str(config.get("model_family") or context.get("model_family") or "moneyline"),
         "market_key": str(config.get("market_key") or context.get("market_key") or "moneyline"),
         "algorithm": str(identity.get("algorithm") or context.get("algorithm") or config.get("algorithm") or "xgboost"),
-        "config_path": str(context.get("config_path") or ""),
-        "artifact_dir": str((config.get("artifacts") or {}).get("output_dir") or context.get("artifact_dir") or ""),
+        "config_path": config_path,
+        "artifact_dir": str((config.get("artifacts") or {}).get("output_dir") or ""),
         "status": str(config.get("status") or context.get("status") or "draft"),
         "dashboard_selectable": bool(identity.get("dashboard_selectable", context.get("dashboard_selectable", False))),
         "outcome_architecture": True,
@@ -57,8 +67,7 @@ def _github_delete_file(path: str, message: str) -> tuple[bool, str]:
 def save_model_setup(context: dict[str, Any], registry: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
     """Create or update a model config and registry entry on GitHub."""
 
-    model_id = str(context.get("model_id") or "")
-    model_exists = model_id in (registry.get("models") or {})
+    context_model_id = str(context.get("model_id") or "")
 
     validation = combine_validation_results(
         validate_save_allowed(context),
@@ -68,16 +77,27 @@ def save_model_setup(context: dict[str, Any], registry: dict[str, Any], payload:
         return {
             "ok": False,
             "message": "; ".join(validation["errors"]),
-            "model_id": model_id,
+            "model_id": context_model_id,
             "config_path": str(context.get("config_path") or ""),
         }
 
     config = build_config_payload_from_form(context, payload)
-    config_path = str(context.get("config_path") or "")
-    if not config_path:
-        return {"ok": False, "message": "Config path is missing.", "model_id": model_id, "config_path": config_path}
+    model_id = str(config.get("model_id") or context_model_id)
+    if not model_id:
+        return {"ok": False, "message": "Model ID is missing.", "model_id": model_id, "config_path": ""}
 
-    registry_entry = _build_registry_entry(context, payload, config)
+    # Model Setup may be launched from a template context. Always persist the
+    # saved config and registry entry using the final model_id-derived path so
+    # a new model cannot inherit the template model's config_path.
+    config_path = build_config_path(model_id)
+    model_exists = model_id in (registry.get("models") or {})
+
+    registry_entry = _build_registry_entry(
+        context,
+        payload,
+        config,
+        config_path=config_path,
+    )
     updated_registry = upsert_model_registry_entry(registry, model_id, registry_entry)
 
     ok, msg = mlw._github_write_file(
@@ -90,7 +110,15 @@ def save_model_setup(context: dict[str, Any], registry: dict[str, Any], payload:
 
     ok, msg = mlw._save_registry(updated_registry)
     if not ok:
-        return {"ok": False, "message": msg, "model_id": model_id, "config_path": config_path}
+        return {
+            "ok": False,
+            "message": (
+                f"Config was saved to {config_path}, but registry update failed: {msg}. "
+                "Re-save this model after fixing the registry write error to prevent config/registry drift."
+            ),
+            "model_id": model_id,
+            "config_path": config_path,
+        }
 
     action = "Created" if not model_exists else "Updated"
     return {"ok": True, "message": f"{action} model {model_id} on GitHub.", "model_id": model_id, "config_path": config_path}
