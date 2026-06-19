@@ -154,12 +154,14 @@ def update_after_fight(
         method=row["method"],
         won=red_won,
         fight_time_sec=fight_time_sec,
+        fight_date=fight_date,
     )
     finish_profile.update_after_fight(
         state=states["finish_profile"][b_id],
         method=row["method"],
         won=not red_won,
         fight_time_sec=fight_time_sec,
+        fight_date=fight_date,
     )
     recent_form.update_after_fight(
         state=states["recent_form"][r_id],
