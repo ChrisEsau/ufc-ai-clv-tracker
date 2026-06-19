@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import quote, unquote
 
 import streamlit as st
 
@@ -60,8 +61,25 @@ def _select_existing_model_with_key(key: str):
     return selector
 
 
+def _query_param_workspace() -> str | None:
+    """Resolve the workspace from the URL query parameter, if present."""
+
+    value = st.query_params.get("mlab_workspace")
+    if isinstance(value, list):
+        value = value[0] if value else None
+    if not value:
+        return None
+    workspace = unquote(str(value))
+    return workspace if workspace in WORKSPACES else None
+
+
 def _sync_workspace_from_legacy_sidebar() -> None:
     """Read the current legacy sidebar workspace without letting it own routing forever."""
+
+    query_workspace = _query_param_workspace()
+    if query_workspace:
+        st.session_state["mlab_active_workspace"] = query_workspace
+        return
 
     legacy_workspace = st.session_state.get("sidebar_model_lab_workspace")
     previous_legacy = st.session_state.get("mlab_last_sidebar_workspace_seen")
@@ -106,7 +124,7 @@ def _render_workspace_header(active: str) -> None:
 
 
 def _render_workspace_strip(active: str) -> str:
-    """Render the internal Model Lab workspace navigation strip."""
+    """Render the internal Model Lab workspace navigation strip as text tabs."""
 
     st.markdown(
         """
@@ -154,49 +172,39 @@ def _render_workspace_strip(active: str) -> str:
             white-space: nowrap;
             padding-top: .2rem;
         }
-        .mlab-workspace-strip-caption {
-            color: #8fb3db;
-            font-size: .68rem;
-            margin: 0 0 .18rem;
-            text-transform: uppercase;
-            letter-spacing: .06em;
-            font-weight: 900;
-        }
-        .mlab-workspace-strip-spacer {
-            height: .2rem;
+        .mlab-workspace-tabs {
+            display: flex;
+            align-items: center;
+            gap: 2.05rem;
+            margin: .25rem 0 0;
+            padding: .15rem 0 0;
             border-bottom: 1px solid rgba(43,60,82,.82);
-            margin-bottom: .95rem;
+            overflow-x: auto;
+            scrollbar-width: none;
         }
-        div[data-testid="stHorizontalBlock"]:has(button[id^="mlab_workspace_"]) {
-            gap: .75rem !important;
+        .mlab-workspace-tabs::-webkit-scrollbar {
+            display: none;
         }
-        div[data-testid="stHorizontalBlock"] button[id^="mlab_workspace_"] {
-            min-height: 1.95rem !important;
-            border-radius: 0 !important;
-            border: 0 !important;
-            border-bottom: 2px solid transparent !important;
-            background: transparent !important;
-            box-shadow: none !important;
-            padding: .25rem 0 .38rem !important;
-            color: #9fb0c4 !important;
-            font-weight: 760 !important;
-            letter-spacing: -.01em !important;
-            justify-content: flex-start !important;
+        .mlab-workspace-tab {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            color: #b8c7da !important;
+            text-decoration: none !important;
+            font-size: .86rem;
+            font-weight: 760;
+            line-height: 1;
+            padding: .95rem 0 1rem;
+            border-bottom: 2px solid transparent;
+            white-space: nowrap;
         }
-        div[data-testid="stHorizontalBlock"] button[id^="mlab_workspace_"][kind="primary"] {
-            color: #5fb7ff !important;
-            border-bottom-color: #2f9bff !important;
-            background: transparent !important;
-            box-shadow: none !important;
-        }
-        div[data-testid="stHorizontalBlock"] button[id^="mlab_workspace_"][kind="secondary"] {
-            color: #9fb0c4 !important;
-            background: transparent !important;
-        }
-        div[data-testid="stHorizontalBlock"] button[id^="mlab_workspace_"]:hover {
+        .mlab-workspace-tab:hover {
             color: #f8fbff !important;
-            border-bottom-color: rgba(96, 165, 250, .55) !important;
-            background: rgba(96, 165, 250, .04) !important;
+            border-bottom-color: rgba(96,165,250,.5);
+        }
+        .mlab-workspace-tab.active {
+            color: #5fb7ff !important;
+            border-bottom-color: #2f9bff;
         }
         @media (max-width: 900px) {
             .mlab-active-header {
@@ -206,27 +214,22 @@ def _render_workspace_strip(active: str) -> str:
                 grid-column: 1 / -1;
                 padding-top: 0;
             }
+            .mlab-workspace-tabs {
+                gap: 1.25rem;
+            }
         }
         </style>
         """,
         unsafe_allow_html=True,
     )
-    st.markdown("<div class='mlab-workspace-strip-caption'>Workspace</div>", unsafe_allow_html=True)
 
-    columns = st.columns(len(WORKSPACES), gap="small")
-    for column, workspace in zip(columns, WORKSPACES):
-        with column:
-            if st.button(
-                workspace,
-                use_container_width=True,
-                type="primary" if workspace == active else "secondary",
-                key=f"mlab_workspace_{workspace}",
-            ):
-                st.session_state["mlab_active_workspace"] = workspace
-                st.rerun()
-
-    st.markdown("<div class='mlab-workspace-strip-spacer'></div>", unsafe_allow_html=True)
-    return str(st.session_state.get("mlab_active_workspace", DEFAULT_WORKSPACE))
+    links = []
+    for workspace in WORKSPACES:
+        active_class = " active" if workspace == active else ""
+        href = f"?mlab_workspace={quote(workspace)}"
+        links.append(f'<a class="mlab-workspace-tab{active_class}" href="{href}">{workspace}</a>')
+    st.markdown(f'<nav class="mlab-workspace-tabs">{"".join(links)}</nav>', unsafe_allow_html=True)
+    return active
 
 
 def render_model_lab() -> None:
