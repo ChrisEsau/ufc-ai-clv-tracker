@@ -8,7 +8,7 @@ on:
         required: false
         default: configs/models/moneyline_xgboost_v5.yaml
       artifact_dir:
-        description: "Optional override for model artifact directory to commit"
+        description: "Deprecated; artifact directory is resolved from the selected config"
         required: false
         default: ""
 
@@ -51,23 +51,7 @@ jobs:
       - name: Resolve artifact directory
         id: artifact_dir
         run: |
-          if [ -n "${{ inputs.artifact_dir }}" ]; then
-            artifact_dir="${{ inputs.artifact_dir }}"
-          else
-            artifact_dir=$(python - <<'PY'
-          from pathlib import Path
-          import yaml
-
-          config_path = Path("${{ inputs.config_path }}")
-          config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
-          output_dir = (config.get("artifacts") or {}).get("output_dir")
-          if not output_dir:
-              raise SystemExit(f"Missing artifacts.output_dir in {config_path}")
-          print(output_dir)
-          PY
-          )
-          fi
-
+          artifact_dir=$(python -c "from pathlib import Path; import yaml; p=Path('${{ inputs.config_path }}'); c=yaml.safe_load(p.read_text(encoding='utf-8')) or {}; d=(c.get('artifacts') or {}).get('output_dir'); raise SystemExit('Missing artifacts.output_dir in ' + str(p)) if not d else print(d)")
           echo "artifact_dir=${artifact_dir}" >> "$GITHUB_OUTPUT"
           echo "Resolved artifact directory: ${artifact_dir}"
 
