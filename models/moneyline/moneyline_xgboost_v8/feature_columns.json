@@ -118,9 +118,15 @@
   "aggression_index_diff",
   "experience_ratio_diff",
   "grappling_edge",
+  "grappling_edge_x_avg_opp_elo",
+  "grappling_edge_x_ewm_avg_opp_elo",
   "pressure_striking_adv_diff",
   "striking_edge",
+  "striking_edge_x_avg_opp_elo",
+  "striking_edge_x_ewm_avg_opp_elo",
   "submission_mismatch_diff",
+  "submission_mismatch_x_avg_opp_elo",
   "wrestling_mismatch_diff",
+  "wrestling_mismatch_x_avg_opp_elo",
   "wrestling_pressure_vs_defense"
 ]
