@@ -19,7 +19,7 @@ NAV_ITEMS = [
 
 MODEL_LAB_WORKSPACES = [
     ("Overview", "◎"),
-    ("Configuration", "⚙"),
+    ("Model Setup", "✣"),
     ("Features", "◇"),
     ("Performance", "▤"),
     ("Backtest", "▥"),
@@ -283,13 +283,13 @@ def _render_clv_filters() -> None:
 def _render_model_lab_navigation() -> None:
     _sidebar_section("Model Lab Navigation", compact=True)
     if st.session_state.get("sidebar_model_lab_workspace") not in [name for name, _ in MODEL_LAB_WORKSPACES]:
-        st.session_state["sidebar_model_lab_workspace"] = "Configuration"
+        st.session_state["sidebar_model_lab_workspace"] = "Overview"
     for workspace, icon in MODEL_LAB_WORKSPACES:
         active = workspace == st.session_state["sidebar_model_lab_workspace"]
         if st.sidebar.button(f"{icon}  {workspace}", use_container_width=True, type="primary" if active else "secondary", key=f"sidebar_mlab_{workspace}"):
             st.session_state["sidebar_model_lab_workspace"] = workspace
             st.rerun()
-    st.sidebar.caption("Use Configuration to create, edit, delete, and save draft model configs.")
+    st.sidebar.caption("Use Model Setup to create, edit, delete, and save draft model configs.")
 
 
 def render_sidebar():
