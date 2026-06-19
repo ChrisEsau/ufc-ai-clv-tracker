@@ -11,7 +11,7 @@ source_files:
 schema_contracts:
   rolling_feature_store:
     artifact: data/features/UFC_enhanced_rolling_features_EWM.parquet
-    expected_columns: 483
+    expected_columns: 495
     preservation_rule: all_columns_preserved_or_explicitly_deprecated
   current_moneyline_v5:
     expected_features: 124
@@ -283,7 +283,7 @@ feature_families:
     current_moneyline_v5: false
 
 validation_rules:
-  - full_rolling_feature_inventory_must_have_483_columns
+  - full_rolling_feature_inventory_must_have_495_columns
   - current_moneyline_v5_feature_count_must_equal_124
   - every_current_moneyline_v5_feature_must_remain_available
   - raw_red_blue_corner_columns_must_not_enter_moneyline_v5_directly
