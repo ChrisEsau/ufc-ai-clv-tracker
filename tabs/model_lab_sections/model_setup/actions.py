@@ -18,17 +18,20 @@ def _inject_action_styles() -> None:
     st.markdown(
         """
         <style>
-        div[data-testid="stVerticalBlock"]:has(.model-setup-delete-button-anchor) div[data-testid="stButton"] button {
+        div[data-testid="stElementContainer"]:has(.model-setup-delete-button-anchor)
+        + div[data-testid="stButton"] button {
             background: linear-gradient(180deg, rgba(220, 38, 38, 0.98), rgba(153, 27, 27, 0.98)) !important;
             border-color: rgba(248, 113, 113, 0.85) !important;
             color: #ffffff !important;
         }
-        div[data-testid="stVerticalBlock"]:has(.model-setup-delete-button-anchor) div[data-testid="stButton"] button:hover {
+        div[data-testid="stElementContainer"]:has(.model-setup-delete-button-anchor)
+        + div[data-testid="stButton"] button:hover {
             background: linear-gradient(180deg, rgba(239, 68, 68, 1), rgba(185, 28, 28, 1)) !important;
             border-color: rgba(252, 165, 165, 0.95) !important;
             color: #ffffff !important;
         }
-        div[data-testid="stVerticalBlock"]:has(.model-setup-delete-button-anchor) div[data-testid="stButton"] button:disabled {
+        div[data-testid="stElementContainer"]:has(.model-setup-delete-button-anchor)
+        + div[data-testid="stButton"] button:disabled {
             background: rgba(69, 26, 26, 0.55) !important;
             border-color: rgba(127, 29, 29, 0.8) !important;
             color: rgba(255, 255, 255, 0.48) !important;
