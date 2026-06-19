@@ -18,10 +18,9 @@ from tabs.model_lab_sections.styles import inject_model_lab_control_css
 import utils.model_lab_workflows as mlw
 
 
-WORKSPACES = ["Overview", "Configuration", "Model Setup", "Features", "Performance", "Compare", "Backtest", "Actions"]
+WORKSPACES = ["Overview", "Model Setup", "Features", "Performance", "Compare", "Backtest", "Actions"]
 WORKSPACE_ICONS = {
     "Overview": "⌂",
-    "Configuration": "▣",
     "Model Setup": "✣",
     "Features": "▦",
     "Performance": "⌁",
@@ -29,10 +28,9 @@ WORKSPACE_ICONS = {
     "Backtest": "⟳",
     "Actions": "⚙",
 }
-DEFAULT_WORKSPACE = "Configuration"
+DEFAULT_WORKSPACE = "Overview"
 WORKSPACE_DESCRIPTIONS = {
     "Overview": "Review registered models, status, and high-level model health.",
-    "Configuration": "Configure and maintain legacy model config settings.",
     "Model Setup": "Configure model identity, training setup, behavior, hyperparameters, and feature selection.",
     "Features": "Review feature registry coverage, bundles, and model feature inputs.",
     "Performance": "Inspect model metrics, calibration, and training artifacts.",
@@ -42,7 +40,6 @@ WORKSPACE_DESCRIPTIONS = {
 }
 LEGACY_WORKSPACE_MAP = {
     "Overview": "Overview",
-    "Configuration": "Configuration",
     "Model Setup": "Model Setup",
     "Features": "Features",
     "Performance": "Performance",
@@ -306,8 +303,6 @@ def render_model_lab() -> None:
                 row_by_id,
                 existing_model_selector=_select_existing_model_with_key("mlab_overview_model"),
             )
-        elif workspace == "Configuration":
-            legacy_model_lab._render_configuration(registry, rows, row_by_id)
         elif workspace == "Model Setup":
             render_model_setup_page()
         elif workspace == "Features":
