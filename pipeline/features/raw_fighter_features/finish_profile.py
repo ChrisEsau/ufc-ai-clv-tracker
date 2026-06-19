@@ -94,6 +94,7 @@ def update_after_fight(
     method: Any,
     won: bool,
     fight_time_sec: float,
+    fight_date: Any,
 ) -> None:
     """Update finish-profile state after a completed fight."""
 
@@ -122,7 +123,7 @@ def update_after_fight(
 
         if method_defeat:
             state["method_defeat_count"] = state.get("method_defeat_count", 0) + 1
-            state["last_method_defeat_date"] = state.get("current_fight_date")
+            state["last_method_defeat_date"] = fight_date
 
     state["last_method_defeat"] = 1 if method_defeat else 0
     state.setdefault("recent_method_defeats", deque(maxlen=RECENT_METHOD_DEFEAT_N)).append(
