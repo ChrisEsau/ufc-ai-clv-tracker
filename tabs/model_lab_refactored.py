@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any
 
 import streamlit as st
@@ -18,6 +19,16 @@ import utils.model_lab_workflows as mlw
 
 WORKSPACES = ["Overview", "Configuration", "Model Setup", "Features", "Performance", "Compare", "Backtest", "Actions"]
 DEFAULT_WORKSPACE = "Configuration"
+WORKSPACE_DESCRIPTIONS = {
+    "Overview": "Review registered models, status, and high-level model health.",
+    "Configuration": "Configure and maintain legacy model config settings.",
+    "Model Setup": "Configure model identity, training setup, behavior, hyperparameters, and feature selection.",
+    "Features": "Review feature registry coverage, bundles, and model feature inputs.",
+    "Performance": "Inspect model metrics, calibration, and training artifacts.",
+    "Compare": "Compare model configurations and performance side by side.",
+    "Backtest": "Run and review model backtest outputs.",
+    "Actions": "Trigger model workflows and lifecycle operations.",
+}
 LEGACY_WORKSPACE_MAP = {
     "Overview": "Overview",
     "Configuration": "Configuration",
@@ -50,12 +61,7 @@ def _select_existing_model_with_key(key: str):
 
 
 def _sync_workspace_from_legacy_sidebar() -> None:
-    """Read the current legacy sidebar workspace without letting it own routing forever.
-
-    The sidebar still exists during this phase. We only remap it when the sidebar
-    value changes, so clicks on the new internal Model Lab strip are not
-    overwritten on every rerun.
-    """
+    """Read the current legacy sidebar workspace without letting it own routing forever."""
 
     legacy_workspace = st.session_state.get("sidebar_model_lab_workspace")
     previous_legacy = st.session_state.get("mlab_last_sidebar_workspace_seen")
@@ -70,32 +76,102 @@ def _sync_workspace_from_legacy_sidebar() -> None:
         st.session_state["mlab_active_workspace"] = DEFAULT_WORKSPACE
 
 
-def _render_workspace_strip() -> str:
-    """Render the internal Model Lab workspace navigation strip."""
-
+def _active_workspace() -> str:
     _sync_workspace_from_legacy_sidebar()
     active = st.session_state.get("mlab_active_workspace", DEFAULT_WORKSPACE)
     if active not in WORKSPACES:
         active = DEFAULT_WORKSPACE
         st.session_state["mlab_active_workspace"] = active
+    return str(active)
+
+
+def _render_workspace_header(active: str) -> None:
+    """Render the active workspace as the page header."""
+
+    now = datetime.now(timezone.utc).strftime("%b %-d, %Y %I:%M %p UTC")
+    description = WORKSPACE_DESCRIPTIONS.get(active, "Build, tune, compare, and promote predictive models.")
+    st.markdown(
+        f"""
+        <div class="mlab-active-header">
+            <div>
+                <div class="mlab-active-title">{active}</div>
+                <div class="mlab-active-subtitle">{description}</div>
+            </div>
+            <div class="mlab-active-loaded">Last Loaded: {now}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_workspace_strip(active: str) -> str:
+    """Render the internal Model Lab workspace navigation strip."""
 
     st.markdown(
         """
         <style>
-        .mlab-workspace-strip-caption {
+        .mlab-active-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+            margin: .1rem 0 1.15rem;
+        }
+        .mlab-active-title {
+            color: #f8fbff;
+            font-size: 1.82rem;
+            font-weight: 950;
+            letter-spacing: -.045em;
+            line-height: 1.05;
+        }
+        .mlab-active-subtitle {
             color: #dbe7f5;
-            font-size: .76rem;
-            margin: -.15rem 0 .35rem;
+            font-size: .95rem;
+            margin-top: .32rem;
+        }
+        .mlab-active-loaded {
+            color: #dbe7f5;
+            font-size: .78rem;
+            font-weight: 760;
+            white-space: nowrap;
+            padding-top: .1rem;
+        }
+        .mlab-workspace-strip-caption {
+            color: #8fb3db;
+            font-size: .7rem;
+            margin: 0 0 .45rem;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            font-weight: 900;
+        }
+        div[data-testid="stHorizontalBlock"] button {
+            min-height: 2.6rem !important;
+            border-radius: 10px !important;
+            font-weight: 820 !important;
+            letter-spacing: -.01em !important;
+            border: 1px solid rgba(59, 130, 246, .55) !important;
+            box-shadow: 0 12px 26px rgba(0,0,0,.18) !important;
         }
         div[data-testid="stHorizontalBlock"] button[kind="primary"] {
-            font-weight: 900 !important;
+            background: linear-gradient(180deg, rgba(34, 102, 215, 1), rgba(18, 70, 154, 1)) !important;
+            color: #ffffff !important;
+            border-color: rgba(96, 165, 250, .9) !important;
+            box-shadow: 0 0 0 1px rgba(59,130,246,.24) inset, 0 14px 30px rgba(20,80,180,.22) !important;
+        }
+        div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
+            background: linear-gradient(180deg, rgba(14, 47, 92, .92), rgba(10, 34, 68, .96)) !important;
+            color: #dbeafe !important;
+        }
+        div[data-testid="stHorizontalBlock"] button:hover {
+            border-color: rgba(147, 197, 253, 1) !important;
+            transform: translateY(-1px);
         }
         </style>
         """,
         unsafe_allow_html=True,
     )
     st.markdown(
-        "<div class='mlab-workspace-strip-caption'>Model Lab Workspace</div>",
+        "<div class='mlab-workspace-strip-caption'>Workspace</div>",
         unsafe_allow_html=True,
     )
 
@@ -119,15 +195,15 @@ def render_model_lab() -> None:
 
     mlw._inject_css()
     inject_model_lab_control_css()
-    mlw._render_header()
+    active = _active_workspace()
+    _render_workspace_header(active)
 
     try:
         registry, rows, row_by_id = legacy_model_lab._load_registry_rows()
         if not rows:
             st.info("No models are registered in configs/models/model_registry.yaml.")
             return
-
-        workspace = _render_workspace_strip()
+        workspace = _render_workspace_strip(active)
 
         if workspace == "Overview":
             render_overview(
