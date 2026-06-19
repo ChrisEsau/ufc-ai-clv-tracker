@@ -342,7 +342,7 @@ prediction:
     clip_low: 0.02
     clip_high: 0.98
   threshold:
-    source: fixed
+    source: best_sweep
     value: 0.5
   format: binary_matchup
   market_key: moneyline
