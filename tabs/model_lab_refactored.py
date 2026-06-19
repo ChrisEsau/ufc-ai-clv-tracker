@@ -19,6 +19,16 @@ import utils.model_lab_workflows as mlw
 
 
 WORKSPACES = ["Overview", "Configuration", "Model Setup", "Features", "Performance", "Compare", "Backtest", "Actions"]
+WORKSPACE_ICONS = {
+    "Overview": "⌂",
+    "Configuration": "▣",
+    "Model Setup": "✣",
+    "Features": "▦",
+    "Performance": "⌁",
+    "Compare": "⌬",
+    "Backtest": "⟳",
+    "Actions": "⚙",
+}
 DEFAULT_WORKSPACE = "Configuration"
 WORKSPACE_DESCRIPTIONS = {
     "Overview": "Review registered models, status, and high-level model health.",
@@ -114,52 +124,53 @@ def _render_workspace_controls(active: str, rows: list[dict[str, Any]]) -> str:
         <style>
         .mlab-active-header {
             display: grid;
-            grid-template-columns: 2.35rem minmax(0, 1fr) auto;
+            grid-template-columns: 2.25rem minmax(0, 1fr) auto;
             align-items: start;
-            gap: .9rem;
-            margin: .05rem 0 .8rem;
-            padding: .15rem 0 .9rem;
+            gap: .85rem;
+            margin: .05rem 0 .76rem;
+            padding: .12rem 0 .88rem;
             border-bottom: 1px solid rgba(43,60,82,.92);
         }
         .mlab-active-header-icon {
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 2.05rem;
-            height: 2.05rem;
+            width: 2rem;
+            height: 2rem;
             border-radius: 9px;
             color: #9ed0ff;
             border: 1px solid rgba(96, 165, 250, .62);
             background: linear-gradient(180deg, rgba(11, 31, 57, .96), rgba(7, 20, 37, .98));
-            font-size: 1.25rem;
-            font-weight: 900;
+            font-size: 1.06rem;
+            font-weight: 760;
             line-height: 1;
         }
         .mlab-active-title {
             color: #f8fbff;
-            font-size: 1.85rem;
-            font-weight: 950;
-            letter-spacing: -.045em;
-            line-height: 1.02;
+            font-size: 1.62rem;
+            font-weight: 780;
+            letter-spacing: -.025em;
+            line-height: 1.08;
         }
         .mlab-active-subtitle {
             color: #dbe7f5;
-            font-size: .9rem;
-            margin-top: .34rem;
+            font-size: .86rem;
+            font-weight: 430;
+            margin-top: .24rem;
             line-height: 1.35;
         }
         .mlab-active-loaded {
-            color: #b9c8da;
-            font-size: .78rem;
-            font-weight: 720;
+            color: #c7d3e1;
+            font-size: .74rem;
+            font-weight: 600;
             white-space: nowrap;
-            padding-top: .2rem;
+            padding-top: .18rem;
         }
         .mlab-control-label {
             color: #dbeafe;
-            font-size: .82rem;
-            line-height: 2.25rem;
-            font-weight: 820;
+            font-size: .8rem;
+            line-height: 2.1rem;
+            font-weight: 640;
             white-space: nowrap;
         }
         .mlab-control-gear {
@@ -168,12 +179,24 @@ def _render_workspace_controls(active: str, rows: list[dict[str, Any]]) -> str:
             justify-content: center;
             width: 2.05rem;
             height: 2.05rem;
-            margin-top: .08rem;
+            margin-top: 0;
             border-radius: 8px;
             color: #b9d8ff;
             border: 1px solid rgba(61, 84, 112, .9);
             background: rgba(9, 27, 49, .94);
-            font-size: .98rem;
+            font-size: .9rem;
+            font-weight: 650;
+        }
+        div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+            min-height: 2.05rem !important;
+            border-radius: 8px !important;
+            background: rgba(7, 18, 33, .96) !important;
+            border-color: rgba(61, 84, 112, .92) !important;
+        }
+        div[data-testid="stSelectbox"] div[data-baseweb="select"] span,
+        div[data-testid="stSelectbox"] div[data-baseweb="select"] div {
+            font-size: .8rem !important;
+            font-weight: 560 !important;
         }
         div[data-testid="stRadio"] > label {
             display: none !important;
@@ -182,8 +205,8 @@ def _render_workspace_controls(active: str, rows: list[dict[str, Any]]) -> str:
             display: flex !important;
             flex-direction: row !important;
             align-items: center !important;
-            gap: 2.0rem !important;
-            min-height: 2.35rem !important;
+            gap: 1.82rem !important;
+            min-height: 2.1rem !important;
             margin: 0 !important;
             padding: 0 !important;
             border-bottom: 1px solid rgba(43,60,82,.82) !important;
@@ -191,7 +214,7 @@ def _render_workspace_controls(active: str, rows: list[dict[str, Any]]) -> str:
             scrollbar-width: none !important;
         }
         div[data-testid="stRadio"] div[role="radiogroup"] label {
-            min-height: 2.35rem !important;
+            min-height: 2.1rem !important;
             padding: 0 !important;
             margin: 0 !important;
             border-bottom: 2px solid transparent !important;
@@ -200,16 +223,24 @@ def _render_workspace_controls(active: str, rows: list[dict[str, Any]]) -> str:
         }
         div[data-testid="stRadio"] div[role="radiogroup"] label p {
             color: #b8c7da !important;
-            font-size: .86rem !important;
-            font-weight: 760 !important;
+            font-size: .8rem !important;
+            font-weight: 560 !important;
+            letter-spacing: -.005em !important;
             line-height: 1 !important;
-            padding: .72rem 0 .75rem !important;
+            padding: .64rem 0 .7rem !important;
         }
         div[data-testid="stRadio"] div[role="radiogroup"] label:hover p {
             color: #f8fbff !important;
         }
         div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-child {
             display: none !important;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] div[role="radio"][aria-checked="true"] {
+            border-bottom: 2px solid #2f9bff !important;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] div[role="radio"][aria-checked="true"] p {
+            color: #5fb7ff !important;
+            font-weight: 650 !important;
         }
         @media (max-width: 900px) {
             .mlab-active-header {
@@ -220,7 +251,7 @@ def _render_workspace_controls(active: str, rows: list[dict[str, Any]]) -> str:
                 padding-top: 0;
             }
             div[data-testid="stRadio"] div[role="radiogroup"] {
-                gap: 1.25rem !important;
+                gap: 1.1rem !important;
             }
         }
         </style>
@@ -228,9 +259,9 @@ def _render_workspace_controls(active: str, rows: list[dict[str, Any]]) -> str:
         unsafe_allow_html=True,
     )
 
-    selector_col, nav_col = st.columns([1.5, 5.0], gap="large")
+    selector_col, nav_col = st.columns([1.42, 5.35], gap="large")
     with selector_col:
-        label_col, select_col, gear_col = st.columns([0.26, 1.0, 0.16], gap="small")
+        label_col, select_col, gear_col = st.columns([0.23, 1.0, 0.17], gap="small")
         with label_col:
             st.markdown('<div class="mlab-control-label">Model</div>', unsafe_allow_html=True)
         with select_col:
@@ -245,6 +276,7 @@ def _render_workspace_controls(active: str, rows: list[dict[str, Any]]) -> str:
             horizontal=True,
             label_visibility="collapsed",
             key="mlab_workspace_text_tabs",
+            format_func=lambda workspace: f"{WORKSPACE_ICONS.get(workspace, '')}  {workspace}".strip(),
         )
     if selected != active:
         st.session_state["mlab_active_workspace"] = selected
