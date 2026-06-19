@@ -123,7 +123,7 @@ def render_page() -> None:
         _clear_form_widget_state_if_context_changed(context)
         _render_context_banner(context)
 
-        row1_col1, row1_col2, row1_col3, row1_col4 = st.columns([1.25, 0.92, 1.05, 1.25], gap="medium")
+        row1_col1, row1_col2, row1_col3, row1_col4 = st.columns([1.12, 0.95, 1.22, 1.1], gap="medium")
         with row1_col1:
             with st.container(border=True):
                 identity_payload = render_identity_section(context)
