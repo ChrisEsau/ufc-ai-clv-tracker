@@ -31,14 +31,7 @@ def _safe_widget_key(value: Any) -> str:
 
 
 def _identity_key(context: dict[str, Any], suffix: str) -> str:
-    """Return a model-scoped key for identity widgets.
-
-    Model Identity contains the highest-visibility fields in Model Setup. Using
-    stable keys across model changes lets Streamlit preserve the previous
-    model's values. Scoping these keys by model_id forces the identity card to
-    hydrate from the newly selected model context while still preserving edits
-    during reruns for the same model.
-    """
+    """Return a model-scoped key for identity widgets."""
 
     model_key = _safe_widget_key(context.get("model_id") or context.get("config_path") or "model")
     return f"model_setup_identity_{suffix}_{model_key}"
@@ -100,19 +93,7 @@ def render_identity_section(context: dict[str, Any]) -> dict[str, Any]:
             disabled=not editable,
             key=_identity_key(context, "market"),
         )
-        dashboard_selectable = st.toggle(
-            "Dashboard Selectable",
-            value=bool(context.get("dashboard_selectable", False)),
-            disabled=not editable,
-            key=_identity_key(context, "dashboard_selectable"),
-        )
 
-    display_name = st.text_input(
-        "Display Name",
-        value=str(context.get("display_name") or context.get("model_id") or ""),
-        disabled=not editable,
-        key=_identity_key(context, "display_name"),
-    )
     description = st.text_area(
         "Description",
         value=str(context.get("description") or ""),
@@ -120,6 +101,9 @@ def render_identity_section(context: dict[str, Any]) -> dict[str, Any]:
         height=86,
         key=_identity_key(context, "description"),
     )
+
+    display_name = str(context.get("display_name") or context.get("model_id") or "")
+    dashboard_selectable = bool(context.get("dashboard_selectable", False))
 
     return {
         "model_id": model_id,
