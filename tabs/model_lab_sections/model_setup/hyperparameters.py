@@ -26,72 +26,21 @@ def render_hyperparameters_section(context: dict[str, Any]) -> dict[str, Any]:
 
     c1, c2, c3 = st.columns(3)
     with c1:
-        n_estimators = st.number_input(
-            "N Estimators",
-            value=int(params.get("n_estimators", 500)),
-            step=50,
-            min_value=50,
-            disabled=not editable,
-            key=_hyperparameter_key(context, "n_estimators"),
-        )
+        n_estimators = st.number_input("N Estimators", value=int(params.get("n_estimators", 500)), step=50, min_value=50, disabled=not editable, key=_hyperparameter_key(context, "n_estimators"))
     with c2:
-        max_depth = st.number_input(
-            "Max Depth",
-            value=int(params.get("max_depth", 4)),
-            step=1,
-            min_value=1,
-            max_value=20,
-            disabled=not editable,
-            key=_hyperparameter_key(context, "max_depth"),
-        )
+        max_depth = st.number_input("Max Depth", value=int(params.get("max_depth", 4)), step=1, min_value=1, max_value=20, disabled=not editable, key=_hyperparameter_key(context, "max_depth"))
     with c3:
-        learning_rate = st.number_input(
-            "Learning Rate",
-            value=float(params.get("learning_rate", 0.03)),
-            step=0.01,
-            min_value=0.001,
-            max_value=1.0,
-            disabled=not editable,
-            key=_hyperparameter_key(context, "learning_rate"),
-        )
+        learning_rate = st.number_input("Learning Rate", value=float(params.get("learning_rate", 0.03)), step=0.01, min_value=0.001, max_value=1.0, disabled=not editable, key=_hyperparameter_key(context, "learning_rate"))
 
     c4, c5, c6 = st.columns(3)
     with c4:
-        subsample = st.number_input(
-            "Subsample",
-            value=float(params.get("subsample", 0.8)),
-            step=0.05,
-            min_value=0.1,
-            max_value=1.0,
-            disabled=not editable,
-            key=_hyperparameter_key(context, "subsample"),
-        )
+        subsample = st.number_input("Subsample", value=float(params.get("subsample", 0.8)), step=0.05, min_value=0.1, max_value=1.0, disabled=not editable, key=_hyperparameter_key(context, "subsample"))
     with c5:
-        colsample_bytree = st.number_input(
-            "Colsample Bytree",
-            value=float(params.get("colsample_bytree", 0.8)),
-            step=0.05,
-            min_value=0.1,
-            max_value=1.0,
-            disabled=not editable,
-            key=_hyperparameter_key(context, "colsample_bytree"),
-        )
+        colsample_bytree = st.number_input("Colsample Bytree", value=float(params.get("colsample_bytree", 0.8)), step=0.05, min_value=0.1, max_value=1.0, disabled=not editable, key=_hyperparameter_key(context, "colsample_bytree"), label_visibility="visible")
     with c6:
-        random_state = st.number_input(
-            "Random State",
-            value=int(params.get("random_state", 42)),
-            step=1,
-            min_value=0,
-            disabled=not editable,
-            key=_hyperparameter_key(context, "random_state"),
-        )
+        random_state = st.number_input("Random State", value=int(params.get("random_state", 42)), step=1, min_value=0, disabled=not editable, key=_hyperparameter_key(context, "random_state"))
 
-    eval_metric = st.text_input(
-        "Eval Metric",
-        value=str(params.get("eval_metric", "logloss")),
-        disabled=not editable,
-        key=_hyperparameter_key(context, "eval_metric"),
-    )
+    eval_metric = st.text_input("Eval Metric", value=str(params.get("eval_metric", "logloss")), disabled=not editable, key=_hyperparameter_key(context, "eval_metric"))
 
     return {
         "params": {
