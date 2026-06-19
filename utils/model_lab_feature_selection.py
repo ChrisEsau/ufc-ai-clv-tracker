@@ -26,6 +26,7 @@ UNSAFE_FEATURE_NAMES = {
     "result",
     "fight_result",
 }
+FEATURE_PANEL_HEIGHT = 520
 
 
 def _safe_key(value) -> str:
@@ -155,9 +156,10 @@ def _inject_feature_selector_css() -> None:
             font-weight: 800;
             margin-bottom: .55rem;
         }
-        .feature-pane-divider {
-            border-left: 1px solid rgba(43,60,82,.95);
-            padding-left: 1rem;
+        .feature-selection-scroll-note {
+            color: #8fa4bd;
+            font-size: .72rem;
+            margin-bottom: .55rem;
         }
         [data-testid="stCheckbox"] label p {
             font-size: .82rem !important;
@@ -167,6 +169,22 @@ def _inject_feature_selector_css() -> None:
         [data-testid="stCheckbox"] {
             min-height: 1.28rem !important;
             margin-bottom: .08rem !important;
+        }
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.feature-pane-title) {
+            border-color: rgba(43,60,82,.95) !important;
+            border-radius: 12px !important;
+            background: linear-gradient(180deg, rgba(9, 22, 40, .96), rgba(5, 15, 28, .98)) !important;
+        }
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.feature-pane-title) ::-webkit-scrollbar {
+            width: 9px;
+        }
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.feature-pane-title) ::-webkit-scrollbar-track {
+            background: rgba(5, 15, 28, .75);
+            border-radius: 999px;
+        }
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.feature-pane-title) ::-webkit-scrollbar-thumb {
+            background: rgba(76, 112, 154, .85);
+            border-radius: 999px;
         }
         </style>
         """,
@@ -216,6 +234,7 @@ def _render_bundle_selector(state: dict[str, Any]) -> list[str]:
 
     st.markdown('<div class="feature-pane-title">Bundles</div>', unsafe_allow_html=True)
     st.markdown('<div class="feature-two-pane-caption">Select bundles to include in this model.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="feature-selection-scroll-note">Scroll inside this panel for more bundles.</div>', unsafe_allow_html=True)
     for bundle_id, features in bundle_map.items():
         label = f"{bundle_labels.get(bundle_id, bundle_id)} ({len(features)} features)"
         value = st.checkbox(
@@ -239,15 +258,14 @@ def _render_feature_selector(state: dict[str, Any], selected: list[str]) -> tupl
     available_set = state["available_set"]
     saved_set = state["saved_set"]
 
-    st.markdown('<div class="feature-pane-divider">', unsafe_allow_html=True)
     st.markdown('<div class="feature-pane-title">Features in Selected Bundles</div>', unsafe_allow_html=True)
     if selected:
         bundle_names = ", ".join(bundle_labels.get(bundle, bundle) for bundle in selected[:3])
         suffix = "..." if len(selected) > 3 else ""
         st.markdown(f'<div class="feature-pane-subtitle">{bundle_names}{suffix}</div>', unsafe_allow_html=True)
+        st.markdown('<div class="feature-selection-scroll-note">Scroll inside this panel for more selected features.</div>', unsafe_allow_html=True)
     else:
         st.info("Select at least one bundle.")
-        st.markdown('</div>', unsafe_allow_html=True)
         return [], [], [], []
 
     included: list[str] = []
@@ -276,7 +294,6 @@ def _render_feature_selector(state: dict[str, Any], selected: list[str]) -> tupl
             else:
                 removed.append(feature)
 
-    st.markdown('</div>', unsafe_allow_html=True)
     return (
         list(dict.fromkeys(included)),
         list(dict.fromkeys(removed)),
@@ -293,9 +310,11 @@ def render_feature_checklist(context):
 
     bundle_col, feature_col = st.columns([0.56, 1.0], gap="large")
     with bundle_col:
-        selected = _render_bundle_selector(state)
+        with st.container(border=True, height=FEATURE_PANEL_HEIGHT):
+            selected = _render_bundle_selector(state)
     with feature_col:
-        resolved, removed, universe, registry_only = _render_feature_selector(state, selected)
+        with st.container(border=True, height=FEATURE_PANEL_HEIGHT):
+            resolved, removed, universe, registry_only = _render_feature_selector(state, selected)
 
     if registry_only:
         st.warning(
