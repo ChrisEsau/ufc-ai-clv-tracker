@@ -18,6 +18,7 @@ def render_behavior_section(context: dict[str, Any]) -> dict[str, Any]:
     prediction = config.get("prediction") or {}
     probability = prediction.get("probability") or {}
     threshold = prediction.get("threshold") or {}
+    symmetry = config.get("symmetry") or {}
 
     st.markdown("#### 3. Model Behavior")
 
@@ -77,6 +78,26 @@ def render_behavior_section(context: dict[str, Any]) -> dict[str, Any]:
         key="model_setup_behavior_threshold_value",
     )
 
+    st.divider()
+    symmetry_enabled = st.toggle(
+        "Symmetry Enabled",
+        value=bool(symmetry.get("enabled", False)),
+        disabled=not editable,
+        key="model_setup_behavior_symmetry_enabled",
+    )
+    symmetry_options = ["flip_all", "none"]
+    current_symmetry_mode = str(symmetry.get("mode") or "none")
+    if current_symmetry_mode not in symmetry_options:
+        symmetry_options.append(current_symmetry_mode)
+    symmetry_mode = st.selectbox(
+        "Symmetry Mode",
+        symmetry_options,
+        index=_option_index(symmetry_options, current_symmetry_mode),
+        disabled=not editable,
+        key="model_setup_behavior_symmetry_mode",
+        help="Controls red/blue mirrored training augmentation.",
+    )
+
     return {
         "calibration_enabled": calibration_enabled,
         "calibration_method": calibration_method,
@@ -84,4 +105,6 @@ def render_behavior_section(context: dict[str, Any]) -> dict[str, Any]:
         "clip_high": clip_high,
         "threshold_source": threshold_source,
         "threshold_value": threshold_value,
+        "symmetry_enabled": symmetry_enabled,
+        "symmetry_mode": symmetry_mode,
     }
