@@ -33,81 +33,34 @@ def render_behavior_section(context: dict[str, Any]) -> dict[str, Any]:
 
     st.markdown("#### 3. Model Behavior")
 
-    calibration_enabled = st.toggle(
-        "Calibration Enabled",
-        value=bool(calibration.get("enabled", True)),
-        disabled=not editable,
-        key=_behavior_key(context, "calibration_enabled"),
-    )
+    calibration_enabled = st.toggle("Calibration Enabled", value=bool(calibration.get("enabled", True)), disabled=not editable, key=_behavior_key(context, "calibration_enabled"))
 
     calibration_options = ["isotonic", "sigmoid", "none"]
-    calibration_method = st.selectbox(
-        "Calibration Method",
-        calibration_options,
-        index=_option_index(calibration_options, str(calibration.get("method") or "isotonic")),
-        disabled=not editable,
-        key=_behavior_key(context, "calibration_method"),
-    )
+    calibration_method = st.selectbox("Calibration Method", calibration_options, index=_option_index(calibration_options, str(calibration.get("method") or "isotonic")), disabled=not editable, key=_behavior_key(context, "calibration_method"))
 
     c1, c2 = st.columns(2)
     with c1:
-        clip_low = st.number_input(
-            "Probability Clip Low",
-            value=float(probability.get("clip_low", 0.02)),
-            step=0.01,
-            min_value=0.0,
-            max_value=0.49,
-            disabled=not editable,
-            key=_behavior_key(context, "clip_low"),
-        )
+        clip_low = st.number_input("Probability Clip Low", value=float(probability.get("clip_low", 0.02)), step=0.01, min_value=0.0, max_value=0.49, disabled=not editable, key=_behavior_key(context, "clip_low"))
     with c2:
-        clip_high = st.number_input(
-            "Probability Clip High",
-            value=float(probability.get("clip_high", 0.98)),
-            step=0.01,
-            min_value=0.51,
-            max_value=1.0,
-            disabled=not editable,
-            key=_behavior_key(context, "clip_high"),
-        )
+        clip_high = st.number_input("Probability Clip High", value=float(probability.get("clip_high", 0.98)), step=0.01, min_value=0.51, max_value=1.0, disabled=not editable, key=_behavior_key(context, "clip_high"))
 
     threshold_options = ["fixed", "best_sweep", "model_card"]
-    threshold_source = st.selectbox(
-        "Threshold Source",
-        threshold_options,
-        index=_option_index(threshold_options, str(threshold.get("source") or "fixed")),
-        disabled=not editable,
-        key=_behavior_key(context, "threshold_source"),
-    )
-    threshold_value = st.number_input(
-        "Threshold Value",
-        value=float(threshold.get("value", 0.5)),
-        step=0.01,
-        min_value=0.0,
-        max_value=1.0,
-        disabled=not editable,
-        key=_behavior_key(context, "threshold_value"),
-    )
+    t1, t2 = st.columns(2)
+    with t1:
+        threshold_source = st.selectbox("Threshold Source", threshold_options, index=_option_index(threshold_options, str(threshold.get("source") or "fixed")), disabled=not editable, key=_behavior_key(context, "threshold_source"))
+    with t2:
+        threshold_value = st.number_input("Threshold Value", value=float(threshold.get("value", 0.5)), step=0.01, min_value=0.0, max_value=1.0, disabled=not editable, key=_behavior_key(context, "threshold_value"))
 
-    st.divider()
-    symmetry_enabled = st.toggle(
-        "Symmetry Enabled",
-        value=bool(symmetry.get("enabled", False)),
-        disabled=not editable,
-        key=_behavior_key(context, "symmetry_enabled"),
-    )
     symmetry_options = ["flip_all", "none"]
     current_symmetry_mode = str(symmetry.get("mode") or "none")
     if current_symmetry_mode not in symmetry_options:
         symmetry_options.append(current_symmetry_mode)
-    symmetry_mode = st.selectbox(
-        "Symmetry Mode",
-        symmetry_options,
-        index=_option_index(symmetry_options, current_symmetry_mode),
-        disabled=not editable,
-        key=_behavior_key(context, "symmetry_mode"),
-        help="Controls red/blue mirrored training augmentation.",
-    )
+
+    s1, s2 = st.columns([0.9, 1.1])
+    with s1:
+        symmetry_enabled = st.toggle("Symmetry Enabled", value=bool(symmetry.get("enabled", False)), disabled=not editable, key=_behavior_key(context, "symmetry_enabled"))
+    with s2:
+        symmetry_mode = st.selectbox("Symmetry Mode", symmetry_options, index=_option_index(symmetry_options, current_symmetry_mode), disabled=not editable, key=_behavior_key(context, "symmetry_mode"), help="Controls red/blue mirrored training augmentation.")
 
     return {
         "calibration_enabled": calibration_enabled,
