@@ -138,103 +138,35 @@ def _inject_feature_selector_css() -> None:
     st.markdown(
         """
         <style>
-        [data-testid="stMultiSelect"] [data-baseweb="tag"] {
-            background: linear-gradient(180deg, #2563eb, #1d4ed8) !important;
-            background-color: #2563eb !important;
-            border: 1px solid #60a5fa !important;
-            color: #ffffff !important;
-            box-shadow: 0 0 0 1px rgba(59,130,246,.22) inset !important;
-        }
-        [data-testid="stMultiSelect"] [data-baseweb="tag"] * {
-            color: #ffffff !important;
-            fill: #ffffff !important;
-            opacity: 1 !important;
-        }
-        [data-testid="stMultiSelect"] input,
-        [data-testid="stMultiSelect"] [data-baseweb="input"],
-        [data-testid="stMultiSelect"] [data-baseweb="input"] > div {
-            background: transparent !important;
-            background-color: transparent !important;
-            box-shadow: none !important;
-        }
-        [data-baseweb="popover"],
-        [data-baseweb="popover"] > div,
-        [data-baseweb="popover"] [data-baseweb="menu"],
-        [data-baseweb="popover"] [role="listbox"] {
-            background: rgba(7,16,28,.98) !important;
-            background-color: rgba(7,16,28,.98) !important;
-            color: #ffffff !important;
-        }
-        [data-baseweb="popover"] [role="option"],
-        [data-baseweb="popover"] [role="option"] *,
-        [data-baseweb="popover"] li,
-        [data-baseweb="popover"] li * {
-            color: #ffffff !important;
-            background-color: rgba(7,16,28,.98) !important;
-            opacity: 1 !important;
-        }
-        details[data-testid="stExpander"] summary,
-        details[data-testid="stExpander"] summary * {
-            color: #f8fafc !important;
-            opacity: 1 !important;
-        }
-        details[data-testid="stExpander"] {
-            background: linear-gradient(180deg, rgba(9,19,32,.95), rgba(7,16,28,.98)) !important;
-            border: 1px solid rgba(51,75,108,.95) !important;
-            border-radius: 10px !important;
-        }
-        .feature-summary-row {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) auto auto;
-            gap: .65rem;
-            align-items: center;
-            padding: .5rem .65rem;
-            margin-bottom: .35rem;
-            border: 1px solid rgba(43,60,82,.95);
-            border-radius: 9px;
-            background: rgba(7,17,31,.66);
-        }
-        .feature-summary-name {
-            color: #f8fbff;
-            font-weight: 760;
-            font-size: .84rem;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .feature-summary-count {
+        .feature-two-pane-caption {
             color: #9fb0c4;
-            font-size: .76rem;
-            white-space: nowrap;
+            font-size: .78rem;
+            margin: -.15rem 0 .5rem 0;
         }
-        .feature-summary-pill {
-            color: #6ee7b7;
-            border: 1px solid rgba(110,231,183,.35);
-            background: rgba(6,78,59,.22);
-            padding: .1rem .45rem;
-            border-radius: 999px;
-            font-size: .72rem;
-            font-weight: 800;
-            white-space: nowrap;
-        }
-        .feature-editor-shell {
-            border: 1px solid rgba(59,130,246,.35);
-            border-radius: 12px;
-            padding: .9rem;
-            margin-top: .75rem;
-            background: linear-gradient(180deg, rgba(10,31,55,.84), rgba(5,15,28,.92));
-            box-shadow: 0 18px 40px rgba(0,0,0,.28);
-        }
-        .feature-editor-title {
+        .feature-pane-title {
             color: #f8fbff;
-            font-size: 1rem;
+            font-size: .95rem;
             font-weight: 900;
             margin-bottom: .15rem;
         }
-        .feature-editor-caption {
-            color: #9fb0c4;
-            font-size: .78rem;
-            margin-bottom: .7rem;
+        .feature-pane-subtitle {
+            color: #38bdf8;
+            font-size: .86rem;
+            font-weight: 800;
+            margin-bottom: .55rem;
+        }
+        .feature-pane-divider {
+            border-left: 1px solid rgba(43,60,82,.95);
+            padding-left: 1rem;
+        }
+        [data-testid="stCheckbox"] label p {
+            font-size: .82rem !important;
+            color: #f8fbff !important;
+            font-weight: 650 !important;
+        }
+        [data-testid="stCheckbox"] {
+            min-height: 1.28rem !important;
+            margin-bottom: .08rem !important;
         }
         </style>
         """,
@@ -269,76 +201,35 @@ def _selection_state(context: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _default_selected_bundles(state: dict[str, Any], selected_key: str) -> list[str]:
+def _default_selected_bundles(state: dict[str, Any]) -> list[str]:
     bundle_map = state["bundle_map"]
-    session_value = st.session_state.get(selected_key)
-    if isinstance(session_value, list):
-        return [bundle for bundle in session_value if bundle in bundle_map]
     return [bundle for bundle in state["saved"] if bundle in bundle_map]
 
 
-def _resolve_features_without_editor(state: dict[str, Any], selected: list[str]) -> tuple[list[str], list[str], list[str], list[str]]:
-    bundle_map = state["bundle_map"]
-    current = state["current"]
-    saved_set = state["saved_set"]
-    available_set = state["available_set"]
-
-    included: list[str] = []
-    removed: list[str] = []
-    universe: list[str] = []
-    registry_only: list[str] = []
-    for bundle in selected:
-        features = list(bundle_map.get(bundle, []))
-        universe.extend(features)
-        for feature in features:
-            default = feature in current if bundle in saved_set else True
-            if default:
-                included.append(feature)
-                if feature not in available_set:
-                    registry_only.append(feature)
-            else:
-                removed.append(feature)
-    return (
-        list(dict.fromkeys(included)),
-        list(dict.fromkeys(removed)),
-        list(dict.fromkeys(universe)),
-        list(dict.fromkeys(registry_only)),
-    )
-
-
-def _render_feature_summary(state: dict[str, Any], selected: list[str], resolved: list[str], removed: list[str], universe: list[str]) -> None:
+def _render_bundle_selector(state: dict[str, Any]) -> list[str]:
+    editable = state["editable"]
+    model_key = state["model_key"]
     bundle_map = state["bundle_map"]
     bundle_labels = state["bundle_labels"]
-    availability = state["availability"]
+    default_selected = set(_default_selected_bundles(state))
+    selected: list[str] = []
 
-    if not selected:
-        st.info("No feature bundles selected.")
-        return
-
-    for bundle in selected:
-        features = bundle_map.get(bundle, [])
-        available_count = len(availability.get(bundle, set()))
-        included_count = len([feature for feature in features if feature in set(resolved)])
-        label = bundle_labels.get(bundle, bundle)
-        st.markdown(
-            f"""
-            <div class="feature-summary-row">
-                <div class="feature-summary-name">{label}</div>
-                <div class="feature-summary-count">{available_count}/{len(features)} available</div>
-                <div class="feature-summary-pill">{included_count} included</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
+    st.markdown('<div class="feature-pane-title">Bundles</div>', unsafe_allow_html=True)
+    st.markdown('<div class="feature-two-pane-caption">Select bundles to include in this model.</div>', unsafe_allow_html=True)
+    for bundle_id, features in bundle_map.items():
+        label = f"{bundle_labels.get(bundle_id, bundle_id)} ({len(features)} features)"
+        value = st.checkbox(
+            label,
+            value=bundle_id in default_selected,
+            disabled=not editable,
+            key=f"mlab_bundle_{model_key}_{_safe_key(bundle_id)}",
         )
-
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Bundles", len(selected))
-    c2.metric("Available", len(list(dict.fromkeys(universe))))
-    c3.metric("Included", len(resolved))
-    c4.metric("Excluded", len(removed))
+        if value:
+            selected.append(bundle_id)
+    return selected
 
 
-def _render_feature_editor(state: dict[str, Any], selected_key: str) -> tuple[list[str], list[str], list[str], list[str]]:
+def _render_feature_selector(state: dict[str, Any], selected: list[str]) -> tuple[list[str], list[str], list[str], list[str]]:
     editable = state["editable"]
     model_key = state["model_key"]
     bundle_map = state["bundle_map"]
@@ -348,52 +239,45 @@ def _render_feature_editor(state: dict[str, Any], selected_key: str) -> tuple[li
     available_set = state["available_set"]
     saved_set = state["saved_set"]
 
-    st.markdown(
-        """
-        <div class="feature-editor-shell">
-            <div class="feature-editor-title">Manage Feature Bundles</div>
-            <div class="feature-editor-caption">Select bundles, then optionally uncheck individual features inside each bundle.</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.markdown('<div class="feature-pane-divider">', unsafe_allow_html=True)
+    st.markdown('<div class="feature-pane-title">Features in Selected Bundles</div>', unsafe_allow_html=True)
+    if selected:
+        bundle_names = ", ".join(bundle_labels.get(bundle, bundle) for bundle in selected[:3])
+        suffix = "..." if len(selected) > 3 else ""
+        st.markdown(f'<div class="feature-pane-subtitle">{bundle_names}{suffix}</div>', unsafe_allow_html=True)
+    else:
+        st.info("Select at least one bundle.")
+        st.markdown('</div>', unsafe_allow_html=True)
+        return [], [], [], []
 
-    selected = st.multiselect(
-        "Selected Bundles",
-        list(bundle_map.keys()),
-        default=_default_selected_bundles(state, selected_key),
-        format_func=lambda b: f"{bundle_labels.get(b, b)} ({len(bundle_map.get(b, []))})",
-        disabled=not editable,
-        key=selected_key,
-    )
+    included: list[str] = []
+    removed: list[str] = []
+    universe: list[str] = []
+    registry_only: list[str] = []
+    seen_features: set[str] = set()
 
-    included = []
-    removed = []
-    universe = []
-    registry_only = []
     for bundle in selected:
         features = list(bundle_map.get(bundle, []))
         available_in_bundle = availability.get(bundle, set())
-        universe.extend(features)
-        label = bundle_labels.get(bundle, bundle)
-        with st.expander(f"{label} ({len(features)} features)", expanded=False):
-            cols = st.columns(3)
-            for i, feature in enumerate(features):
-                default = feature in current if bundle in saved_set else True
-                key = f"mlab_feature_{model_key}_{_safe_key(bundle)}_{_safe_key(feature)}"
-                checkbox_label = feature if feature in available_set else f"{feature} ⚠ registry-only"
-                help_text = None if feature in available_in_bundle else "Registered feature, but not currently present in the feature view. Training may require rebuilding/updating the feature view."
-                with cols[i % 3]:
-                    value = st.checkbox(checkbox_label, value=default, disabled=not editable, key=key, help=help_text)
-                if value:
-                    included.append(feature)
-                    if feature not in available_set:
-                        registry_only.append(feature)
-                else:
-                    removed.append(feature)
+        for feature in features:
+            if feature in seen_features:
+                continue
+            seen_features.add(feature)
+            universe.append(feature)
+            default = feature in current if bundle in saved_set else True
+            key = f"mlab_feature_{model_key}_{_safe_key(feature)}"
+            checkbox_label = feature if feature in available_set else f"{feature} ⚠"
+            help_text = None if feature in available_in_bundle else "Registered feature, but not currently present in the feature view. Training may require rebuilding/updating the feature view."
+            value = st.checkbox(checkbox_label, value=default, disabled=not editable, key=key, help=help_text)
+            if value:
+                included.append(feature)
+                if feature not in available_set:
+                    registry_only.append(feature)
+            else:
+                removed.append(feature)
 
+    st.markdown('</div>', unsafe_allow_html=True)
     return (
-        selected,
         list(dict.fromkeys(included)),
         list(dict.fromkeys(removed)),
         list(dict.fromkeys(universe)),
@@ -405,33 +289,13 @@ def render_feature_checklist(context):
     _inject_feature_selector_css()
 
     state = _selection_state(context)
-    model_key = state["model_key"]
-    selected_key = f"mlab_selected_bundles_{model_key}"
-    editor_key = f"mlab_manage_bundles_open_{model_key}"
+    st.markdown("#### 5. Feature Selection")
 
-    st.markdown("#### Feature Selection")
-    top_col1, top_col2 = st.columns([1.0, 0.34])
-    with top_col1:
-        st.caption("Model-specific bundle summary. Open Manage Bundles for detailed feature editing.")
-    with top_col2:
-        if st.button("Manage Bundles", use_container_width=True, key=f"mlab_manage_bundles_button_{model_key}"):
-            st.session_state[editor_key] = not bool(st.session_state.get(editor_key, False))
-            st.rerun()
-
-    editor_open = bool(st.session_state.get(editor_key, False))
-    selected = _default_selected_bundles(state, selected_key)
-
-    if editor_open:
-        selected, resolved, removed, universe, registry_only = _render_feature_editor(state, selected_key)
-        done_col1, done_col2 = st.columns([1.0, 0.22])
-        with done_col2:
-            if st.button("Done", use_container_width=True, key=f"mlab_manage_bundles_done_{model_key}"):
-                st.session_state[editor_key] = False
-                st.rerun()
-    else:
-        resolved, removed, universe, registry_only = _resolve_features_without_editor(state, selected)
-
-    _render_feature_summary(state, selected, resolved, removed, universe)
+    bundle_col, feature_col = st.columns([0.56, 1.0], gap="large")
+    with bundle_col:
+        selected = _render_bundle_selector(state)
+    with feature_col:
+        resolved, removed, universe, registry_only = _render_feature_selector(state, selected)
 
     if registry_only:
         st.warning(
