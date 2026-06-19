@@ -141,6 +141,9 @@ def main() -> None:
     print("TRAINING SUMMARY")
     print("=" * 80)
     print(f"Output dir        : {output_dir}")
+    print(f"Train start date  : {getattr(split, 'train_start_date', None) or 'all'}")
+    print(f"Train end date    : {getattr(split, 'train_end_date', '')}")
+    print(f"Calibration end   : {getattr(split, 'calibration_end_date', 'n/a')}")
     print(f"Train rows        : {len(split.y_train)}")
     print(f"Calibration rows  : {getattr(split, 'y_calibration', pd.Series(dtype=int)).shape[0]}")
     print(f"Test rows         : {len(split.y_test)}")
@@ -241,6 +244,13 @@ def maybe_apply_symmetry(
     raise ValueError(f"Unsupported symmetry mode: {mode}")
 
 
+def _optional_config_string(value: Any) -> str | None:
+    """Return a stripped string value, treating blank config fields as None."""
+
+    normalized = str(value or "").strip()
+    return normalized or None
+
+
 def build_split(
     df: pd.DataFrame,
     feature_columns: list[str],
@@ -250,11 +260,13 @@ def build_split(
     split_config = config.get("split", {})
     data_config = config.get("data", {})
     mode = str(split_config.get("mode", "train_calibration_test")).strip().lower()
+    train_start_date = _optional_config_string(split_config.get("train_start_date"))
 
     if mode == "train_calibration_test":
         return build_temporal_train_calibration_test_split(
             df=df,
             feature_columns=feature_columns,
+            train_start_date=train_start_date,
             train_end_date=split_config["train_end_date"],
             calibration_end_date=split_config["calibration_end_date"],
             target_col=data_config.get("target_column", "target"),
@@ -265,6 +277,7 @@ def build_split(
         return build_temporal_train_test_split(
             df=df,
             feature_columns=feature_columns,
+            train_start_date=train_start_date,
             train_end_date=split_config["train_end_date"],
             target_col=data_config.get("target_column", "target"),
             date_col=data_config.get("date_column", "date"),
@@ -335,6 +348,9 @@ def save_artifacts(
             "final_metrics": evaluation.metrics,
             "best_threshold": evaluation.best_threshold,
             "trained_at_utc": datetime.now(timezone.utc).isoformat(),
+            "train_start_date": getattr(split, "train_start_date", None),
+            "train_end_date": getattr(split, "train_end_date", None),
+            "calibration_end_date": getattr(split, "calibration_end_date", None),
         }
         (output_dir / "metrics.json").write_text(
             json.dumps(metrics_payload, indent=2),
@@ -385,6 +401,7 @@ def build_model_card(
         "data": config.get("data", {}),
         "split": {
             "mode": config.get("split", {}).get("mode"),
+            "train_start_date": getattr(split, "train_start_date", None),
             "train_end_date": getattr(split, "train_end_date", None),
             "calibration_end_date": getattr(split, "calibration_end_date", None),
             "train_rows": int(len(split.y_train)),
