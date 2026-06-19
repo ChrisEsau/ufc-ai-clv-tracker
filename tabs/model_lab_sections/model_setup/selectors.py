@@ -57,7 +57,12 @@ def _model_label(row: dict[str, Any]) -> str:
     return f"{model_id}  ·  {status}  ·  {market}"
 
 
-def render_model_selector(rows: list[dict[str, Any]]) -> str | None:
+def render_model_selector(
+    rows: list[dict[str, Any]],
+    *,
+    label: str = "Model",
+    label_visibility: str = "visible",
+) -> str | None:
     """Render the existing-model selector.
 
     The selector only loads existing models. New model creation is prepared by
@@ -75,12 +80,13 @@ def render_model_selector(rows: list[dict[str, Any]]) -> str | None:
     index = model_ids.index(current) if current in model_ids else 0
 
     selected = st.selectbox(
-        "Model",
+        label,
         model_ids,
         index=index,
         format_func=lambda model_id: _model_label(row_by_id[model_id]),
         key="model_setup_selected_model_id",
         on_change=_clear_model_setup_form_state,
         help="Select an existing model to view/edit or use as the template for New.",
+        label_visibility=label_visibility,
     )
     return str(selected)
