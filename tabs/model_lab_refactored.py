@@ -117,8 +117,8 @@ def _render_workspace_controls(active: str, rows: list[dict[str, Any]]) -> str:
             grid-template-columns: 2.35rem minmax(0, 1fr) auto;
             align-items: start;
             gap: .9rem;
-            margin: .05rem 0 .9rem;
-            padding: .15rem 0 1rem;
+            margin: .05rem 0 .8rem;
+            padding: .15rem 0 .9rem;
             border-bottom: 1px solid rgba(43,60,82,.92);
         }
         .mlab-active-header-icon {
@@ -155,13 +155,25 @@ def _render_workspace_controls(active: str, rows: list[dict[str, Any]]) -> str:
             white-space: nowrap;
             padding-top: .2rem;
         }
-        .mlab-control-caption {
-            color: #8fb3db;
-            font-size: .68rem;
-            margin: 0 0 .35rem;
-            text-transform: uppercase;
-            letter-spacing: .06em;
-            font-weight: 900;
+        .mlab-control-label {
+            color: #dbeafe;
+            font-size: .82rem;
+            line-height: 2.25rem;
+            font-weight: 820;
+            white-space: nowrap;
+        }
+        .mlab-control-gear {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.05rem;
+            height: 2.05rem;
+            margin-top: .08rem;
+            border-radius: 8px;
+            color: #b9d8ff;
+            border: 1px solid rgba(61, 84, 112, .9);
+            background: rgba(9, 27, 49, .94);
+            font-size: .98rem;
         }
         div[data-testid="stRadio"] > label {
             display: none !important;
@@ -170,15 +182,16 @@ def _render_workspace_controls(active: str, rows: list[dict[str, Any]]) -> str:
             display: flex !important;
             flex-direction: row !important;
             align-items: center !important;
-            gap: 2.05rem !important;
-            margin: .1rem 0 .95rem !important;
-            padding: .15rem 0 0 !important;
+            gap: 2.0rem !important;
+            min-height: 2.35rem !important;
+            margin: 0 !important;
+            padding: 0 !important;
             border-bottom: 1px solid rgba(43,60,82,.82) !important;
             overflow-x: auto !important;
             scrollbar-width: none !important;
         }
         div[data-testid="stRadio"] div[role="radiogroup"] label {
-            min-height: 2.95rem !important;
+            min-height: 2.35rem !important;
             padding: 0 !important;
             margin: 0 !important;
             border-bottom: 2px solid transparent !important;
@@ -190,7 +203,7 @@ def _render_workspace_controls(active: str, rows: list[dict[str, Any]]) -> str:
             font-size: .86rem !important;
             font-weight: 760 !important;
             line-height: 1 !important;
-            padding: .95rem 0 1rem !important;
+            padding: .72rem 0 .75rem !important;
         }
         div[data-testid="stRadio"] div[role="radiogroup"] label:hover p {
             color: #f8fbff !important;
@@ -215,12 +228,16 @@ def _render_workspace_controls(active: str, rows: list[dict[str, Any]]) -> str:
         unsafe_allow_html=True,
     )
 
-    selector_col, nav_col = st.columns([1.05, 4.6], gap="large")
+    selector_col, nav_col = st.columns([1.5, 5.0], gap="large")
     with selector_col:
-        st.markdown('<div class="mlab-control-caption">Model</div>', unsafe_allow_html=True)
-        render_model_selector(rows)
+        label_col, select_col, gear_col = st.columns([0.26, 1.0, 0.16], gap="small")
+        with label_col:
+            st.markdown('<div class="mlab-control-label">Model</div>', unsafe_allow_html=True)
+        with select_col:
+            render_model_selector(rows, label_visibility="collapsed")
+        with gear_col:
+            st.markdown('<div class="mlab-control-gear">⚙</div>', unsafe_allow_html=True)
     with nav_col:
-        st.markdown('<div class="mlab-control-caption">Workspace</div>', unsafe_allow_html=True)
         selected = st.radio(
             "Workspace",
             WORKSPACES,
