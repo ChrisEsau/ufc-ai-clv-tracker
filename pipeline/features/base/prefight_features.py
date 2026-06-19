@@ -13,6 +13,8 @@ from typing import Any
 
 from pipeline.features.base.elo import safe_div
 
+NO_PRIOR_STOPPAGE_DEFEAT_DAYS = 3650
+
 
 def get_prefight_features(
     fighter_state: dict[str, dict[str, Any]],
@@ -34,6 +36,18 @@ def get_prefight_features(
         days_since_last_fight = 365
     else:
         days_since_last_fight = (fight_date - s["last_fight_date"]).days
+
+    if s["last_stoppage_defeat_date"] is None:
+        days_since_last_stoppage_defeat = NO_PRIOR_STOPPAGE_DEFEAT_DAYS
+    else:
+        days_since_last_stoppage_defeat = (fight_date - s["last_stoppage_defeat_date"]).days
+
+    extra_features = {
+        "career_ko_losses": s["stoppage_defeats"],
+        "recent_ko_losses_3": sum(s["recent_stoppage_defeats"]),
+        "last_fight_ko_loss": s["last_stoppage_defeat"],
+        "days_since_last_ko_loss": days_since_last_stoppage_defeat,
+    }
 
     return {
         "elo": s["elo"],
@@ -58,6 +72,7 @@ def get_prefight_features(
         "sub_win_rate": safe_div(s["sub_wins"], s["wins"]),
         "decision_win_rate": safe_div(s["decision_wins"], s["wins"]),
         "finish_loss_rate": safe_div(s["finish_losses"], s["losses"]),
+        **extra_features,
         "decision_loss_rate": safe_div(s["decision_losses"], s["losses"]),
         "avg_opponent_elo": safe_div(s["opponent_elo_sum"], s["fights"]),
         "best_win_elo": s["best_win_elo"],
