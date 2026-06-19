@@ -75,15 +75,17 @@ def _render_context_banner(context: dict) -> None:
     st.markdown(
         f"""
         <div class="model-setup-shell">
-            <div class="model-setup-title">{summary['model_id']} <span class="model-setup-status">{status}</span></div>
-            <div class="model-setup-subtitle">
-                Family: {summary['family']} &nbsp; | &nbsp;
-                Market: {summary['market']} &nbsp; | &nbsp;
-                {summary['editable_label']}
-            </div>
-            <div class="model-setup-note">
-                Config: {summary['config_path']}<br/>
-                Artifacts: {summary['artifact_dir']}
+            <div class="model-setup-banner-left">
+                <div class="model-setup-title">{summary['model_id']} <span class="model-setup-status">{status}</span></div>
+                <div class="model-setup-subtitle">
+                    Family: {summary['family']} &nbsp; · &nbsp;
+                    Market: {summary['market']} &nbsp; · &nbsp;
+                    {summary['editable_label']}
+                </div>
+                <div class="model-setup-note">
+                    Config: {summary['config_path']}<br/>
+                    Artifacts: {summary['artifact_dir']}
+                </div>
             </div>
         </div>
         """,
@@ -95,8 +97,15 @@ def render_page() -> None:
     """Render the new clean Model Setup workspace."""
 
     inject_styles()
-    st.markdown("## Model Setup")
-    st.caption("Configure model identity, training setup, behavior, hyperparameters, and feature selection.")
+    st.markdown(
+        """
+        <div class="model-setup-page-title">Model Setup</div>
+        <div class="model-setup-page-caption">
+            Configure model identity, training setup, behavior, hyperparameters, and feature selection.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     try:
         registry = registry_io.load_model_registry()
@@ -108,7 +117,7 @@ def render_page() -> None:
         _clear_form_widget_state_if_context_changed(context)
         _render_context_banner(context)
 
-        row1_col1, row1_col2, row1_col3 = st.columns([1.05, 1.0, 1.0], gap="medium")
+        row1_col1, row1_col2, row1_col3 = st.columns([1.05, 1.0, 1.75], gap="medium")
         with row1_col1:
             with st.container(border=True):
                 identity_payload = render_identity_section(context)
@@ -119,7 +128,7 @@ def render_page() -> None:
             with st.container(border=True):
                 behavior_payload = render_behavior_section(context)
 
-        row2_col1, row2_col2 = st.columns([1.0, 1.5], gap="medium")
+        row2_col1, row2_col2 = st.columns([0.85, 1.9], gap="medium")
         with row2_col1:
             with st.container(border=True):
                 hyperparameters_payload = render_hyperparameters_section(context)
@@ -141,11 +150,12 @@ def render_page() -> None:
         st.session_state["model_setup_hyperparameters_payload"] = hyperparameters_payload
         st.session_state["model_setup_feature_payload"] = feature_payload
 
-        row3_col1, row3_col2 = st.columns([1.25, 1.0], gap="medium")
-        with row3_col1:
+        st.markdown('<div class="model-setup-footer-spacer"></div>', unsafe_allow_html=True)
+        footer_col1, footer_col2 = st.columns([1.35, 1.0], gap="medium")
+        with footer_col1:
             with st.container(border=True):
                 validation_result = render_validation_summary(context, registry, payload)
-        with row3_col2:
+        with footer_col2:
             with st.container(border=True):
                 render_action_bar(context, registry, payload, validation_result)
         st.session_state["model_setup_validation_result"] = validation_result
