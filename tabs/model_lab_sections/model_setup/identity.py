@@ -5,11 +5,43 @@ from typing import Any
 import streamlit as st
 
 
+FAMILY_OPTIONS = ["moneyline", "prop"]
+MARKET_OPTIONS = [
+    "moneyline",
+    "goes_distance",
+    "inside_distance",
+    "ko_tko",
+    "submission",
+    "decision",
+    "over_1_5",
+    "over_2_5",
+    "over_3_5",
+]
+ALGORITHM_OPTIONS = ["xgboost", "lightgbm", "random_forest", "logistic_regression"]
+
+
+def _option_index(options: list[str], current: str, default_index: int = 0) -> int:
+    return options.index(current) if current in options else default_index
+
+
 def render_identity_section(context: dict[str, Any]) -> dict[str, Any]:
     """Render the Model Identity card and return identity payload."""
 
     editable = bool(context.get("is_editable"))
     config = context.get("config") or {}
+    current_family = str(context.get("model_family") or "moneyline").strip().lower()
+    current_market = str(context.get("market_key") or "moneyline").strip().lower()
+    current_algorithm = str(context.get("algorithm") or config.get("algorithm") or "xgboost").strip().lower()
+
+    family_options = FAMILY_OPTIONS.copy()
+    if current_family and current_family not in family_options:
+        family_options.append(current_family)
+    market_options = MARKET_OPTIONS.copy()
+    if current_market and current_market not in market_options:
+        market_options.append(current_market)
+    algorithm_options = ALGORITHM_OPTIONS.copy()
+    if current_algorithm and current_algorithm not in algorithm_options:
+        algorithm_options.append(current_algorithm)
 
     st.markdown("#### 1. Model Identity")
     c1, c2 = st.columns(2)
@@ -20,16 +52,18 @@ def render_identity_section(context: dict[str, Any]) -> dict[str, Any]:
             disabled=True,
             key="model_setup_identity_model_id",
         )
-        model_family = st.text_input(
+        model_family = st.selectbox(
             "Family",
-            value=str(context.get("model_family") or ""),
-            disabled=True,
+            family_options,
+            index=_option_index(family_options, current_family),
+            disabled=not editable,
             key="model_setup_identity_family",
         )
-        algorithm = st.text_input(
+        algorithm = st.selectbox(
             "Algorithm",
-            value=str(context.get("algorithm") or config.get("algorithm") or "xgboost"),
-            disabled=True,
+            algorithm_options,
+            index=_option_index(algorithm_options, current_algorithm),
+            disabled=not editable,
             key="model_setup_identity_algorithm",
         )
     with c2:
@@ -39,10 +73,11 @@ def render_identity_section(context: dict[str, Any]) -> dict[str, Any]:
             disabled=True,
             key="model_setup_identity_status",
         )
-        market_key = st.text_input(
+        market_key = st.selectbox(
             "Market",
-            value=str(context.get("market_key") or "moneyline"),
-            disabled=True,
+            market_options,
+            index=_option_index(market_options, current_market),
+            disabled=not editable,
             key="model_setup_identity_market",
         )
         dashboard_selectable = st.toggle(
