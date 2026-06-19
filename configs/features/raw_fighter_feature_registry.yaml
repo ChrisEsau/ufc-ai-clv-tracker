@@ -119,6 +119,10 @@ feature_groups:
       - sub_win_rate
       - decision_win_rate
       - finish_loss_rate
+      - career_ko_losses
+      - recent_ko_losses_3
+      - last_fight_ko_loss
+      - days_since_last_ko_loss
       - decision_loss_rate
       - avg_fight_time
 
