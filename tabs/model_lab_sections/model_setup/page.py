@@ -7,7 +7,6 @@ from tabs.model_lab_sections.model_setup.behavior import render_behavior_section
 from tabs.model_lab_sections.model_setup.feature_selection import render_feature_selection_section
 from tabs.model_lab_sections.model_setup.hyperparameters import render_hyperparameters_section
 from tabs.model_lab_sections.model_setup.identity import render_identity_section
-from tabs.model_lab_sections.model_setup.selectors import render_model_selector
 from tabs.model_lab_sections.model_setup.styles import inject_styles
 from tabs.model_lab_sections.model_setup.training import render_training_section
 from tabs.model_lab_sections.model_setup.validation import render_validation_summary
@@ -58,6 +57,17 @@ def _clear_form_widget_state_if_context_changed(context: dict) -> None:
     st.session_state["model_setup_last_context_id"] = context_id
 
 
+def _resolve_selected_model_id(rows: list[dict]) -> str | None:
+    if not rows:
+        return None
+    model_ids = [str(row["model_id"]) for row in rows]
+    selected = str(st.session_state.get("model_setup_selected_model_id") or model_ids[0])
+    if selected not in model_ids:
+        selected = model_ids[0]
+        st.session_state["model_setup_selected_model_id"] = selected
+    return selected
+
+
 def _resolve_page_context(registry: dict, selected_model_id: str) -> dict:
     draft_context = st.session_state.get("model_setup_draft_context")
     draft_template_id = st.session_state.get("model_setup_draft_template_model_id")
@@ -106,8 +116,9 @@ def render_page() -> None:
     try:
         registry = registry_io.load_model_registry()
         rows = registry_io.get_registered_model_rows(registry)
-        selected_model_id = render_model_selector(rows)
+        selected_model_id = _resolve_selected_model_id(rows)
         if not selected_model_id:
+            st.info("No registered models found.")
             return
         context = _resolve_page_context(registry, selected_model_id)
         _clear_form_widget_state_if_context_changed(context)
