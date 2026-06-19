@@ -6,7 +6,7 @@ feature_sources:
 - moneyline_feature_view
 features:
   selection_mode: explicit
-  expected_feature_count: 124
+  expected_feature_count: 130
   allow_unsafe_features: false
   feature_columns:
   - avg_opponent_elo_diff
@@ -128,10 +128,16 @@ features:
   - aggression_index_diff
   - experience_ratio_diff
   - grappling_edge
+  - grappling_edge_x_avg_opp_elo
+  - grappling_edge_x_ewm_avg_opp_elo
   - pressure_striking_adv_diff
   - striking_edge
+  - striking_edge_x_avg_opp_elo
+  - striking_edge_x_ewm_avg_opp_elo
   - submission_mismatch_diff
+  - submission_mismatch_x_avg_opp_elo
   - wrestling_mismatch_diff
+  - wrestling_mismatch_x_avg_opp_elo
   - wrestling_pressure_vs_defense
   selected_bundles:
   - core_state
@@ -158,12 +164,6 @@ features:
   - height_mismatch_abs
   - reach_mismatch_abs
   - older_fighter_age
-  - grappling_edge_x_avg_opp_elo
-  - grappling_edge_x_ewm_avg_opp_elo
-  - striking_edge_x_avg_opp_elo
-  - striking_edge_x_ewm_avg_opp_elo
-  - submission_mismatch_x_avg_opp_elo
-  - wrestling_mismatch_x_avg_opp_elo
   resolved_features:
   - avg_opponent_elo_diff
   - best_win_elo_diff
@@ -284,10 +284,16 @@ features:
   - aggression_index_diff
   - experience_ratio_diff
   - grappling_edge
+  - grappling_edge_x_avg_opp_elo
+  - grappling_edge_x_ewm_avg_opp_elo
   - pressure_striking_adv_diff
   - striking_edge
+  - striking_edge_x_avg_opp_elo
+  - striking_edge_x_ewm_avg_opp_elo
   - submission_mismatch_diff
+  - submission_mismatch_x_avg_opp_elo
   - wrestling_mismatch_diff
+  - wrestling_mismatch_x_avg_opp_elo
   - wrestling_pressure_vs_defense
 data:
   rolling_features_path: data/features/moneyline_feature_view.parquet
