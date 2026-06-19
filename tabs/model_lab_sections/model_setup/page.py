@@ -86,21 +86,20 @@ def _render_context_banner(context: dict) -> None:
     st.markdown(
         f"""
         <div class="model-setup-shell">
-            <div class="model-setup-banner-main">
-                <div>
+            <div class="model-setup-summary-grid">
+                <div class="model-setup-summary-left">
                     <div class="model-setup-kicker">Current Model</div>
                     <div class="model-setup-title">{summary['model_id']} <span class="model-setup-status">{status}</span></div>
+                    <div class="model-setup-meta-grid">
+                        <div><span>Family</span>{summary['family']}</div>
+                        <div><span>Market</span>{summary['market']}</div>
+                        <div><span>Algorithm</span>{algorithm}</div>
+                    </div>
                 </div>
-                <div class="model-setup-banner-paths">
-                    <div><span>Config</span>{summary['config_path']}</div>
-                    <div><span>Artifacts</span>{summary['artifact_dir']}</div>
+                <div class="model-setup-summary-right">
+                    <div class="model-setup-path-item"><span>Config Path</span>{summary['config_path']}</div>
+                    <div class="model-setup-path-item"><span>Artifact Path</span>{summary['artifact_dir']}</div>
                 </div>
-            </div>
-            <div class="model-setup-meta-grid">
-                <div><span>Family</span>{summary['family']}</div>
-                <div><span>Market</span>{summary['market']}</div>
-                <div><span>Algorithm</span>{algorithm}</div>
-                <div><span>Mode</span>{summary['editable_label']}</div>
             </div>
         </div>
         """,
