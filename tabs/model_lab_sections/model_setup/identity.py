@@ -56,7 +56,7 @@ def render_identity_section(context: dict[str, Any]) -> dict[str, Any]:
     if current_algorithm and current_algorithm not in algorithm_options:
         algorithm_options.append(current_algorithm)
 
-    st.markdown("#### 1. Model Identity")
+    st.markdown('<div class="model-setup-card-heading"><span>1.</span> Model Identity</div>', unsafe_allow_html=True)
     c1, c2 = st.columns(2)
     with c1:
         model_id = st.text_input(
