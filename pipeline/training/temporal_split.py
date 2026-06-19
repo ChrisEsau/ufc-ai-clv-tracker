@@ -32,6 +32,7 @@ class TemporalSplit:
     train_end_date: str
     feature_columns: list[str]
     target_col: str
+    train_start_date: str | None = None
 
 
 @dataclass(frozen=True)
@@ -51,6 +52,14 @@ class TemporalCalibrationSplit:
     calibration_end_date: str
     feature_columns: list[str]
     target_col: str
+    train_start_date: str | None = None
+
+
+def _normalize_optional_date(value: str | None) -> str | None:
+    """Return a stripped date string or None for blank optional date inputs."""
+
+    normalized = str(value or "").strip()
+    return normalized or None
 
 
 def build_temporal_train_test_split(
@@ -59,10 +68,14 @@ def build_temporal_train_test_split(
     train_end_date: str = "2022-12-31",
     target_col: str = "target",
     date_col: str = "date",
+    train_start_date: str | None = None,
 ) -> TemporalSplit:
     """Build chronological train/test datasets using a fixed cutoff date.
 
     Rows with dates less than or equal to ``train_end_date`` become training rows.
+    If ``train_start_date`` is provided, training rows are additionally limited
+    to dates greater than or equal to that start date. Blank/None means all
+    available history up to ``train_end_date``.
     Rows after the cutoff become test rows. Feature values are coerced to numeric
     and missing values are filled with zero to mirror the existing notebook.
     """
@@ -72,10 +85,22 @@ def build_temporal_train_test_split(
         target_col=target_col,
         date_col=date_col,
     )
-    cutoff = pd.to_datetime(train_end_date)
+    start_date = _normalize_optional_date(train_start_date)
+    start_cutoff = pd.to_datetime(start_date) if start_date else None
+    end_cutoff = pd.to_datetime(train_end_date)
 
-    train_df = model_df[model_df[date_col] <= cutoff].copy()
-    test_df = model_df[model_df[date_col] > cutoff].copy()
+    if start_cutoff is not None and start_cutoff > end_cutoff:
+        raise ValueError(
+            "train_start_date must be on or before train_end_date: "
+            f"train_start_date={start_date}, train_end_date={train_end_date}"
+        )
+
+    train_mask = model_df[date_col] <= end_cutoff
+    if start_cutoff is not None:
+        train_mask &= model_df[date_col] >= start_cutoff
+
+    train_df = model_df[train_mask].copy()
+    test_df = model_df[model_df[date_col] > end_cutoff].copy()
 
     _require_non_empty_split(train_df, "train", train_end_date)
     _require_non_empty_split(test_df, "test", train_end_date)
@@ -95,6 +120,7 @@ def build_temporal_train_test_split(
         train_end_date=train_end_date,
         feature_columns=feature_columns,
         target_col=target_col,
+        train_start_date=start_date,
     )
 
 
@@ -105,16 +131,18 @@ def build_temporal_train_calibration_test_split(
     calibration_end_date: str,
     target_col: str = "target",
     date_col: str = "date",
+    train_start_date: str | None = None,
 ) -> TemporalCalibrationSplit:
     """Build chronological train/calibration/test datasets.
 
     Rows are assigned as:
-    - train: date <= train_end_date
+    - train: date <= train_end_date, optionally date >= train_start_date
     - calibration: train_end_date < date <= calibration_end_date
     - test: date > calibration_end_date
 
-    This avoids fitting the calibrator on the same rows used for final model
-    evaluation.
+    Blank/None ``train_start_date`` means all available history up to
+    ``train_end_date``. This avoids fitting the calibrator on the same rows used
+    for final model evaluation.
     """
     model_df = _prepare_temporal_model_df(
         df=df,
@@ -122,8 +150,16 @@ def build_temporal_train_calibration_test_split(
         target_col=target_col,
         date_col=date_col,
     )
+    start_date = _normalize_optional_date(train_start_date)
+    start_cutoff = pd.to_datetime(start_date) if start_date else None
     train_cutoff = pd.to_datetime(train_end_date)
     calibration_cutoff = pd.to_datetime(calibration_end_date)
+
+    if start_cutoff is not None and start_cutoff > train_cutoff:
+        raise ValueError(
+            "train_start_date must be on or before train_end_date: "
+            f"train_start_date={start_date}, train_end_date={train_end_date}"
+        )
 
     if calibration_cutoff <= train_cutoff:
         raise ValueError(
@@ -131,7 +167,11 @@ def build_temporal_train_calibration_test_split(
             f"train_end_date={train_end_date}, calibration_end_date={calibration_end_date}"
         )
 
-    train_df = model_df[model_df[date_col] <= train_cutoff].copy()
+    train_mask = model_df[date_col] <= train_cutoff
+    if start_cutoff is not None:
+        train_mask &= model_df[date_col] >= start_cutoff
+
+    train_df = model_df[train_mask].copy()
     calibration_df = model_df[
         (model_df[date_col] > train_cutoff) & (model_df[date_col] <= calibration_cutoff)
     ].copy()
@@ -162,6 +202,7 @@ def build_temporal_train_calibration_test_split(
         calibration_end_date=calibration_end_date,
         feature_columns=feature_columns,
         target_col=target_col,
+        train_start_date=start_date,
     )
 
 
