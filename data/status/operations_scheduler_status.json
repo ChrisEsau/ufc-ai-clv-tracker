@@ -3,7 +3,7 @@
   "dispatched_runbooks": [],
   "due_runbooks": [],
   "errors": [],
-  "last_checked_at": "2026-06-19T20:42:24.789379+00:00",
+  "last_checked_at": "2026-06-19T22:07:54.332334+00:00",
   "next_due_runbook": {
     "display_name": "Fight Day Monitor",
     "runbook_id": "fight_day_monitor_v1",
@@ -14,5 +14,5 @@
   "skipped_runbooks": [],
   "status": "completed",
   "timezone": "America/Chicago",
-  "updated_at": "2026-06-19T20:42:24.802959+00:00"
+  "updated_at": "2026-06-19T22:07:54.343375+00:00"
 }
