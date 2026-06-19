@@ -13,7 +13,7 @@ feature_sources:
   rolling_moneyline_v5:
     description: Current monolithic rolling feature warehouse used by the V5 moneyline model.
     path: data/features/UFC_enhanced_rolling_features_EWM.parquet
-    expected_columns: 483
+    expected_columns: 495
     join_keys:
       - fight_id
     required_columns:
