@@ -14,6 +14,31 @@ def _new_template_model_id(context: dict[str, Any]) -> str:
     return str(context.get("model_id") or "")
 
 
+def _inject_action_styles() -> None:
+    st.markdown(
+        """
+        <style>
+        div[data-testid="stVerticalBlock"]:has(.model-setup-delete-button-anchor) div[data-testid="stButton"] button {
+            background: linear-gradient(180deg, rgba(220, 38, 38, 0.98), rgba(153, 27, 27, 0.98)) !important;
+            border-color: rgba(248, 113, 113, 0.85) !important;
+            color: #ffffff !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(.model-setup-delete-button-anchor) div[data-testid="stButton"] button:hover {
+            background: linear-gradient(180deg, rgba(239, 68, 68, 1), rgba(185, 28, 28, 1)) !important;
+            border-color: rgba(252, 165, 165, 0.95) !important;
+            color: #ffffff !important;
+        }
+        div[data-testid="stVerticalBlock"]:has(.model-setup-delete-button-anchor) div[data-testid="stButton"] button:disabled {
+            background: rgba(69, 26, 26, 0.55) !important;
+            border-color: rgba(127, 29, 29, 0.8) !important;
+            color: rgba(255, 255, 255, 0.48) !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def render_action_bar(
     context: dict[str, Any],
     registry: dict[str, Any],
@@ -21,6 +46,8 @@ def render_action_bar(
     validation_result: dict[str, Any] | None = None,
 ) -> None:
     """Render New, Save, and Delete actions for Model Setup."""
+
+    _inject_action_styles()
 
     full_validation = validation_result or {"ok": True, "errors": [], "warnings": []}
     delete_validation = validate_delete_allowed(context, registry)
@@ -61,6 +88,7 @@ def render_action_bar(
                 st.error(result.get("message") or "Save failed.")
 
     with c3:
+        st.markdown('<span class="model-setup-delete-button-anchor"></span>', unsafe_allow_html=True)
         if st.button("Delete", use_container_width=True, disabled=delete_disabled, key="model_setup_action_delete"):
             st.session_state["model_setup_delete_requested"] = True
 
@@ -85,9 +113,9 @@ def render_action_bar(
                 st.session_state.pop("model_setup_delete_confirmation", None)
                 st.rerun()
         with dc2:
+            st.markdown('<span class="model-setup-delete-button-anchor"></span>', unsafe_allow_html=True)
             if st.button(
                 "Confirm Delete",
-                type="primary",
                 use_container_width=True,
                 disabled=confirmation != str(context.get("model_id") or ""),
                 key="model_setup_delete_confirm",
