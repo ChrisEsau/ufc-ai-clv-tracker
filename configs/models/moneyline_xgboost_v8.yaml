@@ -1,6 +1,6 @@
-model_id: moneyline_xgboost_v5
+model_id: moneyline_xgboost_v8
 model_family: moneyline
-artifact_name: moneyline_xgboost_v5
+artifact_name: moneyline_xgboost_v8
 algorithm: xgboost
 feature_sources:
 - moneyline_feature_view
@@ -329,7 +329,7 @@ metrics:
   - 0.95
   - 1.0
 artifacts:
-  output_dir: models/moneyline/moneyline_xgboost_v5
+  output_dir: models/moneyline/moneyline_xgboost_v8
   save_raw_model: true
   save_calibrated_model: true
   save_feature_columns: true
