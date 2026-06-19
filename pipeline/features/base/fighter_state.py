@@ -17,6 +17,7 @@ from pipeline.features.base.elo import RECENT_N, START_ELO, safe_div
 
 FINISH_METHODS = ["KO/TKO", "TKO - Doctor's Stoppage", "Submission"]
 KO_METHODS = ["KO/TKO", "TKO - Doctor's Stoppage"]
+RECENT_STOPPAGE_DEFEAT_N = 3
 
 
 def default_state() -> dict[str, Any]:
@@ -45,6 +46,7 @@ def default_state() -> dict[str, Any]:
         "sub_wins": 0,
         "decision_wins": 0,
         "finish_losses": 0,
+        "stoppage_defeats": 0,
         "decision_losses": 0,
         "opponent_elo_sum": 0,
         "best_win_elo": START_ELO,
@@ -52,12 +54,15 @@ def default_state() -> dict[str, Any]:
         "win_streak": 0,
         "loss_streak": 0,
         "last_fight_date": None,
+        "last_stoppage_defeat": 0,
+        "last_stoppage_defeat_date": None,
         "recent_results": deque(maxlen=RECENT_N),
         "recent_sig_landed": deque(maxlen=RECENT_N),
         "recent_sig_absorbed": deque(maxlen=RECENT_N),
         "recent_td_landed": deque(maxlen=RECENT_N),
         "recent_finish_results": deque(maxlen=RECENT_N),
         "recent_fight_times": deque(maxlen=RECENT_N),
+        "recent_stoppage_defeats": deque(maxlen=RECENT_STOPPAGE_DEFEAT_N),
     }
 
 
@@ -75,6 +80,7 @@ def update_fighter(
     """Update a fighter's rolling state after a completed fight."""
     s = fighter_state[fighter_id]
     method = str(method)
+    stoppage_defeat = (not won) and method in KO_METHODS
 
     s["opponent_elo_sum"] += opponent_elo
     s["fights"] += 1
@@ -104,6 +110,12 @@ def update_fighter(
         elif "Decision" in method:
             s["decision_losses"] += 1
 
+        if stoppage_defeat:
+            s["stoppage_defeats"] += 1
+            s["last_stoppage_defeat_date"] = fight_date
+
+    s["last_stoppage_defeat"] = 1 if stoppage_defeat else 0
+
     s["kd_for"] += own["kd"]
     s["kd_against"] += opp["kd"]
     s["sig_str_landed"] += own["sig_str_landed"]
@@ -129,3 +141,4 @@ def update_fighter(
     s["recent_td_landed"].append(own["td_landed"])
     s["recent_finish_results"].append(finish_flag)
     s["recent_fight_times"].append(fight_time_sec)
+    s["recent_stoppage_defeats"].append(1 if stoppage_defeat else 0)
