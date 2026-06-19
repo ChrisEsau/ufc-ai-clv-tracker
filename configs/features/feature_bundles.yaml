@@ -85,6 +85,29 @@ bundles:
     - decision
     - goes_distance
     - rounds
+  ko_loss_vulnerability:
+    label: KO Loss Vulnerability
+    description: KO/TKO loss accumulation, recent KO-loss exposure, and recovery timing state.
+    source_layer: fighter_state
+    candidate_columns:
+    - career_ko_losses_diff
+    - recent_ko_losses_3_diff
+    - last_fight_ko_loss_diff
+    - days_since_last_ko_loss_diff
+    - r_pre_career_ko_losses
+    - b_pre_career_ko_losses
+    - r_pre_recent_ko_losses_3
+    - b_pre_recent_ko_losses_3
+    - r_pre_last_fight_ko_loss
+    - b_pre_last_fight_ko_loss
+    - r_pre_days_since_last_ko_loss
+    - b_pre_days_since_last_ko_loss
+    recommended_transforms:
+    - red_minus_blue
+    - absolute_gap
+    markets:
+    - moneyline
+    - ko_tko
   ewm_state:
     description: Exponentially weighted fighter-state signals.
     source_layer: fighter_state
