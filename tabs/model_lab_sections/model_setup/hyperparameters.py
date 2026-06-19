@@ -22,7 +22,7 @@ def render_hyperparameters_section(context: dict[str, Any]) -> dict[str, Any]:
     editable = bool(context.get("is_editable"))
     params = (context.get("config") or {}).get("params") or {}
 
-    st.markdown("#### :blue[4.] Hyperparameters")
+    st.markdown("#### 4. Hyperparameters")
 
     c1, c2, c3 = st.columns(3)
     with c1:
