@@ -10,14 +10,14 @@ def inject_styles() -> None:
         """
         <style>
         .model-setup-shell {
-            border: 1px solid rgba(54, 78, 111, 0.96);
+            border: 1px solid rgba(43, 60, 82, 0.95);
             border-radius: 12px;
             padding: 1rem 1.15rem 1rem;
             margin: 0.72rem 0 0.9rem 0;
             background:
-                radial-gradient(circle at 8% 0%, rgba(37, 99, 235, 0.18), transparent 42%),
-                linear-gradient(180deg, rgba(16, 37, 65, 0.98), rgba(8, 22, 41, 0.99));
-            box-shadow: 0 16px 34px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(148, 190, 255, 0.06);
+                radial-gradient(circle at 8% 0%, rgba(37, 99, 235, 0.15), transparent 42%),
+                linear-gradient(180deg, rgba(15, 32, 54, 0.98), rgba(7, 18, 32, 0.99));
+            box-shadow: 0 18px 38px rgba(0, 0, 0, 0.24);
         }
         .model-setup-summary-grid {
             display: grid;
@@ -26,7 +26,9 @@ def inject_styles() -> None:
             align-items: start;
         }
         .model-setup-summary-left,
-        .model-setup-summary-right { min-width: 0; }
+        .model-setup-summary-right {
+            min-width: 0;
+        }
         .model-setup-summary-right {
             display: grid;
             gap: .58rem;
@@ -88,47 +90,47 @@ def inject_styles() -> None:
             font-size: .8rem;
             font-weight: 560;
         }
-        .model-setup-section-number { color: #43a3ff; font-weight: 760; }
-        .model-setup-section-title { color: #f8fbff; font-weight: 650; }
-        .model-setup-footer-spacer { height: 0.22rem; }
+        .model-setup-footer-spacer {
+            height: 0.22rem;
+        }
 
         section.main div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlockBorderWrapper"] {
-            min-height: 272px !important;
-            border: 1px solid rgba(74, 101, 136, 0.98) !important;
+            border-color: rgba(43, 60, 82, 0.95) !important;
             border-radius: 12px !important;
             background:
-                radial-gradient(circle at 8% 0%, rgba(37, 99, 235, 0.16), transparent 43%),
-                linear-gradient(180deg, rgba(14, 34, 61, 0.99), rgba(8, 22, 40, 0.99)) !important;
-            box-shadow: 0 14px 32px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(148, 190, 255, 0.07) !important;
+                linear-gradient(180deg, rgba(12, 27, 47, 0.97), rgba(6, 17, 31, 0.99)) !important;
+            box-shadow: 0 16px 34px rgba(0, 0, 0, 0.18) !important;
         }
         section.main div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stMarkdownContainer"] h4 {
-            color: #f8fbff !important;
-            font-size: .96rem !important;
-            font-weight: 640 !important;
-            letter-spacing: -0.012em !important;
-            margin-bottom: 0.78rem !important;
+            color: #2f9bff !important;
+            font-size: .98rem !important;
+            font-weight: 680 !important;
+            letter-spacing: -0.015em !important;
+            margin-bottom: 0.62rem !important;
         }
         section.main label,
         section.main div[data-testid="stWidgetLabel"] p {
             color: #d7e2f0 !important;
-            font-size: 0.71rem !important;
-            font-weight: 540 !important;
+            font-size: 0.72rem !important;
+            font-weight: 560 !important;
         }
         section.main input,
         section.main textarea,
         section.main div[data-baseweb="select"] > div {
-            border-color: rgba(87, 114, 150, 0.96) !important;
-            background-color: rgba(3, 12, 24, 0.96) !important;
+            border-color: rgba(61, 84, 112, 0.92) !important;
+            background-color: rgba(4, 14, 26, 0.84) !important;
             color: #f8fbff !important;
             border-radius: 7px !important;
-            font-size: .79rem !important;
+            font-size: .8rem !important;
             font-weight: 500 !important;
         }
-        section.main textarea { min-height: 70px !important; }
+        section.main textarea {
+            min-height: 70px !important;
+        }
         section.main div[data-testid="stNumberInput"] button,
         section.main div[data-testid="stNumberInput"] button:disabled {
-            background: rgba(4, 13, 25, 0.98) !important;
-            border-color: rgba(87, 114, 150, 0.92) !important;
+            background: rgba(7, 17, 31, 0.95) !important;
+            border-color: rgba(61, 84, 112, 0.9) !important;
             color: #ffffff !important;
             opacity: 1 !important;
         }
@@ -150,15 +152,19 @@ def inject_styles() -> None:
             background: linear-gradient(180deg, rgba(30, 96, 210, 1), rgba(21, 68, 154, 1)) !important;
         }
         section.main div[data-testid="stMetric"] {
-            border: 1px solid rgba(54, 78, 111, 0.96);
+            border: 1px solid rgba(43, 60, 82, 0.95);
             border-radius: 10px;
             padding: 0.6rem 0.75rem;
             background: rgba(10, 28, 48, 0.86);
         }
-        section.main div[data-testid="stAlert"] { border-radius: 10px !important; }
+        section.main div[data-testid="stAlert"] {
+            border-radius: 10px !important;
+        }
         @media (max-width: 1200px) {
             .model-setup-summary-grid,
-            .model-setup-meta-grid { grid-template-columns: 1fr; }
+            .model-setup-meta-grid {
+                grid-template-columns: 1fr;
+            }
         }
         </style>
         """,
