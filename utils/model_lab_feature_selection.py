@@ -27,6 +27,7 @@ UNSAFE_FEATURE_NAMES = {
     "fight_result",
 }
 FEATURE_PANEL_HEIGHT = 520
+FEATURE_CHECKBOX_COLUMNS = 2
 
 
 def _safe_key(value) -> str:
@@ -165,6 +166,7 @@ def _inject_feature_selector_css() -> None:
             font-size: .82rem !important;
             color: #f8fbff !important;
             font-weight: 650 !important;
+            overflow-wrap: anywhere !important;
         }
         [data-testid="stCheckbox"] {
             min-height: 1.28rem !important;
@@ -248,31 +250,14 @@ def _render_bundle_selector(state: dict[str, Any]) -> list[str]:
     return selected
 
 
-def _render_feature_selector(state: dict[str, Any], selected: list[str]) -> tuple[list[str], list[str], list[str], list[str]]:
-    editable = state["editable"]
-    model_key = state["model_key"]
+def _collect_selected_feature_rows(state: dict[str, Any], selected: list[str]) -> list[dict[str, Any]]:
     bundle_map = state["bundle_map"]
-    bundle_labels = state["bundle_labels"]
     availability = state["availability"]
     current = state["current"]
     available_set = state["available_set"]
     saved_set = state["saved_set"]
-
-    st.markdown('<div class="feature-pane-title">Features in Selected Bundles</div>', unsafe_allow_html=True)
-    if selected:
-        bundle_names = ", ".join(bundle_labels.get(bundle, bundle) for bundle in selected[:3])
-        suffix = "..." if len(selected) > 3 else ""
-        st.markdown(f'<div class="feature-pane-subtitle">{bundle_names}{suffix}</div>', unsafe_allow_html=True)
-        st.markdown('<div class="feature-selection-scroll-note">Scroll inside this panel for more selected features.</div>', unsafe_allow_html=True)
-    else:
-        st.info("Select at least one bundle.")
-        return [], [], [], []
-
-    included: list[str] = []
-    removed: list[str] = []
-    universe: list[str] = []
-    registry_only: list[str] = []
     seen_features: set[str] = set()
+    rows: list[dict[str, Any]] = []
 
     for bundle in selected:
         features = list(bundle_map.get(bundle, []))
@@ -281,15 +266,54 @@ def _render_feature_selector(state: dict[str, Any], selected: list[str]) -> tupl
             if feature in seen_features:
                 continue
             seen_features.add(feature)
-            universe.append(feature)
-            default = feature in current if bundle in saved_set else True
+            rows.append(
+                {
+                    "feature": feature,
+                    "default": feature in current if bundle in saved_set else True,
+                    "checkbox_label": feature if feature in available_set else f"{feature} ⚠",
+                    "help_text": None if feature in available_in_bundle else "Registered feature, but not currently present in the feature view. Training may require rebuilding/updating the feature view.",
+                    "registry_only": feature not in available_set,
+                }
+            )
+    return rows
+
+
+def _render_feature_selector(state: dict[str, Any], selected: list[str]) -> tuple[list[str], list[str], list[str], list[str]]:
+    editable = state["editable"]
+    model_key = state["model_key"]
+    bundle_labels = state["bundle_labels"]
+
+    st.markdown('<div class="feature-pane-title">Features in Selected Bundles</div>', unsafe_allow_html=True)
+    if selected:
+        bundle_names = ", ".join(bundle_labels.get(bundle, bundle) for bundle in selected[:3])
+        suffix = "..." if len(selected) > 3 else ""
+        st.markdown(f'<div class="feature-pane-subtitle">{bundle_names}{suffix}</div>', unsafe_allow_html=True)
+        st.markdown('<div class="feature-selection-scroll-note">Features are shown in two columns. Scroll inside this panel for more.</div>', unsafe_allow_html=True)
+    else:
+        st.info("Select at least one bundle.")
+        return [], [], [], []
+
+    included: list[str] = []
+    removed: list[str] = []
+    registry_only: list[str] = []
+    rows = _collect_selected_feature_rows(state, selected)
+    universe = [row["feature"] for row in rows]
+    feature_columns = st.columns(FEATURE_CHECKBOX_COLUMNS, gap="medium")
+
+    for index, row in enumerate(rows):
+        with feature_columns[index % FEATURE_CHECKBOX_COLUMNS]:
+            feature = row["feature"]
             key = f"mlab_feature_{model_key}_{_safe_key(feature)}"
-            checkbox_label = feature if feature in available_set else f"{feature} ⚠"
-            help_text = None if feature in available_in_bundle else "Registered feature, but not currently present in the feature view. Training may require rebuilding/updating the feature view."
-            value = st.checkbox(checkbox_label, value=default, disabled=not editable, key=key, help=help_text)
+            value = st.checkbox(
+                row["checkbox_label"],
+                value=bool(row["default"]),
+                disabled=not editable,
+                key=key,
+                help=row["help_text"],
+            )
             if value:
                 included.append(feature)
-                if feature not in available_set:
+                if row["registry_only"]:
                     registry_only.append(feature)
             else:
                 removed.append(feature)
