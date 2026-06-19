@@ -3,16 +3,16 @@
   "dispatched_runbooks": [],
   "due_runbooks": [],
   "errors": [],
-  "last_checked_at": "2026-06-19T04:49:49.782278+00:00",
+  "last_checked_at": "2026-06-19T09:46:50.198846+00:00",
   "next_due_runbook": {
     "display_name": "Market Refresh",
     "runbook_id": "market_refresh_v2",
-    "scheduled_at_local": "2026-06-19T03:00:00-05:00",
-    "scheduled_time": "03:00",
+    "scheduled_at_local": "2026-06-19T15:00:00-05:00",
+    "scheduled_time": "15:00",
     "workflow_file": "run-market-refresh-orchestrator.yml"
   },
   "skipped_runbooks": [],
   "status": "completed",
   "timezone": "America/Chicago",
-  "updated_at": "2026-06-19T04:49:49.783937+00:00"
+  "updated_at": "2026-06-19T09:46:50.205253+00:00"
 }
