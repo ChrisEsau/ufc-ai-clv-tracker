@@ -11,6 +11,7 @@ from tabs.model_lab_sections.backtest_enhanced import render_backtest
 from tabs.model_lab_sections.compare import render_compare
 from tabs.model_lab_sections.features import render_features
 from tabs.model_lab_sections.model_setup.page import render_page as render_model_setup_page
+from tabs.model_lab_sections.model_setup.selectors import render_model_selector
 from tabs.model_lab_sections.overview import render_overview
 from tabs.model_lab_sections.performance import render_performance
 from tabs.model_lab_sections.styles import inject_model_lab_control_css
@@ -105,8 +106,8 @@ def _render_workspace_header(active: str) -> None:
     )
 
 
-def _render_workspace_strip(active: str) -> str:
-    """Render the internal Model Lab workspace navigation strip as same-window text tabs."""
+def _render_workspace_controls(active: str, rows: list[dict[str, Any]]) -> str:
+    """Render top model selector and same-window workspace navigation."""
 
     st.markdown(
         """
@@ -154,6 +155,14 @@ def _render_workspace_strip(active: str) -> str:
             white-space: nowrap;
             padding-top: .2rem;
         }
+        .mlab-control-caption {
+            color: #8fb3db;
+            font-size: .68rem;
+            margin: 0 0 .35rem;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            font-weight: 900;
+        }
         div[data-testid="stRadio"] > label {
             display: none !important;
         }
@@ -162,7 +171,7 @@ def _render_workspace_strip(active: str) -> str:
             flex-direction: row !important;
             align-items: center !important;
             gap: 2.05rem !important;
-            margin: .25rem 0 .95rem !important;
+            margin: .1rem 0 .95rem !important;
             padding: .15rem 0 0 !important;
             border-bottom: 1px solid rgba(43,60,82,.82) !important;
             overflow-x: auto !important;
@@ -206,14 +215,20 @@ def _render_workspace_strip(active: str) -> str:
         unsafe_allow_html=True,
     )
 
-    selected = st.radio(
-        "Workspace",
-        WORKSPACES,
-        index=WORKSPACES.index(active),
-        horizontal=True,
-        label_visibility="collapsed",
-        key="mlab_workspace_text_tabs",
-    )
+    selector_col, nav_col = st.columns([1.05, 4.6], gap="large")
+    with selector_col:
+        st.markdown('<div class="mlab-control-caption">Model</div>', unsafe_allow_html=True)
+        render_model_selector(rows)
+    with nav_col:
+        st.markdown('<div class="mlab-control-caption">Workspace</div>', unsafe_allow_html=True)
+        selected = st.radio(
+            "Workspace",
+            WORKSPACES,
+            index=WORKSPACES.index(active),
+            horizontal=True,
+            label_visibility="collapsed",
+            key="mlab_workspace_text_tabs",
+        )
     if selected != active:
         st.session_state["mlab_active_workspace"] = selected
         st.rerun()
@@ -233,7 +248,7 @@ def render_model_lab() -> None:
         if not rows:
             st.info("No models are registered in configs/models/model_registry.yaml.")
             return
-        workspace = _render_workspace_strip(active)
+        workspace = _render_workspace_controls(active, rows)
 
         if workspace == "Overview":
             render_overview(
