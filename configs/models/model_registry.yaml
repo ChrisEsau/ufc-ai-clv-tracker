@@ -35,8 +35,7 @@ models:
     outcome_architecture: true
   moneyline_xgboost_v8:
     display_name: Moneyline XGBoost V8
-    description: Current production moneyline model trained from the modular V5 training
-      framework.
+    description: 'Latest experimental version to improve performance. '
     model_family: moneyline
     market_key: moneyline
     algorithm: xgboost
