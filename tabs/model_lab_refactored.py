@@ -115,65 +115,64 @@ def _render_workspace_strip(active: str) -> str:
             justify-content: space-between;
             align-items: flex-start;
             gap: 1rem;
-            margin: .1rem 0 1.15rem;
+            margin: .1rem 0 .85rem;
+            padding-bottom: .85rem;
+            border-bottom: 1px solid rgba(43,60,82,.92);
         }
         .mlab-active-title {
             color: #f8fbff;
-            font-size: 1.82rem;
+            font-size: 1.72rem;
             font-weight: 950;
             letter-spacing: -.045em;
             line-height: 1.05;
         }
         .mlab-active-subtitle {
             color: #dbe7f5;
-            font-size: .95rem;
+            font-size: .9rem;
             margin-top: .32rem;
         }
         .mlab-active-loaded {
             color: #dbe7f5;
-            font-size: .78rem;
+            font-size: .75rem;
             font-weight: 760;
             white-space: nowrap;
             padding-top: .1rem;
         }
         .mlab-workspace-strip-caption {
             color: #8fb3db;
-            font-size: .7rem;
-            margin: 0 0 .45rem;
+            font-size: .68rem;
+            margin: 0 0 .35rem;
             text-transform: uppercase;
             letter-spacing: .06em;
             font-weight: 900;
         }
         div[data-testid="stHorizontalBlock"] button {
-            min-height: 2.6rem !important;
-            border-radius: 10px !important;
-            font-weight: 820 !important;
+            min-height: 2.38rem !important;
+            border-radius: 8px !important;
+            font-weight: 790 !important;
             letter-spacing: -.01em !important;
-            border: 1px solid rgba(59, 130, 246, .55) !important;
-            box-shadow: 0 12px 26px rgba(0,0,0,.18) !important;
+            border: 1px solid rgba(45, 72, 108, .92) !important;
+            box-shadow: none !important;
         }
         div[data-testid="stHorizontalBlock"] button[kind="primary"] {
-            background: linear-gradient(180deg, rgba(34, 102, 215, 1), rgba(18, 70, 154, 1)) !important;
-            color: #ffffff !important;
-            border-color: rgba(96, 165, 250, .9) !important;
-            box-shadow: 0 0 0 1px rgba(59,130,246,.24) inset, 0 14px 30px rgba(20,80,180,.22) !important;
+            background: linear-gradient(180deg, rgba(15, 36, 68, .96), rgba(8, 25, 48, .98)) !important;
+            color: #5fb7ff !important;
+            border-color: rgba(59, 130, 246, .78) !important;
+            box-shadow: inset 0 -2px 0 #2f9bff !important;
         }
         div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
-            background: linear-gradient(180deg, rgba(14, 47, 92, .92), rgba(10, 34, 68, .96)) !important;
+            background: linear-gradient(180deg, rgba(8, 22, 41, .72), rgba(6, 17, 31, .84)) !important;
             color: #dbeafe !important;
         }
         div[data-testid="stHorizontalBlock"] button:hover {
-            border-color: rgba(147, 197, 253, 1) !important;
-            transform: translateY(-1px);
+            border-color: rgba(96, 165, 250, .9) !important;
+            color: #ffffff !important;
         }
         </style>
         """,
         unsafe_allow_html=True,
     )
-    st.markdown(
-        "<div class='mlab-workspace-strip-caption'>Workspace</div>",
-        unsafe_allow_html=True,
-    )
+    st.markdown("<div class='mlab-workspace-strip-caption'>Workspace</div>", unsafe_allow_html=True)
 
     columns = st.columns(len(WORKSPACES), gap="small")
     for column, workspace in zip(columns, WORKSPACES):
