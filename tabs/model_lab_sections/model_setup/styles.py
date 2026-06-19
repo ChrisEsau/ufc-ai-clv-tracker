@@ -26,9 +26,7 @@ def inject_styles() -> None:
             align-items: start;
         }
         .model-setup-summary-left,
-        .model-setup-summary-right {
-            min-width: 0;
-        }
+        .model-setup-summary-right { min-width: 0; }
         .model-setup-summary-right {
             display: grid;
             gap: .58rem;
@@ -90,48 +88,47 @@ def inject_styles() -> None:
             font-size: .8rem;
             font-weight: 560;
         }
-        .model-setup-footer-spacer {
-            height: 0.22rem;
-        }
+        .model-setup-section-number { color: #43a3ff; font-weight: 760; }
+        .model-setup-section-title { color: #f8fbff; font-weight: 650; }
+        .model-setup-footer-spacer { height: 0.22rem; }
 
         section.main div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlockBorderWrapper"] {
-            border: 1px solid rgba(54, 78, 111, 0.96) !important;
+            min-height: 272px !important;
+            border: 1px solid rgba(74, 101, 136, 0.98) !important;
             border-radius: 12px !important;
             background:
-                radial-gradient(circle at 10% 0%, rgba(37, 99, 235, 0.08), transparent 40%),
-                linear-gradient(180deg, rgba(12, 30, 54, 0.98), rgba(6, 18, 34, 0.99)) !important;
-            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(148, 190, 255, 0.045) !important;
+                radial-gradient(circle at 8% 0%, rgba(37, 99, 235, 0.16), transparent 43%),
+                linear-gradient(180deg, rgba(14, 34, 61, 0.99), rgba(8, 22, 40, 0.99)) !important;
+            box-shadow: 0 14px 32px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(148, 190, 255, 0.07) !important;
         }
         section.main div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stMarkdownContainer"] h4 {
             color: #f8fbff !important;
-            font-size: .98rem !important;
-            font-weight: 660 !important;
-            letter-spacing: -0.015em !important;
-            margin-bottom: 0.72rem !important;
+            font-size: .96rem !important;
+            font-weight: 640 !important;
+            letter-spacing: -0.012em !important;
+            margin-bottom: 0.78rem !important;
         }
         section.main label,
         section.main div[data-testid="stWidgetLabel"] p {
             color: #d7e2f0 !important;
-            font-size: 0.72rem !important;
-            font-weight: 560 !important;
+            font-size: 0.71rem !important;
+            font-weight: 540 !important;
         }
         section.main input,
         section.main textarea,
         section.main div[data-baseweb="select"] > div {
-            border-color: rgba(78, 104, 138, 0.92) !important;
-            background-color: rgba(5, 16, 31, 0.92) !important;
+            border-color: rgba(87, 114, 150, 0.96) !important;
+            background-color: rgba(3, 12, 24, 0.96) !important;
             color: #f8fbff !important;
             border-radius: 7px !important;
-            font-size: .8rem !important;
+            font-size: .79rem !important;
             font-weight: 500 !important;
         }
-        section.main textarea {
-            min-height: 70px !important;
-        }
+        section.main textarea { min-height: 70px !important; }
         section.main div[data-testid="stNumberInput"] button,
         section.main div[data-testid="stNumberInput"] button:disabled {
-            background: rgba(7, 17, 31, 0.95) !important;
-            border-color: rgba(78, 104, 138, 0.9) !important;
+            background: rgba(4, 13, 25, 0.98) !important;
+            border-color: rgba(87, 114, 150, 0.92) !important;
             color: #ffffff !important;
             opacity: 1 !important;
         }
@@ -158,14 +155,10 @@ def inject_styles() -> None:
             padding: 0.6rem 0.75rem;
             background: rgba(10, 28, 48, 0.86);
         }
-        section.main div[data-testid="stAlert"] {
-            border-radius: 10px !important;
-        }
+        section.main div[data-testid="stAlert"] { border-radius: 10px !important; }
         @media (max-width: 1200px) {
             .model-setup-summary-grid,
-            .model-setup-meta-grid {
-                grid-template-columns: 1fr;
-            }
+            .model-setup-meta-grid { grid-template-columns: 1fr; }
         }
         </style>
         """,
