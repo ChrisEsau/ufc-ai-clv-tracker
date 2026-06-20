@@ -1,6 +1,8 @@
 {
+  "catchup_grace_minutes": 1440,
   "schedules": {
     "fight_day_monitor_v1": {
+      "catchup_grace_minutes": 180,
       "days": [
         "SAT"
       ],
@@ -20,6 +22,7 @@
       "workflow_file": "run-fight-day-monitor.yml"
     },
     "market_refresh_v2": {
+      "catchup_grace_minutes": 1440,
       "days": [
         "TUE",
         "WED",
@@ -41,6 +44,7 @@
       "workflow_file": "run-market-refresh-orchestrator.yml"
     },
     "monday_reset_v1": {
+      "catchup_grace_minutes": 2880,
       "days": [
         "MON"
       ],
