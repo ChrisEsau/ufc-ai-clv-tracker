@@ -6,6 +6,8 @@ import streamlit as st
 
 from tabs.clv_intelligence_sections.data import american, number, pct, signed_pct
 
+PLOT_CONFIG = {"displayModeBar": False, "responsive": True}
+
 
 def _positive_class(value) -> str:
     if pd.isna(value):
@@ -117,10 +119,10 @@ def render_edge_scatter(candidate_clv: pd.DataFrame) -> None:
         color="model_id" if "model_id" in plot_df.columns else None,
         hover_data=[col for col in ["fight_display", "outcome_display", "candidate_odds", "closing_odds", "bookmaker"] if col in plot_df.columns],
     )
-    fig.update_layout(height=420, margin=dict(l=10, r=10, t=10, b=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-    fig.update_xaxes(title="Candidate Edge", tickformat=".0%", gridcolor="rgba(148,163,184,.16)", zerolinecolor="rgba(255,255,255,.28)")
-    fig.update_yaxes(title="CLV", tickformat=".0%", gridcolor="rgba(148,163,184,.16)", zerolinecolor="rgba(255,255,255,.28)")
-    st.plotly_chart(fig, use_container_width=True)
+    fig.update_layout(height=380, margin=dict(l=8, r=8, t=4, b=8), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+    fig.update_xaxes(title="Candidate Edge", tickformat=".0%", gridcolor="rgba(148,163,184,.14)", zerolinecolor="rgba(255,255,255,.28)")
+    fig.update_yaxes(title="CLV", tickformat=".0%", gridcolor="rgba(148,163,184,.14)", zerolinecolor="rgba(255,255,255,.28)")
+    st.plotly_chart(fig, use_container_width=True, config=PLOT_CONFIG)
 
 
 def render_market_validation_matrix(candidate_clv: pd.DataFrame) -> None:
