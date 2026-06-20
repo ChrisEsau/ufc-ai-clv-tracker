@@ -31,7 +31,7 @@ from pipeline.common.paths import (
     NORMALIZED_MARKET_SNAPSHOTS_PATH,
     ensure_data_dirs,
 )
-from utils.bankroll_artifacts import load_bet_ledger
+from utils.bankroll_artifacts import load_bet_ledger, save_bet_ledger
 
 
 def _read_parquet(path: Path) -> pd.DataFrame:
@@ -60,6 +60,35 @@ def _load_market_snapshot_source() -> tuple[pd.DataFrame, Path]:
     return legacy_market_snapshots, MARKET_SNAPSHOTS_PATH
 
 
+def _update_ledger_with_clv(ledger: pd.DataFrame, clv_results: pd.DataFrame) -> int:
+    """Write calculated CLV and closing odds back to the bankroll ledger."""
+
+    if ledger.empty or clv_results.empty or "bet_id" not in ledger.columns or "bet_id" not in clv_results.columns:
+        return 0
+
+    updates = clv_results.dropna(subset=["bet_id"]).copy()
+    if updates.empty:
+        return 0
+
+    updates = updates.sort_values("closing_timestamp", na_position="first").drop_duplicates("bet_id", keep="last")
+    updates_by_id = updates.set_index(updates["bet_id"].astype(str))
+    ledger_out = ledger.copy()
+    ledger_ids = ledger_out["bet_id"].astype(str)
+    matched = ledger_ids.isin(updates_by_id.index)
+    if not matched.any():
+        return 0
+
+    for column in ["clv", "closing_odds"]:
+        if column not in ledger_out.columns:
+            ledger_out[column] = pd.NA
+
+    matched_ids = ledger_ids[matched]
+    ledger_out.loc[matched, "clv"] = matched_ids.map(updates_by_id["clv_pct"])
+    ledger_out.loc[matched, "closing_odds"] = matched_ids.map(updates_by_id["closing_odds"])
+    save_bet_ledger(ledger_out)
+    return int(matched.sum())
+
+
 def main() -> None:
     ensure_data_dirs()
 
@@ -71,6 +100,7 @@ def main() -> None:
     closing_lines = build_closing_lines(normalized_snapshots)
     line_movement = build_line_movement(normalized_snapshots)
     clv_results = build_clv_results(ledger, closing_lines)
+    ledger_rows_updated = _update_ledger_with_clv(ledger, clv_results)
 
     _write_parquet(normalized_snapshots, NORMALIZED_MARKET_SNAPSHOTS_PATH, NORMALIZED_MARKET_COLUMNS)
     _write_parquet(normalization_audit, CLV_MARKET_NORMALIZATION_AUDIT_PATH, MARKET_NORMALIZATION_AUDIT_COLUMNS)
@@ -84,6 +114,7 @@ def main() -> None:
     print(f"Normalized market rows written: {len(normalized_snapshots)} -> {NORMALIZED_MARKET_SNAPSHOTS_PATH}")
     print(f"Market normalization audit written: {CLV_MARKET_NORMALIZATION_AUDIT_PATH}")
     print(f"Ledger bets loaded: {len(ledger)}")
+    print(f"Ledger rows updated with CLV: {ledger_rows_updated}")
     print(f"Closing lines written: {len(closing_lines)} -> {CLOSING_LINES_PATH}")
     print(f"Line movement rows written: {len(line_movement)} -> {LINE_MOVEMENT_PATH}")
     print(f"CLV result rows written: {len(clv_results)} -> {CLV_RESULTS_PATH}")
