@@ -12,17 +12,21 @@ SCHEDULER_STATUS_PATH = Path("data/status/operations_scheduler_status.json")
 DEFAULT_TIMEZONE = "America/Chicago"
 DAY_ORDER = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
 RUNBOOK_ORDER = ["monday_reset_v1", "market_refresh_v2", "fight_day_monitor_v1"]
+DEFAULT_WINDOW_MINUTES = 30
+DEFAULT_CATCHUP_GRACE_MINUTES = 1440
 
 DEFAULT_SCHEDULE: dict[str, Any] = {
     "version": 1,
     "timezone": DEFAULT_TIMEZONE,
-    "window_minutes": 30,
+    "window_minutes": DEFAULT_WINDOW_MINUTES,
+    "catchup_grace_minutes": DEFAULT_CATCHUP_GRACE_MINUTES,
     "schedules": {
         "monday_reset_v1": {
             "enabled": False,
             "display_name": "Monday Reset",
             "days": ["MON"],
             "times": ["08:00"],
+            "catchup_grace_minutes": 2880,
             "workflow_file": "run-monday-reset-orchestrator.yml",
             "inputs": {
                 "mode": "production",
@@ -37,6 +41,7 @@ DEFAULT_SCHEDULE: dict[str, Any] = {
             "display_name": "Market Refresh",
             "days": ["FRI", "SAT"],
             "times": ["09:00", "15:00", "21:00"],
+            "catchup_grace_minutes": 1440,
             "workflow_file": "run-market-refresh-orchestrator.yml",
             "inputs": {
                 "mode": "production",
@@ -50,6 +55,7 @@ DEFAULT_SCHEDULE: dict[str, Any] = {
             "display_name": "Fight Day Monitor",
             "days": ["SAT"],
             "times": ["17:30", "17:55"],
+            "catchup_grace_minutes": 180,
             "workflow_file": "run-fight-day-monitor.yml",
             "inputs": {
                 "mode": "production",
@@ -115,9 +121,13 @@ def write_scheduler_status(status: dict[str, Any], path: Path = SCHEDULER_STATUS
 def normalize_schedule(raw: dict[str, Any]) -> dict[str, Any]:
     schedule = deepcopy(DEFAULT_SCHEDULE)
     if isinstance(raw, dict):
-        schedule["version"] = int(raw.get("version") or schedule["version"])
+        schedule["version"] = _safe_int(raw.get("version"), schedule["version"])
         schedule["timezone"] = str(raw.get("timezone") or schedule["timezone"])
-        schedule["window_minutes"] = int(raw.get("window_minutes") or schedule["window_minutes"])
+        schedule["window_minutes"] = _safe_int(raw.get("window_minutes"), schedule["window_minutes"])
+        schedule["catchup_grace_minutes"] = _safe_int(
+            raw.get("catchup_grace_minutes"),
+            schedule["catchup_grace_minutes"],
+        )
         raw_schedules = raw.get("schedules") or {}
         if isinstance(raw_schedules, dict):
             for runbook_id in RUNBOOK_ORDER:
@@ -130,6 +140,10 @@ def normalize_schedule(raw: dict[str, Any]) -> dict[str, Any]:
                 existing["days"] = normalize_days(incoming.get("days", existing["days"]))
                 existing["times"] = normalize_times(incoming.get("times", existing["times"]))
                 existing["workflow_file"] = str(incoming.get("workflow_file") or existing["workflow_file"])
+                existing["catchup_grace_minutes"] = _safe_int(
+                    incoming.get("catchup_grace_minutes"),
+                    existing.get("catchup_grace_minutes", schedule["catchup_grace_minutes"]),
+                )
                 inputs = incoming.get("inputs")
                 if isinstance(inputs, dict):
                     existing_inputs = dict(existing.get("inputs") or {})
@@ -176,7 +190,10 @@ def get_due_runbooks(
     timezone_name = str(schedule.get("timezone") or DEFAULT_TIMEZONE)
     tz = ZoneInfo(timezone_name)
     now_local = now_utc.astimezone(tz)
-    window_minutes = int(schedule.get("window_minutes") or 30)
+    default_catchup_minutes = _safe_int(
+        schedule.get("catchup_grace_minutes"),
+        _safe_int(schedule.get("window_minutes"), DEFAULT_WINDOW_MINUTES),
+    )
     dispatch_history = status.get("dispatch_history") or []
     dispatched_keys = {str(row.get("dispatch_key")) for row in dispatch_history if row.get("dispatch_key")}
 
@@ -191,29 +208,35 @@ def get_due_runbooks(
             continue
         days = normalize_days(cfg.get("days"))
         times = normalize_times(cfg.get("times"))
-        for scheduled_time in times:
-            scheduled_local = _scheduled_datetime_for_today(now_local, scheduled_time)
+        catchup_minutes = max(1, _safe_int(cfg.get("catchup_grace_minutes"), default_catchup_minutes))
+        for scheduled_local in _scheduled_datetimes_in_window(
+            now_local=now_local,
+            scheduled_times=times,
+            lookback_minutes=catchup_minutes,
+        ):
             day = DAY_ORDER[scheduled_local.weekday()]
             if day not in days:
                 continue
-            delta_minutes = (now_local - scheduled_local).total_seconds() / 60.0
-            if 0 <= delta_minutes < window_minutes:
-                dispatch_key = f"{runbook_id}:{scheduled_local.strftime('%Y-%m-%dT%H:%M')}:{timezone_name}"
-                row = {
-                    "runbook_id": runbook_id,
-                    "display_name": cfg.get("display_name", runbook_id),
-                    "workflow_file": cfg.get("workflow_file"),
-                    "inputs": cfg.get("inputs") or {},
-                    "scheduled_time": scheduled_time,
-                    "scheduled_at_local": scheduled_local.isoformat(),
-                    "dispatch_key": dispatch_key,
-                    "minutes_late": round(delta_minutes, 2),
-                }
-                if dispatch_key in dispatched_keys:
-                    skipped.append({**row, "reason": "already_dispatched"})
-                else:
-                    due.append(row)
-    return due, skipped
+            minutes_late = (now_local - scheduled_local).total_seconds() / 60.0
+            if minutes_late < 0 or minutes_late > catchup_minutes:
+                continue
+            dispatch_key = f"{runbook_id}:{scheduled_local.strftime('%Y-%m-%dT%H:%M')}:{timezone_name}"
+            row = {
+                "runbook_id": runbook_id,
+                "display_name": cfg.get("display_name", runbook_id),
+                "workflow_file": cfg.get("workflow_file"),
+                "inputs": cfg.get("inputs") or {},
+                "scheduled_time": scheduled_local.strftime("%H:%M"),
+                "scheduled_at_local": scheduled_local.isoformat(),
+                "dispatch_key": dispatch_key,
+                "minutes_late": round(minutes_late, 2),
+                "catchup_grace_minutes": catchup_minutes,
+            }
+            if dispatch_key in dispatched_keys:
+                skipped.append({**row, "reason": "already_dispatched"})
+            else:
+                due.append(row)
+    return sorted(due, key=lambda row: row["scheduled_at_local"]), skipped
 
 
 def next_due_runbook(schedule: dict[str, Any], now_utc: datetime | None = None) -> dict[str, Any] | None:
@@ -244,6 +267,10 @@ def next_due_runbook(schedule: dict[str, Any], now_utc: datetime | None = None) 
                         "workflow_file": cfg.get("workflow_file"),
                         "scheduled_at_local": dt.isoformat(),
                         "scheduled_time": scheduled_time,
+                        "catchup_grace_minutes": _safe_int(
+                            cfg.get("catchup_grace_minutes"),
+                            _safe_int(schedule.get("catchup_grace_minutes"), DEFAULT_CATCHUP_GRACE_MINUTES),
+                        ),
                     }
                 )
     if not candidates:
@@ -251,9 +278,30 @@ def next_due_runbook(schedule: dict[str, Any], now_utc: datetime | None = None) 
     return sorted(candidates, key=lambda row: row["scheduled_at_local"])[0]
 
 
-def _scheduled_datetime_for_today(now_local: datetime, scheduled_time: str) -> datetime:
-    hour, minute = [int(part) for part in scheduled_time.split(":")]
-    return now_local.replace(hour=hour, minute=minute, second=0, microsecond=0)
+def _scheduled_datetimes_in_window(
+    *,
+    now_local: datetime,
+    scheduled_times: list[str],
+    lookback_minutes: int,
+) -> list[datetime]:
+    lookback_start = now_local - timedelta(minutes=lookback_minutes)
+    lookback_days = max(1, int(lookback_minutes / 1440) + 2)
+    candidates: list[datetime] = []
+    for days_back in range(0, lookback_days + 1):
+        candidate_date = now_local.date() - timedelta(days=days_back)
+        for scheduled_time in scheduled_times:
+            hour, minute = [int(part) for part in scheduled_time.split(":")]
+            candidate = datetime.combine(candidate_date, time(hour, minute), tzinfo=now_local.tzinfo)
+            if lookback_start <= candidate <= now_local:
+                candidates.append(candidate)
+    return sorted(candidates)
+
+
+def _safe_int(value: Any, fallback: int) -> int:
+    try:
+        return int(value)
+    except Exception:
+        return int(fallback)
 
 
 def _empty_scheduler_status() -> dict[str, Any]:
