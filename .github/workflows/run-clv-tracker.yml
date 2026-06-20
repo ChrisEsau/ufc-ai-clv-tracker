@@ -55,6 +55,8 @@ jobs:
             data/market/ufc_closing_lines.parquet \
             data/market/ufc_clv_results.parquet \
             data/market/ufc_line_movement.parquet \
+            data/clv/ufc_model_candidate_tracker.parquet \
+            data/clv/ufc_model_candidate_clv.parquet \
             data/bankroll/ufc_bet_ledger.parquet \
             data/bankroll/ufc_open_bets.parquet \
             data/bankroll/ufc_bankroll_snapshots.parquet
