@@ -19,6 +19,7 @@ DRAFTKINGS_RAW_DIR = MARKET_RAW_DIR / "draftkings"
 BANKROLL_DIR = DATA_DIR / "bankroll"
 MODEL_LAB_DIR = DATA_DIR / "model_lab"
 SNAPSHOTS_DIR = DATA_DIR / "snapshots"
+CLV_DIR = DATA_DIR / "clv"
 DOCS_DIR = ROOT_DIR / "docs"
 MARKET_CONFIG_DIR = CONFIGS_DIR / "market"
 
@@ -82,6 +83,8 @@ MARKET_MATCH_AUDIT_PATH = MARKET_DIR / "ufc_market_match_audit.parquet"
 CLOSING_LINES_PATH = MARKET_DIR / "ufc_closing_lines.parquet"
 LINE_MOVEMENT_PATH = MARKET_DIR / "ufc_line_movement.parquet"
 CLV_RESULTS_PATH = MARKET_DIR / "ufc_clv_results.parquet"
+MODEL_CANDIDATE_TRACKER_PATH = CLV_DIR / "ufc_model_candidate_tracker.parquet"
+MODEL_CANDIDATE_CLV_PATH = CLV_DIR / "ufc_model_candidate_clv.parquet"
 
 MARKET_REGISTRY_PATH = MARKET_CONFIG_DIR / "market_registry.yaml"
 MARKET_OUTCOMES_PATH = MARKET_DIR / "market_outcomes.parquet"
@@ -143,6 +146,7 @@ def ensure_data_dirs() -> None:
         BANKROLL_DIR,
         MODEL_LAB_DIR,
         SNAPSHOTS_DIR,
+        CLV_DIR,
         MODELS_DIR,
         MODEL_DIR,
         DOCS_DIR,
