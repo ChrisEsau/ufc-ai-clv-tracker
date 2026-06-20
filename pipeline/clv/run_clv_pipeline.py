@@ -1,8 +1,8 @@
 """Run the canonical CLV artifact pipeline.
 
-This runner intentionally consumes existing market snapshots and bankroll ledger
-artifacts.  It does not pull fresh odds; market ingestion remains owned by the
-market update pipeline so the Betting Board contract stays stable.
+This runner intentionally consumes existing model-market snapshots and bankroll
+ledger artifacts. It does not pull fresh odds; market ingestion remains owned by
+the Market Refresh pipeline so the Betting Board contract stays stable.
 """
 
 from __future__ import annotations
@@ -27,6 +27,7 @@ from pipeline.common.paths import (
     CLV_RESULTS_PATH,
     LINE_MOVEMENT_PATH,
     MARKET_SNAPSHOTS_PATH,
+    MODEL_MARKET_SNAPSHOTS_PATH,
     NORMALIZED_MARKET_SNAPSHOTS_PATH,
     ensure_data_dirs,
 )
@@ -48,10 +49,21 @@ def _write_parquet(df: pd.DataFrame, path: Path, columns: list[str]) -> None:
     output.to_parquet(path, index=False)
 
 
+def _load_market_snapshot_source() -> tuple[pd.DataFrame, Path]:
+    """Prefer Market Refresh V2 model-market snapshots, with legacy fallback."""
+
+    model_market_snapshots = _read_parquet(MODEL_MARKET_SNAPSHOTS_PATH)
+    if not model_market_snapshots.empty:
+        return model_market_snapshots, MODEL_MARKET_SNAPSHOTS_PATH
+
+    legacy_market_snapshots = _read_parquet(MARKET_SNAPSHOTS_PATH)
+    return legacy_market_snapshots, MARKET_SNAPSHOTS_PATH
+
+
 def main() -> None:
     ensure_data_dirs()
 
-    market_snapshots = _read_parquet(MARKET_SNAPSHOTS_PATH)
+    market_snapshots, market_snapshot_source = _load_market_snapshot_source()
     ledger = load_bet_ledger() if BET_LEDGER_PATH.exists() else pd.DataFrame()
 
     normalized_snapshots = normalize_market_snapshots(market_snapshots)
@@ -67,6 +79,7 @@ def main() -> None:
     _write_parquet(clv_results, CLV_RESULTS_PATH, CLV_RESULT_COLUMNS)
 
     print("========== UFC CLV PIPELINE ==========")
+    print(f"Market snapshot source: {market_snapshot_source}")
     print(f"Market snapshots loaded: {len(market_snapshots)}")
     print(f"Normalized market rows written: {len(normalized_snapshots)} -> {NORMALIZED_MARKET_SNAPSHOTS_PATH}")
     print(f"Market normalization audit written: {CLV_MARKET_NORMALIZATION_AUDIT_PATH}")
