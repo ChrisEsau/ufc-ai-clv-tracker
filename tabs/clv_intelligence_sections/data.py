@@ -31,6 +31,22 @@ def load_clv_intelligence_data() -> CLVIntelligenceData:
     )
 
 
+def _normalize_percent_point_column(series: pd.Series) -> pd.Series:
+    """Convert artifact percent-points into decimal pct for this UI.
+
+    CLV artifacts store clv_pct as percent-points, e.g. 1.31 means +1.31%.
+    Plotly tickformat and the CLV Intelligence pct formatters expect decimal
+    percentages, e.g. 0.0131 means +1.31%.
+    """
+
+    values = pd.to_numeric(series, errors="coerce")
+    if values.dropna().empty:
+        return values
+    if values.abs().max(skipna=True) > 1:
+        return values / 100.0
+    return values
+
+
 def prepare_candidate_clv(df: pd.DataFrame) -> pd.DataFrame:
     if df is None or df.empty:
         return pd.DataFrame()
@@ -55,6 +71,8 @@ def prepare_candidate_clv(df: pd.DataFrame) -> pd.DataFrame:
     ]:
         if column in out.columns:
             out[column] = pd.to_numeric(out[column], errors="coerce")
+    if "clv_pct" in out.columns:
+        out["clv_pct"] = _normalize_percent_point_column(out["clv_pct"])
     if "beat_closing_line" in out.columns:
         out["beat_closing_line"] = out["beat_closing_line"].astype("boolean")
     return out
@@ -70,6 +88,8 @@ def prepare_official_clv(df: pd.DataFrame) -> pd.DataFrame:
     for column in ["odds_taken", "closing_odds", "clv_pct", "edge", "ev", "model_probability"]:
         if column in out.columns:
             out[column] = pd.to_numeric(out[column], errors="coerce")
+    if "clv_pct" in out.columns:
+        out["clv_pct"] = _normalize_percent_point_column(out["clv_pct"])
     return out
 
 
