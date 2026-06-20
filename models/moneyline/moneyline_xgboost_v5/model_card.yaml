@@ -2,17 +2,18 @@ model_id: moneyline_xgboost_v5
 model_family: moneyline
 artifact_name: moneyline_xgboost_v5
 algorithm: xgboost
-config_path: configs/models/moneyline_xgboost_v8.yaml
-trained_at_utc: '2026-06-19T12:36:24.682835+00:00'
+config_path: configs/models/moneyline_xgboost_v5.yaml
+trained_at_utc: '2026-06-20T00:13:25.962939+00:00'
 data:
   rolling_features_path: data/features/moneyline_feature_view.parquet
   target_column: target
   date_column: date
 split:
   mode: train_calibration_test
+  train_start_date: '2002-01-01'
   train_end_date: '2022-12-31'
   calibration_end_date: '2023-12-31'
-  train_rows: 13626
+  train_rows: 13026
   calibration_rows: 1008
   test_rows: 2520
 features:
@@ -34,13 +35,13 @@ params:
   random_state: 42
   eval_metric: logloss
 metrics:
-  accuracy: 0.6357142857142857
-  log_loss: 0.6394045491767884
-  roc_auc: 0.6854254850088185
-  brier_score: 0.22407801116121162
-  threshold: 0.49
-  positive_pick_rate_percent: 45.55555555555556
-  negative_pick_rate_percent: 54.44444444444445
+  accuracy: 0.6329365079365079
+  log_loss: 0.663587680432594
+  roc_auc: 0.6839594356261023
+  brier_score: 0.22521665151088405
+  threshold: 0.5
+  positive_pick_rate_percent: 44.56349206349206
+  negative_pick_rate_percent: 55.43650793650794
   actual_positive_rate_percent: 50.0
   row_count: 2520
-best_threshold: 0.49
+best_threshold: 0.5
