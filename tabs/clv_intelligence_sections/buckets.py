@@ -53,6 +53,14 @@ def _timing_bucket(value) -> str:
     return "48h+"
 
 
+def _american_label(value) -> str:
+    parsed = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+    if pd.isna(parsed):
+        return "—"
+    rounded = int(round(float(parsed)))
+    return f"+{rounded}" if rounded > 0 else str(rounded)
+
+
 def render_edge_bucket_chart(candidate_clv: pd.DataFrame) -> None:
     st.markdown('<div class="clvi-card-title">CLV by Edge Bucket</div>', unsafe_allow_html=True)
     st.markdown('<div class="clvi-card-caption">Does higher model edge produce better market validation?</div>', unsafe_allow_html=True)
@@ -62,17 +70,50 @@ def render_edge_bucket_chart(candidate_clv: pd.DataFrame) -> None:
     _bar_chart(work, "edge_bucket", "edge bucket")
 
 
-def render_confidence_chart(candidate_clv: pd.DataFrame) -> None:
-    st.markdown('<div class="clvi-card-title">CLV by Confidence Tier</div>', unsafe_allow_html=True)
-    st.markdown('<div class="clvi-card-caption">Checks whether confidence tiers are market validated.</div>', unsafe_allow_html=True)
-    work = candidate_clv.copy()
-    if "candidate_confidence_tier" not in work.columns or work["candidate_confidence_tier"].isna().all():
-        work["candidate_confidence_tier"] = pd.cut(
-            pd.to_numeric(work.get("candidate_confidence_pct", pd.Series(dtype=float)), errors="coerce"),
-            bins=[-1, 60, 65, 70, 100],
-            labels=["<60%", "60-65%", "65-70%", "70%+"],
-        ).astype(str)
-    _bar_chart(work, "candidate_confidence_tier", "confidence tier")
+def render_steam_chart(candidate_clv: pd.DataFrame) -> None:
+    st.markdown('<div class="clvi-card-title">Steam Moves</div>', unsafe_allow_html=True)
+    st.markdown('<div class="clvi-card-caption">Largest market moves toward the model candidate from first signal to close.</div>', unsafe_allow_html=True)
+    if candidate_clv.empty or "clv_pct" not in candidate_clv.columns:
+        st.info("No candidate CLV rows available for steam moves.")
+        return
+
+    work = candidate_clv.dropna(subset=["clv_pct", "candidate_odds", "closing_odds"]).copy()
+    work = work[work["clv_pct"] > 0].copy()
+    if work.empty:
+        st.info("No positive steam moves found yet.")
+        return
+
+    label_parts = []
+    for _, row in work.iterrows():
+        fight = str(row.get("fight_display") or "Unknown fight")
+        outcome = str(row.get("outcome_display") or "Unknown side")
+        model = str(row.get("model_id") or "Unknown model")
+        label_parts.append(f"{outcome} · {model}")
+    work["steam_label"] = label_parts
+    work["odds_move"] = work.apply(
+        lambda row: f"{_american_label(row.get('candidate_odds'))} → {_american_label(row.get('closing_odds'))}",
+        axis=1,
+    )
+    work = work.sort_values("clv_pct", ascending=False).head(10)
+
+    fig = px.bar(
+        work,
+        x="clv_pct",
+        y="steam_label",
+        orientation="h",
+        text="odds_move",
+        hover_data=[col for col in ["fight_display", "bookmaker", "candidate_edge", "candidate_odds", "closing_odds"] if col in work.columns],
+    )
+    fig.update_layout(
+        height=300,
+        margin=dict(l=10, r=10, t=10, b=10),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        yaxis={"categoryorder": "total ascending"},
+    )
+    fig.update_xaxes(title="Steam / CLV", tickformat=".1%", gridcolor="rgba(148,163,184,.16)", zerolinecolor="rgba(255,255,255,.28)")
+    fig.update_yaxes(title="")
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def render_timing_chart(candidate_clv: pd.DataFrame) -> None:
