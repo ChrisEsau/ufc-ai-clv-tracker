@@ -3,8 +3,8 @@ from __future__ import annotations
 import streamlit as st
 
 from tabs.clv_intelligence_sections.buckets import (
-    render_confidence_chart,
     render_edge_bucket_chart,
+    render_steam_chart,
     render_timing_chart,
 )
 from tabs.clv_intelligence_sections.data import (
@@ -63,7 +63,7 @@ def render_clv_intelligence() -> None:
             render_edge_bucket_chart(filtered_candidates)
     with row2_col2:
         with st.container(border=True):
-            render_confidence_chart(filtered_candidates)
+            render_steam_chart(filtered_candidates)
 
     row3_col1, row3_col2 = st.columns(2, gap="medium")
     with row3_col1:
