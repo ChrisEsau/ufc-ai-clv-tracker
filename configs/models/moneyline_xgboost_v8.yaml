@@ -6,7 +6,7 @@ feature_sources:
 - moneyline_feature_view
 features:
   selection_mode: explicit
-  expected_feature_count: 142
+  expected_feature_count: 139
   allow_unsafe_features: false
   feature_columns:
   - age_x_career_ko_losses_diff
@@ -20,7 +20,6 @@ features:
   - older_fighter_career_ko_losses
   - recent_ko_losses_3_diff
   - age_diff
-  - age_squared_diff
   - aggression_index_diff
   - chin_risk_diff
   - experience_ratio_diff
@@ -28,9 +27,7 @@ features:
   - grappling_edge
   - grappling_edge_x_avg_opp_elo
   - grappling_edge_x_ewm_avg_opp_elo
-  - height_diff
   - pressure_striking_adv_diff
-  - reach_diff
   - reach_striking_combo
   - striking_edge
   - striking_edge_x_avg_opp_elo
@@ -164,6 +161,9 @@ features:
   - engineered
   include_features: []
   exclude_features:
+  - age_squared_diff
+  - height_diff
+  - reach_diff
   - match_time_sec
   - testfeature
   - combined_avg_fight_time
@@ -188,7 +188,6 @@ features:
   - older_fighter_career_ko_losses
   - recent_ko_losses_3_diff
   - age_diff
-  - age_squared_diff
   - aggression_index_diff
   - chin_risk_diff
   - experience_ratio_diff
@@ -196,9 +195,7 @@ features:
   - grappling_edge
   - grappling_edge_x_avg_opp_elo
   - grappling_edge_x_ewm_avg_opp_elo
-  - height_diff
   - pressure_striking_adv_diff
-  - reach_diff
   - reach_striking_combo
   - striking_edge
   - striking_edge_x_avg_opp_elo
