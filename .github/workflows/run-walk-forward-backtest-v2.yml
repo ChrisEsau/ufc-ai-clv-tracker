@@ -1,0 +1,107 @@
+name: Run Walk Forward Backtest V2
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_config_path:
+        description: "Model config YAML path"
+        required: true
+        default: "configs/models/moneyline_xgboost_v8.yaml"
+      feature_view_path:
+        description: "Historical feature view parquet path"
+        required: true
+        default: "data/features/moneyline_feature_view.parquet"
+      historical_market_path:
+        description: "Historical market outcomes parquet path"
+        required: true
+        default: "data/market/historical_market_outcomes.parquet"
+      market_key:
+        description: "Market key to backtest"
+        required: true
+        default: "moneyline"
+      train_start_date:
+        description: "First training date YYYY-MM-DD"
+        required: true
+        default: "2014-01-01"
+      first_test_year:
+        description: "First walk-forward test year"
+        required: true
+        default: "2022"
+      last_test_year:
+        description: "Last walk-forward test year"
+        required: true
+        default: "2025"
+      min_edge:
+        description: "Minimum model edge"
+        required: false
+        default: "0.00"
+      min_confidence:
+        description: "Minimum confidence score"
+        required: false
+        default: "0.00"
+      flat_stake:
+        description: "Flat stake amount"
+        required: false
+        default: "100"
+      starting_bankroll:
+        description: "Starting bankroll for Kelly simulation"
+        required: false
+        default: "10000"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: run-walk-forward-backtest-v2-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  run-walk-forward-backtest-v2:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Sync latest branch state
+        run: |
+          git fetch origin "${GITHUB_REF_NAME}"
+          git pull --ff-only origin "${GITHUB_REF_NAME}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/requirements-workspace.txt
+
+      - name: Run Walk Forward Backtest V2
+        run: |
+          python -m pipeline.backtesting.run_walk_forward_backtest_v2 \
+            --model-config-path "${{ github.event.inputs.model_config_path }}" \
+            --feature-view-path "${{ github.event.inputs.feature_view_path }}" \
+            --historical-market-path "${{ github.event.inputs.historical_market_path }}" \
+            --market-key "${{ github.event.inputs.market_key }}" \
+            --train-start-date "${{ github.event.inputs.train_start_date }}" \
+            --first-test-year "${{ github.event.inputs.first_test_year }}" \
+            --last-test-year "${{ github.event.inputs.last_test_year }}" \
+            --min-edge "${{ github.event.inputs.min_edge }}" \
+            --min-confidence "${{ github.event.inputs.min_confidence }}" \
+            --flat-stake "${{ github.event.inputs.flat_stake }}" \
+            --starting-bankroll "${{ github.event.inputs.starting_bankroll }}"
+
+      - name: Commit walk-forward backtest artifacts
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add -f data/model_lab/walk_forward_backtests
+
+          git commit -m "Update walk-forward backtest v2 artifacts" || echo "No changes to commit"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
