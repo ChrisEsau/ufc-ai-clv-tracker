@@ -19,6 +19,7 @@ scipy
 scikit-learn
 xgboost
 joblib
+shap
 
 # Configuration / serialization
 PyYAML
