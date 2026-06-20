@@ -4,14 +4,17 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
+PLOT_CONFIG = {"displayModeBar": False, "responsive": True}
+
 
 def _bar_chart(df: pd.DataFrame, x: str, title: str) -> None:
     if df.empty or x not in df.columns or "clv_pct" not in df.columns:
         st.info(f"No data available for {title}.")
         return
     work = df.dropna(subset=[x, "clv_pct"]).copy()
+    work = work[work[x].astype(str).str.lower() != "unknown"]
     if work.empty:
-        st.info(f"No populated rows available for {title}.")
+        st.markdown('<div class="clvi-empty-note">Not enough usable rows yet.</div>', unsafe_allow_html=True)
         return
     summary = (
         work.groupby(x, dropna=False)
@@ -19,10 +22,17 @@ def _bar_chart(df: pd.DataFrame, x: str, title: str) -> None:
         .reset_index()
     )
     fig = px.bar(summary, x=x, y="avg_clv", text="candidates", hover_data=["beat_close"])
-    fig.update_layout(height=300, margin=dict(l=10, r=10, t=10, b=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-    fig.update_yaxes(title="Avg CLV", tickformat=".0%", gridcolor="rgba(148,163,184,.16)", zerolinecolor="rgba(255,255,255,.28)")
+    fig.update_traces(textposition="inside", cliponaxis=False)
+    fig.update_layout(
+        height=245,
+        margin=dict(l=8, r=8, t=4, b=8),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        showlegend=False,
+    )
+    fig.update_yaxes(title="Avg CLV", tickformat=".0%", gridcolor="rgba(148,163,184,.14)", zerolinecolor="rgba(255,255,255,.28)")
     fig.update_xaxes(title="")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config=PLOT_CONFIG)
 
 
 def _edge_bucket(value) -> str:
@@ -42,6 +52,8 @@ def _timing_bucket(value) -> str:
     if pd.isna(value):
         return "Unknown"
     value = float(value)
+    if value < 0:
+        return "Unknown"
     if value < 6:
         return "0-6h"
     if value < 12:
@@ -61,6 +73,13 @@ def _american_label(value) -> str:
     return f"+{rounded}" if rounded > 0 else str(rounded)
 
 
+def _signed_pct(value) -> str:
+    parsed = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+    if pd.isna(parsed):
+        return "—"
+    return f"{float(parsed) * 100:+.1f}%"
+
+
 def render_edge_bucket_chart(candidate_clv: pd.DataFrame) -> None:
     st.markdown('<div class="clvi-card-title">CLV by Edge Bucket</div>', unsafe_allow_html=True)
     st.markdown('<div class="clvi-card-caption">Does higher model edge produce better market validation?</div>', unsafe_allow_html=True)
@@ -72,48 +91,36 @@ def render_edge_bucket_chart(candidate_clv: pd.DataFrame) -> None:
 
 def render_steam_chart(candidate_clv: pd.DataFrame) -> None:
     st.markdown('<div class="clvi-card-title">Steam Moves</div>', unsafe_allow_html=True)
-    st.markdown('<div class="clvi-card-caption">Largest market moves toward the model candidate from first signal to close.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="clvi-card-caption">Largest moves toward a model candidate from first signal to close.</div>', unsafe_allow_html=True)
     if candidate_clv.empty or "clv_pct" not in candidate_clv.columns:
-        st.info("No candidate CLV rows available for steam moves.")
+        st.markdown('<div class="clvi-empty-note">No candidate CLV rows available.</div>', unsafe_allow_html=True)
         return
 
     work = candidate_clv.dropna(subset=["clv_pct", "candidate_odds", "closing_odds"]).copy()
-    work = work[work["clv_pct"] > 0].copy()
+    work = work[work["clv_pct"] > 0].sort_values("clv_pct", ascending=False).head(6)
     if work.empty:
-        st.info("No positive steam moves found yet.")
+        st.markdown('<div class="clvi-empty-note">No positive steam moves found yet.</div>', unsafe_allow_html=True)
         return
 
-    label_parts = []
     for _, row in work.iterrows():
-        fight = str(row.get("fight_display") or "Unknown fight")
         outcome = str(row.get("outcome_display") or "Unknown side")
+        fight = str(row.get("fight_display") or "Unknown fight")
         model = str(row.get("model_id") or "Unknown model")
-        label_parts.append(f"{outcome} · {model}")
-    work["steam_label"] = label_parts
-    work["odds_move"] = work.apply(
-        lambda row: f"{_american_label(row.get('candidate_odds'))} → {_american_label(row.get('closing_odds'))}",
-        axis=1,
-    )
-    work = work.sort_values("clv_pct", ascending=False).head(10)
-
-    fig = px.bar(
-        work,
-        x="clv_pct",
-        y="steam_label",
-        orientation="h",
-        text="odds_move",
-        hover_data=[col for col in ["fight_display", "bookmaker", "candidate_edge", "candidate_odds", "closing_odds"] if col in work.columns],
-    )
-    fig.update_layout(
-        height=300,
-        margin=dict(l=10, r=10, t=10, b=10),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        yaxis={"categoryorder": "total ascending"},
-    )
-    fig.update_xaxes(title="Steam / CLV", tickformat=".1%", gridcolor="rgba(148,163,184,.16)", zerolinecolor="rgba(255,255,255,.28)")
-    fig.update_yaxes(title="")
-    st.plotly_chart(fig, use_container_width=True)
+        odds_move = f"{_american_label(row.get('candidate_odds'))} → {_american_label(row.get('closing_odds'))}"
+        clv = _signed_pct(row.get("clv_pct"))
+        st.markdown(
+            f"""
+            <div class="clvi-steam-row">
+                <div class="clvi-steam-main">
+                    <div class="clvi-steam-side">{outcome}</div>
+                    <div class="clvi-steam-meta">{fight} · {model}</div>
+                </div>
+                <div class="clvi-steam-odds">{odds_move}</div>
+                <div class="clvi-steam-clv">{clv}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 
 def render_timing_chart(candidate_clv: pd.DataFrame) -> None:
@@ -121,5 +128,9 @@ def render_timing_chart(candidate_clv: pd.DataFrame) -> None:
     st.markdown('<div class="clvi-card-caption">How candidate timing relates to CLV.</div>', unsafe_allow_html=True)
     work = candidate_clv.copy()
     if "hours_before_fight" in work.columns:
-        work["timing_bucket"] = work["hours_before_fight"].apply(_timing_bucket)
+        usable = pd.to_numeric(work["hours_before_fight"], errors="coerce")
+        if usable.notna().sum() == 0:
+            st.markdown('<div class="clvi-empty-note">Waiting for usable fight-time timestamps.</div>', unsafe_allow_html=True)
+            return
+        work["timing_bucket"] = usable.apply(_timing_bucket)
     _bar_chart(work, "timing_bucket", "timing")
