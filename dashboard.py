@@ -7,6 +7,7 @@ import streamlit as st
 
 from utils.theme import apply_theme
 from tabs.betting_board_v2 import render_betting_board
+from tabs.clv_intelligence import render_clv_intelligence
 from tabs.line_movement import render_line_movement
 from tabs.bankroll import render_bankroll
 from tabs.model_lab_refactored import render_model_lab
@@ -24,6 +25,8 @@ page = render_sidebar()
 
 if page == "Betting Board":
     render_betting_board()
+elif page == "CLV Intelligence":
+    render_clv_intelligence()
 elif page == "Line Movement / CLV":
     render_line_movement()
 elif page in {"Bankroll", "Bet Ledger / Bankroll"}:
