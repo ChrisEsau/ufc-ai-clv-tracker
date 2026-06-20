@@ -111,10 +111,12 @@ def standardize_market(market: pd.DataFrame) -> pd.DataFrame:
 
 def apply_filters(df: pd.DataFrame, args: argparse.Namespace) -> pd.DataFrame:
     out = df.copy()
-    if args.start_date and "date" in out.columns:
-        out = out[out["date"] >= pd.to_datetime(args.start_date)]
-    if args.end_date and "date" in out.columns:
-        out = out[out["date"] <= pd.to_datetime(args.end_date)]
+    start_date = getattr(args, "start_date", None)
+    end_date = getattr(args, "end_date", None)
+    if start_date and "date" in out.columns:
+        out = out[out["date"] >= pd.to_datetime(start_date)]
+    if end_date and "date" in out.columns:
+        out = out[out["date"] <= pd.to_datetime(end_date)]
     out["edge"] = out["model_probability"] - out["implied_probability"]
     mask = (
         out["model_probability"].notna()
@@ -177,8 +179,8 @@ def summarize(scored: pd.DataFrame, args: argparse.Namespace, backtest_id: str) 
         "min_confidence": float(args.min_confidence),
         "min_odds": float(args.min_odds),
         "max_odds": float(args.max_odds),
-        "start_date": args.start_date,
-        "end_date": args.end_date,
+        "start_date": getattr(args, "start_date", None),
+        "end_date": getattr(args, "end_date", None),
     }
 
 
