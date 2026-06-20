@@ -322,7 +322,7 @@ split:
   mode: train_calibration_test
   train_end_date: '2022-12-31'
   calibration_end_date: '2023-12-31'
-  train_start_date: '2002-01-01'
+  train_start_date: '2014-01-01'
 symmetry:
   enabled: true
   mode: flip_all
