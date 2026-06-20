@@ -54,7 +54,10 @@ jobs:
             data/audits/ufc_clv_market_normalization_audit.parquet \
             data/market/ufc_closing_lines.parquet \
             data/market/ufc_clv_results.parquet \
-            data/market/ufc_line_movement.parquet
+            data/market/ufc_line_movement.parquet \
+            data/bankroll/ufc_bet_ledger.parquet \
+            data/bankroll/ufc_open_bets.parquet \
+            data/bankroll/ufc_bankroll_snapshots.parquet
           git commit -m "Automated CLV update" || echo "No changes to commit"
 
           git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
