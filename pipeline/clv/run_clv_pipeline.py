@@ -102,8 +102,8 @@ def main() -> None:
     ensure_data_dirs()
 
     market_snapshots, market_snapshot_source = _load_market_snapshot_source()
-    ledger = load_bet_ledger() if BET_LEDGER_PATH.exists() else pd.DataFrame()
     existing_candidates = _read_parquet(MODEL_CANDIDATE_TRACKER_PATH)
+    ledger = load_bet_ledger() if BET_LEDGER_PATH.exists() else pd.DataFrame()
 
     normalized_snapshots = normalize_market_snapshots(market_snapshots)
     normalization_audit = build_market_normalization_audit(market_snapshots, normalized_snapshots)
@@ -111,7 +111,11 @@ def main() -> None:
     line_movement = build_line_movement(normalized_snapshots)
     clv_results = build_clv_results(ledger, closing_lines)
     ledger_rows_updated = _update_ledger_with_clv(ledger, clv_results)
-    model_candidates = build_model_candidate_tracker(market_snapshots, existing_candidates=existing_candidates)
+
+    model_candidates = build_model_candidate_tracker(
+        snapshots=market_snapshots,
+        existing_candidates=existing_candidates,
+    )
     new_candidate_count = count_new_candidates(existing_candidates, model_candidates)
     model_candidate_clv = build_model_candidate_clv(model_candidates, closing_lines)
 
@@ -133,7 +137,8 @@ def main() -> None:
     print(f"Closing lines written: {len(closing_lines)} -> {CLOSING_LINES_PATH}")
     print(f"Line movement rows written: {len(line_movement)} -> {LINE_MOVEMENT_PATH}")
     print(f"CLV result rows written: {len(clv_results)} -> {CLV_RESULTS_PATH}")
-    print(f"Model candidates tracked: {len(model_candidates)} ({new_candidate_count} new)")
+    print(f"Model candidates tracked: {len(model_candidates)} -> {MODEL_CANDIDATE_TRACKER_PATH}")
+    print(f"New model candidates added: {new_candidate_count}")
     print(f"Model candidate CLV rows written: {len(model_candidate_clv)} -> {MODEL_CANDIDATE_CLV_PATH}")
 
 
