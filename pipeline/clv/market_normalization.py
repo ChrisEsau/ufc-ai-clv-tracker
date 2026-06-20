@@ -1,4 +1,4 @@
-"""Normalize Betting Board market snapshots into side-level CLV rows."""
+"""Normalize market snapshot artifacts into side-level CLV rows."""
 
 from __future__ import annotations
 
@@ -64,13 +64,45 @@ def _side_rows(snapshots: pd.DataFrame, side: str) -> pd.DataFrame:
     return rows
 
 
-def normalize_market_snapshots(snapshots: pd.DataFrame | None) -> pd.DataFrame:
-    """Return one side-level row per fighter/market snapshot.
+def _model_market_rows(snapshots: pd.DataFrame) -> pd.DataFrame:
+    rows = pd.DataFrame(index=snapshots.index)
+    rows["snapshot_timestamp"] = _series(
+        snapshots,
+        "market_snapshot_timestamp",
+        _series(snapshots, "capture_timestamp", _series(snapshots, "snapshot_timestamp")),
+    )
+    rows["event_name"] = _series(snapshots, "event_name")
+    rows["commence_time"] = _series(snapshots, "commence_time")
+    rows["fight_id"] = _series(snapshots, "fight_id")
+    rows["fighter_id"] = _series(snapshots, "outcome_fighter_id", _series(snapshots, "fighter_id"))
+    rows["fighter_name"] = _series(snapshots, "outcome_display", _series(snapshots, "fighter_name"))
+    rows["sportsbook"] = _series(snapshots, "bookmaker", _series(snapshots, "sportsbook"))
+    rows["market_type"] = _series(snapshots, "market_key", _series(snapshots, "market_type", MONEYLINE)).apply(normalize_market_type)
+    rows["american_odds"] = pd.to_numeric(_series(snapshots, "american_odds", pd.NA), errors="coerce")
+    rows["implied_prob"] = pd.to_numeric(
+        _series(snapshots, "implied_probability", _series(snapshots, "implied_prob", pd.NA)),
+        errors="coerce",
+    )
+    rows["source_snapshot_run_id"] = _series(
+        snapshots,
+        "capture_run_id",
+        _series(snapshots, "market_snapshot_run_id", _series(snapshots, "snapshot_run_id")),
+    )
+    rows["odds_match_type"] = _series(snapshots, "odds_match_type")
+    rows["odds_match_score"] = pd.to_numeric(_series(snapshots, "odds_match_score", pd.NA), errors="coerce")
 
-    The active market updater writes a wide fight-level snapshot with red/blue
-    odds.  CLV calculations need side-level rows keyed by fight, fighter,
-    sportsbook, and market type.
-    """
+    side = _series(snapshots, "outcome_side").astype(str).str.lower()
+    rows["opponent_id"] = pd.NA
+    rows["opponent_name"] = pd.NA
+    rows.loc[side.eq("red"), "opponent_id"] = _series(snapshots, "blue_fighter_id", pd.NA).loc[side.eq("red")]
+    rows.loc[side.eq("red"), "opponent_name"] = _series(snapshots, "blue_fighter", pd.NA).loc[side.eq("red")]
+    rows.loc[side.eq("blue"), "opponent_id"] = _series(snapshots, "red_fighter_id", pd.NA).loc[side.eq("blue")]
+    rows.loc[side.eq("blue"), "opponent_name"] = _series(snapshots, "red_fighter", pd.NA).loc[side.eq("blue")]
+    return rows
+
+
+def normalize_market_snapshots(snapshots: pd.DataFrame | None) -> pd.DataFrame:
+    """Return one side-level row per fighter/market snapshot."""
 
     if snapshots is None or snapshots.empty:
         return empty_frame(NORMALIZED_MARKET_COLUMNS)
@@ -78,6 +110,8 @@ def normalize_market_snapshots(snapshots: pd.DataFrame | None) -> pd.DataFrame:
     work = snapshots.copy()
     if {"red_american_odds", "blue_american_odds"}.issubset(work.columns):
         normalized = pd.concat([_side_rows(work, "red"), _side_rows(work, "blue")], ignore_index=True)
+    elif {"outcome_fighter_id", "american_odds"}.issubset(work.columns):
+        normalized = _model_market_rows(work)
     elif {"fighter_id", "american_odds"}.issubset(work.columns):
         normalized = work.rename(columns={"bookmaker": "sportsbook"}).copy()
         for column in NORMALIZED_MARKET_COLUMNS:
@@ -125,11 +159,7 @@ MARKET_NORMALIZATION_AUDIT_COLUMNS = [
 
 
 def build_market_normalization_audit(raw_snapshots: pd.DataFrame | None, normalized_snapshots: pd.DataFrame | None) -> pd.DataFrame:
-    """Summarize CLV market-normalization coverage and quality.
-
-    The audit is intentionally one row so the dashboard/workflows can quickly
-    tell whether CLV inputs are usable without scanning large parquet files.
-    """
+    """Summarize CLV market-normalization coverage and quality."""
 
     raw_rows = 0 if raw_snapshots is None else len(raw_snapshots)
     normalized = empty_frame(NORMALIZED_MARKET_COLUMNS) if normalized_snapshots is None else normalized_snapshots.copy()
