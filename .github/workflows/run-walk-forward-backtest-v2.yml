@@ -95,10 +95,14 @@ jobs:
             --flat-stake "${{ github.event.inputs.flat_stake }}" \
             --starting-bankroll "${{ github.event.inputs.starting_bankroll }}"
 
+      - name: Export reviewable walk-forward artifacts
+        run: |
+          python -m pipeline.backtesting.export_walk_forward_artifacts --output-root data/model_lab/walk_forward_backtests
+
       - name: Commit walk-forward backtest artifacts
         run: |
           git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
+          git config user.email "actions@github.com"
 
           git add -f data/model_lab/walk_forward_backtests
 
