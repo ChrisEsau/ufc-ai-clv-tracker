@@ -164,7 +164,12 @@ def build_model_candidate_clv(candidates: pd.DataFrame | None, closing_lines: pd
                 on=["fight_id", "join_fighter_id", "join_market_type"],
             )
             for column in ["closing_timestamp", "closing_odds", "closing_implied_prob", "closing_line_status"]:
-                exact.loc[unmatched, column] = fallback_values[column].to_numpy()
+                if column == "closing_timestamp":
+                    exact[column] = pd.to_datetime(exact[column], utc=True, errors="coerce").astype("object")
+                    values = pd.to_datetime(fallback_values[column], utc=True, errors="coerce").astype("object")
+                    exact.loc[unmatched, column] = values.to_numpy()
+                else:
+                    exact.loc[unmatched, column] = fallback_values[column].to_numpy()
         results = exact.drop(columns=["join_market_type", "join_fighter_id", "join_sportsbook"], errors="ignore")
 
     results["candidate_timestamp"] = pd.to_datetime(results["candidate_timestamp"], utc=True, errors="coerce")
