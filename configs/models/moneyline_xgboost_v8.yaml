@@ -6,13 +6,11 @@ feature_sources:
 - moneyline_feature_view
 features:
   selection_mode: explicit
-  expected_feature_count: 139
+  expected_feature_count: 137
   allow_unsafe_features: false
   feature_columns:
   - age_x_career_ko_losses_diff
   - career_ko_losses_diff
-  - combined_career_ko_losses
-  - combined_recent_ko_losses_3
   - days_since_last_ko_loss_diff
   - ko_recovery_gap
   - last_fight_ko_loss_diff
@@ -161,6 +159,8 @@ features:
   - engineered
   include_features: []
   exclude_features:
+  - combined_career_ko_losses
+  - combined_recent_ko_losses_3
   - age_squared_diff
   - match_time_sec
   - testfeature
@@ -179,8 +179,6 @@ features:
   resolved_features:
   - age_x_career_ko_losses_diff
   - career_ko_losses_diff
-  - combined_career_ko_losses
-  - combined_recent_ko_losses_3
   - days_since_last_ko_loss_diff
   - ko_recovery_gap
   - last_fight_ko_loss_diff
