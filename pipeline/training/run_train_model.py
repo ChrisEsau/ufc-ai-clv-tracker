@@ -246,7 +246,6 @@ def maybe_apply_symmetry(
 
 def _optional_config_string(value: Any) -> str | None:
     """Return a stripped string value, treating blank config fields as None."""
-
     normalized = str(value or "").strip()
     return normalized or None
 
@@ -314,6 +313,46 @@ def maybe_calibrate(model: Any, split: Any, config: dict[str, Any]) -> Any:
     )
 
 
+def build_shap_importance(
+    *,
+    model: Any,
+    X: pd.DataFrame,
+    feature_columns: list[str],
+    max_rows: int = 1000,
+    random_state: int = 42,
+) -> pd.DataFrame:
+    """Build a mean absolute SHAP importance table for tree models.
+
+    SHAP is intentionally calculated against the raw trained model rather than a
+    calibration wrapper so the feature attribution maps directly to model inputs.
+    """
+
+    if X.empty:
+        return pd.DataFrame(columns=["feature", "mean_abs_shap"])
+
+    import shap  # Imported lazily so non-SHAP workflows do not pay import cost.
+
+    sample_size = min(len(X), max(1, int(max_rows)))
+    sample = X.sample(n=sample_size, random_state=random_state) if len(X) > sample_size else X.copy()
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(sample)
+
+    if isinstance(shap_values, list):
+        shap_values = shap_values[1] if len(shap_values) > 1 else shap_values[0]
+
+    return (
+        pd.DataFrame(
+            {
+                "feature": feature_columns,
+                "mean_abs_shap": abs(shap_values).mean(axis=0),
+            }
+        )
+        .sort_values("mean_abs_shap", ascending=False)
+        .reset_index(drop=True)
+    )
+
+
 def save_artifacts(
     output_dir: Path,
     config_path: Path,
@@ -364,6 +403,20 @@ def save_artifacts(
     if artifact_config.get("save_confidence_buckets", True):
         evaluation.confidence_buckets.to_parquet(output_dir / "confidence_buckets.parquet", index=False)
         raw_evaluation.confidence_buckets.to_parquet(output_dir / "raw_confidence_buckets.parquet", index=False)
+
+    if artifact_config.get("save_shap_importance", True):
+        try:
+            shap_df = build_shap_importance(
+                model=training_result.model,
+                X=split.X_test,
+                feature_columns=feature_columns,
+                max_rows=int(artifact_config.get("shap_max_rows", 1000)),
+                random_state=int(config.get("params", {}).get("random_state", 42)),
+            )
+            shap_df.to_csv(output_dir / "shap_importance.csv", index=False)
+            print(f"Saved SHAP importance: {output_dir / 'shap_importance.csv'}")
+        except Exception as exc:  # noqa: BLE001 - SHAP should not fail the training run.
+            print(f"WARNING: SHAP importance generation failed: {exc}")
 
     if artifact_config.get("save_model_card", True):
         model_card = build_model_card(
