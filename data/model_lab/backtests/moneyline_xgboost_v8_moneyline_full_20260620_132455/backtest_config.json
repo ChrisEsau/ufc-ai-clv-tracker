@@ -1,0 +1,21 @@
+{
+  "model_config_path": "configs/models/moneyline_xgboost_v8.yaml",
+  "feature_view_path": "data/features/moneyline_feature_view.parquet",
+  "historical_market_path": "data/market/historical_market_outcomes.parquet",
+  "output_root": "data/model_lab/backtests",
+  "market_key": "moneyline",
+  "start_date": "2020-01-01",
+  "end_date": "2026-01-01",
+  "starting_bankroll": 500.0,
+  "flat_stake": 10.0,
+  "kelly_fraction": 0.25,
+  "max_stake_pct": 0.05,
+  "min_edge": 0.0,
+  "min_confidence": 0.0,
+  "min_odds": -1000.0,
+  "max_odds": 3000.0,
+  "model_id": "moneyline_xgboost_v8",
+  "backtest_id": "moneyline_xgboost_v8_moneyline_full_20260620_132455",
+  "created_at_utc": "2026-06-20T13:24:55.846728+00:00",
+  "mode": "full_model"
+}
