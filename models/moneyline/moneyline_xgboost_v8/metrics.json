@@ -23,7 +23,7 @@
     "row_count": 2520
   },
   "best_threshold": 0.46,
-  "trained_at_utc": "2026-06-20T00:51:51.672334+00:00",
+  "trained_at_utc": "2026-06-20T00:59:25.307287+00:00",
   "train_start_date": "2002-01-01",
   "train_end_date": "2022-12-31",
   "calibration_end_date": "2023-12-31"
