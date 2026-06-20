@@ -1,0 +1,58 @@
+[
+  {
+    "bucket_type": "edge",
+    "bucket": "(0.2, 10.0]",
+    "bets": 43,
+    "win_rate": 0.5348837209,
+    "flat_profit": 266.7260031543,
+    "flat_roi": 0.0620293031
+  },
+  {
+    "bucket_type": "confidence",
+    "bucket": "(0.6, 0.7]",
+    "bets": 43,
+    "win_rate": 0.5348837209,
+    "flat_profit": 266.7260031543,
+    "flat_roi": 0.0620293031
+  },
+  {
+    "bucket_type": "odds",
+    "bucket": "(-10000.001, -300.0]",
+    "bets": 4,
+    "win_rate": 1.0,
+    "flat_profit": 119.9752051431,
+    "flat_roi": 0.2999380129
+  },
+  {
+    "bucket_type": "odds",
+    "bucket": "(-150.0, 100.0]",
+    "bets": 14,
+    "win_rate": 0.6428571429,
+    "flat_profit": 296.5073562919,
+    "flat_roi": 0.2117909688
+  },
+  {
+    "bucket_type": "odds",
+    "bucket": "(-300.0, -150.0]",
+    "bets": 9,
+    "win_rate": 0.3333333333,
+    "flat_profit": -457.7565582808,
+    "flat_roi": -0.5086183981
+  },
+  {
+    "bucket_type": "odds",
+    "bucket": "(100.0, 200.0]",
+    "bets": 11,
+    "win_rate": 0.3636363636,
+    "flat_profit": -187.0,
+    "flat_roi": -0.17
+  },
+  {
+    "bucket_type": "odds",
+    "bucket": "(200.0, 500.0]",
+    "bets": 5,
+    "win_rate": 0.6,
+    "flat_profit": 495.0,
+    "flat_roi": 0.99
+  }
+]
