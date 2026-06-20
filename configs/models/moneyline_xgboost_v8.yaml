@@ -27,7 +27,9 @@ features:
   - grappling_edge
   - grappling_edge_x_avg_opp_elo
   - grappling_edge_x_ewm_avg_opp_elo
+  - height_diff
   - pressure_striking_adv_diff
+  - reach_diff
   - reach_striking_combo
   - striking_edge
   - striking_edge_x_avg_opp_elo
@@ -140,8 +142,6 @@ features:
   - sapm_diff
   - str_def_diff
   - td_def_diff
-  - height_mismatch_abs
-  - reach_mismatch_abs
   - days_since_last_fight_diff
   - fights_diff
   - loss_streak_diff
@@ -162,8 +162,6 @@ features:
   include_features: []
   exclude_features:
   - age_squared_diff
-  - height_diff
-  - reach_diff
   - match_time_sec
   - testfeature
   - combined_avg_fight_time
@@ -175,6 +173,8 @@ features:
   - combined_finish_pressure
   - combined_finish_rate
   - finish_round
+  - height_mismatch_abs
+  - reach_mismatch_abs
   - older_fighter_age
   resolved_features:
   - age_x_career_ko_losses_diff
@@ -195,7 +195,9 @@ features:
   - grappling_edge
   - grappling_edge_x_avg_opp_elo
   - grappling_edge_x_ewm_avg_opp_elo
+  - height_diff
   - pressure_striking_adv_diff
+  - reach_diff
   - reach_striking_combo
   - striking_edge
   - striking_edge_x_avg_opp_elo
@@ -308,8 +310,6 @@ features:
   - sapm_diff
   - str_def_diff
   - td_def_diff
-  - height_mismatch_abs
-  - reach_mismatch_abs
   - days_since_last_fight_diff
   - fights_diff
   - loss_streak_diff
