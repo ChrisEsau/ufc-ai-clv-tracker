@@ -227,6 +227,93 @@ feature_definitions:
     output_column: height_mismatch_abs
     model_input_allowed: true
 
+  combined_career_ko_losses:
+    label: Combined Career KO Losses
+    type: formula
+    status: active
+    family: ko_loss_vulnerability
+    description: Total point-in-time career KO/TKO losses across both fighters.
+    inputs:
+      - r_pre_career_ko_losses
+      - b_pre_career_ko_losses
+    formula: r_pre_career_ko_losses + b_pre_career_ko_losses
+    output_column: combined_career_ko_losses
+    model_input_allowed: true
+    leakage_safe: true
+
+  combined_recent_ko_losses_3:
+    label: Combined Recent KO Losses 3
+    type: formula
+    status: active
+    family: ko_loss_vulnerability
+    description: Total KO/TKO losses across both fighters over their last three fights.
+    inputs:
+      - r_pre_recent_ko_losses_3
+      - b_pre_recent_ko_losses_3
+    formula: r_pre_recent_ko_losses_3 + b_pre_recent_ko_losses_3
+    output_column: combined_recent_ko_losses_3
+    model_input_allowed: true
+    leakage_safe: true
+
+  ko_recovery_gap:
+    label: KO Recovery Gap
+    type: formula
+    status: active
+    family: ko_loss_vulnerability
+    description: Absolute gap in days since each fighter's last KO/TKO loss.
+    inputs:
+      - days_since_last_ko_loss_diff
+    formula: abs(days_since_last_ko_loss_diff)
+    output_column: ko_recovery_gap
+    model_input_allowed: true
+    leakage_safe: true
+
+  max_career_ko_losses:
+    label: Max Career KO Losses
+    type: formula
+    status: active
+    family: ko_loss_vulnerability
+    description: Higher point-in-time career KO/TKO loss count between the two fighters.
+    inputs:
+      - r_pre_career_ko_losses
+      - b_pre_career_ko_losses
+    formula: max(r_pre_career_ko_losses, b_pre_career_ko_losses)
+    output_column: max_career_ko_losses
+    model_input_allowed: true
+    leakage_safe: true
+
+  older_fighter_career_ko_losses:
+    label: Older Fighter Career KO Losses
+    type: formula
+    status: active
+    family: ko_loss_vulnerability
+    description: Career KO/TKO loss count for the older fighter in the matchup.
+    inputs:
+      - r_pre_age
+      - b_pre_age
+      - r_pre_career_ko_losses
+      - b_pre_career_ko_losses
+    formula: where(r_pre_age >= b_pre_age, r_pre_career_ko_losses, b_pre_career_ko_losses)
+    output_column: older_fighter_career_ko_losses
+    model_input_allowed: true
+    leakage_safe: true
+
+  age_x_career_ko_losses_diff:
+    label: Age x Career KO Loss Diff
+    type: formula
+    status: active
+    family: ko_loss_vulnerability
+    description: Red-minus-blue age interaction with career KO/TKO loss accumulation.
+    inputs:
+      - r_pre_age
+      - b_pre_age
+      - r_pre_career_ko_losses
+      - b_pre_career_ko_losses
+    formula: (r_pre_age * r_pre_career_ko_losses) - (b_pre_age * b_pre_career_ko_losses)
+    output_column: age_x_career_ko_losses_diff
+    model_input_allowed: true
+    leakage_safe: true
+
 feature_layers:
   metadata:
     description: Non-model identifiers, event context, fight context, and join keys.
@@ -271,6 +358,11 @@ feature_families:
     model_input_allowed: true
     ownership: pipeline.features.moneyline / feature_engineering
     current_moneyline_v5: included
+  ko_loss_vulnerability:
+    layer: moneyline
+    model_input_allowed: true
+    ownership: model_lab / feature_registry
+    current_moneyline_v5: false
   goes_distance_core_v1:
     layer: props
     model_input_allowed: true
