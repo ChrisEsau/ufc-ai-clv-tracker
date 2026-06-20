@@ -62,6 +62,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
 def main(argv: Sequence[str] | None = None) -> None:
     args = parse_args(argv)
+    dry_run = bool(args.dry_run)
     now_utc = datetime.now(timezone.utc)
     schedule = load_schedule()
     status = load_scheduler_status()
@@ -75,33 +76,36 @@ def main(argv: Sequence[str] | None = None) -> None:
     print("=" * 80)
     print("Checked at:", now_utc.isoformat())
     print("Timezone:", schedule.get("timezone", DEFAULT_TIMEZONE))
+    print("Dry run:", dry_run)
     print("Due runbooks:", len(due))
 
     for row in due:
         ok, message = _dispatch_workflow(
             workflow_file=str(row.get("workflow_file") or ""),
             inputs=row.get("inputs") or {},
-            dry_run=bool(args.dry_run),
+            dry_run=dry_run,
         )
         record = {
             **row,
             "dispatched_at": now_utc.isoformat(),
-            "dry_run": bool(args.dry_run),
+            "dry_run": dry_run,
             "message": message,
         }
         if ok:
             dispatched.append(record)
-            print("DISPATCHED:", row.get("runbook_id"), message)
+            label = "DRY RUN" if dry_run else "DISPATCHED"
+            print(f"{label}:", row.get("runbook_id"), message)
         else:
             errors.append(record)
             print("ERROR:", row.get("runbook_id"), message)
 
     history = list(status.get("dispatch_history") or [])
-    history.extend(dispatched)
+    if not dry_run:
+        history.extend(dispatched)
     history = history[-250:]
 
     new_status = {
-        "status": "completed" if not errors else "completed_with_errors",
+        "status": "dry_run_completed" if dry_run and not errors else "completed" if not errors else "completed_with_errors",
         "last_checked_at": now_utc.isoformat(),
         "timezone": schedule.get("timezone", DEFAULT_TIMEZONE),
         "due_runbooks": due,
