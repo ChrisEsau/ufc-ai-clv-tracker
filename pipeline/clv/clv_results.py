@@ -116,6 +116,7 @@ def _merge_bets_to_closing(bets: pd.DataFrame, closing: pd.DataFrame) -> pd.Data
         "closing_line_status",
     ]
     closing = closing[closing_cols].copy()
+    closing["closing_timestamp"] = pd.to_datetime(closing["closing_timestamp"], utc=True, errors="coerce")
 
     for column in join_cols:
         if column not in bets.columns:
@@ -157,7 +158,12 @@ def _merge_bets_to_closing(bets: pd.DataFrame, closing: pd.DataFrame) -> pd.Data
                 errors="ignore",
             ).merge(fallback_closing, how="left", on=join_cols, suffixes=("", "_fallback"))
             for column in ["closing_timestamp", "closing_odds", "closing_implied_prob", "closing_line_status"]:
-                exact.loc[unmatched, column] = fallback_values[column].to_numpy()
+                if column == "closing_timestamp":
+                    exact[column] = pd.to_datetime(exact[column], utc=True, errors="coerce").astype("object")
+                    values = pd.to_datetime(fallback_values[column], utc=True, errors="coerce").astype("object")
+                else:
+                    values = fallback_values[column].to_numpy()
+                exact.loc[unmatched, column] = values.to_numpy() if hasattr(values, "to_numpy") else values
     else:
         exact = pd.DataFrame()
         missing_book_bets = mergeable_bets.copy()
@@ -170,6 +176,8 @@ def _merge_bets_to_closing(bets: pd.DataFrame, closing: pd.DataFrame) -> pd.Data
         fallback = pd.DataFrame()
 
     merged = pd.concat([exact, fallback, unmergeable], ignore_index=True, sort=False)
+    if "closing_timestamp" in merged.columns:
+        merged["closing_timestamp"] = pd.to_datetime(merged["closing_timestamp"], utc=True, errors="coerce")
     return merged
 
 
@@ -188,6 +196,8 @@ def build_clv_results(ledger: pd.DataFrame | None, closing_lines: pd.DataFrame |
     else:
         results = _merge_bets_to_closing(bets, closing)
 
+    results["closing_timestamp"] = pd.to_datetime(results.get("closing_timestamp"), utc=True, errors="coerce")
+    results["placed_timestamp"] = pd.to_datetime(results.get("placed_timestamp"), utc=True, errors="coerce")
     results["clv_pct"] = results.apply(lambda row: clv_pct(row.get("odds_taken"), row.get("closing_odds")), axis=1)
     results["clv_implied_prob_delta"] = pd.to_numeric(results.get("closing_implied_prob"), errors="coerce") - pd.to_numeric(
         results.get("bet_implied_prob"), errors="coerce"
