@@ -90,6 +90,51 @@ def inject_styles() -> None:
             letter-spacing: .045em;
             font-weight: 720;
         }
+        .clvi-steam-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto auto;
+            gap: .7rem;
+            align-items: center;
+            padding: .56rem 0;
+            border-bottom: 1px solid rgba(43,60,82,.58);
+        }
+        .clvi-steam-main {
+            min-width: 0;
+        }
+        .clvi-steam-side {
+            color: #f8fbff;
+            font-size: .78rem;
+            font-weight: 690;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .clvi-steam-meta {
+            color: #8fa3bb;
+            font-size: .66rem;
+            margin-top: .12rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .clvi-steam-odds {
+            color: #dbeafe;
+            font-size: .78rem;
+            font-weight: 720;
+            white-space: nowrap;
+        }
+        .clvi-steam-clv {
+            color: #64d899;
+            font-size: .82rem;
+            font-weight: 780;
+            text-align: right;
+            white-space: nowrap;
+        }
+        .clvi-empty-note {
+            color: #9fb0c4;
+            font-size: .78rem;
+            padding: .8rem 0;
+        }
         .clvi-positive { color: #64d899; font-weight: 700; }
         .clvi-negative { color: #ff7b7b; font-weight: 700; }
         .clvi-neutral { color: #dbe7f5; font-weight: 650; }
