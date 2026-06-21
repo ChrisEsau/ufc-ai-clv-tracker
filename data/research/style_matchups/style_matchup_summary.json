@@ -6,36 +6,13 @@
   "minimum_fights": 50,
   "odds_path": "data/market/historical_moneyline_odds.parquet",
   "odds_join_status": {
-    "status": "not_normalized",
-    "reason": "Could not identify side, fighter_id, or fighter_name column.",
-    "columns": [
-      "historical_market_run_id",
-      "historical_market_timestamp",
-      "fight_id",
-      "date",
-      "event_name",
-      "market_key",
-      "bookmaker",
-      "outcome_join_key",
-      "outcome_fighter_id",
-      "outcome_label",
-      "outcome_side",
-      "canonical_side",
-      "legacy_side",
-      "american_odds",
-      "implied_probability",
-      "profit_per_100",
-      "won",
-      "result_status",
-      "source",
-      "mapping_method",
-      "legacy_row_number",
-      "legacy_r_name",
-      "legacy_b_name",
-      "legacy_winner_side"
-    ],
-    "rows": 12988
+    "status": "side_long",
+    "price_col": "american_odds",
+    "side_col": "canonical_side",
+    "rows": 6507,
+    "join_type": "fight_id_wide_join",
+    "matched_fights": 3071
   },
-  "odds_matched_fights": 0,
-  "roi_report_rows": 1
+  "odds_matched_fights": 3071,
+  "roi_report_rows": 16
 }
