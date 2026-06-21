@@ -6,7 +6,7 @@ feature_sources:
 - moneyline_feature_view
 features:
   selection_mode: explicit
-  expected_feature_count: 156
+  expected_feature_count: 154
   allow_unsafe_features: false
   feature_columns:
   - style_all_round_finisher_score_abs_diff
@@ -33,8 +33,6 @@ features:
   - max_career_ko_losses
   - older_fighter_career_ko_losses
   - recent_ko_losses_3_diff
-  - age_diff
-  - age_squared_diff
   - aggression_index_diff
   - chin_risk_diff
   - experience_ratio_diff
@@ -184,6 +182,8 @@ features:
   - style_edge_ko_finisher_vs_decision_technician_reverse
   - combined_career_ko_losses
   - combined_recent_ko_losses_3
+  - age_diff
+  - age_squared_diff
   - match_time_sec
   - testfeature
   - combined_avg_fight_time
@@ -223,8 +223,6 @@ features:
   - max_career_ko_losses
   - older_fighter_career_ko_losses
   - recent_ko_losses_3_diff
-  - age_diff
-  - age_squared_diff
   - aggression_index_diff
   - chin_risk_diff
   - experience_ratio_diff
