@@ -3,7 +3,7 @@ model_family: moneyline
 artifact_name: moneyline_xgboost_v9
 algorithm: xgboost
 config_path: configs/models/moneyline_xgboost_v9.yaml
-trained_at_utc: '2026-06-21T21:04:54.696971+00:00'
+trained_at_utc: '2026-06-21T21:31:11.529805+00:00'
 data:
   rolling_features_path: data/features/moneyline_feature_view.parquet
   target_column: target
@@ -17,8 +17,8 @@ split:
   calibration_rows: 1008
   test_rows: 2520
 features:
-  feature_count: 118
-  expected_feature_count: 118
+  feature_count: 159
+  expected_feature_count: 159
 symmetry:
   enabled: true
   mode: flip_all
@@ -35,13 +35,13 @@ params:
   random_state: 42
   eval_metric: logloss
 metrics:
-  accuracy: 0.6301587301587301
-  log_loss: 0.6522711296252268
-  roc_auc: 0.6686262282690855
-  brier_score: 0.2300138659005557
-  threshold: 0.51
-  positive_pick_rate_percent: 52.77777777777778
-  negative_pick_rate_percent: 47.22222222222222
+  accuracy: 0.6392857142857142
+  log_loss: 0.6483488232258002
+  roc_auc: 0.6717135928445452
+  brier_score: 0.22859302185748515
+  threshold: 0.46
+  positive_pick_rate_percent: 52.261904761904766
+  negative_pick_rate_percent: 47.738095238095234
   actual_positive_rate_percent: 50.0
   row_count: 2520
-best_threshold: 0.51
+best_threshold: 0.46
