@@ -1,0 +1,66 @@
+name: Run Style Score Weight Generation
+
+on:
+  workflow_dispatch:
+    inputs:
+      config_path:
+        description: Style matchup research config path
+        required: false
+        default: pipeline/research/style_matchups/style_config.yaml
+      min_abs_z:
+        description: Minimum absolute z-score required for feature inclusion
+        required: false
+        default: "0.50"
+      max_features:
+        description: Maximum features per style score
+        required: false
+        default: "8"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: style-score-weight-generation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  style-score-weight-generation:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/requirements-workspace.txt
+
+      - name: Generate style score weights
+        run: |
+          python -m pipeline.research.style_matchups.generate_style_score_weights \
+            --config "${{ inputs.config_path }}" \
+            --min-abs-z "${{ inputs.min_abs_z }}" \
+            --max-features "${{ inputs.max_features }}"
+
+      - name: Commit style score weights
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: Update style score weights
+          file_pattern: data/research/style_matchups/style_score_weights.yaml data/research/style_matchups/style_score_weight_audit.csv data/research/style_matchups/style_score_weight_summary.json
+
+      - name: Upload style score weights
+        uses: actions/upload-artifact@v4
+        with:
+          name: style-score-weights
+          path: |
+            data/research/style_matchups/style_score_weights.yaml
+            data/research/style_matchups/style_score_weight_audit.csv
+            data/research/style_matchups/style_score_weight_summary.json
