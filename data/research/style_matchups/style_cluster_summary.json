@@ -1,6 +1,6 @@
 {
-  "selected_k": 3,
-  "selected_cluster_column": "style_cluster_k3",
+  "selected_k": 5,
+  "selected_cluster_column": "style_cluster_k5",
   "sample_count": 10333,
   "usable_style_columns": [
     "splm",
@@ -27,8 +27,6 @@
     "days_since_last_ko_loss"
   ],
   "k_values_evaluated": [
-    3,
-    4,
     5
   ]
 }
