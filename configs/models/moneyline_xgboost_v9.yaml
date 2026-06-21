@@ -6,7 +6,7 @@ feature_sources:
 - moneyline_feature_view
 features:
   selection_mode: explicit
-  expected_feature_count: 158
+  expected_feature_count: 157
   allow_unsafe_features: false
   feature_columns:
   - style_all_round_finisher_score_abs_diff
@@ -36,7 +36,6 @@ features:
   - max_career_ko_losses
   - older_fighter_career_ko_losses
   - recent_ko_losses_3_diff
-  - age_diff
   - aggression_index_diff
   - chin_risk_diff
   - experience_ratio_diff
@@ -178,11 +177,11 @@ features:
   - durability
   - physical
   - experience
-  - engineered
   include_features: []
   exclude_features:
   - combined_career_ko_losses
   - combined_recent_ko_losses_3
+  - age_diff
   - age_squared_diff
   - match_time_sec
   - testfeature
@@ -226,7 +225,6 @@ features:
   - max_career_ko_losses
   - older_fighter_career_ko_losses
   - recent_ko_losses_3_diff
-  - age_diff
   - aggression_index_diff
   - chin_risk_diff
   - experience_ratio_diff
