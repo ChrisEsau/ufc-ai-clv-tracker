@@ -1,6 +1,6 @@
 registry_name: ufc_master_feature_registry
-version: 5
-status: current_moneyline_v5_plus_goes_distance_v1_definitions
+version: 6
+status: current_moneyline_v5_plus_style_scores
 
 source_files:
   full_inventory: configs/features/full_rolling_feature_inventory.yaml
@@ -358,6 +358,12 @@ feature_families:
     model_input_allowed: true
     ownership: pipeline.features.moneyline / feature_engineering
     current_moneyline_v5: included
+  style_scores_v1:
+    layer: moneyline
+    model_input_allowed: true
+    ownership: pipeline.features.raw_fighter_features.style_scores / pipeline.features.run_build_feature_view
+    current_moneyline_v5: false
+    description: Continuous k5 fighter-style scores, score gaps, and persistent style matchup edge features.
   ko_loss_vulnerability:
     layer: moneyline
     model_input_allowed: true
