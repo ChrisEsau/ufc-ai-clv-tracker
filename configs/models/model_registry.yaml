@@ -32,17 +32,6 @@ models:
     status: production
     dashboard_selectable: true
     outcome_architecture: true
-  moneyline_xgboost_v9_style_scores:
-    display_name: Moneyline XGBoost V9 Style Scores
-    description: Research moneyline model using style score features.
-    model_family: moneyline
-    market_key: moneyline
-    algorithm: xgboost
-    config_path: configs/models/moneyline_xgboost_v9_style_scores.yaml
-    artifact_dir: models/moneyline/moneyline_xgboost_v9_style_scores
-    status: research
-    dashboard_selectable: true
-    outcome_architecture: true
 active_models:
   moneyline:
     primary: moneyline_xgboost_v8
