@@ -1,5 +1,5 @@
 registry_name: ufc_feature_bundles
-version: 2
+version: 3
 status: draft_contract
 bundle_rules:
   model_inputs_are_selected_in_model_config: true
@@ -85,6 +85,33 @@ bundles:
     - decision
     - goes_distance
     - rounds
+  style_scores_v1:
+    label: Style Scores V1
+    description: Continuous k5 fighter-style scores and persistent style matchup edge features.
+    source_layer: fighter_state_plus_engineered
+    candidate_columns:
+    - style_control_wrestler_score_diff
+    - style_ko_finisher_score_diff
+    - style_submission_grappler_score_diff
+    - style_decision_technician_score_diff
+    - style_all_round_finisher_score_diff
+    - style_control_wrestler_score_abs_diff
+    - style_ko_finisher_score_abs_diff
+    - style_submission_grappler_score_abs_diff
+    - style_decision_technician_score_abs_diff
+    - style_all_round_finisher_score_abs_diff
+    - style_edge_ko_finisher_vs_decision_technician
+    - style_edge_ko_finisher_vs_decision_technician_reverse
+    - style_edge_ko_finisher_vs_decision_technician_net
+    - style_edge_decision_technician_vs_submission_grappler
+    - style_edge_decision_technician_vs_submission_grappler_reverse
+    - style_edge_decision_technician_vs_submission_grappler_net
+    - style_edge_control_wrestler_vs_ko_finisher
+    - style_edge_control_wrestler_vs_ko_finisher_reverse
+    - style_edge_control_wrestler_vs_ko_finisher_net
+    recommended_transforms: []
+    markets:
+    - moneyline
   ko_loss_vulnerability:
     label: KO Loss Vulnerability
     description: KO/TKO loss accumulation, recent KO-loss exposure, recovery timing, and age interaction state.
@@ -168,8 +195,7 @@ bundles:
     - moneyline
     - props
   engineered_matchup:
-    description: Existing V5 engineered matchup features plus competition-adjusted
-      interaction features.
+    description: Existing V5 engineered matchup features plus competition-adjusted interaction features.
     source_layer: engineered
     candidate_columns:
     - age_diff
@@ -199,8 +225,7 @@ bundles:
     - moneyline
     - props
   market_odds:
-    description: Timestamped market information for market-aware models. Must be point-in-time
-      only.
+    description: Timestamped market information for market-aware models. Must be point-in-time only.
     source_layer: market
     candidate_columns:
     - opening_implied_prob
@@ -257,8 +282,7 @@ bundles:
     markets:
     - moneyline
   goes_distance_core_v1:
-    description: Core V1 Goes Distance features built from finish tendency, fight
-      duration, durability, and physical mismatch signals.
+    description: Core V1 Goes Distance features built from finish tendency, fight duration, durability, and physical mismatch signals.
     candidate_columns:
     - combined_finish_rate
     - combined_finish_loss_rate
