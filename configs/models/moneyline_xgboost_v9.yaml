@@ -6,11 +6,14 @@ feature_sources:
 - moneyline_feature_view
 features:
   selection_mode: explicit
-  expected_feature_count: 153
+  expected_feature_count: 158
   allow_unsafe_features: false
   feature_columns:
+  - style_all_round_finisher_score_abs_diff
   - style_all_round_finisher_score_diff
+  - style_control_wrestler_score_abs_diff
   - style_control_wrestler_score_diff
+  - style_decision_technician_score_abs_diff
   - style_decision_technician_score_diff
   - style_edge_control_wrestler_vs_ko_finisher
   - style_edge_control_wrestler_vs_ko_finisher_net
@@ -65,6 +68,8 @@ features:
   - recent_win_pct_diff
   - splm_diff
   - str_acc_diff
+  - style_primary_score_diff
+  - style_score_spread_diff
   - sub_avg_diff
   - td_acc_diff
   - td_avg_diff
@@ -176,15 +181,10 @@ features:
   - engineered
   include_features: []
   exclude_features:
-  - style_all_round_finisher_score_abs_diff
-  - style_control_wrestler_score_abs_diff
-  - style_decision_technician_score_abs_diff
   - combined_career_ko_losses
   - combined_recent_ko_losses_3
   - age_squared_diff
   - match_time_sec
-  - style_primary_score_diff
-  - style_score_spread_diff
   - testfeature
   - combined_avg_fight_time
   - combined_ewm_avg_fight_time
@@ -199,8 +199,11 @@ features:
   - reach_mismatch_abs
   - older_fighter_age
   resolved_features:
+  - style_all_round_finisher_score_abs_diff
   - style_all_round_finisher_score_diff
+  - style_control_wrestler_score_abs_diff
   - style_control_wrestler_score_diff
+  - style_decision_technician_score_abs_diff
   - style_decision_technician_score_diff
   - style_edge_control_wrestler_vs_ko_finisher
   - style_edge_control_wrestler_vs_ko_finisher_net
@@ -255,6 +258,8 @@ features:
   - recent_win_pct_diff
   - splm_diff
   - str_acc_diff
+  - style_primary_score_diff
+  - style_score_spread_diff
   - sub_avg_diff
   - td_acc_diff
   - td_avg_diff
