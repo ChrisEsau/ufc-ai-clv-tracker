@@ -118,9 +118,9 @@ def normalize_odds(odds: pd.DataFrame) -> tuple[pd.DataFrame | None, dict[str, A
         return out[["fight_id", "r_odds", "b_odds"]], {"status": "wide", "r_col": r_col, "b_col": b_col, "rows": int(len(out))}
 
     price_col = first_col(odds, ["odds", "moneyline", "american_odds", "price", "american_price", "outcome_price"])
-    side_col = first_col(odds, ["side", "corner", "fighter_side"])
-    fighter_col = first_col(odds, ["fighter_id", "selection_id", "participant_id"])
-    name_col = first_col(odds, ["fighter_name", "selection_name", "participant_name", "outcome_name", "name", "fighter"])
+    side_col = first_col(odds, ["canonical_side", "outcome_side", "side", "corner", "fighter_side", "legacy_side"])
+    fighter_col = first_col(odds, ["outcome_fighter_id", "fighter_id", "selection_id", "participant_id"])
+    name_col = first_col(odds, ["outcome_label", "fighter_name", "selection_name", "participant_name", "outcome_name", "name", "fighter"])
     if price_col is None:
         return None, odds_schema_info(odds, "Could not find odds/price column.")
 
@@ -129,7 +129,7 @@ def normalize_odds(odds: pd.DataFrame) -> tuple[pd.DataFrame | None, dict[str, A
     long = long.dropna(subset=["fight_id", "odds_numeric"])
 
     if side_col:
-        side = norm_text(long[side_col]).replace({"red": "r", "blue": "b"})
+        side = norm_text(long[side_col]).replace({"red": "r", "blue": "b", "r_corner": "r", "b_corner": "b"})
         long["side_norm"] = side
         wide = long[long["side_norm"].isin(["r", "b"])].pivot_table(
             index="fight_id", columns="side_norm", values="odds_numeric", aggfunc="last"
