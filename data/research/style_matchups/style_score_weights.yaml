@@ -1,0 +1,65 @@
+metadata:
+  source: data/research/style_matchups/style_cluster_profiles.csv
+  method: feature weight = abs(cluster_mean - global_mean) / global_std, normalized
+    within style
+  min_abs_z: 0.5
+  max_features_per_style: 8
+  allow_negative_weights: true
+  normalize_abs_weights_to_1: true
+  locked_k: 5
+style_score_weights:
+  control_wrestler:
+    source_cluster: 0
+    weights:
+      td_acc: 0.1620675634199524
+      td_avg: 0.15568035079542217
+      ctrl_per_min: 0.1542164145740077
+      sapm: -0.14854551972316088
+      str_acc: 0.11669137229277027
+      ctrl_against_per_min: -0.1043615092209398
+      decision_loss_rate: -0.08996817841973187
+      splm: -0.0684690915540148
+  ko_finisher:
+    source_cluster: 1
+    weights:
+      kd_avg: 0.19090068926005582
+      ko_rate: 0.17715434830913454
+      splm: 0.13469726050604572
+      finish_rate: 0.10675390982428114
+      decision_win_rate: -0.10453367738560092
+      ctrl_per_min: -0.10213386241801144
+      td_avg: -0.09991911013381923
+      sapm: 0.08390714216305117
+  submission_grappler:
+    source_cluster: 2
+    weights:
+      td_def: -0.15283257225074326
+      sub_win_rate: 0.15265896372478396
+      sub_avg: 0.14963096161728692
+      ctrl_against_per_min: 0.13575526528356138
+      splm: -0.11568167104009876
+      str_def: -0.11207858080688562
+      decision_win_rate: -0.09092408969069954
+      finish_rate: 0.09043789558594048
+  decision_technician:
+    source_cluster: 3
+    weights:
+      avg_fight_time: 0.1529151836406198
+      decision_loss_rate: 0.1353652489309664
+      str_acc: -0.13296626000474546
+      decision_win_rate: 0.13051896584827039
+      finish_rate: -0.13034907000989288
+      finish_loss_rate: -0.12603798233474675
+      str_def: 0.09735984301984106
+      ko_rate: -0.09448744621091727
+  all_round_finisher:
+    source_cluster: 4
+    weights:
+      last_fight_ko_loss: 0.16382605107824552
+      recent_ko_losses_3: 0.16153643910732154
+      career_ko_losses: 0.15920993388248192
+      days_since_last_ko_loss: -0.15512803981604398
+      finish_loss_rate: 0.1257865007688599
+      decision_loss_rate: -0.08862030152975799
+      str_def: -0.07353231673585314
+      sapm: 0.07236041708143605
