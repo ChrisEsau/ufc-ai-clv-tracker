@@ -1,8 +1,8 @@
 {
   "fight_count": 3795,
   "baseline_red_win_rate": 0.6039525691699604,
-  "matchup_count": 16,
-  "edge_report_rows": 16,
+  "matchup_count": 9,
+  "edge_report_rows": 9,
   "minimum_fights": 50,
   "odds_path": "data/market/historical_moneyline_odds.parquet",
   "odds_join_status": {
@@ -14,5 +14,5 @@
     "matched_fights": 3071
   },
   "odds_matched_fights": 3071,
-  "roi_report_rows": 16
+  "roi_report_rows": 9
 }
