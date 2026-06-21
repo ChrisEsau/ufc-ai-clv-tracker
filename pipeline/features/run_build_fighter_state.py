@@ -9,6 +9,7 @@ Pipeline:
 - Reuse rolling feature preparation for date sorting and ID-based targets
 - Build fighter-level prefight state history with raw fighter feature plugins
 - Add whitelisted fighter-level EWM state features through the EWM plugin adapter
+- Add continuous k=5 style-score state features
 - Derive latest fighter state
 - Write data/features/fighter_state_history.parquet
 - Write data/features/latest_fighter_state.parquet
@@ -24,6 +25,7 @@ from pipeline.common.paths import (
     MASTER_PATH,
     ensure_data_dirs,
 )
+from pipeline.features.raw_fighter_features import style_scores
 from pipeline.features.run_build_rolling_features import prepare_master_for_rolling
 from pipeline.features.state.ewm_state import get_ewm_state_columns
 from pipeline.features.state.history_builder import build_latest_fighter_state
@@ -52,13 +54,16 @@ def main() -> None:
     base_history_df = build_plugin_fighter_state_history(prepared_df, add_ewm=False)
     ewm_source_columns = get_ewm_state_columns(base_history_df)
     history_df = build_plugin_fighter_state_history(prepared_df, add_ewm=True)
+    history_df = style_scores.enrich_history(history_df)
     latest_df = build_latest_fighter_state(history_df)
 
     expected_history_rows = len(prepared_df) * 2
+    style_columns = [column for column in history_df.columns if column.startswith("style_")]
     print(f"History shape      : {history_df.shape}")
     print(f"Expected rows      : {expected_history_rows}")
     print(f"EWM source columns : {len(ewm_source_columns)}")
     print(f"EWM added columns  : {len(ewm_source_columns) * 2}")
+    print(f"Style score columns: {len(style_columns)}")
     print(f"Latest shape       : {latest_df.shape}")
     print(f"Unique fighters    : {history_df['fighter_id'].nunique() if not history_df.empty else 0}")
 
