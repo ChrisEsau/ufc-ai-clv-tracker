@@ -1,0 +1,31 @@
+{
+  "selected_k": 4,
+  "selected_cluster_column": "style_cluster_k4",
+  "sample_count": 10333,
+  "usable_style_columns": [
+    "elo",
+    "fights",
+    "win_pct",
+    "splm",
+    "sapm",
+    "str_acc",
+    "str_def",
+    "kd_avg",
+    "td_avg",
+    "td_acc",
+    "td_def",
+    "sub_avg",
+    "ctrl_per_min",
+    "ctrl_against_per_min",
+    "finish_rate",
+    "finish_loss_rate",
+    "avg_fight_time"
+  ],
+  "k_values_evaluated": [
+    4,
+    5,
+    6,
+    7,
+    8
+  ]
+}
