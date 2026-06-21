@@ -6,7 +6,7 @@ feature_sources:
 - moneyline_feature_view
 features:
   selection_mode: explicit
-  expected_feature_count: 159
+  expected_feature_count: 156
   allow_unsafe_features: false
   feature_columns:
   - style_all_round_finisher_score_abs_diff
@@ -17,13 +17,10 @@ features:
   - style_decision_technician_score_diff
   - style_edge_control_wrestler_vs_ko_finisher
   - style_edge_control_wrestler_vs_ko_finisher_net
-  - style_edge_control_wrestler_vs_ko_finisher_reverse
   - style_edge_decision_technician_vs_submission_grappler
   - style_edge_decision_technician_vs_submission_grappler_net
-  - style_edge_decision_technician_vs_submission_grappler_reverse
   - style_edge_ko_finisher_vs_decision_technician
   - style_edge_ko_finisher_vs_decision_technician_net
-  - style_edge_ko_finisher_vs_decision_technician_reverse
   - style_ko_finisher_score_abs_diff
   - style_ko_finisher_score_diff
   - style_submission_grappler_score_abs_diff
@@ -182,6 +179,9 @@ features:
   - engineered
   include_features: []
   exclude_features:
+  - style_edge_control_wrestler_vs_ko_finisher_reverse
+  - style_edge_decision_technician_vs_submission_grappler_reverse
+  - style_edge_ko_finisher_vs_decision_technician_reverse
   - combined_career_ko_losses
   - combined_recent_ko_losses_3
   - match_time_sec
@@ -207,13 +207,10 @@ features:
   - style_decision_technician_score_diff
   - style_edge_control_wrestler_vs_ko_finisher
   - style_edge_control_wrestler_vs_ko_finisher_net
-  - style_edge_control_wrestler_vs_ko_finisher_reverse
   - style_edge_decision_technician_vs_submission_grappler
   - style_edge_decision_technician_vs_submission_grappler_net
-  - style_edge_decision_technician_vs_submission_grappler_reverse
   - style_edge_ko_finisher_vs_decision_technician
   - style_edge_ko_finisher_vs_decision_technician_net
-  - style_edge_ko_finisher_vs_decision_technician_reverse
   - style_ko_finisher_score_abs_diff
   - style_ko_finisher_score_diff
   - style_submission_grappler_score_abs_diff
