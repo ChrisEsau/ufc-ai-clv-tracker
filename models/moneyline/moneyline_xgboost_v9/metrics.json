@@ -1,0 +1,30 @@
+{
+  "model_id": "moneyline_xgboost_v9",
+  "raw_metrics": {
+    "accuracy": 0.6317460317460317,
+    "log_loss": 0.6513397241239236,
+    "roc_auc": 0.670806248425296,
+    "brier_score": 0.22921836174836577,
+    "threshold": 0.48,
+    "positive_pick_rate_percent": 53.888888888888886,
+    "negative_pick_rate_percent": 46.111111111111114,
+    "actual_positive_rate_percent": 50.0,
+    "row_count": 2520
+  },
+  "final_metrics": {
+    "accuracy": 0.6317460317460317,
+    "log_loss": 0.6493035479038151,
+    "roc_auc": 0.6685550516502897,
+    "brier_score": 0.2289602786978045,
+    "threshold": 0.46,
+    "positive_pick_rate_percent": 55.3968253968254,
+    "negative_pick_rate_percent": 44.6031746031746,
+    "actual_positive_rate_percent": 50.0,
+    "row_count": 2520
+  },
+  "best_threshold": 0.46,
+  "trained_at_utc": "2026-06-21T18:38:09.504710+00:00",
+  "train_start_date": "2018-01-01",
+  "train_end_date": "2022-12-31",
+  "calibration_end_date": "2023-12-31"
+}
