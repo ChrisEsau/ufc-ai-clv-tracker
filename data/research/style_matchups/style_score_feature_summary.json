@@ -1,0 +1,25 @@
+{
+  "fighter_score_rows": 10333,
+  "matchup_feature_rows": 3795,
+  "score_columns": [
+    "control_wrestler_score",
+    "ko_finisher_score",
+    "submission_grappler_score",
+    "decision_technician_score",
+    "all_round_finisher_score"
+  ],
+  "edge_pairs": {
+    "style_edge_ko_finisher_vs_decision_technician": [
+      "ko_finisher",
+      "decision_technician"
+    ],
+    "style_edge_decision_technician_vs_submission_grappler": [
+      "decision_technician",
+      "submission_grappler"
+    ],
+    "style_edge_control_wrestler_vs_ko_finisher": [
+      "control_wrestler",
+      "ko_finisher"
+    ]
+  }
+}
