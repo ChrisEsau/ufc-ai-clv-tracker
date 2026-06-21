@@ -1,0 +1,63 @@
+name: Run Style Score Feature Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      config_path:
+        description: Style matchup research config path
+        required: false
+        default: pipeline/research/style_matchups/style_config.yaml
+      weights_path:
+        description: Style score weights YAML path
+        required: false
+        default: data/research/style_matchups/style_score_weights.yaml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: style-score-feature-build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  style-score-feature-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/requirements-workspace.txt
+
+      - name: Build style score features
+        run: |
+          python -m pipeline.research.style_matchups.build_style_score_features \
+            --config "${{ inputs.config_path }}" \
+            --weights-path "${{ inputs.weights_path }}"
+
+      - name: Commit style score features
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: Update style score feature outputs
+          file_pattern: data/research/style_matchups/style_fighter_scores.parquet data/research/style_matchups/style_fighter_scores.csv data/research/style_matchups/style_matchup_score_features.parquet data/research/style_matchups/style_matchup_score_features.csv data/research/style_matchups/style_score_feature_summary.json
+
+      - name: Upload style score feature outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: style-score-features
+          path: |
+            data/research/style_matchups/style_fighter_scores.parquet
+            data/research/style_matchups/style_fighter_scores.csv
+            data/research/style_matchups/style_matchup_score_features.parquet
+            data/research/style_matchups/style_matchup_score_features.csv
+            data/research/style_matchups/style_score_feature_summary.json
