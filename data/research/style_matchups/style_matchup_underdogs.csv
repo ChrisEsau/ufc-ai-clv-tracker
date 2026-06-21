@@ -1,2 +1,2 @@
-status,reason,supported_red_columns,supported_blue_columns
-not_available,No supported historical odds columns found in matchup fight dataframe.,r_odds|red_odds|r_moneyline|red_moneyline,b_odds|blue_odds|b_moneyline|blue_moneyline
+
+
