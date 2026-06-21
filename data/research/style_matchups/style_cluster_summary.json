@@ -3,9 +3,6 @@
   "selected_cluster_column": "style_cluster_k4",
   "sample_count": 10333,
   "usable_style_columns": [
-    "elo",
-    "fights",
-    "win_pct",
     "splm",
     "sapm",
     "str_acc",
