@@ -20,6 +20,18 @@ DEFAULT_CONFIG_PATH = "configs/feature_views/moneyline_base.yaml"
 DEFAULT_MODEL_LAB_FEATURE_REGISTRY = "configs/features/feature_registry.yaml"
 SUPPORTED_VIEW_FAMILIES = {"moneyline", "prop"}
 SUPPORTED_PROP_MARKETS = {"goes_distance"}
+STYLE_SCORE_NAMES = [
+    "control_wrestler",
+    "ko_finisher",
+    "submission_grappler",
+    "decision_technician",
+    "all_round_finisher",
+]
+STYLE_EDGE_PAIRS = {
+    "style_edge_ko_finisher_vs_decision_technician": ("ko_finisher", "decision_technician"),
+    "style_edge_decision_technician_vs_submission_grappler": ("decision_technician", "submission_grappler"),
+    "style_edge_control_wrestler_vs_ko_finisher": ("control_wrestler", "ko_finisher"),
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -130,6 +142,11 @@ def build_feature_view_from_config(config_path: str | Path = DEFAULT_CONFIG_PATH
     if registry_result.missing_inputs:
         print(f"Registry features skipped for missing inputs: {registry_result.missing_inputs}")
 
+    style_edge_config = include.get("style_matchup_edges", {}) or {}
+    if style_edge_config.get("enabled", False):
+        feature_view_df = add_style_matchup_edge_features(feature_view_df)
+        print("Style matchup edge features enabled")
+
     feature_view_df = apply_model_lab_formula_features(feature_view_df=feature_view_df, config=config)
     validate_feature_view_output(feature_view_df=feature_view_df, prepared_df=prepared_df, config=config)
     feature_view_path.parent.mkdir(parents=True, exist_ok=True)
@@ -138,6 +155,36 @@ def build_feature_view_from_config(config_path: str | Path = DEFAULT_CONFIG_PATH
     print(f"Saved feature view: {feature_view_path}")
     print("DONE")
     return feature_view_path
+
+
+def add_style_matchup_edge_features(feature_view_df: pd.DataFrame) -> pd.DataFrame:
+    """Add V9 style-score abs-diff and persistent matchup edge features."""
+
+    out = feature_view_df.copy()
+    new_columns: dict[str, Any] = {}
+
+    for style_name in STYLE_SCORE_NAMES:
+        diff_col = f"style_{style_name}_score_diff"
+        if diff_col in out.columns:
+            new_columns[f"style_{style_name}_score_abs_diff"] = out[diff_col].abs()
+
+    for edge_name, (red_style, blue_style) in STYLE_EDGE_PAIRS.items():
+        direct_r = f"r_pre_style_{red_style}_score"
+        direct_b = f"b_pre_style_{blue_style}_score"
+        reverse_r = f"r_pre_style_{blue_style}_score"
+        reverse_b = f"b_pre_style_{red_style}_score"
+        missing = [column for column in [direct_r, direct_b, reverse_r, reverse_b] if column not in out.columns]
+        if missing:
+            raise ValueError(f"Missing style edge inputs for {edge_name}: {missing}")
+        direct = out[direct_r] * out[direct_b]
+        reverse = out[reverse_r] * out[reverse_b]
+        new_columns[edge_name] = direct
+        new_columns[f"{edge_name}_reverse"] = reverse
+        new_columns[f"{edge_name}_net"] = direct - reverse
+
+    if new_columns:
+        out = pd.concat([out, pd.DataFrame(new_columns, index=out.index)], axis=1)
+    return out
 
 
 def add_physical_alias_columns(df: pd.DataFrame) -> pd.DataFrame:
