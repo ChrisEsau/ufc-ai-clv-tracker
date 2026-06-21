@@ -38,6 +38,9 @@ include:
     enabled: true
     function: ufc_feature_engineering.add_v5_engineered_features
     registry_function: ufc_feature_engineering.get_engineered_feature_list
+  style_matchup_edges:
+    enabled: true
+    source: k5_style_score_weights
 
 # Optional Model Lab formula feature layer.
 # Keep disabled for canonical parity builds. Enable in an experiment feature-view
@@ -61,6 +64,9 @@ contracts:
     - b_id
     - r_pre_elo
     - b_pre_elo
+    - style_ko_finisher_score_diff
+    - style_decision_technician_score_diff
+    - style_edge_ko_finisher_vs_decision_technician_net
   protected_model_contracts:
     - configs/models/moneyline_xgboost_v5.yaml
 
@@ -76,4 +82,5 @@ notes:
   - The first generic feature-view builder should reproduce this output before replacing the current runner.
   - Do not duplicate the 124 model feature list here; that remains in the model config.
   - Formula features are opt-in and should be enabled in experiment configs, not canonical parity configs.
+  - Style-score matchup edges are now reusable columns in the canonical moneyline feature view.
   - Future prop views should reuse this config shape with market-specific labels and feature families.
