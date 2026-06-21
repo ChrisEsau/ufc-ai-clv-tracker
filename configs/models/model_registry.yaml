@@ -1,8 +1,7 @@
 models:
   moneyline_xgboost_v5:
     display_name: Moneyline XGBoost V5
-    description: Current production moneyline model trained from the modular V5 training
-      framework.
+    description: Current production moneyline model trained from the modular V5 training framework.
     model_family: moneyline
     market_key: moneyline
     algorithm: xgboost
@@ -12,8 +11,8 @@ models:
     dashboard_selectable: false
     outcome_architecture: true
   prop_goes_distance_xgboost_v1:
-    display_name: Goes th distance v1
-    description: Draft experiment created from moneyline_xgboost_v5.
+    display_name: Goes distance v1
+    description: Draft prop model.
     model_family: prop
     market_key: goes_distance
     algorithm: xgboost
@@ -24,13 +23,24 @@ models:
     outcome_architecture: true
   moneyline_xgboost_v8:
     display_name: Moneyline XGBoost V8
-    description: 'Latest experimental version to improve performance. '
+    description: Production moneyline model.
     model_family: moneyline
     market_key: moneyline
     algorithm: xgboost
     config_path: configs/models/moneyline_xgboost_v8.yaml
     artifact_dir: models/moneyline/moneyline_xgboost_v8
     status: production
+    dashboard_selectable: true
+    outcome_architecture: true
+  moneyline_xgboost_v9_style_scores:
+    display_name: Moneyline XGBoost V9 Style Scores
+    description: Research moneyline model using style score features.
+    model_family: moneyline
+    market_key: moneyline
+    algorithm: xgboost
+    config_path: configs/models/moneyline_xgboost_v9_style_scores.yaml
+    artifact_dir: models/moneyline/moneyline_xgboost_v9_style_scores
+    status: research
     dashboard_selectable: true
     outcome_architecture: true
 active_models:
