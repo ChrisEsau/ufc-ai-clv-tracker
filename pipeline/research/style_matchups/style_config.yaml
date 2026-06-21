@@ -12,9 +12,6 @@ outputs:
   style_fighter_snapshots_path: data/research/style_matchups/style_fighter_snapshots.parquet
 
 filters:
-  # Require a minimum amount of point-in-time UFC history before using a fighter
-  # snapshot for style clustering. This avoids treating debut/low-sample zero
-  # states as meaningful style signals.
   min_fights: 3
 
 identity_columns:
@@ -31,10 +28,10 @@ identity_columns:
   - division
   - source_row_index
 
+# Pure style features only.
+# Intentionally excludes elo, fights, and win_pct because those measure
+# fighter quality/experience rather than fighting style.
 style_columns:
-  - elo
-  - fights
-  - win_pct
   - splm
   - sapm
   - str_acc
@@ -51,11 +48,9 @@ style_columns:
   - avg_fight_time
 
 missingness:
-  # Drop configured style columns that are missing from the source artifact so the
-  # research runner can tolerate older fighter-state versions while reporting the
-  # skipped columns loudly.
   allow_missing_style_columns: true
 
 notes:
-  - Build this dataset first, inspect shape and missingness, then cluster.
+  - Pure-style clustering configuration.
+  - Excludes quality metrics to prevent good-vs-bad fighter clusters.
   - Use only prefight fighter-state columns to preserve point-in-time safety.
