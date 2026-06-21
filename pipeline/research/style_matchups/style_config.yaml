@@ -1,0 +1,61 @@
+# Standalone UFC style-matchup research config.
+#
+# This config is intentionally research-only. It does not modify production
+# fighter-state artifacts, feature views, model configs, workflows, or dashboard
+# components.
+
+inputs:
+  fighter_state_history_path: data/features/fighter_state_history.parquet
+
+outputs:
+  research_dir: data/research/style_matchups
+  style_fighter_snapshots_path: data/research/style_matchups/style_fighter_snapshots.parquet
+
+filters:
+  # Require a minimum amount of point-in-time UFC history before using a fighter
+  # snapshot for style clustering. This avoids treating debut/low-sample zero
+  # states as meaningful style signals.
+  min_fights: 3
+
+identity_columns:
+  - fighter_id
+  - fighter_name
+  - fight_id
+  - fight_date
+  - date
+  - event_id
+  - event_name
+  - corner
+  - opponent_id
+  - opponent_name
+  - division
+  - source_row_index
+
+style_columns:
+  - elo
+  - fights
+  - win_pct
+  - splm
+  - sapm
+  - str_acc
+  - str_def
+  - kd_avg
+  - td_avg
+  - td_acc
+  - td_def
+  - sub_avg
+  - ctrl_per_min
+  - ctrl_against_per_min
+  - finish_rate
+  - finish_loss_rate
+  - avg_fight_time
+
+missingness:
+  # Drop configured style columns that are missing from the source artifact so the
+  # research runner can tolerate older fighter-state versions while reporting the
+  # skipped columns loudly.
+  allow_missing_style_columns: true
+
+notes:
+  - Build this dataset first, inspect shape and missingness, then cluster.
+  - Use only prefight fighter-state columns to preserve point-in-time safety.
