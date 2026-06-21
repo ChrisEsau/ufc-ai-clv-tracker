@@ -16,7 +16,15 @@
     "ctrl_against_per_min",
     "finish_rate",
     "finish_loss_rate",
-    "avg_fight_time"
+    "avg_fight_time",
+    "ko_rate",
+    "sub_win_rate",
+    "decision_win_rate",
+    "decision_loss_rate",
+    "career_ko_losses",
+    "recent_ko_losses_3",
+    "last_fight_ko_loss",
+    "days_since_last_ko_loss"
   ],
   "k_values_evaluated": [
     4,
