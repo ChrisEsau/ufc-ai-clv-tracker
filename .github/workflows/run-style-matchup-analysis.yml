@@ -58,6 +58,7 @@ jobs:
             data/research/style_matchups/style_matchup_fights.parquet \
             data/research/style_matchups/style_matchup_matrix.csv \
             data/research/style_matchups/style_matchup_edge_report.csv \
+            data/research/style_matchups/style_matchup_roi_report.csv \
             data/research/style_matchups/style_matchup_underdogs.csv \
             data/research/style_matchups/style_matchup_summary.json
           git commit -m "Update style matchup analysis outputs" || echo "No changes to commit"
