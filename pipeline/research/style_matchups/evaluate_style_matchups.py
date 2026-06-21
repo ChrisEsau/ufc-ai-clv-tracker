@@ -96,13 +96,50 @@ def _style_label_frame(assignments_df: pd.DataFrame, side: str) -> pd.DataFrame:
     return out
 
 
+def _normalize_text_series(series: pd.Series) -> pd.Series:
+    """Normalize string values for name comparisons."""
+
+    return series.fillna("").astype(str).str.strip().str.casefold()
+
+
+def _derive_red_win(fight_df: pd.DataFrame) -> pd.Series:
+    """Derive red-corner win flag from master result columns.
+
+    The canonical master schema stores fight results as winner/winner_id rather
+    than a modeling target column. Prefer ID comparison and fall back to normalized
+    fighter-name comparison only if IDs are unavailable.
+    """
+
+    target_column = _first_existing(fight_df, ["target", "red_win", "r_win"])
+    if target_column is not None:
+        target = pd.to_numeric(fight_df[target_column], errors="coerce")
+        return target.where(target.isin([0, 1]))
+
+    if "winner_id" in fight_df.columns:
+        winner_id = fight_df["winner_id"].fillna("").astype(str).str.strip()
+        r_id = fight_df["r_id"].fillna("").astype(str).str.strip()
+        b_id = fight_df["b_id"].fillna("").astype(str).str.strip()
+        valid = winner_id.ne("") & (winner_id.eq(r_id) | winner_id.eq(b_id))
+        red_win = winner_id.eq(r_id).astype(float)
+        return red_win.where(valid)
+
+    if "winner" in fight_df.columns and "r_name" in fight_df.columns and "b_name" in fight_df.columns:
+        winner = _normalize_text_series(fight_df["winner"])
+        r_name = _normalize_text_series(fight_df["r_name"])
+        b_name = _normalize_text_series(fight_df["b_name"])
+        valid = winner.ne("") & (winner.eq(r_name) | winner.eq(b_name))
+        red_win = winner.eq(r_name).astype(float)
+        return red_win.where(valid)
+
+    raise ValueError(
+        "ufc_master missing result columns. Expected target/red_win/r_win or canonical winner_id/winner."
+    )
+
+
 def build_fight_style_matchups(master_df: pd.DataFrame, assignments_df: pd.DataFrame) -> pd.DataFrame:
     """Join red/blue style cluster assignments onto master fight rows."""
 
     _require_columns(master_df, ["fight_id", "r_id", "b_id"], label="ufc_master")
-    target_column = _first_existing(master_df, ["target", "red_win", "r_win"])
-    if target_column is None:
-        raise ValueError("ufc_master missing target column. Expected one of: target, red_win, r_win")
 
     red_styles = _style_label_frame(assignments_df, "r")
     blue_styles = _style_label_frame(assignments_df, "b")
@@ -121,7 +158,11 @@ def build_fight_style_matchups(master_df: pd.DataFrame, assignments_df: pd.DataF
             "division",
             "title_fight",
             "method",
-            target_column,
+            "winner",
+            "winner_id",
+            "target",
+            "red_win",
+            "r_win",
         ]
         if column in master_df.columns
     ]
@@ -134,8 +175,11 @@ def build_fight_style_matchups(master_df: pd.DataFrame, assignments_df: pd.DataF
         print(f"Rows missing style assignments: {int(missing_style.sum())}")
     fight_df = fight_df.loc[~missing_style].copy()
 
-    fight_df["red_win"] = pd.to_numeric(fight_df[target_column], errors="coerce")
-    fight_df = fight_df[fight_df["red_win"].isin([0, 1])].copy()
+    fight_df["red_win"] = _derive_red_win(fight_df)
+    missing_result = fight_df["red_win"].isna()
+    if missing_result.any():
+        print(f"Rows missing valid result target: {int(missing_result.sum())}")
+    fight_df = fight_df.loc[~missing_result].copy()
     fight_df["red_win"] = fight_df["red_win"].astype(int)
     fight_df["blue_win"] = 1 - fight_df["red_win"]
 
