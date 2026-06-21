@@ -1,0 +1,54 @@
+name: Run Style Era Analysis
+
+on:
+  workflow_dispatch:
+    inputs:
+      config_path:
+        description: Style matchup research config path
+        required: false
+        default: pipeline/research/style_matchups/style_config.yaml
+      min_fights:
+        description: Minimum fights required per era matchup row
+        required: false
+        default: "20"
+      eras:
+        description: Comma-separated label:start:end era specs
+        required: false
+        default: "2010-2016:2010-01-01:2016-12-31,2017-2020:2017-01-01:2020-12-31,2021-present:2021-01-01:2099-12-31"
+
+permissions:
+  contents: read
+
+jobs:
+  style-era-analysis:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/requirements-workspace.txt
+
+      - name: Run style era analysis
+        run: |
+          python -m pipeline.research.style_matchups.evaluate_style_eras \
+            --config "${{ inputs.config_path }}" \
+            --min-fights "${{ inputs.min_fights }}" \
+            --eras "${{ inputs.eras }}"
+
+      - name: Upload style era outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: style-era-analysis
+          path: |
+            data/research/style_matchups/style_matchup_era_roi_report.csv
+            data/research/style_matchups/style_matchup_era_summary.csv
+            data/research/style_matchups/style_matchup_era_summary.json
