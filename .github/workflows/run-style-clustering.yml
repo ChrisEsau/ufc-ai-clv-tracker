@@ -1,0 +1,64 @@
+name: Run Style Clustering
+
+on:
+  workflow_dispatch:
+    inputs:
+      config_path:
+        description: Style matchup research config path
+        required: false
+        default: pipeline/research/style_matchups/style_config.yaml
+      k_values:
+        description: Comma-separated KMeans cluster counts to evaluate
+        required: false
+        default: "4,5,6,7,8"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: style-clustering-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  style-clustering:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Sync latest branch state
+        run: |
+          git fetch origin "${GITHUB_REF_NAME}"
+          git pull --ff-only origin "${GITHUB_REF_NAME}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/requirements-workspace.txt
+
+      - name: Run style clustering research
+        run: |
+          python -m pipeline.research.style_matchups.run_style_clustering \
+            --config "${{ inputs.config_path }}" \
+            --k-values "${{ inputs.k_values }}"
+
+      - name: Commit style clustering research outputs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add -f \
+            data/research/style_matchups/style_cluster_assignments.parquet \
+            data/research/style_matchups/style_cluster_profiles.csv \
+            data/research/style_matchups/style_cluster_metrics.csv \
+            data/research/style_matchups/style_cluster_summary.json
+          git commit -m "Update style clustering research outputs" || echo "No changes to commit"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
