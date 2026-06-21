@@ -4,7 +4,7 @@ market_key: moneyline
 artifact_name: moneyline_xgboost_v9_style_scores
 algorithm: xgboost
 feature_sources:
-  - moneyline_v9_style_scores
+  - moneyline_feature_view
 features:
   selection_mode: explicit
   expected_feature_count: 19
@@ -34,7 +34,7 @@ features:
   include_features: []
   exclude_features: []
 data:
-  rolling_features_path: data/features/moneyline_v9_style_feature_view.parquet
+  rolling_features_path: data/features/moneyline_feature_view.parquet
   target_column: target
   date_column: date
 split:
