@@ -1,0 +1,25 @@
+{
+  "input_fights_path": "data/research/style_matchups/style_matchup_fights.parquet",
+  "eras": [
+    {
+      "era": "2010-2016",
+      "start": "2010-01-01",
+      "end": "2016-12-31"
+    },
+    {
+      "era": "2017-2020",
+      "start": "2017-01-01",
+      "end": "2020-12-31"
+    },
+    {
+      "era": "2021-present",
+      "start": "2021-01-01",
+      "end": "2099-12-31"
+    }
+  ],
+  "min_fights": 20,
+  "matched_fights": 3071,
+  "unmatched_fights": 0,
+  "era_report_rows": 69,
+  "summary_rows": 3
+}
