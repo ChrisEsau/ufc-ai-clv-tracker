@@ -1,6 +1,9 @@
 [
+  "style_all_round_finisher_score_abs_diff",
   "style_all_round_finisher_score_diff",
+  "style_control_wrestler_score_abs_diff",
   "style_control_wrestler_score_diff",
+  "style_decision_technician_score_abs_diff",
   "style_decision_technician_score_diff",
   "style_edge_control_wrestler_vs_ko_finisher",
   "style_edge_control_wrestler_vs_ko_finisher_net",
@@ -55,6 +58,8 @@
   "recent_win_pct_diff",
   "splm_diff",
   "str_acc_diff",
+  "style_primary_score_diff",
+  "style_score_spread_diff",
   "sub_avg_diff",
   "td_acc_diff",
   "td_avg_diff",
