@@ -3,7 +3,7 @@ model_family: moneyline
 artifact_name: moneyline_xgboost_v10
 algorithm: xgboost
 config_path: configs/models/moneyline_xgboost_v10.yaml
-trained_at_utc: '2026-06-21T22:01:28.081966+00:00'
+trained_at_utc: '2026-06-21T22:15:03.929696+00:00'
 data:
   rolling_features_path: data/features/moneyline_feature_view.parquet
   target_column: target
@@ -11,11 +11,11 @@ data:
 split:
   mode: train_calibration_test
   train_start_date: '2018-01-01'
-  train_end_date: '2022-12-31'
-  calibration_end_date: '2023-12-31'
-  train_rows: 4844
-  calibration_rows: 1008
-  test_rows: 2520
+  train_end_date: '2023-12-31'
+  calibration_end_date: '2024-12-31'
+  train_rows: 5852
+  calibration_rows: 1026
+  test_rows: 1494
 features:
   feature_count: 156
   expected_feature_count: 156
@@ -25,7 +25,7 @@ symmetry:
 calibration:
   enabled: true
   method: isotonic
-  calibration_rows: 1008
+  calibration_rows: 1026
 params:
   n_estimators: 500
   max_depth: 4
@@ -35,13 +35,13 @@ params:
   random_state: 42
   eval_metric: logloss
 metrics:
-  accuracy: 0.6194444444444445
-  log_loss: 0.6609705273054184
-  roc_auc: 0.6650992063492064
-  brier_score: 0.22993858250977706
-  threshold: 0.43
-  positive_pick_rate_percent: 61.54761904761905
-  negative_pick_rate_percent: 38.45238095238095
+  accuracy: 0.6372155287817939
+  log_loss: 0.654827166614479
+  roc_auc: 0.6892657645306798
+  brier_score: 0.2242972039951913
+  threshold: 0.49
+  positive_pick_rate_percent: 42.904953145917005
+  negative_pick_rate_percent: 57.095046854082995
   actual_positive_rate_percent: 50.0
-  row_count: 2520
-best_threshold: 0.43
+  row_count: 1494
+best_threshold: 0.49
