@@ -49,6 +49,7 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: Update style score feature outputs
+          add_options: -f
           file_pattern: data/research/style_matchups/style_fighter_scores.parquet data/research/style_matchups/style_fighter_scores.csv data/research/style_matchups/style_matchup_score_features.parquet data/research/style_matchups/style_matchup_score_features.csv data/research/style_matchups/style_score_feature_summary.json
 
       - name: Upload style score feature outputs
