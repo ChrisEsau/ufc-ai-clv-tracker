@@ -15,6 +15,14 @@ on:
         description: Comma-separated label:start:end era specs
         required: false
         default: "2010-2016:2010-01-01:2016-12-31,2017-2020:2017-01-01:2020-12-31,2021-present:2021-01-01:2099-12-31"
+      min_eras:
+        description: Minimum eras required for persistent edge report
+        required: false
+        default: "2"
+      modern_era:
+        description: Era label treated as modern UFC
+        required: false
+        default: "2021-present"
 
 permissions:
   contents: write
@@ -50,11 +58,18 @@ jobs:
             --min-fights "${{ inputs.min_fights }}" \
             --eras "${{ inputs.eras }}"
 
+      - name: Run persistent style edge analysis
+        run: |
+          python -m pipeline.research.style_matchups.evaluate_persistent_style_edges \
+            --config "${{ inputs.config_path }}" \
+            --min-eras "${{ inputs.min_eras }}" \
+            --modern-era "${{ inputs.modern_era }}"
+
       - name: Commit style era outputs
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: Update style era analysis outputs
-          file_pattern: data/research/style_matchups/style_matchup_era_roi_report.csv data/research/style_matchups/style_matchup_era_summary.csv data/research/style_matchups/style_matchup_era_summary.json
+          file_pattern: data/research/style_matchups/style_matchup_era_roi_report.csv data/research/style_matchups/style_matchup_era_summary.csv data/research/style_matchups/style_matchup_era_summary.json data/research/style_matchups/style_matchup_persistent_edges.csv data/research/style_matchups/style_matchup_persistent_modern_edges.csv data/research/style_matchups/style_matchup_persistent_summary.json
 
       - name: Upload style era outputs
         uses: actions/upload-artifact@v4
@@ -64,3 +79,6 @@ jobs:
             data/research/style_matchups/style_matchup_era_roi_report.csv
             data/research/style_matchups/style_matchup_era_summary.csv
             data/research/style_matchups/style_matchup_era_summary.json
+            data/research/style_matchups/style_matchup_persistent_edges.csv
+            data/research/style_matchups/style_matchup_persistent_modern_edges.csv
+            data/research/style_matchups/style_matchup_persistent_summary.json
