@@ -1,0 +1,54 @@
+name: Run Build Style Dataset
+
+on:
+  workflow_dispatch:
+    inputs:
+      config_path:
+        description: Style matchup research config path
+        required: false
+        default: pipeline/research/style_matchups/style_config.yaml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-style-dataset-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-style-dataset:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Sync latest branch state
+        run: |
+          git fetch origin "${GITHUB_REF_NAME}"
+          git pull --ff-only origin "${GITHUB_REF_NAME}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/requirements-workspace.txt
+
+      - name: Build style matchup research dataset
+        run: |
+          python -m pipeline.research.style_matchups.build_style_dataset --config "${{ inputs.config_path }}"
+
+      - name: Commit style research dataset
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add -f data/research/style_matchups/style_fighter_snapshots.parquet
+          git commit -m "Update style matchup research dataset" || echo "No changes to commit"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
