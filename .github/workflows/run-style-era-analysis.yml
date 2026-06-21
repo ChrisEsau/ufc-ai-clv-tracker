@@ -17,7 +17,11 @@ on:
         default: "2010-2016:2010-01-01:2016-12-31,2017-2020:2017-01-01:2020-12-31,2021-present:2021-01-01:2099-12-31"
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: style-era-analysis-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   style-era-analysis:
@@ -26,6 +30,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -43,6 +49,12 @@ jobs:
             --config "${{ inputs.config_path }}" \
             --min-fights "${{ inputs.min_fights }}" \
             --eras "${{ inputs.eras }}"
+
+      - name: Commit style era outputs
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: Update style era analysis outputs
+          file_pattern: data/research/style_matchups/style_matchup_era_roi_report.csv data/research/style_matchups/style_matchup_era_summary.csv data/research/style_matchups/style_matchup_era_summary.json
 
       - name: Upload style era outputs
         uses: actions/upload-artifact@v4
