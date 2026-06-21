@@ -107,11 +107,11 @@ def build_style_dataset(config: dict[str, Any]) -> pd.DataFrame:
     if not available_style_columns:
         raise ValueError("No configured style columns were found in fighter-state history.")
 
-    output_columns = list(dict.fromkeys([*available_identity_columns, *available_style_columns]))
-    style_df = history_df.loc[:, output_columns].copy()
+    fight_count_filter = pd.to_numeric(history_df["fights"], errors="coerce").fillna(0) >= min_fights
+    filtered_history_df = history_df.loc[fight_count_filter].copy()
 
-    style_df["fights"] = pd.to_numeric(style_df["fights"], errors="coerce")
-    style_df = style_df[style_df["fights"].fillna(0) >= min_fights].copy()
+    output_columns = list(dict.fromkeys([*available_identity_columns, *available_style_columns]))
+    style_df = filtered_history_df.loc[:, output_columns].copy()
 
     # Convert style signal columns to numeric so clustering can consume them
     # directly in the next research step.
