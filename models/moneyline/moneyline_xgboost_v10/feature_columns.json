@@ -23,6 +23,8 @@
   "max_career_ko_losses",
   "older_fighter_career_ko_losses",
   "recent_ko_losses_3_diff",
+  "age_diff",
+  "age_squared_diff",
   "aggression_index_diff",
   "chin_risk_diff",
   "experience_ratio_diff",
