@@ -48,28 +48,30 @@ style_columns:
   - finish_loss_rate
   - avg_fight_time
 
-  # Style V2 experimental additions.
-  # These are intentionally easy to remove if clustering stability or ROI gets worse.
-  - knockdowns_per_min
-  - knockdowns_per_fight
-  - control_time_pct
-  - submission_finish_rate
-  - ko_win_pct
-  - sub_win_pct
-  - decision_win_pct
-  - inside_distance_rate
-  - avg_fight_minutes
+  # Style V2 experimental additions using columns that already exist in
+  # fighter_state_history.parquet from finish_profile.py.
+  # Equivalent intended meanings:
+  # ko_win_pct       -> ko_rate
+  # sub_win_pct      -> sub_win_rate
+  # decision_win_pct -> decision_win_rate
+  - ko_rate
+  - sub_win_rate
+  - decision_win_rate
+  - decision_loss_rate
+  - career_ko_losses
+  - recent_ko_losses_3
+  - last_fight_ko_loss
+  - days_since_last_ko_loss
 
 experimental_style_v2_columns:
-  - knockdowns_per_min
-  - knockdowns_per_fight
-  - control_time_pct
-  - submission_finish_rate
-  - ko_win_pct
-  - sub_win_pct
-  - decision_win_pct
-  - inside_distance_rate
-  - avg_fight_minutes
+  - ko_rate
+  - sub_win_rate
+  - decision_win_rate
+  - decision_loss_rate
+  - career_ko_losses
+  - recent_ko_losses_3
+  - last_fight_ko_loss
+  - days_since_last_ko_loss
 
 missingness:
   allow_missing_style_columns: true
@@ -78,5 +80,6 @@ notes:
   - Pure-style clustering configuration.
   - Excludes quality metrics to prevent good-vs-bad fighter clusters.
   - Style V1 baseline remains the first 14 style_columns.
-  - Style V2 experimental additions are duplicated under experimental_style_v2_columns for easy rollback/removal.
+  - Style V2 experimental additions now use existing finish_profile columns only.
+  - Removed missing experimental names for now: knockdowns_per_min, knockdowns_per_fight, control_time_pct, submission_finish_rate, ko_win_pct, sub_win_pct, decision_win_pct, inside_distance_rate, avg_fight_minutes.
   - Use only prefight fighter-state columns to preserve point-in-time safety.
