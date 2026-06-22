@@ -1,0 +1,105 @@
+model_id: prop_method_of_victory_xgboost_v1
+model_family: prop
+market_key: method_of_victory
+artifact_name: prop_method_of_victory_xgboost_v1
+version: 1
+status: draft
+algorithm: xgboost
+feature_view_config_path: configs/feature_views/prop_method_of_victory.yaml
+feature_sources:
+- prop_method_of_victory_feature_view
+features:
+  selection_mode: explicit
+  expected_feature_count: 15
+  allow_unsafe_features: false
+  feature_columns:
+  - combined_avg_fight_time
+  - combined_ewm_avg_fight_time
+  - combined_ewm_finish_loss_rate
+  - combined_ewm_finish_pressure
+  - combined_ewm_finish_rate
+  - combined_finish_loss_rate
+  - combined_finish_pressure
+  - combined_finish_rate
+  - finish_loss_rate_diff
+  - finish_rate_diff
+  - height_mismatch_abs
+  - older_fighter_age
+  - reach_mismatch_abs
+  - recent_form_avg_fight_time_diff
+  - ewm_avg_fight_time_diff
+  selected_bundles:
+  - method_of_victory_core_v1
+  include_features: []
+  exclude_features: []
+  resolved_features:
+  - combined_avg_fight_time
+  - combined_ewm_avg_fight_time
+  - combined_ewm_finish_loss_rate
+  - combined_ewm_finish_pressure
+  - combined_ewm_finish_rate
+  - combined_finish_loss_rate
+  - combined_finish_pressure
+  - combined_finish_rate
+  - finish_loss_rate_diff
+  - finish_rate_diff
+  - height_mismatch_abs
+  - older_fighter_age
+  - reach_mismatch_abs
+  - recent_form_avg_fight_time_diff
+  - ewm_avg_fight_time_diff
+data:
+  rolling_features_path: data/features/prop_method_of_victory_feature_view.parquet
+  target_column: target_method_class
+  date_column: date
+split:
+  mode: train_calibration_test
+  train_start_date: '2014-01-01'
+  train_end_date: '2022-12-31'
+  calibration_end_date: '2023-12-31'
+symmetry:
+  enabled: false
+  mode: none
+calibration:
+  enabled: false
+  reason: multiclass calibration not supported yet
+params:
+  n_estimators: 500
+  max_depth: 4
+  learning_rate: 0.03
+  subsample: 0.8
+  colsample_bytree: 0.8
+  random_state: 42
+  objective: multi:softprob
+  num_class: 3
+  eval_metric: mlogloss
+metrics:
+  primary_metric: log_loss
+artifacts:
+  output_dir: models/method_of_victory/prop_method_of_victory_xgboost_v1
+  save_raw_model: true
+  save_calibrated_model: false
+  save_feature_columns: true
+  save_metrics: true
+  save_threshold_sweep: false
+  save_confidence_buckets: false
+  save_shap_importance: true
+  save_model_card: true
+prediction:
+  format: multiclass
+  market_key: method_of_victory
+  prediction_type: multiclass_prop
+  class_labels:
+  - ko_tko
+  - submission
+  - decision
+  probability:
+    clip_low: 0.01
+    clip_high: 0.99
+  output:
+    model_scoped_path_template: data/predictions/by_model/{model_id}/model_outcomes.parquet
+notes:
+- Draft fight-level multiclass method model.
+- Class probabilities sum to 100 percent across ko_tko, submission, and decision.
+- This powers method-level fight props and can derive goes-distance/inside-distance probabilities.
+- This does not yet model fighter-specific method-of-victory markets.
