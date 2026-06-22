@@ -3,7 +3,7 @@ model_family: prop
 market_key: goes_distance
 artifact_name: prop_goes_distance_xgboost_v1
 version: 1
-status: draft
+status: production
 algorithm: xgboost
 feature_sources:
 - prop_goes_distance_feature_view
