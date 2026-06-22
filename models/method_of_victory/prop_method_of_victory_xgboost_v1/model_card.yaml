@@ -4,7 +4,7 @@ market_key: method_of_victory
 artifact_name: prop_method_of_victory_xgboost_v1
 algorithm: xgboost
 config_path: configs/models/prop_method_of_victory_xgboost_v1.yaml
-trained_at_utc: '2026-06-22T19:07:57.704591+00:00'
+trained_at_utc: '2026-06-22T19:19:17.169400+00:00'
 prediction:
   format: multiclass
   class_labels:
