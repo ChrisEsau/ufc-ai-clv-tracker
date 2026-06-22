@@ -76,6 +76,12 @@ def build_outcome_join_key(
         if label_token in {"inside_distance", "does_not_go_distance", "no", "under"} or side_token == "no":
             return "fight:inside_distance"
 
+    if market == "over_under_2_5":
+        if label_token in {"over_2_5", "over", "yes"} or side_token == "over":
+            return "fight:over_2_5"
+        if label_token in {"under_2_5", "under", "no"} or side_token == "under":
+            return "fight:under_2_5"
+
     if market in {"total_rounds", "totals"}:
         base = side_token if side_token in {"over", "under"} else label_token
         if not _is_missing(line):
