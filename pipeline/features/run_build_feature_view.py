@@ -19,7 +19,7 @@ from ufc_feature_engineering import add_v5_engineered_features, get_engineered_f
 DEFAULT_CONFIG_PATH = "configs/feature_views/moneyline_base.yaml"
 DEFAULT_MODEL_LAB_FEATURE_REGISTRY = "configs/features/feature_registry.yaml"
 SUPPORTED_VIEW_FAMILIES = {"moneyline", "prop"}
-SUPPORTED_PROP_MARKETS = {"goes_distance", "over_under_2_5"}
+SUPPORTED_PROP_MARKETS = {"goes_distance", "over_under_2_5", "method_of_victory"}
 STYLE_SCORE_NAMES = [
     "control_wrestler",
     "ko_finisher",
@@ -252,6 +252,19 @@ def add_prop_labels(*, feature_view_df: pd.DataFrame, config: dict[str, Any]) ->
         out[target_column] = elapsed_seconds.gt(750.0).astype(int)
         return out
 
+    if market_key == "method_of_victory":
+        if "method" not in out.columns:
+            raise ValueError("Cannot build method-of-victory target because method column is missing.")
+        method = out["method"].astype("string").fillna("").str.strip().str.lower()
+        target = pd.Series(pd.NA, index=out.index, dtype="Int64")
+        target.loc[method.str.contains("ko/tko", na=False) | method.str.contains("tko", na=False) | method.str.contains("ko", na=False)] = 0
+        target.loc[method.str.contains("submission", na=False)] = 1
+        target.loc[method.str.contains("decision", na=False)] = 2
+        out[target_column] = target
+        out = out[out[target_column].notna()].copy()
+        out[target_column] = out[target_column].astype(int)
+        return out
+
     raise ValueError(f"Unsupported prop market for label generation: {market_key}")
 
 
@@ -260,8 +273,15 @@ def print_target_distribution(feature_view_df: pd.DataFrame, target_column: str)
         print(f"Target distribution unavailable; missing column: {target_column}")
         return
     target = pd.to_numeric(feature_view_df[target_column], errors="coerce")
-    positive_count = int(target.fillna(0).sum())
     total_count = int(target.notna().sum())
+    if total_count == 0:
+        print("Target distribution: no valid target rows")
+        return
+    counts = target.value_counts(dropna=True).sort_index().to_dict()
+    if len(counts) > 2:
+        print(f"Target distribution: total={total_count}, class_counts={counts}")
+        return
+    positive_count = int(target.fillna(0).sum())
     positive_rate = positive_count / total_count if total_count else 0.0
     print(f"Target distribution: positives={positive_count}, total={total_count}, positive_rate={positive_rate:.4f}")
 
