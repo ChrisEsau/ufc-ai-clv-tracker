@@ -182,14 +182,6 @@ def render_multiclass_summary(context: dict[str, Any], *, compact: bool = False)
     st.caption(f"Confusion matrix loaded from `{confusion_path}`. Rows are actual classes; columns are predicted classes.")
     st.dataframe(confusion, use_container_width=True, hide_index=True)
 
-    if "actual_class" in confusion.columns:
-        numeric = confusion.set_index("actual_class")
-        numeric = numeric.apply(pd.to_numeric, errors="coerce")
-        st.dataframe(
-            numeric.style.background_gradient(axis=None),
-            use_container_width=True,
-        )
-
 
 def _read_shap_importance(context: dict[str, Any]) -> pd.DataFrame:
     """Load overall SHAP importance for the selected model artifact directory."""
