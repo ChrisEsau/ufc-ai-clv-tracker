@@ -1,0 +1,47 @@
+model_id: prop_over_under_2_5_xgboost_v1
+model_family: prop
+artifact_name: prop_over_under_2_5_xgboost_v1
+algorithm: xgboost
+config_path: configs/models/prop_over_under_2_5_xgboost_v1.yaml
+trained_at_utc: '2026-06-22T17:23:56.520597+00:00'
+data:
+  rolling_features_path: data/features/prop_over_under_2_5_feature_view.parquet
+  target_column: target_over_2_5
+  date_column: date
+split:
+  mode: train_calibration_test
+  train_start_date: '2014-01-01'
+  train_end_date: '2022-12-31'
+  calibration_end_date: '2023-12-31'
+  train_rows: 4309
+  calibration_rows: 504
+  test_rows: 1272
+features:
+  feature_count: 11
+  expected_feature_count: 11
+symmetry:
+  enabled: false
+  mode: none
+calibration:
+  enabled: true
+  method: isotonic
+  calibration_rows: 504
+params:
+  n_estimators: 500
+  max_depth: 4
+  learning_rate: 0.03
+  subsample: 0.8
+  colsample_bytree: 0.8
+  random_state: 42
+  eval_metric: logloss
+metrics:
+  accuracy: 0.5904088050314465
+  log_loss: 0.6929603371193862
+  roc_auc: 0.5998451954125653
+  brier_score: 0.24099469890290626
+  threshold: 0.5
+  positive_pick_rate_percent: 56.289308176100626
+  negative_pick_rate_percent: 43.710691823899374
+  actual_positive_rate_percent: 56.05345911949685
+  row_count: 1272
+best_threshold: 0.5

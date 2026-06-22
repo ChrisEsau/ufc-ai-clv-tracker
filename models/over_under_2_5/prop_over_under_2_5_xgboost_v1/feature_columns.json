@@ -1,0 +1,13 @@
+[
+  "combined_avg_fight_time",
+  "combined_ewm_avg_fight_time",
+  "combined_ewm_finish_loss_rate",
+  "combined_ewm_finish_pressure",
+  "combined_ewm_finish_rate",
+  "combined_finish_loss_rate",
+  "combined_finish_pressure",
+  "combined_finish_rate",
+  "height_mismatch_abs",
+  "older_fighter_age",
+  "reach_mismatch_abs"
+]

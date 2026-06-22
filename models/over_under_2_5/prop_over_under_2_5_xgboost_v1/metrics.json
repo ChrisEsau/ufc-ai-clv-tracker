@@ -1,0 +1,30 @@
+{
+  "model_id": "prop_over_under_2_5_xgboost_v1",
+  "raw_metrics": {
+    "accuracy": 0.5919811320754716,
+    "log_loss": 0.6791808261474496,
+    "roc_auc": 0.6031783865698866,
+    "brier_score": 0.24258738514409725,
+    "threshold": 0.49,
+    "positive_pick_rate_percent": 66.50943396226415,
+    "negative_pick_rate_percent": 33.490566037735846,
+    "actual_positive_rate_percent": 56.05345911949685,
+    "row_count": 1272
+  },
+  "final_metrics": {
+    "accuracy": 0.5904088050314465,
+    "log_loss": 0.6929603371193862,
+    "roc_auc": 0.5998451954125653,
+    "brier_score": 0.24099469890290626,
+    "threshold": 0.5,
+    "positive_pick_rate_percent": 56.289308176100626,
+    "negative_pick_rate_percent": 43.710691823899374,
+    "actual_positive_rate_percent": 56.05345911949685,
+    "row_count": 1272
+  },
+  "best_threshold": 0.5,
+  "trained_at_utc": "2026-06-22T17:23:55.582515+00:00",
+  "train_start_date": "2014-01-01",
+  "train_end_date": "2022-12-31",
+  "calibration_end_date": "2023-12-31"
+}
