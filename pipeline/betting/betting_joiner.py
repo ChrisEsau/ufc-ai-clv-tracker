@@ -76,6 +76,21 @@ def ensure_output_columns(df: pd.DataFrame) -> pd.DataFrame:
     return out[OUTPUT_COLUMNS]
 
 
+def _market_filter_series(out: pd.DataFrame, settings: RiskSettings) -> pd.DataFrame:
+    rows = []
+    for market_key in out["market_key"].fillna("moneyline"):
+        market_filter = settings.filter_for_market(market_key)
+        rows.append(
+            {
+                "risk_min_edge": market_filter.min_edge,
+                "risk_min_confidence": market_filter.min_confidence,
+                "risk_min_odds": market_filter.min_odds,
+                "risk_max_odds": market_filter.max_odds,
+            }
+        )
+    return pd.DataFrame(rows, index=out.index)
+
+
 def build_betting_outcomes(
     *,
     model_df: pd.DataFrame,
@@ -183,6 +198,9 @@ def build_betting_outcomes(
         float(settings.starting_bankroll) * out["fractional_kelly_fraction"]
     ).clip(lower=0.0, upper=out["max_stake"])
 
+    market_filters = _market_filter_series(out, settings)
+    out = pd.concat([out, market_filters], axis=1)
+
     out["passes_market_data_filter"] = (
         model_probability.notna()
         & implied_probability.notna()
@@ -190,9 +208,13 @@ def build_betting_outcomes(
         & american_odds.notna()
         & decimal_odds.gt(1.0)
     )
-    out["passes_edge_filter"] = pd.to_numeric(out["edge"], errors="coerce").ge(float(settings.min_edge))
-    out["passes_confidence_filter"] = confidence_pct.ge(float(settings.min_confidence))
-    out["passes_odds_filter"] = american_odds.between(int(settings.min_odds), int(settings.max_odds), inclusive="both")
+    out["passes_edge_filter"] = pd.to_numeric(out["edge"], errors="coerce").ge(pd.to_numeric(out["risk_min_edge"], errors="coerce"))
+    out["passes_confidence_filter"] = confidence_pct.ge(pd.to_numeric(out["risk_min_confidence"], errors="coerce"))
+    out["passes_odds_filter"] = american_odds.between(
+        pd.to_numeric(out["risk_min_odds"], errors="coerce"),
+        pd.to_numeric(out["risk_max_odds"], errors="coerce"),
+        inclusive="both",
+    )
     out["is_bet_candidate"] = (
         out["passes_market_data_filter"]
         & out["passes_edge_filter"]
@@ -204,9 +226,5 @@ def build_betting_outcomes(
     out["risk_starting_bankroll"] = float(settings.starting_bankroll)
     out["risk_kelly_fraction"] = float(settings.kelly_fraction)
     out["risk_max_stake_pct"] = float(settings.max_stake_pct)
-    out["risk_min_edge"] = float(settings.min_edge)
-    out["risk_min_confidence"] = float(settings.min_confidence)
-    out["risk_min_odds"] = int(settings.min_odds)
-    out["risk_max_odds"] = int(settings.max_odds)
 
     return ensure_output_columns(out)
