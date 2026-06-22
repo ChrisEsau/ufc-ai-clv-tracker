@@ -9,7 +9,7 @@ The permanent outcome join contract is:
     fight_id + market_key + outcome_join_key
 
 This supports both fighter-specific outcomes, such as moneyline, and fight-level
-props, such as goes distance or round totals.
+props, such as goes distance, method, or round totals.
 """
 
 from __future__ import annotations
@@ -81,6 +81,14 @@ def build_outcome_join_key(
             return "fight:over_2_5"
         if label_token in {"under_2_5", "under", "no"} or side_token == "under":
             return "fight:under_2_5"
+
+    if market == "method_of_victory":
+        if label_token in {"ko_tko", "ko_tko_dq", "ko", "tko", "knockout"} or side_token in {"ko_tko", "ko", "tko"}:
+            return "fight:ko_tko"
+        if label_token in {"submission", "sub"} or side_token in {"submission", "sub"}:
+            return "fight:submission"
+        if label_token in {"decision", "dec"} or side_token in {"decision", "dec"}:
+            return "fight:decision"
 
     if market in {"total_rounds", "totals"}:
         base = side_token if side_token in {"over", "under"} else label_token
