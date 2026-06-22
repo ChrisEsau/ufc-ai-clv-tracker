@@ -10,7 +10,7 @@ feature_sources:
 - prop_method_of_victory_feature_view
 features:
   selection_mode: explicit
-  expected_feature_count: 175
+  expected_feature_count: 173
   allow_unsafe_features: false
   feature_columns:
   - style_all_round_finisher_score_abs_diff
@@ -64,8 +64,6 @@ features:
   - wrestling_mismatch_diff
   - wrestling_mismatch_x_avg_opp_elo
   - wrestling_pressure_vs_defense
-  - combined_avg_fight_time
-  - combined_ewm_avg_fight_time
   - combined_ewm_finish_loss_rate
   - combined_ewm_finish_pressure
   - combined_ewm_finish_rate
@@ -204,6 +202,8 @@ features:
   - engineered
   include_features: []
   exclude_features:
+  - combined_avg_fight_time
+  - combined_ewm_avg_fight_time
   - match_time_sec
   - target_method_class
   - finish_round
@@ -259,8 +259,6 @@ features:
   - wrestling_mismatch_diff
   - wrestling_mismatch_x_avg_opp_elo
   - wrestling_pressure_vs_defense
-  - combined_avg_fight_time
-  - combined_ewm_avg_fight_time
   - combined_ewm_finish_loss_rate
   - combined_ewm_finish_pressure
   - combined_ewm_finish_rate
