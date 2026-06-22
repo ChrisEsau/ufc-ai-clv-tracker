@@ -68,13 +68,22 @@ def _status_icon(status: str) -> str:
 def _latest_run(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "betting_run_id" not in df.columns:
         return df
+
+    run_ids = df["betting_run_id"].dropna().astype(str)
+    run_ids = run_ids[~run_ids.str.strip().isin(["", "nan", "None", "<NA>"])]
+    if run_ids.empty:
+        return df.copy()
+
     if "betting_timestamp" in df.columns:
-        ranked = df[["betting_run_id", "betting_timestamp"]].dropna().drop_duplicates()
+        ranked = df[["betting_run_id", "betting_timestamp"]].copy()
+        ranked["betting_run_id"] = ranked["betting_run_id"].astype(str)
+        ranked["betting_timestamp"] = pd.to_datetime(ranked["betting_timestamp"], errors="coerce", utc=True)
+        ranked = ranked[ranked["betting_run_id"].isin(run_ids.unique())].dropna(subset=["betting_timestamp"]).drop_duplicates()
         if not ranked.empty:
-            ranked["betting_timestamp"] = pd.to_datetime(ranked["betting_timestamp"], errors="coerce", utc=True)
             latest = ranked.sort_values("betting_timestamp").tail(1)["betting_run_id"].iloc[0]
             return df[df["betting_run_id"].astype(str) == str(latest)].copy()
-    latest = df["betting_run_id"].dropna().astype(str).iloc[-1]
+
+    latest = run_ids.iloc[-1]
     return df[df["betting_run_id"].astype(str) == latest].copy()
 
 
@@ -382,6 +391,10 @@ def render_compare(
         return
 
     latest = _latest_run(raw)
+    if latest.empty:
+        st.warning("Betting outcomes artifact exists, but no usable rows were found for the latest run.")
+        return
+
     _render_summary_cards(_build_overview_table(latest), latest)
 
     if not audit.empty:
