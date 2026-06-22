@@ -11,18 +11,6 @@ import utils.model_lab_workflows as mlw
 
 
 ExistingModelSelector = Callable[[dict[str, Any], list[dict[str, Any]], dict[str, dict[str, Any]]], dict[str, Any]]
-LEAKAGE_KEYWORDS = [
-    "target",
-    "outcome",
-    "method",
-    "winner",
-    "result",
-    "finish",
-    "round",
-    "duration",
-    "time_sec",
-    "match_time",
-]
 
 
 def _artifact_dir(context: dict[str, Any]) -> Path:
@@ -189,31 +177,6 @@ def _read_shap_importance(context: dict[str, Any]) -> pd.DataFrame:
     return _read_csv_artifact(context, "shap_importance.csv")
 
 
-def _render_leakage_flags(shap_df: pd.DataFrame, *, top_n: int = 25) -> None:
-    if shap_df.empty or "feature" not in shap_df.columns:
-        return
-    top = shap_df.head(top_n).copy()
-    flagged_rows = []
-    for position, (_, row) in enumerate(top.iterrows(), start=1):
-        feature = str(row.get("feature") or "")
-        lowered = feature.lower()
-        matched = [keyword for keyword in LEAKAGE_KEYWORDS if keyword in lowered]
-        if matched:
-            flagged_rows.append(
-                {
-                    "feature": feature,
-                    "rank": position,
-                    "matched_keywords": ", ".join(matched),
-                    "mean_abs_shap": row.get("mean_abs_shap", row.get("importance")),
-                }
-            )
-    if not flagged_rows:
-        st.success(f"No obvious leakage keywords found in top {min(top_n, len(top))} SHAP features.")
-        return
-    st.warning("Potential leakage-like feature names detected in top SHAP features. Review before trusting the run.")
-    st.dataframe(pd.DataFrame(flagged_rows), use_container_width=True, hide_index=True)
-
-
 def _render_shap_table(context: dict[str, Any], shap_df: pd.DataFrame, *, title: str, key_suffix: str, source_name: str) -> None:
     st.markdown(f"#### {title}")
     source_path = _artifact_path(context, source_name)
@@ -229,21 +192,30 @@ def _render_shap_table(context: dict[str, Any], shap_df: pd.DataFrame, *, title:
             break
 
     st.caption(f"Loaded `{source_path}` · {len(shap_df):,} features")
-    _render_leakage_flags(shap_df, top_n=25)
 
-    top_n = st.slider(
-        f"Top SHAP features · {title}",
-        min_value=10,
-        max_value=min(100, max(10, len(shap_df))),
-        value=min(25, len(shap_df)),
-        step=5,
-        key=f"performance_shap_top_n_{context.get('model_id')}_{key_suffix}",
+    show_all = st.toggle(
+        f"Show all SHAP features · {title}",
+        value=True,
+        key=f"performance_shap_show_all_{context.get('model_id')}_{key_suffix}",
     )
-    top_df = shap_df.head(top_n).copy()
+    if show_all:
+        top_df = shap_df.copy()
+    else:
+        top_n = st.slider(
+            f"Top SHAP features · {title}",
+            min_value=10,
+            max_value=min(100, max(10, len(shap_df))),
+            value=min(25, len(shap_df)),
+            step=5,
+            key=f"performance_shap_top_n_{context.get('model_id')}_{key_suffix}",
+        )
+        top_df = shap_df.head(top_n).copy()
 
     if value_col:
-        chart_df = top_df[[feature_col, value_col]].set_index(feature_col)
+        chart_n = min(50, len(shap_df))
+        chart_df = shap_df.head(chart_n)[[feature_col, value_col]].set_index(feature_col)
         st.bar_chart(chart_df)
+        st.caption(f"Chart shows top {chart_n:,}; table shows {'all' if show_all else len(top_df):,} features.")
 
     st.dataframe(top_df, use_container_width=True, hide_index=True)
 
