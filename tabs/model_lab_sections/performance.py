@@ -53,34 +53,23 @@ def _class_labels(context: dict[str, Any]) -> list[str]:
 
 
 def _discover_class_shap_files(context: dict[str, Any]) -> dict[str, str]:
-    """Return class-label to SHAP filename mapping from config and artifact files."""
-
     discovered: dict[str, str] = {}
     for label in _class_labels(context):
-        filename = f"shap_importance_{_safe_label_for_filename(label)}.csv"
-        discovered[label] = filename
-
+        discovered[label] = f"shap_importance_{_safe_label_for_filename(label)}.csv"
     artifact_dir = _artifact_dir(context)
     if artifact_dir.exists():
         for path in sorted(artifact_dir.glob("shap_importance_*.csv")):
             if path.name == "shap_importance.csv":
                 continue
             suffix = path.stem.replace("shap_importance_", "", 1)
-            matching_label = next(
-                (label for label in discovered if _safe_label_for_filename(label) == suffix),
-                suffix,
-            )
+            matching_label = next((label for label in discovered if _safe_label_for_filename(label) == suffix), suffix)
             discovered.setdefault(matching_label, path.name)
     return discovered
 
 
 def _is_multiclass_model(context: dict[str, Any]) -> bool:
     prediction = (context.get("config") or {}).get("prediction") or {}
-    if str(prediction.get("format") or "").strip().lower() == "multiclass":
-        return True
-    if _read_class_labels_artifact(context):
-        return True
-    return bool(_discover_class_shap_files(context))
+    return str(prediction.get("format") or "").strip().lower() == "multiclass" or bool(_read_class_labels_artifact(context)) or bool(_discover_class_shap_files(context))
 
 
 def _read_parquet_artifact(context: dict[str, Any], filename: str) -> pd.DataFrame:
@@ -101,12 +90,11 @@ def _read_csv_artifact(context: dict[str, Any], filename: str) -> pd.DataFrame:
         df = pd.read_csv(path)
     except Exception:
         return pd.DataFrame()
-    if df.empty:
-        return df
-    if "mean_abs_shap" in df.columns:
-        df = df.sort_values("mean_abs_shap", ascending=False).reset_index(drop=True)
-    elif "importance" in df.columns:
-        df = df.sort_values("importance", ascending=False).reset_index(drop=True)
+    if not df.empty:
+        if "mean_abs_shap" in df.columns:
+            df = df.sort_values("mean_abs_shap", ascending=False).reset_index(drop=True)
+        elif "importance" in df.columns:
+            df = df.sort_values("importance", ascending=False).reset_index(drop=True)
     return df
 
 
@@ -119,162 +107,55 @@ def _format_rate_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def render_multiclass_summary(context: dict[str, Any], *, compact: bool = False) -> None:
-    """Render multiclass artifacts for models that emit class probability rows."""
-
     if not _is_multiclass_model(context):
         return
-
-    class_metrics_path = _artifact_path(context, "class_metrics.parquet")
-    confusion_path = _artifact_path(context, "confusion_matrix.parquet")
     class_metrics = _format_rate_columns(_read_parquet_artifact(context, "class_metrics.parquet"))
     confusion = _read_parquet_artifact(context, "confusion_matrix.parquet")
-
     st.markdown("### Multiclass Breakdown")
-    if class_metrics.empty and confusion.empty:
-        st.info(
-            "No multiclass class artifacts found yet. Expected "
-            f"`{class_metrics_path}` and `{confusion_path}` after training."
-        )
-        return
-
     if not class_metrics.empty:
-        st.caption(f"Class metrics loaded from `{class_metrics_path}`")
-        display_cols = [
-            column
-            for column in [
-                "class_index",
-                "class_label",
-                "support",
-                "predicted_count",
-                "actual_rate",
-                "predicted_rate",
-                "mean_probability",
-                "one_vs_rest_f1",
-            ]
-            if column in class_metrics.columns
-        ]
-        st.dataframe(class_metrics[display_cols], use_container_width=True, hide_index=True)
-
-        chart_cols = [column for column in ["actual_rate", "predicted_rate", "mean_probability", "one_vs_rest_f1"] if column in class_metrics.columns]
-        if chart_cols and "class_label" in class_metrics.columns and not compact:
-            st.bar_chart(class_metrics.set_index("class_label")[chart_cols])
-
-    if compact:
-        return
-
-    st.markdown("### Confusion Matrix")
-    if confusion.empty:
-        st.info(f"No confusion matrix artifact found yet: `{confusion_path}`")
-        return
-
-    st.caption(f"Confusion matrix loaded from `{confusion_path}`. Rows are actual classes; columns are predicted classes.")
-    st.dataframe(confusion, use_container_width=True, hide_index=True)
+        st.dataframe(class_metrics, use_container_width=True, hide_index=True)
+    if not compact and not confusion.empty:
+        st.markdown("### Confusion Matrix")
+        st.dataframe(confusion, use_container_width=True, hide_index=True)
 
 
 def _read_shap_importance(context: dict[str, Any]) -> pd.DataFrame:
-    """Load overall SHAP importance for the selected model artifact directory."""
-
     return _read_csv_artifact(context, "shap_importance.csv")
 
 
 def _render_shap_table(context: dict[str, Any], shap_df: pd.DataFrame, *, title: str, key_suffix: str, source_name: str) -> None:
     st.markdown(f"#### {title}")
-    source_path = _artifact_path(context, source_name)
     if shap_df.empty:
-        st.info(f"No SHAP artifact found yet: `{source_path}`")
         return
-
     feature_col = "feature" if "feature" in shap_df.columns else shap_df.columns[0]
-    value_col = None
-    for candidate in ["mean_abs_shap", "importance", "gain", "weight"]:
-        if candidate in shap_df.columns:
-            value_col = candidate
-            break
-
-    st.caption(f"Loaded `{source_path}` · {len(shap_df):,} features")
-
-    show_all = st.toggle(
-        f"Show all SHAP features · {title}",
-        value=True,
-        key=f"performance_shap_show_all_{context.get('model_id')}_{key_suffix}",
-    )
-    if show_all:
-        top_df = shap_df.copy()
-    else:
-        top_n = st.slider(
-            f"Top SHAP features · {title}",
-            min_value=10,
-            max_value=min(100, max(10, len(shap_df))),
-            value=min(25, len(shap_df)),
-            step=5,
-            key=f"performance_shap_top_n_{context.get('model_id')}_{key_suffix}",
-        )
-        top_df = shap_df.head(top_n).copy()
-
+    value_col = next((c for c in ["mean_abs_shap", "importance", "gain", "weight"] if c in shap_df.columns), None)
+    show_all = st.toggle(f"Show all SHAP features · {title}", value=True, key=f"performance_shap_show_all_{context.get('model_id')}_{key_suffix}")
+    top_df = shap_df if show_all else shap_df.head(25)
     if value_col:
         chart_n = min(50, len(shap_df))
         chart_df = shap_df.head(chart_n)[[feature_col, value_col]].set_index(feature_col)
         st.bar_chart(chart_df)
-        st.caption(f"Chart shows top {chart_n:,}; table shows {'all' if show_all else len(top_df):,} features.")
-
+        table_count = "all" if show_all else f"{len(top_df):,}"
+        st.caption(f"Chart shows top {chart_n:,}; table shows {table_count} features.")
     st.dataframe(top_df, use_container_width=True, hide_index=True)
 
 
 def _render_shap_importance(context: dict[str, Any]) -> None:
-    """Render SHAP feature importance inside the Performance workspace."""
-
     st.markdown("### SHAP Analysis")
     overall = _read_shap_importance(context)
-
     if not _is_multiclass_model(context):
-        _render_shap_table(
-            context,
-            overall,
-            title="Overall SHAP Importance",
-            key_suffix="overall",
-            source_name="shap_importance.csv",
-        )
+        _render_shap_table(context, overall, title="Overall SHAP Importance", key_suffix="overall", source_name="shap_importance.csv")
         return
-
     class_files = _discover_class_shap_files(context)
-    tab_labels = ["Overall"] + [str(label) for label in class_files]
-    tabs = st.tabs(tab_labels)
+    tabs = st.tabs(["Overall"] + [str(label) for label in class_files])
     with tabs[0]:
-        _render_shap_table(
-            context,
-            overall,
-            title="Overall SHAP Importance",
-            key_suffix="overall",
-            source_name="shap_importance.csv",
-        )
-        with st.expander("SHAP artifact discovery", expanded=False):
-            artifact_dir = _artifact_dir(context)
-            st.write(
-                {
-                    "artifact_dir": str(artifact_dir),
-                    "artifact_dir_exists": artifact_dir.exists(),
-                    "class_labels": _class_labels(context),
-                    "class_shap_files": class_files,
-                }
-            )
+        _render_shap_table(context, overall, title="Overall SHAP Importance", key_suffix="overall", source_name="shap_importance.csv")
     for tab, (label, filename) in zip(tabs[1:], class_files.items()):
         with tab:
-            _render_shap_table(
-                context,
-                _read_csv_artifact(context, filename),
-                title=f"{label} SHAP Importance",
-                key_suffix=_safe_label_for_filename(label),
-                source_name=filename,
-            )
+            _render_shap_table(context, _read_csv_artifact(context, filename), title=f"{label} SHAP Importance", key_suffix=_safe_label_for_filename(label), source_name=filename)
 
 
-def render_performance(
-    registry: dict[str, Any],
-    rows: list[dict[str, Any]],
-    row_by_id: dict[str, dict[str, Any]],
-    *,
-    existing_model_selector: ExistingModelSelector,
-) -> None:
+def render_performance(registry, rows, row_by_id, *, existing_model_selector):
     st.markdown("## Performance")
     context = existing_model_selector(registry, rows, row_by_id)
     mlw._render_model_bar(context, registry)
