@@ -3,7 +3,7 @@ model_family: moneyline
 artifact_name: moneyline_xgboost_v10
 algorithm: xgboost
 config_path: configs/models/moneyline_xgboost_v10.yaml
-trained_at_utc: '2026-06-21T23:10:09.250866+00:00'
+trained_at_utc: '2026-06-22T01:33:14.275986+00:00'
 data:
   rolling_features_path: data/features/moneyline_feature_view.parquet
   target_column: target
