@@ -24,9 +24,21 @@ features:
   - older_fighter_age
   - reach_mismatch_abs
   selected_bundles:
-  - over_under_2_5_core_v1
+  - goes_distance_core_v1
   include_features: []
   exclude_features: []
+  resolved_features:
+  - combined_avg_fight_time
+  - combined_ewm_avg_fight_time
+  - combined_ewm_finish_loss_rate
+  - combined_ewm_finish_pressure
+  - combined_ewm_finish_rate
+  - combined_finish_loss_rate
+  - combined_finish_pressure
+  - combined_finish_rate
+  - height_mismatch_abs
+  - older_fighter_age
+  - reach_mismatch_abs
 data:
   rolling_features_path: data/features/prop_over_under_2_5_feature_view.parquet
   target_column: target_over_2_5
@@ -35,6 +47,7 @@ split:
   mode: train_calibration_test
   train_end_date: '2022-12-31'
   calibration_end_date: '2023-12-31'
+  train_start_date: '2014-01-01'
 symmetry:
   enabled: false
   mode: none
@@ -75,6 +88,12 @@ artifacts:
   save_confidence_buckets: true
   save_model_card: true
 prediction:
+  probability:
+    clip_low: 0.02
+    clip_high: 0.98
+  threshold:
+    source: best_sweep
+    value: 0.5
   format: binary_prop
   market_key: over_under_2_5
   prediction_type: binary_prop
@@ -89,12 +108,6 @@ prediction:
       label: under_2_5
       outcome_side: under
       outcome_fighter_id: null
-  probability:
-    clip_low: 0.02
-    clip_high: 0.98
-  threshold:
-    source: best_sweep
-    value: 0.5
 notes:
 - Draft prop-market training config for over/under 2.5 rounds.
 - Uses the proven Goes Distance V1 feature family as the initial baseline.
