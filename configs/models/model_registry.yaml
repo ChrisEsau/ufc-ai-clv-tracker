@@ -12,14 +12,25 @@ models:
     dashboard_selectable: false
     outcome_architecture: true
   prop_goes_distance_xgboost_v1:
-    display_name: Goes distance v1
-    description: Draft prop model.
+    display_name: Goes Distance XGBoost V1
+    description: Production fight-level prop model for goes distance / inside distance.
     model_family: prop
     market_key: goes_distance
     algorithm: xgboost
     config_path: configs/models/prop_goes_distance_xgboost_v1.yaml
     artifact_dir: models/goes_distance/prop_goes_distance_xgboost_v1
     status: production
+    dashboard_selectable: true
+    outcome_architecture: true
+  prop_over_under_2_5_xgboost_v1:
+    display_name: Over / Under 2.5 XGBoost V1
+    description: Draft fight-level prop model for over / under 2.5 rounds.
+    model_family: prop
+    market_key: over_under_2_5
+    algorithm: xgboost
+    config_path: configs/models/prop_over_under_2_5_xgboost_v1.yaml
+    artifact_dir: models/over_under_2_5/prop_over_under_2_5_xgboost_v1
+    status: draft
     dashboard_selectable: true
     outcome_architecture: true
   moneyline_xgboost_v8:
