@@ -43,7 +43,10 @@ def apply_registry_feature_definitions(
 ) -> RegistryFeatureBuildResult:
     registry = load_feature_registry(registry_path)
     definitions = registry.get("feature_definitions", {}) or {}
-    requested = {str(item) for item in selected_features or [] if str(item).strip()}
+    requested = _resolve_requested_features_with_dependencies(
+        definitions=definitions,
+        selected_features=selected_features,
+    )
     statuses = {str(item) for item in (allowed_statuses or {"active", "draft"})}
 
     out = df.copy()
@@ -101,6 +104,55 @@ def apply_registry_feature_definitions(
         missing_inputs=missing_inputs,
         skipped_features=skipped,
     )
+
+
+def _resolve_requested_features_with_dependencies(
+    *,
+    definitions: dict[str, Any],
+    selected_features: Iterable[str] | None,
+) -> set[str]:
+    """Return selected registry features plus registry-defined dependencies.
+
+    Live prediction passes the exact model feature contract as ``selected_features``.
+    Some formula features depend on intermediate registry formulas that are not
+    model inputs, for example style ``*_net`` features depend on matching
+    ``*_reverse`` features. Without dependency expansion, the materializer skips
+    the intermediate feature and the requested feature fails missing-input
+    validation.
+    """
+
+    requested = {str(item) for item in selected_features or [] if str(item).strip()}
+    if not requested:
+        return set()
+
+    output_to_feature_id = {
+        str(definition.get("output_column") or feature_id): str(feature_id)
+        for feature_id, definition in definitions.items()
+        if isinstance(definition, dict)
+    }
+
+    expanded = set(requested)
+    changed = True
+    while changed:
+        changed = False
+        for feature_id, definition in definitions.items():
+            feature_id = str(feature_id)
+            if not isinstance(definition, dict):
+                continue
+
+            output_column = str(definition.get("output_column") or feature_id)
+            if feature_id not in expanded and output_column not in expanded:
+                continue
+
+            for input_name in definition.get("inputs", []) or []:
+                input_name = str(input_name)
+                dependency_feature_id = output_to_feature_id.get(input_name)
+                if dependency_feature_id and dependency_feature_id not in expanded:
+                    expanded.add(dependency_feature_id)
+                    expanded.add(input_name)
+                    changed = True
+
+    return expanded
 
 
 def _apply_transform_feature(
