@@ -1,0 +1,104 @@
+# Method of Victory Multiclass Prop Feature View
+#
+# Purpose:
+#   Defines a fight-level multiclass method model feature view.
+#   Target encoding:
+#     0 = ko_tko
+#     1 = submission
+#     2 = decision
+
+view_id: prop_method_of_victory
+view_family: prop
+market_key: method_of_victory
+version: 1
+status: draft
+
+inputs:
+  master_path: data/master/ufc_master.parquet
+  fighter_state_history_path: data/features/fighter_state_history.parquet
+
+output:
+  feature_view_path: data/features/prop_method_of_victory_feature_view.parquet
+
+builder:
+  runner: pipeline.features.run_build_feature_view
+  base_view_builder:
+    module: pipeline.features.views.moneyline
+    function: build_moneyline_feature_view
+
+join:
+  fight_key: fight_id
+  red_fighter_key: r_id
+  blue_fighter_key: b_id
+  fighter_state_key: fighter_id
+
+market:
+  market_family: prop
+  market_key: method_of_victory
+  outcome_grain: fight
+  class_labels:
+    - ko_tko
+    - submission
+    - decision
+
+label:
+  target_column: target_method_class
+  source_columns:
+    - method
+  class_mapping:
+    ko_tko: 0
+    submission: 1
+    decision: 2
+
+include:
+  prepared_fight_columns: true
+  fight_context:
+    enabled: true
+    columns:
+      - total_rounds
+      - title_fight
+      - division
+  bundles:
+    - core_state
+    - finish_profile
+    - durability
+    - recent_form
+    - ewm_state
+    - fight_context
+  prefight_state: true
+  ewm_state: true
+  recent_form_state: true
+  transforms:
+    - red_minus_blue
+    - absolute_gap
+  engineered_features:
+    enabled: true
+    function: ufc_feature_engineering.add_v5_engineered_features
+    registry_function: ufc_feature_engineering.get_engineered_feature_list
+
+contracts:
+  expected_rows_match_prepared_fights: false
+  require_no_missing_state_matches: true
+  required_columns:
+    - fight_id
+    - date
+    - method
+    - target_method_class
+    - r_id
+    - b_id
+    - r_pre_elo
+    - b_pre_elo
+    - finish_rate_diff
+    - finish_loss_rate_diff
+    - recent_form_avg_fight_time_diff
+    - ewm_avg_fight_time_diff
+
+validation:
+  expected_feature_view_shape:
+    rows_source: prepared_fights_with_known_method
+  allow_extra_columns: true
+
+notes:
+  - Draws, no contests, disqualifications without clear method, and unknown methods should be excluded before training.
+  - This is a fight-level multiclass target, not a fighter-specific method-of-victory target.
+  - Prediction outputs will be class probabilities that sum to 100 percent across ko_tko, submission, and decision.
