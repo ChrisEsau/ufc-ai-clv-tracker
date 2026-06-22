@@ -1,0 +1,115 @@
+# Over / Under 2.5 Rounds Prop Feature View
+#
+# Purpose:
+#   Defines the second prop-market feature view for the V2 feature graph.
+#   This uses the same prefight fighter-state architecture as Goes Distance,
+#   but labels whether the fight elapsed beyond 2.5 rounds.
+#
+# Scope:
+#   Fight-level binary market.
+#   Positive outcome: over 2.5 rounds.
+#   Negative outcome: under 2.5 rounds.
+
+view_id: prop_over_under_2_5
+view_family: prop
+market_key: over_under_2_5
+version: 1
+status: draft
+
+inputs:
+  master_path: data/master/ufc_master.parquet
+  fighter_state_history_path: data/features/fighter_state_history.parquet
+
+output:
+  feature_view_path: data/features/prop_over_under_2_5_feature_view.parquet
+
+builder:
+  runner: pipeline.features.run_build_feature_view
+  base_view_builder:
+    module: pipeline.features.views.moneyline
+    function: build_moneyline_feature_view
+
+join:
+  fight_key: fight_id
+  red_fighter_key: r_id
+  blue_fighter_key: b_id
+  fighter_state_key: fighter_id
+
+market:
+  market_family: prop
+  market_key: over_under_2_5
+  outcome_grain: fight
+  line: 2.5
+  outcome_labels:
+    positive: over_2_5
+    negative: under_2_5
+
+label:
+  target_column: target_over_2_5
+  source_columns:
+    - match_time_sec
+  positive_rule:
+    column: match_time_sec
+    greater_than: 750
+  negative_rule:
+    column: match_time_sec
+    less_than_or_equal: 750
+
+include:
+  prepared_fight_columns: true
+  fight_context:
+    enabled: true
+    columns:
+      - total_rounds
+      - title_fight
+      - division
+  bundles:
+    - core_state
+    - finish_profile
+    - durability
+    - recent_form
+    - ewm_state
+    - fight_context
+  prefight_state: true
+  ewm_state: true
+  recent_form_state: true
+  transforms:
+    - red_minus_blue
+    - absolute_gap
+  engineered_features:
+    enabled: true
+    function: ufc_feature_engineering.add_v5_engineered_features
+    registry_function: ufc_feature_engineering.get_engineered_feature_list
+
+contracts:
+  expected_rows_match_prepared_fights: true
+  require_no_missing_state_matches: true
+  required_columns:
+    - fight_id
+    - date
+    - match_time_sec
+    - target_over_2_5
+    - r_id
+    - b_id
+    - total_rounds
+    - title_fight
+    - r_pre_elo
+    - b_pre_elo
+    - avg_fight_time_diff
+    - finish_rate_diff
+    - finish_loss_rate_diff
+    - recent_form_avg_fight_time_diff
+    - ewm_avg_fight_time_diff
+
+validation:
+  expected_feature_view_shape:
+    rows_source: prepared_fights
+  allow_extra_columns: true
+  target_distribution:
+    min_positive_rate: 0.20
+    max_positive_rate: 0.80
+
+notes:
+  - 2.5 rounds equals 12 minutes 30 seconds, or 750 elapsed fight seconds.
+  - The feature-view runner repairs legacy match_time_sec values to elapsed fight time before labeling.
+  - Model configs select exact training columns; this config defines available candidate columns and the prop target.
