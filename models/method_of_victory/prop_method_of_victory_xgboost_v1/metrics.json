@@ -1,10 +1,10 @@
 {
   "model_id": "prop_method_of_victory_xgboost_v1",
   "metrics": {
-    "accuracy": 0.5094488188976378,
-    "log_loss": 0.9893625974655151,
-    "macro_f1": 0.35372368024185574,
-    "weighted_f1": 0.45617436523366467,
+    "accuracy": 0.5031496062992126,
+    "log_loss": 0.9975265860557556,
+    "macro_f1": 0.34419755623974374,
+    "weighted_f1": 0.44579668619618407,
     "row_count": 1270,
     "class_count": 3
   },
@@ -13,7 +13,7 @@
     "submission",
     "decision"
   ],
-  "trained_at_utc": "2026-06-22T19:48:10.800161+00:00",
+  "trained_at_utc": "2026-06-22T19:55:11.253071+00:00",
   "train_start_date": "2014-01-01",
   "train_end_date": "2022-12-31",
   "calibration_end_date": "2023-12-31"
