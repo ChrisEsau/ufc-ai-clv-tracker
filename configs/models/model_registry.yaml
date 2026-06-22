@@ -35,7 +35,8 @@ models:
     outcome_architecture: true
   prop_method_of_victory_xgboost_v1:
     display_name: Method of Victory XGBoost V1
-    description: Draft fight-level multiclass prop model for KO/TKO, submission, and decision probabilities.
+    description: Draft fight-level multiclass prop model for KO/TKO, submission, and
+      decision probabilities.
     model_family: prop
     market_key: method_of_victory
     algorithm: xgboost
