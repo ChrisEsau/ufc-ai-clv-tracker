@@ -28,6 +28,140 @@ def _read_parquet(path_text: str) -> pd.DataFrame:
         return pd.DataFrame()
 
 
+def _inject_compare_css() -> None:
+    st.html(
+        """
+        <style>
+        .compare-hero {
+            display:flex;
+            justify-content:space-between;
+            gap:1rem;
+            align-items:flex-start;
+            margin:.15rem 0 1rem;
+        }
+        .compare-title {
+            color:#f8fbff;
+            font-size:1.95rem;
+            line-height:1.05;
+            font-weight:850;
+            letter-spacing:-.035em;
+        }
+        .compare-subtitle {
+            color:#c7d3e1;
+            font-size:.88rem;
+            margin-top:.35rem;
+        }
+        .compare-run {
+            color:#9fb0c4;
+            font-size:.76rem;
+            font-weight:650;
+            white-space:nowrap;
+            padding-top:.18rem;
+        }
+        .compare-card-grid {
+            display:grid;
+            grid-template-columns:repeat(5, minmax(0, 1fr));
+            gap:.72rem;
+            margin:.8rem 0 1rem;
+        }
+        .compare-card {
+            border:1px solid rgba(71, 105, 148, .68);
+            border-radius:12px;
+            background:linear-gradient(180deg, rgba(14, 35, 61, .97), rgba(8, 20, 36, .98));
+            box-shadow:0 18px 34px rgba(0, 0, 0, .25);
+            padding:.88rem 1rem;
+            min-height:88px;
+        }
+        .compare-card-label {
+            color:#dbeafe;
+            font-size:.72rem;
+            font-weight:780;
+            letter-spacing:.02em;
+            text-transform:uppercase;
+        }
+        .compare-card-value {
+            color:#ffffff;
+            font-size:2.05rem;
+            line-height:1.05;
+            font-weight:900;
+            letter-spacing:-.04em;
+            margin-top:.38rem;
+        }
+        .compare-card-caption {
+            color:#8fa4bd;
+            font-size:.72rem;
+            margin-top:.12rem;
+        }
+        .compare-panel-grid {
+            display:grid;
+            grid-template-columns:1.06fr 1fr;
+            gap:.78rem;
+            margin:.65rem 0 1.05rem;
+        }
+        .compare-panel {
+            border:1px solid rgba(48, 70, 99, .9);
+            border-radius:12px;
+            background:linear-gradient(180deg, rgba(9, 28, 49, .96), rgba(5, 16, 29, .99));
+            padding:.85rem .9rem .95rem;
+            box-shadow:0 20px 38px rgba(0, 0, 0, .22);
+        }
+        .compare-panel-title {
+            color:#f8fbff;
+            font-size:1rem;
+            font-weight:830;
+            letter-spacing:-.015em;
+            margin-bottom:.15rem;
+        }
+        .compare-panel-subtitle {
+            color:#9fb0c4;
+            font-size:.75rem;
+            margin-bottom:.65rem;
+        }
+        .compare-warning {
+            border:1px solid rgba(245, 158, 11, .35);
+            background:rgba(245, 158, 11, .10);
+            color:#fde68a;
+            border-radius:10px;
+            padding:.55rem .72rem;
+            font-size:.78rem;
+            font-weight:650;
+            margin:.4rem 0 .8rem;
+        }
+        .compare-model-key {
+            color:#a9bdd3;
+            font-size:.76rem;
+            line-height:1.45;
+            border:1px solid rgba(48, 70, 99, .7);
+            border-radius:10px;
+            padding:.55rem .7rem;
+            background:rgba(7, 19, 34, .72);
+        }
+        div[data-testid="stDataFrame"] {
+            border-radius:12px !important;
+            overflow:hidden !important;
+            border:1px solid rgba(66, 95, 128, .72) !important;
+            box-shadow:0 18px 34px rgba(0, 0, 0, .20);
+        }
+        div[data-testid="stDataFrame"] div[role="gridcell"],
+        div[data-testid="stDataFrame"] div[role="columnheader"] {
+            font-size:.78rem !important;
+        }
+        div[data-testid="stSelectbox"] div[data-baseweb="select"] > div,
+        div[data-testid="stNumberInput"] input {
+            background:rgba(7, 18, 33, .97) !important;
+            border-color:rgba(71, 105, 148, .82) !important;
+            border-radius:9px !important;
+        }
+        @media (max-width: 1100px) {
+            .compare-card-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+            .compare-panel-grid { grid-template-columns:1fr; }
+            .compare-hero { flex-direction:column; }
+        }
+        </style>
+        """
+    )
+
+
 def _fmt_pct(value: Any, decimals: int = 0) -> str:
     try:
         number = float(value)
@@ -46,27 +180,34 @@ def _fmt_odds(value: Any) -> str:
     return f"+{number}" if number > 0 else str(number)
 
 
-def _fmt_money(value: Any) -> str:
-    try:
-        return f"${float(value):,.2f}"
-    except Exception:
-        return "—"
-
-
 def _clean_text(value: Any, default: str = "—") -> str:
     text = str(value or "").strip()
     return text if text and text.lower() not in {"nan", "none", "<na>"} else default
 
 
+def _short_name(name: Any) -> str:
+    text = _clean_text(name)
+    if text == "—":
+        return text
+    pieces = text.split()
+    return pieces[-1] if pieces else text
+
+
+def _short_fight(fight_display: Any) -> str:
+    text = _clean_text(fight_display)
+    if " vs " not in text:
+        return text
+    left, right = text.split(" vs ", 1)
+    return f"{_short_name(left)} vs {_short_name(right)}"
+
+
 def _latest_run(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "betting_run_id" not in df.columns:
         return df.copy()
-
     run_ids = df["betting_run_id"].dropna().astype(str)
     run_ids = run_ids[~run_ids.str.strip().isin(["", "nan", "None", "<NA>"])]
     if run_ids.empty:
         return df.copy()
-
     if "betting_timestamp" in df.columns:
         ranked = df[["betting_run_id", "betting_timestamp"]].copy()
         ranked["betting_run_id"] = ranked["betting_run_id"].astype(str)
@@ -75,7 +216,6 @@ def _latest_run(df: pd.DataFrame) -> pd.DataFrame:
         if not ranked.empty:
             latest = ranked.sort_values("betting_timestamp").tail(1)["betting_run_id"].iloc[0]
             return df[df["betting_run_id"].astype(str) == str(latest)].copy()
-
     latest = run_ids.iloc[-1]
     return df[df["betting_run_id"].astype(str) == latest].copy()
 
@@ -89,10 +229,10 @@ def _enrich_status(df: pd.DataFrame, rows: list[dict[str, Any]]) -> pd.DataFrame
     if "model_registry_status" not in out.columns:
         out["model_registry_status"] = pd.NA
     status_map = _registry_status_map(rows)
-    mapped = out["model_id"].astype(str).map(status_map) if "model_id" in out.columns else pd.Series(dtype=str)
-    out["model_registry_status"] = out["model_registry_status"].fillna(mapped)
-    out["model_registry_status"] = out["model_registry_status"].astype(str).str.lower().replace({"nan": "", "none": "", "<na>": ""})
-    out.loc[out["model_registry_status"].eq(""), "model_registry_status"] = mapped
+    if "model_id" in out.columns:
+        mapped = out["model_id"].astype(str).map(status_map)
+        current = out["model_registry_status"].astype(str).str.lower().replace({"nan": "", "none": "", "<na>": ""})
+        out["model_registry_status"] = current.where(current.ne(""), mapped)
     return out
 
 
@@ -106,8 +246,7 @@ def _model_order(df: pd.DataFrame) -> list[str]:
         rank = 0 if status == "production" else 1 if status == "draft" else 2
         return rank, str(row.get("model_id"))
 
-    ordered = model_status.sort_values(by=list(model_status.columns)).apply(sort_key, axis=1)
-    model_status = model_status.assign(_sort=ordered)
+    model_status = model_status.assign(_sort=model_status.apply(sort_key, axis=1))
     return [str(x) for x in model_status.sort_values("_sort")["model_id"].dropna().unique()]
 
 
@@ -129,7 +268,6 @@ def _model_aliases(model_ids: list[str], df: pd.DataFrame) -> dict[str, str]:
 
 
 def _consensus_status(agreement_pct: float, spread_pct: float, support: int, model_count: int) -> str:
-    # Outlier means one model is far away while the rest broadly agree, not merely a low-agreement split.
     if model_count >= 3 and support >= model_count - 1 and spread_pct >= OUTLIER_SPREAD_THRESHOLD:
         return "Outlier"
     if agreement_pct >= STRONG_THRESHOLD:
@@ -140,20 +278,13 @@ def _consensus_status(agreement_pct: float, spread_pct: float, support: int, mod
 
 
 def _status_icon(status: str) -> str:
-    return {
-        "Strong Consensus": "🟢",
-        "Lean Consensus": "🟡",
-        "Split": "🔴",
-        "Outlier": "🟣",
-    }.get(status, "⚪")
+    return {"Strong Consensus": "🟢", "Lean Consensus": "🟡", "Split": "🔴", "Outlier": "🟣"}.get(status, "⚪")
 
 
 def _one_row_per_model_outcome(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
-    if "model_probability" in out.columns:
-        out["_prob_sort"] = pd.to_numeric(out["model_probability"], errors="coerce")
-    if "ev_dollars_at_100" in out.columns:
-        out["_ev_sort"] = pd.to_numeric(out["ev_dollars_at_100"], errors="coerce")
+    out["_prob_sort"] = pd.to_numeric(out.get("model_probability", pd.Series(dtype=float)), errors="coerce")
+    out["_ev_sort"] = pd.to_numeric(out.get("ev_dollars_at_100", pd.Series(dtype=float)), errors="coerce")
     sort_cols = [col for col in ["fight_id", "market_key", "model_id", "_prob_sort", "_ev_sort"] if col in out.columns]
     if sort_cols:
         ascending = [True] * len(sort_cols)
@@ -176,15 +307,17 @@ def _model_pick_rows(group: pd.DataFrame) -> pd.DataFrame:
     return group.sort_values("model_probability", ascending=False).drop_duplicates("model_id")
 
 
-def _best_market_display(group: pd.DataFrame, consensus_pick: str) -> tuple[str, str, float | None]:
+def _best_market_display(group: pd.DataFrame, consensus_pick: str) -> tuple[str, str]:
     outcome_rows = group[group["outcome_label"].astype(str) == str(consensus_pick)] if "outcome_label" in group.columns else group
     if outcome_rows.empty:
         outcome_rows = group
     odds = pd.to_numeric(outcome_rows.get("american_odds", pd.Series(dtype=float)), errors="coerce").dropna()
     implied = pd.to_numeric(outcome_rows.get("implied_probability", pd.Series(dtype=float)), errors="coerce").dropna()
-    best_odds = None if odds.empty else odds.max()
-    best_implied = None if implied.empty else implied.min()
-    return _fmt_odds(best_odds), _fmt_pct(best_implied), best_implied
+    return _fmt_odds(odds.max() if not odds.empty else None), _fmt_pct(implied.min() if not implied.empty else None)
+
+
+def _model_cell(outcome: Any, probability: Any) -> str:
+    return f"{_short_name(outcome)} {_fmt_pct(probability)}"
 
 
 def _build_compare_board(df: pd.DataFrame, model_ids: list[str], aliases: dict[str, str]) -> pd.DataFrame:
@@ -193,7 +326,7 @@ def _build_compare_board(df: pd.DataFrame, model_ids: list[str], aliases: dict[s
         return pd.DataFrame()
 
     source = _one_row_per_model_outcome(df)
-    rows: list[dict[str, Any]] = []
+    rows_out: list[dict[str, Any]] = []
     for key_values, group in source.groupby(["event_name", "fight_id", "fight_display", "market_key"], dropna=False):
         event_name, fight_id, fight_display, market_key = key_values
         picks = _model_pick_rows(group)
@@ -205,62 +338,54 @@ def _build_compare_board(df: pd.DataFrame, model_ids: list[str], aliases: dict[s
         pick_counts = picks.groupby("outcome_label")["model_id"].nunique().sort_values(ascending=False)
         consensus_pick = str(pick_counts.index[0]) if not pick_counts.empty else "—"
         support = int(pick_counts.iloc[0]) if not pick_counts.empty else 0
-        agreement_pct = support / model_count * 100.0 if model_count else 0.0
-
+        agreement_pct = support / model_count * 100.0
         pick_probs = pd.to_numeric(picks["model_probability"], errors="coerce")
         avg_prob_pct = float(pick_probs.mean() * 100.0) if not pick_probs.dropna().empty else 0.0
         spread_pct = float((pick_probs.max() - pick_probs.min()) * 100.0) if not pick_probs.dropna().empty else 0.0
         ev_values = pd.to_numeric(picks.get("ev_dollars_at_100", pd.Series(dtype=float)), errors="coerce")
         avg_ev = float(ev_values.mean()) if not ev_values.dropna().empty else 0.0
         max_ev = float(ev_values.max()) if not ev_values.dropna().empty else 0.0
-        odds_display, implied_display, best_implied = _best_market_display(group, consensus_pick)
+        odds_display, implied_display = _best_market_display(group, consensus_pick)
 
         prod_pick = "—"
-        prod_prob = pd.NA
         prod_rows = picks[picks.get("model_registry_status", pd.Series(dtype=str)).astype(str).str.lower() == "production"]
         if not prod_rows.empty:
-            prod_row = prod_rows.iloc[0]
-            prod_pick = _clean_text(prod_row.get("outcome_label"))
-            prod_prob = pd.to_numeric(pd.Series([prod_row.get("model_probability")]), errors="coerce").iloc[0]
+            prod_pick = _model_cell(prod_rows.iloc[0].get("outcome_label"), prod_rows.iloc[0].get("model_probability"))
 
         status = _consensus_status(agreement_pct, spread_pct, support, model_count)
         row: dict[str, Any] = {
             "event_name": event_name,
             "fight_id": str(fight_id),
             "market_key": market_key,
-            "Fight": fight_display,
+            "Fight": _short_fight(fight_display),
+            "Full Fight": fight_display,
             "Market": market_key,
-            "Odds (Best)": odds_display,
-            "Implied Prob (%)": implied_display,
-            "Consensus Pick": consensus_pick,
+            "Odds": odds_display,
+            "Implied": implied_display,
+            "Prod Pick": prod_pick,
+            "Consensus": _short_name(consensus_pick),
             "Agreement": f"{_status_icon(status)} {_fmt_pct(agreement_pct)}",
             "Agreement %": round(agreement_pct, 1),
-            "Avg Prob (%)": round(avg_prob_pct, 1),
-            "Prob Spread (%)": round(spread_pct, 1),
-            "Avg EV ($100 stake)": round(avg_ev, 2),
-            "Max EV ($100 stake)": round(max_ev, 2),
-            "Production Pick": prod_pick,
+            "Avg Prob": _fmt_pct(avg_prob_pct),
+            "Spread": _fmt_pct(spread_pct),
+            "Avg EV": round(avg_ev, 2),
+            "Max EV": round(max_ev, 2),
             "Status": status,
             "Models Included": model_count,
-            "_best_implied": best_implied,
-            "_prod_prob": prod_prob,
         }
-
         for model_id in model_ids:
             alias = aliases.get(model_id, model_id)
             model_pick = picks[picks["model_id"].astype(str) == str(model_id)]
             if model_pick.empty:
-                row[f"{alias} Prob (%)"] = "—"
+                row[alias] = "—"
                 row[f"{alias} Pick"] = "—"
                 continue
             model_row = model_pick.iloc[0]
-            prob = pd.to_numeric(pd.Series([model_row.get("model_probability")]), errors="coerce").iloc[0]
-            outcome = _clean_text(model_row.get("outcome_label"))
-            row[f"{alias} Prob (%)"] = _fmt_pct(prob)
-            row[f"{alias} Pick"] = outcome
-        rows.append(row)
+            row[alias] = _model_cell(model_row.get("outcome_label"), model_row.get("model_probability"))
+            row[f"{alias} Pick"] = _clean_text(model_row.get("outcome_label"))
+        rows_out.append(row)
 
-    board = pd.DataFrame(rows)
+    board = pd.DataFrame(rows_out)
     if board.empty:
         return board
     return board.sort_values(["event_name", "Fight", "Market"]).reset_index(drop=True)
@@ -273,10 +398,10 @@ def _build_suggested_bets(df: pd.DataFrame, model_ids: list[str], aliases: dict[
     if bets.empty:
         return pd.DataFrame()
 
-    rows: list[dict[str, Any]] = []
+    output_rows: list[dict[str, Any]] = []
     group_cols = ["event_name", "fight_id", "fight_display", "market_key", "outcome_join_key", "outcome_label"]
     for key_values, group in bets.groupby(group_cols, dropna=False):
-        event_name, fight_id, fight_display, market_key, outcome_join_key, outcome_label = key_values
+        _, _, fight_display, market_key, _, outcome_label = key_values
         models = sorted([str(x) for x in group["model_id"].dropna().unique()], key=lambda x: model_ids.index(x) if x in model_ids else 999)
         model_aliases = [aliases.get(model_id, model_id) for model_id in models]
         prob = pd.to_numeric(group.get("model_probability", pd.Series(dtype=float)), errors="coerce")
@@ -285,37 +410,39 @@ def _build_suggested_bets(df: pd.DataFrame, model_ids: list[str], aliases: dict[
         stake = pd.to_numeric(group.get("recommended_stake", pd.Series(dtype=float)), errors="coerce")
         odds = pd.to_numeric(group.get("american_odds", pd.Series(dtype=float)), errors="coerce").dropna()
         book = group.get("bookmaker", pd.Series(dtype=str)).dropna().astype(str)
-        rows.append(
+        output_rows.append(
             {
-                "Fight": fight_display,
-                "Bet (Outcome)": outcome_label,
-                "Book (Best)": book.iloc[0] if not book.empty else "—",
+                "Fight": _short_fight(fight_display),
+                "Bet": _short_name(outcome_label),
+                "Market": market_key,
+                "Book": book.iloc[0] if not book.empty else "—",
                 "Odds": _fmt_odds(odds.max() if not odds.empty else None),
-                "Implied Prob (%)": round(float(implied.mean() * 100.0), 1) if not implied.dropna().empty else pd.NA,
-                "Models Supporting": f"{len(models)}/{len(model_ids)} " + ", ".join(model_aliases),
-                "Avg Model Prob (%)": round(float(prob.mean() * 100.0), 1) if not prob.dropna().empty else pd.NA,
-                "Avg EV ($100)": round(float(ev.mean()), 2) if not ev.dropna().empty else pd.NA,
-                "Kelly Range ($)": "—" if stake.dropna().empty else f"{stake.min():.0f} - {stake.max():.0f}",
+                "Implied": _fmt_pct(float(implied.mean()) if not implied.dropna().empty else None),
+                "Models": f"{len(models)}/{len(model_ids)} " + ", ".join(model_aliases),
+                "Avg Prob": _fmt_pct(float(prob.mean()) if not prob.dropna().empty else None),
+                "Avg EV": round(float(ev.mean()), 2) if not ev.dropna().empty else pd.NA,
+                "Kelly Range": "—" if stake.dropna().empty else f"${stake.min():.0f} - ${stake.max():.0f}",
                 "Status": "Consensus Bet" if len(models) >= max(1, len(model_ids) - 1) else "Lean Bet",
             }
         )
-    out = pd.DataFrame(rows)
+    out = pd.DataFrame(output_rows)
     if out.empty:
         return out
-    return out.sort_values("Avg EV ($100)", ascending=False).reset_index(drop=True)
+    return out.sort_values("Avg EV", ascending=False).reset_index(drop=True)
 
 
 def _build_disagreements(df: pd.DataFrame, model_ids: list[str], aliases: dict[str, str]) -> pd.DataFrame:
     if df.empty:
         return pd.DataFrame()
-    rows: list[dict[str, Any]] = []
+    output_rows: list[dict[str, Any]] = []
     source = _one_row_per_model_outcome(df)
-    for key_values, group in source.groupby(["event_name", "fight_id", "fight_display", "market_key"], dropna=False):
-        event_name, fight_id, fight_display, market_key = key_values
+    for _, group in source.groupby(["event_name", "fight_id", "fight_display", "market_key"], dropna=False):
+        fight_display = group["fight_display"].iloc[0]
+        market_key = group["market_key"].iloc[0]
         picks = _model_pick_rows(group)
         side_map: dict[str, list[str]] = {}
         for _, row in picks.iterrows():
-            side = _clean_text(row.get("outcome_label"))
+            side = _short_name(row.get("outcome_label"))
             model_id = str(row.get("model_id"))
             side_map.setdefault(side, []).append(aliases.get(model_id, model_id))
         if len(side_map) < 2:
@@ -324,21 +451,21 @@ def _build_disagreements(df: pd.DataFrame, model_ids: list[str], aliases: dict[s
         probs = pd.to_numeric(picks.get("model_probability", pd.Series(dtype=float)), errors="coerce")
         ev = pd.to_numeric(picks.get("ev_dollars_at_100", pd.Series(dtype=float)), errors="coerce")
         implied = pd.to_numeric(picks.get("implied_probability", pd.Series(dtype=float)), errors="coerce")
-        rows.append(
+        output_rows.append(
             {
-                "Fight / Market": f"{fight_display} ({market_key})",
-                "Side A (Models)": f"{sorted_sides[0][0]} ({', '.join(sorted_sides[0][1])})",
-                "Side B (Models)": f"{sorted_sides[1][0]} ({', '.join(sorted_sides[1][1])})",
-                "Prob Spread (%)": round(float((probs.max() - probs.min()) * 100.0), 1) if not probs.dropna().empty else pd.NA,
-                "Implied Prob Diff (%)": round(float((implied.max() - implied.min()) * 100.0), 1) if not implied.dropna().empty else pd.NA,
-                "EV Spread ($)": round(float(ev.max() - ev.min()), 2) if not ev.dropna().empty else pd.NA,
+                "Fight / Market": f"{_short_fight(fight_display)} ({market_key})",
+                "Side A": f"{sorted_sides[0][0]} ({', '.join(sorted_sides[0][1])})",
+                "Side B": f"{sorted_sides[1][0]} ({', '.join(sorted_sides[1][1])})",
+                "Prob Spread": _fmt_pct(float((probs.max() - probs.min())) if not probs.dropna().empty else None),
+                "Implied Diff": _fmt_pct(float((implied.max() - implied.min())) if not implied.dropna().empty else None),
+                "EV Spread": round(float(ev.max() - ev.min()), 2) if not ev.dropna().empty else pd.NA,
                 "Notes": "Model split",
             }
         )
-    out = pd.DataFrame(rows)
+    out = pd.DataFrame(output_rows)
     if out.empty:
         return out
-    return out.sort_values("Prob Spread (%)", ascending=False).reset_index(drop=True)
+    return out.sort_values("EV Spread", ascending=False).reset_index(drop=True)
 
 
 def _filter_data(df: pd.DataFrame, board: pd.DataFrame, model_ids: list[str]) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -376,8 +503,8 @@ def _filter_data(df: pd.DataFrame, board: pd.DataFrame, model_ids: list[str]) ->
 
     with filter_cols[4]:
         min_ev = st.number_input("Minimum EV ($)", value=0.0, step=1.0, key="compare_min_ev")
-    if "Max EV ($100 stake)" in board_out.columns:
-        board_out = board_out[pd.to_numeric(board_out["Max EV ($100 stake)"], errors="coerce").fillna(-10**9) >= float(min_ev)]
+    if "Max EV" in board_out.columns:
+        board_out = board_out[pd.to_numeric(board_out["Max EV"], errors="coerce").fillna(-10**9) >= float(min_ev)]
 
     with filter_cols[5]:
         min_agreement = st.number_input("Minimum Agreement (%)", value=0.0, min_value=0.0, max_value=100.0, step=5.0, key="compare_min_agreement")
@@ -401,41 +528,47 @@ def _filter_data(df: pd.DataFrame, board: pd.DataFrame, model_ids: list[str]) ->
         board_out = board_out.merge(bet_keys, on=["fight_id", "market_key"], how="inner")
 
     valid_keys = set(zip(board_out["fight_id"].astype(str), board_out["market_key"].astype(str))) if not board_out.empty else set()
-    if valid_keys:
-        out = out[out.apply(lambda row: (str(row.get("fight_id")), str(row.get("market_key"))) in valid_keys, axis=1)]
-    else:
-        out = out.iloc[0:0]
+    out = out[out.apply(lambda row: (str(row.get("fight_id")), str(row.get("market_key"))) in valid_keys, axis=1)] if valid_keys else out.iloc[0:0]
     return out, board_out
+
+
+def _latest_timestamp(df: pd.DataFrame) -> str:
+    if "betting_timestamp" not in df.columns:
+        return "—"
+    timestamps = pd.to_datetime(df["betting_timestamp"], errors="coerce", utc=True).dropna()
+    return timestamps.max().strftime("%Y-%m-%d %H:%M:%S UTC") if not timestamps.empty else "—"
+
+
+def _render_metric_cards(df: pd.DataFrame, board: pd.DataFrame, suggested: pd.DataFrame) -> None:
+    models = df[["model_id", "model_registry_status"]].drop_duplicates() if "model_registry_status" in df.columns else pd.DataFrame()
+    total = int(models["model_id"].nunique()) if not models.empty else int(df.get("model_id", pd.Series(dtype=str)).nunique())
+    prod = int((models["model_registry_status"].astype(str).str.lower() == "production").sum()) if not models.empty else 0
+    draft = int((models["model_registry_status"].astype(str).str.lower() == "draft").sum()) if not models.empty else 0
+    strong = int((board.get("Status", pd.Series(dtype=str)) == "Strong Consensus").sum()) if not board.empty else 0
+    bets = len(suggested)
+    cards = [
+        ("Models", total, f"{prod} production · {draft} draft"),
+        ("Markets", len(board), "fight / market rows"),
+        ("Strong", strong, "75%+ agreement"),
+        ("Suggested", bets, "candidate bets"),
+        ("Avg Agree", _fmt_pct(pd.to_numeric(board.get("Agreement %", pd.Series(dtype=float)), errors="coerce").mean()) if not board.empty else "—", "selected board"),
+    ]
+    html = "<div class='compare-card-grid'>"
+    for label, value, caption in cards:
+        html += f"<div class='compare-card'><div class='compare-card-label'>{label}</div><div class='compare-card-value'>{value}</div><div class='compare-card-caption'>{caption}</div></div>"
+    html += "</div>"
+    st.html(html)
 
 
 def _model_key_text(model_ids: list[str], aliases: dict[str, str], df: pd.DataFrame) -> str:
     parts = []
     for model_id in model_ids:
         status = ""
-        if "model_registry_status" in df.columns:
-            rows = df[df["model_id"].astype(str) == model_id]
-            if not rows.empty:
-                status = rows["model_registry_status"].dropna().astype(str).iloc[0]
-        parts.append(f"{aliases.get(model_id, model_id)} = {model_id}" + (f" ({status})" if status else ""))
-    return "Models: " + " · ".join(parts)
-
-
-def _render_summary_cards(df: pd.DataFrame, board: pd.DataFrame) -> None:
-    latest_timestamp = "—"
-    if "betting_timestamp" in df.columns:
-        timestamps = pd.to_datetime(df["betting_timestamp"], errors="coerce", utc=True).dropna()
-        if not timestamps.empty:
-            latest_timestamp = timestamps.max().strftime("%Y-%m-%d %H:%M:%S UTC")
-    models = df[["model_id", "model_registry_status"]].drop_duplicates() if "model_registry_status" in df.columns else pd.DataFrame()
-    total = int(models["model_id"].nunique()) if not models.empty else int(df.get("model_id", pd.Series(dtype=str)).nunique())
-    prod = int((models["model_registry_status"].astype(str).str.lower() == "production").sum()) if not models.empty else 0
-    draft = int((models["model_registry_status"].astype(str).str.lower() == "draft").sum()) if not models.empty else 0
-    c1, c2, c3, c4, c5 = st.columns([1.5, .7, .7, .7, .8])
-    c1.caption(f"Last Outcomes Run: {latest_timestamp}")
-    c2.metric("Models", total)
-    c3.metric("Production", prod)
-    c4.metric("Draft", draft)
-    c5.metric("Markets", len(board))
+        rows = df[df["model_id"].astype(str) == model_id] if "model_id" in df.columns else pd.DataFrame()
+        if not rows.empty and "model_registry_status" in rows.columns:
+            status = rows["model_registry_status"].dropna().astype(str).iloc[0]
+        parts.append(f"<b>{aliases.get(model_id, model_id)}</b> = {model_id}" + (f" ({status})" if status else ""))
+    return " · ".join(parts)
 
 
 def _render_consensus_summary(board: pd.DataFrame) -> None:
@@ -449,7 +582,7 @@ def _render_consensus_summary(board: pd.DataFrame) -> None:
     c2.metric("Split", int(counts.get("Split", 0)))
     c2.metric("Outlier", int(counts.get("Outlier", 0)))
     c3.metric("Average Agreement", _fmt_pct(pd.to_numeric(board["Agreement %"], errors="coerce").mean()))
-    c3.metric("Average Prob Spread", _fmt_pct(pd.to_numeric(board["Prob Spread (%)"], errors="coerce").mean()))
+    c3.metric("Average Spread", _fmt_pct(pd.to_numeric(board["Spread"].astype(str).str.replace("%", "", regex=False), errors="coerce").mean()))
     c3.caption(f"Total markets: {len(board)}")
 
 
@@ -462,11 +595,22 @@ def render_compare(
 ) -> None:
     """Render upcoming event prediction comparison from Betting Outcomes V2."""
 
-    st.markdown("## Upcoming Event Prediction Compare")
-    st.caption("Compare model predictions, probabilities, agreement, EV, and suggested bets for upcoming events.")
-
+    _inject_compare_css()
     raw = _read_parquet(str(BETTING_OUTCOMES_PATH))
     audit = _read_parquet(str(BETTING_OUTCOMES_AUDIT_PATH))
+
+    st.html(
+        f"""
+        <div class='compare-hero'>
+            <div>
+                <div class='compare-title'>Upcoming Event Prediction Compare</div>
+                <div class='compare-subtitle'>Compare model picks, probabilities, agreement, EV, and suggested bets for upcoming events.</div>
+            </div>
+            <div class='compare-run'>Last Outcomes Run: {_latest_timestamp(raw)}</div>
+        </div>
+        """
+    )
+
     if raw.empty:
         st.warning("No betting outcomes artifact found. Run Model Lab → Actions → Run Outcomes first.")
         return
@@ -483,48 +627,33 @@ def render_compare(
         st.warning("Betting outcomes loaded, but the compare board could not be built from the available columns.")
         return
 
-    _render_summary_cards(latest, base_board)
-    if not audit.empty and "passes_validation" in audit.columns and not bool(audit.tail(1)["passes_validation"].iloc[0]):
-        st.warning("Latest betting outcomes audit did not pass validation. Review join-key diagnostics before relying on this board.")
-
-    st.divider()
     filtered, board = _filter_data(latest, base_board, model_ids)
     suggested = _build_suggested_bets(filtered, model_ids, aliases)
     disagreements = _build_disagreements(filtered, model_ids, aliases)
 
+    _render_metric_cards(filtered if not filtered.empty else latest, board, suggested)
+
+    if not audit.empty and "passes_validation" in audit.columns and not bool(audit.tail(1)["passes_validation"].iloc[0]):
+        st.html("<div class='compare-warning'>⚠ Audit warning: latest betting outcomes did not pass validation. Review join-key diagnostics before relying on this board.</div>")
+
+    st.html("<div class='compare-panel-grid'>")
+    left, right = st.columns([1.04, 1.0], gap="medium")
+    with left:
+        st.html("<div class='compare-panel-title'>Consensus / Suggested Bets</div><div class='compare-panel-subtitle'>Highest-priority candidates from the selected board.</div>")
+        st.dataframe(suggested.head(8), use_container_width=True, hide_index=True) if not suggested.empty else st.info("No suggested bets match the selected filters.")
+    with right:
+        st.html("<div class='compare-panel-title'>Disagreement Board</div><div class='compare-panel-subtitle'>Markets where models are split across sides.</div>")
+        st.dataframe(disagreements.head(8), use_container_width=True, hide_index=True) if not disagreements.empty else st.success("No model disagreements for the selected filters.")
+    st.html("</div>")
+
     tabs = st.tabs(["Overview", "Suggested Bets", "Disagreements", "Model Probabilities", "Model EV Comparison", "Consensus Summary"])
 
-    model_prob_cols = [f"{aliases[mid]} Prob (%)" for mid in model_ids]
-    overview_cols = [
-        "Fight",
-        "Market",
-        "Odds (Best)",
-        "Implied Prob (%)",
-        *model_prob_cols,
-        "Consensus Pick",
-        "Agreement",
-        "Avg Prob (%)",
-        "Prob Spread (%)",
-        "Avg EV ($100 stake)",
-        "Max EV ($100 stake)",
-        "Production Pick",
-        "Status",
-    ]
+    model_cols = [aliases[mid] for mid in model_ids]
+    overview_cols = ["Fight", "Market", "Odds", "Implied", "Prod Pick", *model_cols, "Consensus", "Agreement", "Avg Prob", "Spread", "Avg EV", "Max EV", "Status"]
 
     with tabs[0]:
         st.markdown("#### Fight / Market Comparison")
-        if board.empty:
-            st.info("No rows match the selected filters.")
-        else:
-            st.dataframe(board[[col for col in overview_cols if col in board.columns]], use_container_width=True, hide_index=True)
-
-        c1, c2 = st.columns([1.0, 1.0], gap="medium")
-        with c1:
-            st.markdown("#### Suggested Bets Comparison")
-            st.dataframe(suggested.head(10), use_container_width=True, hide_index=True) if not suggested.empty else st.info("No suggested bets match the selected filters.")
-        with c2:
-            st.markdown("#### Disagreement Board")
-            st.dataframe(disagreements.head(10), use_container_width=True, hide_index=True) if not disagreements.empty else st.success("No model disagreements for the selected filters.")
+        st.dataframe(board[[col for col in overview_cols if col in board.columns]], use_container_width=True, hide_index=True) if not board.empty else st.info("No rows match the selected filters.")
 
     with tabs[1]:
         st.markdown("#### Suggested Bets")
@@ -537,7 +666,7 @@ def render_compare(
     with tabs[3]:
         st.markdown("#### Model Probabilities")
         pick_cols = [f"{aliases[mid]} Pick" for mid in model_ids]
-        cols = ["Fight", "Market", *model_prob_cols, *pick_cols, "Consensus Pick", "Agreement", "Status"]
+        cols = ["Fight", "Market", *model_cols, *pick_cols, "Consensus", "Agreement", "Status"]
         st.dataframe(board[[col for col in cols if col in board.columns]], use_container_width=True, hide_index=True)
 
     with tabs[4]:
@@ -553,5 +682,4 @@ def render_compare(
         _render_consensus_summary(board)
 
     st.divider()
-    st.caption(_model_key_text(model_ids, aliases, latest))
-    st.caption("Legend: Strong = 75%+ agreement · Lean = 55–74% · Split = under 55% · Outlier = broad agreement with a large probability spread. EV is at $100 stake.")
+    st.html(f"<div class='compare-model-key'>{_model_key_text(model_ids, aliases, latest)}<br>Legend: 🟢 Strong = 75%+ · 🟡 Lean = 55–74% · 🔴 Split = under 55% · 🟣 Outlier = broad agreement with large probability spread. EV is at $100 stake.</div>")
