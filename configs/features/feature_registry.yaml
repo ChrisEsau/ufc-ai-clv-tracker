@@ -314,6 +314,197 @@ feature_definitions:
     model_input_allowed: true
     leakage_safe: true
 
+  style_control_wrestler_score_abs_diff:
+    label: Style Control Wrestler Absolute Diff
+    type: formula
+    status: active
+    family: style_scores_v1
+    description: Absolute matchup gap for control-wrestler style scores.
+    inputs:
+      - style_control_wrestler_score_diff
+    formula: abs(style_control_wrestler_score_diff)
+    output_column: style_control_wrestler_score_abs_diff
+    model_input_allowed: true
+    leakage_safe: true
+
+  style_ko_finisher_score_abs_diff:
+    label: Style KO Finisher Absolute Diff
+    type: formula
+    status: active
+    family: style_scores_v1
+    description: Absolute matchup gap for KO-finisher style scores.
+    inputs:
+      - style_ko_finisher_score_diff
+    formula: abs(style_ko_finisher_score_diff)
+    output_column: style_ko_finisher_score_abs_diff
+    model_input_allowed: true
+    leakage_safe: true
+
+  style_submission_grappler_score_abs_diff:
+    label: Style Submission Grappler Absolute Diff
+    type: formula
+    status: active
+    family: style_scores_v1
+    description: Absolute matchup gap for submission-grappler style scores.
+    inputs:
+      - style_submission_grappler_score_diff
+    formula: abs(style_submission_grappler_score_diff)
+    output_column: style_submission_grappler_score_abs_diff
+    model_input_allowed: true
+    leakage_safe: true
+
+  style_decision_technician_score_abs_diff:
+    label: Style Decision Technician Absolute Diff
+    type: formula
+    status: active
+    family: style_scores_v1
+    description: Absolute matchup gap for decision-technician style scores.
+    inputs:
+      - style_decision_technician_score_diff
+    formula: abs(style_decision_technician_score_diff)
+    output_column: style_decision_technician_score_abs_diff
+    model_input_allowed: true
+    leakage_safe: true
+
+  style_all_round_finisher_score_abs_diff:
+    label: Style All-Round Finisher Absolute Diff
+    type: formula
+    status: active
+    family: style_scores_v1
+    description: Absolute matchup gap for all-round-finisher style scores.
+    inputs:
+      - style_all_round_finisher_score_diff
+    formula: abs(style_all_round_finisher_score_diff)
+    output_column: style_all_round_finisher_score_abs_diff
+    model_input_allowed: true
+    leakage_safe: true
+
+  style_edge_ko_finisher_vs_decision_technician:
+    label: Style Edge KO Finisher vs Decision Technician
+    type: formula
+    status: active
+    family: style_scores_v1
+    description: Persistent matchup edge for red KO-finisher traits against blue decision-technician traits.
+    inputs:
+      - r_pre_style_ko_finisher_score
+      - b_pre_style_decision_technician_score
+    formula: r_pre_style_ko_finisher_score * b_pre_style_decision_technician_score
+    output_column: style_edge_ko_finisher_vs_decision_technician
+    model_input_allowed: true
+    leakage_safe: true
+
+  style_edge_ko_finisher_vs_decision_technician_reverse:
+    label: Style Edge KO Finisher vs Decision Technician Reverse
+    type: formula
+    status: active
+    family: style_scores_v1
+    description: Reverse matchup edge for blue KO-finisher traits against red decision-technician traits.
+    inputs:
+      - r_pre_style_decision_technician_score
+      - b_pre_style_ko_finisher_score
+    formula: r_pre_style_decision_technician_score * b_pre_style_ko_finisher_score
+    output_column: style_edge_ko_finisher_vs_decision_technician_reverse
+    model_input_allowed: true
+    leakage_safe: true
+
+  style_edge_ko_finisher_vs_decision_technician_net:
+    label: Style Edge KO Finisher vs Decision Technician Net
+    type: formula
+    status: active
+    family: style_scores_v1
+    description: Net persistent matchup edge for KO-finisher versus decision-technician traits.
+    inputs:
+      - style_edge_ko_finisher_vs_decision_technician
+      - style_edge_ko_finisher_vs_decision_technician_reverse
+    formula: style_edge_ko_finisher_vs_decision_technician - style_edge_ko_finisher_vs_decision_technician_reverse
+    output_column: style_edge_ko_finisher_vs_decision_technician_net
+    model_input_allowed: true
+    leakage_safe: true
+
+  style_edge_decision_technician_vs_submission_grappler:
+    label: Style Edge Decision Technician vs Submission Grappler
+    type: formula
+    status: active
+    family: style_scores_v1
+    description: Persistent matchup edge for red decision-technician traits against blue submission-grappler traits.
+    inputs:
+      - r_pre_style_decision_technician_score
+      - b_pre_style_submission_grappler_score
+    formula: r_pre_style_decision_technician_score * b_pre_style_submission_grappler_score
+    output_column: style_edge_decision_technician_vs_submission_grappler
+    model_input_allowed: true
+    leakage_safe: true
+
+  style_edge_decision_technician_vs_submission_grappler_reverse:
+    label: Style Edge Decision Technician vs Submission Grappler Reverse
+    type: formula
+    status: active
+    family: style_scores_v1
+    description: Reverse matchup edge for blue decision-technician traits against red submission-grappler traits.
+    inputs:
+      - r_pre_style_submission_grappler_score
+      - b_pre_style_decision_technician_score
+    formula: r_pre_style_submission_grappler_score * b_pre_style_decision_technician_score
+    output_column: style_edge_decision_technician_vs_submission_grappler_reverse
+    model_input_allowed: true
+    leakage_safe: true
+
+  style_edge_decision_technician_vs_submission_grappler_net:
+    label: Style Edge Decision Technician vs Submission Grappler Net
+    type: formula
+    status: active
+    family: style_scores_v1
+    description: Net persistent matchup edge for decision-technician versus submission-grappler traits.
+    inputs:
+      - style_edge_decision_technician_vs_submission_grappler
+      - style_edge_decision_technician_vs_submission_grappler_reverse
+    formula: style_edge_decision_technician_vs_submission_grappler - style_edge_decision_technician_vs_submission_grappler_reverse
+    output_column: style_edge_decision_technician_vs_submission_grappler_net
+    model_input_allowed: true
+    leakage_safe: true
+
+  style_edge_control_wrestler_vs_ko_finisher:
+    label: Style Edge Control Wrestler vs KO Finisher
+    type: formula
+    status: active
+    family: style_scores_v1
+    description: Persistent matchup edge for red control-wrestler traits against blue KO-finisher traits.
+    inputs:
+      - r_pre_style_control_wrestler_score
+      - b_pre_style_ko_finisher_score
+    formula: r_pre_style_control_wrestler_score * b_pre_style_ko_finisher_score
+    output_column: style_edge_control_wrestler_vs_ko_finisher
+    model_input_allowed: true
+    leakage_safe: true
+
+  style_edge_control_wrestler_vs_ko_finisher_reverse:
+    label: Style Edge Control Wrestler vs KO Finisher Reverse
+    type: formula
+    status: active
+    family: style_scores_v1
+    description: Reverse matchup edge for blue control-wrestler traits against red KO-finisher traits.
+    inputs:
+      - r_pre_style_ko_finisher_score
+      - b_pre_style_control_wrestler_score
+    formula: r_pre_style_ko_finisher_score * b_pre_style_control_wrestler_score
+    output_column: style_edge_control_wrestler_vs_ko_finisher_reverse
+    model_input_allowed: true
+    leakage_safe: true
+
+  style_edge_control_wrestler_vs_ko_finisher_net:
+    label: Style Edge Control Wrestler vs KO Finisher Net
+    type: formula
+    status: active
+    family: style_scores_v1
+    description: Net persistent matchup edge for control-wrestler versus KO-finisher traits.
+    inputs:
+      - style_edge_control_wrestler_vs_ko_finisher
+      - style_edge_control_wrestler_vs_ko_finisher_reverse
+    formula: style_edge_control_wrestler_vs_ko_finisher - style_edge_control_wrestler_vs_ko_finisher_reverse
+    output_column: style_edge_control_wrestler_vs_ko_finisher_net
+    model_input_allowed: true
+    leakage_safe: true
+
 feature_layers:
   metadata:
     description: Non-model identifiers, event context, fight context, and join keys.
@@ -361,9 +552,9 @@ feature_families:
   style_scores_v1:
     layer: moneyline
     model_input_allowed: true
-    ownership: pipeline.features.raw_fighter_features.style_scores / pipeline.features.run_build_feature_view
+    ownership: pipeline.features.raw_fighter_features.style_scores / model_lab_feature_registry
     current_moneyline_v5: false
-    description: Continuous k5 fighter-style scores, score gaps, and persistent style matchup edge features.
+    description: Continuous k5 fighter-style scores, score gaps, and registry-materialized persistent style matchup edge features.
   ko_loss_vulnerability:
     layer: moneyline
     model_input_allowed: true
