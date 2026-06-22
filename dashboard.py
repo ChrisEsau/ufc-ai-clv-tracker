@@ -9,7 +9,7 @@ from utils.theme import apply_theme
 from tabs.betting_board_v2 import render_betting_board
 from tabs.clv_intelligence import render_clv_intelligence
 from tabs.line_movement import render_line_movement
-from tabs.bankroll import render_bankroll
+from tabs.bankroll_market_risk import render_bankroll
 from tabs.model_lab_refactored import render_model_lab
 from tabs.data_maintenance import render_data_maintenance
 from tabs.operations_center import render_operations_center
