@@ -10,6 +10,18 @@ import utils.model_lab_workflows as mlw
 
 
 ExistingModelSelector = Callable[[dict[str, Any], list[dict[str, Any]], dict[str, dict[str, Any]]], dict[str, Any]]
+LEAKAGE_KEYWORDS = [
+    "target",
+    "outcome",
+    "method",
+    "winner",
+    "result",
+    "finish",
+    "round",
+    "duration",
+    "time_sec",
+    "match_time",
+]
 
 
 def _artifact_path(context: dict[str, Any], filename: str) -> Path:
@@ -29,6 +41,38 @@ def _read_parquet_artifact(context: dict[str, Any], filename: str) -> pd.DataFra
         return pd.read_parquet(path)
     except Exception:
         return pd.DataFrame()
+
+
+def _read_csv_artifact(context: dict[str, Any], filename: str) -> pd.DataFrame:
+    path = _artifact_path(context, filename)
+    if not path.exists():
+        return pd.DataFrame()
+    try:
+        df = pd.read_csv(path)
+    except Exception:
+        return pd.DataFrame()
+    if df.empty:
+        return df
+    if "mean_abs_shap" in df.columns:
+        df = df.sort_values("mean_abs_shap", ascending=False).reset_index(drop=True)
+    elif "importance" in df.columns:
+        df = df.sort_values("importance", ascending=False).reset_index(drop=True)
+    return df
+
+
+def _safe_label_for_filename(label: str) -> str:
+    token = str(label).strip().lower()
+    for char in ["/", "\\", " ", "-", "."]:
+        token = token.replace(char, "_")
+    while "__" in token:
+        token = token.replace("__", "_")
+    return token.strip("_") or "class"
+
+
+def _class_labels(context: dict[str, Any]) -> list[str]:
+    prediction = (context.get("config") or {}).get("prediction") or {}
+    labels = prediction.get("class_labels") or prediction.get("classes") or []
+    return [str(label) for label in labels if str(label).strip()]
 
 
 def _format_rate_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -101,38 +145,40 @@ def render_multiclass_summary(context: dict[str, Any], *, compact: bool = False)
 
 
 def _read_shap_importance(context: dict[str, Any]) -> pd.DataFrame:
-    """Load SHAP importance for the selected model artifact directory."""
+    """Load overall SHAP importance for the selected model artifact directory."""
 
-    artifact_dir = Path(str(context.get("artifact_dir") or ""))
-    path = artifact_dir / "shap_importance.csv"
-    if not artifact_dir or not path.exists():
-        return pd.DataFrame()
-
-    try:
-        df = pd.read_csv(path)
-    except Exception:
-        return pd.DataFrame()
-
-    if df.empty:
-        return df
-
-    if "mean_abs_shap" in df.columns:
-        df = df.sort_values("mean_abs_shap", ascending=False).reset_index(drop=True)
-    elif "importance" in df.columns:
-        df = df.sort_values("importance", ascending=False).reset_index(drop=True)
-
-    return df
+    return _read_csv_artifact(context, "shap_importance.csv")
 
 
-def _render_shap_importance(context: dict[str, Any]) -> None:
-    """Render SHAP feature importance inside the Performance workspace."""
+def _render_leakage_flags(shap_df: pd.DataFrame, *, top_n: int = 25) -> None:
+    if shap_df.empty or "feature" not in shap_df.columns:
+        return
+    top = shap_df.head(top_n).copy()
+    flagged_rows = []
+    for _, row in top.iterrows():
+        feature = str(row.get("feature") or "")
+        lowered = feature.lower()
+        matched = [keyword for keyword in LEAKAGE_KEYWORDS if keyword in lowered]
+        if matched:
+            flagged_rows.append(
+                {
+                    "feature": feature,
+                    "rank": int(row.name) + 1 if isinstance(row.name, int) else None,
+                    "matched_keywords": ", ".join(matched),
+                    "mean_abs_shap": row.get("mean_abs_shap", row.get("importance")),
+                }
+            )
+    if not flagged_rows:
+        st.success(f"No obvious leakage keywords found in top {min(top_n, len(top))} SHAP features.")
+        return
+    st.warning("Potential leakage-like feature names detected in top SHAP features. Review before trusting the run.")
+    st.dataframe(pd.DataFrame(flagged_rows), use_container_width=True, hide_index=True)
 
-    st.markdown("### SHAP Analysis")
-    shap_df = _read_shap_importance(context)
-    shap_path = Path(str(context.get("artifact_dir") or "")) / "shap_importance.csv"
 
+def _render_shap_table(context: dict[str, Any], shap_df: pd.DataFrame, *, title: str, key_suffix: str, source_name: str) -> None:
+    st.markdown(f"#### {title}")
     if shap_df.empty:
-        st.info(f"No SHAP artifact found yet: `{shap_path}`")
+        st.info(f"No SHAP artifact found yet: `{_artifact_path(context, source_name)}`")
         return
 
     feature_col = "feature" if "feature" in shap_df.columns else shap_df.columns[0]
@@ -142,15 +188,16 @@ def _render_shap_importance(context: dict[str, Any]) -> None:
             value_col = candidate
             break
 
-    st.caption(f"Loaded `{shap_path}` · {len(shap_df):,} features")
+    st.caption(f"Loaded `{_artifact_path(context, source_name)}` · {len(shap_df):,} features")
+    _render_leakage_flags(shap_df, top_n=25)
 
     top_n = st.slider(
-        "Top SHAP features",
+        f"Top SHAP features · {title}",
         min_value=10,
         max_value=min(100, max(10, len(shap_df))),
         value=min(25, len(shap_df)),
         step=5,
-        key=f"performance_shap_top_n_{context.get('model_id')}",
+        key=f"performance_shap_top_n_{context.get('model_id')}_{key_suffix}",
     )
     top_df = shap_df.head(top_n).copy()
 
@@ -159,6 +206,45 @@ def _render_shap_importance(context: dict[str, Any]) -> None:
         st.bar_chart(chart_df)
 
     st.dataframe(top_df, use_container_width=True, hide_index=True)
+
+
+def _render_shap_importance(context: dict[str, Any]) -> None:
+    """Render SHAP feature importance inside the Performance workspace."""
+
+    st.markdown("### SHAP Analysis")
+    overall = _read_shap_importance(context)
+
+    if not _is_multiclass_model(context):
+        _render_shap_table(
+            context,
+            overall,
+            title="Overall SHAP Importance",
+            key_suffix="overall",
+            source_name="shap_importance.csv",
+        )
+        return
+
+    labels = _class_labels(context)
+    tab_labels = ["Overall"] + [str(label) for label in labels]
+    tabs = st.tabs(tab_labels)
+    with tabs[0]:
+        _render_shap_table(
+            context,
+            overall,
+            title="Overall SHAP Importance",
+            key_suffix="overall",
+            source_name="shap_importance.csv",
+        )
+    for tab, label in zip(tabs[1:], labels):
+        filename = f"shap_importance_{_safe_label_for_filename(label)}.csv"
+        with tab:
+            _render_shap_table(
+                context,
+                _read_csv_artifact(context, filename),
+                title=f"{label} SHAP Importance",
+                key_suffix=_safe_label_for_filename(label),
+                source_name=filename,
+            )
 
 
 def render_performance(
