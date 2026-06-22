@@ -13,7 +13,6 @@ from pipeline.modeling.algorithms.xgboost_predictor import predict_class_probabi
 from pipeline.training.model_training import train_model
 from pipeline.training.multiclass_metrics import evaluate_multiclass_probabilities
 from pipeline.training.run_train_model import (
-    build_shap_importance,
     build_split,
     load_training_feature_dataframe,
     maybe_apply_symmetry,
@@ -131,6 +130,78 @@ def _validate_multiclass_target(*, split: Any, class_labels: list[str]) -> None:
         raise MulticlassTrainingError(f"Training target is missing classes required by class_labels: {missing}")
 
 
+def _safe_label_for_filename(label: str) -> str:
+    token = str(label).strip().lower()
+    for char in ["/", "\\", " ", "-", "."]:
+        token = token.replace(char, "_")
+    while "__" in token:
+        token = token.replace("__", "_")
+    return token.strip("_") or "class"
+
+
+def build_multiclass_shap_importance(
+    *,
+    model: Any,
+    X: pd.DataFrame,
+    feature_columns: list[str],
+    class_labels: list[str],
+    max_rows: int = 1000,
+    random_state: int = 42,
+) -> tuple[pd.DataFrame, dict[str, pd.DataFrame]]:
+    """Build overall and per-class mean absolute SHAP tables for multiclass tree models."""
+
+    if X.empty:
+        empty = pd.DataFrame(columns=["feature", "mean_abs_shap"])
+        return empty, {label: empty.copy() for label in class_labels}
+
+    import numpy as np
+    import shap  # Imported lazily so non-SHAP workflows do not pay import cost.
+
+    sample_size = min(len(X), max(1, int(max_rows)))
+    sample = X.sample(n=sample_size, random_state=random_state) if len(X) > sample_size else X.copy()
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(sample)
+
+    # SHAP may return list[class][row, feature] or ndarray[row, feature, class].
+    if isinstance(shap_values, list):
+        class_arrays = [np.asarray(values) for values in shap_values]
+    else:
+        values = np.asarray(shap_values)
+        if values.ndim == 3 and values.shape[2] == len(class_labels):
+            class_arrays = [values[:, :, class_index] for class_index in range(len(class_labels))]
+        elif values.ndim == 3 and values.shape[0] == len(class_labels):
+            class_arrays = [values[class_index, :, :] for class_index in range(len(class_labels))]
+        else:
+            raise ValueError(f"Unsupported multiclass SHAP output shape: {values.shape}")
+
+    if len(class_arrays) != len(class_labels):
+        raise ValueError(f"SHAP class count mismatch: {len(class_arrays)} != {len(class_labels)}")
+
+    per_class: dict[str, pd.DataFrame] = {}
+    class_abs_values = []
+    for class_label, class_values in zip(class_labels, class_arrays):
+        if class_values.shape[1] != len(feature_columns):
+            raise ValueError(
+                f"SHAP feature count mismatch for {class_label}: {class_values.shape[1]} != {len(feature_columns)}"
+            )
+        mean_abs = np.abs(class_values).mean(axis=0)
+        class_abs_values.append(mean_abs)
+        per_class[class_label] = (
+            pd.DataFrame({"feature": feature_columns, "mean_abs_shap": mean_abs})
+            .sort_values("mean_abs_shap", ascending=False)
+            .reset_index(drop=True)
+        )
+
+    overall_mean_abs = np.vstack(class_abs_values).mean(axis=0)
+    overall = (
+        pd.DataFrame({"feature": feature_columns, "mean_abs_shap": overall_mean_abs})
+        .sort_values("mean_abs_shap", ascending=False)
+        .reset_index(drop=True)
+    )
+    return overall, per_class
+
+
 def save_multiclass_artifacts(
     *,
     output_dir: Path,
@@ -170,17 +241,22 @@ def save_multiclass_artifacts(
 
     if artifact_config.get("save_shap_importance", True):
         try:
-            shap_df = build_shap_importance(
+            shap_df, per_class_shap = build_multiclass_shap_importance(
                 model=training_result.model,
                 X=split.X_test,
                 feature_columns=feature_columns,
+                class_labels=class_labels,
                 max_rows=int(artifact_config.get("shap_max_rows", 1000)),
                 random_state=int(config.get("params", {}).get("random_state", 42)),
             )
             shap_df.to_csv(output_dir / "shap_importance.csv", index=False)
             print(f"Saved SHAP importance: {output_dir / 'shap_importance.csv'}")
+            for class_label, class_df in per_class_shap.items():
+                path = output_dir / f"shap_importance_{_safe_label_for_filename(class_label)}.csv"
+                class_df.to_csv(path, index=False)
+                print(f"Saved class SHAP importance: {path}")
         except Exception as exc:  # noqa: BLE001 - SHAP should not fail the training run.
-            print(f"WARNING: SHAP importance generation failed: {exc}")
+            print(f"WARNING: multiclass SHAP importance generation failed: {exc}")
 
     if artifact_config.get("save_model_card", True):
         model_card = {
