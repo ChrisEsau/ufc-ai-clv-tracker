@@ -10,7 +10,7 @@ feature_sources:
 - prop_method_of_victory_feature_view
 features:
   selection_mode: explicit
-  expected_feature_count: 176
+  expected_feature_count: 175
   allow_unsafe_features: false
   feature_columns:
   - style_all_round_finisher_score_abs_diff
@@ -81,7 +81,6 @@ features:
   - ctrl_per_min_diff
   - elo_diff
   - kd_avg_diff
-  - match_time_sec
   - recent_splm_diff
   - recent_td_avg_diff
   - recent_win_pct_diff
@@ -205,6 +204,7 @@ features:
   - engineered
   include_features: []
   exclude_features:
+  - match_time_sec
   - target_method_class
   - finish_round
   resolved_features:
@@ -276,7 +276,6 @@ features:
   - ctrl_per_min_diff
   - elo_diff
   - kd_avg_diff
-  - match_time_sec
   - recent_splm_diff
   - recent_td_avg_diff
   - recent_win_pct_diff
