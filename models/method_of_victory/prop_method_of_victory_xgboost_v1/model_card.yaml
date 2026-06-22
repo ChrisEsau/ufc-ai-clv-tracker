@@ -4,7 +4,7 @@ market_key: method_of_victory
 artifact_name: prop_method_of_victory_xgboost_v1
 algorithm: xgboost
 config_path: configs/models/prop_method_of_victory_xgboost_v1.yaml
-trained_at_utc: '2026-06-22T19:37:51.229392+00:00'
+trained_at_utc: '2026-06-22T19:48:13.451656+00:00'
 prediction:
   format: multiclass
   class_labels:
@@ -23,8 +23,8 @@ split:
   train_rows: 4298
   test_rows: 1270
 features:
-  feature_count: 175
-  expected_feature_count: 175
+  feature_count: 173
+  expected_feature_count: 173
 calibration:
   enabled: false
   reason: multiclass calibration not supported yet
@@ -39,9 +39,9 @@ params:
   objective: multi:softprob
   num_class: 3
 metrics:
-  accuracy: 0.5173228346456693
-  log_loss: 0.9819329977035522
-  macro_f1: 0.3643960500697754
-  weighted_f1: 0.46664632352227775
+  accuracy: 0.5094488188976378
+  log_loss: 0.9893625974655151
+  macro_f1: 0.35372368024185574
+  weighted_f1: 0.45617436523366467
   row_count: 1270
   class_count: 3

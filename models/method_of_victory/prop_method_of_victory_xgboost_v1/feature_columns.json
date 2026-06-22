@@ -50,8 +50,6 @@
   "wrestling_mismatch_diff",
   "wrestling_mismatch_x_avg_opp_elo",
   "wrestling_pressure_vs_defense",
-  "combined_avg_fight_time",
-  "combined_ewm_avg_fight_time",
   "combined_ewm_finish_loss_rate",
   "combined_ewm_finish_pressure",
   "combined_ewm_finish_rate",
