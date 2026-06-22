@@ -239,11 +239,11 @@ def _apply_base_filters(df: pd.DataFrame) -> pd.DataFrame:
     book = st.session_state.get("bb_filter_bookmaker", "All Books")
     if book != "All Books" and "bookmaker" in out.columns:
         out = out[out["bookmaker"].astype(str) == book]
-    odds_range = st.session_state.get("bb_filter_odds_range")
-    if odds_range and "american_odds" in out.columns:
-        low, high = odds_range
-        odds = pd.to_numeric(out["american_odds"], errors="coerce")
-        out = out[odds.between(low, high)]
+    #odds_range = st.session_state.get("bb_filter_odds_range")
+    #if odds_range and "american_odds" in out.columns:
+    #    low, high = odds_range
+    #    odds = pd.to_numeric(out["american_odds"], errors="coerce")
+    #    out = out[odds.between(low, high)]
     if st.session_state.get("bb_filter_hide_missing_odds", True) and "american_odds" in out.columns:
         out = out[pd.to_numeric(out["american_odds"], errors="coerce").notna()]
     return out.reset_index(drop=True)
