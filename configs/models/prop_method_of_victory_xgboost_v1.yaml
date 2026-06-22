@@ -10,9 +10,45 @@ feature_sources:
 - prop_method_of_victory_feature_view
 features:
   selection_mode: explicit
-  expected_feature_count: 15
+  expected_feature_count: 51
   allow_unsafe_features: false
   feature_columns:
+  - style_all_round_finisher_score_abs_diff
+  - style_control_wrestler_score_abs_diff
+  - style_decision_technician_score_abs_diff
+  - style_edge_control_wrestler_vs_ko_finisher
+  - style_edge_control_wrestler_vs_ko_finisher_net
+  - style_edge_control_wrestler_vs_ko_finisher_reverse
+  - style_edge_decision_technician_vs_submission_grappler
+  - style_edge_decision_technician_vs_submission_grappler_net
+  - style_edge_decision_technician_vs_submission_grappler_reverse
+  - style_edge_ko_finisher_vs_decision_technician
+  - style_edge_ko_finisher_vs_decision_technician_net
+  - style_edge_ko_finisher_vs_decision_technician_reverse
+  - style_ko_finisher_score_abs_diff
+  - style_submission_grappler_score_abs_diff
+  - age_x_career_ko_losses_diff
+  - combined_career_ko_losses
+  - combined_recent_ko_losses_3
+  - ko_recovery_gap
+  - max_career_ko_losses
+  - older_fighter_career_ko_losses
+  - age_diff
+  - age_squared_diff
+  - aggression_index_diff
+  - chin_risk_diff
+  - experience_ratio_diff
+  - finish_volatility
+  - grappling_edge
+  - height_diff
+  - pressure_striking_adv_diff
+  - reach_diff
+  - reach_striking_combo
+  - striking_edge
+  - submission_mismatch_diff
+  - weight_diff
+  - wrestling_mismatch_diff
+  - wrestling_pressure_vs_defense
   - combined_avg_fight_time
   - combined_ewm_avg_fight_time
   - combined_ewm_finish_loss_rate
@@ -21,18 +57,62 @@ features:
   - combined_finish_loss_rate
   - combined_finish_pressure
   - combined_finish_rate
-  - finish_loss_rate_diff
-  - finish_rate_diff
   - height_mismatch_abs
   - older_fighter_age
   - reach_mismatch_abs
-  - recent_form_avg_fight_time_diff
   - ewm_avg_fight_time_diff
+  - recent_form_avg_fight_time_diff
+  - finish_loss_rate_diff
+  - finish_rate_diff
   selected_bundles:
-  - method_of_victory_core_v1
+  - style_scores_v1
+  - ko_loss_vulnerability
+  - engineered_matchup
+  - goes_distance_core_v1
+  - ewm_state
+  - recent_form
+  - finish_profile
+  - physical
+  - experience
   include_features: []
   exclude_features: []
   resolved_features:
+  - style_all_round_finisher_score_abs_diff
+  - style_control_wrestler_score_abs_diff
+  - style_decision_technician_score_abs_diff
+  - style_edge_control_wrestler_vs_ko_finisher
+  - style_edge_control_wrestler_vs_ko_finisher_net
+  - style_edge_control_wrestler_vs_ko_finisher_reverse
+  - style_edge_decision_technician_vs_submission_grappler
+  - style_edge_decision_technician_vs_submission_grappler_net
+  - style_edge_decision_technician_vs_submission_grappler_reverse
+  - style_edge_ko_finisher_vs_decision_technician
+  - style_edge_ko_finisher_vs_decision_technician_net
+  - style_edge_ko_finisher_vs_decision_technician_reverse
+  - style_ko_finisher_score_abs_diff
+  - style_submission_grappler_score_abs_diff
+  - age_x_career_ko_losses_diff
+  - combined_career_ko_losses
+  - combined_recent_ko_losses_3
+  - ko_recovery_gap
+  - max_career_ko_losses
+  - older_fighter_career_ko_losses
+  - age_diff
+  - age_squared_diff
+  - aggression_index_diff
+  - chin_risk_diff
+  - experience_ratio_diff
+  - finish_volatility
+  - grappling_edge
+  - height_diff
+  - pressure_striking_adv_diff
+  - reach_diff
+  - reach_striking_combo
+  - striking_edge
+  - submission_mismatch_diff
+  - weight_diff
+  - wrestling_mismatch_diff
+  - wrestling_pressure_vs_defense
   - combined_avg_fight_time
   - combined_ewm_avg_fight_time
   - combined_ewm_finish_loss_rate
@@ -41,13 +121,13 @@ features:
   - combined_finish_loss_rate
   - combined_finish_pressure
   - combined_finish_rate
-  - finish_loss_rate_diff
-  - finish_rate_diff
   - height_mismatch_abs
   - older_fighter_age
   - reach_mismatch_abs
-  - recent_form_avg_fight_time_diff
   - ewm_avg_fight_time_diff
+  - recent_form_avg_fight_time_diff
+  - finish_loss_rate_diff
+  - finish_rate_diff
 data:
   rolling_features_path: data/features/prop_method_of_victory_feature_view.parquet
   target_column: target_method_class
@@ -63,6 +143,7 @@ symmetry:
 calibration:
   enabled: false
   reason: multiclass calibration not supported yet
+  method: isotonic
 params:
   n_estimators: 500
   max_depth: 4
@@ -70,8 +151,6 @@ params:
   subsample: 0.8
   colsample_bytree: 0.8
   random_state: 42
-  objective: multi:softprob
-  num_class: 3
   eval_metric: mlogloss
 metrics:
   primary_metric: log_loss
@@ -86,6 +165,12 @@ artifacts:
   save_shap_importance: true
   save_model_card: true
 prediction:
+  probability:
+    clip_low: 0.01
+    clip_high: 0.99
+  threshold:
+    source: fixed
+    value: 0.5
   format: multiclass
   market_key: method_of_victory
   prediction_type: multiclass_prop
@@ -93,13 +178,11 @@ prediction:
   - ko_tko
   - submission
   - decision
-  probability:
-    clip_low: 0.01
-    clip_high: 0.99
   output:
     model_scoped_path_template: data/predictions/by_model/{model_id}/model_outcomes.parquet
 notes:
 - Draft fight-level multiclass method model.
 - Class probabilities sum to 100 percent across ko_tko, submission, and decision.
-- This powers method-level fight props and can derive goes-distance/inside-distance probabilities.
+- This powers method-level fight props and can derive goes-distance/inside-distance
+  probabilities.
 - This does not yet model fighter-specific method-of-victory markets.
