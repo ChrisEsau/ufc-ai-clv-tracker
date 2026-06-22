@@ -12,6 +12,94 @@ import utils.model_lab_workflows as mlw
 ExistingModelSelector = Callable[[dict[str, Any], list[dict[str, Any]], dict[str, dict[str, Any]]], dict[str, Any]]
 
 
+def _artifact_path(context: dict[str, Any], filename: str) -> Path:
+    return Path(str(context.get("artifact_dir") or "")) / filename
+
+
+def _is_multiclass_model(context: dict[str, Any]) -> bool:
+    prediction = (context.get("config") or {}).get("prediction") or {}
+    return str(prediction.get("format") or "").strip().lower() == "multiclass"
+
+
+def _read_parquet_artifact(context: dict[str, Any], filename: str) -> pd.DataFrame:
+    path = _artifact_path(context, filename)
+    if not path.exists():
+        return pd.DataFrame()
+    try:
+        return pd.read_parquet(path)
+    except Exception:
+        return pd.DataFrame()
+
+
+def _format_rate_columns(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    for column in ["actual_rate", "predicted_rate", "mean_probability", "one_vs_rest_f1"]:
+        if column in out.columns:
+            out[column] = pd.to_numeric(out[column], errors="coerce")
+    return out
+
+
+def render_multiclass_summary(context: dict[str, Any], *, compact: bool = False) -> None:
+    """Render multiclass artifacts for models that emit class probability rows."""
+
+    if not _is_multiclass_model(context):
+        return
+
+    class_metrics_path = _artifact_path(context, "class_metrics.parquet")
+    confusion_path = _artifact_path(context, "confusion_matrix.parquet")
+    class_metrics = _format_rate_columns(_read_parquet_artifact(context, "class_metrics.parquet"))
+    confusion = _read_parquet_artifact(context, "confusion_matrix.parquet")
+
+    st.markdown("### Multiclass Breakdown")
+    if class_metrics.empty and confusion.empty:
+        st.info(
+            "No multiclass class artifacts found yet. Expected "
+            f"`{class_metrics_path}` and `{confusion_path}` after training."
+        )
+        return
+
+    if not class_metrics.empty:
+        st.caption(f"Class metrics loaded from `{class_metrics_path}`")
+        display_cols = [
+            column
+            for column in [
+                "class_index",
+                "class_label",
+                "support",
+                "predicted_count",
+                "actual_rate",
+                "predicted_rate",
+                "mean_probability",
+                "one_vs_rest_f1",
+            ]
+            if column in class_metrics.columns
+        ]
+        st.dataframe(class_metrics[display_cols], use_container_width=True, hide_index=True)
+
+        chart_cols = [column for column in ["actual_rate", "predicted_rate", "mean_probability", "one_vs_rest_f1"] if column in class_metrics.columns]
+        if chart_cols and "class_label" in class_metrics.columns and not compact:
+            st.bar_chart(class_metrics.set_index("class_label")[chart_cols])
+
+    if compact:
+        return
+
+    st.markdown("### Confusion Matrix")
+    if confusion.empty:
+        st.info(f"No confusion matrix artifact found yet: `{confusion_path}`")
+        return
+
+    st.caption(f"Confusion matrix loaded from `{confusion_path}`. Rows are actual classes; columns are predicted classes.")
+    st.dataframe(confusion, use_container_width=True, hide_index=True)
+
+    if "actual_class" in confusion.columns:
+        numeric = confusion.set_index("actual_class")
+        numeric = numeric.apply(pd.to_numeric, errors="coerce")
+        st.dataframe(
+            numeric.style.background_gradient(axis=None),
+            use_container_width=True,
+        )
+
+
 def _read_shap_importance(context: dict[str, Any]) -> pd.DataFrame:
     """Load SHAP importance for the selected model artifact directory."""
 
@@ -84,4 +172,5 @@ def render_performance(
     context = existing_model_selector(registry, rows, row_by_id)
     mlw._render_model_bar(context, registry)
     mlw._render_performance(context)
+    render_multiclass_summary(context)
     _render_shap_importance(context)
