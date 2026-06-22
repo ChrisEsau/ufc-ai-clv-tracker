@@ -19,7 +19,7 @@ from ufc_feature_engineering import add_v5_engineered_features, get_engineered_f
 DEFAULT_CONFIG_PATH = "configs/feature_views/moneyline_base.yaml"
 DEFAULT_MODEL_LAB_FEATURE_REGISTRY = "configs/features/feature_registry.yaml"
 SUPPORTED_VIEW_FAMILIES = {"moneyline", "prop"}
-SUPPORTED_PROP_MARKETS = {"goes_distance"}
+SUPPORTED_PROP_MARKETS = {"goes_distance", "over_under_2_5"}
 STYLE_SCORE_NAMES = [
     "control_wrestler",
     "ko_finisher",
@@ -231,16 +231,28 @@ def apply_model_lab_formula_features(*, feature_view_df: pd.DataFrame, config: d
 
 def add_prop_labels(*, feature_view_df: pd.DataFrame, config: dict[str, Any]) -> pd.DataFrame:
     market_key = str(config.get("market_key", ""))
-    if market_key != "goes_distance":
-        raise ValueError(f"Unsupported prop market for label generation: {market_key}")
-    target_column = str((config.get("label", {}) or {}).get("target_column", "target_goes_distance"))
-    if "method" not in feature_view_df.columns:
-        raise ValueError("Cannot build goes-distance target because method column is missing.")
+    target_column = str((config.get("label", {}) or {}).get("target_column", f"target_{market_key}"))
     out = feature_view_df.copy()
-    decision_methods = {"decision - unanimous", "decision - split", "decision - majority"}
-    method = out["method"].astype("string").fillna("").str.strip().str.lower()
-    out[target_column] = method.isin(decision_methods).astype(int)
-    return out
+
+    if market_key == "goes_distance":
+        if "method" not in out.columns:
+            raise ValueError("Cannot build goes-distance target because method column is missing.")
+        decision_methods = {"decision - unanimous", "decision - split", "decision - majority"}
+        method = out["method"].astype("string").fillna("").str.strip().str.lower()
+        out[target_column] = method.isin(decision_methods).astype(int)
+        return out
+
+    if market_key == "over_under_2_5":
+        if "match_time_sec" not in out.columns:
+            raise ValueError("Cannot build over/under 2.5 target because match_time_sec column is missing.")
+        elapsed_seconds = pd.to_numeric(out["match_time_sec"], errors="coerce")
+        if elapsed_seconds.isna().any():
+            missing = int(elapsed_seconds.isna().sum())
+            raise ValueError(f"Cannot build over/under 2.5 target; match_time_sec missing in {missing} rows.")
+        out[target_column] = elapsed_seconds.gt(750.0).astype(int)
+        return out
+
+    raise ValueError(f"Unsupported prop market for label generation: {market_key}")
 
 
 def print_target_distribution(feature_view_df: pd.DataFrame, target_column: str) -> None:
