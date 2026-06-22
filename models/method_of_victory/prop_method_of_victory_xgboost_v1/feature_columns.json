@@ -67,7 +67,6 @@
   "ctrl_per_min_diff",
   "elo_diff",
   "kd_avg_diff",
-  "match_time_sec",
   "recent_splm_diff",
   "recent_td_avg_diff",
   "recent_win_pct_diff",
