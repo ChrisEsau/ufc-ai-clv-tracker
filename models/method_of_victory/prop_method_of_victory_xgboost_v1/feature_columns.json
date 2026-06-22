@@ -12,7 +12,6 @@
   "decision_win_rate_diff",
   "finish_loss_rate_diff",
   "finish_rate_diff",
-  "finish_round",
   "finish_volatility",
   "ko_rate_diff",
   "recent_avg_fight_time_diff",
