@@ -50,6 +50,13 @@ def main() -> None:
     config_path = Path(args.config)
     config = load_model_config(config_path)
 
+    prediction_format = str((config.get("prediction") or {}).get("format", "binary")).strip().lower()
+    if prediction_format == "multiclass":
+        from pipeline.training.train_multiclass_model import train_multiclass_from_config
+
+        train_multiclass_from_config(config=config, config_path=config_path)
+        return
+
     print("=" * 80)
     print("TRAIN UFC MODEL")
     print("=" * 80)
