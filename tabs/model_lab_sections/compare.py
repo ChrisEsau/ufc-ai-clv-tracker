@@ -37,13 +37,6 @@ def _fmt_pct(value: Any, decimals: int = 0) -> str:
     return f"{number:.{decimals}f}%"
 
 
-def _fmt_money(value: Any) -> str:
-    try:
-        return f"${float(value):,.2f}"
-    except Exception:
-        return "—"
-
-
 def _fmt_odds(value: Any) -> str:
     try:
         number = int(round(float(value)))
@@ -75,12 +68,11 @@ def _status_icon(status: str) -> str:
 def _latest_run(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "betting_run_id" not in df.columns:
         return df
-    timestamp_col = "betting_timestamp"
-    if timestamp_col in df.columns:
-        ranked = df[["betting_run_id", timestamp_col]].dropna().drop_duplicates()
+    if "betting_timestamp" in df.columns:
+        ranked = df[["betting_run_id", "betting_timestamp"]].dropna().drop_duplicates()
         if not ranked.empty:
-            ranked[timestamp_col] = pd.to_datetime(ranked[timestamp_col], errors="coerce", utc=True)
-            latest = ranked.sort_values(timestamp_col).tail(1)["betting_run_id"].iloc[0]
+            ranked["betting_timestamp"] = pd.to_datetime(ranked["betting_timestamp"], errors="coerce", utc=True)
+            latest = ranked.sort_values("betting_timestamp").tail(1)["betting_run_id"].iloc[0]
             return df[df["betting_run_id"].astype(str) == str(latest)].copy()
     latest = df["betting_run_id"].dropna().astype(str).iloc[-1]
     return df[df["betting_run_id"].astype(str) == latest].copy()
@@ -89,12 +81,111 @@ def _latest_run(df: pd.DataFrame) -> pd.DataFrame:
 def _model_counts(df: pd.DataFrame) -> tuple[int, int, int]:
     if df.empty or "model_id" not in df.columns:
         return 0, 0, 0
-    models = df[["model_id", "model_registry_status"]].drop_duplicates() if "model_registry_status" in df.columns else df[["model_id"]].drop_duplicates()
-    total = int(models["model_id"].nunique())
-    if "model_registry_status" not in models.columns:
-        return total, 0, 0
-    statuses = models["model_registry_status"].astype(str).str.lower()
-    return total, int((statuses == "production").sum()), int((statuses == "draft").sum())
+    if "model_registry_status" in df.columns:
+        models = df[["model_id", "model_registry_status"]].drop_duplicates()
+        total = int(models["model_id"].nunique())
+        statuses = models["model_registry_status"].astype(str).str.lower()
+        return total, int((statuses == "production").sum()), int((statuses == "draft").sum())
+    return int(df["model_id"].nunique()), 0, 0
+
+
+def _best_market_by_outcome(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    if "ev_dollars_at_100" in out.columns:
+        out["_ev_sort"] = pd.to_numeric(out["ev_dollars_at_100"], errors="coerce")
+    sort_cols = [col for col in ["fight_id", "market_key", "outcome_join_key", "_ev_sort"] if col in out.columns]
+    if sort_cols:
+        ascending = [True] * len(sort_cols)
+        if sort_cols[-1] == "_ev_sort":
+            ascending[-1] = False
+        out = out.sort_values(sort_cols, ascending=ascending)
+    dedupe = [col for col in ["fight_id", "market_key", "outcome_join_key", "model_id"] if col in out.columns]
+    if dedupe:
+        out = out.drop_duplicates(dedupe, keep="first")
+    return out.drop(columns=["_ev_sort"], errors="ignore")
+
+
+def _build_overview_table(df: pd.DataFrame) -> pd.DataFrame:
+    required = {"fight_id", "market_key", "model_id", "outcome_label", "model_probability"}
+    if df.empty or not required.issubset(df.columns):
+        return pd.DataFrame()
+
+    source = _best_market_by_outcome(df)
+    rows: list[dict[str, Any]] = []
+    group_keys = ["event_name", "fight_id", "fight_display", "market_key"]
+    for key_values, group in source.groupby(group_keys, dropna=False):
+        event_name, fight_id, fight_display, market_key = key_values
+        model_ids = sorted([str(x) for x in group["model_id"].dropna().unique()])
+        models_included = len(model_ids)
+
+        if "is_model_pick" in group.columns:
+            model_pick_rows = group[group["is_model_pick"].fillna(False).astype(bool)]
+        else:
+            model_pick_rows = pd.DataFrame()
+        if model_pick_rows.empty:
+            model_pick_rows = group.sort_values("model_probability", ascending=False).drop_duplicates("model_id")
+
+        pick_counts = model_pick_rows.groupby("outcome_label")["model_id"].nunique().sort_values(ascending=False)
+        consensus_pick = str(pick_counts.index[0]) if not pick_counts.empty else "—"
+        support = int(pick_counts.iloc[0]) if not pick_counts.empty else 0
+        agreement_pct = (support / models_included * 100.0) if models_included else 0.0
+
+        probabilities = pd.to_numeric(group["model_probability"], errors="coerce")
+        avg_prob = float(probabilities.mean()) if not probabilities.dropna().empty else 0.0
+        spread_pct = float((probabilities.max() - probabilities.min()) * 100.0) if len(probabilities.dropna()) else 0.0
+
+        ev_values = pd.to_numeric(group.get("ev_dollars_at_100", pd.Series(dtype=float)), errors="coerce")
+        avg_ev = float(ev_values.mean()) if not ev_values.dropna().empty else 0.0
+        max_ev = float(ev_values.max()) if not ev_values.dropna().empty else 0.0
+
+        implied = pd.to_numeric(group.get("implied_probability", pd.Series(dtype=float)), errors="coerce")
+        implied_display = "—"
+        if not implied.dropna().empty:
+            implied_display = f"{_fmt_pct(implied.min())} / {_fmt_pct(implied.max())}"
+
+        odds = pd.to_numeric(group.get("american_odds", pd.Series(dtype=float)), errors="coerce")
+        odds_display = "—" if odds.dropna().empty else " / ".join(_fmt_odds(x) for x in sorted(odds.dropna().unique())[:3])
+
+        prod_pick = "—"
+        if "model_registry_status" in model_pick_rows.columns:
+            prod_rows = model_pick_rows[model_pick_rows["model_registry_status"].astype(str).str.lower() == "production"]
+            if not prod_rows.empty:
+                prod_pick = str(prod_rows.sort_values("model_probability", ascending=False)["outcome_label"].iloc[0])
+
+        status = _status_label(agreement_pct, spread_pct)
+        row: dict[str, Any] = {
+            "event_name": event_name,
+            "fight_id": str(fight_id),
+            "fight_display": fight_display,
+            "market_key": market_key,
+            "Fight": fight_display,
+            "Market": market_key,
+            "Odds (Best)": odds_display,
+            "Implied Prob (%)": implied_display,
+            "Consensus Pick": consensus_pick,
+            "Agreement %": round(agreement_pct, 1),
+            "Agreement": f"{_status_icon(status)} {_fmt_pct(agreement_pct)}",
+            "Avg Prob (%)": round(avg_prob * 100.0, 1),
+            "Prob Spread (%)": round(spread_pct, 1),
+            "Avg EV ($100 stake)": round(avg_ev, 2),
+            "Max EV ($100 stake)": round(max_ev, 2),
+            "Production Pick": prod_pick,
+            "Status": status,
+            "Models Included": models_included,
+        }
+        for model_id in model_ids:
+            model_group = group[group["model_id"].astype(str) == model_id]
+            if model_group.empty:
+                continue
+            pick_row = model_group.sort_values("model_probability", ascending=False).iloc[0]
+            model_prob = pd.to_numeric(pd.Series([pick_row.get("model_probability")]), errors="coerce").iloc[0]
+            row[f"{model_id} Prob (%)"] = round(float(model_prob) * 100.0, 1) if pd.notna(model_prob) else pd.NA
+        rows.append(row)
+
+    table = pd.DataFrame(rows)
+    if table.empty:
+        return table
+    return table.sort_values(["event_name", "fight_display", "market_key"]).reset_index(drop=True)
 
 
 def _apply_filters(df: pd.DataFrame) -> pd.DataFrame:
@@ -146,116 +237,22 @@ def _apply_filters(df: pd.DataFrame) -> pd.DataFrame:
     with toggle_cols[2]:
         hide_incomplete = st.toggle("Hide Fights Without All Models", value=False, key="compare_hide_incomplete")
 
-    summary = _build_overview_table(out)
-    valid_keys = set()
-    if not summary.empty:
-        filtered_summary = summary.copy()
-        filtered_summary = filtered_summary[pd.to_numeric(filtered_summary["Agreement %"], errors="coerce").fillna(0) >= float(min_agreement)]
-        if show_disagreements:
-            filtered_summary = filtered_summary[filtered_summary["Status"].isin(["Split", "Outlier"])]
-        if show_bets:
-            bet_keys = out.loc[out.get("is_bet_candidate", False).fillna(False).astype(bool), ["fight_id", "market_key"]].drop_duplicates()
-            filtered_summary = filtered_summary.merge(bet_keys, on=["fight_id", "market_key"], how="inner")
-        if hide_incomplete and "Models Included" in filtered_summary.columns:
-            expected_models = max(1, _model_counts(df)[0])
-            filtered_summary = filtered_summary[pd.to_numeric(filtered_summary["Models Included"], errors="coerce").fillna(0) >= expected_models]
-        valid_keys = set(zip(filtered_summary["fight_id"].astype(str), filtered_summary["market_key"].astype(str)))
-        out = out[out.apply(lambda row: (str(row.get("fight_id")), str(row.get("market_key"))) in valid_keys, axis=1)]
+    overview = _build_overview_table(out)
+    if overview.empty:
+        return out
 
-    return out
+    filtered_overview = overview[pd.to_numeric(overview["Agreement %"], errors="coerce").fillna(0) >= float(min_agreement)].copy()
+    if show_disagreements:
+        filtered_overview = filtered_overview[filtered_overview["Status"].isin(["Split", "Outlier"])]
+    if show_bets and "is_bet_candidate" in out.columns:
+        bet_keys = out.loc[out["is_bet_candidate"].fillna(False).astype(bool), ["fight_id", "market_key"]].drop_duplicates()
+        filtered_overview = filtered_overview.merge(bet_keys, on=["fight_id", "market_key"], how="inner")
+    if hide_incomplete and "Models Included" in filtered_overview.columns:
+        expected_models = max(1, _model_counts(df)[0])
+        filtered_overview = filtered_overview[pd.to_numeric(filtered_overview["Models Included"], errors="coerce").fillna(0) >= expected_models]
 
-
-def _best_market_by_outcome(df: pd.DataFrame) -> pd.DataFrame:
-    sort_cols = ["fight_id", "market_key", "outcome_join_key", "ev_dollars_at_100"]
-    existing = [col for col in sort_cols if col in df.columns]
-    out = df.copy()
-    if "ev_dollars_at_100" in out.columns:
-        out["_ev_sort"] = pd.to_numeric(out["ev_dollars_at_100"], errors="coerce")
-        existing = [col if col != "ev_dollars_at_100" else "_ev_sort" for col in existing]
-    if existing:
-        out = out.sort_values(existing, ascending=[True] * (len(existing) - 1) + [False])
-    dedupe = [col for col in ["fight_id", "market_key", "outcome_join_key", "model_id"] if col in out.columns]
-    if dedupe:
-        out = out.drop_duplicates(dedupe, keep="first")
-    return out.drop(columns=["_ev_sort"], errors="ignore")
-
-
-def _build_overview_table(df: pd.DataFrame) -> pd.DataFrame:
-    if df.empty:
-        return pd.DataFrame()
-
-    source = _best_market_by_outcome(df)
-    rows: list[dict[str, Any]] = []
-    group_keys = ["event_name", "fight_id", "fight_display", "market_key"]
-    for key_values, group in source.groupby(group_keys, dropna=False):
-        event_name, fight_id, fight_display, market_key = key_values
-        model_ids = sorted([str(x) for x in group.get("model_id", pd.Series(dtype=str)).dropna().unique()])
-        models_included = len(model_ids)
-
-        model_pick_rows = group[group.get("is_model_pick", False).fillna(False).astype(bool)] if "is_model_pick" in group.columns else group
-        if model_pick_rows.empty:
-            model_pick_rows = group.sort_values("model_probability", ascending=False).drop_duplicates("model_id")
-
-        pick_counts = model_pick_rows.groupby("outcome_label")["model_id"].nunique().sort_values(ascending=False)
-        consensus_pick = str(pick_counts.index[0]) if not pick_counts.empty else "—"
-        support = int(pick_counts.iloc[0]) if not pick_counts.empty else 0
-        agreement_pct = (support / models_included * 100.0) if models_included else 0.0
-
-        probabilities = pd.to_numeric(group["model_probability"], errors="coerce") if "model_probability" in group.columns else pd.Series(dtype=float)
-        avg_prob = float(probabilities.mean()) if not probabilities.dropna().empty else 0.0
-        spread_pct = float((probabilities.max() - probabilities.min()) * 100.0) if len(probabilities.dropna()) else 0.0
-
-        ev_values = pd.to_numeric(group.get("ev_dollars_at_100", pd.Series(dtype=float)), errors="coerce")
-        avg_ev = float(ev_values.mean()) if not ev_values.dropna().empty else 0.0
-        max_ev = float(ev_values.max()) if not ev_values.dropna().empty else 0.0
-
-        implied = pd.to_numeric(group.get("implied_probability", pd.Series(dtype=float)), errors="coerce")
-        implied_min = implied.min() if not implied.dropna().empty else None
-        implied_max = implied.max() if not implied.dropna().empty else None
-        implied_display = "—" if implied_min is None else f"{_fmt_pct(implied_min)} / {_fmt_pct(implied_max)}"
-
-        odds = pd.to_numeric(group.get("american_odds", pd.Series(dtype=float)), errors="coerce")
-        odds_display = "—" if odds.dropna().empty else " / ".join(_fmt_odds(x) for x in sorted(odds.dropna().unique())[:3])
-
-        prod_pick = "—"
-        if "model_registry_status" in model_pick_rows.columns:
-            prod_rows = model_pick_rows[model_pick_rows["model_registry_status"].astype(str).str.lower() == "production"]
-            if not prod_rows.empty:
-                prod_pick = str(prod_rows.sort_values("model_probability", ascending=False)["outcome_label"].iloc[0])
-
-        status = _status_label(agreement_pct, spread_pct)
-        row: dict[str, Any] = {
-            "event_name": event_name,
-            "fight_id": str(fight_id),
-            "fight_display": fight_display,
-            "market_key": market_key,
-            "Fight": fight_display,
-            "Market": market_key,
-            "Odds (Best)": odds_display,
-            "Implied Prob (%)": implied_display,
-            "Consensus Pick": consensus_pick,
-            "Agreement %": round(agreement_pct, 1),
-            "Agreement": f"{_status_icon(status)} {_fmt_pct(agreement_pct)}",
-            "Avg Prob (%)": round(avg_prob * 100.0, 1),
-            "Prob Spread (%)": round(spread_pct, 1),
-            "Avg EV ($100 stake)": round(avg_ev, 2),
-            "Max EV ($100 stake)": round(max_ev, 2),
-            "Production Pick": prod_pick,
-            "Status": status,
-            "Models Included": models_included,
-        }
-        for model_id in model_ids:
-            model_group = group[group["model_id"].astype(str) == model_id]
-            if model_group.empty:
-                continue
-            pick_row = model_group.sort_values("model_probability", ascending=False).iloc[0]
-            row[f"{model_id} Prob (%)"] = round(float(pd.to_numeric(pick_row.get("model_probability"), errors="coerce") or 0) * 100.0, 1)
-        rows.append(row)
-
-    table = pd.DataFrame(rows)
-    if table.empty:
-        return table
-    return table.sort_values(["event_name", "fight_display", "market_key"]).reset_index(drop=True)
+    valid_keys = set(zip(filtered_overview["fight_id"].astype(str), filtered_overview["market_key"].astype(str)))
+    return out[out.apply(lambda row: (str(row.get("fight_id")), str(row.get("market_key"))) in valid_keys, axis=1)]
 
 
 def _build_suggested_bets(df: pd.DataFrame) -> pd.DataFrame:
@@ -266,8 +263,10 @@ def _build_suggested_bets(df: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame()
     support = bets.groupby(["fight_id", "market_key", "outcome_join_key"])["model_id"].nunique().rename("Models Supporting")
     bets = bets.join(support, on=["fight_id", "market_key", "outcome_join_key"])
-    bets["Model Prob (%)"] = pd.to_numeric(bets["model_probability"], errors="coerce") * 100.0
-    bets["Implied Prob (%)"] = pd.to_numeric(bets["implied_probability"], errors="coerce") * 100.0
+    if "model_probability" in bets.columns:
+        bets["Model Prob (%)"] = pd.to_numeric(bets["model_probability"], errors="coerce") * 100.0
+    if "implied_probability" in bets.columns:
+        bets["Implied Prob (%)"] = pd.to_numeric(bets["implied_probability"], errors="coerce") * 100.0
     display_cols = [
         "outcome_display",
         "bookmaker",
