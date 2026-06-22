@@ -10,7 +10,7 @@ feature_sources:
 - prop_method_of_victory_feature_view
 features:
   selection_mode: explicit
-  expected_feature_count: 41
+  expected_feature_count: 40
   allow_unsafe_features: false
   feature_columns:
   - avg_fight_time_diff
@@ -26,7 +26,6 @@ features:
   - decision_win_rate_diff
   - finish_loss_rate_diff
   - finish_rate_diff
-  - finish_round
   - finish_volatility
   - ko_rate_diff
   - recent_avg_fight_time_diff
@@ -59,7 +58,8 @@ features:
   - durability
   - physical
   include_features: []
-  exclude_features: []
+  exclude_features:
+  - finish_round
   resolved_features:
   - avg_fight_time_diff
   - combined_avg_fight_time
@@ -74,7 +74,6 @@ features:
   - decision_win_rate_diff
   - finish_loss_rate_diff
   - finish_rate_diff
-  - finish_round
   - finish_volatility
   - ko_rate_diff
   - recent_avg_fight_time_diff
