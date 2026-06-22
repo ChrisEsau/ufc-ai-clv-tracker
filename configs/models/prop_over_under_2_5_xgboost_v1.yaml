@@ -5,6 +5,7 @@ artifact_name: prop_over_under_2_5_xgboost_v1
 version: 1
 status: draft
 algorithm: xgboost
+feature_view_config_path: configs/feature_views/prop_over_under_2_5.yaml
 feature_sources:
 - prop_over_under_2_5_feature_view
 features:
