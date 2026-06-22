@@ -10,7 +10,7 @@ feature_sources:
 - prop_method_of_victory_feature_view
 features:
   selection_mode: explicit
-  expected_feature_count: 177
+  expected_feature_count: 176
   allow_unsafe_features: false
   feature_columns:
   - style_all_round_finisher_score_abs_diff
@@ -90,7 +90,6 @@ features:
   - style_primary_score_diff
   - style_score_spread_diff
   - sub_avg_diff
-  - target_method_class
   - td_acc_diff
   - td_avg_diff
   - testfeature
@@ -206,6 +205,7 @@ features:
   - engineered
   include_features: []
   exclude_features:
+  - target_method_class
   - finish_round
   resolved_features:
   - style_all_round_finisher_score_abs_diff
@@ -285,7 +285,6 @@ features:
   - style_primary_score_diff
   - style_score_spread_diff
   - sub_avg_diff
-  - target_method_class
   - td_acc_diff
   - td_avg_diff
   - testfeature
