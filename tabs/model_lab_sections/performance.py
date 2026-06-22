@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any, Callable
 
@@ -24,13 +25,74 @@ LEAKAGE_KEYWORDS = [
 ]
 
 
+def _artifact_dir(context: dict[str, Any]) -> Path:
+    return Path(str(context.get("artifact_dir") or ""))
+
+
 def _artifact_path(context: dict[str, Any], filename: str) -> Path:
-    return Path(str(context.get("artifact_dir") or "")) / filename
+    return _artifact_dir(context) / filename
+
+
+def _safe_label_for_filename(label: str) -> str:
+    token = str(label).strip().lower()
+    for char in ["/", "\\", " ", "-", "."]:
+        token = token.replace(char, "_")
+    while "__" in token:
+        token = token.replace("__", "_")
+    return token.strip("_") or "class"
+
+
+def _read_class_labels_artifact(context: dict[str, Any]) -> list[str]:
+    path = _artifact_path(context, "class_labels.json")
+    if not path.exists():
+        return []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    if not isinstance(payload, list):
+        return []
+    return [str(label) for label in payload if str(label).strip()]
+
+
+def _class_labels(context: dict[str, Any]) -> list[str]:
+    artifact_labels = _read_class_labels_artifact(context)
+    if artifact_labels:
+        return artifact_labels
+    prediction = (context.get("config") or {}).get("prediction") or {}
+    labels = prediction.get("class_labels") or prediction.get("classes") or []
+    return [str(label) for label in labels if str(label).strip()]
+
+
+def _discover_class_shap_files(context: dict[str, Any]) -> dict[str, str]:
+    """Return class-label to SHAP filename mapping from config and artifact files."""
+
+    discovered: dict[str, str] = {}
+    for label in _class_labels(context):
+        filename = f"shap_importance_{_safe_label_for_filename(label)}.csv"
+        discovered[label] = filename
+
+    artifact_dir = _artifact_dir(context)
+    if artifact_dir.exists():
+        for path in sorted(artifact_dir.glob("shap_importance_*.csv")):
+            if path.name == "shap_importance.csv":
+                continue
+            suffix = path.stem.replace("shap_importance_", "", 1)
+            matching_label = next(
+                (label for label in discovered if _safe_label_for_filename(label) == suffix),
+                suffix,
+            )
+            discovered.setdefault(matching_label, path.name)
+    return discovered
 
 
 def _is_multiclass_model(context: dict[str, Any]) -> bool:
     prediction = (context.get("config") or {}).get("prediction") or {}
-    return str(prediction.get("format") or "").strip().lower() == "multiclass"
+    if str(prediction.get("format") or "").strip().lower() == "multiclass":
+        return True
+    if _read_class_labels_artifact(context):
+        return True
+    return bool(_discover_class_shap_files(context))
 
 
 def _read_parquet_artifact(context: dict[str, Any], filename: str) -> pd.DataFrame:
@@ -58,21 +120,6 @@ def _read_csv_artifact(context: dict[str, Any], filename: str) -> pd.DataFrame:
     elif "importance" in df.columns:
         df = df.sort_values("importance", ascending=False).reset_index(drop=True)
     return df
-
-
-def _safe_label_for_filename(label: str) -> str:
-    token = str(label).strip().lower()
-    for char in ["/", "\\", " ", "-", "."]:
-        token = token.replace(char, "_")
-    while "__" in token:
-        token = token.replace("__", "_")
-    return token.strip("_") or "class"
-
-
-def _class_labels(context: dict[str, Any]) -> list[str]:
-    prediction = (context.get("config") or {}).get("prediction") or {}
-    labels = prediction.get("class_labels") or prediction.get("classes") or []
-    return [str(label) for label in labels if str(label).strip()]
 
 
 def _format_rate_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -155,7 +202,7 @@ def _render_leakage_flags(shap_df: pd.DataFrame, *, top_n: int = 25) -> None:
         return
     top = shap_df.head(top_n).copy()
     flagged_rows = []
-    for _, row in top.iterrows():
+    for position, (_, row) in enumerate(top.iterrows(), start=1):
         feature = str(row.get("feature") or "")
         lowered = feature.lower()
         matched = [keyword for keyword in LEAKAGE_KEYWORDS if keyword in lowered]
@@ -163,7 +210,7 @@ def _render_leakage_flags(shap_df: pd.DataFrame, *, top_n: int = 25) -> None:
             flagged_rows.append(
                 {
                     "feature": feature,
-                    "rank": int(row.name) + 1 if isinstance(row.name, int) else None,
+                    "rank": position,
                     "matched_keywords": ", ".join(matched),
                     "mean_abs_shap": row.get("mean_abs_shap", row.get("importance")),
                 }
@@ -177,8 +224,9 @@ def _render_leakage_flags(shap_df: pd.DataFrame, *, top_n: int = 25) -> None:
 
 def _render_shap_table(context: dict[str, Any], shap_df: pd.DataFrame, *, title: str, key_suffix: str, source_name: str) -> None:
     st.markdown(f"#### {title}")
+    source_path = _artifact_path(context, source_name)
     if shap_df.empty:
-        st.info(f"No SHAP artifact found yet: `{_artifact_path(context, source_name)}`")
+        st.info(f"No SHAP artifact found yet: `{source_path}`")
         return
 
     feature_col = "feature" if "feature" in shap_df.columns else shap_df.columns[0]
@@ -188,7 +236,7 @@ def _render_shap_table(context: dict[str, Any], shap_df: pd.DataFrame, *, title:
             value_col = candidate
             break
 
-    st.caption(f"Loaded `{_artifact_path(context, source_name)}` · {len(shap_df):,} features")
+    st.caption(f"Loaded `{source_path}` · {len(shap_df):,} features")
     _render_leakage_flags(shap_df, top_n=25)
 
     top_n = st.slider(
@@ -224,8 +272,8 @@ def _render_shap_importance(context: dict[str, Any]) -> None:
         )
         return
 
-    labels = _class_labels(context)
-    tab_labels = ["Overall"] + [str(label) for label in labels]
+    class_files = _discover_class_shap_files(context)
+    tab_labels = ["Overall"] + [str(label) for label in class_files]
     tabs = st.tabs(tab_labels)
     with tabs[0]:
         _render_shap_table(
@@ -235,8 +283,17 @@ def _render_shap_importance(context: dict[str, Any]) -> None:
             key_suffix="overall",
             source_name="shap_importance.csv",
         )
-    for tab, label in zip(tabs[1:], labels):
-        filename = f"shap_importance_{_safe_label_for_filename(label)}.csv"
+        with st.expander("SHAP artifact discovery", expanded=False):
+            artifact_dir = _artifact_dir(context)
+            st.write(
+                {
+                    "artifact_dir": str(artifact_dir),
+                    "artifact_dir_exists": artifact_dir.exists(),
+                    "class_labels": _class_labels(context),
+                    "class_shap_files": class_files,
+                }
+            )
+    for tab, (label, filename) in zip(tabs[1:], class_files.items()):
         with tab:
             _render_shap_table(
                 context,
