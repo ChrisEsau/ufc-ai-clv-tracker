@@ -162,14 +162,14 @@ def _render_betting_board_filters() -> None:
     else:
         st.sidebar.caption("Date Range: no upcoming dates available")
 
-    st.sidebar.slider(
-        "Odds Range",
-        min_value=-500,
-        max_value=500,
-        value=st.session_state.get("bb_filter_odds_range", (risk_settings.min_odds, risk_settings.max_odds)),
-        step=10,
-        key="bb_filter_odds_range",
-    )
+    #st.sidebar.slider(
+    #    "Odds Range",
+    #    min_value=-500,
+    #    max_value=500,
+    #    value=st.session_state.get("bb_filter_odds_range", (risk_settings.min_odds, risk_settings.max_odds)),
+    #    step=10,
+    #    key="bb_filter_odds_range",
+    #)
     st.sidebar.selectbox("EV Threshold ($)", [0, 25, 50, 75, 100, 150, 200], index=2, key="bb_filter_ev_threshold")
     confidence_options = [0, 50, 60, 70, 75, 80, 85, 90]
     confidence_default = min(range(len(confidence_options)), key=lambda idx: abs(confidence_options[idx] - risk_settings.min_confidence))
