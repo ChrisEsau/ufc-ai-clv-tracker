@@ -10,97 +10,108 @@ feature_sources:
 - prop_method_of_victory_feature_view
 features:
   selection_mode: explicit
-  expected_feature_count: 40
+  expected_feature_count: 46
   allow_unsafe_features: false
   feature_columns:
-  - avg_fight_time_diff
-  - combined_avg_fight_time
-  - combined_ewm_avg_fight_time
-  - combined_ewm_finish_loss_rate
-  - combined_ewm_finish_pressure
-  - combined_ewm_finish_rate
-  - combined_finish_loss_rate
-  - combined_finish_pressure
-  - combined_finish_rate
-  - decision_loss_rate_diff
-  - decision_win_rate_diff
-  - finish_loss_rate_diff
-  - finish_rate_diff
-  - finish_volatility
+  - age_x_career_ko_losses_diff
+  - career_ko_losses_diff
+  - chin_risk_diff
+  - days_since_last_ko_loss_diff
+  - ewm_ko_rate_diff
+  - kd_absorbed_avg_diff
+  - kd_avg_diff
   - ko_rate_diff
-  - recent_avg_fight_time_diff
-  - recent_finish_rate_diff
-  - style_all_round_finisher_score_abs_diff
-  - style_all_round_finisher_score_diff
-  - style_edge_control_wrestler_vs_ko_finisher
+  - last_fight_ko_loss_diff
+  - recent_form_ko_rate_diff
+  - recent_ko_losses_3_diff
   - style_edge_control_wrestler_vs_ko_finisher_net
-  - style_edge_control_wrestler_vs_ko_finisher_reverse
-  - style_edge_ko_finisher_vs_decision_technician
-  - style_edge_ko_finisher_vs_decision_technician_net
-  - style_edge_ko_finisher_vs_decision_technician_reverse
   - style_ko_finisher_score_abs_diff
   - style_ko_finisher_score_diff
+  - ctrl_against_per_min_diff
+  - ctrl_per_min_diff
+  - ewm_sub_avg_diff
+  - ewm_sub_win_rate_diff
+  - recent_form_sub_avg_diff
+  - recent_form_sub_win_rate_diff
+  - style_edge_decision_technician_vs_submission_grappler_net
+  - style_submission_grappler_score_abs_diff
+  - style_submission_grappler_score_diff
+  - sub_avg_diff
   - sub_win_rate_diff
-  - chin_risk_diff
-  - kd_absorbed_avg_diff
-  - recent_sapm_diff
-  - sapm_diff
-  - str_def_diff
+  - submission_mismatch_diff
+  - submission_mismatch_x_avg_opp_elo
+  - td_acc_diff
+  - td_avg_diff
   - td_def_diff
-  - height_diff
-  - height_mismatch_abs
-  - reach_diff
-  - reach_mismatch_abs
+  - avg_fight_time_diff
+  - decision_loss_rate_diff
+  - decision_win_rate_diff
+  - ewm_avg_fight_time_diff
+  - ewm_decision_loss_rate_diff
+  - ewm_decision_win_rate_diff
   - reach_striking_combo
-  - weight_diff
+  - recent_form_avg_fight_time_diff
+  - recent_form_decision_loss_rate_diff
+  - recent_form_decision_win_rate_diff
+  - sapm_diff
+  - splm_diff
+  - str_acc_diff
+  - str_def_diff
+  - style_decision_technician_score_abs_diff
+  - style_decision_technician_score_diff
   selected_bundles:
-  - finish_profile
-  - durability
-  - physical
+  - ko_tko_v1
+  - submission_v1
+  - decision_v1
   include_features: []
-  exclude_features:
-  - finish_round
+  exclude_features: []
   resolved_features:
-  - avg_fight_time_diff
-  - combined_avg_fight_time
-  - combined_ewm_avg_fight_time
-  - combined_ewm_finish_loss_rate
-  - combined_ewm_finish_pressure
-  - combined_ewm_finish_rate
-  - combined_finish_loss_rate
-  - combined_finish_pressure
-  - combined_finish_rate
-  - decision_loss_rate_diff
-  - decision_win_rate_diff
-  - finish_loss_rate_diff
-  - finish_rate_diff
-  - finish_volatility
+  - age_x_career_ko_losses_diff
+  - career_ko_losses_diff
+  - chin_risk_diff
+  - days_since_last_ko_loss_diff
+  - ewm_ko_rate_diff
+  - kd_absorbed_avg_diff
+  - kd_avg_diff
   - ko_rate_diff
-  - recent_avg_fight_time_diff
-  - recent_finish_rate_diff
-  - style_all_round_finisher_score_abs_diff
-  - style_all_round_finisher_score_diff
-  - style_edge_control_wrestler_vs_ko_finisher
+  - last_fight_ko_loss_diff
+  - recent_form_ko_rate_diff
+  - recent_ko_losses_3_diff
   - style_edge_control_wrestler_vs_ko_finisher_net
-  - style_edge_control_wrestler_vs_ko_finisher_reverse
-  - style_edge_ko_finisher_vs_decision_technician
-  - style_edge_ko_finisher_vs_decision_technician_net
-  - style_edge_ko_finisher_vs_decision_technician_reverse
   - style_ko_finisher_score_abs_diff
   - style_ko_finisher_score_diff
+  - ctrl_against_per_min_diff
+  - ctrl_per_min_diff
+  - ewm_sub_avg_diff
+  - ewm_sub_win_rate_diff
+  - recent_form_sub_avg_diff
+  - recent_form_sub_win_rate_diff
+  - style_edge_decision_technician_vs_submission_grappler_net
+  - style_submission_grappler_score_abs_diff
+  - style_submission_grappler_score_diff
+  - sub_avg_diff
   - sub_win_rate_diff
-  - chin_risk_diff
-  - kd_absorbed_avg_diff
-  - recent_sapm_diff
-  - sapm_diff
-  - str_def_diff
+  - submission_mismatch_diff
+  - submission_mismatch_x_avg_opp_elo
+  - td_acc_diff
+  - td_avg_diff
   - td_def_diff
-  - height_diff
-  - height_mismatch_abs
-  - reach_diff
-  - reach_mismatch_abs
+  - avg_fight_time_diff
+  - decision_loss_rate_diff
+  - decision_win_rate_diff
+  - ewm_avg_fight_time_diff
+  - ewm_decision_loss_rate_diff
+  - ewm_decision_win_rate_diff
   - reach_striking_combo
-  - weight_diff
+  - recent_form_avg_fight_time_diff
+  - recent_form_decision_loss_rate_diff
+  - recent_form_decision_win_rate_diff
+  - sapm_diff
+  - splm_diff
+  - str_acc_diff
+  - str_def_diff
+  - style_decision_technician_score_abs_diff
+  - style_decision_technician_score_diff
 data:
   rolling_features_path: data/features/prop_method_of_victory_feature_view.parquet
   target_column: target_method_class
