@@ -17,6 +17,12 @@ inputs:
 output:
   feature_view_path: data/features/moneyline_feature_view.parquet
 
+# Feature-view symmetry happens before fighter-state joins and diff generation.
+# This replaces training-time feature negation for moneyline training datasets.
+symmetry:
+  enabled: true
+  mode: both_fighter_perspectives
+
 builder:
   module: pipeline.features.views.moneyline
   function: build_moneyline_feature_view
@@ -24,6 +30,8 @@ builder:
 
 join:
   fight_key: fight_id
+  base_fight_key: base_fight_id
+  state_fight_key: state_fight_id
   red_fighter_key: r_id
   blue_fighter_key: b_id
   fighter_state_key: fighter_id
@@ -58,6 +66,9 @@ contracts:
   require_no_missing_state_matches: true
   required_columns:
     - fight_id
+    - base_fight_id
+    - state_fight_id
+    - row_perspective
     - date
     - target
     - r_id
@@ -72,14 +83,14 @@ contracts:
 
 validation:
   expected_feature_view_shape:
-    rows_source: prepared_fights
-    columns_current: 489
+    rows_source: prepared_fights_x2
+    columns_current: 492
   expected_current_model_feature_count: 124
   allow_extra_columns: true
 
 notes:
-  - This config mirrors the current hardcoded moneyline feature view.
-  - The first generic feature-view builder should reproduce this output before replacing the current runner.
+  - This config writes the canonical moneyline feature view parquet.
+  - Symmetry is handled by appending flipped fighter-perspective rows before feature generation.
   - Do not duplicate the 124 model feature list here; that remains in the model config.
   - Formula features are opt-in and should be enabled in an experiment feature-view config, not canonical parity configs.
   - Style-score matchup edges are reusable columns materialized from configs/features/feature_registry.yaml.
