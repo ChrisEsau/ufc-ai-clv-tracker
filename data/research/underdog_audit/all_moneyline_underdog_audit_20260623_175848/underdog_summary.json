@@ -1,0 +1,31 @@
+{
+  "run_id": "all_moneyline_underdog_audit_20260623_175848",
+  "created_at_utc": "2026-06-23T17:58:48.414004+00:00",
+  "model_id": "all",
+  "market_key": "moneyline",
+  "rows": 0,
+  "total": {
+    "bets": 0.0,
+    "wins": 0.0,
+    "win_rate": 0.0,
+    "avg_model_probability": 0.0,
+    "avg_implied_probability": 0.0,
+    "avg_edge": 0.0,
+    "calibration_error": 0.0,
+    "flat_profit": 0.0,
+    "flat_risked": 0.0,
+    "flat_roi": 0.0,
+    "kelly_profit": 0.0,
+    "kelly_risked": 0.0,
+    "kelly_roi": 0.0
+  },
+  "filters": {
+    "start_date": null,
+    "end_date": null,
+    "min_edge": 0.0,
+    "min_confidence": 0.0,
+    "min_odds": -1000.0,
+    "max_odds": 3000.0
+  },
+  "artifact_note": "Research-only output. Does not modify Model Lab, configs, production models, live predictions, or CLV artifacts."
+}
