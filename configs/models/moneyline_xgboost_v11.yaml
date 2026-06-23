@@ -275,6 +275,7 @@ features:
   - win_method_entropy_diff
 data:
   rolling_features_path: data/features/moneyline_feature_view.parquet
+  flipped_rolling_features_path: data/features/moneyline_feature_view_flipped.parquet
   target_column: target
   date_column: date
 split:
@@ -284,7 +285,7 @@ split:
   train_start_date: '2018-01-01'
 symmetry:
   enabled: true
-  mode: flip_all
+  source: feature_view_flipped
 calibration:
   enabled: true
   method: isotonic
