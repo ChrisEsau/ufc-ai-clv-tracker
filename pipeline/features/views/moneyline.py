@@ -31,6 +31,14 @@ STATE_CONTEXT_COLUMNS = {
 }
 
 STATE_JOIN_COLUMNS = ["fight_id", "fighter_id"]
+UPSET_POTENTIAL_ABS_DIFF_COLUMNS = [
+    "win_method_entropy_diff",
+    "finish_dependency_diff",
+    "decision_dependency_diff",
+    "ko_dependency_diff",
+    "submission_dependency_diff",
+    "style_flexibility_score_diff",
+]
 
 
 def get_state_feature_columns(fighter_state_history_df: pd.DataFrame) -> list[str]:
@@ -98,6 +106,11 @@ def _add_diff_columns(
         if r_col in out.columns and b_col in out.columns:
             new_columns[diff_col] = out[r_col] - out[b_col]
 
+    for diff_col in UPSET_POTENTIAL_ABS_DIFF_COLUMNS:
+        if diff_col in new_columns:
+            abs_col = diff_col.replace("_diff", "_abs_diff")
+            new_columns[abs_col] = new_columns[diff_col].abs()
+
     if new_columns:
         out = pd.concat([out, pd.DataFrame(new_columns, index=out.index)], axis=1)
 
@@ -108,15 +121,7 @@ def build_moneyline_feature_view(
     prepared_fights_df: pd.DataFrame,
     fighter_state_history_df: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Build a V5-compatible moneyline feature view from fighter-state history.
-
-    Parameters
-    ----------
-    prepared_fights_df:
-        Chronological fight rows prepared by ``prepare_master_for_rolling``.
-    fighter_state_history_df:
-        Fighter-level prefight snapshots produced by the fighter-state runner.
-    """
+    """Build a V5-compatible moneyline feature view from fighter-state history."""
 
     required_fight_columns = {"fight_id", "r_id", "b_id"}
     missing_fight_columns = required_fight_columns - set(prepared_fights_df.columns)
