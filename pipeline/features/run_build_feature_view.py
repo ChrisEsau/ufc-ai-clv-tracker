@@ -12,7 +12,7 @@ import yaml
 from pipeline.common.paths import ensure_data_dirs
 from pipeline.features.formula_engine import apply_formula_features
 from pipeline.features.registry_feature_builder import apply_registry_feature_definitions
-from pipeline.features.row_perspective import apply_row_perspective_to_prepared_fights
+from pipeline.features.row_perspective import both_perspectives, original_rows
 from pipeline.features.run_build_rolling_features import prepare_master_for_rolling
 from pipeline.features.views.moneyline import build_moneyline_feature_view
 from ufc_feature_engineering import add_v5_engineered_features, get_engineered_feature_list
@@ -95,24 +95,63 @@ def build_feature_view_from_config(config_path: str | Path = DEFAULT_CONFIG_PATH
 
     inputs = config["inputs"]
     output = config["output"]
-    include = config.get("include", {})
     master_path = Path(inputs["master_path"])
     fighter_state_history_path = Path(inputs["fighter_state_history_path"])
     feature_view_path = Path(output["feature_view_path"])
+    flipped_feature_view_path = Path(
+        output.get("flipped_feature_view_path")
+        or feature_view_path.with_name(f"{feature_view_path.stem}_flipped{feature_view_path.suffix}")
+    )
 
     print(f"Master path       : {master_path}")
     print(f"Fighter state path: {fighter_state_history_path}")
     print(f"Output path       : {feature_view_path}")
+    print(f"Flipped path      : {flipped_feature_view_path}")
 
     master_df = pd.read_parquet(master_path)
     print(f"Master shape      : {master_df.shape}")
     prepared_df = prepare_master_for_rolling(master_df)
     print(f"Prepared shape    : {prepared_df.shape}")
-    prepared_df = apply_row_perspective_to_prepared_fights(prepared_df, config)
-    print(f"Perspective shape : {prepared_df.shape}")
     fighter_state_history_df = pd.read_parquet(fighter_state_history_path)
     print(f"State shape       : {fighter_state_history_df.shape}")
 
+    normal_prepared_df = original_rows(prepared_df)
+    print(f"Normal shape      : {normal_prepared_df.shape}")
+    feature_view_df = build_feature_view_dataframe(
+        prepared_df=normal_prepared_df,
+        fighter_state_history_df=fighter_state_history_df,
+        config=config,
+    )
+    validate_feature_view_output(feature_view_df=feature_view_df, prepared_df=normal_prepared_df, config=config)
+    feature_view_path.parent.mkdir(parents=True, exist_ok=True)
+    feature_view_df.to_parquet(feature_view_path, index=False)
+    print(f"Feature view shape: {feature_view_df.shape}")
+    print(f"Saved feature view: {feature_view_path}")
+
+    flipped_prepared_df = both_perspectives(prepared_df)
+    print(f"Flipped shape     : {flipped_prepared_df.shape}")
+    flipped_feature_view_df = build_feature_view_dataframe(
+        prepared_df=flipped_prepared_df,
+        fighter_state_history_df=fighter_state_history_df,
+        config=config,
+    )
+    validate_feature_view_output(feature_view_df=flipped_feature_view_df, prepared_df=flipped_prepared_df, config=config)
+    flipped_feature_view_path.parent.mkdir(parents=True, exist_ok=True)
+    flipped_feature_view_df.to_parquet(flipped_feature_view_path, index=False)
+    print(f"Flipped view shape: {flipped_feature_view_df.shape}")
+    print(f"Saved flipped view: {flipped_feature_view_path}")
+    print("DONE")
+    return feature_view_path
+
+
+def build_feature_view_dataframe(
+    *,
+    prepared_df: pd.DataFrame,
+    fighter_state_history_df: pd.DataFrame,
+    config: dict[str, Any],
+) -> pd.DataFrame:
+    view_family = str(config["view_family"])
+    include = config.get("include", {})
     feature_view_df = build_moneyline_feature_view(
         prepared_fights_df=prepared_df,
         fighter_state_history_df=fighter_state_history_df,
@@ -150,14 +189,7 @@ def build_feature_view_from_config(config_path: str | Path = DEFAULT_CONFIG_PATH
         feature_view_df = add_style_matchup_edge_features(feature_view_df)
         print("Style matchup edge features enabled")
 
-    feature_view_df = apply_model_lab_formula_features(feature_view_df=feature_view_df, config=config)
-    validate_feature_view_output(feature_view_df=feature_view_df, prepared_df=prepared_df, config=config)
-    feature_view_path.parent.mkdir(parents=True, exist_ok=True)
-    feature_view_df.to_parquet(feature_view_path, index=False)
-    print(f"Feature view shape: {feature_view_df.shape}")
-    print(f"Saved feature view: {feature_view_path}")
-    print("DONE")
-    return feature_view_path
+    return apply_model_lab_formula_features(feature_view_df=feature_view_df, config=config)
 
 
 def add_style_matchup_edge_features(feature_view_df: pd.DataFrame) -> pd.DataFrame:
