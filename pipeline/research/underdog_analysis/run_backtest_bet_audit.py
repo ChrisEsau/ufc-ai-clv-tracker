@@ -21,6 +21,8 @@ BET_FILES = [
 ]
 IMPLIED_PROB_BINS = [0.0, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 1.01]
 IMPLIED_PROB_LABELS = ["<20%", "20-30%", "30-40%", "40-50%", "50-60%", "60-70%", "70-80%", "80%+"]
+MODEL_PROB_BINS = [0.0, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 1.01]
+MODEL_PROB_LABELS = ["0-10%", "10-20%", "20-30%", "30-40%", "40-50%", "50-60%", "60-70%", "70-80%", "80-90%", "90-100%"]
 DELTA_BINS = [-10.0, 0.0, 0.05, 0.10, 0.15, 0.20, 10.0]
 DELTA_LABELS = ["<=0%", "0-5%", "5-10%", "10-15%", "15-20%", "20%+"]
 
@@ -151,6 +153,12 @@ def main() -> None:
         labels=IMPLIED_PROB_LABELS,
         include_lowest=True,
     ).astype(str)
+    out["model_probability_bucket"] = pd.cut(
+        out["model_probability"],
+        bins=MODEL_PROB_BINS,
+        labels=MODEL_PROB_LABELS,
+        include_lowest=True,
+    ).astype(str)
     out["model_market_delta_bucket"] = pd.cut(
         out["model_probability"] - out["implied_probability"],
         bins=DELTA_BINS,
@@ -166,11 +174,15 @@ def main() -> None:
     by_side = summarize_by(out, ["side_type"])
     by_implied = summarize_by(out, ["implied_probability_bucket"])
     by_side_implied = summarize_by(out, ["side_type", "implied_probability_bucket"])
+    by_model = summarize_by(out, ["model_probability_bucket"])
+    by_side_model = summarize_by(out, ["side_type", "model_probability_bucket"])
     by_delta = summarize_by(out, ["side_type", "model_market_delta_bucket"])
 
     by_side.to_csv(output_dir / "underdog_roi.csv", index=False)
     by_implied.to_csv(output_dir / "probability_calibration_by_implied_bucket.csv", index=False)
     by_side_implied.to_csv(output_dir / "probability_calibration_by_side_and_implied_bucket.csv", index=False)
+    by_model.to_csv(output_dir / "probability_calibration_by_model_bucket.csv", index=False)
+    by_side_model.to_csv(output_dir / "probability_calibration_by_model_bucket_and_side.csv", index=False)
     by_delta.to_csv(output_dir / "probability_calibration_by_model_market_delta.csv", index=False)
 
     summary = {
@@ -186,6 +198,8 @@ def main() -> None:
             "side_summary": "underdog_roi.csv",
             "implied_probability_calibration": "probability_calibration_by_implied_bucket.csv",
             "side_implied_probability_calibration": "probability_calibration_by_side_and_implied_bucket.csv",
+            "model_probability_calibration": "probability_calibration_by_model_bucket.csv",
+            "side_model_probability_calibration": "probability_calibration_by_model_bucket_and_side.csv",
             "model_market_delta_calibration": "probability_calibration_by_model_market_delta.csv",
         },
     }
@@ -207,6 +221,9 @@ def main() -> None:
     print("\nProbability calibration by implied probability bucket:")
     if not by_implied.empty:
         print(by_implied.to_string(index=False))
+    print("\nProbability calibration by model probability bucket:")
+    if not by_model.empty:
+        print(by_model.to_string(index=False))
     print("\nFavorite/underdog summary:")
     if not by_side.empty:
         print(by_side.to_string(index=False))
