@@ -12,6 +12,7 @@ import yaml
 from pipeline.common.paths import ensure_data_dirs
 from pipeline.features.formula_engine import apply_formula_features
 from pipeline.features.registry_feature_builder import apply_registry_feature_definitions
+from pipeline.features.row_perspective import apply_row_perspective_to_prepared_fights
 from pipeline.features.run_build_rolling_features import prepare_master_for_rolling
 from pipeline.features.views.moneyline import build_moneyline_feature_view
 from ufc_feature_engineering import add_v5_engineered_features, get_engineered_feature_list
@@ -107,6 +108,8 @@ def build_feature_view_from_config(config_path: str | Path = DEFAULT_CONFIG_PATH
     print(f"Master shape      : {master_df.shape}")
     prepared_df = prepare_master_for_rolling(master_df)
     print(f"Prepared shape    : {prepared_df.shape}")
+    prepared_df = apply_row_perspective_to_prepared_fights(prepared_df, config)
+    print(f"Perspective shape : {prepared_df.shape}")
     fighter_state_history_df = pd.read_parquet(fighter_state_history_path)
     print(f"State shape       : {fighter_state_history_df.shape}")
 
