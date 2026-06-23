@@ -6,7 +6,7 @@ feature_sources:
 - moneyline_feature_view
 features:
   selection_mode: explicit
-  expected_feature_count: 24
+  expected_feature_count: 22
   allow_unsafe_features: false
   feature_columns:
   - avg_opponent_elo_diff
@@ -18,24 +18,22 @@ features:
   - win_pct_diff
   - wins_diff
   - worst_loss_elo_diff
-  - age_x_career_ko_losses_diff
-  - career_ko_losses_diff
-  - chin_risk_diff
-  - days_since_last_ko_loss_diff
-  - ewm_kd_absorbed_avg_diff
-  - ewm_sapm_diff
-  - kd_absorbed_avg_diff
-  - ko_recovery_gap
-  - last_fight_ko_loss_diff
-  - max_career_ko_losses
-  - older_fighter_career_ko_losses
-  - recent_form_kd_absorbed_avg_diff
-  - recent_form_sapm_diff
-  - recent_ko_losses_3_diff
-  - sapm_diff
+  - style_all_round_finisher_score_abs_diff
+  - style_all_round_finisher_score_diff
+  - style_control_wrestler_score_abs_diff
+  - style_control_wrestler_score_diff
+  - style_decision_technician_score_abs_diff
+  - style_decision_technician_score_diff
+  - style_edge_control_wrestler_vs_ko_finisher_net
+  - style_edge_decision_technician_vs_submission_grappler_net
+  - style_edge_ko_finisher_vs_decision_technician_net
+  - style_ko_finisher_score_abs_diff
+  - style_ko_finisher_score_diff
+  - style_submission_grappler_score_abs_diff
+  - style_submission_grappler_score_diff
   selected_bundles:
   - fighter_quality_v1
-  - durability_decline_v1
+  - style_clash_v1
   include_features: []
   exclude_features: []
   resolved_features:
@@ -48,21 +46,19 @@ features:
   - win_pct_diff
   - wins_diff
   - worst_loss_elo_diff
-  - age_x_career_ko_losses_diff
-  - career_ko_losses_diff
-  - chin_risk_diff
-  - days_since_last_ko_loss_diff
-  - ewm_kd_absorbed_avg_diff
-  - ewm_sapm_diff
-  - kd_absorbed_avg_diff
-  - ko_recovery_gap
-  - last_fight_ko_loss_diff
-  - max_career_ko_losses
-  - older_fighter_career_ko_losses
-  - recent_form_kd_absorbed_avg_diff
-  - recent_form_sapm_diff
-  - recent_ko_losses_3_diff
-  - sapm_diff
+  - style_all_round_finisher_score_abs_diff
+  - style_all_round_finisher_score_diff
+  - style_control_wrestler_score_abs_diff
+  - style_control_wrestler_score_diff
+  - style_decision_technician_score_abs_diff
+  - style_decision_technician_score_diff
+  - style_edge_control_wrestler_vs_ko_finisher_net
+  - style_edge_decision_technician_vs_submission_grappler_net
+  - style_edge_ko_finisher_vs_decision_technician_net
+  - style_ko_finisher_score_abs_diff
+  - style_ko_finisher_score_diff
+  - style_submission_grappler_score_abs_diff
+  - style_submission_grappler_score_diff
 data:
   rolling_features_path: data/features/moneyline_feature_view.parquet
   target_column: target
