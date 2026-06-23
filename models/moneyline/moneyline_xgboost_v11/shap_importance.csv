@@ -1,0 +1,10 @@
+feature,mean_abs_shap
+best_win_elo_diff,0.17780323
+win_pct_diff,0.14837009
+elo_diff,0.1348433
+avg_opponent_elo_diff,0.12710717
+losses_diff,0.07459302
+fights_diff,0.06753619
+worst_loss_elo_diff,0.06719369
+experience_ratio_diff,0.058836468
+wins_diff,0.048273817
