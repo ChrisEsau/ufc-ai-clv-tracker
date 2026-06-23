@@ -29,7 +29,6 @@ STATE_CONTEXT_COLUMNS = {
     "opponent_id",
     "opponent_name",
 }
-
 STATE_JOIN_COLUMNS = ["fight_id", "fighter_id"]
 UPSET_POTENTIAL_ABS_DIFF_COLUMNS = [
     "win_method_entropy_diff",
@@ -62,7 +61,7 @@ def _prefixed_state_frame(
         raise ValueError(f"Unsupported side prefix: {side_prefix}")
 
     join_id_column = f"{side_prefix}_id"
-    rename_map = {"fighter_id": join_id_column}
+    rename_map = {"fight_id": "state_fight_id", "fighter_id": join_id_column}
 
     for column in state_columns:
         if column.startswith("ewm_"):
@@ -137,8 +136,11 @@ def build_moneyline_feature_view(
     blue_state = _prefixed_state_frame(fighter_state_history_df, "b", state_columns)
 
     view_df = prepared_fights_df.copy()
-    view_df = view_df.merge(red_state, on=["fight_id", "r_id"], how="left")
-    view_df = view_df.merge(blue_state, on=["fight_id", "b_id"], how="left")
+    if "state_fight_id" not in view_df.columns:
+        view_df["state_fight_id"] = view_df["fight_id"]
+
+    view_df = view_df.merge(red_state, on=["state_fight_id", "r_id"], how="left")
+    view_df = view_df.merge(blue_state, on=["state_fight_id", "b_id"], how="left")
     view_df = _add_diff_columns(view_df, state_columns)
 
     return view_df
