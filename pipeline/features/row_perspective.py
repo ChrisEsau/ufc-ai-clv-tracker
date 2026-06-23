@@ -1,25 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
-
 import pandas as pd
-
-
-def apply_row_perspective_to_prepared_fights(prepared_df: pd.DataFrame, config: dict[str, Any]) -> pd.DataFrame:
-    row_config = config.get("row_perspective", {}) or {}
-    symmetry_config = config.get("symmetry", {}) or {}
-
-    if row_config:
-        mode = str(row_config.get("mode", "fight_level")).strip().lower()
-    else:
-        enabled = bool(symmetry_config.get("enabled", True))
-        mode = "both_fighter_perspectives" if enabled else "fight_level"
-
-    if mode == "fight_level":
-        return original_rows(prepared_df)
-    if mode == "both_fighter_perspectives":
-        return both_perspectives(prepared_df)
-    raise ValueError(f"Unsupported feature view perspective mode: {mode}")
 
 
 def original_rows(prepared_df: pd.DataFrame) -> pd.DataFrame:
