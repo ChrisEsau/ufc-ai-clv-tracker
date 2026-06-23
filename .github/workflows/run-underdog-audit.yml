@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       model_id:
-        description: "Model ID to audit"
+        description: "Model ID to audit, or all"
         required: true
-        default: "moneyline_xgboost_v11"
+        default: "all"
       market_key:
         description: "Market key"
         required: true
