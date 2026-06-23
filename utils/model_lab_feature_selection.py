@@ -7,7 +7,6 @@ from typing import Any
 import streamlit as st
 import yaml
 
-import utils.feature_registry as fr
 import utils.model_lab_workflows as mlw
 
 
@@ -51,12 +50,6 @@ def _load_feature_bundle_registry(path_text: str = str(FEATURE_BUNDLE_REGISTRY_P
     return _load_yaml_registry(path_text)
 
 
-def _registry_defined_features() -> set[str]:
-    registry = fr.load_feature_registry()
-    definitions = registry.get("feature_definitions", {}) or {}
-    return {str(feature_id) for feature_id in definitions.keys()}
-
-
 def _bundle_label(bundle_id: str, bundle: dict[str, Any] | None = None) -> str:
     bundle = bundle or {}
     if bundle.get("label"):
@@ -80,7 +73,6 @@ def _is_safe_model_lab_feature(feature: str) -> bool:
 
 def _registry_bundle_map(available: list[str]) -> tuple[dict[str, list[str]], dict[str, str], dict[str, set[str]]]:
     available_set = set(available)
-    registry_defined = _registry_defined_features()
     registry = _load_feature_bundle_registry()
     bundles = registry.get("bundles", {}) or {}
     resolved: dict[str, list[str]] = {}
@@ -91,12 +83,7 @@ def _registry_bundle_map(available: list[str]) -> tuple[dict[str, list[str]], di
         if not isinstance(bundle, dict):
             continue
         candidates = [str(item) for item in bundle.get("candidate_columns", []) or []]
-        safe_candidates = [
-            feature
-            for feature in candidates
-            if _is_safe_model_lab_feature(feature)
-            and (feature in available_set or feature in registry_defined)
-        ]
+        safe_candidates = [feature for feature in candidates if _is_safe_model_lab_feature(feature)]
         if safe_candidates:
             bundle_key = str(bundle_id)
             resolved[bundle_key] = sorted(dict.fromkeys(safe_candidates))
@@ -140,54 +127,16 @@ def _inject_feature_selector_css() -> None:
     st.markdown(
         """
         <style>
-        .feature-two-pane-caption {
-            color: #9fb0c4;
-            font-size: .78rem;
-            margin: -.15rem 0 .5rem 0;
-        }
-        .feature-pane-title {
-            color: #f8fbff;
-            font-size: .95rem;
-            font-weight: 900;
-            margin-bottom: .15rem;
-        }
-        .feature-pane-subtitle {
-            color: #38bdf8;
-            font-size: .86rem;
-            font-weight: 800;
-            margin-bottom: .55rem;
-        }
-        .feature-selection-scroll-note {
-            color: #8fa4bd;
-            font-size: .72rem;
-            margin-bottom: .55rem;
-        }
-        [data-testid="stCheckbox"] label p {
-            font-size: .82rem !important;
-            color: #f8fbff !important;
-            font-weight: 650 !important;
-            overflow-wrap: anywhere !important;
-        }
-        [data-testid="stCheckbox"] {
-            min-height: 1.28rem !important;
-            margin-bottom: .08rem !important;
-        }
-        div[data-testid="stVerticalBlockBorderWrapper"]:has(.feature-pane-title) {
-            border-color: rgba(43,60,82,.95) !important;
-            border-radius: 12px !important;
-            background: linear-gradient(180deg, rgba(9, 22, 40, .96), rgba(5, 15, 28, .98)) !important;
-        }
-        div[data-testid="stVerticalBlockBorderWrapper"]:has(.feature-pane-title) ::-webkit-scrollbar {
-            width: 9px;
-        }
-        div[data-testid="stVerticalBlockBorderWrapper"]:has(.feature-pane-title) ::-webkit-scrollbar-track {
-            background: rgba(5, 15, 28, .75);
-            border-radius: 999px;
-        }
-        div[data-testid="stVerticalBlockBorderWrapper"]:has(.feature-pane-title) ::-webkit-scrollbar-thumb {
-            background: rgba(76, 112, 154, .85);
-            border-radius: 999px;
-        }
+        .feature-two-pane-caption { color: #9fb0c4; font-size: .78rem; margin: -.15rem 0 .5rem 0; }
+        .feature-pane-title { color: #f8fbff; font-size: .95rem; font-weight: 900; margin-bottom: .15rem; }
+        .feature-pane-subtitle { color: #38bdf8; font-size: .86rem; font-weight: 800; margin-bottom: .55rem; }
+        .feature-selection-scroll-note { color: #8fa4bd; font-size: .72rem; margin-bottom: .55rem; }
+        [data-testid="stCheckbox"] label p { font-size: .82rem !important; color: #f8fbff !important; font-weight: 650 !important; overflow-wrap: anywhere !important; }
+        [data-testid="stCheckbox"] { min-height: 1.28rem !important; margin-bottom: .08rem !important; }
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.feature-pane-title) { border-color: rgba(43,60,82,.95) !important; border-radius: 12px !important; background: linear-gradient(180deg, rgba(9, 22, 40, .96), rgba(5, 15, 28, .98)) !important; }
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.feature-pane-title) ::-webkit-scrollbar { width: 9px; }
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.feature-pane-title) ::-webkit-scrollbar-track { background: rgba(5, 15, 28, .75); border-radius: 999px; }
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.feature-pane-title) ::-webkit-scrollbar-thumb { background: rgba(76, 112, 154, .85); border-radius: 999px; }
         </style>
         """,
         unsafe_allow_html=True,
@@ -271,7 +220,7 @@ def _collect_selected_feature_rows(state: dict[str, Any], selected: list[str]) -
                     "feature": feature,
                     "default": feature in current if bundle in saved_set else True,
                     "checkbox_label": feature if feature in available_set else f"{feature} ⚠",
-                    "help_text": None if feature in available_in_bundle else "Registered feature, but not currently present in the feature view. Training may require rebuilding/updating the feature view.",
+                    "help_text": None if feature in available_in_bundle else "Configured bundle feature, but not currently present in the feature view. Training may require rebuilding/updating the feature view.",
                     "registry_only": feature not in available_set,
                 }
             )
@@ -304,13 +253,7 @@ def _render_feature_selector(state: dict[str, Any], selected: list[str]) -> tupl
         with feature_columns[index % FEATURE_CHECKBOX_COLUMNS]:
             feature = row["feature"]
             key = f"mlab_feature_{model_key}_{_safe_key(feature)}"
-            value = st.checkbox(
-                row["checkbox_label"],
-                value=bool(row["default"]),
-                disabled=not editable,
-                key=key,
-                help=row["help_text"],
-            )
+            value = st.checkbox(row["checkbox_label"], value=bool(row["default"]), disabled=not editable, key=key, help=row["help_text"])
             if value:
                 included.append(feature)
                 if row["registry_only"]:
@@ -318,12 +261,7 @@ def _render_feature_selector(state: dict[str, Any], selected: list[str]) -> tupl
             else:
                 removed.append(feature)
 
-    return (
-        list(dict.fromkeys(included)),
-        list(dict.fromkeys(removed)),
-        list(dict.fromkeys(universe)),
-        list(dict.fromkeys(registry_only)),
-    )
+    return list(dict.fromkeys(included)), list(dict.fromkeys(removed)), list(dict.fromkeys(universe)), list(dict.fromkeys(registry_only))
 
 
 def render_feature_checklist(context):
@@ -341,9 +279,6 @@ def render_feature_checklist(context):
             resolved, removed, universe, registry_only = _render_feature_selector(state, selected)
 
     if registry_only:
-        st.warning(
-            "Some selected features are registered but not in the current feature view yet: "
-            + ", ".join(registry_only)
-        )
+        st.warning("Some selected features are configured but not in the current feature view yet: " + ", ".join(registry_only))
 
     return {"selected_bundles": selected, "include_features": [], "exclude_features": removed, "resolved_features": resolved}
