@@ -176,14 +176,13 @@ def parse_args() -> argparse.Namespace:
 def load_training_feature_dataframe(config: dict[str, Any]) -> pd.DataFrame:
     """Load feature dataframe and materialize selected registry-defined features.
 
-    Training may be launched before a feature-view artifact has been rebuilt.
-    To keep Model Lab experiments runnable, selected feature columns that are
-    defined in ``feature_registry.yaml`` are materialized in-memory before the
-    feature contract is validated.
+    If model symmetry is enabled, training reads the prebuilt flipped feature view
+    instead of applying training-time feature negation. Backtests and predictions
+    should continue using the normal unflipped feature view.
     """
 
     data_config = config.get("data", {})
-    path = data_config.get("rolling_features_path")
+    path = resolve_training_feature_path(config)
     if not path:
         raise ValueError("Model config data section must define rolling_features_path")
 
@@ -191,6 +190,7 @@ def load_training_feature_dataframe(config: dict[str, Any]) -> pd.DataFrame:
     if not feature_path.exists():
         raise FileNotFoundError(f"Feature warehouse not found: {feature_path}")
 
+    print(f"Training feature path: {feature_path}")
     feature_df = pd.read_parquet(feature_path)
     selected_features = (config.get("features") or {}).get("feature_columns") or []
     build_result = apply_registry_feature_definitions(
@@ -216,14 +216,35 @@ def load_training_feature_dataframe(config: dict[str, Any]) -> pd.DataFrame:
     return build_result.dataframe
 
 
+def resolve_training_feature_path(config: dict[str, Any]) -> str | None:
+    data_config = config.get("data", {})
+    base_path = data_config.get("rolling_features_path")
+    symmetry_config = config.get("symmetry", {}) or {}
+    if not symmetry_config.get("enabled", False):
+        return base_path
+
+    explicit_flipped_path = data_config.get("flipped_rolling_features_path") or data_config.get("flipped_feature_view_path")
+    if explicit_flipped_path:
+        return explicit_flipped_path
+    if not base_path:
+        return base_path
+
+    base = Path(base_path)
+    return str(base.with_name(f"{base.stem}_flipped{base.suffix}"))
+
+
 def maybe_apply_symmetry(
     df: pd.DataFrame,
     feature_columns: list[str],
     config: dict[str, Any],
 ) -> pd.DataFrame:
-    """Apply symmetry augmentation if enabled in the model config."""
-    symmetry_config = config.get("symmetry", {})
+    """Apply legacy training-time symmetry only when explicitly requested."""
+    symmetry_config = config.get("symmetry", {}) or {}
     if not symmetry_config.get("enabled", False):
+        return df
+
+    source = str(symmetry_config.get("source", "feature_view_flipped")).strip().lower()
+    if source in {"feature_view_flipped", "flipped_feature_view", "prebuilt_feature_view"}:
         return df
 
     mode = str(symmetry_config.get("mode", "flip_all")).strip().lower()
@@ -358,131 +379,3 @@ def build_shap_importance(
         .sort_values("mean_abs_shap", ascending=False)
         .reset_index(drop=True)
     )
-
-
-def save_artifacts(
-    output_dir: Path,
-    config_path: Path,
-    config: dict[str, Any],
-    feature_columns: list[str],
-    training_result: Any,
-    calibration_result: Any,
-    evaluation: Any,
-    raw_evaluation: Any,
-    split: Any,
-) -> None:
-    """Save model artifacts and evaluation outputs."""
-    artifact_config = config.get("artifacts", {})
-
-    if artifact_config.get("save_raw_model", True):
-        joblib.dump(training_result.model, output_dir / "raw_model.joblib")
-
-    if artifact_config.get("save_calibrated_model", True) and calibration_result.calibrator is not None:
-        joblib.dump(calibration_result.calibrator, output_dir / "calibrated_model.joblib")
-
-    if artifact_config.get("save_feature_columns", True):
-        joblib.dump(feature_columns, output_dir / "feature_columns.joblib")
-        (output_dir / "feature_columns.json").write_text(
-            json.dumps(feature_columns, indent=2),
-            encoding="utf-8",
-        )
-
-    if artifact_config.get("save_metrics", True):
-        metrics_payload = {
-            "model_id": config["model_id"],
-            "raw_metrics": raw_evaluation.metrics,
-            "final_metrics": evaluation.metrics,
-            "best_threshold": evaluation.best_threshold,
-            "trained_at_utc": datetime.now(timezone.utc).isoformat(),
-            "train_start_date": getattr(split, "train_start_date", None),
-            "train_end_date": getattr(split, "train_end_date", None),
-            "calibration_end_date": getattr(split, "calibration_end_date", None),
-        }
-        (output_dir / "metrics.json").write_text(
-            json.dumps(metrics_payload, indent=2),
-            encoding="utf-8",
-        )
-
-    if artifact_config.get("save_threshold_sweep", True):
-        evaluation.threshold_sweep.to_parquet(output_dir / "threshold_sweep.parquet", index=False)
-        raw_evaluation.threshold_sweep.to_parquet(output_dir / "raw_threshold_sweep.parquet", index=False)
-
-    if artifact_config.get("save_confidence_buckets", True):
-        evaluation.confidence_buckets.to_parquet(output_dir / "confidence_buckets.parquet", index=False)
-        raw_evaluation.confidence_buckets.to_parquet(output_dir / "raw_confidence_buckets.parquet", index=False)
-
-    if artifact_config.get("save_shap_importance", True):
-        try:
-            shap_df = build_shap_importance(
-                model=training_result.model,
-                X=split.X_test,
-                feature_columns=feature_columns,
-                max_rows=int(artifact_config.get("shap_max_rows", 1000)),
-                random_state=int(config.get("params", {}).get("random_state", 42)),
-            )
-            shap_df.to_csv(output_dir / "shap_importance.csv", index=False)
-            print(f"Saved SHAP importance: {output_dir / 'shap_importance.csv'}")
-        except Exception as exc:  # noqa: BLE001 - SHAP should not fail the training run.
-            print(f"WARNING: SHAP importance generation failed: {exc}")
-
-    if artifact_config.get("save_model_card", True):
-        model_card = build_model_card(
-            config_path=config_path,
-            config=config,
-            feature_columns=feature_columns,
-            training_result=training_result,
-            calibration_result=calibration_result,
-            evaluation=evaluation,
-            split=split,
-        )
-        (output_dir / "model_card.yaml").write_text(
-            yaml.safe_dump(model_card, sort_keys=False),
-            encoding="utf-8",
-        )
-
-
-def build_model_card(
-    config_path: Path,
-    config: dict[str, Any],
-    feature_columns: list[str],
-    training_result: Any,
-    calibration_result: Any,
-    evaluation: Any,
-    split: Any,
-) -> dict[str, Any]:
-    """Build a compact model card for tracking trained artifacts."""
-    return {
-        "model_id": config["model_id"],
-        "model_family": config.get("model_family"),
-        "artifact_name": config.get("artifact_name"),
-        "algorithm": training_result.algorithm,
-        "config_path": str(config_path),
-        "trained_at_utc": datetime.now(timezone.utc).isoformat(),
-        "data": config.get("data", {}),
-        "split": {
-            "mode": config.get("split", {}).get("mode"),
-            "train_start_date": getattr(split, "train_start_date", None),
-            "train_end_date": getattr(split, "train_end_date", None),
-            "calibration_end_date": getattr(split, "calibration_end_date", None),
-            "train_rows": int(len(split.y_train)),
-            "calibration_rows": int(getattr(split, "y_calibration", pd.Series(dtype=int)).shape[0]),
-            "test_rows": int(len(split.y_test)),
-        },
-        "features": {
-            "feature_count": len(feature_columns),
-            "expected_feature_count": config.get("features", {}).get("expected_feature_count"),
-        },
-        "symmetry": config.get("symmetry", {}),
-        "calibration": {
-            "enabled": config.get("calibration", {}).get("enabled", False),
-            "method": calibration_result.method,
-            "calibration_rows": calibration_result.n_calibration_rows,
-        },
-        "params": training_result.params,
-        "metrics": evaluation.metrics,
-        "best_threshold": evaluation.best_threshold,
-    }
-
-
-if __name__ == "__main__":
-    main()
