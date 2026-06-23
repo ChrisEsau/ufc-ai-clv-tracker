@@ -286,8 +286,9 @@ split:
 symmetry:
   enabled: true
   source: feature_view_flipped
+  mode: none
 calibration:
-  enabled: true
+  enabled: false
   method: isotonic
 params:
   n_estimators: 500
