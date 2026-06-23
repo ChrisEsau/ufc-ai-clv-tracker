@@ -11,6 +11,10 @@ on:
         description: "Market key"
         required: true
         default: "moneyline"
+      source:
+        description: "Audit source: all_rows or bets"
+        required: true
+        default: "all_rows"
 
 jobs:
   audit:
@@ -29,7 +33,8 @@ jobs:
         run: |
           python -m pipeline.research.underdog_analysis.run_backtest_bet_audit \
             --model-id "${{ github.event.inputs.model_id }}" \
-            --market-key "${{ github.event.inputs.market_key }}"
+            --market-key "${{ github.event.inputs.market_key }}" \
+            --source "${{ github.event.inputs.source }}"
       - uses: actions/upload-artifact@v4
         with:
           name: underdog-backtest-bet-audit
