@@ -8,7 +8,7 @@ production model artifacts, live prediction outputs, or CLV artifacts.
 Run from repo root:
 
     python -m pipeline.research.underdog_analysis.run_underdog_audit \
-        --model-id moneyline_xgboost_v11
+        --model-id all
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ PROBABILITY_BUCKETS = [0.0, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 1.0]
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run isolated underdog/favorite audit.")
-    parser.add_argument("--model-id", required=True, help="Model ID to audit from model_outcomes.parquet.")
+    parser.add_argument("--model-id", required=True, help="Model ID to audit from model_outcomes.parquet, or 'all'.")
     parser.add_argument("--market-key", default="moneyline")
     parser.add_argument("--model-outcomes-path", default=str(DEFAULT_MODEL_OUTCOMES_PATH))
     parser.add_argument("--historical-market-path", default=str(DEFAULT_MARKET_OUTCOMES_PATH))
@@ -70,8 +70,21 @@ def load_inputs(args: argparse.Namespace) -> tuple[pd.DataFrame, pd.DataFrame]:
 
     model_raw = model_raw[model_raw["market_key"].astype(str).str.lower() == args.market_key.lower()].copy()
     market_raw = market_raw[market_raw["market_key"].astype(str).str.lower() == args.market_key.lower()].copy()
+
+    requested_model_id = str(args.model_id).strip()
     if "model_id" in model_raw.columns:
-        model_raw = model_raw[model_raw["model_id"].astype(str) == str(args.model_id)].copy()
+        available_model_ids = sorted(model_raw["model_id"].dropna().astype(str).unique().tolist())
+        if requested_model_id.lower() != "all":
+            filtered = model_raw[model_raw["model_id"].astype(str) == requested_model_id].copy()
+            if filtered.empty:
+                preview = available_model_ids[:25]
+                raise ValueError(
+                    f"No model outcome rows found for model_id={requested_model_id!r}. "
+                    f"Available model_ids ({len(available_model_ids)}): {preview}"
+                )
+            model_raw = filtered
+    elif requested_model_id.lower() != "all":
+        print("WARNING: model_outcomes has no model_id column; auditing all model rows.")
 
     return standardize_model(model_raw), standardize_market(market_raw)
 
@@ -239,12 +252,6 @@ def build_summary(scored: pd.DataFrame, args: argparse.Namespace, run_id: str) -
 
 
 def build_registry_row(summary: dict[str, Any], output_dir: Path) -> dict[str, Any]:
-    """Return a flat, Parquet-safe registry row.
-
-    Keep nested detail in underdog_summary.json. Parquet registry rows should only
-    contain scalar values to avoid Arrow struct-write issues.
-    """
-
     total = summary.get("total") or {}
     filters = summary.get("filters") or {}
     row = {
@@ -293,7 +300,8 @@ def write_outputs(scored: pd.DataFrame, args: argparse.Namespace, run_id: str) -
 def main() -> None:
     args = parse_args()
     run_time = datetime.now(timezone.utc)
-    run_id = f"{args.model_id}_{args.market_key}_underdog_audit_{run_time.strftime('%Y%m%d_%H%M%S')}"
+    safe_model_id = str(args.model_id).replace("/", "_").replace(" ", "_")
+    run_id = f"{safe_model_id}_{args.market_key}_underdog_audit_{run_time.strftime('%Y%m%d_%H%M%S')}"
     model, market = load_inputs(args)
     joined = model.merge(market, on=["fight_id", "market_key", "outcome_join_key"], how="inner", suffixes=("_model", "_market"))
     candidates = apply_research_filters(joined, args)
