@@ -6,28 +6,9 @@ feature_sources:
 - moneyline_feature_view
 features:
   selection_mode: explicit
-  expected_feature_count: 28
+  expected_feature_count: 24
   allow_unsafe_features: false
   feature_columns:
-  - style_all_round_finisher_score_abs_diff
-  - style_all_round_finisher_score_diff
-  - style_control_wrestler_score_abs_diff
-  - style_control_wrestler_score_diff
-  - style_decision_technician_score_abs_diff
-  - style_decision_technician_score_diff
-  - style_edge_control_wrestler_vs_ko_finisher
-  - style_edge_control_wrestler_vs_ko_finisher_net
-  - style_edge_control_wrestler_vs_ko_finisher_reverse
-  - style_edge_decision_technician_vs_submission_grappler
-  - style_edge_decision_technician_vs_submission_grappler_net
-  - style_edge_decision_technician_vs_submission_grappler_reverse
-  - style_edge_ko_finisher_vs_decision_technician
-  - style_edge_ko_finisher_vs_decision_technician_net
-  - style_edge_ko_finisher_vs_decision_technician_reverse
-  - style_ko_finisher_score_abs_diff
-  - style_ko_finisher_score_diff
-  - style_submission_grappler_score_abs_diff
-  - style_submission_grappler_score_diff
   - avg_opponent_elo_diff
   - best_win_elo_diff
   - elo_diff
@@ -37,31 +18,27 @@ features:
   - win_pct_diff
   - wins_diff
   - worst_loss_elo_diff
+  - decision_dependency_abs_diff
+  - decision_dependency_diff
+  - finish_dependency_abs_diff
+  - finish_dependency_diff
+  - ko_dependency_abs_diff
+  - ko_dependency_diff
+  - ko_win_concentration_diff
+  - style_flexibility_score_abs_diff
+  - style_flexibility_score_diff
+  - submission_dependency_abs_diff
+  - submission_dependency_diff
+  - submission_win_concentration_diff
+  - victory_concentration_index_diff
+  - win_method_entropy_abs_diff
+  - win_method_entropy_diff
   selected_bundles:
-  - style_scores_v1
   - fighter_quality_v1
+  - upset_potential_v1
   include_features: []
   exclude_features: []
   resolved_features:
-  - style_all_round_finisher_score_abs_diff
-  - style_all_round_finisher_score_diff
-  - style_control_wrestler_score_abs_diff
-  - style_control_wrestler_score_diff
-  - style_decision_technician_score_abs_diff
-  - style_decision_technician_score_diff
-  - style_edge_control_wrestler_vs_ko_finisher
-  - style_edge_control_wrestler_vs_ko_finisher_net
-  - style_edge_control_wrestler_vs_ko_finisher_reverse
-  - style_edge_decision_technician_vs_submission_grappler
-  - style_edge_decision_technician_vs_submission_grappler_net
-  - style_edge_decision_technician_vs_submission_grappler_reverse
-  - style_edge_ko_finisher_vs_decision_technician
-  - style_edge_ko_finisher_vs_decision_technician_net
-  - style_edge_ko_finisher_vs_decision_technician_reverse
-  - style_ko_finisher_score_abs_diff
-  - style_ko_finisher_score_diff
-  - style_submission_grappler_score_abs_diff
-  - style_submission_grappler_score_diff
   - avg_opponent_elo_diff
   - best_win_elo_diff
   - elo_diff
@@ -71,6 +48,21 @@ features:
   - win_pct_diff
   - wins_diff
   - worst_loss_elo_diff
+  - decision_dependency_abs_diff
+  - decision_dependency_diff
+  - finish_dependency_abs_diff
+  - finish_dependency_diff
+  - ko_dependency_abs_diff
+  - ko_dependency_diff
+  - ko_win_concentration_diff
+  - style_flexibility_score_abs_diff
+  - style_flexibility_score_diff
+  - submission_dependency_abs_diff
+  - submission_dependency_diff
+  - submission_win_concentration_diff
+  - victory_concentration_index_diff
+  - win_method_entropy_abs_diff
+  - win_method_entropy_diff
 data:
   rolling_features_path: data/features/moneyline_feature_view.parquet
   target_column: target
