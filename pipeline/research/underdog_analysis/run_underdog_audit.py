@@ -33,12 +33,6 @@ DEFAULT_MODEL_OUTCOMES_PATH = PREDICTIONS_DIR / "model_outcomes.parquet"
 DEFAULT_MARKET_OUTCOMES_PATH = MARKET_DIR / "historical_market_outcomes.parquet"
 DEFAULT_OUTPUT_ROOT = Path("data/research/underdog_audit")
 
-DOG_BUCKET_ORDER = [
-    "Favorite",
-    "Small Underdog (+100 to +150)",
-    "Medium Underdog (+150 to +250)",
-    "Large Underdog (+250+)",
-]
 EDGE_BUCKETS = [-1.0, 0.0, 0.025, 0.05, 0.10, 0.15, 0.20, 10.0]
 PROBABILITY_BUCKETS = [0.0, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 1.0]
 
@@ -147,18 +141,40 @@ def score_candidates(candidates: pd.DataFrame, args: argparse.Namespace) -> pd.D
     return out
 
 
+def _empty_summary() -> pd.Series:
+    return pd.Series(
+        {
+            "bets": 0,
+            "wins": 0,
+            "win_rate": 0.0,
+            "avg_model_probability": 0.0,
+            "avg_implied_probability": 0.0,
+            "avg_edge": 0.0,
+            "calibration_error": 0.0,
+            "flat_profit": 0.0,
+            "flat_risked": 0.0,
+            "flat_roi": 0.0,
+            "kelly_profit": 0.0,
+            "kelly_risked": 0.0,
+            "kelly_roi": 0.0,
+        }
+    )
+
+
 def _summarize_group(group: pd.DataFrame) -> pd.Series:
+    if group.empty:
+        return _empty_summary()
     flat_risked = group["flat_stake"].sum()
     kelly_risked = group["kelly_stake"].sum()
     return pd.Series(
         {
             "bets": int(len(group)),
             "wins": int(group["won"].sum()),
-            "win_rate": float(group["won"].mean()) if len(group) else 0.0,
-            "avg_model_probability": float(group["model_probability"].mean()) if len(group) else 0.0,
-            "avg_implied_probability": float(group["implied_probability"].mean()) if len(group) else 0.0,
-            "avg_edge": float(group["edge"].mean()) if len(group) else 0.0,
-            "calibration_error": float(group["won"].mean() - group["model_probability"].mean()) if len(group) else 0.0,
+            "win_rate": float(group["won"].mean()),
+            "avg_model_probability": float(group["model_probability"].mean()),
+            "avg_implied_probability": float(group["implied_probability"].mean()),
+            "avg_edge": float(group["edge"].mean()),
+            "calibration_error": float(group["won"].mean() - group["model_probability"].mean()),
             "flat_profit": float(group["flat_profit"].sum()),
             "flat_risked": float(flat_risked),
             "flat_roi": float(group["flat_profit"].sum() / flat_risked) if flat_risked else 0.0,
@@ -202,14 +218,14 @@ def build_edge_distribution(scored: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_summary(scored: pd.DataFrame, args: argparse.Namespace, run_id: str) -> dict[str, Any]:
-    total = _summarize_group(scored) if not scored.empty else pd.Series(dtype=float)
+    total = _summarize_group(scored).to_dict()
     return {
         "run_id": run_id,
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
         "model_id": args.model_id,
         "market_key": args.market_key,
         "rows": int(len(scored)),
-        "total": total.to_dict() if not scored.empty else {},
+        "total": total,
         "filters": {
             "start_date": args.start_date,
             "end_date": args.end_date,
@@ -220,6 +236,30 @@ def build_summary(scored: pd.DataFrame, args: argparse.Namespace, run_id: str) -
         },
         "artifact_note": "Research-only output. Does not modify Model Lab, configs, production models, live predictions, or CLV artifacts.",
     }
+
+
+def build_registry_row(summary: dict[str, Any], output_dir: Path) -> dict[str, Any]:
+    """Return a flat, Parquet-safe registry row.
+
+    Keep nested detail in underdog_summary.json. Parquet registry rows should only
+    contain scalar values to avoid Arrow struct-write issues.
+    """
+
+    total = summary.get("total") or {}
+    filters = summary.get("filters") or {}
+    row = {
+        "run_id": summary.get("run_id"),
+        "created_at_utc": summary.get("created_at_utc"),
+        "model_id": summary.get("model_id"),
+        "market_key": summary.get("market_key"),
+        "rows": summary.get("rows", 0),
+        "output_dir": str(output_dir),
+    }
+    for key, value in total.items():
+        row[f"total_{key}"] = value
+    for key, value in filters.items():
+        row[f"filter_{key}"] = value
+    return row
 
 
 def write_outputs(scored: pd.DataFrame, args: argparse.Namespace, run_id: str) -> Path:
@@ -240,7 +280,7 @@ def write_outputs(scored: pd.DataFrame, args: argparse.Namespace, run_id: str) -
     (output_dir / "underdog_summary.json").write_text(json.dumps(summary, indent=2, default=str), encoding="utf-8")
 
     registry_path = Path(args.output_root) / "underdog_audit_registry.parquet"
-    registry_row = pd.DataFrame([{**summary, "output_dir": str(output_dir)}])
+    registry_row = pd.DataFrame([build_registry_row(summary, output_dir)])
     if registry_path.exists():
         registry = pd.read_parquet(registry_path)
         registry = pd.concat([registry, registry_row], ignore_index=True)
