@@ -15,13 +15,10 @@ inputs:
   fighter_state_history_path: data/features/fighter_state_history.parquet
 
 output:
+  # Normal unflipped view: use for backtests, predictions, display, and market joins.
   feature_view_path: data/features/moneyline_feature_view.parquet
-
-# Feature-view symmetry happens before fighter-state joins and diff generation.
-# This replaces training-time feature negation for moneyline training datasets.
-symmetry:
-  enabled: true
-  mode: both_fighter_perspectives
+  # Training-only symmetric view: original + flipped fighter perspectives.
+  flipped_feature_view_path: data/features/moneyline_feature_view_flipped.parquet
 
 builder:
   module: pipeline.features.views.moneyline
@@ -83,14 +80,15 @@ contracts:
 
 validation:
   expected_feature_view_shape:
-    rows_source: prepared_fights_x2
+    rows_source: prepared_fights
     columns_current: 492
   expected_current_model_feature_count: 124
   allow_extra_columns: true
 
 notes:
-  - This config writes the canonical moneyline feature view parquet.
-  - Symmetry is handled by appending flipped fighter-perspective rows before feature generation.
+  - This config writes both normal and flipped moneyline feature-view parquets.
+  - The normal feature view remains one row per fight for backtesting, prediction, display, and market joins.
+  - The flipped feature view is original plus flipped fighter-perspective rows for training when model config symmetry is enabled.
   - Do not duplicate the 124 model feature list here; that remains in the model config.
   - Formula features are opt-in and should be enabled in an experiment feature-view config, not canonical parity configs.
   - Style-score matchup edges are reusable columns materialized from configs/features/feature_registry.yaml.
