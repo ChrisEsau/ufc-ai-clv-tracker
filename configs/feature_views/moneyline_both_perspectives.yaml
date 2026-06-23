@@ -1,0 +1,85 @@
+# Moneyline Both-Perspectives Feature View
+#
+# Experimental training view that appends a red/blue-swapped raw fight row
+# before fighter-state joins and diff feature generation. Use this to train
+# side-symmetric moneyline models without training-time feature negation.
+
+view_id: moneyline_both_perspectives
+view_family: moneyline
+version: 1
+status: experimental
+
+inputs:
+  master_path: data/master/ufc_master.parquet
+  fighter_state_history_path: data/features/fighter_state_history.parquet
+
+output:
+  feature_view_path: data/features/moneyline_feature_view_both_perspectives.parquet
+
+row_perspective:
+  mode: both_fighter_perspectives
+
+builder:
+  module: pipeline.features.views.moneyline
+  function: build_moneyline_feature_view
+  runner: pipeline.features.run_build_feature_view
+
+join:
+  fight_key: fight_id
+  base_fight_key: base_fight_id
+  state_fight_key: state_fight_id
+  red_fighter_key: r_id
+  blue_fighter_key: b_id
+  fighter_state_key: fighter_id
+
+include:
+  prepared_fight_columns: true
+  prefight_state: true
+  ewm_state: true
+  recent_form_state: true
+  red_blue_differentials: true
+  engineered_features:
+    enabled: true
+    function: ufc_feature_engineering.add_v5_engineered_features
+    registry_function: ufc_feature_engineering.get_engineered_feature_list
+  style_matchup_edges:
+    enabled: false
+    source: feature_registry
+
+model_lab_formula_features:
+  enabled: false
+  registry_path: configs/features/feature_registry.yaml
+  bundles: []
+  features: []
+  statuses:
+    - active
+
+contracts:
+  expected_rows_match_prepared_fights: true
+  require_no_missing_state_matches: true
+  required_columns:
+    - fight_id
+    - base_fight_id
+    - state_fight_id
+    - row_perspective
+    - date
+    - target
+    - r_id
+    - b_id
+    - r_pre_elo
+    - b_pre_elo
+    - style_ko_finisher_score_diff
+    - style_decision_technician_score_diff
+    - style_edge_ko_finisher_vs_decision_technician_net
+
+validation:
+  expected_feature_view_shape:
+    rows_source: prepared_fights_x2
+    columns_current: 492
+  expected_current_model_feature_count: 124
+  allow_extra_columns: true
+
+notes:
+  - Research-only training feature view.
+  - Do not use this view for direct model backtest prediction formatting unless duplicate perspective rows are explicitly handled.
+  - Intended pairing is a model config with training-time symmetry disabled.
