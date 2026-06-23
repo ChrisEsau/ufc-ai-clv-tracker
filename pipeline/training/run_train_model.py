@@ -181,7 +181,6 @@ def load_training_feature_dataframe(config: dict[str, Any]) -> pd.DataFrame:
     should continue using the normal unflipped feature view.
     """
 
-    data_config = config.get("data", {})
     path = resolve_training_feature_path(config)
     if not path:
         raise ValueError("Model config data section must define rolling_features_path")
@@ -379,3 +378,113 @@ def build_shap_importance(
         .sort_values("mean_abs_shap", ascending=False)
         .reset_index(drop=True)
     )
+
+
+def save_artifacts(
+    output_dir: Path,
+    config_path: Path,
+    config: dict[str, Any],
+    feature_columns: list[str],
+    training_result: Any,
+    calibration_result: Any,
+    evaluation: Any,
+    raw_evaluation: Any,
+    split: Any,
+) -> None:
+    """Save model artifacts and evaluation outputs."""
+    artifact_config = config.get("artifacts", {})
+
+    if artifact_config.get("save_raw_model", True):
+        joblib.dump(training_result.model, output_dir / "raw_model.joblib")
+
+    if artifact_config.get("save_calibrated_model", True) and calibration_result.calibrator is not None:
+        joblib.dump(calibration_result.calibrator, output_dir / "calibrated_model.joblib")
+
+    if artifact_config.get("save_feature_columns", True):
+        joblib.dump(feature_columns, output_dir / "feature_columns.joblib")
+        (output_dir / "feature_columns.json").write_text(
+            json.dumps(feature_columns, indent=2),
+            encoding="utf-8",
+        )
+
+    if artifact_config.get("save_metrics", True):
+        metrics_payload = {
+            "model_id": config.get("model_id"),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "config_path": str(config_path),
+            "feature_count": len(feature_columns),
+            "best_threshold": evaluation.best_threshold,
+            "metrics": evaluation.metrics,
+            "raw_metrics": raw_evaluation.metrics,
+            "train_rows": int(len(split.y_train)),
+            "calibration_rows": int(getattr(split, "y_calibration", pd.Series(dtype=int)).shape[0]),
+            "test_rows": int(len(split.y_test)),
+            "train_start_date": getattr(split, "train_start_date", None),
+            "train_end_date": getattr(split, "train_end_date", None),
+            "calibration_end_date": getattr(split, "calibration_end_date", None),
+        }
+        (output_dir / "metrics.json").write_text(
+            json.dumps(metrics_payload, indent=2, default=str),
+            encoding="utf-8",
+        )
+        pd.DataFrame(
+            [{"metric": key, "value": value} for key, value in evaluation.metrics.items()]
+        ).to_csv(output_dir / "metrics.csv", index=False)
+
+    if artifact_config.get("save_threshold_sweep", True):
+        evaluation.threshold_sweep.to_csv(output_dir / "threshold_sweep.csv", index=False)
+        evaluation.threshold_sweep.to_parquet(output_dir / "threshold_sweep.parquet", index=False)
+        raw_evaluation.threshold_sweep.to_csv(output_dir / "raw_threshold_sweep.csv", index=False)
+        raw_evaluation.threshold_sweep.to_parquet(output_dir / "raw_threshold_sweep.parquet", index=False)
+
+    if artifact_config.get("save_confidence_buckets", True):
+        evaluation.confidence_buckets.to_csv(output_dir / "confidence_buckets.csv", index=False)
+        evaluation.confidence_buckets.to_parquet(output_dir / "confidence_buckets.parquet", index=False)
+        raw_evaluation.confidence_buckets.to_csv(output_dir / "raw_confidence_buckets.csv", index=False)
+        raw_evaluation.confidence_buckets.to_parquet(output_dir / "raw_confidence_buckets.parquet", index=False)
+
+    shap_importance = build_shap_importance(
+        model=training_result.model,
+        X=split.X_test,
+        feature_columns=feature_columns,
+    )
+    shap_importance.to_csv(output_dir / "shap_feature_importance.csv", index=False)
+    shap_importance.to_parquet(output_dir / "shap_feature_importance.parquet", index=False)
+
+    if artifact_config.get("save_model_card", True):
+        model_card = {
+            "model_id": config.get("model_id"),
+            "model_family": config.get("model_family"),
+            "artifact_name": config.get("artifact_name"),
+            "algorithm": config.get("algorithm"),
+            "status": config.get("status"),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "config_path": str(config_path),
+            "artifacts_output_dir": str(output_dir),
+            "feature_count": len(feature_columns),
+            "symmetry": config.get("symmetry"),
+            "data": config.get("data"),
+            "split": config.get("split"),
+            "calibration": config.get("calibration"),
+            "params": config.get("params"),
+            "metrics": evaluation.metrics,
+            "raw_metrics": raw_evaluation.metrics,
+            "best_threshold": evaluation.best_threshold,
+        }
+        (output_dir / "model_card.json").write_text(
+            json.dumps(model_card, indent=2, default=str),
+            encoding="utf-8",
+        )
+        (output_dir / "model_card.yaml").write_text(
+            yaml.safe_dump(model_card, sort_keys=False),
+            encoding="utf-8",
+        )
+
+    (output_dir / "training_config_snapshot.yaml").write_text(
+        yaml.safe_dump(config, sort_keys=False),
+        encoding="utf-8",
+    )
+
+
+if __name__ == "__main__":
+    main()
