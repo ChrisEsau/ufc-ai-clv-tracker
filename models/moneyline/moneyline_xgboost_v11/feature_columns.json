@@ -7,5 +7,21 @@
   "losses_diff",
   "win_pct_diff",
   "wins_diff",
-  "worst_loss_elo_diff"
+  "worst_loss_elo_diff",
+  "ewm_elo_diff",
+  "ewm_finish_rate_diff",
+  "ewm_kd_absorbed_avg_diff",
+  "ewm_kd_avg_diff",
+  "ewm_sapm_diff",
+  "ewm_splm_diff",
+  "ewm_td_avg_diff",
+  "ewm_win_pct_diff",
+  "recent_form_elo_diff",
+  "recent_form_finish_rate_diff",
+  "recent_form_sapm_diff",
+  "recent_form_splm_diff",
+  "recent_form_td_avg_diff",
+  "recent_form_win_pct_diff",
+  "recent_form_win_streak_diff",
+  "recent_form_wins_diff"
 ]
