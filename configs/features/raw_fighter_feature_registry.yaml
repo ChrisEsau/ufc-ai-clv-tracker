@@ -6,7 +6,7 @@
 #   source-of-truth contract for calculated fighter-state features.
 
 registry_name: ufc_raw_fighter_feature_registry
-version: 1
+version: 2
 status: plugin_contract
 
 plugin_contract:
@@ -125,6 +125,23 @@ feature_groups:
       - days_since_last_ko_loss
       - decision_loss_rate
       - avg_fight_time
+
+  victory_path_profile:
+    description: Point-in-time win-method concentration, finish dependency, and specialist-path features.
+    source_layer: calculated
+    plugin: pipeline.features.raw_fighter_features.victory_path_profile
+    function: calculate
+    status: active
+    output_columns:
+      - win_method_entropy
+      - victory_concentration_index
+      - finish_dependency
+      - ko_dependency
+      - submission_dependency
+      - decision_dependency
+      - ko_win_concentration
+      - submission_win_concentration
+      - style_flexibility_score
 
   recent_form:
     description: Short-horizon recent fighter state.
