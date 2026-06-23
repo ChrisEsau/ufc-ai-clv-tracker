@@ -6,21 +6,32 @@ import pandas as pd
 
 
 def apply_row_perspective_to_prepared_fights(prepared_df: pd.DataFrame, config: dict[str, Any]) -> pd.DataFrame:
-    mode = str((config.get("row_perspective", {}) or {}).get("mode", "fight_level")).strip().lower()
+    row_config = config.get("row_perspective", {}) or {}
+    symmetry_config = config.get("symmetry", {}) or {}
+
+    if row_config:
+        mode = str(row_config.get("mode", "fight_level")).strip().lower()
+    else:
+        enabled = bool(symmetry_config.get("enabled", True))
+        mode = "both_fighter_perspectives" if enabled else "fight_level"
+
     if mode == "fight_level":
-        out = prepared_df.copy()
-        out["base_fight_id"] = out["fight_id"].astype(str)
-        out["state_fight_id"] = out["fight_id"].astype(str)
-        out["row_perspective"] = "original"
-        return out
-    if mode != "both_fighter_perspectives":
-        raise ValueError(f"Unsupported row_perspective.mode: {mode}")
+        return original_rows(prepared_df)
+    if mode == "both_fighter_perspectives":
+        return both_perspectives(prepared_df)
+    raise ValueError(f"Unsupported feature view perspective mode: {mode}")
 
-    original = prepared_df.copy()
-    original["base_fight_id"] = original["fight_id"].astype(str)
-    original["state_fight_id"] = original["fight_id"].astype(str)
-    original["row_perspective"] = "original"
 
+def original_rows(prepared_df: pd.DataFrame) -> pd.DataFrame:
+    out = prepared_df.copy()
+    out["base_fight_id"] = out["fight_id"].astype(str)
+    out["state_fight_id"] = out["fight_id"].astype(str)
+    out["row_perspective"] = "original"
+    return out
+
+
+def both_perspectives(prepared_df: pd.DataFrame) -> pd.DataFrame:
+    original = original_rows(prepared_df)
     flipped = original.copy()
     swap_column_pairs(flipped, "r_", "b_")
     swap_column_pairs(flipped, "red_", "blue_")
@@ -28,7 +39,6 @@ def apply_row_perspective_to_prepared_fights(prepared_df: pd.DataFrame, config: 
     flipped["row_perspective"] = "flipped"
     if "target" in flipped.columns:
         flipped["target"] = 1 - pd.to_numeric(flipped["target"], errors="coerce")
-
     return pd.concat([original, flipped], ignore_index=True)
 
 
