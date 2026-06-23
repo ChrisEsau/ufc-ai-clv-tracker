@@ -1,0 +1,26 @@
+# Pending merge into configs/features/feature_bundles.yaml
+# The GitHub connector blocked the full feature_bundles.yaml replacement.
+
+upset_potential_v1:
+  label: Upset Potential V1
+  description: Win-method concentration, specialization, finish dependency, and path-to-victory features.
+  source_layer: fighter_state_plus_matchup
+  candidate_columns:
+    - victory_concentration_index_diff
+    - win_method_entropy_diff
+    - win_method_entropy_abs_diff
+    - finish_dependency_diff
+    - finish_dependency_abs_diff
+    - decision_dependency_diff
+    - decision_dependency_abs_diff
+    - ko_dependency_diff
+    - ko_dependency_abs_diff
+    - ko_win_concentration_diff
+    - submission_dependency_diff
+    - submission_dependency_abs_diff
+    - submission_win_concentration_diff
+    - style_flexibility_score_diff
+    - style_flexibility_score_abs_diff
+  markets:
+    - moneyline
+    - props
