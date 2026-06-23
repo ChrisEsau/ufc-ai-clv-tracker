@@ -43,9 +43,31 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements/requirements-workspace.txt
 
-      - name: Train model
+      - name: Debug training inputs
         run: |
-          python -m pipeline.training.run_train_model \
+          echo "Branch: ${GITHUB_REF_NAME}"
+          echo "Commit: $(git rev-parse HEAD)"
+          echo "Config: ${{ inputs.config_path }}"
+          test -f "${{ inputs.config_path }}"
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+          config_path = Path("${{ inputs.config_path }}")
+          config = yaml.safe_load(config_path.read_text()) or {}
+          print("model_id:", config.get("model_id"))
+          print("rolling_features_path:", (config.get("data") or {}).get("rolling_features_path"))
+          print("flipped_feature_path:", (config.get("data") or {}).get("flipped_rolling_features_path") or (config.get("data") or {}).get("flipped_feature_view_path"))
+          print("symmetry:", config.get("symmetry"))
+          print("runner_has_flipped_path:", "resolve_training_feature_path" in Path("pipeline/training/run_train_model.py").read_text())
+          for path in sorted(Path("data/features").glob("moneyline_feature_view*.parquet")):
+              print("feature_artifact:", path, path.stat().st_size)
+          PY
+
+      - name: Train model
+        env:
+          PYTHONUNBUFFERED: "1"
+        run: |
+          python -u -m pipeline.training.run_train_model \
             --config "${{ inputs.config_path }}"
 
       - name: Resolve artifact directory
