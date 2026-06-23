@@ -6,7 +6,7 @@ feature_sources:
 - moneyline_feature_view
 features:
   selection_mode: explicit
-  expected_feature_count: 126
+  expected_feature_count: 123
   allow_unsafe_features: false
   feature_columns:
   - style_all_round_finisher_score_abs_diff
@@ -78,13 +78,10 @@ features:
   - wrestling_mismatch_diff
   - wrestling_mismatch_x_avg_opp_elo
   - wrestling_pressure_vs_defense
-  - age_diff
-  - age_squared_diff
   - days_since_last_fight_diff
   - ewm_days_since_last_fight_diff
   - height_diff
   - height_mismatch_abs
-  - older_fighter_age
   - reach_diff
   - reach_mismatch_abs
   - recent_form_days_since_last_fight_diff
@@ -148,7 +145,10 @@ features:
   - goes_distance_v1
   - upset_potential_v1
   include_features: []
-  exclude_features: []
+  exclude_features:
+  - age_diff
+  - age_squared_diff
+  - older_fighter_age
   resolved_features:
   - style_all_round_finisher_score_abs_diff
   - style_all_round_finisher_score_diff
@@ -219,13 +219,10 @@ features:
   - wrestling_mismatch_diff
   - wrestling_mismatch_x_avg_opp_elo
   - wrestling_pressure_vs_defense
-  - age_diff
-  - age_squared_diff
   - days_since_last_fight_diff
   - ewm_days_since_last_fight_diff
   - height_diff
   - height_mismatch_abs
-  - older_fighter_age
   - reach_diff
   - reach_mismatch_abs
   - recent_form_days_since_last_fight_diff
