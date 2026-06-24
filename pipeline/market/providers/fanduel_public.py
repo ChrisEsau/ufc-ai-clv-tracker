@@ -88,18 +88,36 @@ def _attachments(payload: dict[str, Any]) -> dict[str, Any]:
 
 def _market_family(market_type: Any, market_name: Any) -> str | None:
     text = f"{market_type or ''} {market_name or ''}".lower()
+
     if "match_betting" in text or "moneyline" in text:
         return "moneyline"
     if "method_of_victory" in text:
         return "fighter_method_props"
-    if "total_rounds" in text:
-        return "over_under_rounds"
     if "will_the_fight_go_the_distance" in text or "go the distance" in text:
         return "goes_distance"
+    if "total_rounds" in text:
+        return "total_rounds"
     if "round_betting" in text or "what_round" in text:
-        return "fighter_round_win"
+        return "round_betting"
     if "how_fight_will_end" in text:
         return "exact_method"
+    if "method_&_round_combo" in text:
+        return "method_round_combo"
+    if "ko/tko_round_combos" in text:
+        return "ko_tko_round_combo"
+    if "submission_round_combos" in text:
+        return "submission_round_combo"
+    if "decision_no_bet" in text:
+        return "decision_no_bet"
+    if "double_chance" in text:
+        return "double_chance"
+    if "gone_in_60_seconds" in text:
+        return "gone_in_60_seconds"
+    if "winning_minute" in text:
+        return "winning_minute"
+    if "winning_round_&_minute" in text:
+        return "winning_round_minute"
+
     return None
 
 
