@@ -10,6 +10,7 @@ import joblib
 import pandas as pd
 import yaml
 
+from pipeline.backtesting.implied_bucket_calibration import apply_implied_bucket_delta_calibration
 from pipeline.backtesting.model_outcomes import build_backtest_model_outcomes
 from pipeline.backtesting.run_backtest_v2 import (
     apply_filters,
@@ -131,6 +132,10 @@ def main() -> None:
     market_raw = market_raw[market_raw["market_key"].astype(str).str.lower() == args.market_key.lower()].copy()
     market = standardize_market(market_raw)
     joined = model_outcomes.merge(market, on=["fight_id", "market_key", "outcome_join_key"], how="inner", suffixes=("_model", "_market"))
+
+    post_calibration = apply_implied_bucket_delta_calibration(joined, config=config)
+    joined = post_calibration.rows
+
     candidates = apply_filters(joined, args)
     scored = score_bets(candidates, args)
     summary = summarize(scored, args, backtest_id)
@@ -140,6 +145,8 @@ def main() -> None:
         "feature_rows": int(len(feature_df)),
         "historical_model_outcome_rows": int(len(model_outcomes)),
         "joined_rows": int(len(joined)),
+        "post_market_calibration_enabled": bool((config.get("post_market_calibration") or {}).get("enabled", False)),
+        "post_market_calibration_method": str((config.get("post_market_calibration") or {}).get("method", "none")),
         "model_config_path": str(args.model_config_path),
         "feature_view_path": str(args.feature_view_path),
         "historical_market_path": str(args.historical_market_path),
@@ -153,6 +160,9 @@ def main() -> None:
     joined.to_parquet(output_dir / "joined_model_market_rows.parquet", index=False)
     scored.to_parquet(output_dir / "backtest_bets.parquet", index=False)
     buckets.to_parquet(output_dir / "backtest_bucket_summary.parquet", index=False)
+    if not post_calibration.report.empty:
+        post_calibration.report.to_csv(output_dir / "implied_bucket_calibration_summary.csv", index=False)
+        post_calibration.report.to_parquet(output_dir / "implied_bucket_calibration_summary.parquet", index=False)
 
     registry_path = Path(args.output_root) / "backtest_registry.parquet"
     registry_row = pd.DataFrame([summary | {"output_dir": str(output_dir), "created_at_utc": ts}])
@@ -170,6 +180,7 @@ def main() -> None:
     print("Model outcome rows:", len(model_outcomes))
     print("Market rows:", len(market))
     print("Joined rows:", len(joined))
+    print("Post-market calibration:", summary["post_market_calibration_method"])
     print("Bet candidates:", len(scored))
     print(json.dumps(summary, indent=2, default=str))
     print("Output dir:", output_dir)
