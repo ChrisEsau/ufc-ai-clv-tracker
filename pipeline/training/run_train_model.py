@@ -89,13 +89,31 @@ def main() -> None:
         config=config,
     )
 
+    early_stopping_config = config.get("early_stopping", {}) or {}
+    early_stopping_enabled = bool(early_stopping_config.get("enabled", False))
+    X_validation = getattr(split, "X_calibration", None) if early_stopping_enabled else None
+    y_validation = getattr(split, "y_calibration", None) if early_stopping_enabled else None
+
+    if early_stopping_enabled:
+        validation_rows = 0 if y_validation is None else len(y_validation)
+        print("Early stopping enabled.")
+        print(f"Early stopping rounds : {early_stopping_config.get('rounds')}")
+        print(f"Early stopping metric : {early_stopping_config.get('metric', config.get('params', {}).get('eval_metric', 'logloss'))}")
+        print(f"Validation rows       : {validation_rows}")
+
     training_result = train_model(
         algorithm=config["algorithm"],
         X_train=split.X_train,
         y_train=split.y_train,
         params=config.get("params", {}),
+        X_validation=X_validation,
+        y_validation=y_validation,
+        early_stopping_config=early_stopping_config,
     )
     print("Model training complete.")
+    if getattr(training_result, "early_stopping_enabled", False):
+        print(f"Best iteration       : {getattr(training_result, 'best_iteration', None)}")
+        print(f"Best validation score: {getattr(training_result, 'best_score', None)}")
 
     raw_test_probabilities = predict_positive_class_probability(
         training_result.model,
@@ -331,7 +349,6 @@ def maybe_calibrate(model: Any, split: Any, config: dict[str, Any]) -> Any:
             method=calibration_config.get("method", "isotonic"),
         )
 
-    # Backward-compatible train/test mode. Prefer train_calibration_test for production.
     return calibrate_model(
         model=model,
         X_calibration=split.X_test,
@@ -348,16 +365,12 @@ def build_shap_importance(
     max_rows: int = 1000,
     random_state: int = 42,
 ) -> pd.DataFrame:
-    """Build a mean absolute SHAP importance table for tree models.
-
-    SHAP is intentionally calculated against the raw trained model rather than a
-    calibration wrapper so the feature attribution maps directly to model inputs.
-    """
+    """Build a mean absolute SHAP importance table for tree models."""
 
     if X.empty:
         return pd.DataFrame(columns=["feature", "mean_abs_shap"])
 
-    import shap  # Imported lazily so non-SHAP workflows do not pay import cost.
+    import shap
 
     sample_size = min(len(X), max(1, int(max_rows)))
     sample = X.sample(n=sample_size, random_state=random_state) if len(X) > sample_size else X.copy()
@@ -380,6 +393,16 @@ def build_shap_importance(
     )
 
 
+def _training_metadata(training_result: Any) -> dict[str, Any]:
+    return {
+        "early_stopping_enabled": bool(getattr(training_result, "early_stopping_enabled", False)),
+        "early_stopping_rounds": getattr(training_result, "early_stopping_rounds", None),
+        "early_stopping_metric": getattr(training_result, "early_stopping_metric", None),
+        "best_iteration": getattr(training_result, "best_iteration", None),
+        "best_score": getattr(training_result, "best_score", None),
+    }
+
+
 def save_artifacts(
     output_dir: Path,
     config_path: Path,
@@ -393,6 +416,7 @@ def save_artifacts(
 ) -> None:
     """Save model artifacts and evaluation outputs."""
     artifact_config = config.get("artifacts", {})
+    training_metadata = _training_metadata(training_result)
 
     if artifact_config.get("save_raw_model", True):
         joblib.dump(training_result.model, output_dir / "raw_model.joblib")
@@ -416,6 +440,7 @@ def save_artifacts(
             "best_threshold": evaluation.best_threshold,
             "metrics": evaluation.metrics,
             "raw_metrics": raw_evaluation.metrics,
+            "training": training_metadata,
             "train_rows": int(len(split.y_train)),
             "calibration_rows": int(getattr(split, "y_calibration", pd.Series(dtype=int)).shape[0]),
             "test_rows": int(len(split.y_test)),
@@ -466,6 +491,8 @@ def save_artifacts(
             "data": config.get("data"),
             "split": config.get("split"),
             "calibration": config.get("calibration"),
+            "early_stopping": config.get("early_stopping"),
+            "training": training_metadata,
             "params": config.get("params"),
             "metrics": evaluation.metrics,
             "raw_metrics": raw_evaluation.metrics,
