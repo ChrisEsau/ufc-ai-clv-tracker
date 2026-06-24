@@ -41,6 +41,11 @@ def parse_args() -> argparse.Namespace:
         help="Model family to resolve from the registry when --model-id is not supplied.",
     )
     parser.add_argument(
+        "--market-key",
+        default=None,
+        help="Optional market key for market-scoped active model resolution, e.g. goes_distance.",
+    )
+    parser.add_argument(
         "--model-id",
         default=None,
         help="Explicit model ID. Overrides UFC_MODEL_ID and registry active model.",
@@ -84,11 +89,13 @@ def main() -> None:
         model_family=args.model_family,
         registry=registry,
         model_id=args.model_id,
+        market_key=args.market_key,
     )
     model_entry = get_model_entry(model_id, registry)
     config_path = Path(model_entry["config_path"])
 
     print(f"Model family: {args.model_family}")
+    print(f"Market key: {args.market_key or 'registry primary'}")
     print(f"Model ID: {model_id}")
     print(f"Config path: {config_path}")
 
