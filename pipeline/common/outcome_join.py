@@ -82,12 +82,12 @@ def build_outcome_join_key(
         if label_token in {"under_2_5", "under", "no"} or side_token == "under":
             return "fight:under_2_5"
 
-    if market == "method_of_victory":
-        if label_token in {"ko_tko", "ko_tko_dq", "ko", "tko", "knockout"} or side_token in {"ko_tko", "ko", "tko"}:
+    if market in {"method_of_victory", "exact_method"}:
+        if label_token in {"ko_tko", "ko_tko_dq", "ko", "tko", "knockout"} or outcome_token in {"ko_tko", "ko_tko_dq", "ko", "tko", "knockout"} or side_token in {"ko_tko", "ko", "tko"}:
             return "fight:ko_tko"
-        if label_token in {"submission", "sub"} or side_token in {"submission", "sub"}:
+        if label_token in {"submission", "sub"} or outcome_token in {"submission", "sub"} or side_token in {"submission", "sub"}:
             return "fight:submission"
-        if label_token in {"decision", "dec"} or side_token in {"decision", "dec"}:
+        if label_token in {"decision", "dec"} or outcome_token in {"decision", "dec"} or side_token in {"decision", "dec"}:
             return "fight:decision"
 
     if market in {"total_rounds", "totals"}:
