@@ -81,11 +81,12 @@ def validate_delete_allowed(context: dict[str, Any], registry: dict[str, Any]) -
     status = str(context.get("status") or "").lower()
     model_id = str(context.get("model_id") or "")
     model_family = str(context.get("model_family") or "")
+    market_key = str(context.get("market_key") or "")
     errors: list[str] = []
     if status == "production":
         errors.append("Production models cannot be deleted.")
-    if is_active_primary(registry, model_id, model_family):
-        errors.append("Active primary models cannot be deleted.")
+    if is_active_primary(registry, model_id, model_family, market_key):
+        errors.append("Active production models cannot be deleted.")
     return _result(errors)
 
 
