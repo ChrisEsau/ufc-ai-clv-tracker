@@ -3,7 +3,7 @@ model_family: moneyline
 artifact_name: moneyline_xgboost_v11
 algorithm: xgboost
 status: draft
-generated_at: '2026-06-24T12:25:45.881958+00:00'
+generated_at: '2026-06-24T12:42:17.356769+00:00'
 config_path: configs/models/moneyline_xgboost_v11.yaml
 artifacts_output_dir: models/moneyline/moneyline_xgboost_v11
 feature_count: 123
