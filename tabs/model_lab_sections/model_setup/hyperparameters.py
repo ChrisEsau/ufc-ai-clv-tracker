@@ -17,10 +17,10 @@ def _hyperparameter_key(context: dict[str, Any], suffix: str) -> str:
 
 
 def render_hyperparameters_section(context: dict[str, Any]) -> dict[str, Any]:
-    """Render the Hyperparameters card and return params payload."""
-
     editable = bool(context.get("is_editable"))
-    params = (context.get("config") or {}).get("params") or {}
+    config = context.get("config") or {}
+    params = config.get("params") or {}
+    stop_cfg = config.get("early_stopping") or {}
 
     st.markdown("#### 4. Hyperparameters")
 
@@ -40,7 +40,22 @@ def render_hyperparameters_section(context: dict[str, Any]) -> dict[str, Any]:
     with c6:
         random_state = st.number_input("Random State", value=int(params.get("random_state", 42)), step=1, min_value=0, disabled=not editable, key=_hyperparameter_key(context, "random_state"))
 
+    c7, c8, c9 = st.columns(3)
+    with c7:
+        min_child_weight = st.number_input("Min Child Weight", value=float(params.get("min_child_weight", 1.0)), step=1.0, min_value=0.0, disabled=not editable, key=_hyperparameter_key(context, "min_child_weight"))
+    with c8:
+        reg_lambda = st.number_input("Reg Lambda", value=float(params.get("reg_lambda", 1.0)), step=0.5, min_value=0.0, disabled=not editable, key=_hyperparameter_key(context, "reg_lambda"))
+    with c9:
+        reg_alpha = st.number_input("Reg Alpha", value=float(params.get("reg_alpha", 0.0)), step=0.1, min_value=0.0, disabled=not editable, key=_hyperparameter_key(context, "reg_alpha"))
+
     eval_metric = st.text_input("Eval Metric", value=str(params.get("eval_metric", "logloss")), disabled=not editable, key=_hyperparameter_key(context, "eval_metric"))
+
+    stop_enabled = st.toggle("Stop automatically on validation plateau", value=bool(stop_cfg.get("enabled", False)), disabled=not editable, key=_hyperparameter_key(context, "stop_enabled"))
+    s1, s2 = st.columns(2)
+    with s1:
+        stop_rounds = st.number_input("Stop Rounds", value=int(stop_cfg.get("rounds", 100)), step=25, min_value=1, disabled=(not editable or not stop_enabled), key=_hyperparameter_key(context, "stop_rounds"))
+    with s2:
+        stop_metric = st.text_input("Stop Metric", value=str(stop_cfg.get("metric") or eval_metric or "logloss"), disabled=(not editable or not stop_enabled), key=_hyperparameter_key(context, "stop_metric"))
 
     return {
         "params": {
@@ -49,7 +64,16 @@ def render_hyperparameters_section(context: dict[str, Any]) -> dict[str, Any]:
             "learning_rate": float(learning_rate),
             "subsample": float(subsample),
             "colsample_bytree": float(colsample_bytree),
+            "min_child_weight": float(min_child_weight),
+            "reg_lambda": float(reg_lambda),
+            "reg_alpha": float(reg_alpha),
             "random_state": int(random_state),
             "eval_metric": eval_metric,
-        }
+        },
+        "early_stopping": {
+            "enabled": bool(stop_enabled),
+            "rounds": int(stop_rounds),
+            "metric": str(stop_metric or eval_metric or "logloss"),
+            "verbose": bool(stop_cfg.get("verbose", False)),
+        },
     }
