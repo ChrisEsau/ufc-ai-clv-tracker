@@ -83,16 +83,34 @@ def get_model_registry_entry(registry: dict[str, Any], model_id: str) -> dict[st
     return entry
 
 
+def _normalize_market_key(market_key: str | None) -> str:
+    return str(market_key or "").strip().lower()
+
+
 def get_active_primary_model_id(registry: dict[str, Any], model_family: str) -> str:
-    """Return the active primary model id for a model family."""
+    """Return the backward-compatible active primary model id for a model family."""
 
     return str(((registry.get("active_models") or {}).get(model_family) or {}).get("primary") or "")
 
 
-def is_active_primary(registry: dict[str, Any], model_id: str, model_family: str) -> bool:
-    """Return whether model_id is the active primary for model_family."""
+def get_active_market_model_id(registry: dict[str, Any], model_family: str, market_key: str | None = None) -> str:
+    """Return the active model id for a family/market pair.
 
-    return get_active_primary_model_id(registry, model_family) == model_id
+    Falls back to family primary for backward compatibility when no market-specific
+    active model has been configured.
+    """
+
+    family_config = ((registry.get("active_models") or {}).get(model_family) or {})
+    normalized_market_key = _normalize_market_key(market_key)
+    if normalized_market_key:
+        return str(family_config.get(normalized_market_key) or family_config.get("primary") or "")
+    return str(family_config.get("primary") or "")
+
+
+def is_active_primary(registry: dict[str, Any], model_id: str, model_family: str, market_key: str | None = None) -> bool:
+    """Return whether model_id is active for model_family/market_key."""
+
+    return get_active_market_model_id(registry, model_family, market_key) == model_id
 
 
 def upsert_model_registry_entry(
