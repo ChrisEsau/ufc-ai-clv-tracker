@@ -19,9 +19,16 @@ def _market_key(context: dict[str, Any]) -> str:
 
 
 def _active_model_id(registry: dict[str, Any], family: str, market_key: str = "") -> str:
+    family = str(family or "").strip().lower()
+    market_key = str(market_key or "").strip().lower()
     active_family = ((registry.get("active_models") or {}).get(family) or {})
     if market_key:
-        return str(active_family.get(market_key) or active_family.get("primary") or "")
+        market_model = active_family.get(market_key)
+        if market_model:
+            return str(market_model)
+        if family == "moneyline" and market_key == "moneyline":
+            return str(active_family.get("primary") or "")
+        return ""
     return str(active_family.get("primary") or "")
 
 
@@ -36,6 +43,8 @@ def _is_primary(registry: dict[str, Any], context: dict[str, Any]) -> bool:
 
 
 def _set_active_model(updated: dict[str, Any], *, family: str, market_key: str, model_id: str) -> None:
+    family = str(family or "").strip().lower()
+    market_key = str(market_key or "").strip().lower()
     active_family = updated.setdefault("active_models", {}).setdefault(family, {})
     if market_key:
         active_family[market_key] = model_id
