@@ -94,16 +94,18 @@ def get_active_primary_model_id(registry: dict[str, Any], model_family: str) -> 
 
 
 def get_active_market_model_id(registry: dict[str, Any], model_family: str, market_key: str | None = None) -> str:
-    """Return the active model id for a family/market pair.
+    """Return the active model id for a family/market pair."""
 
-    Falls back to family primary for backward compatibility when no market-specific
-    active model has been configured.
-    """
-
-    family_config = ((registry.get("active_models") or {}).get(model_family) or {})
+    family = str(model_family or "").strip().lower()
+    family_config = ((registry.get("active_models") or {}).get(family) or {})
     normalized_market_key = _normalize_market_key(market_key)
     if normalized_market_key:
-        return str(family_config.get(normalized_market_key) or family_config.get("primary") or "")
+        market_model = family_config.get(normalized_market_key)
+        if market_model:
+            return str(market_model)
+        if family == "moneyline" and normalized_market_key == "moneyline":
+            return str(family_config.get("primary") or "")
+        return ""
     return str(family_config.get("primary") or "")
 
 
