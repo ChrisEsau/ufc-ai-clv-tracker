@@ -19,8 +19,8 @@ models:
     algorithm: xgboost
     config_path: configs/models/prop_goes_distance_xgboost_v1.yaml
     artifact_dir: models/goes_distance/prop_goes_distance_xgboost_v1
-    status: production
-    dashboard_selectable: true
+    status: draft
+    dashboard_selectable: false
     outcome_architecture: true
   prop_over_under_2_5_xgboost_v1:
     display_name: Over / Under 2.5 XGBoost V1
@@ -30,7 +30,7 @@ models:
     algorithm: xgboost
     config_path: configs/models/prop_over_under_2_5_xgboost_v1.yaml
     artifact_dir: models/over_under_2_5/prop_over_under_2_5_xgboost_v1
-    status: draft
+    status: production
     dashboard_selectable: true
     outcome_architecture: true
   prop_method_of_victory_xgboost_v1:
@@ -93,6 +93,6 @@ active_models:
   moneyline:
     primary: moneyline_xgboost_v8
   prop:
-    primary: prop_goes_distance_xgboost_v1
+    primary: prop_over_under_2_5_xgboost_v1
 registry_name: ufc_model_registry
 version: 1
