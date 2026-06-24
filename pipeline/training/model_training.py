@@ -27,6 +27,9 @@ def train_model(
     X_train: pd.DataFrame,
     y_train: pd.Series,
     params: dict[str, Any] | None = None,
+    X_validation: pd.DataFrame | None = None,
+    y_validation: pd.Series | None = None,
+    early_stopping_config: dict[str, Any] | None = None,
 ) -> TrainedModelResult:
     """Train a model using an algorithm-specific plug-in."""
     normalized_algorithm = algorithm.strip().lower()
@@ -36,6 +39,9 @@ def train_model(
             X_train=X_train,
             y_train=y_train,
             params=params,
+            X_validation=X_validation,
+            y_validation=y_validation,
+            early_stopping_config=early_stopping_config,
         )
 
     raise ValueError(
