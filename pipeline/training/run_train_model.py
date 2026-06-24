@@ -5,15 +5,9 @@ Run from repo root:
     python -m pipeline.training.run_train_model \
         --config configs/models/moneyline_xgb_base.yaml
 
-The model config is the single source of truth for:
-- feature sources
-- explicit feature columns
-- algorithm and parameters
-- symmetry behavior
-- temporal split dates
-- calibration method
-- metric settings
-- artifact output paths
+The model config is the single source of truth for feature sources, explicit
+feature columns, algorithm parameters, symmetry behavior, temporal split dates,
+calibration method, metrics, and artifact paths.
 """
 
 from __future__ import annotations
@@ -30,10 +24,7 @@ import yaml
 
 from pipeline.features.registry_feature_builder import apply_registry_feature_definitions
 from pipeline.training.calibration import calibrate_model, predict_positive_class_probability
-from pipeline.training.feature_selection import (
-    load_model_config,
-    resolve_features_from_model_config,
-)
+from pipeline.training.feature_selection import load_model_config, resolve_features_from_model_config
 from pipeline.training.metrics import evaluate_binary_probabilities
 from pipeline.training.model_training import train_model
 from pipeline.training.symmetry import apply_symmetry_augmentation
@@ -70,24 +61,13 @@ def main() -> None:
     feature_df = load_training_feature_dataframe(config)
     print(f"Feature dataframe shape: {feature_df.shape}")
 
-    feature_columns = resolve_features_from_model_config(
-        df=feature_df,
-        model_config=config,
-    )
+    feature_columns = resolve_features_from_model_config(df=feature_df, model_config=config)
     print(f"Resolved feature count: {len(feature_columns)}")
 
-    model_df = maybe_apply_symmetry(
-        df=feature_df,
-        feature_columns=feature_columns,
-        config=config,
-    )
+    model_df = maybe_apply_symmetry(df=feature_df, feature_columns=feature_columns, config=config)
     print(f"Model dataframe shape: {model_df.shape}")
 
-    split = build_split(
-        df=model_df,
-        feature_columns=feature_columns,
-        config=config,
-    )
+    split = build_split(df=model_df, feature_columns=feature_columns, config=config)
 
     early_stopping_config = config.get("early_stopping", {}) or {}
     early_stopping_enabled = bool(early_stopping_config.get("enabled", False))
@@ -98,7 +78,10 @@ def main() -> None:
         validation_rows = 0 if y_validation is None else len(y_validation)
         print("Early stopping enabled.")
         print(f"Early stopping rounds : {early_stopping_config.get('rounds')}")
-        print(f"Early stopping metric : {early_stopping_config.get('metric', config.get('params', {}).get('eval_metric', 'logloss'))}")
+        print(
+            "Early stopping metric : "
+            f"{early_stopping_config.get('metric', config.get('params', {}).get('eval_metric', 'logloss'))}"
+        )
         print(f"Validation rows       : {validation_rows}")
 
     training_result = train_model(
@@ -115,21 +98,13 @@ def main() -> None:
         print(f"Best iteration       : {getattr(training_result, 'best_iteration', None)}")
         print(f"Best validation score: {getattr(training_result, 'best_score', None)}")
 
-    raw_test_probabilities = predict_positive_class_probability(
-        training_result.model,
-        split.X_test,
-    )
-
-    calibration_result = maybe_calibrate(
-        model=training_result.model,
-        split=split,
-        config=config,
-    )
+    raw_test_probabilities = predict_positive_class_probability(training_result.model, split.X_test)
+    calibration_result = maybe_calibrate(model=training_result.model, split=split, config=config)
 
     final_model = calibration_result.calibrator or training_result.model
     final_test_probabilities = predict_positive_class_probability(final_model, split.X_test)
 
-    metric_config = config.get("metrics", {})
+    metric_config = config.get("metrics", {}) or {}
     evaluation = evaluate_binary_probabilities(
         y_true=split.y_test,
         probabilities=final_test_probabilities,
@@ -139,7 +114,6 @@ def main() -> None:
         bucket_edges=metric_config.get("confidence_bucket_edges"),
         probability_label="calibrated_probability",
     )
-
     raw_evaluation = evaluate_binary_probabilities(
         y_true=split.y_test,
         probabilities=raw_test_probabilities,
@@ -183,22 +157,12 @@ def main() -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train a UFC model from a YAML config.")
-    parser.add_argument(
-        "--config",
-        default=DEFAULT_CONFIG_PATH,
-        help="Path to model config YAML.",
-    )
+    parser.add_argument("--config", default=DEFAULT_CONFIG_PATH, help="Path to model config YAML.")
     return parser.parse_args()
 
 
 def load_training_feature_dataframe(config: dict[str, Any]) -> pd.DataFrame:
-    """Load feature dataframe and materialize selected registry-defined features.
-
-    If model symmetry is enabled, training reads the prebuilt flipped feature view
-    instead of applying training-time feature negation. Backtests and predictions
-    should continue using the normal unflipped feature view.
-    """
-
+    """Load feature dataframe and materialize selected registry-defined features."""
     path = resolve_training_feature_path(config)
     if not path:
         raise ValueError("Model config data section must define rolling_features_path")
@@ -234,7 +198,7 @@ def load_training_feature_dataframe(config: dict[str, Any]) -> pd.DataFrame:
 
 
 def resolve_training_feature_path(config: dict[str, Any]) -> str | None:
-    data_config = config.get("data", {})
+    data_config = config.get("data", {}) or {}
     base_path = data_config.get("rolling_features_path")
     symmetry_config = config.get("symmetry", {}) or {}
     if not symmetry_config.get("enabled", False):
@@ -250,11 +214,7 @@ def resolve_training_feature_path(config: dict[str, Any]) -> str | None:
     return str(base.with_name(f"{base.stem}_flipped{base.suffix}"))
 
 
-def maybe_apply_symmetry(
-    df: pd.DataFrame,
-    feature_columns: list[str],
-    config: dict[str, Any],
-) -> pd.DataFrame:
+def maybe_apply_symmetry(df: pd.DataFrame, feature_columns: list[str], config: dict[str, Any]) -> pd.DataFrame:
     """Apply legacy training-time symmetry only when explicitly requested."""
     symmetry_config = config.get("symmetry", {}) or {}
     if not symmetry_config.get("enabled", False):
@@ -275,7 +235,6 @@ def maybe_apply_symmetry(
             target_col=target_col,
             date_col=date_col,
         )
-
     if mode == "explicit":
         return apply_symmetry_augmentation(
             df=df,
@@ -290,19 +249,14 @@ def maybe_apply_symmetry(
 
 
 def _optional_config_string(value: Any) -> str | None:
-    """Return a stripped string value, treating blank config fields as None."""
     normalized = str(value or "").strip()
     return normalized or None
 
 
-def build_split(
-    df: pd.DataFrame,
-    feature_columns: list[str],
-    config: dict[str, Any],
-) -> Any:
+def build_split(df: pd.DataFrame, feature_columns: list[str], config: dict[str, Any]) -> Any:
     """Build temporal split based on model config."""
-    split_config = config.get("split", {})
-    data_config = config.get("data", {})
+    split_config = config.get("split", {}) or {}
+    data_config = config.get("data", {}) or {}
     mode = str(split_config.get("mode", "train_calibration_test")).strip().lower()
     train_start_date = _optional_config_string(split_config.get("train_start_date"))
 
@@ -316,7 +270,6 @@ def build_split(
             target_col=data_config.get("target_column", "target"),
             date_col=data_config.get("date_column", "date"),
         )
-
     if mode == "train_test":
         return build_temporal_train_test_split(
             df=df,
@@ -331,29 +284,40 @@ def build_split(
 
 
 def maybe_calibrate(model: Any, split: Any, config: dict[str, Any]) -> Any:
-    """Fit calibration layer if enabled, otherwise pass raw probabilities through."""
-    calibration_config = config.get("calibration", {})
+    """Fit calibration layer if enabled, otherwise pass raw probabilities through.
+
+    Backward compatibility:
+    - Old configs with calibration disabled still use method='none'.
+    - Old configs without segmented options still work because calibrate_model
+      accepts config=None/defaults and sklearn methods ignore extra config.
+    - New segmented configs receive the full calibration section.
+    """
+    calibration_config = config.get("calibration", {}) or {}
     if not calibration_config.get("enabled", False):
         return calibrate_model(
             model=model,
             X_calibration=split.X_test,
             y_calibration=split.y_test,
             method="none",
+            config=None,
         )
 
+    method = calibration_config.get("method", "isotonic")
     if hasattr(split, "X_calibration") and hasattr(split, "y_calibration"):
         return calibrate_model(
             model=model,
             X_calibration=split.X_calibration,
             y_calibration=split.y_calibration,
-            method=calibration_config.get("method", "isotonic"),
+            method=method,
+            config=calibration_config,
         )
 
     return calibrate_model(
         model=model,
         X_calibration=split.X_test,
         y_calibration=split.y_test,
-        method=calibration_config.get("method", "isotonic"),
+        method=method,
+        config=calibration_config,
     )
 
 
@@ -366,7 +330,6 @@ def build_shap_importance(
     random_state: int = 42,
 ) -> pd.DataFrame:
     """Build a mean absolute SHAP importance table for tree models."""
-
     if X.empty:
         return pd.DataFrame(columns=["feature", "mean_abs_shap"])
 
@@ -374,7 +337,6 @@ def build_shap_importance(
 
     sample_size = min(len(X), max(1, int(max_rows)))
     sample = X.sample(n=sample_size, random_state=random_state) if len(X) > sample_size else X.copy()
-
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(sample)
 
@@ -382,12 +344,7 @@ def build_shap_importance(
         shap_values = shap_values[1] if len(shap_values) > 1 else shap_values[0]
 
     return (
-        pd.DataFrame(
-            {
-                "feature": feature_columns,
-                "mean_abs_shap": abs(shap_values).mean(axis=0),
-            }
-        )
+        pd.DataFrame({"feature": feature_columns, "mean_abs_shap": abs(shap_values).mean(axis=0)})
         .sort_values("mean_abs_shap", ascending=False)
         .reset_index(drop=True)
     )
@@ -415,7 +372,7 @@ def save_artifacts(
     split: Any,
 ) -> None:
     """Save model artifacts and evaluation outputs."""
-    artifact_config = config.get("artifacts", {})
+    artifact_config = config.get("artifacts", {}) or {}
     training_metadata = _training_metadata(training_result)
 
     if artifact_config.get("save_raw_model", True):
@@ -426,10 +383,7 @@ def save_artifacts(
 
     if artifact_config.get("save_feature_columns", True):
         joblib.dump(feature_columns, output_dir / "feature_columns.joblib")
-        (output_dir / "feature_columns.json").write_text(
-            json.dumps(feature_columns, indent=2),
-            encoding="utf-8",
-        )
+        (output_dir / "feature_columns.json").write_text(json.dumps(feature_columns, indent=2), encoding="utf-8")
 
     if artifact_config.get("save_metrics", True):
         metrics_payload = {
@@ -448,13 +402,11 @@ def save_artifacts(
             "train_end_date": getattr(split, "train_end_date", None),
             "calibration_end_date": getattr(split, "calibration_end_date", None),
         }
-        (output_dir / "metrics.json").write_text(
-            json.dumps(metrics_payload, indent=2, default=str),
-            encoding="utf-8",
+        (output_dir / "metrics.json").write_text(json.dumps(metrics_payload, indent=2, default=str), encoding="utf-8")
+        pd.DataFrame([{"metric": key, "value": value} for key, value in evaluation.metrics.items()]).to_csv(
+            output_dir / "metrics.csv",
+            index=False,
         )
-        pd.DataFrame(
-            [{"metric": key, "value": value} for key, value in evaluation.metrics.items()]
-        ).to_csv(output_dir / "metrics.csv", index=False)
 
     if artifact_config.get("save_threshold_sweep", True):
         evaluation.threshold_sweep.to_csv(output_dir / "threshold_sweep.csv", index=False)
@@ -468,11 +420,12 @@ def save_artifacts(
         raw_evaluation.confidence_buckets.to_csv(output_dir / "raw_confidence_buckets.csv", index=False)
         raw_evaluation.confidence_buckets.to_parquet(output_dir / "raw_confidence_buckets.parquet", index=False)
 
-    shap_importance = build_shap_importance(
-        model=training_result.model,
-        X=split.X_test,
-        feature_columns=feature_columns,
-    )
+    if calibration_result.calibrator is not None and hasattr(calibration_result.calibrator, "calibration_report"):
+        calibration_report = calibration_result.calibrator.calibration_report()
+        calibration_report.to_csv(output_dir / "calibration_bucket_summary.csv", index=False)
+        calibration_report.to_parquet(output_dir / "calibration_bucket_summary.parquet", index=False)
+
+    shap_importance = build_shap_importance(model=training_result.model, X=split.X_test, feature_columns=feature_columns)
     shap_importance.to_csv(output_dir / "shap_feature_importance.csv", index=False)
     shap_importance.to_parquet(output_dir / "shap_feature_importance.parquet", index=False)
 
@@ -498,19 +451,10 @@ def save_artifacts(
             "raw_metrics": raw_evaluation.metrics,
             "best_threshold": evaluation.best_threshold,
         }
-        (output_dir / "model_card.json").write_text(
-            json.dumps(model_card, indent=2, default=str),
-            encoding="utf-8",
-        )
-        (output_dir / "model_card.yaml").write_text(
-            yaml.safe_dump(model_card, sort_keys=False),
-            encoding="utf-8",
-        )
+        (output_dir / "model_card.json").write_text(json.dumps(model_card, indent=2, default=str), encoding="utf-8")
+        (output_dir / "model_card.yaml").write_text(yaml.safe_dump(model_card, sort_keys=False), encoding="utf-8")
 
-    (output_dir / "training_config_snapshot.yaml").write_text(
-        yaml.safe_dump(config, sort_keys=False),
-        encoding="utf-8",
-    )
+    (output_dir / "training_config_snapshot.yaml").write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
 
 
 if __name__ == "__main__":
