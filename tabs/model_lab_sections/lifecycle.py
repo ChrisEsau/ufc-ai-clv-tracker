@@ -10,48 +10,81 @@ import utils.model_lab_workflows as mlw
 ExistingModelSelector = Callable[[dict[str, Any], list[dict[str, Any]], dict[str, dict[str, Any]]], dict[str, Any]]
 
 
+def _market_key(context: dict[str, Any]) -> str:
+    family = str(context.get("model_family") or "").strip().lower()
+    market = str(context.get("market_key") or "").strip().lower()
+    if market:
+        return market
+    return "moneyline" if family == "moneyline" else ""
+
+
+def _active_model_id(registry: dict[str, Any], family: str, market_key: str = "") -> str:
+    active_family = ((registry.get("active_models") or {}).get(family) or {})
+    if market_key:
+        return str(active_family.get(market_key) or active_family.get("primary") or "")
+    return str(active_family.get("primary") or "")
+
+
 def _primary_model_id(registry: dict[str, Any], family: str) -> str:
-    return str(((registry.get("active_models") or {}).get(family) or {}).get("primary") or "")
+    return _active_model_id(registry, family)
 
 
 def _is_primary(registry: dict[str, Any], context: dict[str, Any]) -> bool:
-    return _primary_model_id(registry, str(context.get("model_family") or "")) == str(context.get("model_id") or "")
+    family = str(context.get("model_family") or "")
+    market = _market_key(context)
+    return _active_model_id(registry, family, market) == str(context.get("model_id") or "")
+
+
+def _set_active_model(updated: dict[str, Any], *, family: str, market_key: str, model_id: str) -> None:
+    active_family = updated.setdefault("active_models", {}).setdefault(family, {})
+    if market_key:
+        active_family[market_key] = model_id
+    # Keep primary for backward compatibility with older callers that are not yet market-aware.
+    active_family["primary"] = model_id
 
 
 def _promote(context: dict[str, Any], registry: dict[str, Any]) -> tuple[bool, str]:
     model_id = str(context.get("model_id") or "")
-    family = str(context.get("model_family") or "")
+    family = str(context.get("model_family") or "").strip().lower()
+    market = _market_key(context)
     status = str(context.get("status") or "").lower()
     if status != "draft":
         return False, "Only draft models can be promoted."
+    if not family:
+        return False, "Model family is required for promotion."
+    if family == "prop" and not market:
+        return False, "Prop model promotion requires a market_key."
 
     updated = deepcopy(registry)
     models = updated.setdefault("models", {})
     if model_id not in models:
         return False, f"Model is not registered: {model_id}"
 
-    old_primary = _primary_model_id(updated, family)
-    if old_primary and old_primary in models and old_primary != model_id:
-        models[old_primary]["status"] = "draft"
-        models[old_primary]["dashboard_selectable"] = False
+    old_active = _active_model_id(updated, family, market)
+    if old_active and old_active in models and old_active != model_id:
+        models[old_active]["status"] = "draft"
+        models[old_active]["dashboard_selectable"] = False
 
     models[model_id]["status"] = "production"
     models[model_id]["dashboard_selectable"] = True
-    updated.setdefault("active_models", {}).setdefault(family, {})["primary"] = model_id
+    _set_active_model(updated, family=family, market_key=market, model_id=model_id)
 
     ok, msg = mlw._save_registry(updated)
     if not ok:
         return ok, msg
-    return True, f"Promoted {model_id} to production."
+    market_label = f" for {market}" if market else ""
+    return True, f"Promoted {model_id} to production{market_label}."
 
 
 def _demote(context: dict[str, Any], registry: dict[str, Any]) -> tuple[bool, str]:
     model_id = str(context.get("model_id") or "")
+    market = _market_key(context)
     status = str(context.get("status") or "").lower()
     if status != "production":
         return False, "Only production models can be demoted."
     if _is_primary(registry, context):
-        return False, "Cannot demote the active primary model. Promote another model first."
+        market_label = f" for {market}" if market else ""
+        return False, f"Cannot demote the active production model{market_label}. Promote another model first."
 
     updated = deepcopy(registry)
     models = updated.setdefault("models", {})
@@ -78,10 +111,11 @@ def render_lifecycle(
     mlw._render_model_bar(context, registry)
 
     model_id = str(context.get("model_id") or "")
-    family = str(context.get("model_family") or "")
+    family = str(context.get("model_family") or "").strip().lower()
+    market = _market_key(context)
     status = str(context.get("status") or "").lower()
-    primary = _primary_model_id(registry, family)
-    is_primary = primary == model_id
+    active_model = _active_model_id(registry, family, market)
+    is_primary = active_model == model_id
 
     st.html("<div class='mlab-card'><div class='mlab-section'><div class='mlab-section-title'>Lifecycle</div>")
     st.caption("Status changes update the model registry only. Model artifacts are not moved or deleted.")
@@ -92,9 +126,10 @@ def render_lifecycle(
     with c2:
         st.metric("Status", status.title() if status else "—")
     with c3:
-        st.metric("Active Primary", "Yes" if is_primary else "No")
+        st.metric("Active for Market", "Yes" if is_primary else "No")
 
-    st.write(f"Current `{family}` primary: `{primary or 'not configured'}`")
+    scope_label = f"{family}/{market}" if market else family
+    st.write(f"Current `{scope_label}` production model: `{active_model or 'not configured'}`")
 
     if status == "draft":
         confirm = st.checkbox("Confirm promotion", key=f"mlab_confirm_promote_{model_id}")
@@ -106,7 +141,7 @@ def render_lifecycle(
                 st.rerun()
     elif status == "production":
         if is_primary:
-            st.warning("This is the active primary model. Promote another model before demoting it.")
+            st.warning("This is the active production model for this market. Promote another model for the same market before demoting it.")
         else:
             confirm = st.checkbox("Confirm demotion", key=f"mlab_confirm_demote_{model_id}")
             if st.button("Demote to Draft", disabled=not confirm, use_container_width=True, key=f"mlab_demote_{model_id}"):
