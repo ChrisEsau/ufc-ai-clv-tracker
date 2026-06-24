@@ -1,0 +1,62 @@
+name: Run Backtest Bet Audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      backtest_dir:
+        description: "Backtest artifact directory containing backtest_bets.parquet"
+        required: true
+        default: "data/model_lab/backtests/moneyline_xgboost_v11_moneyline_full_20260623_220808"
+      output_root:
+        description: "Output root for audit artifacts"
+        required: false
+        default: "data/research/backtest_bet_audit"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: run-backtest-bet-audit-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  run-backtest-bet-audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Sync latest branch state
+        run: |
+          git fetch origin "${GITHUB_REF_NAME}"
+          git pull --ff-only origin "${GITHUB_REF_NAME}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas pyarrow
+
+      - name: Run backtest bet audit
+        run: |
+          python -m pipeline.research.backtest_bet_audit.run_backtest_bet_audit \
+            --backtest-dir "${{ github.event.inputs.backtest_dir }}" \
+            --output-root "${{ github.event.inputs.output_root }}"
+
+      - name: Commit backtest bet audit artifacts
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add -f "${{ github.event.inputs.output_root }}"
+
+          git commit -m "Update backtest bet audit artifacts" || echo "No changes to commit"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
