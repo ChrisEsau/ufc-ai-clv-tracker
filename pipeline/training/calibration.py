@@ -5,6 +5,7 @@ be calibrated with this module.
 
 Supported methods:
 - isotonic: flexible non-parametric calibration used by the current notebook
+- segmented_delta: subtracts learned actual-results bucket model-error deltas
 - segmented_empirical: actual-results empirical bucket calibration with shrinkage
 - segmented_isotonic: experimental actual-results isotonic calibration by bucket
 - sigmoid / platt: logistic calibration, more stable with smaller samples
@@ -21,6 +22,7 @@ import pandas as pd
 from sklearn.calibration import CalibratedClassifierCV
 
 from pipeline.training.segmented_calibration import (
+    fit_segmented_delta_calibrator,
     fit_segmented_empirical_calibrator,
     fit_segmented_isotonic_calibrator,
 )
@@ -60,8 +62,8 @@ def calibrate_model(
     y_calibration:
         Binary labels for calibration.
     method:
-        ``isotonic``, ``segmented_empirical``, ``segmented_isotonic``,
-        ``sigmoid``/``platt``, or ``none``.
+        ``isotonic``, ``segmented_delta``, ``segmented_empirical``,
+        ``segmented_isotonic``, ``sigmoid``/``platt``, or ``none``.
     config:
         Optional calibration config. Used by segmented calibration for bucket
         definitions and minimum row thresholds.
@@ -75,6 +77,22 @@ def calibrate_model(
             method="none",
             raw_probabilities=raw_probabilities,
             calibrated_probabilities=raw_probabilities,
+            n_calibration_rows=len(X_calibration),
+        )
+
+    if normalized_method in {"segmented_delta", "bucketed_delta", "dynamic_delta"}:
+        calibrator = fit_segmented_delta_calibrator(
+            base_model=model,
+            raw_probabilities=raw_probabilities,
+            y_true=y_calibration,
+            config=config or {},
+        )
+        calibrated_probabilities = predict_positive_class_probability(calibrator, X_calibration)
+        return CalibrationResult(
+            calibrator=calibrator,
+            method="segmented_delta",
+            raw_probabilities=raw_probabilities,
+            calibrated_probabilities=calibrated_probabilities,
             n_calibration_rows=len(X_calibration),
         )
 
@@ -148,7 +166,7 @@ def _normalize_sklearn_calibration_method(method: str) -> str:
 
     raise ValueError(
         f"Unsupported calibration method '{method}'. "
-        "Supported methods: isotonic, segmented_empirical, segmented_isotonic, sigmoid/platt, none"
+        "Supported methods: isotonic, segmented_delta, segmented_empirical, segmented_isotonic, sigmoid/platt, none"
     )
 
 
