@@ -165,13 +165,17 @@ symmetry:
   mode: none
 calibration:
   enabled: true
-  method: segmented_empirical
+  method: segmented_delta
   source: actual_results
   probability_column: raw_model_probability
   target_column: target
   min_rows_per_segment: 150
-  shrinkage_weight: 0.5
-  fallback: global_empirical
+  fallback: global_delta
+  smoothing:
+    enabled: true
+    previous_weight: 0.25
+    current_weight: 0.5
+    next_weight: 0.25
   buckets:
   - name: very_low
     min: 0.0
