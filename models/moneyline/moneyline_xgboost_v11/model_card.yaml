@@ -3,7 +3,7 @@ model_family: moneyline
 artifact_name: moneyline_xgboost_v11
 algorithm: xgboost
 status: draft
-generated_at: '2026-06-24T04:05:32.885218+00:00'
+generated_at: '2026-06-24T04:42:38.477047+00:00'
 config_path: configs/models/moneyline_xgboost_v11.yaml
 artifacts_output_dir: models/moneyline/moneyline_xgboost_v11
 feature_count: 123
@@ -23,12 +23,13 @@ split:
   calibration_end_date: '2023-12-31'
 calibration:
   enabled: true
-  method: segmented_isotonic
+  method: segmented_empirical
   source: actual_results
   probability_column: raw_model_probability
   target_column: target
   min_rows_per_segment: 150
-  fallback: global_isotonic
+  shrinkage_weight: 0.5
+  fallback: global_empirical
   buckets:
   - name: very_low
     min: 0.0
@@ -77,13 +78,13 @@ params:
   random_state: 42
   eval_metric: logloss
 metrics:
-  accuracy: 0.6175314465408805
-  log_loss: 0.7035255536408618
-  roc_auc: 0.6527172085756102
-  brier_score: 0.23451928084970972
-  threshold: 0.47
-  positive_pick_rate_percent: 52.39779874213837
-  negative_pick_rate_percent: 47.60220125786163
+  accuracy: 0.6289308176100629
+  log_loss: 0.6521601377978162
+  roc_auc: 0.668666995470907
+  brier_score: 0.22996430432442205
+  threshold: 0.48
+  positive_pick_rate_percent: 54.95283018867924
+  negative_pick_rate_percent: 45.04716981132076
   actual_positive_rate_percent: 50.0
   row_count: 2544
 raw_metrics:
@@ -96,4 +97,4 @@ raw_metrics:
   negative_pick_rate_percent: 45.79402515723271
   actual_positive_rate_percent: 50.0
   row_count: 2544
-best_threshold: 0.47
+best_threshold: 0.48
