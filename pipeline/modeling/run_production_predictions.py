@@ -118,6 +118,8 @@ def _run_prediction_for_model(model: dict[str, Any], *, registry_path: Path, pre
         str(registry_path),
         "--model-family",
         str(model["model_family"]),
+        "--market-key",
+        str(model["market_key"]),
         "--model-id",
         str(model["model_id"]),
     ]
