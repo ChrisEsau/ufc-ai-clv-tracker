@@ -19,6 +19,11 @@ from pipeline.prediction.live_feature_builder import (
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build live model-ready features.")
     parser.add_argument("--model-family", default="moneyline")
+    parser.add_argument(
+        "--market-key",
+        default=None,
+        help="Optional market key for market-scoped active model resolution, e.g. goes_distance.",
+    )
     parser.add_argument("--model-id", default=None)
     parser.add_argument("--registry-path", default="configs/models/model_registry.yaml")
     parser.add_argument(
@@ -35,6 +40,7 @@ def main() -> None:
         model_family=args.model_family,
         registry=registry,
         model_id=args.model_id,
+        market_key=args.market_key,
     )
     model_entry = get_model_entry(model_id, registry)
     model_config = load_model_config(Path(model_entry["config_path"]), require_prediction=True)
@@ -49,6 +55,8 @@ def main() -> None:
     print("=" * 80)
     print("UFC LIVE FEATURES V2")
     print("=" * 80)
+    print(f"Model family: {args.model_family}")
+    print(f"Market key: {args.market_key or 'registry primary'}")
     print(f"Model ID: {model_id}")
     print(f"Feature count: {len(model_bundle.feature_columns)}")
     print(f"Live feature rows: {len(result.live_feature_df)}")
