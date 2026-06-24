@@ -95,6 +95,10 @@ DRAFTKINGS_MARKET_DIAGNOSTIC_PATH = MARKET_DIR / "draftkings_market_diagnostic.p
 DRAFTKINGS_RAW_INDEX_PATH = MARKET_DIR / "draftkings_raw_index.parquet"
 DRAFTKINGS_EVENT_INDEX_PATH = MARKET_DIR / "draftkings_event_index.parquet"
 DRAFTKINGS_EVENT_CARD_MATCH_PATH = MARKET_DIR / "draftkings_event_card_matches.parquet"
+
+FANDUEL_RAW_DIR = MARKET_RAW_DIR / "fanduel"
+FANDUEL_MARKET_DIAGNOSTIC_PATH = MARKET_DIR / "fanduel_market_diagnostic.parquet"
+FANDUEL_EVENT_INDEX_PATH = MARKET_DIR / "fanduel_event_index.parquet"
 CANONICAL_MARKET_CATALOG_PATH = MARKET_DIR / "canonical_market_catalog.parquet"
 CANONICAL_MARKET_AUDIT_PATH = AUDITS_DIR / "canonical_market_catalog_audit.parquet"
 
@@ -143,6 +147,7 @@ def ensure_data_dirs() -> None:
         MARKET_DIR,
         MARKET_RAW_DIR,
         DRAFTKINGS_RAW_DIR,
+        FANDUEL_RAW_DIR,
         BANKROLL_DIR,
         MODEL_LAB_DIR,
         SNAPSHOTS_DIR,
