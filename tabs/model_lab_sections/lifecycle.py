@@ -42,14 +42,37 @@ def _is_primary(registry: dict[str, Any], context: dict[str, Any]) -> bool:
     return _active_model_id(registry, family, market) == str(context.get("model_id") or "")
 
 
+def _production_models_for_scope(
+    registry: dict[str, Any],
+    *,
+    family: str,
+    market_key: str,
+) -> list[str]:
+    """Return production model IDs in the same family/market scope."""
+
+    matches: list[str] = []
+    for model_id, entry in (registry.get("models") or {}).items():
+        if not isinstance(entry, dict):
+            continue
+        entry_family = str(entry.get("model_family") or "").strip().lower()
+        entry_market = str(entry.get("market_key") or "").strip().lower()
+        entry_status = str(entry.get("status") or "").strip().lower()
+        if entry_family == family and entry_market == market_key and entry_status == "production":
+            matches.append(str(model_id))
+    return matches
+
+
 def _set_active_model(updated: dict[str, Any], *, family: str, market_key: str, model_id: str) -> None:
     family = str(family or "").strip().lower()
     market_key = str(market_key or "").strip().lower()
     active_family = updated.setdefault("active_models", {}).setdefault(family, {})
     if market_key:
         active_family[market_key] = model_id
-    # Keep primary for backward compatibility with older callers that are not yet market-aware.
-    active_family["primary"] = model_id
+
+    # Moneyline has a true single primary. Props do not; keep prop.primary only as a
+    # compatibility fallback and do not rewrite it every time a new prop market is promoted.
+    if family == "moneyline" or not active_family.get("primary"):
+        active_family["primary"] = model_id
 
 
 def _promote(context: dict[str, Any], registry: dict[str, Any]) -> tuple[bool, str]:
@@ -69,13 +92,20 @@ def _promote(context: dict[str, Any], registry: dict[str, Any]) -> tuple[bool, s
     if model_id not in models:
         return False, f"Model is not registered: {model_id}"
 
+    same_market_production = _production_models_for_scope(updated, family=family, market_key=market)
     old_active = _active_model_id(updated, family, market)
-    if old_active and old_active in models and old_active != model_id:
-        models[old_active]["status"] = "draft"
-        models[old_active]["dashboard_selectable"] = False
+    if old_active and old_active not in same_market_production:
+        same_market_production.append(old_active)
+
+    for old_model_id in same_market_production:
+        if old_model_id in models and old_model_id != model_id:
+            models[old_model_id]["status"] = "draft"
+            models[old_model_id]["dashboard_selectable"] = False
 
     models[model_id]["status"] = "production"
     models[model_id]["dashboard_selectable"] = True
+    models[model_id]["model_family"] = family
+    models[model_id]["market_key"] = market
     _set_active_model(updated, family=family, market_key=market, model_id=model_id)
 
     ok, msg = mlw._save_registry(updated)
