@@ -2,6 +2,10 @@
 
 This module calibrates raw model probabilities against actual results only.
 It intentionally does not use market odds or implied probabilities.
+
+The default production path is empirical shrinkage by raw-probability bucket.
+That is intentionally less flexible than fitting separate isotonic curves inside
+small buckets, which can overfit the calibration window and worsen log loss.
 """
 
 from __future__ import annotations
@@ -36,18 +40,75 @@ class SegmentCalibrationMetadata:
     raw_avg_probability: float | None
     actual_win_rate: float | None
     calibrated_avg_probability: float | None
+    calibration_value: float | None
+    shrinkage_weight: float
     used_segment_calibrator: bool
     fallback_used: bool
 
 
-class SegmentedIsotonicCalibrator:
-    """Wrapper exposing predict_proba for segmented isotonic calibration.
+class SegmentedEmpiricalCalibrator:
+    """Wrapper exposing predict_proba for empirical bucket calibration.
 
-    The wrapper owns the fitted base model plus global and per-segment isotonic
-    calibrators. It first gets raw probabilities from the base model, assigns
-    each row to a raw-probability bucket, and then applies the matching segment
-    calibrator. Segments with too few validation rows fall back to the global
-    isotonic calibrator.
+    For each raw-probability bucket, the calibration target is the validation
+    bucket's actual win rate. To reduce overfitting, the target is blended with
+    the raw probability using a fixed shrinkage weight:
+
+        calibrated = (1 - weight) * raw_probability + weight * bucket_actual_rate
+
+    Buckets with too few validation rows fall back to the global validation win
+    rate blended the same way. No market data is used.
+    """
+
+    def __init__(
+        self,
+        *,
+        base_model: Any,
+        buckets: list[dict[str, Any]],
+        bucket_values: dict[str, float],
+        global_value: float,
+        min_rows_per_segment: int,
+        shrinkage_weight: float,
+        metadata: list[SegmentCalibrationMetadata],
+    ) -> None:
+        self.base_model = base_model
+        self.buckets = buckets
+        self.bucket_values = bucket_values
+        self.global_value = float(global_value)
+        self.min_rows_per_segment = int(min_rows_per_segment)
+        self.shrinkage_weight = float(shrinkage_weight)
+        self.metadata = metadata
+        self.classes_ = getattr(base_model, "classes_", np.array([0, 1]))
+
+    def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
+        raw_probabilities = _positive_class_probability(self.base_model, X)
+        calibrated = self.calibrate_raw_probabilities(raw_probabilities)
+        return np.column_stack([1.0 - calibrated, calibrated])
+
+    def calibrate_raw_probabilities(self, raw_probabilities: np.ndarray) -> np.ndarray:
+        raw = np.asarray(raw_probabilities, dtype=float)
+        target = np.full(shape=raw.shape, fill_value=self.global_value, dtype=float)
+
+        for bucket in self.buckets:
+            name = str(bucket["name"])
+            value = self.bucket_values.get(name)
+            if value is None:
+                continue
+            mask = _bucket_mask(raw, bucket)
+            if mask.any():
+                target[mask] = float(value)
+
+        calibrated = ((1.0 - self.shrinkage_weight) * raw) + (self.shrinkage_weight * target)
+        return np.clip(calibrated, 0.0, 1.0)
+
+    def calibration_report(self) -> pd.DataFrame:
+        return pd.DataFrame([item.__dict__ for item in self.metadata])
+
+
+class SegmentedIsotonicCalibrator:
+    """Legacy wrapper exposing predict_proba for segmented isotonic calibration.
+
+    Kept for experimentation only. Production V11 should use
+    SegmentedEmpiricalCalibrator because segment-level isotonic can overfit.
     """
 
     def __init__(
@@ -90,6 +151,73 @@ class SegmentedIsotonicCalibrator:
 
     def calibration_report(self) -> pd.DataFrame:
         return pd.DataFrame([item.__dict__ for item in self.metadata])
+
+
+def fit_segmented_empirical_calibrator(
+    *,
+    base_model: Any,
+    raw_probabilities: np.ndarray,
+    y_true: pd.Series | np.ndarray,
+    config: dict[str, Any] | None = None,
+) -> SegmentedEmpiricalCalibrator:
+    """Fit empirical bucket calibration using actual outcomes only."""
+
+    calibration_config = config or {}
+    buckets = calibration_config.get("buckets") or DEFAULT_SEGMENT_BUCKETS
+    min_rows = int(calibration_config.get("min_rows_per_segment", 150))
+    shrinkage_weight = float(calibration_config.get("shrinkage_weight", 0.50))
+
+    raw = np.asarray(raw_probabilities, dtype=float)
+    target = np.asarray(y_true, dtype=float)
+    if raw.shape[0] != target.shape[0]:
+        raise ValueError("raw_probabilities and y_true must have the same length")
+
+    global_value = float(np.nanmean(target))
+    bucket_values: dict[str, float] = {}
+    metadata: list[SegmentCalibrationMetadata] = []
+
+    for bucket in buckets:
+        name = str(bucket["name"])
+        min_probability = float(bucket["min"])
+        max_probability = float(bucket["max"])
+        mask = _bucket_mask(raw, bucket)
+        rows = int(mask.sum())
+        use_segment = rows >= min_rows and len(np.unique(target[mask])) > 1
+        bucket_actual = _safe_mean(target[mask])
+        calibration_value = float(bucket_actual) if use_segment and bucket_actual is not None else global_value
+        if use_segment:
+            bucket_values[name] = calibration_value
+
+        if rows > 0:
+            calibrated_values = ((1.0 - shrinkage_weight) * raw[mask]) + (shrinkage_weight * calibration_value)
+        else:
+            calibrated_values = None
+
+        metadata.append(
+            SegmentCalibrationMetadata(
+                name=name,
+                min_probability=min_probability,
+                max_probability=max_probability,
+                validation_rows=rows,
+                raw_avg_probability=_safe_mean(raw[mask]),
+                actual_win_rate=bucket_actual,
+                calibrated_avg_probability=_safe_mean(calibrated_values),
+                calibration_value=calibration_value,
+                shrinkage_weight=shrinkage_weight,
+                used_segment_calibrator=bool(use_segment),
+                fallback_used=not bool(use_segment),
+            )
+        )
+
+    return SegmentedEmpiricalCalibrator(
+        base_model=base_model,
+        buckets=[dict(item) for item in buckets],
+        bucket_values=bucket_values,
+        global_value=global_value,
+        min_rows_per_segment=min_rows,
+        shrinkage_weight=shrinkage_weight,
+        metadata=metadata,
+    )
 
 
 def fit_segmented_isotonic_calibrator(
@@ -139,6 +267,8 @@ def fit_segmented_isotonic_calibrator(
                 raw_avg_probability=_safe_mean(raw[mask]),
                 actual_win_rate=_safe_mean(target[mask]),
                 calibrated_avg_probability=_safe_mean(segment_calibrated if segment_calibrated is not None else global_calibrated[mask]),
+                calibration_value=None,
+                shrinkage_weight=1.0,
                 used_segment_calibrator=bool(use_segment),
                 fallback_used=not bool(use_segment),
             )
