@@ -4,7 +4,7 @@
   "artifact_name": "moneyline_xgboost_v11",
   "algorithm": "xgboost",
   "status": "draft",
-  "generated_at": "2026-06-24T02:01:39.707398+00:00",
+  "generated_at": "2026-06-24T03:06:32.717960+00:00",
   "config_path": "configs/models/moneyline_xgboost_v11.yaml",
   "artifacts_output_dir": "models/moneyline/moneyline_xgboost_v11",
   "feature_count": 123,
@@ -21,44 +21,60 @@
   },
   "split": {
     "mode": "train_calibration_test",
-    "train_end_date": "2022-12-31",
+    "train_end_date": "2021-12-31",
     "calibration_end_date": "2023-12-31",
-    "train_start_date": "2010-01-01"
+    "train_start_date": "2008-01-01"
   },
   "calibration": {
     "enabled": false,
     "method": "isotonic"
   },
+  "early_stopping": {
+    "enabled": true,
+    "rounds": 100,
+    "metric": "logloss",
+    "verbose": false
+  },
+  "training": {
+    "early_stopping_enabled": true,
+    "early_stopping_rounds": 100,
+    "early_stopping_metric": "logloss",
+    "best_iteration": 551,
+    "best_score": 0.6592037036793656
+  },
   "params": {
-    "n_estimators": 900,
-    "max_depth": 5,
-    "learning_rate": 0.04,
-    "subsample": 0.9,
-    "colsample_bytree": 0.9,
+    "n_estimators": 5000,
+    "max_depth": 3,
+    "learning_rate": 0.02,
+    "subsample": 0.7,
+    "colsample_bytree": 0.7,
+    "min_child_weight": 5,
+    "reg_lambda": 5.0,
+    "reg_alpha": 0.5,
     "random_state": 42,
     "eval_metric": "logloss"
   },
   "metrics": {
-    "accuracy": 0.6025943396226415,
-    "log_loss": 0.6740973907543337,
-    "roc_auc": 0.6429930703888296,
-    "brier_score": 0.2384470977624364,
-    "threshold": 0.55,
-    "positive_pick_rate_percent": 40.36949685534591,
-    "negative_pick_rate_percent": 59.63050314465409,
+    "accuracy": 0.6308962264150944,
+    "log_loss": 0.6525407860154911,
+    "roc_auc": 0.6686527802499902,
+    "brier_score": 0.23014128305362047,
+    "threshold": 0.49,
+    "positive_pick_rate_percent": 54.20597484276729,
+    "negative_pick_rate_percent": 45.79402515723271,
     "actual_positive_rate_percent": 50.0,
     "row_count": 2544
   },
   "raw_metrics": {
-    "accuracy": 0.6025943396226415,
-    "log_loss": 0.6740973907543337,
-    "roc_auc": 0.6429930703888296,
-    "brier_score": 0.2384470977624364,
-    "threshold": 0.55,
-    "positive_pick_rate_percent": 40.36949685534591,
-    "negative_pick_rate_percent": 59.63050314465409,
+    "accuracy": 0.6308962264150944,
+    "log_loss": 0.6525407860154911,
+    "roc_auc": 0.6686527802499902,
+    "brier_score": 0.23014128305362047,
+    "threshold": 0.49,
+    "positive_pick_rate_percent": 54.20597484276729,
+    "negative_pick_rate_percent": 45.79402515723271,
     "actual_positive_rate_percent": 50.0,
     "row_count": 2544
   },
-  "best_threshold": 0.55
+  "best_threshold": 0.49
 }

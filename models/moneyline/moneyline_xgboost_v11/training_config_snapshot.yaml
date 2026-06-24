@@ -280,9 +280,9 @@ data:
   date_column: date
 split:
   mode: train_calibration_test
-  train_end_date: '2022-12-31'
+  train_end_date: '2021-12-31'
   calibration_end_date: '2023-12-31'
-  train_start_date: '2010-01-01'
+  train_start_date: '2008-01-01'
 symmetry:
   enabled: true
   source: feature_view_flipped
@@ -291,13 +291,21 @@ calibration:
   enabled: false
   method: isotonic
 params:
-  n_estimators: 900
-  max_depth: 5
-  learning_rate: 0.04
-  subsample: 0.9
-  colsample_bytree: 0.9
+  n_estimators: 5000
+  max_depth: 3
+  learning_rate: 0.02
+  subsample: 0.7
+  colsample_bytree: 0.7
+  min_child_weight: 5
+  reg_lambda: 5.0
+  reg_alpha: 0.5
   random_state: 42
   eval_metric: logloss
+early_stopping:
+  enabled: true
+  rounds: 100
+  metric: logloss
+  verbose: false
 metrics:
   threshold_min: 0.4
   threshold_max: 0.6
