@@ -92,7 +92,9 @@ models:
 active_models:
   moneyline:
     primary: moneyline_xgboost_v8
+    moneyline: moneyline_xgboost_v8
   prop:
     primary: prop_over_under_2_5_xgboost_v1
+    over_under_2_5: prop_over_under_2_5_xgboost_v1
 registry_name: ufc_model_registry
 version: 1
