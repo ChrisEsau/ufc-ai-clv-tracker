@@ -282,7 +282,7 @@ split:
   mode: train_calibration_test
   train_end_date: '2022-12-31'
   calibration_end_date: '2023-12-31'
-  train_start_date: '2018-01-01'
+  train_start_date: '2010-01-01'
 symmetry:
   enabled: true
   source: feature_view_flipped
@@ -296,9 +296,6 @@ params:
   learning_rate: 0.04
   subsample: 0.9
   colsample_bytree: 0.9
-  min_child_weight: 1
-  reg_lambda: 0.5
-  reg_alpha: 0.0
   random_state: 42
   eval_metric: logloss
 metrics:
