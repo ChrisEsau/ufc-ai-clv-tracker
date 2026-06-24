@@ -26,12 +26,14 @@ from pipeline.common.paths import (
     CANONICAL_MARKET_AUDIT_PATH,
     CANONICAL_MARKET_CATALOG_PATH,
     DRAFTKINGS_MARKET_DIAGNOSTIC_PATH,
+    FANDUEL_MARKET_DIAGNOSTIC_PATH,
     ensure_data_dirs,
 )
 from pipeline.market.normalizers.canonical_market_schema import (
     ensure_canonical_market_audit_columns,
 )
 from pipeline.market.normalizers.draftkings import normalize_draftkings_diagnostic_rows
+from pipeline.market.normalizers.fanduel import normalize_fanduel_diagnostic_rows
 
 
 NormalizerFn = Callable[[pd.DataFrame], pd.DataFrame]
@@ -55,6 +57,13 @@ NORMALIZER_REGISTRY: dict[str, ProviderNormalizerConfig] = {
         bookmaker="DraftKings",
         input_path=DRAFTKINGS_MARKET_DIAGNOSTIC_PATH,
         normalizer=normalize_draftkings_diagnostic_rows,
+    ),
+    "fanduel": ProviderNormalizerConfig(
+        provider="fanduel",
+        source="fanduel_public",
+        bookmaker="FanDuel",
+        input_path=FANDUEL_MARKET_DIAGNOSTIC_PATH,
+        normalizer=normalize_fanduel_diagnostic_rows,
     ),
 }
 
