@@ -49,7 +49,6 @@ def _clean_xgboost_params(params: dict[str, Any]) -> dict[str, Any]:
     """Remove non-XGBClassifier constructor keys from model params."""
 
     blocked = {
-        "early_stopping_rounds",
         "callbacks",
         "eval_set",
         "verbose",
@@ -111,7 +110,8 @@ def train_xgboost_classifier(
         # Compatibility path for XGBoost versions that do not accept
         # early_stopping_rounds in the constructor.
         if early_enabled:
-            model = XGBClassifier(**_clean_xgboost_params({k: v for k, v in final_params.items() if k != "early_stopping_rounds"}))
+            fallback_params = _clean_xgboost_params({k: v for k, v in final_params.items() if k != "early_stopping_rounds"})
+            model = XGBClassifier(**fallback_params)
             model.fit(X_train, y_train, early_stopping_rounds=early_rounds, **fit_kwargs)
         else:
             raise
