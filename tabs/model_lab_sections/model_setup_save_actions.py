@@ -28,9 +28,11 @@ def _artifact_dir_for_market(model_id: str, market_key: str) -> str:
 
 
 def _active_primary(registry: dict[str, Any], context: dict[str, Any]) -> bool:
-    family = context.get("model_family", "")
-    model_id = context.get("model_id", "")
-    return registry.get("active_models", {}).get(family, {}).get("primary") == model_id
+    family = str(context.get("model_family") or "")
+    market_key = str(context.get("market_key") or "")
+    model_id = str(context.get("model_id") or "")
+    active_family = (registry.get("active_models", {}).get(family) or {})
+    return str(active_family.get(market_key) or active_family.get("primary") or "") == model_id
 
 
 def apply_advanced_config_updates(
@@ -139,7 +141,7 @@ def delete_model(context: dict[str, Any], registry: dict[str, Any]) -> tuple[boo
     if status == "production":
         return False, "Production models cannot be deleted."
     if _active_primary(registry, context):
-        return False, "Active primary models cannot be deleted. Change active model first."
+        return False, "Active production models cannot be deleted. Change active model first."
     config_path = context.get("config_path", "")
     if config_path:
         ok, msg = github_delete_file(config_path, f"Delete model config {model_id}")
