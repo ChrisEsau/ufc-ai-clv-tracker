@@ -40,6 +40,11 @@ def parse_args() -> argparse.Namespace:
         help="Model family used when --model-id is not supplied.",
     )
     parser.add_argument(
+        "--market-key",
+        default=None,
+        help="Optional market key for market-scoped active model resolution, e.g. goes_distance.",
+    )
+    parser.add_argument(
         "--registry-path",
         default="configs/models/model_registry.yaml",
         help="Path to model registry YAML.",
@@ -80,6 +85,7 @@ def main() -> None:
         model_family=args.model_family,
         registry=registry,
         model_id=args.model_id,
+        market_key=args.market_key,
     )
     model_entry = get_model_entry(model_id, registry)
     model_config = load_model_config(Path(model_entry["config_path"]), require_prediction=True)
@@ -97,6 +103,8 @@ def main() -> None:
     print("=" * 80)
     print("LIVE FIGHT FEATURE INSPECTION")
     print("=" * 80)
+    print(f"Model family: {args.model_family}")
+    print(f"Market key: {args.market_key or 'registry primary'}")
     print(f"Model ID: {model_id}")
     print(f"Live features path: {live_features_path}")
     print(f"Event: {row.get('event_name', '')}")
