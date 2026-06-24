@@ -156,7 +156,7 @@ prediction:
     source: fixed
     value: 0.5
   format: multiclass
-  market_key: method_of_victory
+  market_key: exact_method
   prediction_type: multiclass_prop
   class_labels:
   - ko_tko
@@ -167,6 +167,6 @@ prediction:
 notes:
 - Draft fight-level multiclass method model.
 - Class probabilities sum to 100 percent across ko_tko, submission, and decision.
-- This powers method-level fight props and can derive goes-distance/inside-distance
-  probabilities.
+- Prediction output is mapped to the sportsbook-compatible exact_method market.
+- This powers fight-level exact-method props and can derive goes-distance/inside-distance probabilities.
 - This does not yet model fighter-specific method-of-victory markets.
