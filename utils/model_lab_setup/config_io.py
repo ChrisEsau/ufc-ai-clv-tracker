@@ -13,6 +13,7 @@ DEFAULT_SECTIONS: dict[str, Any] = {
     "split": {},
     "calibration": {},
     "params": {},
+    "early_stopping": {},
     "prediction": {"probability": {}, "threshold": {}},
     "features": {},
     "artifacts": {},
@@ -61,6 +62,8 @@ def normalize_model_config(config: dict[str, Any]) -> dict[str, Any]:
         prediction["threshold"] = {}
     if not isinstance(normalized.get("symmetry"), dict):
         normalized["symmetry"] = {}
+    if not isinstance(normalized.get("early_stopping"), dict):
+        normalized["early_stopping"] = {}
     return normalized
 
 
@@ -122,6 +125,14 @@ def build_config_payload_from_form(context: dict[str, Any], form_payload: dict[s
     params = hyperparameters.get("params") or {}
     if params:
         config["params"] = deepcopy(params)
+
+    early_payload = hyperparameters.get("early_stopping")
+    if isinstance(early_payload, dict):
+        existing_early_stopping = context.get("config", {}).get("early_stopping")
+        if bool(early_payload.get("enabled", False)) or existing_early_stopping is not None:
+            config["early_stopping"] = deepcopy(early_payload)
+        else:
+            config.pop("early_stopping", None)
 
     feature_config = config.setdefault("features", {})
     for key in ["selected_bundles", "include_features", "exclude_features", "resolved_features", "expected_feature_count"]:
