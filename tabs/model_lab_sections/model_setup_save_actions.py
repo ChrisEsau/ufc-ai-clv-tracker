@@ -28,11 +28,18 @@ def _artifact_dir_for_market(model_id: str, market_key: str) -> str:
 
 
 def _active_primary(registry: dict[str, Any], context: dict[str, Any]) -> bool:
-    family = str(context.get("model_family") or "")
-    market_key = str(context.get("market_key") or "")
+    family = str(context.get("model_family") or "").strip().lower()
+    market_key = str(context.get("market_key") or "").strip().lower()
     model_id = str(context.get("model_id") or "")
     active_family = (registry.get("active_models", {}).get(family) or {})
-    return str(active_family.get(market_key) or active_family.get("primary") or "") == model_id
+    if market_key:
+        market_model = active_family.get(market_key)
+        if market_model:
+            return str(market_model) == model_id
+        if family == "moneyline" and market_key == "moneyline":
+            return str(active_family.get("primary") or "") == model_id
+        return False
+    return str(active_family.get("primary") or "") == model_id
 
 
 def apply_advanced_config_updates(
