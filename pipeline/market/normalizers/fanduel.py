@@ -15,6 +15,7 @@ from typing import Any
 import pandas as pd
 
 from pipeline.market.normalizers.canonical_market_schema import ensure_canonical_market_columns
+from pipeline.market.normalizers.comparison_key import build_comparison_key
 
 
 def _safe_lower(value: Any) -> str:
@@ -107,6 +108,7 @@ def normalize_fanduel_diagnostic_rows(diagnostic_df: pd.DataFrame) -> pd.DataFra
                 "provider_market_type_name": row.get("provider_market_type_name"),
                 "provider_selection_id": row.get("provider_selection_id"),
                 "provider_selection_name": row.get("raw_selection_name"),
+                "normalized_selection_name": fighter_name or row.get("raw_selection_name"),
                 "fighter_name": fighter_name,
                 "fighter_provider_id": None,
                 "american_odds": row.get("price_american"),
@@ -122,4 +124,7 @@ def normalize_fanduel_diagnostic_rows(diagnostic_df: pd.DataFrame) -> pd.DataFra
             }
         )
 
-    return ensure_canonical_market_columns(pd.DataFrame(rows))
+    canonical_df = pd.DataFrame(rows)
+    if not canonical_df.empty:
+        canonical_df["comparison_key"] = canonical_df.apply(build_comparison_key, axis=1)
+    return ensure_canonical_market_columns(canonical_df)
