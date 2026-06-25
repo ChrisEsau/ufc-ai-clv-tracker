@@ -82,7 +82,7 @@ def _base_signal(
     suggested_action: str,
 ) -> dict:
     return {
-        "signal_id": _signal_id(run_id, signal_type, row.get("fight_id"), row.get("market_key"), row.get("outcome_key"), row.get("bookmaker")),
+        "signal_id": _signal_id(run_id, signal_type, row.get("fight_id"), row.get("market_key"), row.get("comparison_key"), row.get("bookmaker")),
         "signal_run_id": run_id,
         "signal_timestamp": timestamp,
         "signal_type": signal_type,
@@ -97,6 +97,7 @@ def _base_signal(
         "market_key": row.get("market_key"),
         "market_display": _market_display(row),
         "outcome_key": row.get("outcome_key"),
+        "comparison_key": row.get("comparison_key"),
         "outcome_display": _outcome_display(row),
         "side": row.get("side"),
         "fighter_name": row.get("fighter_name"),
@@ -117,8 +118,8 @@ def build_market_signals(market_outcomes: pd.DataFrame, run_id: str, timestamp: 
 
     rows: list[dict] = []
 
-    group_cols = ["fight_id", "market_key", "outcome_key"]
-    usable = df.dropna(subset=["fight_id", "market_key", "outcome_key", "bookmaker", "american_odds"]).copy()
+    group_cols = ["fight_id", "market_key", "comparison_key"]
+    usable = df.dropna(subset=["fight_id", "market_key", "comparison_key", "bookmaker", "american_odds"]).copy()
 
     for _, group in usable.groupby(group_cols, dropna=False):
         if group["bookmaker"].nunique() < 2:

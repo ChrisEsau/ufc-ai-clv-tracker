@@ -62,6 +62,7 @@ def build_history_rows(market_outcomes: pd.DataFrame, refresh_id: str, refresh_t
                 "market_key": row.get("market_key"),
                 "market_display": _market_display(row),
                 "outcome_key": row.get("outcome_key"),
+                "comparison_key": row.get("comparison_key"),
                 "outcome_display": _outcome_display(row),
                 "side": row.get("side"),
                 "fighter_name": row.get("fighter_name"),
