@@ -212,15 +212,65 @@ def run_monday_reset(*, mode: str, max_events: int | None, auto_append: bool, ru
             _record(results, "run_clv_tracker", "Run CLV Tracker", "skipped", "run_clv=false")
         _complete_step_status("Completed Reconcile Performance")
 
-        _record_step_status("prepare_next_week", "Prepare Next Week", 5, step_total)
-        _record(
+        _record_step_status("initialize_upcoming_event", "Initialize Upcoming Event", 5, step_total)
+        _run_command_step(
             results,
-            "prepare_next_week",
-            "Prepare Next Week",
-            "planned",
-            "Weekly archive/reset and model performance runners are not implemented yet.",
+            "build_fighter_state",
+            "Build Fighter State V2",
+            _python_module("pipeline.features.run_build_fighter_state"),
+            [
+                "data/features/fighter_state_history.parquet",
+                "data/features/latest_fighter_state.parquet",
+            ],
         )
-        _complete_step_status("Completed Prepare Next Week")
+        _run_command_step(
+            results,
+            "build_feature_view",
+            "Build Feature View V2",
+            _python_module(
+                "pipeline.features.run_build_feature_view",
+                "--config",
+                "configs/feature_views/moneyline_base.yaml",
+            ),
+            ["data/features/moneyline_feature_view.parquet"],
+        )
+        _run_command_step(
+            results,
+            "run_production_predictions",
+            "Run Production Registry Predictions",
+            _python_module(
+                "pipeline.modeling.run_production_predictions",
+                "--registry-path",
+                "configs/models/model_registry.yaml",
+            ),
+            ["data/audits/production_prediction_audit.parquet"],
+        )
+        _run_command_step(
+            results,
+            "run_betting_outcomes_v2",
+            "Run Betting Outcomes V2",
+            _python_module(
+                "pipeline.betting.run_betting_outcomes_v2",
+                "--model-mode",
+                "production",
+            ),
+            ["data/predictions/betting_outcomes.parquet"],
+        )
+        _run_command_step(
+            results,
+            "capture_model_market_snapshots",
+            "Capture Model-Market Snapshots",
+            _python_module(
+                "pipeline.snapshots.run_capture_model_market_snapshots",
+                "--model-mode",
+                "production",
+            ),
+            [
+                "data/snapshots/model_market_snapshots.parquet",
+                "data/audits/model_market_snapshot_audit.parquet",
+            ],
+        )
+        _complete_step_status("Completed Initialize Upcoming Event")
 
         complete_runbook("Monday Reset completed", runbook_id=RUNBOOK_ID)
     except Exception as exc:

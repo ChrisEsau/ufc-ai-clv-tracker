@@ -69,46 +69,7 @@ def build_steps(args: argparse.Namespace) -> list[Step]:
     if not _is_uncapped(args.max_fanduel_events):
         fanduel_matched_discovery_command.extend(["--max-events", str(args.max_fanduel_events)])
 
-    production_prediction_command = _python_module(
-        "pipeline.modeling.run_production_predictions",
-        "--registry-path",
-        args.model_registry_path,
-    )
-    if bool(args.prefer_raw_model):
-        production_prediction_command.append("--prefer-raw-model")
-
     return [
-        Step(
-            step_id="run_predictions",
-            name="Run All Production Predictions",
-            substeps=[
-                Substep(
-                    substep_id="build_fighter_state",
-                    name="Build Fighter State V2",
-                    command=_python_module("pipeline.features.run_build_fighter_state"),
-                    expected_outputs=[
-                        "data/features/fighter_state_history.parquet",
-                        "data/features/latest_fighter_state.parquet",
-                    ],
-                ),
-                Substep(
-                    substep_id="build_feature_view",
-                    name="Build Feature View V2",
-                    command=_python_module(
-                        "pipeline.features.run_build_feature_view",
-                        "--config",
-                        args.feature_view_config,
-                    ),
-                    expected_outputs=[args.feature_view_output],
-                ),
-                Substep(
-                    substep_id="run_production_predictions",
-                    name="Run Production Registry Predictions",
-                    command=production_prediction_command,
-                    expected_outputs=["data/audits/production_prediction_audit.parquet"],
-                ),
-            ],
-        ),
         Step(
             step_id="get_market_odds",
             name="Get Market Odds",
@@ -206,48 +167,9 @@ def build_steps(args: argparse.Namespace) -> list[Step]:
             ],
         ),
         Step(
-            step_id="build_betting_outcomes",
-            name="Build Betting Outcomes",
-            substeps=[
-                Substep(
-                    substep_id="run_betting_outcomes_v2",
-                    name="Run Betting Outcomes V2",
-                    command=_python_module(
-                        "pipeline.betting.run_betting_outcomes_v2",
-                        "--model-mode",
-                        args.model_mode,
-                    ),
-                    expected_outputs=["data/predictions/betting_outcomes.parquet"],
-                ),
-                Substep(
-                    substep_id="run_betting_join_key_diagnostic",
-                    name="Run Betting Join Key Diagnostic",
-                    command=_python_module(
-                        "pipeline.betting.run_betting_join_key_diagnostic",
-                        "--model-mode",
-                        args.model_mode,
-                    ),
-                    expected_outputs=["data/audits/ufc_betting_join_key_diagnostic.parquet"],
-                ),
-            ],
-        ),
-        Step(
             step_id="capture_snapshots",
             name="Capture Snapshots",
             substeps=[
-                Substep(
-                    substep_id="capture_model_market_snapshots",
-                    name="Capture Model-Market Snapshots",
-                    command=_python_module(
-                        "pipeline.snapshots.run_capture_model_market_snapshots",
-                        "--model-mode",
-                        args.snapshot_model_mode,
-                    ),
-                    expected_outputs=[
-                        "data/snapshots/model_market_snapshots.parquet",
-                        "data/audits/model_market_snapshot_audit.parquet",
-                    ],
-                ),
                 Substep(
                     substep_id="capture_market_intelligence_history",
                     name="Capture Market Intelligence History",
@@ -318,17 +240,6 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--draftkings-card-min-single-score", default="70")
     parser.add_argument("--market-min-match-score", default="65")
     parser.add_argument("--draftkings-registry-path", default="configs/market/providers/draftkings_ufc_registry.yaml")
-    parser.add_argument("--model-registry-path", default="configs/models/model_registry.yaml")
-    parser.add_argument("--feature-view-config", default="configs/feature_views/moneyline_base.yaml")
-    parser.add_argument("--feature-view-output", default="data/features/moneyline_feature_view.parquet")
-    parser.add_argument("--model-mode", choices=["production", "all", "single"], default="production")
-    parser.add_argument("--prefer-raw-model", action="store_true")
-    parser.add_argument(
-        "--snapshot-model-mode",
-        choices=["production", "all", "single"],
-        default="production",
-        help="Models included in append-only model-market snapshots.",
-    )
     return parser.parse_args(argv)
 
 
