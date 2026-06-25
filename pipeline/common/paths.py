@@ -106,6 +106,8 @@ CANONICAL_MARKET_CATALOG_PATH = MARKET_DIR / "canonical_market_catalog.parquet"
 CANONICAL_MARKET_AUDIT_PATH = AUDITS_DIR / "canonical_market_catalog_audit.parquet"
 MARKET_SIGNALS_PATH = MARKET_DIR / "market_signals.parquet"
 MARKET_SIGNALS_AUDIT_PATH = AUDITS_DIR / "market_signals_audit.parquet"
+MARKET_INTELLIGENCE_HISTORY_PATH = MARKET_DIR / "market_intelligence_history.parquet"
+MARKET_INTELLIGENCE_HISTORY_AUDIT_PATH = AUDITS_DIR / "market_intelligence_history_audit.parquet"
 
 MODEL_MARKET_SNAPSHOTS_PATH = SNAPSHOTS_DIR / "model_market_snapshots.parquet"
 MODEL_MARKET_SNAPSHOT_AUDIT_PATH = AUDITS_DIR / "model_market_snapshot_audit.parquet"

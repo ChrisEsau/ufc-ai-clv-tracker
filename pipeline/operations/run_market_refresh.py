@@ -249,6 +249,15 @@ def build_steps(args: argparse.Namespace) -> list[Step]:
                     ],
                 ),
                 Substep(
+                    substep_id="capture_market_intelligence_history",
+                    name="Capture Market Intelligence History",
+                    command=_python_module("pipeline.market.run_capture_market_intelligence_history"),
+                    expected_outputs=[
+                        "data/market/market_intelligence_history.parquet",
+                        "data/audits/market_intelligence_history_audit.parquet",
+                    ],
+                ),
+                Substep(
                     substep_id="build_market_signals",
                     name="Build Market Signals",
                     command=_python_module("pipeline.market.run_build_market_signals"),

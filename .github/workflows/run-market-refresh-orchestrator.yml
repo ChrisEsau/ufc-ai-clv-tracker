@@ -120,6 +120,8 @@ jobs:
             data/audits/ufc_betting_join_key_diagnostic.parquet \
             data/snapshots/model_market_snapshots.parquet \
             data/audits/model_market_snapshot_audit.parquet \
+            data/market/market_intelligence_history.parquet \
+            data/audits/market_intelligence_history_audit.parquet \
             data/market/market_signals.parquet \
             data/audits/market_signals_audit.parquet || true
 
