@@ -359,14 +359,20 @@ def _inject_css() -> None:
     st.markdown("""
     <style>
     .bb-card { background:linear-gradient(180deg, rgba(16,28,45,.92), rgba(13,23,39,.94)); border:1px solid rgba(38,54,74,.96); border-radius:10px; padding:.8rem; }
-    .bb-grid { display:grid; grid-template-columns:.3fr 4.8fr .9fr 1.15fr 1.1fr; align-items:center; gap:.4rem; color:#f5f7fb; }
+    .bb-grid { display:grid; grid-template-columns:40px 6fr 90px 130px 120px 100px; align-items:center; gap:.55rem; color:#f5f7fb; }
     .bb-head { color:#dbe7f5; font-size:.72rem; font-weight:900; text-transform:uppercase; border-bottom:1px solid rgba(38,54,74,.95); padding-bottom:.5rem; }
+    .bb-fight-head { display:grid; grid-template-columns:1.5rem 1.8fr .8fr .8fr .8fr .8fr .8fr; gap:.45rem; align-items:center; }
+    .bb-fight-head span { color:#dbe7f5; font-size:.66rem; font-weight:900; text-align:center; white-space:nowrap; }
+    .bb-fight-head span:nth-child(1), .bb-fight-head span:nth-child(2) { text-align:left; }
     .bb-row { border-bottom:1px solid rgba(38,54,74,.75); padding:.55rem 0; }
     .bb-fight { display:flex; flex-direction:column; gap:.35rem; }
-    .bb-corner { display:grid; grid-template-columns:1.5rem 1.8fr .8fr .8fr .8fr .8fr .8fr; gap:.35rem; align-items:center; }
+    .bb-corner { display:grid; grid-template-columns:1.5rem 1.8fr .8fr .8fr .8fr .8fr .8fr; gap:.45rem; align-items:center; }
+    .bb-corner span:nth-child(n+3) { text-align:center; }
     .bb-prop { display:grid; grid-template-columns:1.5rem 1.7fr 1.2fr .8fr .8fr .8fr .8fr .8fr; gap:.35rem; align-items:center; }
     .bb-subtle { color:#dbe7f5; font-size:.76rem; }
     .bb-badge { border-radius:4px; width:1.05rem; height:1.05rem; display:inline-flex; justify-content:center; align-items:center; color:#fff; font-size:.68rem; font-weight:900; }
+    .bb-book { display:inline-flex; align-items:center; justify-content:center; gap:.25rem; min-width:3.2rem; padding:.28rem .55rem; border-radius:7px; border:1px solid rgba(53,85,122,.95); background:rgba(19,34,53,.95); color:#f5f7fb; font-size:.76rem; font-weight:900; white-space:nowrap; }
+    .bb-row > div:last-child { text-align:center; }
     .bb-green { color:#35d96b; } .bb-red { color:#ef4444; } .bb-blue { color:#3b82f6; } .bb-yellow { color:#facc15; }
     .bb-ring { width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:auto; }
     .bb-ring div { background:#0d1727; width:39px; height:39px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#f5f7fb; font-size:.78rem; font-weight:900; }
@@ -383,6 +389,23 @@ def _ring(value) -> str:
     value = _as_float(value, 0) or 0
     color = "#35d96b" if value >= 70 else "#facc15" if value >= 60 else "#ef4444"
     return f'<div class="bb-ring" style="background: conic-gradient({color} {value:.0f}%, rgba(148,163,184,.24) 0);"><div>{value:.0f}%</div></div>'
+
+
+def _bookmaker_badge(bookmaker) -> str:
+    """Render compact sportsbook badge for Betting Board rows."""
+
+    name = str(bookmaker or "").strip()
+    if not name:
+        return '<span class="bb-book">—</span>'
+
+    labels = {
+        "DraftKings": "🟩 DK",
+        "FanDuel": "🟦 FD",
+        "BetMGM": "🟨 MGM",
+        "Caesars": "🟥 CZR",
+    }
+    return f'<span class="bb-book">{_escape(labels.get(name, name))}</span>'
+
 
 
 def _corner(label, fighter, prob, odds, implied, edge, ev, color):
@@ -448,8 +471,27 @@ def _render_table(rows: pd.DataFrame):
         body.append('<div class="bb-grid bb-row">'
             f'<span>{i+1}</span><div class="bb-fight">'
             + fight_html
-            + f'</div><div>{_ring(row.get("confidence_pct"))}</div><b class="{rec_class}">{_escape(rec)}</b><b>{stake}</b></div>')
-    head = '<div class="bb-grid bb-head"><span></span><div>Fight / Market</div><span>Confidence</span><span>Status</span><span>Stake</span></div>'
+            + f'</div><div>{_ring(row.get("confidence_pct"))}</div><b class="{rec_class}">{_escape(rec)}</b><b>{stake}</b><div>{_bookmaker_badge(row.get("bookmaker"))}</div></div>')
+    head = (
+        '<div class="bb-grid bb-head">'
+        '<span></span>'
+        '<div>'
+        '<div style="margin-bottom:.35rem;">Fight / Market</div>'
+        '<div class="bb-fight-head">'
+        '<span></span><span></span>'
+        '<span>Model Prob</span>'
+        '<span>Odds</span>'
+        '<span>Implied Prob</span>'
+        '<span>Edge</span>'
+        '<span>EV ($100)</span>'
+        '</div>'
+        '</div>'
+        '<span>Confidence</span>'
+        '<span>Status</span>'
+        '<span>Stake</span>'
+        '<span>Book</span>'
+        '</div>'
+    )
     st.html('<div class="bb-card">' + head + ''.join(body) + '</div>')
 
 
