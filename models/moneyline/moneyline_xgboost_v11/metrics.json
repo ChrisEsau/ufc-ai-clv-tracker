@@ -1,6 +1,6 @@
 {
   "model_id": "moneyline_xgboost_v11",
-  "generated_at": "2026-06-24T13:50:19.559065+00:00",
+  "generated_at": "2026-06-25T02:18:30.015230+00:00",
   "config_path": "configs/models/moneyline_xgboost_v11.yaml",
   "feature_count": 123,
   "best_threshold": 0.47,
