@@ -119,7 +119,9 @@ jobs:
             data/audits/ufc_betting_outcomes_audit.parquet \
             data/audits/ufc_betting_join_key_diagnostic.parquet \
             data/snapshots/model_market_snapshots.parquet \
-            data/audits/model_market_snapshot_audit.parquet || true
+            data/audits/model_market_snapshot_audit.parquet \
+            data/market/market_signals.parquet \
+            data/audits/market_signals_audit.parquet || true
 
           find data/predictions/by_model -path '*/model_outcomes.parquet' -type f -print0 2>/dev/null | xargs -0 -r git add -f
           git add -f data/audits/ufc_live_card_build_audit.parquet 2>/dev/null || true
