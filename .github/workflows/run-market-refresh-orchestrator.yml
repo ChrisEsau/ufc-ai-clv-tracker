@@ -16,6 +16,11 @@ on:
         required: false
         default: "all"
         type: string
+      max_fanduel_events:
+        description: "Optional max matched FanDuel events; blank/all = all"
+        required: false
+        default: "all"
+        type: string
       model_mode:
         description: "Betting outcomes model mode"
         required: true
@@ -75,6 +80,7 @@ jobs:
             --model-mode "${{ inputs.model_mode }}"
             --snapshot-model-mode "${{ inputs.snapshot_model_mode }}"
             --max-draftkings-events "${{ inputs.max_draftkings_events }}"
+            --max-fanduel-events "${{ inputs.max_fanduel_events }}"
           )
 
           python -m pipeline.operations.run_market_refresh "${ARGS[@]}"
@@ -100,6 +106,11 @@ jobs:
             data/market/draftkings_event_card_matches.parquet \
             data/market/draftkings_market_diagnostic.parquet \
             data/market/draftkings_raw_index.parquet \
+            data/market/fanduel_market_catalog.parquet \
+            data/market/fanduel_market_diagnostic.parquet \
+            data/market/fanduel_event_card_matches.parquet \
+            data/market/fanduel_event_index.parquet \
+            data/market/draftkings_market_catalog.parquet \
             data/market/canonical_market_catalog.parquet \
             data/market/market_outcomes.parquet \
             data/audits/canonical_market_catalog_audit.parquet \

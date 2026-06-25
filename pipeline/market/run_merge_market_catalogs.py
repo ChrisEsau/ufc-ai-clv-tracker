@@ -25,67 +25,6 @@ DEFAULT_INPUTS = [
     FANDUEL_MARKET_CATALOG_PATH,
 ]
 
-def _stabilize_catalog_dtypes(df: pd.DataFrame) -> pd.DataFrame:
-    """Avoid parquet write failures from mixed provider dtypes."""
-
-    out = df.copy()
-    string_columns = [
-        "snapshot_run_id",
-        "snapshot_timestamp",
-        "source",
-        "bookmaker",
-        "provider_event_id",
-        "event_name",
-        "event_start_timestamp",
-        "provider_subcategory_id",
-        "provider_subcategory_name",
-        "provider_market_id",
-        "provider_market_name",
-        "provider_market_type_id",
-        "provider_market_type_name",
-        "provider_selection_id",
-        "provider_selection_name",
-        "market_family",
-        "market_key",
-        "outcome_type",
-        "outcome_key",
-        "side",
-        "fighter_name",
-        "fighter_provider_id",
-        "condition_key",
-        "method_key",
-        "raw_payload_path",
-        "request_url",
-    ]
-    numeric_columns = [
-        "line",
-        "american_odds",
-        "decimal_odds",
-        "true_odds",
-        "implied_probability",
-        "round_number",
-    ]
-    bool_columns = [
-        "is_conditional_no_action",
-        "is_parlay",
-        "is_boost",
-        "is_promo",
-    ]
-
-    for column in string_columns:
-        if column in out.columns:
-            out[column] = out[column].astype("string")
-
-    for column in numeric_columns:
-        if column in out.columns:
-            out[column] = pd.to_numeric(out[column], errors="coerce")
-
-    for column in bool_columns:
-        if column in out.columns:
-            out[column] = out[column].astype("boolean")
-
-    return out
-
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Merge provider-specific market catalogs.")
@@ -138,7 +77,6 @@ def merge_market_catalogs(
         raise RuntimeError("No provider market catalogs available to merge.")
 
     out = ensure_canonical_market_columns(out)
-    out = _stabilize_catalog_dtypes(out)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     out.to_parquet(output_path, index=False)

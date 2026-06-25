@@ -121,12 +121,56 @@ def _read_parquet(path: Path) -> pd.DataFrame:
     return pd.read_parquet(path)
 
 
+def _stabilize_snapshot_dtypes(df: pd.DataFrame) -> pd.DataFrame:
+    """Avoid parquet failures from mixed dtypes after model/market joins."""
+
+    out = df.copy()
+
+    numeric_columns = [
+        "american_odds",
+        "decimal_odds",
+        "true_odds",
+        "implied_probability",
+        "model_probability",
+        "confidence_pct",
+        "edge",
+        "edge_pct",
+        "ev_dollars_at_100",
+        "recommended_stake",
+        "line",
+        "round_number",
+    ]
+    bool_columns = [
+        "is_bet_candidate",
+        "is_conditional_no_action",
+        "is_parlay",
+        "is_boost",
+        "is_promo",
+    ]
+
+    for column in numeric_columns:
+        if column in out.columns:
+            out[column] = pd.to_numeric(out[column], errors="coerce")
+
+    for column in bool_columns:
+        if column in out.columns:
+            out[column] = out[column].astype("boolean")
+
+    for column in out.columns:
+        if column not in numeric_columns and column not in bool_columns:
+            if out[column].dtype == "object":
+                out[column] = out[column].astype("string")
+
+    return out
+
+
 def _write_columns(df: pd.DataFrame, path: Path, columns: list[str]) -> None:
     out = df.copy()
     for column in columns:
         if column not in out.columns:
             out[column] = pd.NA
     path.parent.mkdir(parents=True, exist_ok=True)
+    out = _stabilize_snapshot_dtypes(out)
     out[columns].to_parquet(path, index=False)
 
 

@@ -61,6 +61,14 @@ def build_steps(args: argparse.Namespace) -> list[Step]:
     if not _is_uncapped(args.max_draftkings_events):
         matched_discovery_command.extend(["--max-events", str(args.max_draftkings_events)])
 
+    fanduel_matched_discovery_command = _python_module(
+        "pipeline.market.run_fanduel_matched_discovery",
+        "--sleep-seconds",
+        str(args.fanduel_sleep_seconds),
+    )
+    if not _is_uncapped(args.max_fanduel_events):
+        fanduel_matched_discovery_command.extend(["--max-events", str(args.max_fanduel_events)])
+
     production_prediction_command = _python_module(
         "pipeline.modeling.run_production_predictions",
         "--registry-path",
@@ -124,12 +132,6 @@ def build_steps(args: argparse.Namespace) -> list[Step]:
                     expected_outputs=["data/market/draftkings_event_card_matches.parquet"],
                 ),
                 Substep(
-                    substep_id="update_target_event_commence_time",
-                    name="Update Target Event Commence Time",
-                    command=_python_module("pipeline.market.run_update_target_event_commence_time"),
-                    expected_outputs=["data/cards/ufc_selected_live_card_event.parquet"],
-                ),
-                Substep(
                     substep_id="draftkings_matched_discovery",
                     name="Discover DraftKings Markets",
                     command=matched_discovery_command,
@@ -142,11 +144,53 @@ def build_steps(args: argparse.Namespace) -> list[Step]:
                     substep_id="draftkings_normalize_markets",
                     name="Normalize DraftKings Markets",
                     command=_python_module("pipeline.market.run_normalize_provider_markets", "--provider", "draftkings"),
+                    expected_outputs=["data/market/draftkings_market_catalog.parquet"],
+                ),
+                Substep(
+                    substep_id="fanduel_event_index",
+                    name="Build FanDuel Event Index",
+                    command=_python_module("pipeline.market.run_fanduel_event_index"),
+                    expected_outputs=["data/market/fanduel_event_index.parquet"],
+                ),
+                Substep(
+                    substep_id="fanduel_card_filter",
+                    name="Match FanDuel Events To Card",
+                    command=_python_module(
+                        "pipeline.market.run_fanduel_card_filter",
+                        "--min-match-score",
+                        str(args.draftkings_card_min_match_score),
+                        "--min-single-score",
+                        str(args.draftkings_card_min_single_score),
+                    ),
+                    expected_outputs=["data/market/fanduel_event_card_matches.parquet"],
+                ),
+                Substep(
+                    substep_id="fanduel_matched_discovery",
+                    name="Discover FanDuel Markets",
+                    command=fanduel_matched_discovery_command,
+                    expected_outputs=["data/market/fanduel_market_diagnostic.parquet"],
+                ),
+                Substep(
+                    substep_id="fanduel_normalize_markets",
+                    name="Normalize FanDuel Markets",
+                    command=_python_module("pipeline.market.run_normalize_provider_markets", "--provider", "fanduel"),
+                    expected_outputs=["data/market/fanduel_market_catalog.parquet"],
+                ),
+                Substep(
+                    substep_id="merge_market_catalogs",
+                    name="Merge Provider Market Catalogs",
+                    command=_python_module("pipeline.market.run_merge_market_catalogs"),
                     expected_outputs=["data/market/canonical_market_catalog.parquet"],
                 ),
                 Substep(
-                    substep_id="draftkings_match_markets",
-                    name="Match DraftKings Markets To Live Card",
+                    substep_id="update_target_event_commence_time",
+                    name="Update Target Event Commence Time",
+                    command=_python_module("pipeline.market.run_update_target_event_commence_time"),
+                    expected_outputs=["data/cards/ufc_selected_live_card_event.parquet"],
+                ),
+                Substep(
+                    substep_id="match_markets",
+                    name="Match Merged Markets To Live Card",
                     command=_python_module(
                         "pipeline.market.run_market_matching",
                         "--registry-path",
@@ -249,7 +293,9 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the Market Refresh production runbook.")
     parser.add_argument("--mode", choices=["test", "production"], default="test")
     parser.add_argument("--max-draftkings-events", default="all", help="Optional max matched DraftKings events; use all/blank for every matched event.")
+    parser.add_argument("--max-fanduel-events", default="all", help="Optional max matched FanDuel events; use all/blank for every matched event.")
     parser.add_argument("--draftkings-sleep-seconds", default="3")
+    parser.add_argument("--fanduel-sleep-seconds", default="1")
     parser.add_argument("--draftkings-card-min-match-score", default="80")
     parser.add_argument("--draftkings-card-min-single-score", default="70")
     parser.add_argument("--market-min-match-score", default="65")
