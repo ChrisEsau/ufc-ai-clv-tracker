@@ -11,7 +11,7 @@ from pipeline.common.risk_settings import load_risk_settings
 
 NAV_ITEMS = [
     ("Betting Board", "▣", "Live EV board"),
-    ("Line Movement / CLV", "↗", "Market tracking"),
+    ("Market Intelligence", "↗", "Market signals"),
     ("Model Lab", "⌘", "Model diagnostics"),
     ("Data Maintenance", "▤", "Ingestion control"),
     ("Bankroll", "▥", "Ledger and risk"),
@@ -314,8 +314,9 @@ def render_sidebar():
 
     if page == "Betting Board":
         _render_betting_board_filters()
-    elif page == "Line Movement / CLV":
-        _render_clv_filters()
+    elif page == "Market Intelligence":
+        _sidebar_section("Market Intelligence", compact=True)
+        st.sidebar.caption("Filter signal feed inside the workspace.")
     elif page == "Model Lab":
         _render_model_lab_navigation()
     elif page == "Data Maintenance":

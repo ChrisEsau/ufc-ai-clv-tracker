@@ -4,7 +4,6 @@ from utils import sidebar as legacy_sidebar
 
 
 BACKTEST_WORKSPACE = ("Backtest", "◫")
-CLV_INTELLIGENCE_NAV_ITEM = ("CLV Intelligence", "◈", "Model-market validation")
 OPERATIONS_NAV_ITEM = ("Operations Center", "↻", "Run and monitor workflows")
 
 
@@ -21,21 +20,6 @@ def _ensure_backtest_workspace() -> None:
         workspaces.insert(performance_index + 1, BACKTEST_WORKSPACE)
     except ValueError:
         workspaces.append(BACKTEST_WORKSPACE)
-
-
-def _ensure_clv_intelligence_nav_item() -> None:
-    """Add the new candidate-based CLV workspace beside the legacy CLV page."""
-
-    nav_items = legacy_sidebar.NAV_ITEMS
-    names = [name for name, _, _ in nav_items]
-    if CLV_INTELLIGENCE_NAV_ITEM[0] in names:
-        return
-
-    try:
-        legacy_clv_index = names.index("Line Movement / CLV")
-        nav_items.insert(legacy_clv_index + 1, CLV_INTELLIGENCE_NAV_ITEM)
-    except ValueError:
-        nav_items.append(CLV_INTELLIGENCE_NAV_ITEM)
 
 
 def _ensure_operations_nav_item() -> None:
@@ -57,6 +41,5 @@ def render_sidebar():
     """Render the existing sidebar with modular navigation additions."""
 
     _ensure_backtest_workspace()
-    _ensure_clv_intelligence_nav_item()
     _ensure_operations_nav_item()
     return legacy_sidebar.render_sidebar()
