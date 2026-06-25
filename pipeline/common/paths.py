@@ -100,6 +100,8 @@ FANDUEL_RAW_DIR = MARKET_RAW_DIR / "fanduel"
 FANDUEL_MARKET_DIAGNOSTIC_PATH = MARKET_DIR / "fanduel_market_diagnostic.parquet"
 FANDUEL_EVENT_INDEX_PATH = MARKET_DIR / "fanduel_event_index.parquet"
 FANDUEL_EVENT_CARD_MATCH_PATH = MARKET_DIR / "fanduel_event_card_matches.parquet"
+DRAFTKINGS_MARKET_CATALOG_PATH = MARKET_DIR / "draftkings_market_catalog.parquet"
+FANDUEL_MARKET_CATALOG_PATH = MARKET_DIR / "fanduel_market_catalog.parquet"
 CANONICAL_MARKET_CATALOG_PATH = MARKET_DIR / "canonical_market_catalog.parquet"
 CANONICAL_MARKET_AUDIT_PATH = AUDITS_DIR / "canonical_market_catalog_audit.parquet"
 

@@ -25,7 +25,9 @@ import pandas as pd
 from pipeline.common.paths import (
     CANONICAL_MARKET_AUDIT_PATH,
     CANONICAL_MARKET_CATALOG_PATH,
+    DRAFTKINGS_MARKET_CATALOG_PATH,
     DRAFTKINGS_MARKET_DIAGNOSTIC_PATH,
+    FANDUEL_MARKET_CATALOG_PATH,
     FANDUEL_MARKET_DIAGNOSTIC_PATH,
     ensure_data_dirs,
 )
@@ -47,6 +49,7 @@ class ProviderNormalizerConfig:
     source: str
     bookmaker: str
     input_path: Path
+    output_path: Path
     normalizer: NormalizerFn
 
 
@@ -56,6 +59,7 @@ NORMALIZER_REGISTRY: dict[str, ProviderNormalizerConfig] = {
         source="draftkings_public",
         bookmaker="DraftKings",
         input_path=DRAFTKINGS_MARKET_DIAGNOSTIC_PATH,
+        output_path=DRAFTKINGS_MARKET_CATALOG_PATH,
         normalizer=normalize_draftkings_diagnostic_rows,
     ),
     "fanduel": ProviderNormalizerConfig(
@@ -63,6 +67,7 @@ NORMALIZER_REGISTRY: dict[str, ProviderNormalizerConfig] = {
         source="fanduel_public",
         bookmaker="FanDuel",
         input_path=FANDUEL_MARKET_DIAGNOSTIC_PATH,
+        output_path=FANDUEL_MARKET_CATALOG_PATH,
         normalizer=normalize_fanduel_diagnostic_rows,
     ),
 }
@@ -85,8 +90,8 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--output-path",
-        default=str(CANONICAL_MARKET_CATALOG_PATH),
-        help="Canonical market catalog output path.",
+        default=None,
+        help="Provider market catalog output path. Defaults to provider-specific catalog path.",
     )
     parser.add_argument(
         "--audit-path",
@@ -214,7 +219,7 @@ def normalize_provider_markets(
     *,
     provider: str,
     input_path: Path | None = None,
-    output_path: Path = CANONICAL_MARKET_CATALOG_PATH,
+    output_path: Path | None = None,
     audit_path: Path = CANONICAL_MARKET_AUDIT_PATH,
     allow_provider_event_drop: bool = False,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -225,6 +230,7 @@ def normalize_provider_markets(
 
     provider_config = NORMALIZER_REGISTRY[provider]
     resolved_input_path = Path(input_path or provider_config.input_path)
+    resolved_output_path = Path(output_path or provider_config.output_path)
 
     if not resolved_input_path.exists():
         raise FileNotFoundError(f"Provider diagnostic input not found: {resolved_input_path}")
@@ -242,9 +248,9 @@ def normalize_provider_markets(
         output_df=output_df,
     )
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+    resolved_output_path.parent.mkdir(parents=True, exist_ok=True)
     audit_path.parent.mkdir(parents=True, exist_ok=True)
-    output_df.to_parquet(output_path, index=False)
+    output_df.to_parquet(resolved_output_path, index=False)
     audit_df.to_parquet(audit_path, index=False)
 
     return output_df, audit_df
@@ -257,7 +263,7 @@ def main() -> None:
     output_df, audit_df = normalize_provider_markets(
         provider=args.provider,
         input_path=Path(args.input_path) if args.input_path else None,
-        output_path=Path(args.output_path),
+        output_path=Path(args.output_path) if args.output_path else None,
         audit_path=Path(args.audit_path),
         allow_provider_event_drop=bool(args.allow_provider_event_drop),
     )
@@ -266,7 +272,8 @@ def main() -> None:
     print("NORMALIZE PROVIDER MARKETS")
     print("=" * 80)
     print("Provider:", args.provider)
-    print("Output path:", args.output_path)
+    provider_config = NORMALIZER_REGISTRY[args.provider]
+    print("Output path:", args.output_path or str(provider_config.output_path))
     print("Audit path:", args.audit_path)
     print("Canonical rows:", len(output_df))
 
