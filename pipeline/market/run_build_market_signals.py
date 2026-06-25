@@ -19,6 +19,7 @@ from pipeline.market.signals.schema import (
 )
 from pipeline.market.signals.movement import build_movement_signals
 from pipeline.market.signals.price import build_price_signals
+from pipeline.market.signals.steam import build_steam_signals
 
 
 def _now() -> tuple[str, str]:
@@ -45,6 +46,7 @@ def main() -> None:
     if MARKET_INTELLIGENCE_HISTORY_PATH.exists():
         history = pd.read_parquet(MARKET_INTELLIGENCE_HISTORY_PATH)
         signal_frames.append(build_movement_signals(history, run_id=run_id, timestamp=timestamp))
+        signal_frames.append(build_steam_signals(history, run_id=run_id, timestamp=timestamp))
 
     signals = ensure_market_signal_columns(pd.concat(signal_frames, ignore_index=True))
 
