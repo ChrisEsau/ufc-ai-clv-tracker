@@ -12,6 +12,7 @@ from pipeline.common.paths import (
     MARKET_SIGNALS_AUDIT_PATH,
     MARKET_SIGNALS_PATH,
 )
+from pipeline.market.signals.consensus import build_consensus_signals
 from pipeline.market.signals.schema import (
     ensure_market_signal_audit_columns,
     ensure_market_signal_columns,
@@ -36,7 +37,10 @@ def main() -> None:
         raise FileNotFoundError(f"Missing market outcomes: {MARKET_OUTCOMES_PATH}")
 
     market_outcomes = pd.read_parquet(MARKET_OUTCOMES_PATH)
-    signal_frames = [build_price_signals(market_outcomes, run_id=run_id, timestamp=timestamp)]
+    signal_frames = [
+        build_price_signals(market_outcomes, run_id=run_id, timestamp=timestamp),
+        build_consensus_signals(market_outcomes, run_id=run_id, timestamp=timestamp),
+    ]
 
     if MARKET_INTELLIGENCE_HISTORY_PATH.exists():
         history = pd.read_parquet(MARKET_INTELLIGENCE_HISTORY_PATH)
