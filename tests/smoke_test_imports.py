@@ -46,6 +46,10 @@ MODULES_TO_IMPORT = [
     # Prediction runners
     "pipeline.prediction.run_refresh_upcoming_events",
     "pipeline.prediction.run_build_live_card",
+    # Round Fighter State runners
+    "pipeline.round_stats.round_state_formulas",
+    "pipeline.round_stats.build_round_fighter_state",
+    "pipeline.round_stats.validate_round_fighter_state",
 ]
 
 
@@ -65,6 +69,11 @@ REQUIRED_PATH_CONSTANTS = [
     "CLV_RESULTS_PATH",
     "BET_LEDGER_PATH",
     "BANKROLL_SETTINGS_PATH",
+    "FIGHT_DETAILS_DIR",
+    "ROUND_STATS_PATH",
+    "ROUND_FIGHTER_STATE_HISTORY_PATH",
+    "ROUND_LATEST_FIGHTER_STATE_PATH",
+    "ROUND_FIGHTER_STATE_P0_1_VALIDATION_PATH",
 ]
 
 
