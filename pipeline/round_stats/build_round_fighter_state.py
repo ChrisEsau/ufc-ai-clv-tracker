@@ -22,6 +22,13 @@ import re
 
 import pandas as pd
 
+from pipeline.round_stats.round_state_formulas import (
+    late_diff,
+    late_ratio,
+    ols_slope,
+    safe_div,
+)
+
 from pipeline.common.paths import (
     MASTER_PATH,
     ROUND_FIGHTER_STATE_HISTORY_PATH,
@@ -248,39 +255,186 @@ def validate_round_stats_input(round_stats_df: pd.DataFrame) -> None:
         )
 
 
-def build_round_fighter_state_history(round_stats_df: pd.DataFrame) -> pd.DataFrame:
-    """Build the P0.1 Round Fighter State history shell.
+def _add_per_round_metrics(round_stats_df: pd.DataFrame) -> pd.DataFrame:
+    """Add safe per-round rates used by P0.1 trajectory formulas."""
+    out = round_stats_df.copy()
 
-    Full trajectory feature calculations will be added after the artifact shell
-    and input contract are verified.
-    """
-    standardized_df = standardize_round_stats_input(round_stats_df)
-    validate_round_stats_input(standardized_df)
+    out["sig_accuracy"] = [
+        safe_div(landed, attempted)
+        for landed, attempted in zip(out["sig_str_landed"], out["sig_str_attempted"])
+    ]
+    out["total_accuracy"] = [
+        safe_div(landed, attempted)
+        for landed, attempted in zip(out["total_str_landed"], out["total_str_attempted"])
+    ]
+    out["td_accuracy"] = [
+        safe_div(landed, attempted)
+        for landed, attempted in zip(out["td_landed"], out["td_attempted"])
+    ]
 
-    out = standardized_df[
-        [
-            "event_id",
-            "fight_id",
-            "fighter_id",
-            "opponent_id",
-            "fighter_name",
-            "opponent_name",
-            "event_name",
-            "date",
-            "corner",
-        ]
-    ].drop_duplicates(subset=["fight_id", "fighter_id"]).copy()
+    return out
 
+
+def _join_opponent_round_metrics(round_stats_df: pd.DataFrame) -> pd.DataFrame:
+    """Attach opponent same-round metrics for defensive trajectory proxies."""
+    opponent_columns = [
+        "fight_id",
+        "round",
+        "fighter_id",
+        "sig_str_attempted",
+        "sig_accuracy",
+        "total_accuracy",
+        "control_seconds",
+    ]
+
+    opponent = round_stats_df[opponent_columns].rename(
+        columns={
+            "fighter_id": "opponent_id",
+            "sig_str_attempted": "opp_sig_str_attempted",
+            "sig_accuracy": "opp_sig_accuracy",
+            "total_accuracy": "opp_total_accuracy",
+            "control_seconds": "opp_control_seconds",
+        }
+    )
+
+    out = round_stats_df.merge(
+        opponent,
+        on=["fight_id", "round", "opponent_id"],
+        how="left",
+        validate="many_to_one",
+    )
+
+    return out
+
+
+def _build_fight_observation_rows(round_stats_df: pd.DataFrame) -> pd.DataFrame:
+    """Build one P0.1 fight-observation row per fighter per fight."""
+    rows: list[dict] = []
+
+    group_keys = [
+        "event_id",
+        "fight_id",
+        "fighter_id",
+        "opponent_id",
+        "fighter_name",
+        "opponent_name",
+        "event_name",
+        "date",
+        "corner",
+    ]
+
+    metric_specs = {
+        "sig_attempt": "sig_str_attempted",
+        "total_attempt": "total_str_attempted",
+        "sig_landed": "sig_str_landed",
+        "total_landed": "total_str_landed",
+        "sig_accuracy": "sig_accuracy",
+        "total_accuracy": "total_accuracy",
+        "td_attempt": "td_attempted",
+        "td_accuracy": "td_accuracy",
+        "control_seconds": "control_seconds",
+        "opp_sig_accuracy_allowed": "opp_sig_accuracy",
+        "opp_total_accuracy_allowed": "opp_total_accuracy",
+        "opp_sig_attempt_allowed": "opp_sig_str_attempted",
+        "opp_control_allowed": "opp_control_seconds",
+    }
+
+    late_ratio_metrics = {
+        "sig_attempt": "sig_str_attempted",
+        "total_attempt": "total_str_attempted",
+        "sig_landed": "sig_str_landed",
+        "td_attempt": "td_attempted",
+        "control": "control_seconds",
+    }
+
+    late_diff_metrics = {
+        "sig_accuracy": "sig_accuracy",
+        "total_accuracy": "total_accuracy",
+    }
+
+    for keys, group in round_stats_df.groupby(group_keys, dropna=False, sort=False):
+        group = group.sort_values("round").copy()
+        row = dict(zip(group_keys, keys))
+        row["rfs_traj_fight_rounds_observed"] = int(group["round"].nunique())
+
+        rounds = group["round"]
+
+        for feature_name, source_column in metric_specs.items():
+            row[f"rfs_traj_fight_{feature_name}_slope"] = ols_slope(
+                rounds,
+                group[source_column],
+            )
+
+        for feature_name, source_column in late_ratio_metrics.items():
+            row[f"rfs_traj_fight_{feature_name}_late_ratio"] = late_ratio(
+                group[source_column],
+            )
+
+        for feature_name, source_column in late_diff_metrics.items():
+            row[f"rfs_traj_fight_{feature_name}_late_diff"] = late_diff(
+                group[source_column],
+            )
+
+        rows.append(row)
+
+    return pd.DataFrame(rows)
+
+
+def _add_prior_state_features(fight_observation_df: pd.DataFrame) -> pd.DataFrame:
+    """Convert fight observations into point-in-time prior fighter-state features."""
+    out = fight_observation_df.copy()
     out["date"] = pd.to_datetime(out["date"], errors="coerce")
     out = out.sort_values(["fighter_id", "date", "fight_id"]).reset_index(drop=True)
 
-    # P0.1 shell metadata.
-    # Actual trajectory state features will be added in the next step.
+    observation_columns = [
+        column
+        for column in out.columns
+        if column.startswith("rfs_traj_fight_")
+        and column != "rfs_traj_fight_rounds_observed"
+    ]
+
     out["rfs_traj_prior_fight_count"] = out.groupby("fighter_id").cumcount()
-    out["rfs_traj_prior_valid_trajectory_count"] = 0
-    out["rfs_traj_has_state"] = 0
+
+    valid_observation_mask = out[observation_columns].notna().any(axis=1)
+    out["_valid_trajectory_observation"] = valid_observation_mask.astype(int)
+    out["rfs_traj_prior_valid_trajectory_count"] = (
+        out.groupby("fighter_id")["_valid_trajectory_observation"]
+        .transform(lambda series: series.cumsum().shift(1).fillna(0))
+        .astype(int)
+    )
+
+    for column in observation_columns:
+        base = column.replace("rfs_traj_fight_", "", 1)
+        group = out.groupby("fighter_id")[column]
+
+        out[f"rfs_traj_exp_{base}"] = group.transform(
+            lambda series: series.shift(1).expanding(min_periods=1).mean()
+        )
+        out[f"rfs_traj_last3_{base}"] = group.transform(
+            lambda series: series.shift(1).rolling(window=3, min_periods=1).mean()
+        )
+        out[f"rfs_traj_ewm_{base}"] = group.transform(
+            lambda series: series.shift(1).ewm(alpha=0.35, adjust=False, ignore_na=True).mean()
+        )
+
+    out["rfs_traj_has_state"] = out["rfs_traj_prior_valid_trajectory_count"].gt(0).astype(int)
+    out = out.drop(columns=["_valid_trajectory_observation"])
 
     return out
+
+
+def build_round_fighter_state_history(round_stats_df: pd.DataFrame) -> pd.DataFrame:
+    """Build P0.1 Round Fighter State history with leakage-safe prior features."""
+    standardized_df = standardize_round_stats_input(round_stats_df)
+    validate_round_stats_input(standardized_df)
+
+    metric_df = _add_per_round_metrics(standardized_df)
+    metric_df = _join_opponent_round_metrics(metric_df)
+
+    fight_observation_df = _build_fight_observation_rows(metric_df)
+    history_df = _add_prior_state_features(fight_observation_df)
+
+    return history_df
 
 
 def build_latest_round_fighter_state(history_df: pd.DataFrame) -> pd.DataFrame:
