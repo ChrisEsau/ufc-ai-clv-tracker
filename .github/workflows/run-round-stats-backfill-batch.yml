@@ -6,7 +6,7 @@ on:
       max_fights:
         description: "Max fights to scrape"
         required: false
-        default: "20"
+        default: "100"
         type: string
       sleep_seconds:
         description: "Base sleep seconds"
