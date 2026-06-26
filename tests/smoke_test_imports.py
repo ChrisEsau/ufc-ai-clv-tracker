@@ -152,3 +152,9 @@ importlib.import_module("pipeline.round_stats.validate_round_fighter_suppression
 import importlib
 importlib.import_module("pipeline.round_stats.build_round_fighter_wrestling")
 importlib.import_module("pipeline.round_stats.validate_round_fighter_wrestling")
+
+
+# P1.4 Round Fighter Defense smoke imports
+import importlib
+importlib.import_module("pipeline.round_stats.build_round_fighter_defense")
+importlib.import_module("pipeline.round_stats.validate_round_fighter_defense")
