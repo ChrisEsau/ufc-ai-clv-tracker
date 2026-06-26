@@ -13,6 +13,7 @@ BACKUPS_DIR = DATA_DIR / "backups"
 FEATURES_DIR = DATA_DIR / "features"
 PREDICTIONS_DIR = DATA_DIR / "predictions"
 CARDS_DIR = DATA_DIR / "cards"
+FIGHT_DETAILS_DIR = DATA_DIR / "fight_details"
 MARKET_DIR = DATA_DIR / "market"
 MARKET_RAW_DIR = MARKET_DIR / "raw"
 DRAFTKINGS_RAW_DIR = MARKET_RAW_DIR / "draftkings"
@@ -61,6 +62,11 @@ CURRENT_FIGHTER_FEATURES_PATH = FEATURES_DIR / "latest_fighter_state.parquet"
 FIGHTER_STATE_HISTORY_PATH = FEATURES_DIR / "fighter_state_history.parquet"
 LATEST_FIGHTER_STATE_PATH = FEATURES_DIR / "latest_fighter_state.parquet"
 MONEYLINE_FEATURE_VIEW_PATH = FEATURES_DIR / "moneyline_feature_view.parquet"
+
+ROUND_STATS_PATH = FIGHT_DETAILS_DIR / "ufc_round_stats.parquet"
+ROUND_FIGHTER_STATE_HISTORY_PATH = FEATURES_DIR / "round_fighter_state_history.parquet"
+ROUND_LATEST_FIGHTER_STATE_PATH = FEATURES_DIR / "round_latest_fighter_state.parquet"
+ROUND_FIGHTER_STATE_P0_1_VALIDATION_PATH = AUDITS_DIR / "round_fighter_state_p0_1_validation.parquet"
 
 UPCOMING_EVENTS_PATH = CARDS_DIR / "ufcstats_upcoming_events.parquet"
 UPCOMING_FIGHTS_PATH = CARDS_DIR / "ufcstats_upcoming_fights.parquet"
@@ -151,6 +157,7 @@ def ensure_data_dirs() -> None:
         FEATURES_DIR,
         PREDICTIONS_DIR,
         CARDS_DIR,
+        FIGHT_DETAILS_DIR,
         MARKET_DIR,
         MARKET_RAW_DIR,
         DRAFTKINGS_RAW_DIR,
