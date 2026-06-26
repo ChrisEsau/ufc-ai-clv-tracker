@@ -1,0 +1,69 @@
+name: Build Round Fighter State
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-round-fighter-state:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          else
+            pip install pandas pyarrow numpy
+          fi
+
+      - name: Verify round stats input exists
+        run: |
+          if [ ! -f data/fight_details/ufc_round_stats.parquet ]; then
+            echo "Missing data/fight_details/ufc_round_stats.parquet"
+            echo "Run or publish the historical round-stats backfill before this workflow."
+            exit 1
+          fi
+
+      - name: Build Round Fighter State
+        run: |
+          python -m pipeline.round_stats.build_round_fighter_state
+
+      - name: Validate Round Fighter State
+        run: |
+          python -m pipeline.round_stats.validate_round_fighter_state
+
+      - name: Run smoke imports
+        run: |
+          python tests/smoke_test_imports.py
+
+      - name: Commit generated Round Fighter State artifacts
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add -f \
+            data/features/round_fighter_state_history.parquet \
+            data/features/round_latest_fighter_state.parquet \
+            data/audits/round_fighter_state_p0_1_validation.parquet
+
+          if git diff --cached --quiet; then
+            echo "No Round Fighter State artifact changes to commit."
+          else
+            git commit -m "Update round fighter state artifacts"
+            git push origin dev
+          fi
