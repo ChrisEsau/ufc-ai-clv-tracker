@@ -367,7 +367,7 @@ market:
 market_key: moneyline
 status: draft
 early_stopping:
-  enabled: false
+  enabled: true
   rounds: 100
   metric: logloss
   verbose: false
