@@ -21,7 +21,7 @@ MARKET_REFRESH_V2: RunbookSpec = {
             "workflows": [
                 {"workflow_file": "run-build-fighter-state-v2.yml", "display_name": "Build Fighter State V2", "inputs": {}, "outputs": ["data/features/fighter_state_history.parquet", "data/features/latest_fighter_state.parquet"]},
                 {"workflow_file": "run-build-feature-view-v2.yml", "display_name": "Build Feature View V2", "inputs": {"config_path": "configs/feature_views/moneyline_base.yaml", "output_path": "data/features/moneyline_feature_view.parquet"}, "outputs": ["data/features/moneyline_feature_view.parquet"]},
-                {"workflow_file": "run-market-refresh-orchestrator.yml", "display_name": "Run Production Registry Predictions", "inputs": {"model_mode": "production"}, "outputs": ["data/predictions/by_model/moneyline_xgboost_v7/model_outcomes.parquet", "data/predictions/by_model/prop_goes_distance_xgboost_v1/model_outcomes.parquet", "data/audits/production_prediction_audit.parquet", "data/audits/ufc_live_feature_audit.parquet"]},
+                {"workflow_file": "run-market-refresh-orchestrator.yml", "display_name": "Run Production Registry Predictions", "inputs": {"mode": "production"}, "outputs": ["data/predictions/by_model/moneyline_xgboost_v7/model_outcomes.parquet", "data/predictions/by_model/prop_goes_distance_xgboost_v1/model_outcomes.parquet", "data/audits/production_prediction_audit.parquet", "data/audits/ufc_live_feature_audit.parquet"]},
             ],
         },
         {
@@ -45,7 +45,7 @@ MARKET_REFRESH_V2: RunbookSpec = {
             "step_id": "capture_snapshots",
             "display_name": "Capture Snapshots",
             "description": "Append production model-market snapshots for future CLV and model comparison analysis.",
-            "workflows": [{"workflow_file": "run-market-refresh-orchestrator.yml", "display_name": "Capture Model-Market Snapshots", "inputs": {"snapshot_model_mode": "production"}, "outputs": ["data/snapshots/model_market_snapshots.parquet", "data/audits/model_market_snapshot_audit.parquet"]}],
+            "workflows": [{"workflow_file": "run-market-refresh-orchestrator.yml", "display_name": "Capture Model-Market Snapshots", "inputs": {"mode": "production"}, "outputs": ["data/snapshots/model_market_snapshots.parquet", "data/audits/model_market_snapshot_audit.parquet"]}],
         },
     ],
 }
