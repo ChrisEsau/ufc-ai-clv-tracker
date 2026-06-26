@@ -47,6 +47,8 @@ def build_moneyline_feature_view_with_round_state(
         blue_fighter_id_col="b_id",
         fight_id_col="fight_id",
         add_diffs=add_round_state_diffs,
+        include_fight_observations=False,
+        keep_side_features=False,
     )
 
 
