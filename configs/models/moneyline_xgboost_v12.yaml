@@ -6,7 +6,7 @@ feature_sources:
 - moneyline_feature_view
 features:
   selection_mode: explicit
-  expected_feature_count: 125
+  expected_feature_count: 133
   allow_unsafe_features: false
   feature_columns:
   - style_all_round_finisher_score_abs_diff
@@ -119,10 +119,12 @@ features:
   - recent_form_avg_fight_time_diff
   - recent_form_decision_loss_rate_diff
   - recent_form_decision_win_rate_diff
+  - aggression_index_diff
   - decision_dependency_abs_diff
   - decision_dependency_diff
   - finish_dependency_abs_diff
   - finish_dependency_diff
+  - finish_volatility
   - ko_dependency_abs_diff
   - ko_dependency_diff
   - ko_win_concentration_diff
@@ -134,6 +136,12 @@ features:
   - victory_concentration_index_diff
   - win_method_entropy_abs_diff
   - win_method_entropy_diff
+  - ewm_ctrl_against_per_min_diff
+  - ewm_ctrl_per_min_diff
+  - ewm_str_acc_diff
+  - ewm_str_def_diff
+  - ewm_td_acc_diff
+  - ewm_td_def_diff
   selected_bundles:
   - style_scores_v1
   - ko_loss_vulnerability
@@ -149,6 +157,7 @@ features:
   - submission_v1
   - decision_v1
   - upset_potential_v1
+  - ewm_skill_efficiency_v1
   include_features: []
   exclude_features:
   - style_edge_control_wrestler_vs_ko_finisher_reverse
@@ -267,10 +276,12 @@ features:
   - recent_form_avg_fight_time_diff
   - recent_form_decision_loss_rate_diff
   - recent_form_decision_win_rate_diff
+  - aggression_index_diff
   - decision_dependency_abs_diff
   - decision_dependency_diff
   - finish_dependency_abs_diff
   - finish_dependency_diff
+  - finish_volatility
   - ko_dependency_abs_diff
   - ko_dependency_diff
   - ko_win_concentration_diff
@@ -282,6 +293,12 @@ features:
   - victory_concentration_index_diff
   - win_method_entropy_abs_diff
   - win_method_entropy_diff
+  - ewm_ctrl_against_per_min_diff
+  - ewm_ctrl_per_min_diff
+  - ewm_str_acc_diff
+  - ewm_str_def_diff
+  - ewm_td_acc_diff
+  - ewm_td_def_diff
 data:
   rolling_features_path: data/features/moneyline_feature_view.parquet
   target_column: target
