@@ -17,6 +17,7 @@ from utils.operations_schedule import (
 )
 
 GITHUB_API_BASE = "https://api.github.com"
+LEGACY_MARKET_REFRESH_INPUTS = {"model_mode", "snapshot_model_mode"}
 
 
 def _github_context() -> tuple[str, str, str, str]:
@@ -39,15 +40,24 @@ def _headers(token: str) -> dict[str, str]:
     }
 
 
+def _sanitize_dispatch_inputs(workflow_file: str, inputs: dict[str, Any]) -> dict[str, Any]:
+    clean_inputs = dict(inputs or {})
+    if workflow_file == "run-market-refresh-orchestrator.yml":
+        for key in LEGACY_MARKET_REFRESH_INPUTS:
+            clean_inputs.pop(key, None)
+    return clean_inputs
+
+
 def _dispatch_workflow(*, workflow_file: str, inputs: dict[str, Any], dry_run: bool) -> tuple[bool, str]:
     owner, repo, token, ref = _github_context()
+    clean_inputs = _sanitize_dispatch_inputs(workflow_file, inputs)
     if dry_run:
-        return True, f"DRY RUN: would dispatch {workflow_file} on {ref} with {inputs}"
+        return True, f"DRY RUN: would dispatch {workflow_file} on {ref} with {clean_inputs}"
     if not owner or not repo or not token:
         return False, "Missing GitHub repository or token context."
 
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/actions/workflows/{workflow_file}/dispatches"
-    payload = {"ref": ref, "inputs": inputs or {}}
+    payload = {"ref": ref, "inputs": clean_inputs}
     response = requests.post(url, headers=_headers(token), json=payload, timeout=30)
     if response.status_code in {200, 201, 202, 204}:
         return True, f"Dispatched {workflow_file}"
