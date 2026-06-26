@@ -206,7 +206,7 @@
         "model_mode": "production",
         "snapshot_model_mode": "production"
       },
-      "minutes_late": 813.56,
+      "minutes_late": 973.4,
       "runbook_id": "market_refresh_v2",
       "scheduled_at_local": "2026-06-25T15:00:00-05:00",
       "scheduled_time": "15:00",
@@ -222,7 +222,7 @@
         "model_mode": "production",
         "snapshot_model_mode": "production"
       },
-      "minutes_late": 93.56,
+      "minutes_late": 253.4,
       "runbook_id": "market_refresh_v2",
       "scheduled_at_local": "2026-06-26T03:00:00-05:00",
       "scheduled_time": "03:00",
@@ -233,7 +233,7 @@
     {
       "catchup_grace_minutes": 1440,
       "dispatch_key": "market_refresh_v2:2026-06-25T15:00:America/Chicago",
-      "dispatched_at": "2026-06-26T09:33:33.722456+00:00",
+      "dispatched_at": "2026-06-26T12:13:24.090207+00:00",
       "display_name": "Market Refresh",
       "dry_run": false,
       "inputs": {
@@ -243,7 +243,7 @@
         "snapshot_model_mode": "production"
       },
       "message": "GitHub API error 422: {\"message\":\"Unexpected inputs provided: [\\\"model_mode\\\", \\\"snapshot_model_mode\\\"]\",\"documentation_url\":\"https://docs.github.com/rest/actions/workflows#create-a-workflow-dispatch-event\",\"status\":\"422\"}",
-      "minutes_late": 813.56,
+      "minutes_late": 973.4,
       "runbook_id": "market_refresh_v2",
       "scheduled_at_local": "2026-06-25T15:00:00-05:00",
       "scheduled_time": "15:00",
@@ -252,7 +252,7 @@
     {
       "catchup_grace_minutes": 1440,
       "dispatch_key": "market_refresh_v2:2026-06-26T03:00:America/Chicago",
-      "dispatched_at": "2026-06-26T09:33:33.722456+00:00",
+      "dispatched_at": "2026-06-26T12:13:24.090207+00:00",
       "display_name": "Market Refresh",
       "dry_run": false,
       "inputs": {
@@ -262,14 +262,14 @@
         "snapshot_model_mode": "production"
       },
       "message": "GitHub API error 422: {\"message\":\"Unexpected inputs provided: [\\\"model_mode\\\", \\\"snapshot_model_mode\\\"]\",\"documentation_url\":\"https://docs.github.com/rest/actions/workflows#create-a-workflow-dispatch-event\",\"status\":\"422\"}",
-      "minutes_late": 93.56,
+      "minutes_late": 253.4,
       "runbook_id": "market_refresh_v2",
       "scheduled_at_local": "2026-06-26T03:00:00-05:00",
       "scheduled_time": "03:00",
       "workflow_file": "run-market-refresh-orchestrator.yml"
     }
   ],
-  "last_checked_at": "2026-06-26T09:33:33.722456+00:00",
+  "last_checked_at": "2026-06-26T12:13:24.090207+00:00",
   "next_due_runbook": {
     "catchup_grace_minutes": 1440,
     "display_name": "Market Refresh",
@@ -281,5 +281,5 @@
   "skipped_runbooks": [],
   "status": "completed_with_errors",
   "timezone": "America/Chicago",
-  "updated_at": "2026-06-26T09:33:34.341469+00:00"
+  "updated_at": "2026-06-26T12:13:24.719068+00:00"
 }
