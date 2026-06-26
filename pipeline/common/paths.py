@@ -70,6 +70,9 @@ ROUND_FIGHTER_STATE_P0_1_VALIDATION_PATH = AUDITS_DIR / "round_fighter_state_p0_
 ROUND_FIGHTER_SUPPRESSION_P0_2_HISTORY_PATH = FEATURES_DIR / "round_fighter_suppression_p0_2_history.parquet"
 ROUND_LATEST_FIGHTER_SUPPRESSION_P0_2_PATH = FEATURES_DIR / "round_latest_fighter_suppression_p0_2.parquet"
 ROUND_FIGHTER_SUPPRESSION_P0_2_VALIDATION_PATH = AUDITS_DIR / "round_fighter_suppression_p0_2_validation.parquet"
+ROUND_FIGHTER_WRESTLING_P0_3_HISTORY_PATH = FEATURES_DIR / "round_fighter_wrestling_p0_3_history.parquet"
+ROUND_LATEST_FIGHTER_WRESTLING_P0_3_PATH = FEATURES_DIR / "round_latest_fighter_wrestling_p0_3.parquet"
+ROUND_FIGHTER_WRESTLING_P0_3_VALIDATION_PATH = AUDITS_DIR / "round_fighter_wrestling_p0_3_validation.parquet"
 
 UPCOMING_EVENTS_PATH = CARDS_DIR / "ufcstats_upcoming_events.parquet"
 UPCOMING_FIGHTS_PATH = CARDS_DIR / "ufcstats_upcoming_fights.parquet"

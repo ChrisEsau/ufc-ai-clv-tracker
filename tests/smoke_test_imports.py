@@ -146,3 +146,9 @@ if __name__ == "__main__":
 import importlib
 importlib.import_module("pipeline.round_stats.build_round_fighter_suppression")
 importlib.import_module("pipeline.round_stats.validate_round_fighter_suppression")
+
+
+# P0.3 Round Fighter Wrestling smoke imports
+import importlib
+importlib.import_module("pipeline.round_stats.build_round_fighter_wrestling")
+importlib.import_module("pipeline.round_stats.validate_round_fighter_wrestling")
