@@ -206,7 +206,7 @@
         "model_mode": "production",
         "snapshot_model_mode": "production"
       },
-      "minutes_late": 160.38,
+      "minutes_late": 252.89,
       "runbook_id": "market_refresh_v2",
       "scheduled_at_local": "2026-06-25T15:00:00-05:00",
       "scheduled_time": "15:00",
@@ -217,7 +217,7 @@
     {
       "catchup_grace_minutes": 1440,
       "dispatch_key": "market_refresh_v2:2026-06-25T15:00:America/Chicago",
-      "dispatched_at": "2026-06-25T22:40:22.948158+00:00",
+      "dispatched_at": "2026-06-26T00:12:53.691582+00:00",
       "display_name": "Market Refresh",
       "dry_run": false,
       "inputs": {
@@ -227,14 +227,14 @@
         "snapshot_model_mode": "production"
       },
       "message": "GitHub API error 422: {\"message\":\"Unexpected inputs provided: [\\\"model_mode\\\", \\\"snapshot_model_mode\\\"]\",\"documentation_url\":\"https://docs.github.com/rest/actions/workflows#create-a-workflow-dispatch-event\",\"status\":\"422\"}",
-      "minutes_late": 160.38,
+      "minutes_late": 252.89,
       "runbook_id": "market_refresh_v2",
       "scheduled_at_local": "2026-06-25T15:00:00-05:00",
       "scheduled_time": "15:00",
       "workflow_file": "run-market-refresh-orchestrator.yml"
     }
   ],
-  "last_checked_at": "2026-06-25T22:40:22.948158+00:00",
+  "last_checked_at": "2026-06-26T00:12:53.691582+00:00",
   "next_due_runbook": {
     "catchup_grace_minutes": 1440,
     "display_name": "Market Refresh",
@@ -254,7 +254,7 @@
         "model_mode": "production",
         "snapshot_model_mode": "production"
       },
-      "minutes_late": 880.38,
+      "minutes_late": 972.89,
       "reason": "already_dispatched",
       "runbook_id": "market_refresh_v2",
       "scheduled_at_local": "2026-06-25T03:00:00-05:00",
@@ -264,5 +264,5 @@
   ],
   "status": "completed_with_errors",
   "timezone": "America/Chicago",
-  "updated_at": "2026-06-25T22:40:23.143754+00:00"
+  "updated_at": "2026-06-26T00:12:54.003238+00:00"
 }
