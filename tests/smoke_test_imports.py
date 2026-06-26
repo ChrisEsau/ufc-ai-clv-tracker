@@ -51,6 +51,8 @@ MODULES_TO_IMPORT = [
     "pipeline.round_stats.build_round_fighter_state",
     "pipeline.round_stats.validate_round_fighter_state",
     "pipeline.round_stats.join_round_fighter_state",
+    "pipeline.features.views.moneyline_round_fighter_state",
+    "pipeline.features.views.moneyline",
 ]
 
 
