@@ -254,6 +254,14 @@ def _assemble_requested_features(joined_df: pd.DataFrame, feature_columns: list[
     for feature in feature_columns:
         if feature in out.columns:
             continue
+        if feature.endswith("_abs_diff"):
+            base_name = feature[: -len("_abs_diff")]
+            red_value = _resolve_state_series(out, side="r", base_name=base_name)
+            blue_value = _resolve_state_series(out, side="b", base_name=base_name)
+            if red_value is not None and blue_value is not None:
+                new_feature_values[feature] = (red_value - blue_value).abs()
+            continue
+
         if feature.endswith("_diff"):
             base_name = feature[: -len("_diff")]
             red_value = _resolve_state_series(out, side="r", base_name=base_name)
