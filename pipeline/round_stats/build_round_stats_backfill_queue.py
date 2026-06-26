@@ -133,7 +133,7 @@ def main() -> None:
             "winner",
             "winner_id",
         ]
-    ].assign(_sort_date=queue["_sort_date"]).sort_values(["_sort_date", "event_name", "fight_id"]).drop(columns=["_sort_date"])
+    ].assign(_sort_date=queue["_sort_date"]).sort_values(["_sort_date", "event_name", "fight_id"], ascending=[False, True, True]).drop(columns=["_sort_date"])
 
     audit = pd.DataFrame(
         [
