@@ -140,3 +140,9 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+# P0.2 Round Fighter Suppression smoke imports
+import importlib
+importlib.import_module("pipeline.round_stats.build_round_fighter_suppression")
+importlib.import_module("pipeline.round_stats.validate_round_fighter_suppression")
