@@ -174,8 +174,9 @@ def validate_round_fighter_state(
     missing_history_columns = [
         column for column in required_columns if column not in history.columns
     ]
+    latest_required_columns = REQUIRED_METADATA_COLUMNS + REQUIRED_STATE_COLUMNS
     missing_latest_columns = [
-        column for column in required_columns if column not in latest.columns
+        column for column in latest_required_columns if column not in latest.columns
     ]
 
     _add_check(
@@ -194,7 +195,7 @@ def validate_round_fighter_state(
         "fatal",
         missing_latest_columns,
         "[]",
-        "Latest artifact must include required P0.1 columns.",
+        "Latest artifact must include metadata and current prior-state columns.",
     )
 
     history_duplicate_keys = (
@@ -226,6 +227,20 @@ def validate_round_fighter_state(
         "0",
         "Latest artifact must have one row per fighter_id.",
     )
+
+    latest_fight_observation_columns = [
+        column for column in latest.columns if column.startswith("rfs_traj_fight_")
+    ]
+    _add_check(
+        checks,
+        "latest_has_no_current_fight_observation_columns",
+        len(latest_fight_observation_columns) == 0,
+        "fatal",
+        latest_fight_observation_columns,
+        "[]",
+        "Latest artifact must not expose current-fight observation columns to live joins.",
+    )
+
 
     rfs_cols = [column for column in history.columns if column.startswith("rfs_traj_")]
     fight_cols = [

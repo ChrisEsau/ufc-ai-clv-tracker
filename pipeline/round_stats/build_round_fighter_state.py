@@ -437,19 +437,85 @@ def build_round_fighter_state_history(round_stats_df: pd.DataFrame) -> pd.DataFr
     return history_df
 
 
+def _none_if_nan(value: object) -> float | None:
+    """Return None when pandas/numpy produced NaN."""
+    if pd.isna(value):
+        return None
+    return float(value)
+
+
 def build_latest_round_fighter_state(history_df: pd.DataFrame) -> pd.DataFrame:
-    """Return the latest Round Fighter State row for each fighter."""
+    """Return current post-fight Round Fighter State for each fighter.
+
+    History rows are point-in-time rows entering each historical fight.
+    Latest rows are different: they represent the state available after all
+    completed fights in the round-stats artifact, for future/live joins.
+    """
     if history_df.empty:
         return history_df.copy()
 
-    return (
-        history_df
-        .sort_values(["fighter_id", "date", "fight_id"])
-        .groupby("fighter_id", as_index=False)
-        .tail(1)
-        .reset_index(drop=True)
-    )
+    metadata_columns = [
+        "event_id",
+        "fight_id",
+        "fighter_id",
+        "opponent_id",
+        "fighter_name",
+        "opponent_name",
+        "event_name",
+        "date",
+        "corner",
+    ]
 
+    observation_columns = [
+        column
+        for column in history_df.columns
+        if column.startswith("rfs_traj_fight_")
+        and column != "rfs_traj_fight_rounds_observed"
+    ]
+
+    rows: list[dict] = []
+
+    sorted_history = history_df.copy()
+    sorted_history["date"] = pd.to_datetime(sorted_history["date"], errors="coerce")
+    sorted_history = sorted_history.sort_values(["fighter_id", "date", "fight_id"])
+
+    for fighter_id, group in sorted_history.groupby("fighter_id", sort=False):
+        group = group.sort_values(["date", "fight_id"]).copy()
+        latest_meta = group.tail(1)[metadata_columns].iloc[0].to_dict()
+
+        valid_observation_mask = group[observation_columns].notna().any(axis=1)
+        valid_count = int(valid_observation_mask.sum())
+
+        row = dict(latest_meta)
+        row["rfs_traj_prior_fight_count"] = int(len(group))
+        row["rfs_traj_prior_valid_trajectory_count"] = valid_count
+        row["rfs_traj_has_state"] = int(valid_count > 0)
+
+        for column in observation_columns:
+            base = column.replace("rfs_traj_fight_", "", 1)
+            series = pd.to_numeric(group[column], errors="coerce")
+
+            if series.notna().any():
+                row[f"rfs_traj_exp_{base}"] = _none_if_nan(
+                    series.expanding(min_periods=1).mean().iloc[-1]
+                )
+                row[f"rfs_traj_last3_{base}"] = _none_if_nan(
+                    series.tail(3).mean()
+                )
+                row[f"rfs_traj_ewm_{base}"] = _none_if_nan(
+                    series.ewm(alpha=0.35, adjust=False, ignore_na=True).mean().iloc[-1]
+                )
+            else:
+                row[f"rfs_traj_exp_{base}"] = None
+                row[f"rfs_traj_last3_{base}"] = None
+                row[f"rfs_traj_ewm_{base}"] = None
+
+        rows.append(row)
+
+    latest_df = pd.DataFrame(rows)
+    latest_df = latest_df.sort_values(["fighter_name", "fighter_id"]).reset_index(drop=True)
+
+    return latest_df
 
 def build_round_fighter_state(
     round_stats_path: str | Path = ROUND_STATS_PATH,
