@@ -11,9 +11,7 @@
       "inputs": {
         "max_draftkings_events": "all",
         "mode": "production",
-        "model_mode": "production",
-        "official_closing_snapshot": true,
-        "snapshot_model_mode": "production"
+        "official_closing_snapshot": true
       },
       "times": [
         "17:30",
@@ -33,9 +31,7 @@
       "enabled": true,
       "inputs": {
         "max_draftkings_events": "all",
-        "mode": "production",
-        "model_mode": "production",
-        "snapshot_model_mode": "production"
+        "mode": "production"
       },
       "times": [
         "03:00",
