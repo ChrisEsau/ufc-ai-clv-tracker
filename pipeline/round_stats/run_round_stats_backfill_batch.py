@@ -67,8 +67,11 @@ def main() -> None:
         print(row["fight_url"])
 
         attempt_ts = datetime.now(timezone.utc).isoformat()
+        queue.loc[idx, "status"] = "running"
         queue.loc[idx, "attempt_count"] = int(queue.loc[idx, "attempt_count"]) + 1
         queue.loc[idx, "last_attempt_at"] = attempt_ts
+        if not args.dry_run:
+            queue.to_parquet(queue_path, index=False)
 
         try:
             df = scrape_round_stats_for_queue_row(row)

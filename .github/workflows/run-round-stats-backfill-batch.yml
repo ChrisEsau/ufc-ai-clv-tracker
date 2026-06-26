@@ -1,0 +1,88 @@
+name: Run Round Stats Backfill Batch
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_fights:
+        description: "Max fights to scrape"
+        required: false
+        default: "20"
+        type: string
+      sleep_seconds:
+        description: "Base sleep seconds"
+        required: false
+        default: "10"
+        type: string
+      jitter_seconds:
+        description: "Random jitter seconds"
+        required: false
+        default: "5"
+        type: string
+  schedule:
+    - cron: "17 */6 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: round-stats-backfill-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  run-round-stats-backfill:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - name: Install Google Chrome
+        run: |
+          sudo apt-get update -qq
+          wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo apt install -y ./google-chrome-stable_current_amd64.deb
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install pandas numpy pyarrow requests beautifulsoup4 selenium webdriver-manager lxml
+
+      - name: Build queue if missing
+        run: |
+          if [ ! -f data/status/ufc_round_stats_backfill_queue.parquet ]; then
+            python -m pipeline.round_stats.build_round_stats_backfill_queue
+          fi
+
+      - name: Run round stats backfill batch
+        run: |
+          python -m pipeline.round_stats.run_round_stats_backfill_batch \
+            --max-fights "${{ inputs.max_fights || '20' }}" \
+            --sleep-seconds "${{ inputs.sleep_seconds || '10' }}" \
+            --jitter-seconds "${{ inputs.jitter_seconds || '5' }}" \
+            --max-failures 3
+
+      - name: Validate round stats dataset
+        run: |
+          python -m pipeline.round_stats.validate_round_stats_dataset
+
+      - name: Commit round stats artifacts
+        if: always()
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add -f \
+            data/fight_details/ufc_round_stats.parquet \
+            data/status/ufc_round_stats_backfill_queue.parquet \
+            data/audits/ufc_round_stats_scrape_audit.parquet \
+            data/audits/ufc_round_stats_validation.parquet || true
+
+          git commit -m "Round stats: run backfill batch" || echo "No changes to commit"
+          git pull --rebase --autostash origin dev
+          git push origin HEAD:dev
