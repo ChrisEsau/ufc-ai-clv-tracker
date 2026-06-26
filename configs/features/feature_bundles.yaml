@@ -474,6 +474,8 @@ bundles:
     - win_method_entropy_abs_diff
     - finish_dependency_diff
     - finish_dependency_abs_diff
+    - finish_volatility
+    - aggression_index_diff
     - decision_dependency_diff
     - decision_dependency_abs_diff
     - ko_dependency_diff
@@ -487,3 +489,15 @@ bundles:
     markets:
     - moneyline
     - props
+  ewm_skill_efficiency_v1:
+    label: EWM Skill Efficiency V1
+    description: Recent weighted striking, wrestling, and control efficiency signals.
+    candidate_columns:
+    - ewm_str_acc_diff
+    - ewm_str_def_diff
+    - ewm_td_acc_diff
+    - ewm_td_def_diff
+    - ewm_ctrl_per_min_diff
+    - ewm_ctrl_against_per_min_diff
+    markets:
+    - moneyline
