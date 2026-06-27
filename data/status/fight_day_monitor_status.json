@@ -1,5 +1,5 @@
 {
-  "completed_at": "2026-06-27T23:06:37.740174+00:00",
+  "completed_at": "2026-06-27T23:07:40.412143+00:00",
   "current_step_id": "refresh_live_markets",
   "current_step_name": "Refresh Live Markets",
   "current_substep_id": "draftkings_matched_discovery",
@@ -13,7 +13,7 @@
       "step_name": null,
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-06-27T23:06:34.480803+00:00"
+      "timestamp": "2026-06-27T23:07:37.616161+00:00"
     },
     {
       "event": "step_started",
@@ -22,7 +22,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-06-27T23:06:34.481312+00:00"
+      "timestamp": "2026-06-27T23:07:37.616814+00:00"
     },
     {
       "event": "substep_started",
@@ -31,7 +31,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_event_index",
       "substep_name": "Build DraftKings Event Index",
-      "timestamp": "2026-06-27T23:06:34.481665+00:00"
+      "timestamp": "2026-06-27T23:07:37.617191+00:00"
     },
     {
       "event": "substep_completed",
@@ -40,7 +40,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_event_index",
       "substep_name": "Build DraftKings Event Index",
-      "timestamp": "2026-06-27T23:06:36.149784+00:00"
+      "timestamp": "2026-06-27T23:07:38.742200+00:00"
     },
     {
       "event": "substep_started",
@@ -49,7 +49,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_card_filter",
       "substep_name": "Match DraftKings Events To Card",
-      "timestamp": "2026-06-27T23:06:36.150229+00:00"
+      "timestamp": "2026-06-27T23:07:38.742627+00:00"
     },
     {
       "event": "substep_completed",
@@ -58,7 +58,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_card_filter",
       "substep_name": "Match DraftKings Events To Card",
-      "timestamp": "2026-06-27T23:06:36.761441+00:00"
+      "timestamp": "2026-06-27T23:07:39.358758+00:00"
     },
     {
       "event": "substep_started",
@@ -67,7 +67,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "update_target_event_commence_time",
       "substep_name": "Update Target Event Commence Time",
-      "timestamp": "2026-06-27T23:06:36.761947+00:00"
+      "timestamp": "2026-06-27T23:07:39.359279+00:00"
     },
     {
       "event": "substep_completed",
@@ -76,7 +76,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "update_target_event_commence_time",
       "substep_name": "Update Target Event Commence Time",
-      "timestamp": "2026-06-27T23:06:37.195386+00:00"
+      "timestamp": "2026-06-27T23:07:39.826887+00:00"
     },
     {
       "event": "substep_started",
@@ -85,7 +85,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_matched_discovery",
       "substep_name": "Discover DraftKings Markets",
-      "timestamp": "2026-06-27T23:06:37.195920+00:00"
+      "timestamp": "2026-06-27T23:07:39.858152+00:00"
     },
     {
       "event": "runbook_failed",
@@ -94,17 +94,17 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_matched_discovery",
       "substep_name": "Discover DraftKings Markets",
-      "timestamp": "2026-06-27T23:06:37.740180+00:00"
+      "timestamp": "2026-06-27T23:07:40.412149+00:00"
     }
   ],
   "message": "Runbook failed",
   "mode": "production",
   "runbook_id": "fight_day_monitor_v1",
-  "started_at": "2026-06-27T23:06:34.480798+00:00",
+  "started_at": "2026-06-27T23:07:37.616156+00:00",
   "status": "failed",
   "step_index": 1,
   "step_total": 4,
   "substep_index": 4,
   "substep_total": 6,
-  "updated_at": "2026-06-27T23:06:37.740333+00:00"
+  "updated_at": "2026-06-27T23:07:40.412308+00:00"
 }
