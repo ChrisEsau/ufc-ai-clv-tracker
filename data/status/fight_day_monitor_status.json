@@ -1,10 +1,10 @@
 {
-  "completed_at": "2026-06-20T23:48:12.655834+00:00",
+  "completed_at": "2026-06-27T11:28:35.470693+00:00",
   "current_step_id": "capture_closing_lines",
   "current_step_name": "Capture Closing Lines",
   "current_substep_id": "capture_closing_line_snapshot",
   "current_substep_name": "Capture Closing-Line Snapshot",
-  "error": null,
+  "error": "Command '['/opt/hostedtoolcache/Python/3.11.15/x64/bin/python', '-m', 'pipeline.snapshots.run_capture_closing_line_snapshot']' returned non-zero exit status 1.",
   "history": [
     {
       "event": "runbook_started",
@@ -13,7 +13,7 @@
       "step_name": null,
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-06-20T23:31:43.338591+00:00"
+      "timestamp": "2026-06-27T11:19:27.270050+00:00"
     },
     {
       "event": "step_started",
@@ -22,7 +22,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-06-20T23:31:43.339145+00:00"
+      "timestamp": "2026-06-27T11:19:27.270620+00:00"
     },
     {
       "event": "substep_started",
@@ -31,7 +31,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_event_index",
       "substep_name": "Build DraftKings Event Index",
-      "timestamp": "2026-06-20T23:31:43.339504+00:00"
+      "timestamp": "2026-06-27T11:19:27.270960+00:00"
     },
     {
       "event": "substep_completed",
@@ -40,7 +40,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_event_index",
       "substep_name": "Build DraftKings Event Index",
-      "timestamp": "2026-06-20T23:31:44.578804+00:00"
+      "timestamp": "2026-06-27T11:19:28.717842+00:00"
     },
     {
       "event": "substep_started",
@@ -49,7 +49,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_card_filter",
       "substep_name": "Match DraftKings Events To Card",
-      "timestamp": "2026-06-20T23:31:44.579304+00:00"
+      "timestamp": "2026-06-27T11:19:28.718278+00:00"
     },
     {
       "event": "substep_completed",
@@ -58,7 +58,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_card_filter",
       "substep_name": "Match DraftKings Events To Card",
-      "timestamp": "2026-06-20T23:31:45.541657+00:00"
+      "timestamp": "2026-06-27T11:19:29.428187+00:00"
     },
     {
       "event": "substep_started",
@@ -67,7 +67,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "update_target_event_commence_time",
       "substep_name": "Update Target Event Commence Time",
-      "timestamp": "2026-06-20T23:31:45.542168+00:00"
+      "timestamp": "2026-06-27T11:19:29.428700+00:00"
     },
     {
       "event": "substep_completed",
@@ -76,7 +76,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "update_target_event_commence_time",
       "substep_name": "Update Target Event Commence Time",
-      "timestamp": "2026-06-20T23:31:45.967346+00:00"
+      "timestamp": "2026-06-27T11:19:29.864581+00:00"
     },
     {
       "event": "substep_started",
@@ -85,7 +85,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_matched_discovery",
       "substep_name": "Discover DraftKings Markets",
-      "timestamp": "2026-06-20T23:31:45.967852+00:00"
+      "timestamp": "2026-06-27T11:19:29.865053+00:00"
     },
     {
       "event": "substep_completed",
@@ -94,7 +94,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_matched_discovery",
       "substep_name": "Discover DraftKings Markets",
-      "timestamp": "2026-06-20T23:48:00.435681+00:00"
+      "timestamp": "2026-06-27T11:28:28.056206+00:00"
     },
     {
       "event": "substep_started",
@@ -103,7 +103,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_normalize_markets",
       "substep_name": "Normalize DraftKings Markets",
-      "timestamp": "2026-06-20T23:48:00.436214+00:00"
+      "timestamp": "2026-06-27T11:28:28.056722+00:00"
     },
     {
       "event": "substep_completed",
@@ -112,7 +112,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_normalize_markets",
       "substep_name": "Normalize DraftKings Markets",
-      "timestamp": "2026-06-20T23:48:00.943917+00:00"
+      "timestamp": "2026-06-27T11:28:28.593134+00:00"
     },
     {
       "event": "substep_started",
@@ -121,7 +121,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_match_markets",
       "substep_name": "Match DraftKings Markets To Live Card",
-      "timestamp": "2026-06-20T23:48:00.944533+00:00"
+      "timestamp": "2026-06-27T11:28:28.593669+00:00"
     },
     {
       "event": "substep_completed",
@@ -130,7 +130,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_match_markets",
       "substep_name": "Match DraftKings Markets To Live Card",
-      "timestamp": "2026-06-20T23:48:11.197824+00:00"
+      "timestamp": "2026-06-27T11:28:33.898912+00:00"
     },
     {
       "event": "step_completed",
@@ -139,7 +139,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_match_markets",
       "substep_name": "Match DraftKings Markets To Live Card",
-      "timestamp": "2026-06-20T23:48:11.198418+00:00"
+      "timestamp": "2026-06-27T11:28:33.899434+00:00"
     },
     {
       "event": "step_started",
@@ -148,7 +148,7 @@
       "step_name": "Recalculate Betting Board",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-06-20T23:48:11.198887+00:00"
+      "timestamp": "2026-06-27T11:28:33.899860+00:00"
     },
     {
       "event": "substep_started",
@@ -157,7 +157,7 @@
       "step_name": "Recalculate Betting Board",
       "substep_id": "run_betting_outcomes_v2",
       "substep_name": "Run Betting Outcomes V2",
-      "timestamp": "2026-06-20T23:48:11.199375+00:00"
+      "timestamp": "2026-06-27T11:28:33.900273+00:00"
     },
     {
       "event": "substep_completed",
@@ -166,7 +166,7 @@
       "step_name": "Recalculate Betting Board",
       "substep_id": "run_betting_outcomes_v2",
       "substep_name": "Run Betting Outcomes V2",
-      "timestamp": "2026-06-20T23:48:11.704686+00:00"
+      "timestamp": "2026-06-27T11:28:34.454013+00:00"
     },
     {
       "event": "step_completed",
@@ -175,7 +175,7 @@
       "step_name": "Recalculate Betting Board",
       "substep_id": "run_betting_outcomes_v2",
       "substep_name": "Run Betting Outcomes V2",
-      "timestamp": "2026-06-20T23:48:11.705287+00:00"
+      "timestamp": "2026-06-27T11:28:34.454570+00:00"
     },
     {
       "event": "step_started",
@@ -184,7 +184,7 @@
       "step_name": "Capture Model-Market Snapshot",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-06-20T23:48:11.705785+00:00"
+      "timestamp": "2026-06-27T11:28:34.455050+00:00"
     },
     {
       "event": "substep_started",
@@ -193,7 +193,7 @@
       "step_name": "Capture Model-Market Snapshot",
       "substep_id": "capture_model_market_snapshots",
       "substep_name": "Capture Model-Market Snapshots",
-      "timestamp": "2026-06-20T23:48:11.706302+00:00"
+      "timestamp": "2026-06-27T11:28:34.455581+00:00"
     },
     {
       "event": "substep_completed",
@@ -202,7 +202,7 @@
       "step_name": "Capture Model-Market Snapshot",
       "substep_id": "capture_model_market_snapshots",
       "substep_name": "Capture Model-Market Snapshots",
-      "timestamp": "2026-06-20T23:48:12.220321+00:00"
+      "timestamp": "2026-06-27T11:28:35.040987+00:00"
     },
     {
       "event": "step_completed",
@@ -211,7 +211,7 @@
       "step_name": "Capture Model-Market Snapshot",
       "substep_id": "capture_model_market_snapshots",
       "substep_name": "Capture Model-Market Snapshots",
-      "timestamp": "2026-06-20T23:48:12.220927+00:00"
+      "timestamp": "2026-06-27T11:28:35.041628+00:00"
     },
     {
       "event": "step_started",
@@ -220,7 +220,7 @@
       "step_name": "Capture Closing Lines",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-06-20T23:48:12.221488+00:00"
+      "timestamp": "2026-06-27T11:28:35.042176+00:00"
     },
     {
       "event": "substep_started",
@@ -229,44 +229,26 @@
       "step_name": "Capture Closing Lines",
       "substep_id": "capture_closing_line_snapshot",
       "substep_name": "Capture Closing-Line Snapshot",
-      "timestamp": "2026-06-20T23:48:12.222003+00:00"
+      "timestamp": "2026-06-27T11:28:35.042823+00:00"
     },
     {
-      "event": "substep_completed",
-      "message": "Completed Capture Closing-Line Snapshot",
+      "event": "runbook_failed",
+      "message": "Command '['/opt/hostedtoolcache/Python/3.11.15/x64/bin/python', '-m', 'pipeline.snapshots.run_capture_closing_line_snapshot']' returned non-zero exit status 1.",
       "step_id": "capture_closing_lines",
       "step_name": "Capture Closing Lines",
       "substep_id": "capture_closing_line_snapshot",
       "substep_name": "Capture Closing-Line Snapshot",
-      "timestamp": "2026-06-20T23:48:12.654597+00:00"
-    },
-    {
-      "event": "step_completed",
-      "message": "Completed Capture Closing Lines",
-      "step_id": "capture_closing_lines",
-      "step_name": "Capture Closing Lines",
-      "substep_id": "capture_closing_line_snapshot",
-      "substep_name": "Capture Closing-Line Snapshot",
-      "timestamp": "2026-06-20T23:48:12.655306+00:00"
-    },
-    {
-      "event": "runbook_completed",
-      "message": "Fight Day Monitor completed",
-      "step_id": "capture_closing_lines",
-      "step_name": "Capture Closing Lines",
-      "substep_id": "capture_closing_line_snapshot",
-      "substep_name": "Capture Closing-Line Snapshot",
-      "timestamp": "2026-06-20T23:48:12.655838+00:00"
+      "timestamp": "2026-06-27T11:28:35.470699+00:00"
     }
   ],
-  "message": "Fight Day Monitor completed",
+  "message": "Runbook failed",
   "mode": "production",
   "runbook_id": "fight_day_monitor_v1",
-  "started_at": "2026-06-20T23:31:43.338585+00:00",
-  "status": "completed",
+  "started_at": "2026-06-27T11:19:27.270042+00:00",
+  "status": "failed",
   "step_index": 4,
   "step_total": 4,
   "substep_index": 1,
   "substep_total": 1,
-  "updated_at": "2026-06-20T23:48:12.655987+00:00"
+  "updated_at": "2026-06-27T11:28:35.470849+00:00"
 }
