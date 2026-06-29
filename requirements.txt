@@ -1,15 +1,3 @@
-streamlit
-pandas
-pyarrow
-numpy
-plotly
-requests
-beautifulsoup4
-lxml
-selenium
-webdriver-manager
-joblib
-pyyaml
-scikit-learn
-shap
-xgboost
+# Streamlit Community Cloud installs this file by default.
+# Keep it dashboard/runtime safe: no SHAP, numba, llvmlite, or heavy training-only deps.
+-r requirements-dashboard.txt
