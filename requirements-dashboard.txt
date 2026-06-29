@@ -1,0 +1,14 @@
+streamlit
+pandas
+pyarrow
+numpy
+plotly
+requests
+beautifulsoup4
+lxml
+selenium
+webdriver-manager
+joblib
+pyyaml
+scikit-learn
+xgboost
