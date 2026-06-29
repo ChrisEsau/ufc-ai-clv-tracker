@@ -158,3 +158,8 @@ importlib.import_module("pipeline.round_stats.validate_round_fighter_wrestling")
 import importlib
 importlib.import_module("pipeline.round_stats.build_round_fighter_defense")
 importlib.import_module("pipeline.round_stats.validate_round_fighter_defense")
+
+# Full-family RFS feature-view experiment smoke imports
+import importlib
+importlib.import_module("pipeline.round_stats.join_round_fighter_state_families")
+importlib.import_module("pipeline.features.run_build_moneyline_rfs_view")
