@@ -1,0 +1,4 @@
+# Training/modeling-only dependencies.
+# Install this locally or in GitHub Actions when running model training, SHAP generation, or backtests.
+-r requirements-dashboard.txt
+shap
