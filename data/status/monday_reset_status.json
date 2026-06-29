@@ -1,10 +1,10 @@
 {
-  "completed_at": "2026-06-29T13:45:13.271093+00:00",
+  "completed_at": "2026-06-29T13:52:58.772454+00:00",
   "current_step_id": "initialize_upcoming_event",
   "current_step_name": "Initialize Upcoming Event",
   "current_substep_id": null,
   "current_substep_name": null,
-  "error": "Command '['/opt/hostedtoolcache/Python/3.11.15/x64/bin/python', '-m', 'pipeline.snapshots.run_capture_model_market_snapshots', '--model-mode', 'production']' returned non-zero exit status 1.",
+  "error": null,
   "history": [
     {
       "event": "runbook_started",
@@ -13,7 +13,7 @@
       "step_name": null,
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-06-29T13:43:29.407466+00:00"
+      "timestamp": "2026-06-29T13:47:55.927145+00:00"
     },
     {
       "event": "step_started",
@@ -22,7 +22,7 @@
       "step_name": "Process Completed Events",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-06-29T13:43:29.407877+00:00"
+      "timestamp": "2026-06-29T13:47:55.927459+00:00"
     },
     {
       "event": "step_completed",
@@ -31,7 +31,7 @@
       "step_name": "Process Completed Events",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-06-29T13:43:48.657307+00:00"
+      "timestamp": "2026-06-29T13:48:06.030382+00:00"
     },
     {
       "event": "step_started",
@@ -40,7 +40,7 @@
       "step_name": "Update Master Dataset",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-06-29T13:43:48.657721+00:00"
+      "timestamp": "2026-06-29T13:48:06.030698+00:00"
     },
     {
       "event": "step_completed",
@@ -49,7 +49,7 @@
       "step_name": "Update Master Dataset",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-06-29T13:43:48.659141+00:00"
+      "timestamp": "2026-06-29T13:48:06.032030+00:00"
     },
     {
       "event": "step_started",
@@ -58,7 +58,7 @@
       "step_name": "Refresh Platform Status",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-06-29T13:43:48.659512+00:00"
+      "timestamp": "2026-06-29T13:48:06.032322+00:00"
     },
     {
       "event": "step_completed",
@@ -67,7 +67,7 @@
       "step_name": "Refresh Platform Status",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-06-29T13:44:05.628466+00:00"
+      "timestamp": "2026-06-29T13:52:02.845932+00:00"
     },
     {
       "event": "step_started",
@@ -76,7 +76,7 @@
       "step_name": "Reconcile Performance",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-06-29T13:44:05.628901+00:00"
+      "timestamp": "2026-06-29T13:52:02.846373+00:00"
     },
     {
       "event": "step_completed",
@@ -85,7 +85,7 @@
       "step_name": "Reconcile Performance",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-06-29T13:44:07.384216+00:00"
+      "timestamp": "2026-06-29T13:52:04.066443+00:00"
     },
     {
       "event": "step_started",
@@ -94,26 +94,35 @@
       "step_name": "Initialize Upcoming Event",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-06-29T13:44:07.384739+00:00"
+      "timestamp": "2026-06-29T13:52:04.066899+00:00"
     },
     {
-      "event": "runbook_failed",
-      "message": "Command '['/opt/hostedtoolcache/Python/3.11.15/x64/bin/python', '-m', 'pipeline.snapshots.run_capture_model_market_snapshots', '--model-mode', 'production']' returned non-zero exit status 1.",
+      "event": "step_completed",
+      "message": "Completed Initialize Upcoming Event",
       "step_id": "initialize_upcoming_event",
       "step_name": "Initialize Upcoming Event",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-06-29T13:45:13.271100+00:00"
+      "timestamp": "2026-06-29T13:52:58.771957+00:00"
+    },
+    {
+      "event": "runbook_completed",
+      "message": "Monday Reset completed",
+      "step_id": "initialize_upcoming_event",
+      "step_name": "Initialize Upcoming Event",
+      "substep_id": null,
+      "substep_name": null,
+      "timestamp": "2026-06-29T13:52:58.772458+00:00"
     }
   ],
-  "message": "Runbook failed",
+  "message": "Monday Reset completed",
   "mode": "production",
   "runbook_id": "monday_reset_v1",
-  "started_at": "2026-06-29T13:43:29.407460+00:00",
-  "status": "failed",
+  "started_at": "2026-06-29T13:47:55.927140+00:00",
+  "status": "completed",
   "step_index": 5,
   "step_total": 5,
   "substep_index": null,
   "substep_total": 1,
-  "updated_at": "2026-06-29T13:45:13.271257+00:00"
+  "updated_at": "2026-06-29T13:52:58.772563+00:00"
 }
