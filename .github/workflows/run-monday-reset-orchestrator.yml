@@ -86,7 +86,7 @@ jobs:
             ARGS+=(--skip-clv)
           fi
 
-          python -m pipeline.operations.run_monday_reset "${ARGS[@]}"
+          python -m pipeline.operations.run_monday_reset_with_market "${ARGS[@]}"
 
       - name: Commit Monday Reset artifacts
         if: always()
@@ -101,6 +101,23 @@ jobs:
             data/cards/ufcstats_upcoming_fights.parquet \
             data/cards/ufc_selected_live_card_event.parquet \
             data/predictions/ufc_live_card.parquet \
+            data/market/draftkings_event_index.parquet \
+            data/market/draftkings_event_card_matches.parquet \
+            data/market/draftkings_market_diagnostic.parquet \
+            data/market/draftkings_raw_index.parquet \
+            data/market/fanduel_market_catalog.parquet \
+            data/market/fanduel_market_diagnostic.parquet \
+            data/market/fanduel_event_card_matches.parquet \
+            data/market/fanduel_event_index.parquet \
+            data/market/draftkings_market_catalog.parquet \
+            data/market/canonical_market_catalog.parquet \
+            data/market/market_outcomes.parquet \
+            data/audits/canonical_market_catalog_audit.parquet \
+            data/audits/ufc_market_match_audit_v2.parquet \
+            data/market/market_intelligence_history.parquet \
+            data/audits/market_intelligence_history_audit.parquet \
+            data/market/market_signals.parquet \
+            data/audits/market_signals_audit.parquet \
             data/features/fighter_state_history.parquet \
             data/features/latest_fighter_state.parquet \
             data/features/moneyline_feature_view.parquet \
