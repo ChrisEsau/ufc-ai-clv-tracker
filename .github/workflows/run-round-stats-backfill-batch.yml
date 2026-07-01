@@ -62,7 +62,7 @@ jobs:
       - name: Run round stats backfill batch
         run: |
           python -m pipeline.round_stats.run_round_stats_backfill_batch \
-            --max-fights "${{ inputs.max_fights || '20' }}" \
+            --max-fights "${{ inputs.max_fights || '100' }}" \
             --sleep-seconds "${{ inputs.sleep_seconds || '10' }}" \
             --jitter-seconds "${{ inputs.jitter_seconds || '5' }}" \
             --max-failures 3
