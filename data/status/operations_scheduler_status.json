@@ -461,22 +461,138 @@
       "scheduled_at_local": "2026-07-03T15:00:00-05:00",
       "scheduled_time": "15:00",
       "workflow_file": "run-market-refresh-orchestrator.yml"
+    },
+    {
+      "catchup_grace_minutes": 180,
+      "dispatch_key": "fight_day_monitor_v1:2026-07-04T17:30:America/Chicago",
+      "dispatched_at": "2026-07-04T23:00:07.088805+00:00",
+      "display_name": "Fight Day Monitor",
+      "dry_run": false,
+      "inputs": {
+        "max_draftkings_events": "all",
+        "mode": "production",
+        "model_mode": "production",
+        "official_closing_snapshot": true,
+        "snapshot_model_mode": "production"
+      },
+      "message": "Dispatched run-fight-day-monitor.yml",
+      "minutes_late": 30.12,
+      "runbook_id": "fight_day_monitor_v1",
+      "scheduled_at_local": "2026-07-04T17:30:00-05:00",
+      "scheduled_time": "17:30",
+      "workflow_file": "run-fight-day-monitor.yml"
+    },
+    {
+      "catchup_grace_minutes": 180,
+      "dispatch_key": "fight_day_monitor_v1:2026-07-04T17:55:America/Chicago",
+      "dispatched_at": "2026-07-04T23:00:07.088805+00:00",
+      "display_name": "Fight Day Monitor",
+      "dry_run": false,
+      "inputs": {
+        "max_draftkings_events": "all",
+        "mode": "production",
+        "model_mode": "production",
+        "official_closing_snapshot": true,
+        "snapshot_model_mode": "production"
+      },
+      "message": "Dispatched run-fight-day-monitor.yml",
+      "minutes_late": 5.12,
+      "runbook_id": "fight_day_monitor_v1",
+      "scheduled_at_local": "2026-07-04T17:55:00-05:00",
+      "scheduled_time": "17:55",
+      "workflow_file": "run-fight-day-monitor.yml"
     }
   ],
-  "dispatched_runbooks": [],
-  "due_runbooks": [],
+  "dispatched_runbooks": [
+    {
+      "catchup_grace_minutes": 180,
+      "dispatch_key": "fight_day_monitor_v1:2026-07-04T17:30:America/Chicago",
+      "dispatched_at": "2026-07-04T23:00:07.088805+00:00",
+      "display_name": "Fight Day Monitor",
+      "dry_run": false,
+      "inputs": {
+        "max_draftkings_events": "all",
+        "mode": "production",
+        "model_mode": "production",
+        "official_closing_snapshot": true,
+        "snapshot_model_mode": "production"
+      },
+      "message": "Dispatched run-fight-day-monitor.yml",
+      "minutes_late": 30.12,
+      "runbook_id": "fight_day_monitor_v1",
+      "scheduled_at_local": "2026-07-04T17:30:00-05:00",
+      "scheduled_time": "17:30",
+      "workflow_file": "run-fight-day-monitor.yml"
+    },
+    {
+      "catchup_grace_minutes": 180,
+      "dispatch_key": "fight_day_monitor_v1:2026-07-04T17:55:America/Chicago",
+      "dispatched_at": "2026-07-04T23:00:07.088805+00:00",
+      "display_name": "Fight Day Monitor",
+      "dry_run": false,
+      "inputs": {
+        "max_draftkings_events": "all",
+        "mode": "production",
+        "model_mode": "production",
+        "official_closing_snapshot": true,
+        "snapshot_model_mode": "production"
+      },
+      "message": "Dispatched run-fight-day-monitor.yml",
+      "minutes_late": 5.12,
+      "runbook_id": "fight_day_monitor_v1",
+      "scheduled_at_local": "2026-07-04T17:55:00-05:00",
+      "scheduled_time": "17:55",
+      "workflow_file": "run-fight-day-monitor.yml"
+    }
+  ],
+  "due_runbooks": [
+    {
+      "catchup_grace_minutes": 180,
+      "dispatch_key": "fight_day_monitor_v1:2026-07-04T17:30:America/Chicago",
+      "display_name": "Fight Day Monitor",
+      "inputs": {
+        "max_draftkings_events": "all",
+        "mode": "production",
+        "model_mode": "production",
+        "official_closing_snapshot": true,
+        "snapshot_model_mode": "production"
+      },
+      "minutes_late": 30.12,
+      "runbook_id": "fight_day_monitor_v1",
+      "scheduled_at_local": "2026-07-04T17:30:00-05:00",
+      "scheduled_time": "17:30",
+      "workflow_file": "run-fight-day-monitor.yml"
+    },
+    {
+      "catchup_grace_minutes": 180,
+      "dispatch_key": "fight_day_monitor_v1:2026-07-04T17:55:America/Chicago",
+      "display_name": "Fight Day Monitor",
+      "inputs": {
+        "max_draftkings_events": "all",
+        "mode": "production",
+        "model_mode": "production",
+        "official_closing_snapshot": true,
+        "snapshot_model_mode": "production"
+      },
+      "minutes_late": 5.12,
+      "runbook_id": "fight_day_monitor_v1",
+      "scheduled_at_local": "2026-07-04T17:55:00-05:00",
+      "scheduled_time": "17:55",
+      "workflow_file": "run-fight-day-monitor.yml"
+    }
+  ],
   "errors": [],
-  "last_checked_at": "2026-07-04T21:01:22.891305+00:00",
+  "last_checked_at": "2026-07-04T23:00:07.088805+00:00",
   "next_due_runbook": {
-    "catchup_grace_minutes": 180,
-    "display_name": "Fight Day Monitor",
-    "runbook_id": "fight_day_monitor_v1",
-    "scheduled_at_local": "2026-07-04T17:30:00-05:00",
-    "scheduled_time": "17:30",
-    "workflow_file": "run-fight-day-monitor.yml"
+    "catchup_grace_minutes": 2880,
+    "display_name": "Monday Reset",
+    "runbook_id": "monday_reset_v1",
+    "scheduled_at_local": "2026-07-06T05:00:00-05:00",
+    "scheduled_time": "05:00",
+    "workflow_file": "run-monday-reset-orchestrator.yml"
   },
   "skipped_runbooks": [],
   "status": "completed",
   "timezone": "America/Chicago",
-  "updated_at": "2026-07-04T21:01:22.896053+00:00"
+  "updated_at": "2026-07-04T23:00:09.106915+00:00"
 }
