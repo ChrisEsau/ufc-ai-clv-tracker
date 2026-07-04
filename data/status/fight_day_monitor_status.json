@@ -1,5 +1,5 @@
 {
-  "completed_at": "2026-07-04T23:09:48.593693+00:00",
+  "completed_at": "2026-07-04T23:19:21.108431+00:00",
   "current_step_id": "capture_model_market_snapshot",
   "current_step_name": "Capture Model-Market Snapshot",
   "current_substep_id": "capture_model_market_snapshots",
@@ -13,7 +13,7 @@
       "step_name": null,
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-07-04T23:01:17.817096+00:00"
+      "timestamp": "2026-07-04T23:10:56.188706+00:00"
     },
     {
       "event": "step_started",
@@ -22,7 +22,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-07-04T23:01:17.817537+00:00"
+      "timestamp": "2026-07-04T23:10:56.189273+00:00"
     },
     {
       "event": "substep_started",
@@ -31,7 +31,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_event_index",
       "substep_name": "Build DraftKings Event Index",
-      "timestamp": "2026-07-04T23:01:17.817820+00:00"
+      "timestamp": "2026-07-04T23:10:56.189675+00:00"
     },
     {
       "event": "substep_completed",
@@ -40,7 +40,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_event_index",
       "substep_name": "Build DraftKings Event Index",
-      "timestamp": "2026-07-04T23:01:18.887862+00:00"
+      "timestamp": "2026-07-04T23:10:57.806662+00:00"
     },
     {
       "event": "substep_started",
@@ -49,7 +49,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_card_filter",
       "substep_name": "Match DraftKings Events To Card",
-      "timestamp": "2026-07-04T23:01:18.888379+00:00"
+      "timestamp": "2026-07-04T23:10:57.807123+00:00"
     },
     {
       "event": "substep_completed",
@@ -58,7 +58,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_card_filter",
       "substep_name": "Match DraftKings Events To Card",
-      "timestamp": "2026-07-04T23:01:19.469859+00:00"
+      "timestamp": "2026-07-04T23:10:58.473801+00:00"
     },
     {
       "event": "substep_started",
@@ -67,7 +67,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "update_target_event_commence_time",
       "substep_name": "Update Target Event Commence Time",
-      "timestamp": "2026-07-04T23:01:19.470320+00:00"
+      "timestamp": "2026-07-04T23:10:58.474276+00:00"
     },
     {
       "event": "substep_completed",
@@ -76,7 +76,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "update_target_event_commence_time",
       "substep_name": "Update Target Event Commence Time",
-      "timestamp": "2026-07-04T23:01:19.843215+00:00"
+      "timestamp": "2026-07-04T23:10:58.928051+00:00"
     },
     {
       "event": "substep_started",
@@ -85,7 +85,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_matched_discovery",
       "substep_name": "Discover DraftKings Markets",
-      "timestamp": "2026-07-04T23:01:19.843901+00:00"
+      "timestamp": "2026-07-04T23:10:58.928859+00:00"
     },
     {
       "event": "substep_completed",
@@ -94,7 +94,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_matched_discovery",
       "substep_name": "Discover DraftKings Markets",
-      "timestamp": "2026-07-04T23:09:45.225507+00:00"
+      "timestamp": "2026-07-04T23:19:17.013074+00:00"
     },
     {
       "event": "substep_started",
@@ -103,7 +103,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_normalize_markets",
       "substep_name": "Normalize DraftKings Markets",
-      "timestamp": "2026-07-04T23:09:45.226027+00:00"
+      "timestamp": "2026-07-04T23:19:17.013633+00:00"
     },
     {
       "event": "substep_completed",
@@ -112,7 +112,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_normalize_markets",
       "substep_name": "Normalize DraftKings Markets",
-      "timestamp": "2026-07-04T23:09:45.672420+00:00"
+      "timestamp": "2026-07-04T23:19:17.548544+00:00"
     },
     {
       "event": "substep_started",
@@ -121,7 +121,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_match_markets",
       "substep_name": "Match DraftKings Markets To Live Card",
-      "timestamp": "2026-07-04T23:09:45.672960+00:00"
+      "timestamp": "2026-07-04T23:19:17.549118+00:00"
     },
     {
       "event": "substep_completed",
@@ -130,7 +130,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_match_markets",
       "substep_name": "Match DraftKings Markets To Live Card",
-      "timestamp": "2026-07-04T23:09:47.624374+00:00"
+      "timestamp": "2026-07-04T23:19:19.934257+00:00"
     },
     {
       "event": "step_completed",
@@ -139,7 +139,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_match_markets",
       "substep_name": "Match DraftKings Markets To Live Card",
-      "timestamp": "2026-07-04T23:09:47.624855+00:00"
+      "timestamp": "2026-07-04T23:19:19.934862+00:00"
     },
     {
       "event": "step_started",
@@ -148,7 +148,7 @@
       "step_name": "Recalculate Betting Board",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-07-04T23:09:47.627952+00:00"
+      "timestamp": "2026-07-04T23:19:19.935345+00:00"
     },
     {
       "event": "substep_started",
@@ -157,7 +157,7 @@
       "step_name": "Recalculate Betting Board",
       "substep_id": "run_betting_outcomes_v2",
       "substep_name": "Run Betting Outcomes V2",
-      "timestamp": "2026-07-04T23:09:47.628395+00:00"
+      "timestamp": "2026-07-04T23:19:19.935844+00:00"
     },
     {
       "event": "substep_completed",
@@ -166,7 +166,7 @@
       "step_name": "Recalculate Betting Board",
       "substep_id": "run_betting_outcomes_v2",
       "substep_name": "Run Betting Outcomes V2",
-      "timestamp": "2026-07-04T23:09:48.113000+00:00"
+      "timestamp": "2026-07-04T23:19:20.521085+00:00"
     },
     {
       "event": "step_completed",
@@ -175,7 +175,7 @@
       "step_name": "Recalculate Betting Board",
       "substep_id": "run_betting_outcomes_v2",
       "substep_name": "Run Betting Outcomes V2",
-      "timestamp": "2026-07-04T23:09:48.113549+00:00"
+      "timestamp": "2026-07-04T23:19:20.521769+00:00"
     },
     {
       "event": "step_started",
@@ -184,7 +184,7 @@
       "step_name": "Capture Model-Market Snapshot",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-07-04T23:09:48.114194+00:00"
+      "timestamp": "2026-07-04T23:19:20.522425+00:00"
     },
     {
       "event": "substep_started",
@@ -193,7 +193,7 @@
       "step_name": "Capture Model-Market Snapshot",
       "substep_id": "capture_model_market_snapshots",
       "substep_name": "Capture Model-Market Snapshots",
-      "timestamp": "2026-07-04T23:09:48.114588+00:00"
+      "timestamp": "2026-07-04T23:19:20.523000+00:00"
     },
     {
       "event": "runbook_failed",
@@ -202,17 +202,17 @@
       "step_name": "Capture Model-Market Snapshot",
       "substep_id": "capture_model_market_snapshots",
       "substep_name": "Capture Model-Market Snapshots",
-      "timestamp": "2026-07-04T23:09:48.593698+00:00"
+      "timestamp": "2026-07-04T23:19:21.108438+00:00"
     }
   ],
   "message": "Runbook failed",
   "mode": "production",
   "runbook_id": "fight_day_monitor_v1",
-  "started_at": "2026-07-04T23:01:17.817092+00:00",
+  "started_at": "2026-07-04T23:10:56.188701+00:00",
   "status": "failed",
   "step_index": 3,
   "step_total": 4,
   "substep_index": 1,
   "substep_total": 1,
-  "updated_at": "2026-07-04T23:09:48.593808+00:00"
+  "updated_at": "2026-07-04T23:19:21.108602+00:00"
 }
