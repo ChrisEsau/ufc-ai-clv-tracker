@@ -39,6 +39,13 @@ jobs:
         run: |
           python -m pipeline.features.run_build_fighter_state
 
+      - name: Build RFS fighter-state artifacts
+        run: |
+          python -m pipeline.round_stats.build_round_fighter_state
+          python -m pipeline.round_stats.build_round_fighter_suppression
+          python -m pipeline.round_stats.build_round_fighter_wrestling
+          python -m pipeline.round_stats.build_round_fighter_defense
+
       - name: Commit fighter-state artifacts
         run: |
           git config user.name "github-actions"
@@ -46,7 +53,18 @@ jobs:
 
           git add -f \
             data/features/fighter_state_history.parquet \
-            data/features/latest_fighter_state.parquet
+            data/features/latest_fighter_state.parquet \
+            data/features/round_fighter_state_history.parquet \
+            data/features/round_latest_fighter_state.parquet \
+            data/features/round_fighter_suppression_p0_2_history.parquet \
+            data/features/round_latest_fighter_suppression_p0_2.parquet \
+            data/features/round_fighter_wrestling_p0_3_history.parquet \
+            data/features/round_latest_fighter_wrestling_p0_3.parquet \
+            data/features/round_fighter_defense_p1_4_history.parquet \
+            data/features/round_latest_fighter_defense_p1_4.parquet \
+            data/audits/round_fighter_state_p0_1_validation.parquet \
+            data/audits/round_fighter_wrestling_p0_3_validation.parquet \
+            data/audits/round_fighter_defense_p1_4_validation.parquet
 
           git commit -m "Update fighter state artifacts" || echo "No changes to commit"
           git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
