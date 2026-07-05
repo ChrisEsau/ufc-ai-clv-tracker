@@ -44,6 +44,10 @@ jobs:
           python -m pipeline.features.run_build_feature_view \
             --config "${{ inputs.config_path }}"
 
+      - name: Build RFS moneyline feature view
+        run: |
+          python -m pipeline.features.run_build_moneyline_rfs_view
+
       - name: Commit feature view artifacts
         run: |
           git config user.name "github-actions"
@@ -53,19 +57,35 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           import yaml
+
           config = yaml.safe_load(Path("${{ inputs.config_path }}").read_text(encoding="utf-8")) or {}
           output = config.get("output") or {}
           flipped = output.get("flipped_feature_view_path")
           if not flipped:
               base = Path("${{ inputs.output_path }}")
               flipped = str(base.with_name(f"{base.stem}_flipped{base.suffix}"))
-          path = Path(flipped)
-          if path.exists():
-              print(f"Adding flipped feature view: {path}")
-          else:
-              raise SystemExit(f"Expected flipped feature view does not exist: {path}")
+
+          required_paths = [
+              Path(flipped),
+              Path("data/features/moneyline_rfs_feature_view.parquet"),
+              Path("data/features/moneyline_rfs_feature_view_flipped.parquet"),
+              Path("data/audits/moneyline_rfs_feature_view_validation.parquet"),
+              Path("data/audits/moneyline_rfs_feature_view_flipped_validation.parquet"),
+          ]
+
+          missing = [str(path) for path in required_paths if not path.exists()]
+          if missing:
+              raise SystemExit(f"Expected feature-view artifacts do not exist: {missing}")
+
+          for path in required_paths:
+              print(f"Adding feature-view artifact: {path}")
           PY
-          git add -f data/features/moneyline_feature_view_flipped.parquet
+          git add -f \
+            data/features/moneyline_feature_view_flipped.parquet \
+            data/features/moneyline_rfs_feature_view.parquet \
+            data/features/moneyline_rfs_feature_view_flipped.parquet \
+            data/audits/moneyline_rfs_feature_view_validation.parquet \
+            data/audits/moneyline_rfs_feature_view_flipped_validation.parquet
 
           git commit -m "Update feature view artifacts" || echo "No changes"
           git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
