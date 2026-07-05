@@ -1,0 +1,42 @@
+{
+  "model_id": "moneyline_xgboost_v13_rfs_single_top60",
+  "generated_at": "2026-07-05T20:36:19.762991+00:00",
+  "config_path": "configs/models/moneyline_xgboost_v13_rfs_single_top60.yaml",
+  "feature_count": 60,
+  "best_threshold": 0.56,
+  "metrics": {
+    "accuracy": 0.5841968911917098,
+    "log_loss": 0.6970051271410257,
+    "roc_auc": 0.6159158635131146,
+    "brier_score": 0.24113571736242884,
+    "threshold": 0.56,
+    "positive_pick_rate_percent": 35.233160621761655,
+    "negative_pick_rate_percent": 64.76683937823834,
+    "actual_positive_rate_percent": 50.0,
+    "row_count": 1544
+  },
+  "raw_metrics": {
+    "accuracy": 0.5841968911917098,
+    "log_loss": 0.6696804926740163,
+    "roc_auc": 0.6174192595774384,
+    "brier_score": 0.2386467268121154,
+    "threshold": 0.53,
+    "positive_pick_rate_percent": 39.89637305699482,
+    "negative_pick_rate_percent": 60.10362694300518,
+    "actual_positive_rate_percent": 50.0,
+    "row_count": 1544
+  },
+  "training": {
+    "early_stopping_enabled": true,
+    "early_stopping_rounds": 100,
+    "early_stopping_metric": "logloss",
+    "best_iteration": 119,
+    "best_score": 0.6546485176996181
+  },
+  "train_rows": 5852,
+  "calibration_rows": 1026,
+  "test_rows": 1544,
+  "train_start_date": "2018-01-01",
+  "train_end_date": "2023-12-31",
+  "calibration_end_date": "2024-12-31"
+}

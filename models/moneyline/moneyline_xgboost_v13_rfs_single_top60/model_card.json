@@ -1,0 +1,78 @@
+{
+  "model_id": "moneyline_xgboost_v13_rfs_single_top60",
+  "model_family": "moneyline",
+  "artifact_name": "moneyline_xgboost_v13_rfs_single_top60",
+  "algorithm": "xgboost",
+  "status": "draft",
+  "generated_at": "2026-07-05T20:36:20.273190+00:00",
+  "config_path": "configs/models/moneyline_xgboost_v13_rfs_single_top60.yaml",
+  "artifacts_output_dir": "models/moneyline/moneyline_xgboost_v13_rfs_single_top60",
+  "feature_count": 60,
+  "symmetry": {
+    "enabled": true,
+    "mode": "flip_all"
+  },
+  "data": {
+    "rolling_features_path": "data/features/moneyline_rfs_feature_view.parquet",
+    "target_column": "target",
+    "date_column": "date"
+  },
+  "split": {
+    "mode": "train_calibration_test",
+    "train_end_date": "2023-12-31",
+    "calibration_end_date": "2024-12-31",
+    "train_start_date": "2018-01-01"
+  },
+  "calibration": {
+    "enabled": true,
+    "method": "isotonic"
+  },
+  "early_stopping": {
+    "enabled": true,
+    "rounds": 100,
+    "metric": "logloss",
+    "verbose": false
+  },
+  "training": {
+    "early_stopping_enabled": true,
+    "early_stopping_rounds": 100,
+    "early_stopping_metric": "logloss",
+    "best_iteration": 119,
+    "best_score": 0.6546485176996181
+  },
+  "params": {
+    "n_estimators": 500,
+    "max_depth": 5,
+    "learning_rate": 0.03,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "min_child_weight": 1.0,
+    "reg_lambda": 1.0,
+    "reg_alpha": 0.0,
+    "random_state": 42,
+    "eval_metric": "logloss"
+  },
+  "metrics": {
+    "accuracy": 0.5841968911917098,
+    "log_loss": 0.6970051271410257,
+    "roc_auc": 0.6159158635131146,
+    "brier_score": 0.24113571736242884,
+    "threshold": 0.56,
+    "positive_pick_rate_percent": 35.233160621761655,
+    "negative_pick_rate_percent": 64.76683937823834,
+    "actual_positive_rate_percent": 50.0,
+    "row_count": 1544
+  },
+  "raw_metrics": {
+    "accuracy": 0.5841968911917098,
+    "log_loss": 0.6696804926740163,
+    "roc_auc": 0.6174192595774384,
+    "brier_score": 0.2386467268121154,
+    "threshold": 0.53,
+    "positive_pick_rate_percent": 39.89637305699482,
+    "negative_pick_rate_percent": 60.10362694300518,
+    "actual_positive_rate_percent": 50.0,
+    "row_count": 1544
+  },
+  "best_threshold": 0.56
+}
