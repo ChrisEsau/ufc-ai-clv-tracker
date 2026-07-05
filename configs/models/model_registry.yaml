@@ -89,6 +89,18 @@ models:
     status: draft
     dashboard_selectable: false
     outcome_architecture: true
+  moneyline_xgboost_v13_rfs_single_top60:
+    display_name: Moneyline XGBoost V13 RFS Single Top60
+    description: Draft single-model moneyline XGBoost using the V13 Top60 RFS-capable
+      clean fight feature set. This is not the V13 ensemble.
+    model_family: moneyline
+    market_key: moneyline
+    algorithm: xgboost
+    config_path: configs/models/moneyline_xgboost_v13_rfs_single_top60.yaml
+    artifact_dir: models/moneyline/moneyline_xgboost_v13_rfs_single_top60
+    status: draft
+    dashboard_selectable: false
+    outcome_architecture: true
 active_models:
   moneyline:
     primary: moneyline_xgboost_v8
