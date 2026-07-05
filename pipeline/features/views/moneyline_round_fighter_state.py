@@ -49,12 +49,17 @@ def build_moneyline_feature_view_with_round_state(
         fighter_state_history_df=fighter_state_history_df,
     )
 
+    # For symmetric flipped rows, fight_id becomes "<base_fight_id>__flip" for
+    # row uniqueness and market/output traceability. RFS history is keyed to the
+    # original fight id, so use state_fight_id when present.
+    rfs_join_fight_id_col = "state_fight_id" if "state_fight_id" in base_view.columns else "fight_id"
+
     return join_round_fighter_state_families_history(
         base_view,
         family_configs=family_configs,
         red_fighter_id_col="r_id",
         blue_fighter_id_col="b_id",
-        fight_id_col="fight_id",
+        fight_id_col=rfs_join_fight_id_col,
         add_diffs=add_round_state_diffs,
         include_fight_observations=include_fight_observations,
         keep_side_features=keep_side_features,

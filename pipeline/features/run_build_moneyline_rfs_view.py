@@ -25,6 +25,7 @@ from pipeline.common.paths import (
     ensure_data_dirs,
 )
 from pipeline.features.run_build_rolling_features import prepare_master_for_rolling
+from pipeline.features.row_perspective import both_perspectives, original_rows
 from pipeline.features.views.moneyline_round_fighter_state import (
     build_moneyline_feature_view_with_round_state,
     summarize_moneyline_round_state_view,
@@ -33,7 +34,9 @@ from ufc_feature_engineering import add_v5_engineered_features, get_engineered_f
 
 
 MONEYLINE_RFS_FEATURE_VIEW_PATH = FEATURES_DIR / "moneyline_rfs_feature_view.parquet"
+MONEYLINE_RFS_FEATURE_VIEW_FLIPPED_PATH = FEATURES_DIR / "moneyline_rfs_feature_view_flipped.parquet"
 MONEYLINE_RFS_FEATURE_VIEW_VALIDATION_PATH = AUDITS_DIR / "moneyline_rfs_feature_view_validation.parquet"
+MONEYLINE_RFS_FEATURE_VIEW_FLIPPED_VALIDATION_PATH = AUDITS_DIR / "moneyline_rfs_feature_view_flipped_validation.parquet"
 
 
 def _audit_row(
@@ -209,7 +212,9 @@ def main() -> None:
     print(f"Master path              : {MASTER_PATH}")
     print(f"Fighter state path       : {FIGHTER_STATE_HISTORY_PATH}")
     print(f"RFS feature view path    : {MONEYLINE_RFS_FEATURE_VIEW_PATH}")
+    print(f"RFS flipped view path    : {MONEYLINE_RFS_FEATURE_VIEW_FLIPPED_PATH}")
     print(f"RFS validation path      : {MONEYLINE_RFS_FEATURE_VIEW_VALIDATION_PATH}")
+    print(f"RFS flipped validation   : {MONEYLINE_RFS_FEATURE_VIEW_FLIPPED_VALIDATION_PATH}")
 
     master_df = pd.read_parquet(MASTER_PATH)
     print(f"Master shape             : {master_df.shape}")
@@ -220,70 +225,106 @@ def main() -> None:
     fighter_state_history_df = pd.read_parquet(FIGHTER_STATE_HISTORY_PATH)
     print(f"Fighter state shape      : {fighter_state_history_df.shape}")
 
-    rfs_view_df = build_moneyline_feature_view_with_round_state(
-        prepared_fights_df=prepared_df,
-        fighter_state_history_df=fighter_state_history_df,
-        add_round_state_diffs=True,
-        include_fight_observations=False,
-        keep_side_features=False,
-    )
-
-    rfs_view_df = add_v5_engineered_features(rfs_view_df)
-
-    duplicate_columns = rfs_view_df.columns[rfs_view_df.columns.duplicated()].tolist()
-    if duplicate_columns:
-        print(f"Duplicate columns after engineering: {len(duplicate_columns)}")
-        print(f"Deduplicating columns with keep='last': {duplicate_columns[:25]}")
-        rfs_view_df = rfs_view_df.loc[:, ~rfs_view_df.columns.duplicated(keep="last")].copy()
-
-    engineered_features = get_engineered_feature_list()
-    missing_engineered_features = [
-        column for column in engineered_features if column not in rfs_view_df.columns
-    ]
-    if missing_engineered_features:
-        raise ValueError(
-            "Experimental RFS feature view missing engineered features: "
-            f"{missing_engineered_features}"
+    def build_one_rfs_view(
+        *,
+        prepared_for_view: pd.DataFrame,
+        label: str,
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
+        """Build, engineer, validate, and return one RFS feature view."""
+        view_df = build_moneyline_feature_view_with_round_state(
+            prepared_fights_df=prepared_for_view,
+            fighter_state_history_df=fighter_state_history_df,
+            add_round_state_diffs=True,
+            include_fight_observations=False,
+            keep_side_features=False,
         )
 
-    audit_df = build_validation_audit(
-        prepared_df=prepared_df,
-        rfs_view_df=rfs_view_df,
+        view_df = add_v5_engineered_features(view_df)
+
+        duplicate_columns = view_df.columns[view_df.columns.duplicated()].tolist()
+        if duplicate_columns:
+            print(f"{label} duplicate columns after engineering: {len(duplicate_columns)}")
+            print(f"Deduplicating columns with keep='last': {duplicate_columns[:25]}")
+            view_df = view_df.loc[:, ~view_df.columns.duplicated(keep="last")].copy()
+
+        engineered_features = get_engineered_feature_list()
+        missing_engineered_features = [
+            column for column in engineered_features if column not in view_df.columns
+        ]
+        if missing_engineered_features:
+            raise ValueError(
+                f"{label} RFS feature view missing engineered features: "
+                f"{missing_engineered_features}"
+            )
+
+        audit_df = build_validation_audit(
+            prepared_df=prepared_for_view,
+            rfs_view_df=view_df,
+        )
+
+        # Keep audit parquet schema stable. Mixed object columns can fail pyarrow
+        # serialization when some rows contain ints and others contain strings.
+        audit_df["observed"] = audit_df["observed"].astype(str)
+        audit_df["details"] = audit_df["details"].astype(str)
+
+        print()
+        print("=" * 80)
+        print(label.upper())
+        print("=" * 80)
+        print(f"RFS view shape           : {view_df.shape}")
+        print(f"Unique fights            : {view_df['fight_id'].nunique() if not view_df.empty else 0}")
+        print(f"Engineered features      : {len(engineered_features)}")
+
+        if "row_perspective" in view_df.columns:
+            print("Row perspectives:")
+            print(view_df["row_perspective"].value_counts(dropna=False).to_string())
+
+        summary = summarize_moneyline_round_state_view(view_df)
+        print()
+        print("RFS SUMMARY")
+        for key, value in summary.items():
+            print(f"{key}: {value}")
+
+        print()
+        print("VALIDATION")
+        print(audit_df.to_string(index=False))
+
+        fatal_failures = audit_df[
+            audit_df["severity"].eq("fatal") & audit_df["status"].eq("FAIL")
+        ]
+        if not fatal_failures.empty:
+            raise ValueError(
+                f"{label} experimental RFS feature view failed validation:\n"
+                f"{fatal_failures.to_string(index=False)}"
+            )
+
+        return view_df, audit_df
+
+    normal_prepared_df = original_rows(prepared_df)
+    print(f"Normal prepared shape    : {normal_prepared_df.shape}")
+
+    flipped_prepared_df = both_perspectives(prepared_df)
+    print(f"Flipped prepared shape   : {flipped_prepared_df.shape}")
+
+    rfs_view_df, audit_df = build_one_rfs_view(
+        prepared_for_view=normal_prepared_df,
+        label="normal RFS feature view",
     )
 
-    # Keep audit parquet schema stable. Mixed object columns can fail pyarrow
-    # serialization when some rows contain ints and others contain strings.
-    audit_df["observed"] = audit_df["observed"].astype(str)
-    audit_df["details"] = audit_df["details"].astype(str)
-
-    print(f"RFS view shape           : {rfs_view_df.shape}")
-    print(f"Unique fights            : {rfs_view_df['fight_id'].nunique() if not rfs_view_df.empty else 0}")
-    print(f"Engineered features      : {len(engineered_features)}")
-
-    summary = summarize_moneyline_round_state_view(rfs_view_df)
-    print()
-    print("RFS SUMMARY")
-    for key, value in summary.items():
-        print(f"{key}: {value}")
-
-    print()
-    print("VALIDATION")
-    print(audit_df.to_string(index=False))
-
-    fatal_failures = audit_df[
-        audit_df["severity"].eq("fatal") & audit_df["status"].eq("FAIL")
-    ]
-    if not fatal_failures.empty:
-        raise ValueError(
-            "Experimental RFS feature view failed validation:\n"
-            f"{fatal_failures.to_string(index=False)}"
-        )
+    rfs_flipped_view_df, flipped_audit_df = build_one_rfs_view(
+        prepared_for_view=flipped_prepared_df,
+        label="flipped RFS feature view",
+    )
 
     rfs_view_df.to_parquet(MONEYLINE_RFS_FEATURE_VIEW_PATH, index=False)
+    rfs_flipped_view_df.to_parquet(MONEYLINE_RFS_FEATURE_VIEW_FLIPPED_PATH, index=False)
     audit_df.to_parquet(MONEYLINE_RFS_FEATURE_VIEW_VALIDATION_PATH, index=False)
+    flipped_audit_df.to_parquet(MONEYLINE_RFS_FEATURE_VIEW_FLIPPED_VALIDATION_PATH, index=False)
 
     print()
-    print("Saved experimental RFS feature view successfully.")
+    print("Saved experimental RFS feature views successfully.")
+    print(f"Normal : {MONEYLINE_RFS_FEATURE_VIEW_PATH}")
+    print(f"Flipped: {MONEYLINE_RFS_FEATURE_VIEW_FLIPPED_PATH}")
     print("DONE")
 
 
