@@ -61,10 +61,19 @@ jobs:
             data/features/round_fighter_wrestling_p0_3_history.parquet \
             data/features/round_latest_fighter_wrestling_p0_3.parquet \
             data/features/round_fighter_defense_p1_4_history.parquet \
-            data/features/round_latest_fighter_defense_p1_4.parquet \
+            data/features/round_latest_fighter_defense_p1_4.parquet
+
+          for path in \
             data/audits/round_fighter_state_p0_1_validation.parquet \
             data/audits/round_fighter_wrestling_p0_3_validation.parquet \
             data/audits/round_fighter_defense_p1_4_validation.parquet
+          do
+            if [ -f "$path" ]; then
+              git add -f "$path"
+            else
+              echo "Optional audit artifact not found, skipping: $path"
+            fi
+          done
 
           git commit -m "Update fighter state artifacts" || echo "No changes to commit"
           git pull --rebase --autostash origin "${GITHUB_REF_NAME}"

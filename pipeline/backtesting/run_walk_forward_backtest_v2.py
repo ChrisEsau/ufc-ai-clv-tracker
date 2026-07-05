@@ -128,6 +128,65 @@ def load_feature_view(path: Path, config: dict[str, Any]) -> tuple[pd.DataFrame,
     return feature_df, feature_columns
 
 
+def resolve_prebuilt_flipped_feature_view_path(
+    *,
+    normal_feature_view_path: Path,
+    config: dict[str, Any],
+) -> Path:
+    """Resolve the training-only prebuilt flipped feature-view path."""
+    data_config = config.get("data", {}) or {}
+    explicit = (
+        data_config.get("flipped_rolling_features_path")
+        or data_config.get("flipped_feature_view_path")
+    )
+    if explicit:
+        return Path(explicit)
+
+    return normal_feature_view_path.with_name(
+        f"{normal_feature_view_path.stem}_flipped{normal_feature_view_path.suffix}"
+    )
+
+
+def should_use_prebuilt_flipped_training_view(config: dict[str, Any]) -> bool:
+    """Return True when symmetry should come from a prebuilt flipped feature view."""
+    symmetry_config = config.get("symmetry", {}) or {}
+    if not symmetry_config.get("enabled", False):
+        return False
+
+    source = str(symmetry_config.get("source", "")).strip().lower()
+    return source in {"feature_view_flipped", "flipped_feature_view", "prebuilt_feature_view"}
+
+
+def load_prebuilt_flipped_training_view(
+    *,
+    normal_feature_view_path: Path,
+    config: dict[str, Any],
+    expected_feature_columns: list[str],
+) -> pd.DataFrame | None:
+    """Load a symmetric training-only feature view when configured."""
+    if not should_use_prebuilt_flipped_training_view(config):
+        return None
+
+    flipped_path = resolve_prebuilt_flipped_feature_view_path(
+        normal_feature_view_path=normal_feature_view_path,
+        config=config,
+    )
+    if not flipped_path.exists():
+        raise FileNotFoundError(f"Configured flipped feature view not found: {flipped_path}")
+
+    flipped_df, flipped_feature_columns = load_feature_view(flipped_path, config)
+
+    if flipped_feature_columns != expected_feature_columns:
+        raise ValueError(
+            "Flipped feature view resolved a different feature contract. "
+            f"normal={len(expected_feature_columns)} flipped={len(flipped_feature_columns)}"
+        )
+
+    print(f"Using prebuilt flipped training view: {flipped_path}")
+    print(f"Prebuilt flipped training shape    : {flipped_df.shape}")
+    return flipped_df
+
+
 def build_windows(args: argparse.Namespace) -> list[WalkForwardWindow]:
     """Build annual walk-forward windows.
 
@@ -197,6 +256,12 @@ def maybe_apply_symmetry_to_training(
     if not symmetry_config.get("enabled", False):
         return train
 
+    # When training rows already come from a prebuilt flipped feature view,
+    # do not apply runtime sign-flipping again.
+    source = str(symmetry_config.get("source", "")).strip().lower()
+    if source in {"feature_view_flipped", "flipped_feature_view", "prebuilt_feature_view"}:
+        return train
+
     mode = str(symmetry_config.get("mode", "flip_all")).strip().lower()
     target_col = config.get("data", {}).get("target_column", "target")
     date_col = config.get("data", {}).get("date_column", "date")
@@ -235,6 +300,7 @@ def run_one_window(
     *,
     window: WalkForwardWindow,
     feature_df: pd.DataFrame,
+    training_feature_df: pd.DataFrame | None,
     market: pd.DataFrame,
     feature_columns: list[str],
     config: dict[str, Any],
@@ -247,7 +313,9 @@ def run_one_window(
     data_config = config.get("data", {}) or {}
     target_col = data_config.get("target_column", "target")
 
-    train_raw, calibration_raw, test_raw = slice_window(feature_df, window)
+    train_source_df = training_feature_df if training_feature_df is not None else feature_df
+    train_raw, _, _ = slice_window(train_source_df, window)
+    _, calibration_raw, test_raw = slice_window(feature_df, window)
     if train_raw.empty or calibration_raw.empty or test_raw.empty:
         raise ValueError(
             f"Window {window.test_year} has empty split: "
@@ -398,7 +466,13 @@ def main() -> None:
     output_dir = Path(args.output_root) / run_id
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    feature_df, feature_columns = load_feature_view(Path(args.feature_view_path), config)
+    normal_feature_view_path = Path(args.feature_view_path)
+    feature_df, feature_columns = load_feature_view(normal_feature_view_path, config)
+    training_feature_df = load_prebuilt_flipped_training_view(
+        normal_feature_view_path=normal_feature_view_path,
+        config=config,
+        expected_feature_columns=feature_columns,
+    )
     market_raw = pd.read_parquet(args.historical_market_path)
     market_raw = market_raw[market_raw["market_key"].astype(str).str.lower() == args.market_key.lower()].copy()
     market = standardize_market(market_raw)
@@ -416,6 +490,7 @@ def main() -> None:
         summary, scored, model_outcomes, metrics = run_one_window(
             window=window,
             feature_df=feature_df,
+            training_feature_df=training_feature_df,
             market=market,
             feature_columns=feature_columns,
             config=config,
