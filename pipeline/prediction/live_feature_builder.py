@@ -9,6 +9,10 @@ from pipeline.common.paths import (
     CURRENT_FIGHTER_FEATURES_PATH,
     LIVE_CARD_PATH,
     LIVE_FEATURE_AUDIT_PATH,
+    ROUND_LATEST_FIGHTER_STATE_PATH,
+    ROUND_LATEST_FIGHTER_SUPPRESSION_P0_2_PATH,
+    ROUND_LATEST_FIGHTER_WRESTLING_P0_3_PATH,
+    ROUND_LATEST_FIGHTER_DEFENSE_P1_4_PATH,
 )
 from pipeline.features.shared_registry_features import materialize_model_lab_registry_features
 from ufc_feature_engineering import add_v5_engineered_features
@@ -40,12 +44,20 @@ RED_NAME_CANDIDATES = ["red_fighter", "r_name", "red_name", "fighter_1", "fighte
 BLUE_NAME_CANDIDATES = ["blue_fighter", "b_name", "blue_name", "fighter_2", "fighter_b"]
 FIGHTER_ID_CANDIDATES = ["fighter_id", "id", "ufcstats_fighter_id"]
 
+DEFAULT_ADDITIONAL_FIGHTER_FEATURE_PATHS = [
+    ROUND_LATEST_FIGHTER_STATE_PATH,
+    ROUND_LATEST_FIGHTER_SUPPRESSION_P0_2_PATH,
+    ROUND_LATEST_FIGHTER_WRESTLING_P0_3_PATH,
+    ROUND_LATEST_FIGHTER_DEFENSE_P1_4_PATH,
+]
+
 
 def build_live_model_features(
     *,
     feature_columns: list[str],
     live_card_path: str | Path = LIVE_CARD_PATH,
     current_fighter_features_path: str | Path = CURRENT_FIGHTER_FEATURES_PATH,
+    additional_fighter_feature_paths: list[str | Path] | None = None,
 ) -> LiveFeatureBuildResult:
     """Build model-ready live features for Prediction V2."""
 
@@ -79,6 +91,16 @@ def build_live_model_features(
 
     current_features_df = pd.read_parquet(current_fighter_features_path)
     current_features_df = _deduplicate_columns(current_features_df)
+
+    if additional_fighter_feature_paths is None:
+        additional_fighter_feature_paths = DEFAULT_ADDITIONAL_FIGHTER_FEATURE_PATHS
+
+    current_features_df = _merge_additional_fighter_feature_sources(
+        base_features_df=current_features_df,
+        additional_feature_paths=additional_fighter_feature_paths,
+    )
+    current_features_df = _deduplicate_columns(current_features_df)
+
     fighter_id_column = _find_first_existing_column(current_features_df, FIGHTER_ID_CANDIDATES)
 
     if fighter_id_column is None:
@@ -197,6 +219,99 @@ def _validate_live_card(live_card_df: pd.DataFrame) -> None:
         raise LiveFeatureBuilderError(
             "Live card must include fighter IDs. Names are display-only; feature joins use IDs."
         )
+
+
+def _merge_additional_fighter_feature_sources(
+    *,
+    base_features_df: pd.DataFrame,
+    additional_feature_paths: list[str | Path],
+) -> pd.DataFrame:
+    """Merge optional latest fighter-state/RFS artifacts into the base live state.
+
+    Standard latest_fighter_state remains the primary source. Additional sources
+    only add missing columns by fighter_id. Missing optional files are allowed;
+    required model-contract features still fail later if they cannot be built.
+    """
+
+    out = _deduplicate_columns(base_features_df.copy())
+    base_id_column = _find_first_existing_column(out, FIGHTER_ID_CANDIDATES)
+
+    if base_id_column is None:
+        raise LiveFeatureBuilderError(
+            "Base current fighter features must include one fighter ID column. "
+            f"Checked: {FIGHTER_ID_CANDIDATES}"
+        )
+
+    out[base_id_column] = out[base_id_column].astype(str).str.strip()
+
+    skip_columns = {
+        "fighter_name",
+        "fighter_norm",
+        "latest_fight_date",
+        "feature_store_updated_at",
+        "event_id",
+        "event_name",
+        "fight_id",
+        "date",
+        "fight_date",
+        "division",
+        "title_fight",
+        "total_rounds",
+        "source_row_index",
+        "corner",
+        "opponent_id",
+        "opponent_name",
+    }
+
+    for feature_path in additional_feature_paths:
+        feature_path = Path(feature_path)
+
+        if not feature_path.exists():
+            continue
+
+        extra = pd.read_parquet(feature_path)
+        extra = _deduplicate_columns(extra)
+
+        extra_id_column = _find_first_existing_column(extra, FIGHTER_ID_CANDIDATES)
+        if extra_id_column is None:
+            raise LiveFeatureBuilderError(
+                f"Additional fighter feature source is missing fighter ID column: {feature_path}. "
+                f"Checked: {FIGHTER_ID_CANDIDATES}"
+            )
+
+        extra = extra.copy()
+        extra[extra_id_column] = extra[extra_id_column].astype(str).str.strip()
+
+        # Defensive dedupe so additional sources cannot multiply live-card rows.
+        extra = (
+            extra
+            .drop_duplicates(extra_id_column, keep="last")
+            .reset_index(drop=True)
+        )
+
+        add_columns = [
+            column
+            for column in extra.columns
+            if column != extra_id_column
+            and column not in skip_columns
+            and column not in out.columns
+        ]
+
+        if not add_columns:
+            continue
+
+        extra_for_merge = extra[[extra_id_column, *add_columns]].rename(
+            columns={extra_id_column: base_id_column}
+        )
+
+        out = out.merge(
+            extra_for_merge,
+            on=base_id_column,
+            how="left",
+        )
+        out = _deduplicate_columns(out)
+
+    return out
 
 
 def _join_current_fighter_features(
@@ -325,7 +440,15 @@ def _add_state_aliases(alias_values: dict[str, pd.Series], df: pd.DataFrame, col
     if base.startswith("ewm_"):
         aliases.append(f"{side}_{base}")
     if base.startswith("form_delta_"):
-        aliases.append(f"{side}_recent_form_{base.replace('form_delta_', '', 1)}")
+        form_delta_base = base.replace("form_delta_", "", 1)
+
+        # Moneyline training/view compatibility:
+        # form_delta_splm -> r_recent_form_splm
+        aliases.append(f"{side}_recent_form_{form_delta_base}")
+
+        # Model-lab registry compatibility:
+        # form_delta_splm -> r_pre_recent_splm
+        aliases.append(f"{side}_pre_recent_{form_delta_base}")
 
     for alias in aliases:
         if alias not in df.columns and alias not in alias_values:
