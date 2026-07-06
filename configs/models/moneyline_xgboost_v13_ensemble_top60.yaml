@@ -1,0 +1,196 @@
+model_id: moneyline_xgboost_v13_ensemble_top60
+model_family: moneyline
+artifact_name: moneyline_xgboost_v13_ensemble_top60
+algorithm: xgboost
+architecture:
+  type: market_aware_ensemble
+  version: 1
+feature_sources:
+- moneyline_favdog_market_feature_view
+features:
+  selection_mode: ensemble_member_explicit
+  clean_fight_feature_count: 60
+  clean_fight_features:
+  - rfs_def_exp_late_head_damage_allowed_delta_diff
+  - recent_form_recent_avg_fight_time_diff
+  - sub_avg_diff
+  - recent_form_str_acc_diff
+  - weight_diff
+  - recent_form_avg_fight_time_diff
+  - rfs_def_exp_late_td_defense_decay_diff
+  - rfs_wrestle_exp_td_persistence_score_diff
+  - rfs_suppress_ewm_opp_late_output_delta_diff
+  - ewm_recent_avg_fight_time_diff
+  - rfs_def_exp_opp_total_accuracy_allowed_slope_diff
+  - rfs_wrestle_last3_sig_ground_strikes_per_control_min_diff
+  - rfs_traj_ewm_td_attempt_slope_diff
+  - chin_risk_diff
+  - recent_form_splm_diff
+  - ko_win_concentration_diff
+  - decision_dependency_abs_diff
+  - striking_edge_x_avg_opp_elo
+  - rfs_def_ewm_late_td_defense_decay_diff
+  - avg_opponent_elo_diff
+  - recent_form_avg_opponent_elo_diff
+  - ewm_td_def_diff
+  - style_submission_grappler_score_diff
+  - recent_form_kd_absorbed_avg_diff
+  - recent_form_sub_avg_diff
+  - sapm_diff
+  - striking_edge_x_ewm_avg_opp_elo
+  - recent_form_sub_win_rate_diff
+  - recent_form_win_streak_diff
+  - ewm_recent_sapm_diff
+  - rfs_traj_ewm_control_seconds_slope_diff
+  - ewm_recent_splm_diff
+  - recent_form_finish_rate_diff
+  - worst_loss_elo_diff
+  - recent_form_ctrl_per_min_diff
+  - ewm_ctrl_per_min_diff
+  - ewm_kd_avg_diff
+  - ewm_sapm_diff
+  - str_def_diff
+  - ewm_loss_streak_diff
+  - rfs_suppress_last3_opp_distance_accuracy_delta_diff
+  - ewm_wins_diff
+  - ewm_days_since_last_fight_diff
+  - rfs_suppress_last3_opp_phase_mix_disruption_diff
+  - striking_edge
+  - ewm_str_def_diff
+  - submission_dependency_abs_diff
+  - rfs_traj_exp_td_accuracy_slope_diff
+  - recent_form_ctrl_against_per_min_diff
+  - rfs_def_last3_late_total_damage_allowed_delta_diff
+  - kd_avg_diff
+  - recent_form_recent_td_avg_diff
+  - ewm_td_acc_diff
+  - recent_form_finish_loss_rate_diff
+  - ewm_ko_rate_diff
+  - ewm_win_pct_diff
+  - reach_striking_combo
+  - recent_form_recent_splm_diff
+  - ko_dependency_abs_diff
+  - rfs_suppress_exp_opp_phase_mix_disruption_diff
+  market_feature_count: 9
+  market_features:
+  - favorite_odds
+  - dog_odds
+  - favorite_implied_probability
+  - dog_implied_probability
+  - market_prob_gap
+  - abs_market_prob_gap
+  - favorite_odds_abs
+  - dog_odds_abs
+  - market_price_width
+data:
+  feature_view_path: data/features/moneyline_favdog_market_feature_view.parquet
+  date_column: date
+split:
+  mode: train_calibration_test
+  train_start_date: '2018-01-01'
+  train_end_date: '2023-12-31'
+  calibration_end_date: '2024-12-31'
+ensemble:
+  combiner:
+    type: weighted_average
+    probability_column: calibrated_probability
+  members:
+  - member_id: feature_only_favorite
+    probability_group: favorite
+    target_column: favorite_won
+    perspective: favorite
+    top_n: 60
+    include_market_features: false
+    weight: 1.0
+    random_state: 501
+  - member_id: feature_only_dog
+    probability_group: dog
+    target_column: dog_won
+    perspective: dog
+    top_n: 60
+    include_market_features: false
+    weight: 1.0
+    random_state: 502
+  - member_id: market_aware_favorite
+    probability_group: favorite
+    target_column: favorite_won
+    perspective: favorite
+    top_n: 60
+    include_market_features: true
+    weight: 1.0
+    random_state: 503
+  - member_id: market_aware_dog
+    probability_group: dog
+    target_column: dog_won
+    perspective: dog
+    top_n: 60
+    include_market_features: true
+    weight: 1.0
+    random_state: 504
+decision_rule:
+  favorite:
+    favorite_probability_min: 0.68
+    dog_probability_max: 0.45
+    favorite_edge_min: 0.05
+  dog:
+    favorite_probability_max: 0.52
+    dog_probability_min: 0.4
+    dog_edge_min: 0.05
+    dog_odds_max: 400
+calibration:
+  enabled: true
+  method: isotonic
+params:
+  n_estimators: 350
+  max_depth: 2
+  learning_rate: 0.02
+  subsample: 0.8
+  colsample_bytree: 0.7
+  min_child_weight: 15
+  reg_alpha: 1.0
+  reg_lambda: 12.0
+  objective: binary:logistic
+  eval_metric: logloss
+  n_jobs: 2
+metrics:
+  threshold_min: 0.4
+  threshold_max: 0.6
+  threshold_step: 0.01
+  confidence_bucket_edges:
+  - 0.5
+  - 0.55
+  - 0.6
+  - 0.65
+  - 0.7
+  - 0.75
+  - 0.8
+  - 0.85
+  - 0.9
+  - 0.95
+  - 1.0
+artifacts:
+  output_dir: models/moneyline/moneyline_xgboost_v13_ensemble_top60
+  save_raw_model: true
+  save_calibrated_model: true
+  save_feature_columns: true
+  save_metrics: true
+  save_threshold_sweep: true
+  save_confidence_buckets: true
+  save_model_card: true
+prediction:
+  format: market_aware_ensemble
+  market_key: moneyline
+  prediction_type: binary_matchup_ensemble
+  output:
+    canonical_artifact: model_outcomes
+    path: data/predictions/model_outcomes.parquet
+    model_scoped_path_template: data/predictions/by_model/{model_id}/model_outcomes.parquet
+    ensemble_details_path_template: data/predictions/by_model/{model_id}/ensemble_details.parquet
+market_key: moneyline
+status: draft
+dashboard_selectable: false
+early_stopping:
+  enabled: false
+  rounds: 100
+  metric: logloss
+  verbose: false

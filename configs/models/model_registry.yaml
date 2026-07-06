@@ -101,6 +101,18 @@ models:
     status: draft
     dashboard_selectable: false
     outcome_architecture: true
+  moneyline_xgboost_v13_ensemble_top60:
+    display_name: Moneyline XGBoost V13 Market-Aware Ensemble Top60
+    description: Draft four-member market-aware moneyline ensemble using favorite/dog perspective Top60 RFS features plus optional market features.
+    model_family: moneyline
+    market_key: moneyline
+    algorithm: xgboost
+    architecture: market_aware_ensemble
+    config_path: configs/models/moneyline_xgboost_v13_ensemble_top60.yaml
+    artifact_dir: models/moneyline/moneyline_xgboost_v13_ensemble_top60
+    status: draft
+    dashboard_selectable: false
+    outcome_architecture: true
 active_models:
   moneyline:
     primary: moneyline_xgboost_v8
