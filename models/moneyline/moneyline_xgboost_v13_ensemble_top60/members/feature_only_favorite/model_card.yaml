@@ -1,0 +1,75 @@
+model_id: moneyline_xgboost_v13_ensemble_top60
+model_family: moneyline
+artifact_name: moneyline_xgboost_v13_ensemble_top60
+algorithm: xgboost
+architecture: ensemble_member
+member:
+  member_id: feature_only_favorite
+  probability_group: favorite
+  target_column: favorite_won
+  perspective: favorite
+  top_n: 60
+  include_market_features: false
+  weight: 1.0
+  random_state: 501
+status: draft
+generated_at: '2026-07-06T17:18:19.526309+00:00'
+config_path: configs/models/moneyline_xgboost_v13_ensemble_top60.yaml
+artifacts_output_dir: models/moneyline/moneyline_xgboost_v13_ensemble_top60/members/feature_only_favorite
+feature_count: 60
+data:
+  feature_view_path: data/features/moneyline_favdog_market_feature_view.parquet
+  date_column: date
+split:
+  mode: train_calibration_test
+  train_start_date: '2018-01-01'
+  train_end_date: '2023-12-31'
+  calibration_end_date: '2024-12-31'
+calibration:
+  enabled: true
+  method: isotonic
+early_stopping:
+  enabled: false
+  rounds: 100
+  metric: logloss
+  verbose: false
+training:
+  early_stopping_enabled: false
+  early_stopping_rounds: null
+  early_stopping_metric: null
+  best_iteration: null
+  best_score: null
+params:
+  n_estimators: 350
+  max_depth: 2
+  learning_rate: 0.02
+  subsample: 0.8
+  colsample_bytree: 0.7
+  random_state: 501
+  eval_metric: logloss
+  min_child_weight: 15
+  reg_alpha: 1.0
+  reg_lambda: 12.0
+  objective: binary:logistic
+  n_jobs: 2
+metrics:
+  accuracy: 0.695049504950495
+  log_loss: 0.6869648339146753
+  roc_auc: 0.5597890671420083
+  brier_score: 0.21408118440690027
+  threshold: 0.4
+  positive_pick_rate_percent: 99.4059405940594
+  negative_pick_rate_percent: 0.5940594059405946
+  actual_positive_rate_percent: 69.7029702970297
+  row_count: 505
+raw_metrics:
+  accuracy: 0.697029702970297
+  log_loss: 0.6123313023764244
+  roc_auc: 0.5678475935828877
+  brier_score: 0.2108761521267264
+  threshold: 0.4
+  positive_pick_rate_percent: 100.0
+  negative_pick_rate_percent: 0.0
+  actual_positive_rate_percent: 69.7029702970297
+  row_count: 505
+best_threshold: 0.4

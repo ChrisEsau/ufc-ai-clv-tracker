@@ -1,0 +1,34 @@
+[
+  {
+    "model_id": "moneyline_xgboost_v13_ensemble_top60",
+    "probability_group": "dog",
+    "target_column": "dog_won",
+    "member_count": 2,
+    "row_count": 505,
+    "best_threshold": 0.4,
+    "accuracy": 0.700990099009901,
+    "log_loss": 0.5865703232833583,
+    "roc_auc": 0.6594901218062983,
+    "brier_score": 0.20019967680531858,
+    "threshold": 0.4,
+    "positive_pick_rate_percent": 1.188118811881188,
+    "negative_pick_rate_percent": 98.8118811881188,
+    "actual_positive_rate_percent": 30.297029702970296
+  },
+  {
+    "model_id": "moneyline_xgboost_v13_ensemble_top60",
+    "probability_group": "favorite",
+    "target_column": "favorite_won",
+    "member_count": 2,
+    "row_count": 505,
+    "best_threshold": 0.58,
+    "accuracy": 0.699009900990099,
+    "log_loss": 0.6109739108241146,
+    "roc_auc": 0.6591094771241829,
+    "brier_score": 0.20117945049231012,
+    "threshold": 0.58,
+    "positive_pick_rate_percent": 98.21782178217822,
+    "negative_pick_rate_percent": 1.7821782178217838,
+    "actual_positive_rate_percent": 69.7029702970297
+  }
+]

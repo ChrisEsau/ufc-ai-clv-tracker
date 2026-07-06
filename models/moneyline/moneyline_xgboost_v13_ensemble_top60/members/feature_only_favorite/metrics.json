@@ -1,0 +1,45 @@
+{
+  "model_id": "moneyline_xgboost_v13_ensemble_top60",
+  "member_id": "feature_only_favorite",
+  "probability_group": "favorite",
+  "target_column": "favorite_won",
+  "generated_at": "2026-07-06T17:18:19.511127+00:00",
+  "config_path": "configs/models/moneyline_xgboost_v13_ensemble_top60.yaml",
+  "feature_count": 60,
+  "best_threshold": 0.4,
+  "metrics": {
+    "accuracy": 0.695049504950495,
+    "log_loss": 0.6869648339146753,
+    "roc_auc": 0.5597890671420083,
+    "brier_score": 0.21408118440690027,
+    "threshold": 0.4,
+    "positive_pick_rate_percent": 99.4059405940594,
+    "negative_pick_rate_percent": 0.5940594059405946,
+    "actual_positive_rate_percent": 69.7029702970297,
+    "row_count": 505
+  },
+  "raw_metrics": {
+    "accuracy": 0.697029702970297,
+    "log_loss": 0.6123313023764244,
+    "roc_auc": 0.5678475935828877,
+    "brier_score": 0.2108761521267264,
+    "threshold": 0.4,
+    "positive_pick_rate_percent": 100.0,
+    "negative_pick_rate_percent": 0.0,
+    "actual_positive_rate_percent": 69.7029702970297,
+    "row_count": 505
+  },
+  "training": {
+    "early_stopping_enabled": false,
+    "early_stopping_rounds": null,
+    "early_stopping_metric": null,
+    "best_iteration": null,
+    "best_score": null
+  },
+  "train_rows": 2664,
+  "calibration_rows": 381,
+  "test_rows": 505,
+  "train_start_date": "2018-01-01",
+  "train_end_date": "2023-12-31",
+  "calibration_end_date": "2024-12-31"
+}

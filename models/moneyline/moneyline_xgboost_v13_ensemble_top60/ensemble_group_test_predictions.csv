@@ -1,0 +1,1011 @@
+_ensemble_row_id,fight_id,date,event_name,favorite_fighter_name,dog_fighter_name,favorite_won,dog_won,target_column,y_true,weighted_probability,weight_sum,member_count,probability_group,ensemble_probability
+5962,03c1865919daeaa4,2025-01-11,UFC Fight Night: Dern vs. Ribas 2,Austin Bashi,Christian Rodriguez,0,1,dog_won,1,0.7548387050628662,2.0,2,dog,0.3774193525314331
+5963,192619174bd1ad77,2025-01-11,UFC Fight Night: Dern vs. Ribas 2,Nurullo Aliev,Joe Solecki,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+5964,32cc31b76b32ade1,2025-01-11,UFC Fight Night: Dern vs. Ribas 2,Uros Medic,Punahele Soriano,0,1,dog_won,1,0.6419098079204559,2.0,2,dog,0.32095490396022797
+5965,54fa6e32330a8cca,2025-01-11,UFC Fight Night: Dern vs. Ribas 2,Thiago Moises,Trey Ogden,1,0,dog_won,0,0.7790811359882355,2.0,2,dog,0.38954056799411774
+5966,58eda5a58a89f739,2025-01-11,UFC Fight Night: Dern vs. Ribas 2,Jacobe Smith,Preston Parsons,1,0,dog_won,0,0.5295959860086441,2.0,2,dog,0.26479799300432205
+5967,817cd15077a9419e,2025-01-11,UFC Fight Night: Dern vs. Ribas 2,Magomed Gadzhiyasulov,Bruno Lopes,0,1,dog_won,1,0.29975728690624237,2.0,2,dog,0.14987864345312119
+5968,8a3281b0d7c168af,2025-01-11,UFC Fight Night: Dern vs. Ribas 2,Jose Johnson,Felipe Bunes,0,1,dog_won,1,0.7351421117782593,2.0,2,dog,0.36757105588912964
+5969,8d68863242695224,2025-01-11,UFC Fight Night: Dern vs. Ribas 2,Marco Tulio,Ihor Potieria,1,0,dog_won,0,0.4474845677614212,2.0,2,dog,0.2237422838807106
+5970,a2a5809ed8a01b45,2025-01-11,UFC Fight Night: Dern vs. Ribas 2,Cesar Almeida,Abdul Razak Alhassan,1,0,dog_won,0,0.5791592001914978,2.0,2,dog,0.2895796000957489
+5971,aa38e39397dbea72,2025-01-11,UFC Fight Night: Dern vs. Ribas 2,Roman Kopylov,Chris Curtis,1,0,dog_won,0,0.6076855659484863,2.0,2,dog,0.30384278297424316
+5972,b33e3a6d15700bb1,2025-01-11,UFC Fight Night: Dern vs. Ribas 2,Ernesta Kareckaite,Nicolle Caliari,1,0,dog_won,0,0.4474845677614212,2.0,2,dog,0.2237422838807106
+5973,ce4fc800a7456d18,2025-01-11,UFC Fight Night: Dern vs. Ribas 2,Santiago Ponzinibbio,Carlston Harris,1,0,dog_won,0,0.7602441012859344,2.0,2,dog,0.3801220506429672
+5974,f01851055b8309e0,2025-01-11,UFC Fight Night: Dern vs. Ribas 2,Fatima Kline,Viktoriia Dudakova,1,0,dog_won,0,0.2549019753932953,2.0,2,dog,0.12745098769664764
+5975,f46308108eb9261a,2025-01-11,UFC Fight Night: Dern vs. Ribas 2,Amanda Ribas,Mackenzie Dern,0,1,dog_won,1,0.7602441012859344,2.0,2,dog,0.3801220506429672
+5976,340fcdcabc49f142,2025-01-18,UFC 311: Makhachev vs. Moicano,Karol Rosa,Ailin Perez,0,1,dog_won,1,0.7602441012859344,2.0,2,dog,0.3801220506429672
+5977,54d48b33e7240452,2025-01-18,UFC 311: Makhachev vs. Moicano,Jailton Almeida,Serghei Spivac,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+5978,69d63c057aebffaf,2025-01-18,UFC 311: Makhachev vs. Moicano,Reinier de Ridder,Kevin Holland,1,0,dog_won,0,0.6961030662059784,2.0,2,dog,0.3480515331029892
+5979,959fea398ffa5778,2025-01-18,UFC 311: Makhachev vs. Moicano,Jamahal Hill,Jiri Prochazka,0,1,dog_won,1,0.7588536739349365,2.0,2,dog,0.37942683696746826
+5980,95ba27bea09cd84e,2025-01-18,UFC 311: Makhachev vs. Moicano,Benardo Sopaj,Ricky Turcios,1,0,dog_won,0,0.7602441012859344,2.0,2,dog,0.3801220506429672
+5981,a6db8eb1fb3eebf2,2025-01-18,UFC 311: Makhachev vs. Moicano,Bogdan Guskov,Billy Elekana,1,0,dog_won,0,0.42965926229953766,2.0,2,dog,0.21482963114976883
+5982,aa3fca085d476636,2025-01-18,UFC 311: Makhachev vs. Moicano,Grant Dawson,Diego Ferreira,1,0,dog_won,0,0.5449349582195282,2.0,2,dog,0.2724674791097641
+5983,d14f98b24691d082,2025-01-18,UFC 311: Makhachev vs. Moicano,Payton Talbott,Raoni Barcelos,0,1,dog_won,1,0.5282055586576462,2.0,2,dog,0.2641027793288231
+5984,daef1691c7d6b1e4,2025-01-18,UFC 311: Makhachev vs. Moicano,Islam Makhachev,Renato Moicano,1,0,dog_won,0,0.5433635115623474,2.0,2,dog,0.2716817557811737
+5985,e294a1e5723011db,2025-01-18,UFC 311: Makhachev vs. Moicano,Tagir Ulanbekov,Clayton Carpenter,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+5986,e5e3d396a9b1c5ae,2025-01-18,UFC 311: Makhachev vs. Moicano,Rinya Nakamura,Muin Gafurov,0,1,dog_won,1,0.4474845677614212,2.0,2,dog,0.2237422838807106
+5987,f39941b3743bf18c,2025-01-18,UFC 311: Makhachev vs. Moicano,Umar Nurmagomedov,Merab Dvalishvili,0,1,dog_won,1,0.542518138885498,2.0,2,dog,0.271259069442749
+5988,3c00f34f20c8a189,2025-02-01,UFC Fight Night: Adesanya vs. Imavov,Sergei Pavlovich,Jairzinho Rozenstruik,1,0,dog_won,0,0.6076855659484863,2.0,2,dog,0.30384278297424316
+5989,426e7a3de68117b0,2025-02-01,UFC Fight Night: Adesanya vs. Imavov,Shara Magomedov,Michael Page,0,1,dog_won,1,0.7602441012859344,2.0,2,dog,0.3801220506429672
+5990,43bbaf06603b0f0c,2025-02-01,UFC Fight Night: Adesanya vs. Imavov,Shamil Gaziev,Thomas Petersen,1,0,dog_won,0,0.6090759932994843,2.0,2,dog,0.3045379966497421
+5991,70b8dca3addcf4de,2025-02-01,UFC Fight Night: Adesanya vs. Imavov,Said Nurmagomedov,Vinicius Oliveira,0,1,dog_won,1,0.7602441012859344,2.0,2,dog,0.3801220506429672
+5992,750257171ad29a2c,2025-02-01,UFC Fight Night: Adesanya vs. Imavov,Lucas Alexander,Bogdan Grad,0,1,dog_won,1,0.7978927195072174,2.0,2,dog,0.3989463597536087
+5993,775788423f5eeb99,2025-02-01,UFC Fight Night: Adesanya vs. Imavov,Mike Davis,Fares Ziam,0,1,dog_won,1,0.7790811359882355,2.0,2,dog,0.38954056799411774
+5994,85e79748b75eb30e,2025-02-01,UFC Fight Night: Adesanya vs. Imavov,Israel Adesanya,Nassourdine Imavov,0,1,dog_won,1,0.7602441012859344,2.0,2,dog,0.3801220506429672
+5995,91bf33ada75d6061,2025-02-01,UFC Fight Night: Adesanya vs. Imavov,Jasmine Jasudavicius,Mayra Bueno Silva,1,0,dog_won,0,0.5449349582195282,2.0,2,dog,0.2724674791097641
+5996,940f586104bf8bc8,2025-02-01,UFC Fight Night: Adesanya vs. Imavov,Muhammad Naimov,Kaan Ofli,1,0,dog_won,0,0.5289155691862106,2.0,2,dog,0.2644577845931053
+5997,984ce1062186f3ce,2025-02-01,UFC Fight Night: Adesanya vs. Imavov,Hamdy Abdelwahab,Jamal Pogues,1,0,dog_won,0,0.7776907086372375,2.0,2,dog,0.3888453543186188
+5998,e97e71a593e4c28d,2025-02-01,UFC Fight Night: Adesanya vs. Imavov,Terrance McKinney,Damir Hadzovic,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+5999,03c2a836d033be8f,2025-02-08,UFC 312: Du Plessis vs. Strickland 2,Tatiana Suarez,Zhang Weili,0,1,dog_won,1,0.7776907086372375,2.0,2,dog,0.3888453543186188
+6000,1f70a4516a70abf2,2025-02-08,UFC 312: Du Plessis vs. Strickland 2,Kody Steele,Rongzhu,0,1,dog_won,1,0.28586839884519577,2.0,2,dog,0.14293419942259789
+6001,4218d1d1ce6d322c,2025-02-08,UFC 312: Du Plessis vs. Strickland 2,Quillan Salkilld,Anshul Jubli,1,0,dog_won,0,0.42965926229953766,2.0,2,dog,0.21482963114976883
+6002,4ce53d8a26693f06,2025-02-08,UFC 312: Du Plessis vs. Strickland 2,Jake Matthews,Francisco Prado,1,0,dog_won,0,0.3792372941970825,2.0,2,dog,0.18961864709854126
+6003,64641156360b1b81,2025-02-08,UFC 312: Du Plessis vs. Strickland 2,Viacheslav Borshchev,Tom Nolan,0,1,dog_won,1,0.7776907086372375,2.0,2,dog,0.3888453543186188
+6004,8435f90fbd50c7a5,2025-02-08,UFC 312: Du Plessis vs. Strickland 2,Tallison Teixeira,Justin Tafa,1,0,dog_won,0,0.4134615361690521,2.0,2,dog,0.20673076808452606
+6005,8bc8bb0021337de7,2025-02-08,UFC 312: Du Plessis vs. Strickland 2,Kevin Jousset,Jonathan Micallef,0,1,dog_won,1,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6006,c35a53be30bfd066,2025-02-08,UFC 312: Du Plessis vs. Strickland 2,Gabriel Santos,Jack Jenkins,1,0,dog_won,0,0.6433002352714539,2.0,2,dog,0.32165011763572693
+6007,c7fadbdfdc14c282,2025-02-08,UFC 312: Du Plessis vs. Strickland 2,Aleksandre Topuria,Colby Thicknesse,1,0,dog_won,0,0.42965926229953766,2.0,2,dog,0.21482963114976883
+6008,d13849f49f99bf01,2025-02-08,UFC 312: Du Plessis vs. Strickland 2,Dricus Du Plessis,Sean Strickland,1,0,dog_won,0,0.5449349582195282,2.0,2,dog,0.2724674791097641
+6009,07b357090cc91c2c,2025-02-15,UFC Fight Night: Cannonier vs. Rodrigues,Elijah Smith,Vince Morales,1,0,dog_won,0,0.6961030662059784,2.0,2,dog,0.3480515331029892
+6010,2a493f15e079a7ff,2025-02-15,UFC Fight Night: Cannonier vs. Rodrigues,Jose Delgado,Connor Matthews,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6011,2ae33fce63a75df9,2025-02-15,UFC Fight Night: Cannonier vs. Rodrigues,Rafael Estevam,Jesus Aguilar,1,0,dog_won,0,0.5295959860086441,2.0,2,dog,0.26479799300432205
+6012,365e2d891b98b86d,2025-02-15,UFC Fight Night: Cannonier vs. Rodrigues,Gregory Rodrigues,Jared Cannonier,0,1,dog_won,1,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6013,3b2a24db4eeaeede,2025-02-15,UFC Fight Night: Cannonier vs. Rodrigues,Valter Walker,Don'Tale Mayes,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6014,58668a0736602842,2025-02-15,UFC Fight Night: Cannonier vs. Rodrigues,Jacqueline Cavalcanti,Julia Avila,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6015,68913a422f548ccc,2025-02-15,UFC Fight Night: Cannonier vs. Rodrigues,Youssef Zalal,Calvin Kattar,1,0,dog_won,0,0.42965926229953766,2.0,2,dog,0.21482963114976883
+6016,7b9f169016746f81,2025-02-15,UFC Fight Night: Cannonier vs. Rodrigues,Gabriel Bonfim,Khaos Williams,1,0,dog_won,0,0.3792372941970825,2.0,2,dog,0.18961864709854126
+6017,875b249ebe45a66b,2025-02-15,UFC Fight Night: Cannonier vs. Rodrigues,Rodolfo Vieira,Andre Petroski,0,1,dog_won,1,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6018,ce1436a9b58902a7,2025-02-15,UFC Fight Night: Cannonier vs. Rodrigues,Ismael Bonfim,Nazim Sadykhov,0,1,dog_won,1,0.6961030662059784,2.0,2,dog,0.3480515331029892
+6019,f4817d5cbe9be532,2025-02-15,UFC Fight Night: Cannonier vs. Rodrigues,Angela Hill,Ketlen Souza,1,0,dog_won,0,0.7992831468582153,2.0,2,dog,0.39964157342910767
+6020,f5386c98fea7f5d4,2025-02-15,UFC Fight Night: Cannonier vs. Rodrigues,Edmen Shahbazyan,Dylan Budka,1,0,dog_won,0,0.5295959860086441,2.0,2,dog,0.26479799300432205
+6021,08763e87e10b9709,2025-02-22,UFC Fight Night: Cejudo vs. Song,Ibo Aslan,Ion Cutelaba,0,1,dog_won,1,0.6961030662059784,2.0,2,dog,0.3480515331029892
+6022,0cdca4c22b8d3ab5,2025-02-22,UFC Fight Night: Cejudo vs. Song,Anthony Hernandez,Brendan Allen,1,0,dog_won,0,0.42965926229953766,2.0,2,dog,0.21482963114976883
+6023,19c8092496e94b85,2025-02-22,UFC Fight Night: Cejudo vs. Song,Jean Matsumoto,Rob Font,0,1,dog_won,1,0.6433002352714539,2.0,2,dog,0.32165011763572693
+6024,3ded9bfdfb75f39b,2025-02-22,UFC Fight Night: Cejudo vs. Song,Melquizael Costa,Andre Fili,1,0,dog_won,0,0.5433635115623474,2.0,2,dog,0.2716817557811737
+6025,615f7f894bafad82,2025-02-22,UFC Fight Night: Cejudo vs. Song,Nikolay Veretennikov,Austin Vanderford,0,1,dog_won,1,0.679144412279129,2.0,2,dog,0.3395722061395645
+6026,8ef7723b6a8b45e1,2025-02-22,UFC Fight Night: Cejudo vs. Song,Jean Silva,Melsik Baghdasaryan,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6027,b6475543ab6d20c9,2025-02-22,UFC Fight Night: Cejudo vs. Song,Modestas Bukauskas,Rafael Cerqueira,1,0,dog_won,0,0.5091392695903778,2.0,2,dog,0.2545696347951889
+6028,b959e2c1d16ff832,2025-02-22,UFC Fight Night: Cejudo vs. Song,Song Yadong,Henry Cejudo,1,0,dog_won,0,0.5449349582195282,2.0,2,dog,0.2724674791097641
+6029,bc6d70ab959dce70,2025-02-22,UFC Fight Night: Cejudo vs. Song,Javid Basharat,Ricky Simon,0,1,dog_won,1,0.7548387050628662,2.0,2,dog,0.3774193525314331
+6030,c0d8a231d2f1d1af,2025-02-22,UFC Fight Night: Cejudo vs. Song,Alonzo Menifield,Julius Walker,1,0,dog_won,0,0.5433635115623474,2.0,2,dog,0.2716817557811737
+6031,e011819e721c4a2a,2025-02-22,UFC Fight Night: Cejudo vs. Song,Mansur Abdul-Malik,Nick Klein,1,0,dog_won,0,0.17475728690624237,2.0,2,dog,0.08737864345312119
+6032,e9dfc2f009a77a8d,2025-02-22,UFC Fight Night: Cejudo vs. Song,Nursulton Ruziboev,Eric McConico,1,0,dog_won,0,0.6076855659484863,2.0,2,dog,0.30384278297424316
+6033,061990783b9bdb36,2025-03-01,UFC Fight Night: Kape vs. Almabayev,Esteban Ribovics,Nasrat Haqparast,0,1,dog_won,1,0.6076855659484863,2.0,2,dog,0.30384278297424316
+6034,0dfdc94c1da32e20,2025-03-01,UFC Fight Night: Kape vs. Almabayev,William Gomis,Hyder Amil,0,1,dog_won,1,0.7602441012859344,2.0,2,dog,0.3801220506429672
+6035,1ada4b9ee5810e0f,2025-03-01,UFC Fight Night: Kape vs. Almabayev,JJ Aldrich,Andrea Lee,1,0,dog_won,0,0.7602441012859344,2.0,2,dog,0.3801220506429672
+6036,1de799f17556b501,2025-03-01,UFC Fight Night: Kape vs. Almabayev,Danny Silva,Lucas Almeida,1,0,dog_won,0,0.5449349582195282,2.0,2,dog,0.2724674791097641
+6037,206b8c14546d71f1,2025-03-01,UFC Fight Night: Kape vs. Almabayev,Charles Johnson,Ramazan Temirov,0,1,dog_won,1,0.7978927195072174,2.0,2,dog,0.3989463597536087
+6038,6bdf0756fb57aced,2025-03-01,UFC Fight Night: Kape vs. Almabayev,Cody Brundage,Julian Marquez,1,0,dog_won,0,0.3995726481080055,2.0,2,dog,0.19978632405400276
+6039,9d8a37f130db13e5,2025-03-01,UFC Fight Night: Kape vs. Almabayev,Manel Kape,Asu Almabayev,1,0,dog_won,0,0.7602441012859344,2.0,2,dog,0.3801220506429672
+6040,a857acedb53ee959,2025-03-01,UFC Fight Night: Kape vs. Almabayev,Mario Pinto,Austen Lane,1,0,dog_won,0,0.5295959860086441,2.0,2,dog,0.26479799300432205
+6041,d6c3b730dc9f21a5,2025-03-01,UFC Fight Night: Kape vs. Almabayev,Danny Barlow,Sam Patterson,0,1,dog_won,1,0.5433635115623474,2.0,2,dog,0.2716817557811737
+6042,dd1df7f5a54fd9fc,2025-03-01,UFC Fight Night: Kape vs. Almabayev,Chepe Mariscal,Ricardo Ramos,1,0,dog_won,0,0.5449349582195282,2.0,2,dog,0.2724674791097641
+6043,19fe7177254802d1,2025-03-08,UFC 313: Pereira vs. Ankalaev,Mairon Santos,Francis Marshall,1,0,dog_won,0,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6044,231968c02cdfe65e,2025-03-08,UFC 313: Pereira vs. Ankalaev,Mauricio Ruffy,King Green,1,0,dog_won,0,0.5295959860086441,2.0,2,dog,0.26479799300432205
+6045,79f1c9f97d83ec83,2025-03-08,UFC 313: Pereira vs. Ankalaev,Iasmin Lucindo,Amanda Lemos,0,1,dog_won,1,0.7149401009082794,2.0,2,dog,0.3574700504541397
+6046,9e05fe95a4fc63bc,2025-03-08,UFC 313: Pereira vs. Ankalaev,Alex Pereira,Magomed Ankalaev,0,1,dog_won,1,0.7776907086372375,2.0,2,dog,0.3888453543186188
+6047,a2f31cf3a28a7730,2025-03-08,UFC 313: Pereira vs. Ankalaev,Rafael Fiziev,Justin Gaethje,0,1,dog_won,1,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6048,a3cd6a65aaa9f104,2025-03-08,UFC 313: Pereira vs. Ankalaev,Ignacio Bahamondes,Jalin Turner,1,0,dog_won,0,0.7776907086372375,2.0,2,dog,0.3888453543186188
+6049,af3e43049bc86fe9,2025-03-08,UFC 313: Pereira vs. Ankalaev,Joshua Van,Rei Tsuruya,1,0,dog_won,0,0.7978927195072174,2.0,2,dog,0.3989463597536087
+6050,cab4937435d081d0,2025-03-08,UFC 313: Pereira vs. Ankalaev,Carlos Leal,Alex Morono,1,0,dog_won,0,0.5295959860086441,2.0,2,dog,0.26479799300432205
+6051,e61cb905f6152183,2025-03-08,UFC 313: Pereira vs. Ankalaev,Armen Petrosyan,Brunno Ferreira,0,1,dog_won,1,0.7992831468582153,2.0,2,dog,0.39964157342910767
+6052,1c62a7444808d97f,2025-03-15,UFC Fight Night: Vettori vs. Dolidze 2,Josiane Nunes,Priscila Cachoeira,0,1,dog_won,1,0.3653484061360359,2.0,2,dog,0.18267420306801796
+6053,29d9c5a3f2b78903,2025-03-15,UFC Fight Night: Vettori vs. Dolidze 2,SuYoung You,AJ Cunningham,1,0,dog_won,0,0.0,2.0,2,dog,0.0
+6054,36db86c39ed09997,2025-03-15,UFC Fight Night: Vettori vs. Dolidze 2,Kevin Vallejos,SeungWoo Choi,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6055,5d8af316413ea2f7,2025-03-15,UFC Fight Night: Vettori vs. Dolidze 2,Andre Lima,Daniel Barez,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6056,5fa6543868367f4b,2025-03-15,UFC Fight Night: Vettori vs. Dolidze 2,Stephanie Luciano,Sam Hughes,0,1,dog_won,1,0.5304054021835327,2.0,2,dog,0.26520270109176636
+6057,67f7163e536d62e2,2025-03-15,UFC Fight Night: Vettori vs. Dolidze 2,Marvin Vettori,Roman Dolidze,0,1,dog_won,1,0.7790811359882355,2.0,2,dog,0.38954056799411774
+6058,74bc22b367cca118,2025-03-15,UFC Fight Night: Vettori vs. Dolidze 2,Waldo Cortes-Acosta,Ryan Spann,1,0,dog_won,0,0.5791592001914978,2.0,2,dog,0.2895796000957489
+6059,a8f8245096eaf0cd,2025-03-15,UFC Fight Night: Vettori vs. Dolidze 2,Carli Judice,Yuneisy Duben,1,0,dog_won,0,0.42965926229953766,2.0,2,dog,0.21482963114976883
+6060,ab1aa23060d4e87b,2025-03-15,UFC Fight Night: Vettori vs. Dolidze 2,Da'Mon Blackshear,Cody Gibson,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6061,c83133ee114945ed,2025-03-15,UFC Fight Night: Vettori vs. Dolidze 2,Elizeu Zaleski dos Santos,Chidi Njokuani,0,1,dog_won,1,0.7602441012859344,2.0,2,dog,0.3801220506429672
+6062,cb3eb07b7152366e,2025-03-15,UFC Fight Night: Vettori vs. Dolidze 2,Josias Musasa,Carlos Vera,0,1,dog_won,1,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6063,d8f40b82364b6411,2025-03-15,UFC Fight Night: Vettori vs. Dolidze 2,Alexander Hernandez,Kurt Holobaugh,1,0,dog_won,0,0.6906976699829102,2.0,2,dog,0.3453488349914551
+6064,e56403718205b494,2025-03-15,UFC Fight Night: Vettori vs. Dolidze 2,Diyar Nurgozhay,Brendson Ribeiro,0,1,dog_won,1,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6065,1b02588149d126bf,2025-03-22,UFC Fight Night: Edwards vs. Brady,Nathan Fletcher,Caolan Loughran,0,1,dog_won,1,0.679144412279129,2.0,2,dog,0.3395722061395645
+6066,265dbd9be8caa7de,2025-03-22,UFC Fight Night: Edwards vs. Brady,Guram Kutateladze,Kaue Fernandes,0,1,dog_won,1,0.6433002352714539,2.0,2,dog,0.32165011763572693
+6067,2a1071689c3af9df,2025-03-22,UFC Fight Night: Edwards vs. Brady,Jai Herbert,Chris Padilla,0,1,dog_won,1,0.7978927195072174,2.0,2,dog,0.3989463597536087
+6068,371ed8497799998e,2025-03-22,UFC Fight Night: Edwards vs. Brady,Sean Brady,Leon Edwards,1,0,dog_won,0,0.7776907086372375,2.0,2,dog,0.3888453543186188
+6069,6d9ea9f436ed354d,2025-03-22,UFC Fight Night: Edwards vs. Brady,Carlos Ulberg,Jan Blachowicz,1,0,dog_won,0,0.6076855659484863,2.0,2,dog,0.30384278297424316
+6070,8af2b589d5e9c1ae,2025-03-22,UFC Fight Night: Edwards vs. Brady,Christian Leroy Duncan,Andrey Pulyaev,1,0,dog_won,0,0.42965926229953766,2.0,2,dog,0.21482963114976883
+6071,8e6640c007ad603d,2025-03-22,UFC Fight Night: Edwards vs. Brady,Jordan Vucenic,Chris Duncan,0,1,dog_won,1,0.6076855659484863,2.0,2,dog,0.30384278297424316
+6072,96c6be6b22385967,2025-03-22,UFC Fight Night: Edwards vs. Brady,Gunnar Nelson,Kevin Holland,0,1,dog_won,1,0.6961030662059784,2.0,2,dog,0.3480515331029892
+6073,9779eb1aae1d4654,2025-03-22,UFC Fight Night: Edwards vs. Brady,Morgan Charriere,Nathaniel Wood,0,1,dog_won,1,0.7992831468582153,2.0,2,dog,0.39964157342910767
+6074,a693622ad8c0d672,2025-03-22,UFC Fight Night: Edwards vs. Brady,Shauna Bannon,Puja Tomar,1,0,dog_won,0,0.5449349582195282,2.0,2,dog,0.2724674791097641
+6075,b5b4b69bccb9ff4a,2025-03-22,UFC Fight Night: Edwards vs. Brady,Alexia Thainara,Molly McCann,1,0,dog_won,0,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6076,dd229687cb62c871,2025-03-22,UFC Fight Night: Edwards vs. Brady,Mick Parkin,Marcin Tybura,0,1,dog_won,1,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6077,e5a88f5c686173c4,2025-03-22,UFC Fight Night: Edwards vs. Brady,Lone'er Kavanagh,Felipe dos Santos,1,0,dog_won,0,0.5449349582195282,2.0,2,dog,0.2724674791097641
+6078,0f20c1d7c44fa5fe,2025-03-29,UFC Fight Night: Moreno vs. Erceg,Raul Rosas Jr.,Vince Morales,1,0,dog_won,0,0.27065280824899673,2.0,2,dog,0.13532640412449837
+6079,33e301872e2b5680,2025-03-29,UFC Fight Night: Moreno vs. Erceg,Brandon Moreno,Steve Erceg,1,0,dog_won,0,0.6419098079204559,2.0,2,dog,0.32095490396022797
+6080,41cdbcc0f3635b8f,2025-03-29,UFC Fight Night: Moreno vs. Erceg,Christian Rodriguez,Melquizael Costa,0,1,dog_won,1,0.5449349582195282,2.0,2,dog,0.2724674791097641
+6081,55376d5c205fa844,2025-03-29,UFC Fight Night: Moreno vs. Erceg,David Martinez,Saimon Oliveira,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6082,5ba7dd466e30169f,2025-03-29,UFC Fight Night: Moreno vs. Erceg,Ronaldo Rodriguez,Kevin Borjas,0,1,dog_won,1,0.28586839884519577,2.0,2,dog,0.14293419942259789
+6083,7e3fc760b26b6ae4,2025-03-29,UFC Fight Night: Moreno vs. Erceg,Rafa Garcia,Vinc Pichel,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6084,7efca050bc7be8ac,2025-03-29,UFC Fight Night: Moreno vs. Erceg,Loopy Godinez,Julia Polastri,1,0,dog_won,0,0.7548387050628662,2.0,2,dog,0.3774193525314331
+6085,8fc8d66ad0074ab0,2025-03-29,UFC Fight Night: Moreno vs. Erceg,Manuel Torres,Drew Dober,1,0,dog_won,0,0.7978927195072174,2.0,2,dog,0.3989463597536087
+6086,9f66d450af690df5,2025-03-29,UFC Fight Night: Moreno vs. Erceg,MarQuel Mederos,Austin Hubbard,1,0,dog_won,0,0.5304054021835327,2.0,2,dog,0.26520270109176636
+6087,ab4a91a59c01d6b6,2025-03-29,UFC Fight Night: Moreno vs. Erceg,Edgar Chairez,CJ Vergara,1,0,dog_won,0,0.6076855659484863,2.0,2,dog,0.30384278297424316
+6088,e2e2537a345367d4,2025-03-29,UFC Fight Night: Moreno vs. Erceg,Jamall Emmers,Gabriel Miranda,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6089,0c80eef2f4570543,2025-04-05,UFC Fight Night: Emmett vs. Murphy,Brad Tavares,Gerald Meerschaert,1,0,dog_won,0,0.6961030662059784,2.0,2,dog,0.3480515331029892
+6090,4b1aec2395ebca14,2025-04-05,UFC Fight Night: Emmett vs. Murphy,Victor Henry,Pedro Falcao,1,0,dog_won,0,0.7776907086372375,2.0,2,dog,0.3888453543186188
+6091,58811a4e36c53b89,2025-04-05,UFC Fight Night: Emmett vs. Murphy,Daniel Frunza,Rhys McKee,0,1,dog_won,1,0.679144412279129,2.0,2,dog,0.3395722061395645
+6092,76641669c1607b7a,2025-04-05,UFC Fight Night: Emmett vs. Murphy,Dione Barbosa,Diana Belbita,1,0,dog_won,0,0.4474845677614212,2.0,2,dog,0.2237422838807106
+6093,86a1be10255eea4e,2025-04-05,UFC Fight Night: Emmett vs. Murphy,Lerone Murphy,Josh Emmett,1,0,dog_won,0,0.28586839884519577,2.0,2,dog,0.14293419942259789
+6094,96cc199d78732d11,2025-04-05,UFC Fight Night: Emmett vs. Murphy,Martin Buday,Uran Satybaldiev,1,0,dog_won,0,0.7106440365314484,2.0,2,dog,0.3553220182657242
+6095,a160e94fdb66de17,2025-04-05,UFC Fight Night: Emmett vs. Murphy,Joanderson Brito,Pat Sabatini,0,1,dog_won,1,0.7602441012859344,2.0,2,dog,0.3801220506429672
+6096,cca4d763b1c6de0a,2025-04-05,UFC Fight Night: Emmett vs. Murphy,Vanessa Demopoulos,Talita Alencar,0,1,dog_won,1,0.7992831468582153,2.0,2,dog,0.39964157342910767
+6097,d1368ca941c1fefc,2025-04-05,UFC Fight Night: Emmett vs. Murphy,Torrez Finney,Robert Valentin,1,0,dog_won,0,0.7602441012859344,2.0,2,dog,0.3801220506429672
+6098,de9422207df2de64,2025-04-05,UFC Fight Night: Emmett vs. Murphy,Luis Gurule,Ode Osbourne,0,1,dog_won,1,0.5449349582195282,2.0,2,dog,0.2724674791097641
+6099,fc3825dd1b67e39d,2025-04-05,UFC Fight Night: Emmett vs. Murphy,ChangHo Lee,Cortavious Romious,1,0,dog_won,0,0.7978927195072174,2.0,2,dog,0.3989463597536087
+6100,fd088ce1481315a5,2025-04-05,UFC Fight Night: Emmett vs. Murphy,Loma Lookboonmee,Istela Nunes,1,0,dog_won,0,0.1111111119389534,2.0,2,dog,0.0555555559694767
+6101,08e7a39eb7482ebf,2025-04-12,UFC 314: Volkanovski vs. Lopes,Julian Erosa,Darren Elkins,1,0,dog_won,0,0.6090759932994843,2.0,2,dog,0.3045379966497421
+6102,0e71e69359db4d1e,2025-04-12,UFC 314: Volkanovski vs. Lopes,Nora Cornolle,Hailey Cowan,1,0,dog_won,0,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6103,0eccebee160137b1,2025-04-12,UFC 314: Volkanovski vs. Lopes,Virna Jandiroba,Yan Xiaonan,1,0,dog_won,0,0.7776907086372375,2.0,2,dog,0.3888453543186188
+6104,11eb27a1ac74d225,2025-04-12,UFC 314: Volkanovski vs. Lopes,Chase Hooper,Jim Miller,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6105,4bbda6c1f6cf9d4e,2025-04-12,UFC 314: Volkanovski vs. Lopes,Michal Oleksiejczuk,Sedriques Dumas,1,0,dog_won,0,0.7602441012859344,2.0,2,dog,0.3801220506429672
+6106,8c540eb4afe8c43e,2025-04-12,UFC 314: Volkanovski vs. Lopes,Jean Silva,Bryce Mitchell,1,0,dog_won,0,0.7726426422595978,2.0,2,dog,0.3863213211297989
+6107,b2d731415bd367df,2025-04-12,UFC 314: Volkanovski vs. Lopes,Nikita Krylov,Dominick Reyes,0,1,dog_won,1,0.5433635115623474,2.0,2,dog,0.2716817557811737
+6108,b87d6f71d901355b,2025-04-12,UFC 314: Volkanovski vs. Lopes,Marco Tulio,Tresean Gore,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6109,d05cb4c4135ce402,2025-04-12,UFC 314: Volkanovski vs. Lopes,Paddy Pimblett,Michael Chandler,1,0,dog_won,0,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6110,d3be5a4e0ec273e2,2025-04-12,UFC 314: Volkanovski vs. Lopes,Yair Rodriguez,Patricio Freire,1,0,dog_won,0,0.6961030662059784,2.0,2,dog,0.3480515331029892
+6111,e733f148060bef2a,2025-04-12,UFC 314: Volkanovski vs. Lopes,Alexander Volkanovski,Diego Lopes,1,0,dog_won,0,0.7776907086372375,2.0,2,dog,0.3888453543186188
+6112,fc43d60cbd6b0e6a,2025-04-12,UFC 314: Volkanovski vs. Lopes,Sean Woodson,Dan Ige,0,1,dog_won,1,0.5449349582195282,2.0,2,dog,0.2724674791097641
+6113,fd98843926965cbd,2025-04-12,UFC 314: Volkanovski vs. Lopes,Sumudaerji,Mitch Raposo,1,0,dog_won,0,0.7992831468582153,2.0,2,dog,0.39964157342910767
+6114,23201d09a78d446d,2025-04-26,UFC Fight Night: Machado Garry vs. Prates,Timmy Cuamba,Roberto Romero,1,0,dog_won,0,0.6961030662059784,2.0,2,dog,0.3480515331029892
+6115,4072abf0b0c179f2,2025-04-26,UFC Fight Night: Machado Garry vs. Prates,David Onama,Giga Chikadze,1,0,dog_won,0,0.5449349582195282,2.0,2,dog,0.2724674791097641
+6116,62fbdd4f0bcd3c2a,2025-04-26,UFC Fight Night: Machado Garry vs. Prates,Ikram Aliskerov,Andre Muniz,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6117,633f4b5ec767769d,2025-04-26,UFC Fight Night: Machado Garry vs. Prates,Ian Machado Garry,Carlos Prates,1,0,dog_won,0,0.660307377576828,2.0,2,dog,0.330153688788414
+6118,6f3cb7ce84185dd3,2025-04-26,UFC Fight Night: Machado Garry vs. Prates,Chris Gutierrez,John Castaneda,1,0,dog_won,0,0.5304054021835327,2.0,2,dog,0.26520270109176636
+6119,7d51649373d42571,2025-04-26,UFC Fight Night: Machado Garry vs. Prates,Da'Mon Blackshear,Alatengheili,1,0,dog_won,0,0.42965926229953766,2.0,2,dog,0.21482963114976883
+6120,7fd6770fe2d4f258,2025-04-26,UFC Fight Night: Machado Garry vs. Prates,Joselyne Edwards,Chelsea Chandler,1,0,dog_won,0,0.6419098079204559,2.0,2,dog,0.32095490396022797
+6121,97770b38df67b276,2025-04-26,UFC Fight Night: Machado Garry vs. Prates,Evan Elder,Gauge Young,1,0,dog_won,0,0.3653484061360359,2.0,2,dog,0.18267420306801796
+6122,9bbd45774fb4a6eb,2025-04-26,UFC Fight Night: Machado Garry vs. Prates,Michel Pereira,Abus Magomedov,0,1,dog_won,1,0.7992831468582153,2.0,2,dog,0.39964157342910767
+6123,a526a72ade275f46,2025-04-26,UFC Fight Night: Machado Garry vs. Prates,Zhang Mingyang,Anthony Smith,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6124,c2c20a04a78d9143,2025-04-26,UFC Fight Night: Machado Garry vs. Prates,Malcolm Wellmaker,Cameron Saaiman,1,0,dog_won,0,0.4134615361690521,2.0,2,dog,0.20673076808452606
+6125,d8d22dcc1f6912e7,2025-04-26,UFC Fight Night: Machado Garry vs. Prates,Matt Schnell,Jimmy Flick,1,0,dog_won,0,0.6961030662059784,2.0,2,dog,0.3480515331029892
+6126,e7b3ca036835b7c2,2025-04-26,UFC Fight Night: Machado Garry vs. Prates,Jaqueline Amorim,Polyana Viana,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6127,fbf83609dc96f32e,2025-04-26,UFC Fight Night: Machado Garry vs. Prates,Randy Brown,Nicolas Dalby,1,0,dog_won,0,0.5449349582195282,2.0,2,dog,0.2724674791097641
+6128,191ee545160a4e09,2025-05-03,UFC Fight Night: Sandhagen vs. Figueiredo,Santiago Ponzinibbio,Daniel Rodriguez,0,1,dog_won,1,0.6961030662059784,2.0,2,dog,0.3480515331029892
+6129,2707dc2245335cc1,2025-05-03,UFC Fight Night: Sandhagen vs. Figueiredo,Miesha Tate,Yana Santos,0,1,dog_won,1,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6130,380242601a2c5991,2025-05-03,UFC Fight Night: Sandhagen vs. Figueiredo,Bo Nickal,Reinier de Ridder,0,1,dog_won,1,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6131,469f887278324e63,2025-05-03,UFC Fight Night: Sandhagen vs. Figueiredo,Ivana Petrovic,Juliana Miller,0,1,dog_won,1,0.561188817024231,2.0,2,dog,0.2805944085121155
+6132,5ce29056e0cd2df9,2025-05-03,UFC Fight Night: Sandhagen vs. Figueiredo,Montel Jackson,Daniel Marcos,1,0,dog_won,0,0.6076855659484863,2.0,2,dog,0.30384278297424316
+6133,6ccd10adc968e1f0,2025-05-03,UFC Fight Night: Sandhagen vs. Figueiredo,Serhiy Sidey,Cameron Smotherman,1,0,dog_won,0,0.7790811359882355,2.0,2,dog,0.38954056799411774
+6134,6e26a6293ea6ba62,2025-05-03,UFC Fight Night: Sandhagen vs. Figueiredo,Gillian Robertson,Marina Rodriguez,1,0,dog_won,0,0.6076855659484863,2.0,2,dog,0.30384278297424316
+6135,77ed474dfc5359ea,2025-05-03,UFC Fight Night: Sandhagen vs. Figueiredo,Azamat Bekoev,Ryan Loder,1,0,dog_won,0,0.6090759932994843,2.0,2,dog,0.3045379966497421
+6136,9039959b41901412,2025-05-03,UFC Fight Night: Sandhagen vs. Figueiredo,Mason Jones,Jeremy Stephens,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6137,97b32ff27fd457a8,2025-05-03,UFC Fight Night: Sandhagen vs. Figueiredo,Gaston Bolanos,Quang Le,0,1,dog_won,1,0.7149401009082794,2.0,2,dog,0.3574700504541397
+6138,9b3bade95e1dd484,2025-05-03,UFC Fight Night: Sandhagen vs. Figueiredo,Cory Sandhagen,Deiveson Figueiredo,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6139,c445401709421fa4,2025-05-03,UFC Fight Night: Sandhagen vs. Figueiredo,Thomas Petersen,Don'Tale Mayes,1,0,dog_won,0,0.4474845677614212,2.0,2,dog,0.2237422838807106
+6140,0e0a4282cd6c86d7,2025-05-10,UFC 315: Muhammad vs. Della Maddalena,JeongYeong Lee,Daniel Santos,0,1,dog_won,1,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6141,0f53eb509d0ffeb9,2025-05-10,UFC 315: Muhammad vs. Della Maddalena,Natalia Silva,Alexa Grasso,1,0,dog_won,0,0.5791592001914978,2.0,2,dog,0.2895796000957489
+6142,2521234a4bf7c615,2025-05-10,UFC 315: Muhammad vs. Della Maddalena,Mike Malott,Charles Radtke,1,0,dog_won,0,0.5091392695903778,2.0,2,dog,0.2545696347951889
+6143,4db2d86ebe8c8abd,2025-05-10,UFC 315: Muhammad vs. Della Maddalena,Jasmine Jasudavicius,Jessica Andrade,1,0,dog_won,0,0.5406976640224457,2.0,2,dog,0.27034883201122284
+6144,6ecfa439ef900bcc,2025-05-10,UFC 315: Muhammad vs. Della Maddalena,Marc-Andre Barriault,Bruno Silva,1,0,dog_won,0,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6145,891b2faf1bff38ee,2025-05-10,UFC 315: Muhammad vs. Della Maddalena,Jose Aldo,Aiemann Zahabi,0,1,dog_won,1,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6146,99aa1f28e22bb6dd,2025-05-10,UFC 315: Muhammad vs. Della Maddalena,Navajo Stirling,Ivan Erslan,1,0,dog_won,0,0.42965926229953766,2.0,2,dog,0.21482963114976883
+6147,9e9d1764a015f313,2025-05-10,UFC 315: Muhammad vs. Della Maddalena,Manon Fiorot,Valentina Shevchenko,0,1,dog_won,1,0.7992831468582153,2.0,2,dog,0.39964157342910767
+6148,b873c116e39c9920,2025-05-10,UFC 315: Muhammad vs. Della Maddalena,Belal Muhammad,Jack Della Maddalena,0,1,dog_won,1,0.7548387050628662,2.0,2,dog,0.3774193525314331
+6149,c20bd12ae7f04eff,2025-05-10,UFC 315: Muhammad vs. Della Maddalena,Bekzat Almakhan,Brad Katona,1,0,dog_won,0,0.7790811359882355,2.0,2,dog,0.38954056799411774
+6150,c7190cd03e53fb61,2025-05-10,UFC 315: Muhammad vs. Della Maddalena,Benoit Saint Denis,Kyle Prepolec,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6151,c812457a810dde39,2025-05-10,UFC 315: Muhammad vs. Della Maddalena,Ion Cutelaba,Modestas Bukauskas,0,1,dog_won,1,0.5250000059604645,2.0,2,dog,0.26250000298023224
+6152,18a7dc86279066f8,2025-05-17,UFC Fight Night: Burns vs. Morales,HyunSung Park,Carlos Hernandez,1,0,dog_won,0,0.5091392695903778,2.0,2,dog,0.2545696347951889
+6153,66887532be2de5ee,2025-05-17,UFC Fight Night: Burns vs. Morales,Denise Gomes,Elise Reed,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6154,8ba31cf0b3164b72,2025-05-17,UFC Fight Night: Burns vs. Morales,Jared Gordon,Thiago Moises,1,0,dog_won,0,0.7992831468582153,2.0,2,dog,0.39964157342910767
+6155,a81ad236a2f221f2,2025-05-17,UFC Fight Night: Burns vs. Morales,Michael Morales,Gilbert Burns,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6156,a9a6cca4bbf7a5db,2025-05-17,UFC Fight Night: Burns vs. Morales,Matheus Camilo,Gabe Green,0,1,dog_won,1,0.32500000298023224,2.0,2,dog,0.16250000149011612
+6157,afdd95ae7b7cdb0c,2025-05-17,UFC Fight Night: Burns vs. Morales,Tecia Pennington,Luana Pinheiro,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6158,b3044bf646306e7f,2025-05-17,UFC Fight Night: Burns vs. Morales,Nursulton Ruziboev,Dustin Stoltzfus,1,0,dog_won,0,0.7602441012859344,2.0,2,dog,0.3801220506429672
+6159,d6e2bc6e6c0cc4fe,2025-05-17,UFC Fight Night: Burns vs. Morales,Yadier del Valle,Connor Matthews,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6160,dcb27eef6441268c,2025-05-17,UFC Fight Night: Burns vs. Morales,Mairon Santos,Sodiq Yusuff,1,0,dog_won,0,0.5304054021835327,2.0,2,dog,0.26520270109176636
+6161,f75fe8b384b0db11,2025-05-17,UFC Fight Night: Burns vs. Morales,Luana Santos,Tainara Lisboa,1,0,dog_won,0,0.7992831468582153,2.0,2,dog,0.39964157342910767
+6162,fe2acfdaaaec3dba,2025-05-17,UFC Fight Night: Burns vs. Morales,Melquizael Costa,Julian Erosa,1,0,dog_won,0,0.660307377576828,2.0,2,dog,0.330153688788414
+6163,106918bfbe24335d,2025-05-31,UFC Fight Night: Blanchfield vs. Barber,Macy Chiasson,Ketlen Vieira,0,1,dog_won,1,0.7849240899085999,2.0,2,dog,0.3924620449542999
+6164,212527d462690304,2025-05-31,UFC Fight Night: Blanchfield vs. Barber,Mateusz Gamrot,Ludovit Klein,1,0,dog_won,0,0.6961030662059784,2.0,2,dog,0.3480515331029892
+6165,2521fed000747f47,2025-05-31,UFC Fight Night: Blanchfield vs. Barber,Jordan Leavitt,Kurt Holobaugh,1,0,dog_won,0,0.5449349582195282,2.0,2,dog,0.2724674791097641
+6166,305d8c85b35a7d4e,2025-05-31,UFC Fight Night: Blanchfield vs. Barber,Billy Ray Goff,Ramiz Brahimaj,0,1,dog_won,1,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6167,73240bea13ed5e71,2025-05-31,UFC Fight Night: Blanchfield vs. Barber,Rayanne dos Santos,Alice Ardelean,0,1,dog_won,1,0.5449349582195282,2.0,2,dog,0.2724674791097641
+6168,7aaa810540132a4b,2025-05-31,UFC Fight Night: Blanchfield vs. Barber,Dustin Jacoby,Bruno Lopes,1,0,dog_won,0,0.7944464683532715,2.0,2,dog,0.39722323417663574
+6169,baa2ee0bf7f97079,2025-05-31,UFC Fight Night: Blanchfield vs. Barber,Allan Nascimento,Jafel Filho,1,0,dog_won,0,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6170,01100a90b584215d,2025-06-07,UFC 316: Dvalishvili vs. O'Malley 2,Azamat Murzakanov,Brendson Ribeiro,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6171,0e8599eca8ccfa32,2025-06-07,UFC 316: Dvalishvili vs. O'Malley 2,MarQuel Mederos,Mark Choinski,1,0,dog_won,0,0.5304054021835327,2.0,2,dog,0.26520270109176636
+6172,2129acab2280bd29,2025-06-07,UFC 316: Dvalishvili vs. O'Malley 2,Kevin Holland,Vicente Luque,1,0,dog_won,0,0.5791592001914978,2.0,2,dog,0.2895796000957489
+6173,2e4064e0e6d4d92e,2025-06-07,UFC 316: Dvalishvili vs. O'Malley 2,Quillan Salkilld,Yanal Ashmouz,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6174,81b84b34f0357fa5,2025-06-07,UFC 316: Dvalishvili vs. O'Malley 2,Kayla Harrison,Julianna Pena,1,0,dog_won,0,0.29975728690624237,2.0,2,dog,0.14987864345312119
+6175,9f4a0de31375ba04,2025-06-07,UFC 316: Dvalishvili vs. O'Malley 2,JooSang Yoo,Jeka Saragih,1,0,dog_won,0,0.29975728690624237,2.0,2,dog,0.14987864345312119
+6176,ac977a0389682124,2025-06-07,UFC 316: Dvalishvili vs. O'Malley 2,Serghei Spivac,Waldo Cortes-Acosta,0,1,dog_won,1,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6177,b6a87389bdc36a00,2025-06-07,UFC 316: Dvalishvili vs. O'Malley 2,Joshua Van,Bruno Silva,1,0,dog_won,0,0.5295959860086441,2.0,2,dog,0.26479799300432205
+6178,d078e9046aa86307,2025-06-07,UFC 316: Dvalishvili vs. O'Malley 2,Wang Cong,Ariane da Silva,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6179,df5dac45fc585fb0,2025-06-07,UFC 316: Dvalishvili vs. O'Malley 2,Patchy Mix,Mario Bautista,0,1,dog_won,1,0.8591094315052032,2.0,2,dog,0.4295547157526016
+6180,e28e829800466aca,2025-06-07,UFC 316: Dvalishvili vs. O'Malley 2,Joe Pyfer,Kelvin Gastelum,1,0,dog_won,0,0.5295959860086441,2.0,2,dog,0.26479799300432205
+6181,e61d83e4e1f9c4d7,2025-06-07,UFC 316: Dvalishvili vs. O'Malley 2,Merab Dvalishvili,Sean O'Malley,1,0,dog_won,0,0.6370708048343658,2.0,2,dog,0.3185354024171829
+6182,f0488a4486a64af0,2025-06-07,UFC 316: Dvalishvili vs. O'Malley 2,Khaos Williams,Andreas Gustafsson,0,1,dog_won,1,0.561188817024231,2.0,2,dog,0.2805944085121155
+6183,1714950933f88ab9,2025-06-14,UFC Fight Night: Usman vs. Buckley,Raoni Barcelos,Cody Garbrandt,1,0,dog_won,0,0.5091392695903778,2.0,2,dog,0.2545696347951889
+6184,2ae7404681deb3b3,2025-06-14,UFC Fight Night: Usman vs. Buckley,Ange Loosa,Phil Rowe,0,1,dog_won,1,0.7602441012859344,2.0,2,dog,0.3801220506429672
+6185,59c4fdb3c0673066,2025-06-14,UFC Fight Night: Usman vs. Buckley,Ricky Simon,Cameron Smotherman,1,0,dog_won,0,0.5295959860086441,2.0,2,dog,0.26479799300432205
+6186,79dfbbdd14fbbd11,2025-06-14,UFC Fight Night: Usman vs. Buckley,Rose Namajunas,Miranda Maverick,1,0,dog_won,0,0.6419098079204559,2.0,2,dog,0.32095490396022797
+6187,ab325ea526824723,2025-06-14,UFC Fight Night: Usman vs. Buckley,Jamey-Lyn Horth,Vanessa Demopoulos,1,0,dog_won,0,0.1111111119389534,2.0,2,dog,0.0555555559694767
+6188,b39b8ff0d7de211a,2025-06-14,UFC Fight Night: Usman vs. Buckley,Jose Ochoa,Cody Durden,1,0,dog_won,0,0.6419098079204559,2.0,2,dog,0.32095490396022797
+6189,d75b3d3c2b209b75,2025-06-14,UFC Fight Night: Usman vs. Buckley,Joaquin Buckley,Kamaru Usman,0,1,dog_won,1,0.5449349582195282,2.0,2,dog,0.2724674791097641
+6190,e5bd7e6e2a50a843,2025-06-14,UFC Fight Night: Usman vs. Buckley,Edmen Shahbazyan,Andre Petroski,1,0,dog_won,0,0.7602441012859344,2.0,2,dog,0.3801220506429672
+6191,e861e9cc0118c670,2025-06-14,UFC Fight Night: Usman vs. Buckley,Michael Chiesa,Court McGee,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6192,ec2034b134ae71cd,2025-06-14,UFC Fight Night: Usman vs. Buckley,Oumar Sy,Alonzo Menifield,0,1,dog_won,1,0.42965926229953766,2.0,2,dog,0.21482963114976883
+6193,f6454f2e508626ec,2025-06-14,UFC Fight Night: Usman vs. Buckley,Malcolm Wellmaker,Kris Moutinho,1,0,dog_won,0,0.29975728690624237,2.0,2,dog,0.14987864345312119
+6194,03bc32bdb5a33496,2025-06-21,UFC Fight Night: Hill vs. Rountree Jr.,Jamahal Hill,Khalil Rountree Jr.,0,1,dog_won,1,0.5492424368858337,2.0,2,dog,0.27462121844291687
+6195,19764211af05674c,2025-06-21,UFC Fight Night: Hill vs. Rountree Jr.,Muhammad Naimov,Bogdan Grad,1,0,dog_won,0,0.7602441012859344,2.0,2,dog,0.3801220506429672
+6196,2bfc0212f2cae65b,2025-06-21,UFC Fight Night: Hill vs. Rountree Jr.,Irina Alekseeva,Klaudia Sygula,0,1,dog_won,1,0.561188817024231,2.0,2,dog,0.2805944085121155
+6197,36ec204f47e4d613,2025-06-21,UFC Fight Night: Hill vs. Rountree Jr.,Myktybek Orolbai,Tofiq Musayev,1,0,dog_won,0,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6198,5fcf18bcd2a020f1,2025-06-21,UFC Fight Night: Hill vs. Rountree Jr.,JunYong Park,Ismail Naurdiev,1,0,dog_won,0,0.6419098079204559,2.0,2,dog,0.32095490396022797
+6199,7513a00037094075,2025-06-21,UFC Fight Night: Hill vs. Rountree Jr.,Nazim Sadykhov,Nikolas Motta,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6200,8c140756bf43dcc2,2025-06-21,UFC Fight Night: Hill vs. Rountree Jr.,Tagir Ulanbekov,Azat Maksum,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6201,8e5744c664fec3e9,2025-06-21,UFC Fight Night: Hill vs. Rountree Jr.,Curtis Blaydes,Rizvan Kuniev,1,0,dog_won,0,0.5433635115623474,2.0,2,dog,0.2716817557811737
+6202,a12d3a6c8aaf87ca,2025-06-21,UFC Fight Night: Hill vs. Rountree Jr.,Hamdy Abdelwahab,Mohammed Usman,0,1,dog_won,1,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6203,a1afc16e21d1a807,2025-06-21,UFC Fight Night: Hill vs. Rountree Jr.,Ignacio Bahamondes,Rafael Fiziev,0,1,dog_won,1,0.7776907086372375,2.0,2,dog,0.3888453543186188
+6204,e512b80bbaea36c2,2025-06-21,UFC Fight Night: Hill vs. Rountree Jr.,Oban Elliott,Seokhyeon Ko,0,1,dog_won,1,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6205,fff3218758c513b8,2025-06-21,UFC Fight Night: Hill vs. Rountree Jr.,Melissa Mullins,Daria Zhelezniakova,0,1,dog_won,1,0.6419098079204559,2.0,2,dog,0.32095490396022797
+6206,043172689e415438,2025-06-28,UFC 317: Topuria vs. Oliveira,Jhonata Diniz,Alvin Hines,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6207,1ea9ad3b6e1cba79,2025-06-28,UFC 317: Topuria vs. Oliveira,Beneil Dariush,Renato Moicano,1,0,dog_won,0,0.6961030662059784,2.0,2,dog,0.3480515331029892
+6208,2f523b757f7f33a2,2025-06-28,UFC 317: Topuria vs. Oliveira,Jose Delgado,Hyder Amil,1,0,dog_won,0,0.7790811359882355,2.0,2,dog,0.38954056799411774
+6209,7a64d63e12618ba7,2025-06-28,UFC 317: Topuria vs. Oliveira,Ilia Topuria,Charles Oliveira,1,0,dog_won,0,0.42965926229953766,2.0,2,dog,0.21482963114976883
+6210,815ff62ca8e217be,2025-06-28,UFC 317: Topuria vs. Oliveira,Tracy Cortez,Viviane Araujo,1,0,dog_won,0,0.5449349582195282,2.0,2,dog,0.2724674791097641
+6211,8308464729ea7c40,2025-06-28,UFC 317: Topuria vs. Oliveira,Alexandre Pantoja,Kai Kara-France,1,0,dog_won,0,0.3792372941970825,2.0,2,dog,0.18961864709854126
+6212,958522de54ccc536,2025-06-28,UFC 317: Topuria vs. Oliveira,Gregory Rodrigues,Jack Hermansson,1,0,dog_won,0,0.5945207178592682,2.0,2,dog,0.2972603589296341
+6213,9bff9fe298e63357,2025-06-28,UFC 317: Topuria vs. Oliveira,Jacobe Smith,Niko Price,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6214,d7be78c400e7e0f9,2025-06-28,UFC 317: Topuria vs. Oliveira,Terrance McKinney,Viacheslav Borshchev,1,0,dog_won,0,0.6961030662059784,2.0,2,dog,0.3480515331029892
+6215,f6a3c78f15ff26c7,2025-06-28,UFC 317: Topuria vs. Oliveira,Felipe Lima,Payton Talbott,0,1,dog_won,1,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6216,f722b96ae6862843,2025-06-28,UFC 317: Topuria vs. Oliveira,Joshua Van,Brandon Royval,1,0,dog_won,0,1.0605524480342865,2.0,2,dog,0.5302762240171432
+6217,0adfc21045c02555,2025-07-12,UFC Fight Night: Lewis vs. Teixeira,Tallison Teixeira,Derrick Lewis,0,1,dog_won,1,0.3792372941970825,2.0,2,dog,0.18961864709854126
+6218,120d66cb0da0f3c3,2025-07-12,UFC Fight Night: Lewis vs. Teixeira,Fatima Kline,Melissa Martinez,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6219,236f811290163dca,2025-07-12,UFC Fight Night: Lewis vs. Teixeira,Chris Curtis,Max Griffin,1,0,dog_won,0,0.6090759932994843,2.0,2,dog,0.3045379966497421
+6220,2a03bc4c491b4c9a,2025-07-12,UFC Fight Night: Lewis vs. Teixeira,Gabriel Bonfim,Stephen Thompson,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6221,46bc1338a50cbeac,2025-07-12,UFC Fight Night: Lewis vs. Teixeira,Eduarda Moura,Lauren Murphy,1,0,dog_won,0,0.125,2.0,2,dog,0.0625
+6222,4b75d3b7738cb278,2025-07-12,UFC Fight Night: Lewis vs. Teixeira,Vitor Petrino,Austen Lane,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6223,4e5d4a36eaaa3a78,2025-07-12,UFC Fight Night: Lewis vs. Teixeira,Morgan Charriere,Nate Landwehr,1,0,dog_won,0,0.5449349582195282,2.0,2,dog,0.2724674791097641
+6224,5c650ae2193ab1bc,2025-07-12,UFC Fight Night: Lewis vs. Teixeira,Kennedy Nzechukwu,Valter Walker,0,1,dog_won,1,0.7790811359882355,2.0,2,dog,0.38954056799411774
+6225,7f33fbdc35afd721,2025-07-12,UFC Fight Night: Lewis vs. Teixeira,Mike Davis,Mitch Ramirez,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6226,b19bf99c7eb796bc,2025-07-12,UFC Fight Night: Lewis vs. Teixeira,Junior Tafa,Tuco Tokkos,0,1,dog_won,1,0.5791592001914978,2.0,2,dog,0.2895796000957489
+6227,d5e3be7a07c48b08,2025-07-12,UFC Fight Night: Lewis vs. Teixeira,Chidi Njokuani,Jake Matthews,0,1,dog_won,1,0.7776907086372375,2.0,2,dog,0.3888453543186188
+6228,f368475c366c6d85,2025-07-12,UFC Fight Night: Lewis vs. Teixeira,Steve Garcia,Calvin Kattar,1,0,dog_won,0,0.6961030662059784,2.0,2,dog,0.3480515331029892
+6229,37bc72d5d211b189,2025-07-19,UFC 318: Holloway vs. Poirier 3,Islam Dulatov,Adam Fugitt,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6230,8e1feda9141602f1,2025-07-19,UFC 318: Holloway vs. Poirier 3,Brendan Allen,Marvin Vettori,1,0,dog_won,0,0.6076855659484863,2.0,2,dog,0.30384278297424316
+6231,d7507e2741fd4d05,2025-07-19,UFC 318: Holloway vs. Poirier 3,Max Holloway,Dustin Poirier,1,0,dog_won,0,0.7992831468582153,2.0,2,dog,0.39964157342910767
+6232,017a825c7820d12e,2025-07-26,UFC Fight Night: Whittaker vs. De Ridder,Da'Mon Blackshear,Davey Grant,0,1,dog_won,1,0.4474845677614212,2.0,2,dog,0.2237422838807106
+6233,0a598768f5c8d540,2025-07-26,UFC Fight Night: Whittaker vs. De Ridder,Marcus Buchecha,Martin Buday,0,1,dog_won,1,0.6090759932994843,2.0,2,dog,0.3045379966497421
+6234,23ddf51ce630028d,2025-07-26,UFC Fight Night: Whittaker vs. De Ridder,Steven Nguyen,Mohammad Yahya,1,0,dog_won,0,0.6090759932994843,2.0,2,dog,0.3045379966497421
+6235,3e6067763978d862,2025-07-26,UFC Fight Night: Whittaker vs. De Ridder,Amanda Ribas,Tabatha Ricci,0,1,dog_won,1,0.561188817024231,2.0,2,dog,0.2805944085121155
+6236,582d66ce97309e29,2025-07-26,UFC Fight Night: Whittaker vs. De Ridder,Shara Magomedov,Marc-Andre Barriault,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6237,6b8be0ee3e569ad2,2025-07-26,UFC Fight Night: Whittaker vs. De Ridder,Robert Whittaker,Reinier de Ridder,0,1,dog_won,1,0.7776907086372375,2.0,2,dog,0.3888453543186188
+6238,77f960d82cda0b76,2025-07-26,UFC Fight Night: Whittaker vs. De Ridder,Nikita Krylov,Bogdan Guskov,0,1,dog_won,1,0.6076855659484863,2.0,2,dog,0.30384278297424316
+6239,7c075e3383198e14,2025-07-26,UFC Fight Night: Whittaker vs. De Ridder,Carlos Leal,Muslim Salikhov,0,1,dog_won,1,0.6090759932994843,2.0,2,dog,0.3045379966497421
+6240,887c61da1a78a5e1,2025-07-26,UFC Fight Night: Whittaker vs. De Ridder,Asu Almabayev,Jose Ochoa,1,0,dog_won,0,0.7790811359882355,2.0,2,dog,0.38954056799411774
+6241,d4d4ee045b0ca695,2025-07-26,UFC Fight Night: Whittaker vs. De Ridder,Petr Yan,Marcus McGhee,1,0,dog_won,0,0.6090759932994843,2.0,2,dog,0.3045379966497421
+6242,e72c691b7c68b03a,2025-07-26,UFC Fight Night: Whittaker vs. De Ridder,Bryce Mitchell,Said Nurmagomedov,1,0,dog_won,0,0.6961030662059784,2.0,2,dog,0.3480515331029892
+6243,f9dac7702609669f,2025-07-26,UFC Fight Night: Whittaker vs. De Ridder,Ibo Aslan,Billy Elekana,0,1,dog_won,1,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6244,07c2af68b6dbc4ec,2025-08-02,UFC Fight Night: Taira vs. Park,Austin Bashi,John Yannis,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6245,111e66eb922449e4,2025-08-02,UFC Fight Night: Taira vs. Park,Kevin Vallejos,Danny Silva,1,0,dog_won,0,0.5295959860086441,2.0,2,dog,0.26479799300432205
+6246,282c8c6c1ed82bfb,2025-08-02,UFC Fight Night: Taira vs. Park,Tatsuro Taira,HyunSung Park,1,0,dog_won,0,0.6076855659484863,2.0,2,dog,0.30384278297424316
+6247,426a69e343822ab3,2025-08-02,UFC Fight Night: Taira vs. Park,Mateusz Rebecki,Chris Duncan,0,1,dog_won,1,0.5791592001914978,2.0,2,dog,0.2895796000957489
+6248,45781930d64da456,2025-08-02,UFC Fight Night: Taira vs. Park,Rodolfo Vieira,Tresean Gore,1,0,dog_won,0,0.29975728690624237,2.0,2,dog,0.14987864345312119
+6249,878941394f9e3538,2025-08-02,UFC Fight Night: Taira vs. Park,Esteban Ribovics,Elves Brener,1,0,dog_won,0,0.6076855659484863,2.0,2,dog,0.30384278297424316
+6250,ac57250e3de89d5d,2025-08-02,UFC Fight Night: Taira vs. Park,Elizeu Zaleski dos Santos,Neil Magny,0,1,dog_won,1,0.6961030662059784,2.0,2,dog,0.3480515331029892
+6251,b3c695728e177fd4,2025-08-02,UFC Fight Night: Taira vs. Park,Andrey Pulyaev,Nick Klein,1,0,dog_won,0,0.7992831468582153,2.0,2,dog,0.39964157342910767
+6252,b47db03affb279c3,2025-08-02,UFC Fight Night: Taira vs. Park,Rafael Estevam,Felipe Bunes,1,0,dog_won,0,0.29975728690624237,2.0,2,dog,0.14987864345312119
+6253,c62ed8a6002b5360,2025-08-02,UFC Fight Night: Taira vs. Park,Karol Rosa,Nora Cornolle,1,0,dog_won,0,0.7790811359882355,2.0,2,dog,0.38954056799411774
+6254,d98d6b2c13557a87,2025-08-02,UFC Fight Night: Taira vs. Park,Piera Rodriguez,Ketlen Souza,1,0,dog_won,0,0.5449349582195282,2.0,2,dog,0.2724674791097641
+6255,eeeffa7f514e0c0e,2025-08-02,UFC Fight Night: Taira vs. Park,Rinya Nakamura,Nathan Fletcher,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6256,37d58369782cb86b,2025-08-09,UFC Fight Night: Dolidze vs. Hernandez,Steve Erceg,Ode Osbourne,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6257,3d6571790c21527c,2025-08-09,UFC Fight Night: Dolidze vs. Hernandez,Julius Walker,Rafael Cerqueira,1,0,dog_won,0,0.42965926229953766,2.0,2,dog,0.21482963114976883
+6258,646c79a7ecd12e5f,2025-08-09,UFC Fight Night: Dolidze vs. Hernandez,Iasmin Lucindo,Angela Hill,1,0,dog_won,0,0.5433635115623474,2.0,2,dog,0.2716817557811737
+6259,68fe62bac7fd8bb0,2025-08-09,UFC Fight Night: Dolidze vs. Hernandez,Anthony Hernandez,Roman Dolidze,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6260,6ef50ed03b116b60,2025-08-09,UFC Fight Night: Dolidze vs. Hernandez,Gabriella Fernandes,Julija Stoliarenko,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6261,75a84211f50c53f5,2025-08-09,UFC Fight Night: Dolidze vs. Hernandez,Christian Leroy Duncan,Eryk Anders,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6262,7d923267c44dd93b,2025-08-09,UFC Fight Night: Dolidze vs. Hernandez,Uros Medic,Gilbert Urbina,1,0,dog_won,0,0.7602441012859344,2.0,2,dog,0.3801220506429672
+6263,857e8facd8ff7c36,2025-08-09,UFC Fight Night: Dolidze vs. Hernandez,Cody Brundage,Eric McConico,0,1,dog_won,1,0.5791592001914978,2.0,2,dog,0.2895796000957489
+6264,98d6771af9b0ebe5,2025-08-09,UFC Fight Night: Dolidze vs. Hernandez,Christian Rodriguez,Andre Fili,0,1,dog_won,1,0.5449349582195282,2.0,2,dog,0.2724674791097641
+6265,ae7a8f19743e8154,2025-08-09,UFC Fight Night: Dolidze vs. Hernandez,Elijah Smith,Toshiomi Kazama,1,0,dog_won,0,0.0788092240691185,2.0,2,dog,0.03940461203455925
+6266,aef44145740741b3,2025-08-09,UFC Fight Night: Dolidze vs. Hernandez,Joselyne Edwards,Priscila Cachoeira,1,0,dog_won,0,0.1111111119389534,2.0,2,dog,0.0555555559694767
+6267,ed5383b50ffcdded,2025-08-09,UFC Fight Night: Dolidze vs. Hernandez,Jean Matsumoto,Miles Johns,1,0,dog_won,0,0.6076855659484863,2.0,2,dog,0.30384278297424316
+6268,12cedec11b37ddc0,2025-08-16,UFC 319: Du Plessis vs. Chimaev,Khamzat Chimaev,Dricus Du Plessis,1,0,dog_won,0,0.6076855659484863,2.0,2,dog,0.30384278297424316
+6269,1d8dc0fb5d47357f,2025-08-16,UFC 319: Du Plessis vs. Chimaev,Chase Hooper,Alexander Hernandez,0,1,dog_won,1,0.28586839884519577,2.0,2,dog,0.14293419942259789
+6270,42585ce706c086de,2025-08-16,UFC 319: Du Plessis vs. Chimaev,Carlos Prates,Geoff Neal,1,0,dog_won,0,0.7534482777118683,2.0,2,dog,0.37672413885593414
+6271,5b880d10b0ed7acc,2025-08-16,UFC 319: Du Plessis vs. Chimaev,Michal Oleksiejczuk,Gerald Meerschaert,1,0,dog_won,0,0.75803542137146,2.0,2,dog,0.37901771068573
+6272,5efd13a12be06706,2025-08-16,UFC 319: Du Plessis vs. Chimaev,Baisangur Susurkaev,Eric Nolan,1,0,dog_won,0,0.42965926229953766,2.0,2,dog,0.21482963114976883
+6273,68c423c7119004f3,2025-08-16,UFC 319: Du Plessis vs. Chimaev,Alibi Idiris,Joseph Morales,0,1,dog_won,1,0.30940450727939606,2.0,2,dog,0.15470225363969803
+6274,82338ba457fbe87f,2025-08-16,UFC 319: Du Plessis vs. Chimaev,Kai Asakura,Tim Elliott,0,1,dog_won,1,0.6090759932994843,2.0,2,dog,0.3045379966497421
+6275,88020d22cf905792,2025-08-16,UFC 319: Du Plessis vs. Chimaev,Karine Silva,Dione Barbosa,1,0,dog_won,0,0.7534482777118683,2.0,2,dog,0.37672413885593414
+6276,9939d7073462e07e,2025-08-16,UFC 319: Du Plessis vs. Chimaev,Michael Page,Jared Cannonier,1,0,dog_won,0,0.5449349582195282,2.0,2,dog,0.2724674791097641
+6277,9fa6a029f7f8241c,2025-08-16,UFC 319: Du Plessis vs. Chimaev,Aaron Pico,Lerone Murphy,0,1,dog_won,1,0.7790811359882355,2.0,2,dog,0.38954056799411774
+6278,a2eafd9e1d5031b1,2025-08-16,UFC 319: Du Plessis vs. Chimaev,Loopy Godinez,Jessica Andrade,1,0,dog_won,0,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6279,bc63f1b2e52f603e,2025-08-16,UFC 319: Du Plessis vs. Chimaev,Edson Barboza,Drakkar Klose,0,1,dog_won,1,0.7776907086372375,2.0,2,dog,0.3888453543186188
+6280,0b1460c666e66d39,2025-08-23,UFC Fight Night: Walker vs. Zhang,Gauge Young,Maheshate,1,0,dog_won,0,0.6961030662059784,2.0,2,dog,0.3480515331029892
+6281,130e622d4d2aee3e,2025-08-23,UFC Fight Night: Walker vs. Zhang,Michel Pereira,Kyle Daukaus,0,1,dog_won,1,0.5449349582195282,2.0,2,dog,0.2724674791097641
+6282,1452c20d964c0a63,2025-08-23,UFC Fight Night: Walker vs. Zhang,Taiyilake Nueraji,Kiefer Crosbie,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6283,1ab1ed99a4bc5494,2025-08-23,UFC Fight Night: Walker vs. Zhang,Lone'er Kavanagh,Charles Johnson,0,1,dog_won,1,0.6419098079204559,2.0,2,dog,0.32095490396022797
+6284,2eecf0c36192e40c,2025-08-23,UFC Fight Night: Walker vs. Zhang,Zhang Mingyang,Johnny Walker,0,1,dog_won,1,0.42965926229953766,2.0,2,dog,0.21482963114976883
+6285,2f6065fe0804d1d8,2025-08-23,UFC Fight Night: Walker vs. Zhang,SuYoung You,Xiao Long,1,0,dog_won,0,0.660307377576828,2.0,2,dog,0.330153688788414
+6286,5538d15c4eeac3b3,2025-08-23,UFC Fight Night: Walker vs. Zhang,Sergei Pavlovich,Waldo Cortes-Acosta,1,0,dog_won,0,0.6433002352714539,2.0,2,dog,0.32165011763572693
+6287,58080e8989927500,2025-08-23,UFC Fight Night: Walker vs. Zhang,Aljamain Sterling,Brian Ortega,1,0,dog_won,0,0.29975728690624237,2.0,2,dog,0.14987864345312119
+6288,7fc5f1dc2df84ac7,2025-08-23,UFC Fight Night: Walker vs. Zhang,Diyar Nurgozhay,Uran Satybaldiev,0,1,dog_won,1,0.7978927195072174,2.0,2,dog,0.3989463597536087
+6289,ce6bd165bef82bd7,2025-08-23,UFC Fight Night: Walker vs. Zhang,Sumudaerji,Kevin Borjas,1,0,dog_won,0,0.6961030662059784,2.0,2,dog,0.3480515331029892
+6290,f0b7caa90faf47e5,2025-08-23,UFC Fight Night: Walker vs. Zhang,Yizha,Westin Wilson,1,0,dog_won,0,0.4474845677614212,2.0,2,dog,0.2237422838807106
+6291,f55749e32ce5c6f3,2025-08-23,UFC Fight Night: Walker vs. Zhang,Rongzhu,Austin Hubbard,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6292,0149e875b31e57f8,2025-09-06,UFC Fight Night: Imavov vs. Borralho,Modestas Bukauskas,Paul Craig,1,0,dog_won,0,0.6419098079204559,2.0,2,dog,0.32095490396022797
+6293,23dbe713c4294c66,2025-09-06,UFC Fight Night: Imavov vs. Borralho,Marcin Tybura,Ante Delija,0,1,dog_won,1,0.5492424368858337,2.0,2,dog,0.27462121844291687
+6294,4080b4310d82b42d,2025-09-06,UFC Fight Night: Imavov vs. Borralho,Oumar Sy,Brendson Ribeiro,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6295,420211200a35c1d1,2025-09-06,UFC Fight Night: Imavov vs. Borralho,Sam Patterson,Trey Waters,1,0,dog_won,0,0.6419098079204559,2.0,2,dog,0.32095490396022797
+6296,5bcd8abf6da01dae,2025-09-06,UFC Fight Night: Imavov vs. Borralho,Caio Borralho,Nassourdine Imavov,0,1,dog_won,1,0.7978927195072174,2.0,2,dog,0.3989463597536087
+6297,5cd2dd6075fadcce,2025-09-06,UFC Fight Night: Imavov vs. Borralho,Harry Hardwick,Kaue Fernandes,0,1,dog_won,1,0.6906976699829102,2.0,2,dog,0.3453488349914551
+6298,69b31593175f77ec,2025-09-06,UFC Fight Night: Imavov vs. Borralho,Mason Jones,Bolaji Oki,1,0,dog_won,0,0.7602441012859344,2.0,2,dog,0.3801220506429672
+6299,a38010639e61885c,2025-09-06,UFC Fight Night: Imavov vs. Borralho,Sam Hughes,Shauna Bannon,1,0,dog_won,0,0.6076855659484863,2.0,2,dog,0.30384278297424316
+6300,a47123ae6e048f11,2025-09-06,UFC Fight Night: Imavov vs. Borralho,Axel Sola,Rhys McKee,1,0,dog_won,0,0.6961030662059784,2.0,2,dog,0.3480515331029892
+6301,b3253e2c2d111030,2025-09-06,UFC Fight Night: Imavov vs. Borralho,Brad Tavares,Robert Bryczek,0,1,dog_won,1,0.5433635115623474,2.0,2,dog,0.2716817557811737
+6302,b53031bf4bd0a330,2025-09-06,UFC Fight Night: Imavov vs. Borralho,William Gomis,Robert Ruchala,1,0,dog_won,0,0.32500000298023224,2.0,2,dog,0.16250000149011612
+6303,d14fea43712707f0,2025-09-06,UFC Fight Night: Imavov vs. Borralho,Mauricio Ruffy,Benoit Saint Denis,0,1,dog_won,1,0.8303552865982056,2.0,2,dog,0.4151776432991028
+6304,d56a59a4c79cf515,2025-09-06,UFC Fight Night: Imavov vs. Borralho,Andreas Gustafsson,Rinat Fakhretdinov,0,1,dog_won,1,0.7776907086372375,2.0,2,dog,0.3888453543186188
+6305,07a378b257aad5a9,2025-09-13,UFC Fight Night: Lopes vs. Silva,Dusko Todorovic,Jose Daniel Medina,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6306,114d2f6fcd3f6f00,2025-09-13,UFC Fight Night: Lopes vs. Silva,Kelvin Gastelum,Dustin Stoltzfus,1,0,dog_won,0,0.7572836577892303,2.0,2,dog,0.3786418288946152
+6307,202c47db69768356,2025-09-13,UFC Fight Night: Lopes vs. Silva,Diego Ferreira,Alexander Hernandez,0,1,dog_won,1,0.7776907086372375,2.0,2,dog,0.3888453543186188
+6308,352839a03b428e74,2025-09-13,UFC Fight Night: Lopes vs. Silva,Joaquim Silva,Claudio Puelles,1,0,dog_won,0,0.6419098079204559,2.0,2,dog,0.32095490396022797
+6309,3dc1a6335d890650,2025-09-13,UFC Fight Night: Lopes vs. Silva,Luis Gurule,Jesus Aguilar,0,1,dog_won,1,0.6423985362052917,2.0,2,dog,0.3211992681026459
+6310,3dd2fde7bff79c51,2025-09-13,UFC Fight Night: Lopes vs. Silva,Daniil Donchenko,Rodrigo Sezinando,1,0,dog_won,0,0.5091392695903778,2.0,2,dog,0.2545696347951889
+6311,7cbfeba85f86d1bf,2025-09-13,UFC Fight Night: Lopes vs. Silva,Jared Gordon,Rafa Garcia,0,1,dog_won,1,0.7790811359882355,2.0,2,dog,0.38954056799411774
+6312,8a884a7930d75ca9,2025-09-13,UFC Fight Night: Lopes vs. Silva,Santiago Luna,Quang Le,1,0,dog_won,0,0.6961030662059784,2.0,2,dog,0.3480515331029892
+6313,944b929130b23c2a,2025-09-13,UFC Fight Night: Lopes vs. Silva,Rob Font,David Martinez,0,1,dog_won,1,1.3548386991024017,2.0,2,dog,0.6774193495512009
+6314,9474f64347aade7a,2025-09-13,UFC Fight Night: Lopes vs. Silva,Tatiana Suarez,Amanda Lemos,1,0,dog_won,0,0.2549019753932953,2.0,2,dog,0.12745098769664764
+6315,a1e193425e716b42,2025-09-13,UFC Fight Night: Lopes vs. Silva,Alessandro Costa,Alden Coria,0,1,dog_won,1,0.42965926229953766,2.0,2,dog,0.21482963114976883
+6316,c4a6174b0698652e,2025-09-13,UFC Fight Night: Lopes vs. Silva,Alice Pereira,Montse Rendon,0,1,dog_won,1,0.7886870503425598,2.0,2,dog,0.3943435251712799
+6317,de1a3734be60e6a1,2025-09-13,UFC Fight Night: Lopes vs. Silva,Jean Silva,Diego Lopes,0,1,dog_won,1,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6318,20971ed9a842b0cb,2025-11-08,UFC Fight Night: Bonfim vs. Brown,Chris Padilla,Ismael Bonfim,1,0,dog_won,0,0.7978927195072174,2.0,2,dog,0.3989463597536087
+6319,238c274c90587e21,2025-11-08,UFC Fight Night: Bonfim vs. Brown,Daniel Marcos,Miles Johns,1,0,dog_won,0,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6320,4e224ebb6394611d,2025-11-08,UFC Fight Night: Bonfim vs. Brown,Gabriel Bonfim,Randy Brown,1,0,dog_won,0,0.6961030662059784,2.0,2,dog,0.3480515331029892
+6321,80eae31bc0a94a65,2025-11-08,UFC Fight Night: Bonfim vs. Brown,Jacqueline Cavalcanti,Mayra Bueno Silva,1,0,dog_won,0,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6322,84b66bf7fba2d59d,2025-11-08,UFC Fight Night: Bonfim vs. Brown,Zach Reese,Jackson McVey,1,0,dog_won,0,0.5791592001914978,2.0,2,dog,0.2895796000957489
+6323,87dcb3eab20f6ac1,2025-11-08,UFC Fight Night: Bonfim vs. Brown,Josh Hokit,Max Gimenis,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6324,9126633d921afb57,2025-11-08,UFC Fight Night: Bonfim vs. Brown,Denise Gomes,Tecia Pennington,1,0,dog_won,0,0.6419098079204559,2.0,2,dog,0.32095490396022797
+6325,ac4343150638b635,2025-11-08,UFC Fight Night: Bonfim vs. Brown,Marco Tulio,Christian Leroy Duncan,0,1,dog_won,1,0.7149401009082794,2.0,2,dog,0.3574700504541397
+6326,b23fa678cc65cf5b,2025-11-08,UFC Fight Night: Bonfim vs. Brown,Uros Medic,Muslim Salikhov,1,0,dog_won,0,0.7992831468582153,2.0,2,dog,0.39964157342910767
+6327,c6d56aad93f98249,2025-11-08,UFC Fight Night: Bonfim vs. Brown,Ricky Simon,Raoni Barcelos,0,1,dog_won,1,0.7602441012859344,2.0,2,dog,0.3801220506429672
+6328,e3d657dd88864ba7,2025-11-08,UFC Fight Night: Bonfim vs. Brown,Hyder Amil,Jamall Emmers,0,1,dog_won,1,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6329,f7e9bd2d6f81aeae,2025-11-08,UFC Fight Night: Bonfim vs. Brown,Joseph Morales,Matt Schnell,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6330,00ee51bba08b7a08,2025-11-22,UFC Fight Night: Tsarukyan vs. Hooker,Tagir Ulanbekov,Kyoji Horiguchi,0,1,dog_won,1,0.5449349582195282,2.0,2,dog,0.2724674791097641
+6331,335064c3380e2f10,2025-11-22,UFC Fight Night: Tsarukyan vs. Hooker,Ismail Naurdiev,Ryan Loder,1,0,dog_won,0,0.7992831468582153,2.0,2,dog,0.39964157342910767
+6332,443f30a4a856584a,2025-11-22,UFC Fight Night: Tsarukyan vs. Hooker,Asu Almabayev,Alex Perez,1,0,dog_won,0,0.7374172508716583,2.0,2,dog,0.36870862543582916
+6333,46f81d5ecd974c1c,2025-11-22,UFC Fight Night: Tsarukyan vs. Hooker,Nurullo Aliev,Shem Rock,1,0,dog_won,0,0.42965926229953766,2.0,2,dog,0.21482963114976883
+6334,5e6a74db89f5410c,2025-11-22,UFC Fight Night: Tsarukyan vs. Hooker,Luke Riley,Bogdan Grad,1,0,dog_won,0,0.6419098079204559,2.0,2,dog,0.32095490396022797
+6335,5f5b626e67529056,2025-11-22,UFC Fight Night: Tsarukyan vs. Hooker,Arman Tsarukyan,Dan Hooker,1,0,dog_won,0,0.125,2.0,2,dog,0.0625
+6336,6f0231915cc28507,2025-11-22,UFC Fight Night: Tsarukyan vs. Hooker,Aleksandre Topuria,Bekzat Almakhan,1,0,dog_won,0,0.7046068608760834,2.0,2,dog,0.3523034304380417
+6337,870d374f8d9af65a,2025-11-22,UFC Fight Night: Tsarukyan vs. Hooker,Volkan Oezdemir,Alonzo Menifield,1,0,dog_won,0,0.7790811359882355,2.0,2,dog,0.38954056799411774
+6338,8ed609d80e135d94,2025-11-22,UFC Fight Night: Tsarukyan vs. Hooker,Myktybek Orolbai,Jack Hermansson,1,0,dog_won,0,0.6419098079204559,2.0,2,dog,0.32095490396022797
+6339,9027e156c6f1988a,2025-11-22,UFC Fight Night: Tsarukyan vs. Hooker,Denzel Freeman,Marek Bujlo,1,0,dog_won,0,0.5091392695903778,2.0,2,dog,0.2545696347951889
+6340,b2218930b982d9b6,2025-11-22,UFC Fight Night: Tsarukyan vs. Hooker,Ian Machado Garry,Belal Muhammad,1,0,dog_won,0,0.6076855659484863,2.0,2,dog,0.30384278297424316
+6341,c49485cedb878cf0,2025-11-22,UFC Fight Night: Tsarukyan vs. Hooker,Saygid Izagakhmaev,Nicolas Dalby,0,1,dog_won,1,0.46821457147598267,2.0,2,dog,0.23410728573799133
+6342,e8307c7686c42d8c,2025-11-22,UFC Fight Night: Tsarukyan vs. Hooker,Waldo Cortes Acosta,Shamil Gaziev,1,0,dog_won,0,0.7978927195072174,2.0,2,dog,0.3989463597536087
+6343,f5564a9eeebd4ea0,2025-11-22,UFC Fight Night: Tsarukyan vs. Hooker,Abdul Rakhman Yakhyaev,Rafael Cerqueira,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6344,0fca825e14429c1f,2025-12-13,UFC Fight Night: Royval vs. Kape,Yaroslav Amosov,Neil Magny,1,0,dog_won,0,0.5295959860086441,2.0,2,dog,0.26479799300432205
+6345,225e93ebed9b71b8,2025-12-13,UFC Fight Night: Royval vs. Kape,Joanderson Brito,Isaac Thomson,1,0,dog_won,0,0.6961030662059784,2.0,2,dog,0.3480515331029892
+6346,24bb03f0a3415fbe,2025-12-13,UFC Fight Night: Royval vs. Kape,Kevin Vallejos,Giga Chikadze,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6347,71170fb7ade3e1f4,2025-12-13,UFC Fight Night: Royval vs. Kape,Tereza Bleda,Jamey-Lyn Horth,0,1,dog_won,1,0.5449349582195282,2.0,2,dog,0.2724674791097641
+6348,93ca562453f65b8d,2025-12-13,UFC Fight Night: Royval vs. Kape,Melquizael Costa,Morgan Charriere,1,0,dog_won,0,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6349,a2523a8565fe4361,2025-12-13,UFC Fight Night: Royval vs. Kape,Steven Asplund,Sean Sharaf,1,0,dog_won,0,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6350,a5a81a39ccf9b680,2025-12-13,UFC Fight Night: Royval vs. Kape,Manel Kape,Brandon Royval,1,0,dog_won,0,0.7534482777118683,2.0,2,dog,0.37672413885593414
+6351,ac56a1052c4c8f63,2025-12-13,UFC Fight Night: Royval vs. Kape,Guilherme Pat,Allen Frye Jr.,1,0,dog_won,0,0.5091392695903778,2.0,2,dog,0.2545696347951889
+6352,ceb5b0f1f6daddf6,2025-12-13,UFC Fight Night: Royval vs. Kape,Luana Santos,Melissa Croden,1,0,dog_won,0,0.7992831468582153,2.0,2,dog,0.39964157342910767
+6353,d000cb692343cdcd,2025-12-13,UFC Fight Night: Royval vs. Kape,Cezary Oleksiejczuk,Cesar Almeida,1,0,dog_won,0,0.6433002352714539,2.0,2,dog,0.32165011763572693
+6354,007e8e0d4a39d82c,2026-01-24,UFC 324: Gaethje vs. Pimblett,Sean O'Malley,Song Yadong,1,0,dog_won,0,0.5449349582195282,2.0,2,dog,0.2724674791097641
+6355,210fc45074fba464,2026-01-24,UFC 324: Gaethje vs. Pimblett,Ty Miller,Adam Fugitt,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6356,33be2456161c14c3,2026-01-24,UFC 324: Gaethje vs. Pimblett,Ateba Gautier,Andrey Pulyaev,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6357,6c9f4799990c3c33,2026-01-24,UFC 324: Gaethje vs. Pimblett,Umar Nurmagomedov,Deiveson Figueiredo,1,0,dog_won,0,0.35250258445739746,2.0,2,dog,0.17625129222869873
+6358,780cab0cd07589e4,2026-01-24,UFC 324: Gaethje vs. Pimblett,Modestas Bukauskas,Nikita Krylov,0,1,dog_won,1,0.7992831468582153,2.0,2,dog,0.39964157342910767
+6359,836a188a90e479a5,2026-01-24,UFC 324: Gaethje vs. Pimblett,Jean Silva,Arnold Allen,1,0,dog_won,0,0.7602441012859344,2.0,2,dog,0.3801220506429672
+6360,abfb3ed6dcb0e1f0,2026-01-24,UFC 324: Gaethje vs. Pimblett,Josh Hokit,Denzel Freeman,1,0,dog_won,0,0.6076855659484863,2.0,2,dog,0.30384278297424316
+6361,b5aafe149bec4306,2026-01-24,UFC 324: Gaethje vs. Pimblett,Charles Johnson,Alex Perez,0,1,dog_won,1,0.7602441012859344,2.0,2,dog,0.3801220506429672
+6362,d63c9aa4f4873001,2026-01-24,UFC 324: Gaethje vs. Pimblett,Natalia Silva,Rose Namajunas,1,0,dog_won,0,0.42965926229953766,2.0,2,dog,0.21482963114976883
+6363,d93ee3860196c4ae,2026-01-24,UFC 324: Gaethje vs. Pimblett,Waldo Cortes Acosta,Derrick Lewis,1,0,dog_won,0,0.6076855659484863,2.0,2,dog,0.30384278297424316
+6364,fa4b3f5ce8055921,2026-01-24,UFC 324: Gaethje vs. Pimblett,Paddy Pimblett,Justin Gaethje,0,1,dog_won,1,0.5791592001914978,2.0,2,dog,0.2895796000957489
+6365,0047f8aadca1936f,2026-01-31,UFC 325: Volkanovski vs. Lopes 2,Jacob Malkoun,Torrez Finney,1,0,dog_won,0,0.7978927195072174,2.0,2,dog,0.3989463597536087
+6366,32e9bc4d0a19a923,2026-01-31,UFC 325: Volkanovski vs. Lopes 2,Quillan Salkilld,Jamie Mullarkey,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6367,47362cae6ba0e077,2026-01-31,UFC 325: Volkanovski vs. Lopes 2,Cam Rowston,Cody Brundage,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6368,4c1e7e1765a5438a,2026-01-31,UFC 325: Volkanovski vs. Lopes 2,Yizha,Kaan Ofli,0,1,dog_won,1,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6369,57d7a683b85bb87b,2026-01-31,UFC 325: Volkanovski vs. Lopes 2,Rafael Fiziev,Mauricio Ruffy,0,1,dog_won,1,0.7776907086372375,2.0,2,dog,0.3888453543186188
+6370,5c73e0013b859664,2026-01-31,UFC 325: Volkanovski vs. Lopes 2,Sulangrangbo,Lawrence Lui,0,1,dog_won,1,0.42965926229953766,2.0,2,dog,0.21482963114976883
+6371,67765535bd0b6bdf,2026-01-31,UFC 325: Volkanovski vs. Lopes 2,Tallison Teixeira,Tai Tuivasa,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6372,780bae82bdfc7112,2026-01-31,UFC 325: Volkanovski vs. Lopes 2,Sebastian Szalay,Keiichiro Nakamura,0,1,dog_won,1,0.660307377576828,2.0,2,dog,0.330153688788414
+6373,78912b78aa946375,2026-01-31,UFC 325: Volkanovski vs. Lopes 2,Jonathan Micallef,Oban Elliott,1,0,dog_won,0,0.7776907086372375,2.0,2,dog,0.3888453543186188
+6374,a7ae8f6eb5fc3a79,2026-01-31,UFC 325: Volkanovski vs. Lopes 2,Benoit Saint Denis,Dan Hooker,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6375,ad14c502c9c5a7e9,2026-01-31,UFC 325: Volkanovski vs. Lopes 2,Dom Mar Fan,Sangwook Kim,1,0,dog_won,0,0.660307377576828,2.0,2,dog,0.330153688788414
+6376,b06b43670238c2d8,2026-01-31,UFC 325: Volkanovski vs. Lopes 2,Alexander Volkanovski,Diego Lopes,1,0,dog_won,0,0.7149401009082794,2.0,2,dog,0.3574700504541397
+6377,d94f1b32a81e3fa1,2026-01-31,UFC 325: Volkanovski vs. Lopes 2,Billy Elekana,Junior Tafa,1,0,dog_won,0,0.6076855659484863,2.0,2,dog,0.30384278297424316
+6378,2a26c0cfa06265b7,2026-02-07,UFC Fight Night: Bautista vs. Oliveira,Farid Basharat,Jean Matsumoto,1,0,dog_won,0,0.6076855659484863,2.0,2,dog,0.30384278297424316
+6379,2bbfbb234c255249,2026-02-07,UFC Fight Night: Bautista vs. Oliveira,Klaudia Sygula,Priscila Cachoeira,1,0,dog_won,0,0.3653484061360359,2.0,2,dog,0.18267420306801796
+6380,6cca11f353a2b42d,2026-02-07,UFC Fight Night: Bautista vs. Oliveira,Dustin Jacoby,Julius Walker,1,0,dog_won,0,0.7992831468582153,2.0,2,dog,0.39964157342910767
+6381,84e8ccc3c97c2b4c,2026-02-07,UFC Fight Night: Bautista vs. Oliveira,Wang Cong,Eduarda Moura,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6382,86df0e75f41784d8,2026-02-07,UFC Fight Night: Bautista vs. Oliveira,Javid Basharat,Gianni Vazquez,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6383,8fea32ab0445859c,2026-02-07,UFC Fight Night: Bautista vs. Oliveira,Michal Oleksiejczuk,Marc-Andre Barriault,1,0,dog_won,0,0.29975728690624237,2.0,2,dog,0.14987864345312119
+6384,9d30c887e8bd8824,2026-02-07,UFC Fight Night: Bautista vs. Oliveira,Muin Gafurov,Jakub Wiklacz,0,1,dog_won,1,0.7992831468582153,2.0,2,dog,0.39964157342910767
+6385,a5c5f76cf0a7c784,2026-02-07,UFC Fight Night: Bautista vs. Oliveira,Jailton Almeida,Rizvan Kuniev,0,1,dog_won,1,0.7978927195072174,2.0,2,dog,0.3989463597536087
+6386,abefaf1807941ee4,2026-02-07,UFC Fight Night: Bautista vs. Oliveira,Nikolay Veretennikov,Niko Price,1,0,dog_won,0,0.4474845677614212,2.0,2,dog,0.2237422838807106
+6387,cc5c5a8cff4c1ae9,2026-02-07,UFC Fight Night: Bautista vs. Oliveira,Ketlen Souza,Bruna Brasil,1,0,dog_won,0,0.7602441012859344,2.0,2,dog,0.3801220506429672
+6388,dbbf8334a2600895,2026-02-07,UFC Fight Night: Bautista vs. Oliveira,Kyoji Horiguchi,Amir Albazi,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6389,f964d2dda87f25f0,2026-02-07,UFC Fight Night: Bautista vs. Oliveira,Daniil Donchenko,Alex Morono,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6390,fb4b1754d510b0d0,2026-02-07,UFC Fight Night: Bautista vs. Oliveira,Mario Bautista,Vinicius Oliveira,1,0,dog_won,0,0.7859852910041809,2.0,2,dog,0.39299264550209045
+6391,04b7bcc0e8488604,2026-02-21,UFC Fight Night: Strickland vs. Hernandez,Ante Delija,Serghei Spivac,0,1,dog_won,1,0.7992831468582153,2.0,2,dog,0.39964157342910767
+6392,202d3277e569ad03,2026-02-21,UFC Fight Night: Strickland vs. Hernandez,Carlos Leal,Chidi Njokuani,1,0,dog_won,0,1.093626469373703,2.0,2,dog,0.5468132346868515
+6393,372d1dee0db8dbee,2026-02-21,UFC Fight Night: Strickland vs. Hernandez,Michel Pereira,Zach Reese,1,0,dog_won,0,0.7790811359882355,2.0,2,dog,0.38954056799411774
+6394,508e622130b0a84d,2026-02-21,UFC Fight Night: Strickland vs. Hernandez,Jean-Paul Lebosnoyani,Phil Rowe,1,0,dog_won,0,0.5091392695903778,2.0,2,dog,0.2545696347951889
+6395,54437b8dba3a6110,2026-02-21,UFC Fight Night: Strickland vs. Hernandez,Jacobe Smith,Josiah Harrell,1,0,dog_won,0,0.17475728690624237,2.0,2,dog,0.08737864345312119
+6396,5b97f47cdd355cbe,2026-02-21,UFC Fight Night: Strickland vs. Hernandez,Yadier del Valle,Jordan Leavitt,0,1,dog_won,1,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6397,6e78d874097a3d22,2026-02-21,UFC Fight Night: Strickland vs. Hernandez,Carli Judice,Juliana Miller,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6398,8d740c844353ae0e,2026-02-21,UFC Fight Night: Strickland vs. Hernandez,Anthony Hernandez,Sean Strickland,0,1,dog_won,1,0.42965926229953766,2.0,2,dog,0.21482963114976883
+6399,8f9896e60047007f,2026-02-21,UFC Fight Night: Strickland vs. Hernandez,Punahele Soriano,Ramiz Brahimaj,1,0,dog_won,0,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6400,ac39c1f00ae31e58,2026-02-21,UFC Fight Night: Strickland vs. Hernandez,Alden Coria,Luis Gurule,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6401,dc6f6c8228390ebb,2026-02-21,UFC Fight Night: Strickland vs. Hernandez,Melquizael Costa,Dan Ige,1,0,dog_won,0,0.5791592001914978,2.0,2,dog,0.2895796000957489
+6402,dd12bf51c5ed7f1e,2026-02-21,UFC Fight Night: Strickland vs. Hernandez,Geoff Neal,Uros Medic,0,1,dog_won,1,0.6431776583194733,2.0,2,dog,0.32158882915973663
+6403,fd56a469e4589ebc,2026-02-21,UFC Fight Night: Strickland vs. Hernandez,Joselyne Edwards,Nora Cornolle,1,0,dog_won,0,0.6090759932994843,2.0,2,dog,0.3045379966497421
+6404,1330b5c21269fe92,2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,Brandon Moreno,Lone'er Kavanagh,0,1,dog_won,1,0.6419098079204559,2.0,2,dog,0.32095490396022797
+6405,15068d7b095ca9bd,2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,Imanol Rodriguez,Kevin Borjas,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6406,25ab195cefbce1d0,2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,Cristian Quinonez,Kris Moutinho,1,0,dog_won,0,0.40959523618221283,2.0,2,dog,0.20479761809110641
+6407,36d12b31957e94db,2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,David Martinez,Marlon Vera,1,0,dog_won,0,0.5449349582195282,2.0,2,dog,0.2724674791097641
+6408,3b76a00f5d0400eb,2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,Santiago Luna,Angel Pacheco,1,0,dog_won,0,0.4474845677614212,2.0,2,dog,0.2237422838807106
+6409,44d58943ac8e47e1,2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,Ernesta Kareckaite,Regina Tarin,0,1,dog_won,1,0.7992831468582153,2.0,2,dog,0.39964157342910767
+6410,45ec0c5f19c9adbe,2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,Ryan Gandra,Jose Daniel Medina,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6411,581292ffe5b09344,2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,Francis Marshall,Erik Silva,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6412,6154ee95d3f4fc32,2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,Javier Reyes,Douglas Silva de Andrade,1,0,dog_won,0,0.5269645750522614,2.0,2,dog,0.2634822875261307
+6413,7df505d8260ba680,2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,Edgar Chairez,Felipe Bunes,1,0,dog_won,0,0.6076855659484863,2.0,2,dog,0.30384278297424316
+6414,81f3d28d30d17378,2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,Daniel Zellhuber,King Green,0,1,dog_won,1,0.5373001992702484,2.0,2,dog,0.2686500996351242
+6415,c40b934d2666e351,2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,Ailin Perez,Macy Chiasson,1,0,dog_won,0,0.660307377576828,2.0,2,dog,0.330153688788414
+6416,c6a85b67fdd2ef3d,2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,Damian Pinas,Wes Schultz,1,0,dog_won,0,0.5091392695903778,2.0,2,dog,0.2545696347951889
+6417,6a4738656c493ee9,2026-03-07,UFC 326: Holloway vs. Oliveira 2,Gregory Rodrigues,Brunno Ferreira,1,0,dog_won,0,0.6961030662059784,2.0,2,dog,0.3480515331029892
+6418,6feb49a6b7e8433c,2026-03-07,UFC 326: Holloway vs. Oliveira 2,Alberto Montes,Ricky Turcios,1,0,dog_won,0,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6419,9c8d5dbd8905a715,2026-03-07,UFC 326: Holloway vs. Oliveira 2,Donte Johnson,Cody Brundage,1,0,dog_won,0,0.29975728690624237,2.0,2,dog,0.14987864345312119
+6420,a22fd3735819d858,2026-03-07,UFC 326: Holloway vs. Oliveira 2,Sumudaerji,Jesus Aguilar,1,0,dog_won,0,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6421,a5abdc461cb1538e,2026-03-07,UFC 326: Holloway vs. Oliveira 2,Luke Fernandez,Rodolfo Bellato,0,1,dog_won,1,0.6419098079204559,2.0,2,dog,0.32095490396022797
+6422,bed89a91da9d04c1,2026-03-07,UFC 326: Holloway vs. Oliveira 2,Raul Rosas Jr.,Rob Font,1,0,dog_won,0,0.553448274731636,2.0,2,dog,0.276724137365818
+6423,cc03e698c4b7da52,2026-03-07,UFC 326: Holloway vs. Oliveira 2,Rafael Tobias,Diyar Nurgozhay,0,1,dog_won,1,0.6961030662059784,2.0,2,dog,0.3480515331029892
+6424,d564db29997e1371,2026-03-07,UFC 326: Holloway vs. Oliveira 2,Caio Borralho,Reinier de Ridder,1,0,dog_won,0,0.7602441012859344,2.0,2,dog,0.3801220506429672
+6425,f02c0adc4ae629c6,2026-03-07,UFC 326: Holloway vs. Oliveira 2,Drew Dober,Michael Johnson,1,0,dog_won,0,0.6419098079204559,2.0,2,dog,0.32095490396022797
+6426,f030febede41c661,2026-03-07,UFC 326: Holloway vs. Oliveira 2,Max Holloway,Charles Oliveira,0,1,dog_won,1,0.6419098079204559,2.0,2,dog,0.32095490396022797
+6427,f661ef429055f8c1,2026-03-07,UFC 326: Holloway vs. Oliveira 2,Nyamjargal Tumendemberel,Cody Durden,1,0,dog_won,0,0.7992831468582153,2.0,2,dog,0.39964157342910767
+6428,244285b7fd0ddece,2026-03-14,UFC Fight Night: Emmett vs. Vallejos,Piera Rodriguez,Sam Hughes,1,0,dog_won,0,0.7588536739349365,2.0,2,dog,0.37942683696746826
+6429,2c330a6f7f1e55f0,2026-03-14,UFC Fight Night: Emmett vs. Vallejos,Vitor Petrino,Steven Asplund,1,0,dog_won,0,0.7992831468582153,2.0,2,dog,0.39964157342910767
+6430,32d371462c539bee,2026-03-14,UFC Fight Night: Emmett vs. Vallejos,Hecher Sosa,Luan Lacerda,1,0,dog_won,0,0.5791592001914978,2.0,2,dog,0.2895796000957489
+6431,3b7b771b9578383d,2026-03-14,UFC Fight Night: Emmett vs. Vallejos,Gillian Robertson,Amanda Lemos,1,0,dog_won,0,0.5269645750522614,2.0,2,dog,0.2634822875261307
+6432,8bee5192baec71d8,2026-03-14,UFC Fight Night: Emmett vs. Vallejos,Jose Delgado,Andre Fili,1,0,dog_won,0,0.5295959860086441,2.0,2,dog,0.26479799300432205
+6433,8cab057e6549afd0,2026-03-14,UFC Fight Night: Emmett vs. Vallejos,Bia Mesquita,Montse Rendon,1,0,dog_won,0,0.29975728690624237,2.0,2,dog,0.14987864345312119
+6434,c769dd861357af9f,2026-03-14,UFC Fight Night: Emmett vs. Vallejos,Manoel Sousa,Bolaji Oki,1,0,dog_won,0,0.6090759932994843,2.0,2,dog,0.3045379966497421
+6435,cff81d681a01ae18,2026-03-14,UFC Fight Night: Emmett vs. Vallejos,Eryk Anders,Brad Tavares,1,0,dog_won,0,0.7776907086372375,2.0,2,dog,0.3888453543186188
+6436,db7694f4513120d5,2026-03-14,UFC Fight Night: Emmett vs. Vallejos,Oumar Sy,Ion Cutelaba,0,1,dog_won,1,0.29975728690624237,2.0,2,dog,0.14987864345312119
+6437,e0acd0cf4930671b,2026-03-14,UFC Fight Night: Emmett vs. Vallejos,Marwan Rahiki,Harry Hardwick,1,0,dog_won,0,0.6076855659484863,2.0,2,dog,0.30384278297424316
+6438,f26c0bdf7689aea2,2026-03-14,UFC Fight Night: Emmett vs. Vallejos,Myktybek Orolbai,Chris Curtis,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6439,f44b4e998b6829f6,2026-03-14,UFC Fight Night: Emmett vs. Vallejos,Elijah Smith,SuYoung You,1,0,dog_won,0,0.6433002352714539,2.0,2,dog,0.32165011763572693
+6440,f594fc5c2bc6237e,2026-03-14,UFC Fight Night: Emmett vs. Vallejos,Kevin Vallejos,Josh Emmett,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6441,fc9168fd102e2e66,2026-03-14,UFC Fight Night: Emmett vs. Vallejos,Charles Johnson,Bruno Silva,1,0,dog_won,0,0.7534482777118683,2.0,2,dog,0.37672413885593414
+6442,216bc9b661485017,2026-03-21,UFC Fight Night: Evloev vs. Murphy,Shanelle Dyer,Ravena Oliveira,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6443,346e3897c2ead99a,2026-03-21,UFC Fight Night: Evloev vs. Murphy,Movsar Evloev,Lerone Murphy,1,0,dog_won,0,0.6076855659484863,2.0,2,dog,0.30384278297424316
+6444,3b9f50f07d9a1601,2026-03-21,UFC Fight Night: Evloev vs. Murphy,Losene Keita,Nathaniel Wood,0,1,dog_won,1,0.7602441012859344,2.0,2,dog,0.3801220506429672
+6445,3ee578ddd071ad4c,2026-03-21,UFC Fight Night: Evloev vs. Murphy,Mason Jones,Axel Sola,1,0,dog_won,0,0.7992831468582153,2.0,2,dog,0.39964157342910767
+6446,43e26b46cbb51985,2026-03-21,UFC Fight Night: Evloev vs. Murphy,Iwo Baraniewski,Austen Lane,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6447,4e58bcc0d27042fd,2026-03-21,UFC Fight Night: Evloev vs. Murphy,Kurtis Campbell,Danny Silva,0,1,dog_won,1,0.6419098079204559,2.0,2,dog,0.32095490396022797
+6448,562d916f55918901,2026-03-21,UFC Fight Night: Evloev vs. Murphy,Christian Leroy Duncan,Roman Dolidze,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6449,5ee11b727e89e8ad,2026-03-21,UFC Fight Night: Evloev vs. Murphy,Michael Page,Sam Patterson,1,0,dog_won,0,0.5269645750522614,2.0,2,dog,0.2634822875261307
+6450,8817bd21b6d0a989,2026-03-21,UFC Fight Night: Evloev vs. Murphy,Mantas Kondratavicius,Antonio Trocoli,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6451,90187edeeda7e6d6,2026-03-21,UFC Fight Night: Evloev vs. Murphy,Mario Pinto,Felipe Franco,1,0,dog_won,0,0.42965926229953766,2.0,2,dog,0.21482963114976883
+6452,bbe0f3653de9f6a8,2026-03-21,UFC Fight Night: Evloev vs. Murphy,Abdul-Kareem Al-Selwady,Shem Rock,1,0,dog_won,0,0.7978927195072174,2.0,2,dog,0.3989463597536087
+6453,bfd17ed83ec5b598,2026-03-21,UFC Fight Night: Evloev vs. Murphy,Brando Pericic,Louie Sutherland,1,0,dog_won,0,0.5091392695903778,2.0,2,dog,0.2545696347951889
+6454,fa534aaa5b997a69,2026-03-21,UFC Fight Night: Evloev vs. Murphy,Luke Riley,Michael Aswell Jr.,1,0,dog_won,0,0.5791592001914978,2.0,2,dog,0.2895796000957489
+6455,08d4e3864c44f8a5,2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,Tyrell Fortune,Marcin Tybura,1,0,dog_won,0,0.7978927195072174,2.0,2,dog,0.3989463597536087
+6456,1c50e43770ba84fc,2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,Casey O'Neill,Gabriella Fernandes,1,0,dog_won,0,0.7149401009082794,2.0,2,dog,0.3574700504541397
+6457,6102e7a6dcbc62f0,2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,Michael Chiesa,Niko Price,1,0,dog_won,0,0.125,2.0,2,dog,0.0625
+6458,689384b01b40ef5c,2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,Chase Hooper,Lance Gibson Jr.,0,1,dog_won,1,0.6268608272075653,2.0,2,dog,0.31343041360378265
+6459,796e1151896195aa,2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,Alexia Thainara,Bruna Brasil,1,0,dog_won,0,0.29975728690624237,2.0,2,dog,0.14987864345312119
+6460,85e94a6c071fd9fa,2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,Israel Adesanya,Joe Pyfer,0,1,dog_won,1,0.7776907086372375,2.0,2,dog,0.3888453543186188
+6461,9a0ecee6e8ca173f,2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,Maycee Barber,Alexa Grasso,0,1,dog_won,1,0.6781326830387115,2.0,2,dog,0.3390663415193558
+6462,a76e14495e61cf19,2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,Terrance McKinney,Kyle Nelson,1,0,dog_won,0,0.7978927195072174,2.0,2,dog,0.3989463597536087
+6463,dbf1ee1a1912c735,2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,Navajo Stirling,Bruno Lopes,1,0,dog_won,0,0.5282055586576462,2.0,2,dog,0.2641027793288231
+6464,e32dc26b11d1f81d,2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,Mansur Abdul-Malik,Yousri Belgaroui,0,1,dog_won,1,0.8190870881080627,2.0,2,dog,0.40954354405403137
+6465,f9f5071b993a5f4b,2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,Lerryan Douglas,Julian Erosa,1,0,dog_won,0,0.46545495092868805,2.0,2,dog,0.23272747546434402
+6466,fa96d6252579b51e,2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,Ignacio Bahamondes,Tofiq Musayev,0,1,dog_won,1,0.7534482777118683,2.0,2,dog,0.37672413885593414
+5962,03c1865919daeaa4,2025-01-11,UFC Fight Night: Dern vs. Ribas 2,Austin Bashi,Christian Rodriguez,0,1,favorite_won,0,1.3404634594917297,2.0,2,favorite,0.6702317297458649
+5963,192619174bd1ad77,2025-01-11,UFC Fight Night: Dern vs. Ribas 2,Nurullo Aliev,Joe Solecki,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+5964,32cc31b76b32ade1,2025-01-11,UFC Fight Night: Dern vs. Ribas 2,Uros Medic,Punahele Soriano,0,1,favorite_won,0,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+5965,54fa6e32330a8cca,2025-01-11,UFC Fight Night: Dern vs. Ribas 2,Thiago Moises,Trey Ogden,1,0,favorite_won,1,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+5966,58eda5a58a89f739,2025-01-11,UFC Fight Night: Dern vs. Ribas 2,Jacobe Smith,Preston Parsons,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+5967,817cd15077a9419e,2025-01-11,UFC Fight Night: Dern vs. Ribas 2,Magomed Gadzhiyasulov,Bruno Lopes,0,1,favorite_won,0,1.6571428775787354,2.0,2,favorite,0.8285714387893677
+5968,8a3281b0d7c168af,2025-01-11,UFC Fight Night: Dern vs. Ribas 2,Jose Johnson,Felipe Bunes,0,1,favorite_won,0,1.2229885458946228,2.0,2,favorite,0.6114942729473114
+5969,8d68863242695224,2025-01-11,UFC Fight Night: Dern vs. Ribas 2,Marco Tulio,Ihor Potieria,1,0,favorite_won,1,1.5527734756469727,2.0,2,favorite,0.7763867378234863
+5970,a2a5809ed8a01b45,2025-01-11,UFC Fight Night: Dern vs. Ribas 2,Cesar Almeida,Abdul Razak Alhassan,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+5971,aa38e39397dbea72,2025-01-11,UFC Fight Night: Dern vs. Ribas 2,Roman Kopylov,Chris Curtis,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+5972,b33e3a6d15700bb1,2025-01-11,UFC Fight Night: Dern vs. Ribas 2,Ernesta Kareckaite,Nicolle Caliari,1,0,favorite_won,1,1.511864423751831,2.0,2,favorite,0.7559322118759155
+5973,ce4fc800a7456d18,2025-01-11,UFC Fight Night: Dern vs. Ribas 2,Santiago Ponzinibbio,Carlston Harris,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+5974,f01851055b8309e0,2025-01-11,UFC Fight Night: Dern vs. Ribas 2,Fatima Kline,Viktoriia Dudakova,1,0,favorite_won,1,1.711864411830902,2.0,2,favorite,0.855932205915451
+5975,f46308108eb9261a,2025-01-11,UFC Fight Night: Dern vs. Ribas 2,Amanda Ribas,Mackenzie Dern,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+5976,340fcdcabc49f142,2025-01-18,UFC 311: Makhachev vs. Moicano,Karol Rosa,Ailin Perez,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+5977,54d48b33e7240452,2025-01-18,UFC 311: Makhachev vs. Moicano,Jailton Almeida,Serghei Spivac,1,0,favorite_won,1,1.5527734756469727,2.0,2,favorite,0.7763867378234863
+5978,69d63c057aebffaf,2025-01-18,UFC 311: Makhachev vs. Moicano,Reinier de Ridder,Kevin Holland,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+5979,959fea398ffa5778,2025-01-18,UFC 311: Makhachev vs. Moicano,Jamahal Hill,Jiri Prochazka,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+5980,95ba27bea09cd84e,2025-01-18,UFC 311: Makhachev vs. Moicano,Benardo Sopaj,Ricky Turcios,1,0,favorite_won,1,1.273796796798706,2.0,2,favorite,0.636898398399353
+5981,a6db8eb1fb3eebf2,2025-01-18,UFC 311: Makhachev vs. Moicano,Bogdan Guskov,Billy Elekana,1,0,favorite_won,1,1.5527734756469727,2.0,2,favorite,0.7763867378234863
+5982,aa3fca085d476636,2025-01-18,UFC 311: Makhachev vs. Moicano,Grant Dawson,Diego Ferreira,1,0,favorite_won,1,1.4359238147735596,2.0,2,favorite,0.7179619073867798
+5983,d14f98b24691d082,2025-01-18,UFC 311: Makhachev vs. Moicano,Payton Talbott,Raoni Barcelos,0,1,favorite_won,0,1.4929497241973877,2.0,2,favorite,0.7464748620986938
+5984,daef1691c7d6b1e4,2025-01-18,UFC 311: Makhachev vs. Moicano,Islam Makhachev,Renato Moicano,1,0,favorite_won,1,1.4395604729652405,2.0,2,favorite,0.7197802364826202
+5985,e294a1e5723011db,2025-01-18,UFC 311: Makhachev vs. Moicano,Tagir Ulanbekov,Clayton Carpenter,1,0,favorite_won,1,1.5147058367729187,2.0,2,favorite,0.7573529183864594
+5986,e5e3d396a9b1c5ae,2025-01-18,UFC 311: Makhachev vs. Moicano,Rinya Nakamura,Muin Gafurov,0,1,favorite_won,0,1.5305642485618591,2.0,2,favorite,0.7652821242809296
+5987,f39941b3743bf18c,2025-01-18,UFC 311: Makhachev vs. Moicano,Umar Nurmagomedov,Merab Dvalishvili,0,1,favorite_won,0,1.473796784877777,2.0,2,favorite,0.7368983924388885
+5988,3c00f34f20c8a189,2025-02-01,UFC Fight Night: Adesanya vs. Imavov,Sergei Pavlovich,Jairzinho Rozenstruik,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+5989,426e7a3de68117b0,2025-02-01,UFC Fight Night: Adesanya vs. Imavov,Shara Magomedov,Michael Page,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+5990,43bbaf06603b0f0c,2025-02-01,UFC Fight Night: Adesanya vs. Imavov,Shamil Gaziev,Thomas Petersen,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+5991,70b8dca3addcf4de,2025-02-01,UFC Fight Night: Adesanya vs. Imavov,Said Nurmagomedov,Vinicius Oliveira,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+5992,750257171ad29a2c,2025-02-01,UFC Fight Night: Adesanya vs. Imavov,Lucas Alexander,Bogdan Grad,0,1,favorite_won,0,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+5993,775788423f5eeb99,2025-02-01,UFC Fight Night: Adesanya vs. Imavov,Mike Davis,Fares Ziam,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+5994,85e79748b75eb30e,2025-02-01,UFC Fight Night: Adesanya vs. Imavov,Israel Adesanya,Nassourdine Imavov,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+5995,91bf33ada75d6061,2025-02-01,UFC Fight Night: Adesanya vs. Imavov,Jasmine Jasudavicius,Mayra Bueno Silva,1,0,favorite_won,1,1.3960189819335938,2.0,2,favorite,0.6980094909667969
+5996,940f586104bf8bc8,2025-02-01,UFC Fight Night: Adesanya vs. Imavov,Muhammad Naimov,Kaan Ofli,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+5997,984ce1062186f3ce,2025-02-01,UFC Fight Night: Adesanya vs. Imavov,Hamdy Abdelwahab,Jamal Pogues,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+5998,e97e71a593e4c28d,2025-02-01,UFC Fight Night: Adesanya vs. Imavov,Terrance McKinney,Damir Hadzovic,1,0,favorite_won,1,1.5147058367729187,2.0,2,favorite,0.7573529183864594
+5999,03c2a836d033be8f,2025-02-08,UFC 312: Du Plessis vs. Strickland 2,Tatiana Suarez,Zhang Weili,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6000,1f70a4516a70abf2,2025-02-08,UFC 312: Du Plessis vs. Strickland 2,Kody Steele,Rongzhu,0,1,favorite_won,0,1.800000011920929,2.0,2,favorite,0.9000000059604645
+6001,4218d1d1ce6d322c,2025-02-08,UFC 312: Du Plessis vs. Strickland 2,Quillan Salkilld,Anshul Jubli,1,0,favorite_won,1,1.5527734756469727,2.0,2,favorite,0.7763867378234863
+6002,4ce53d8a26693f06,2025-02-08,UFC 312: Du Plessis vs. Strickland 2,Jake Matthews,Francisco Prado,1,0,favorite_won,1,1.458133041858673,2.0,2,favorite,0.7290665209293365
+6003,64641156360b1b81,2025-02-08,UFC 312: Du Plessis vs. Strickland 2,Viacheslav Borshchev,Tom Nolan,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6004,8435f90fbd50c7a5,2025-02-08,UFC 312: Du Plessis vs. Strickland 2,Tallison Teixeira,Justin Tafa,1,0,favorite_won,1,1.579365074634552,2.0,2,favorite,0.789682537317276
+6005,8bc8bb0021337de7,2025-02-08,UFC 312: Du Plessis vs. Strickland 2,Kevin Jousset,Jonathan Micallef,0,1,favorite_won,0,1.273796796798706,2.0,2,favorite,0.636898398399353
+6006,c35a53be30bfd066,2025-02-08,UFC 312: Du Plessis vs. Strickland 2,Gabriel Santos,Jack Jenkins,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6007,c7fadbdfdc14c282,2025-02-08,UFC 312: Du Plessis vs. Strickland 2,Aleksandre Topuria,Colby Thicknesse,1,0,favorite_won,1,1.511864423751831,2.0,2,favorite,0.7559322118759155
+6008,d13849f49f99bf01,2025-02-08,UFC 312: Du Plessis vs. Strickland 2,Dricus Du Plessis,Sean Strickland,1,0,favorite_won,1,1.4359238147735596,2.0,2,favorite,0.7179619073867798
+6009,07b357090cc91c2c,2025-02-15,UFC Fight Night: Cannonier vs. Rodrigues,Elijah Smith,Vince Morales,1,0,favorite_won,1,1.2720727920532227,2.0,2,favorite,0.6360363960266113
+6010,2a493f15e079a7ff,2025-02-15,UFC Fight Night: Cannonier vs. Rodrigues,Jose Delgado,Connor Matthews,1,0,favorite_won,1,1.4896551966667175,2.0,2,favorite,0.7448275983333588
+6011,2ae33fce63a75df9,2025-02-15,UFC Fight Night: Cannonier vs. Rodrigues,Rafael Estevam,Jesus Aguilar,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6012,365e2d891b98b86d,2025-02-15,UFC Fight Night: Cannonier vs. Rodrigues,Gregory Rodrigues,Jared Cannonier,0,1,favorite_won,0,1.3511433601379395,2.0,2,favorite,0.6755716800689697
+6013,3b2a24db4eeaeede,2025-02-15,UFC Fight Night: Cannonier vs. Rodrigues,Valter Walker,Don'Tale Mayes,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6014,58668a0736602842,2025-02-15,UFC Fight Night: Cannonier vs. Rodrigues,Jacqueline Cavalcanti,Julia Avila,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6015,68913a422f548ccc,2025-02-15,UFC Fight Night: Cannonier vs. Rodrigues,Youssef Zalal,Calvin Kattar,1,0,favorite_won,1,1.5305642485618591,2.0,2,favorite,0.7652821242809296
+6016,7b9f169016746f81,2025-02-15,UFC Fight Night: Cannonier vs. Rodrigues,Gabriel Bonfim,Khaos Williams,1,0,favorite_won,1,1.6571428775787354,2.0,2,favorite,0.8285714387893677
+6017,875b249ebe45a66b,2025-02-15,UFC Fight Night: Cannonier vs. Rodrigues,Rodolfo Vieira,Andre Petroski,0,1,favorite_won,0,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6018,ce1436a9b58902a7,2025-02-15,UFC Fight Night: Cannonier vs. Rodrigues,Ismael Bonfim,Nazim Sadykhov,0,1,favorite_won,0,1.4340866208076477,2.0,2,favorite,0.7170433104038239
+6019,f4817d5cbe9be532,2025-02-15,UFC Fight Night: Cannonier vs. Rodrigues,Angela Hill,Ketlen Souza,1,0,favorite_won,1,0.9333333671092987,2.0,2,favorite,0.46666668355464935
+6020,f5386c98fea7f5d4,2025-02-15,UFC Fight Night: Cannonier vs. Rodrigues,Edmen Shahbazyan,Dylan Budka,1,0,favorite_won,1,1.4754673838615417,2.0,2,favorite,0.7377336919307709
+6021,08763e87e10b9709,2025-02-22,UFC Fight Night: Cejudo vs. Song,Ibo Aslan,Ion Cutelaba,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6022,0cdca4c22b8d3ab5,2025-02-22,UFC Fight Night: Cejudo vs. Song,Anthony Hernandez,Brendan Allen,1,0,favorite_won,1,1.4896551966667175,2.0,2,favorite,0.7448275983333588
+6023,19c8092496e94b85,2025-02-22,UFC Fight Night: Cejudo vs. Song,Jean Matsumoto,Rob Font,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6024,3ded9bfdfb75f39b,2025-02-22,UFC Fight Night: Cejudo vs. Song,Melquizael Costa,Andre Fili,1,0,favorite_won,1,1.4340866208076477,2.0,2,favorite,0.7170433104038239
+6025,615f7f894bafad82,2025-02-22,UFC Fight Night: Cejudo vs. Song,Nikolay Veretennikov,Austin Vanderford,0,1,favorite_won,0,1.4157509207725525,2.0,2,favorite,0.7078754603862762
+6026,8ef7723b6a8b45e1,2025-02-22,UFC Fight Night: Cejudo vs. Song,Jean Silva,Melsik Baghdasaryan,1,0,favorite_won,1,1.5305642485618591,2.0,2,favorite,0.7652821242809296
+6027,b6475543ab6d20c9,2025-02-22,UFC Fight Night: Cejudo vs. Song,Modestas Bukauskas,Rafael Cerqueira,1,0,favorite_won,1,1.4359238147735596,2.0,2,favorite,0.7179619073867798
+6028,b959e2c1d16ff832,2025-02-22,UFC Fight Night: Cejudo vs. Song,Song Yadong,Henry Cejudo,1,0,favorite_won,1,1.4359238147735596,2.0,2,favorite,0.7179619073867798
+6029,bc6d70ab959dce70,2025-02-22,UFC Fight Night: Cejudo vs. Song,Javid Basharat,Ricky Simon,0,1,favorite_won,0,1.273796796798706,2.0,2,favorite,0.636898398399353
+6030,c0d8a231d2f1d1af,2025-02-22,UFC Fight Night: Cejudo vs. Song,Alonzo Menifield,Julius Walker,1,0,favorite_won,1,1.458133041858673,2.0,2,favorite,0.7290665209293365
+6031,e011819e721c4a2a,2025-02-22,UFC Fight Night: Cejudo vs. Song,Mansur Abdul-Malik,Nick Klein,1,0,favorite_won,1,1.8409090638160706,2.0,2,favorite,0.9204545319080353
+6032,e9dfc2f009a77a8d,2025-02-22,UFC Fight Night: Cejudo vs. Song,Nursulton Ruziboev,Eric McConico,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6033,061990783b9bdb36,2025-03-01,UFC Fight Night: Kape vs. Almabayev,Esteban Ribovics,Nasrat Haqparast,0,1,favorite_won,0,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6034,0dfdc94c1da32e20,2025-03-01,UFC Fight Night: Kape vs. Almabayev,William Gomis,Hyder Amil,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6035,1ada4b9ee5810e0f,2025-03-01,UFC Fight Night: Kape vs. Almabayev,JJ Aldrich,Andrea Lee,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6036,1de799f17556b501,2025-03-01,UFC Fight Night: Kape vs. Almabayev,Danny Silva,Lucas Almeida,1,0,favorite_won,1,1.4359238147735596,2.0,2,favorite,0.7179619073867798
+6037,206b8c14546d71f1,2025-03-01,UFC Fight Night: Kape vs. Almabayev,Charles Johnson,Ramazan Temirov,0,1,favorite_won,0,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6038,6bdf0756fb57aced,2025-03-01,UFC Fight Night: Kape vs. Almabayev,Cody Brundage,Julian Marquez,1,0,favorite_won,1,1.579365074634552,2.0,2,favorite,0.789682537317276
+6039,9d8a37f130db13e5,2025-03-01,UFC Fight Night: Kape vs. Almabayev,Manel Kape,Asu Almabayev,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6040,a857acedb53ee959,2025-03-01,UFC Fight Night: Kape vs. Almabayev,Mario Pinto,Austen Lane,1,0,favorite_won,1,1.4876850843429565,2.0,2,favorite,0.7438425421714783
+6041,d6c3b730dc9f21a5,2025-03-01,UFC Fight Night: Kape vs. Almabayev,Danny Barlow,Sam Patterson,0,1,favorite_won,0,1.458133041858673,2.0,2,favorite,0.7290665209293365
+6042,dd1df7f5a54fd9fc,2025-03-01,UFC Fight Night: Kape vs. Almabayev,Chepe Mariscal,Ricardo Ramos,1,0,favorite_won,1,1.4359238147735596,2.0,2,favorite,0.7179619073867798
+6043,19fe7177254802d1,2025-03-08,UFC 313: Pereira vs. Ankalaev,Mairon Santos,Francis Marshall,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6044,231968c02cdfe65e,2025-03-08,UFC 313: Pereira vs. Ankalaev,Mauricio Ruffy,King Green,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6045,79f1c9f97d83ec83,2025-03-08,UFC 313: Pereira vs. Ankalaev,Iasmin Lucindo,Amanda Lemos,0,1,favorite_won,0,1.2720727920532227,2.0,2,favorite,0.6360363960266113
+6046,9e05fe95a4fc63bc,2025-03-08,UFC 313: Pereira vs. Ankalaev,Alex Pereira,Magomed Ankalaev,0,1,favorite_won,0,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6047,a2f31cf3a28a7730,2025-03-08,UFC 313: Pereira vs. Ankalaev,Rafael Fiziev,Justin Gaethje,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6048,a3cd6a65aaa9f104,2025-03-08,UFC 313: Pereira vs. Ankalaev,Ignacio Bahamondes,Jalin Turner,1,0,favorite_won,1,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6049,af3e43049bc86fe9,2025-03-08,UFC 313: Pereira vs. Ankalaev,Joshua Van,Rei Tsuruya,1,0,favorite_won,1,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6050,cab4937435d081d0,2025-03-08,UFC 313: Pereira vs. Ankalaev,Carlos Leal,Alex Morono,1,0,favorite_won,1,1.2000000178813934,2.0,2,favorite,0.6000000089406967
+6051,e61cb905f6152183,2025-03-08,UFC 313: Pereira vs. Ankalaev,Armen Petrosyan,Brunno Ferreira,0,1,favorite_won,0,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6052,1c62a7444808d97f,2025-03-15,UFC Fight Night: Vettori vs. Dolidze 2,Josiane Nunes,Priscila Cachoeira,0,1,favorite_won,0,1.746268630027771,2.0,2,favorite,0.8731343150138855
+6053,29d9c5a3f2b78903,2025-03-15,UFC Fight Night: Vettori vs. Dolidze 2,SuYoung You,AJ Cunningham,1,0,favorite_won,1,2.0,2.0,2,favorite,1.0
+6054,36db86c39ed09997,2025-03-15,UFC Fight Night: Vettori vs. Dolidze 2,Kevin Vallejos,SeungWoo Choi,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6055,5d8af316413ea2f7,2025-03-15,UFC Fight Night: Vettori vs. Dolidze 2,Andre Lima,Daniel Barez,1,0,favorite_won,1,1.5147058367729187,2.0,2,favorite,0.7573529183864594
+6056,5fa6543868367f4b,2025-03-15,UFC Fight Night: Vettori vs. Dolidze 2,Stephanie Luciano,Sam Hughes,0,1,favorite_won,0,1.332417607307434,2.0,2,favorite,0.666208803653717
+6057,67f7163e536d62e2,2025-03-15,UFC Fight Night: Vettori vs. Dolidze 2,Marvin Vettori,Roman Dolidze,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6058,74bc22b367cca118,2025-03-15,UFC Fight Night: Vettori vs. Dolidze 2,Waldo Cortes-Acosta,Ryan Spann,1,0,favorite_won,1,1.4118773937225342,2.0,2,favorite,0.7059386968612671
+6059,a8f8245096eaf0cd,2025-03-15,UFC Fight Night: Vettori vs. Dolidze 2,Carli Judice,Yuneisy Duben,1,0,favorite_won,1,1.511864423751831,2.0,2,favorite,0.7559322118759155
+6060,ab1aa23060d4e87b,2025-03-15,UFC Fight Night: Vettori vs. Dolidze 2,Da'Mon Blackshear,Cody Gibson,1,0,favorite_won,1,1.5147058367729187,2.0,2,favorite,0.7573529183864594
+6061,c83133ee114945ed,2025-03-15,UFC Fight Night: Vettori vs. Dolidze 2,Elizeu Zaleski dos Santos,Chidi Njokuani,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6062,cb3eb07b7152366e,2025-03-15,UFC Fight Night: Vettori vs. Dolidze 2,Josias Musasa,Carlos Vera,0,1,favorite_won,0,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6063,d8f40b82364b6411,2025-03-15,UFC Fight Night: Vettori vs. Dolidze 2,Alexander Hernandez,Kurt Holobaugh,1,0,favorite_won,1,1.3785310983657837,2.0,2,favorite,0.6892655491828918
+6064,e56403718205b494,2025-03-15,UFC Fight Night: Vettori vs. Dolidze 2,Diyar Nurgozhay,Brendson Ribeiro,0,1,favorite_won,0,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6065,1b02588149d126bf,2025-03-22,UFC Fight Night: Edwards vs. Brady,Nathan Fletcher,Caolan Loughran,0,1,favorite_won,0,1.2720727920532227,2.0,2,favorite,0.6360363960266113
+6066,265dbd9be8caa7de,2025-03-22,UFC Fight Night: Edwards vs. Brady,Guram Kutateladze,Kaue Fernandes,0,1,favorite_won,0,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6067,2a1071689c3af9df,2025-03-22,UFC Fight Night: Edwards vs. Brady,Jai Herbert,Chris Padilla,0,1,favorite_won,0,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6068,371ed8497799998e,2025-03-22,UFC Fight Night: Edwards vs. Brady,Sean Brady,Leon Edwards,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6069,6d9ea9f436ed354d,2025-03-22,UFC Fight Night: Edwards vs. Brady,Carlos Ulberg,Jan Blachowicz,1,0,favorite_won,1,1.3960189819335938,2.0,2,favorite,0.6980094909667969
+6070,8af2b589d5e9c1ae,2025-03-22,UFC Fight Night: Edwards vs. Brady,Christian Leroy Duncan,Andrey Pulyaev,1,0,favorite_won,1,1.5909090638160706,2.0,2,favorite,0.7954545319080353
+6071,8e6640c007ad603d,2025-03-22,UFC Fight Night: Edwards vs. Brady,Jordan Vucenic,Chris Duncan,0,1,favorite_won,0,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6072,96c6be6b22385967,2025-03-22,UFC Fight Night: Edwards vs. Brady,Gunnar Nelson,Kevin Holland,0,1,favorite_won,0,1.2720727920532227,2.0,2,favorite,0.6360363960266113
+6073,9779eb1aae1d4654,2025-03-22,UFC Fight Night: Edwards vs. Brady,Morgan Charriere,Nathaniel Wood,0,1,favorite_won,0,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6074,a693622ad8c0d672,2025-03-22,UFC Fight Night: Edwards vs. Brady,Shauna Bannon,Puja Tomar,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6075,b5b4b69bccb9ff4a,2025-03-22,UFC Fight Night: Edwards vs. Brady,Alexia Thainara,Molly McCann,1,0,favorite_won,1,1.273796796798706,2.0,2,favorite,0.636898398399353
+6076,dd229687cb62c871,2025-03-22,UFC Fight Night: Edwards vs. Brady,Mick Parkin,Marcin Tybura,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6077,e5a88f5c686173c4,2025-03-22,UFC Fight Night: Edwards vs. Brady,Lone'er Kavanagh,Felipe dos Santos,1,0,favorite_won,1,1.4359238147735596,2.0,2,favorite,0.7179619073867798
+6078,0f20c1d7c44fa5fe,2025-03-29,UFC Fight Night: Moreno vs. Erceg,Raul Rosas Jr.,Vince Morales,1,0,favorite_won,1,1.8571428656578064,2.0,2,favorite,0.9285714328289032
+6079,33e301872e2b5680,2025-03-29,UFC Fight Night: Moreno vs. Erceg,Brandon Moreno,Steve Erceg,1,0,favorite_won,1,1.3960189819335938,2.0,2,favorite,0.6980094909667969
+6080,41cdbcc0f3635b8f,2025-03-29,UFC Fight Night: Moreno vs. Erceg,Christian Rodriguez,Melquizael Costa,0,1,favorite_won,0,1.3960189819335938,2.0,2,favorite,0.6980094909667969
+6081,55376d5c205fa844,2025-03-29,UFC Fight Night: Moreno vs. Erceg,David Martinez,Saimon Oliveira,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6082,5ba7dd466e30169f,2025-03-29,UFC Fight Night: Moreno vs. Erceg,Ronaldo Rodriguez,Kevin Borjas,0,1,favorite_won,0,1.6571428775787354,2.0,2,favorite,0.8285714387893677
+6083,7e3fc760b26b6ae4,2025-03-29,UFC Fight Night: Moreno vs. Erceg,Rafa Garcia,Vinc Pichel,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6084,7efca050bc7be8ac,2025-03-29,UFC Fight Night: Moreno vs. Erceg,Loopy Godinez,Julia Polastri,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6085,8fc8d66ad0074ab0,2025-03-29,UFC Fight Night: Moreno vs. Erceg,Manuel Torres,Drew Dober,1,0,favorite_won,1,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6086,9f66d450af690df5,2025-03-29,UFC Fight Night: Moreno vs. Erceg,MarQuel Mederos,Austin Hubbard,1,0,favorite_won,1,1.4395604729652405,2.0,2,favorite,0.7197802364826202
+6087,ab4a91a59c01d6b6,2025-03-29,UFC Fight Night: Moreno vs. Erceg,Edgar Chairez,CJ Vergara,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6088,e2e2537a345367d4,2025-03-29,UFC Fight Night: Moreno vs. Erceg,Jamall Emmers,Gabriel Miranda,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6089,0c80eef2f4570543,2025-04-05,UFC Fight Night: Emmett vs. Murphy,Brad Tavares,Gerald Meerschaert,1,0,favorite_won,1,1.2720727920532227,2.0,2,favorite,0.6360363960266113
+6090,4b1aec2395ebca14,2025-04-05,UFC Fight Night: Emmett vs. Murphy,Victor Henry,Pedro Falcao,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6091,58811a4e36c53b89,2025-04-05,UFC Fight Night: Emmett vs. Murphy,Daniel Frunza,Rhys McKee,0,1,favorite_won,0,1.2942820191383362,2.0,2,favorite,0.6471410095691681
+6092,76641669c1607b7a,2025-04-05,UFC Fight Night: Emmett vs. Murphy,Dione Barbosa,Diana Belbita,1,0,favorite_won,1,1.5527734756469727,2.0,2,favorite,0.7763867378234863
+6093,86a1be10255eea4e,2025-04-05,UFC Fight Night: Emmett vs. Murphy,Lerone Murphy,Josh Emmett,1,0,favorite_won,1,1.800000011920929,2.0,2,favorite,0.9000000059604645
+6094,96cc199d78732d11,2025-04-05,UFC Fight Night: Emmett vs. Murphy,Martin Buday,Uran Satybaldiev,1,0,favorite_won,1,1.2942820191383362,2.0,2,favorite,0.6471410095691681
+6095,a160e94fdb66de17,2025-04-05,UFC Fight Night: Emmett vs. Murphy,Joanderson Brito,Pat Sabatini,0,1,favorite_won,0,1.3404634594917297,2.0,2,favorite,0.6702317297458649
+6096,cca4d763b1c6de0a,2025-04-05,UFC Fight Night: Emmett vs. Murphy,Vanessa Demopoulos,Talita Alencar,0,1,favorite_won,0,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6097,d1368ca941c1fefc,2025-04-05,UFC Fight Night: Emmett vs. Murphy,Torrez Finney,Robert Valentin,1,0,favorite_won,1,1.2010840773582458,2.0,2,favorite,0.6005420386791229
+6098,de9422207df2de64,2025-04-05,UFC Fight Night: Emmett vs. Murphy,Luis Gurule,Ode Osbourne,0,1,favorite_won,0,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6099,fc3825dd1b67e39d,2025-04-05,UFC Fight Night: Emmett vs. Murphy,ChangHo Lee,Cortavious Romious,1,0,favorite_won,1,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6100,fd088ce1481315a5,2025-04-05,UFC Fight Night: Emmett vs. Murphy,Loma Lookboonmee,Istela Nunes,1,0,favorite_won,1,2.0,2.0,2,favorite,1.0
+6101,08e7a39eb7482ebf,2025-04-12,UFC 314: Volkanovski vs. Lopes,Julian Erosa,Darren Elkins,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6102,0e71e69359db4d1e,2025-04-12,UFC 314: Volkanovski vs. Lopes,Nora Cornolle,Hailey Cowan,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6103,0eccebee160137b1,2025-04-12,UFC 314: Volkanovski vs. Lopes,Virna Jandiroba,Yan Xiaonan,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6104,11eb27a1ac74d225,2025-04-12,UFC 314: Volkanovski vs. Lopes,Chase Hooper,Jim Miller,1,0,favorite_won,1,1.5147058367729187,2.0,2,favorite,0.7573529183864594
+6105,4bbda6c1f6cf9d4e,2025-04-12,UFC 314: Volkanovski vs. Lopes,Michal Oleksiejczuk,Sedriques Dumas,1,0,favorite_won,1,1.182417631149292,2.0,2,favorite,0.591208815574646
+6106,8c540eb4afe8c43e,2025-04-12,UFC 314: Volkanovski vs. Lopes,Jean Silva,Bryce Mitchell,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6107,b2d731415bd367df,2025-04-12,UFC 314: Volkanovski vs. Lopes,Nikita Krylov,Dominick Reyes,0,1,favorite_won,0,1.579365074634552,2.0,2,favorite,0.789682537317276
+6108,b87d6f71d901355b,2025-04-12,UFC 314: Volkanovski vs. Lopes,Marco Tulio,Tresean Gore,1,0,favorite_won,1,1.511864423751831,2.0,2,favorite,0.7559322118759155
+6109,d05cb4c4135ce402,2025-04-12,UFC 314: Volkanovski vs. Lopes,Paddy Pimblett,Michael Chandler,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6110,d3be5a4e0ec273e2,2025-04-12,UFC 314: Volkanovski vs. Lopes,Yair Rodriguez,Patricio Freire,1,0,favorite_won,1,1.2720727920532227,2.0,2,favorite,0.6360363960266113
+6111,e733f148060bef2a,2025-04-12,UFC 314: Volkanovski vs. Lopes,Alexander Volkanovski,Diego Lopes,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6112,fc43d60cbd6b0e6a,2025-04-12,UFC 314: Volkanovski vs. Lopes,Sean Woodson,Dan Ige,0,1,favorite_won,0,1.4359238147735596,2.0,2,favorite,0.7179619073867798
+6113,fd98843926965cbd,2025-04-12,UFC 314: Volkanovski vs. Lopes,Sumudaerji,Mitch Raposo,1,0,favorite_won,1,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6114,23201d09a78d446d,2025-04-26,UFC Fight Night: Machado Garry vs. Prates,Timmy Cuamba,Roberto Romero,1,0,favorite_won,1,1.2720727920532227,2.0,2,favorite,0.6360363960266113
+6115,4072abf0b0c179f2,2025-04-26,UFC Fight Night: Machado Garry vs. Prates,David Onama,Giga Chikadze,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6116,62fbdd4f0bcd3c2a,2025-04-26,UFC Fight Night: Machado Garry vs. Prates,Ikram Aliskerov,Andre Muniz,1,0,favorite_won,1,1.5305642485618591,2.0,2,favorite,0.7652821242809296
+6117,633f4b5ec767769d,2025-04-26,UFC Fight Night: Machado Garry vs. Prates,Ian Machado Garry,Carlos Prates,1,0,favorite_won,1,1.4340866208076477,2.0,2,favorite,0.7170433104038239
+6118,6f3cb7ce84185dd3,2025-04-26,UFC Fight Night: Machado Garry vs. Prates,Chris Gutierrez,John Castaneda,1,0,favorite_won,1,1.4395604729652405,2.0,2,favorite,0.7197802364826202
+6119,7d51649373d42571,2025-04-26,UFC Fight Night: Machado Garry vs. Prates,Da'Mon Blackshear,Alatengheili,1,0,favorite_won,1,1.711864411830902,2.0,2,favorite,0.855932205915451
+6120,7fd6770fe2d4f258,2025-04-26,UFC Fight Night: Machado Garry vs. Prates,Joselyne Edwards,Chelsea Chandler,1,0,favorite_won,1,1.3960189819335938,2.0,2,favorite,0.6980094909667969
+6121,97770b38df67b276,2025-04-26,UFC Fight Night: Machado Garry vs. Prates,Evan Elder,Gauge Young,1,0,favorite_won,1,1.6034114956855774,2.0,2,favorite,0.8017057478427887
+6122,9bbd45774fb4a6eb,2025-04-26,UFC Fight Night: Machado Garry vs. Prates,Michel Pereira,Abus Magomedov,0,1,favorite_won,0,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6123,a526a72ade275f46,2025-04-26,UFC Fight Night: Machado Garry vs. Prates,Zhang Mingyang,Anthony Smith,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6124,c2c20a04a78d9143,2025-04-26,UFC Fight Night: Machado Garry vs. Prates,Malcolm Wellmaker,Cameron Saaiman,1,0,favorite_won,1,1.5625056624412537,2.0,2,favorite,0.7812528312206268
+6125,d8d22dcc1f6912e7,2025-04-26,UFC Fight Night: Machado Garry vs. Prates,Matt Schnell,Jimmy Flick,1,0,favorite_won,1,1.2600430846214294,2.0,2,favorite,0.6300215423107147
+6126,e7b3ca036835b7c2,2025-04-26,UFC Fight Night: Machado Garry vs. Prates,Jaqueline Amorim,Polyana Viana,1,0,favorite_won,1,1.5305642485618591,2.0,2,favorite,0.7652821242809296
+6127,fbf83609dc96f32e,2025-04-26,UFC Fight Night: Machado Garry vs. Prates,Randy Brown,Nicolas Dalby,1,0,favorite_won,1,1.511864423751831,2.0,2,favorite,0.7559322118759155
+6128,191ee545160a4e09,2025-05-03,UFC Fight Night: Sandhagen vs. Figueiredo,Santiago Ponzinibbio,Daniel Rodriguez,0,1,favorite_won,0,1.2720727920532227,2.0,2,favorite,0.6360363960266113
+6129,2707dc2245335cc1,2025-05-03,UFC Fight Night: Sandhagen vs. Figueiredo,Miesha Tate,Yana Santos,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6130,380242601a2c5991,2025-05-03,UFC Fight Night: Sandhagen vs. Figueiredo,Bo Nickal,Reinier de Ridder,0,1,favorite_won,0,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6131,469f887278324e63,2025-05-03,UFC Fight Night: Sandhagen vs. Figueiredo,Ivana Petrovic,Juliana Miller,0,1,favorite_won,0,1.4340866208076477,2.0,2,favorite,0.7170433104038239
+6132,5ce29056e0cd2df9,2025-05-03,UFC Fight Night: Sandhagen vs. Figueiredo,Montel Jackson,Daniel Marcos,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6133,6ccd10adc968e1f0,2025-05-03,UFC Fight Night: Sandhagen vs. Figueiredo,Serhiy Sidey,Cameron Smotherman,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6134,6e26a6293ea6ba62,2025-05-03,UFC Fight Night: Sandhagen vs. Figueiredo,Gillian Robertson,Marina Rodriguez,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6135,77ed474dfc5359ea,2025-05-03,UFC Fight Night: Sandhagen vs. Figueiredo,Azamat Bekoev,Ryan Loder,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6136,9039959b41901412,2025-05-03,UFC Fight Night: Sandhagen vs. Figueiredo,Mason Jones,Jeremy Stephens,1,0,favorite_won,1,1.4839264750480652,2.0,2,favorite,0.7419632375240326
+6137,97b32ff27fd457a8,2025-05-03,UFC Fight Night: Sandhagen vs. Figueiredo,Gaston Bolanos,Quang Le,0,1,favorite_won,0,1.2720727920532227,2.0,2,favorite,0.6360363960266113
+6138,9b3bade95e1dd484,2025-05-03,UFC Fight Night: Sandhagen vs. Figueiredo,Cory Sandhagen,Deiveson Figueiredo,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6139,c445401709421fa4,2025-05-03,UFC Fight Night: Sandhagen vs. Figueiredo,Thomas Petersen,Don'Tale Mayes,1,0,favorite_won,1,1.511864423751831,2.0,2,favorite,0.7559322118759155
+6140,0e0a4282cd6c86d7,2025-05-10,UFC 315: Muhammad vs. Della Maddalena,JeongYeong Lee,Daniel Santos,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6141,0f53eb509d0ffeb9,2025-05-10,UFC 315: Muhammad vs. Della Maddalena,Natalia Silva,Alexa Grasso,1,0,favorite_won,1,1.4359238147735596,2.0,2,favorite,0.7179619073867798
+6142,2521234a4bf7c615,2025-05-10,UFC 315: Muhammad vs. Della Maddalena,Mike Malott,Charles Radtke,1,0,favorite_won,1,1.511864423751831,2.0,2,favorite,0.7559322118759155
+6143,4db2d86ebe8c8abd,2025-05-10,UFC 315: Muhammad vs. Della Maddalena,Jasmine Jasudavicius,Jessica Andrade,1,0,favorite_won,1,1.511864423751831,2.0,2,favorite,0.7559322118759155
+6144,6ecfa439ef900bcc,2025-05-10,UFC 315: Muhammad vs. Della Maddalena,Marc-Andre Barriault,Bruno Silva,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6145,891b2faf1bff38ee,2025-05-10,UFC 315: Muhammad vs. Della Maddalena,Jose Aldo,Aiemann Zahabi,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6146,99aa1f28e22bb6dd,2025-05-10,UFC 315: Muhammad vs. Della Maddalena,Navajo Stirling,Ivan Erslan,1,0,favorite_won,1,1.511864423751831,2.0,2,favorite,0.7559322118759155
+6147,9e9d1764a015f313,2025-05-10,UFC 315: Muhammad vs. Della Maddalena,Manon Fiorot,Valentina Shevchenko,0,1,favorite_won,0,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6148,b873c116e39c9920,2025-05-10,UFC 315: Muhammad vs. Della Maddalena,Belal Muhammad,Jack Della Maddalena,0,1,favorite_won,0,1.273796796798706,2.0,2,favorite,0.636898398399353
+6149,c20bd12ae7f04eff,2025-05-10,UFC 315: Muhammad vs. Della Maddalena,Bekzat Almakhan,Brad Katona,1,0,favorite_won,1,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6150,c7190cd03e53fb61,2025-05-10,UFC 315: Muhammad vs. Della Maddalena,Benoit Saint Denis,Kyle Prepolec,1,0,favorite_won,1,1.5147058367729187,2.0,2,favorite,0.7573529183864594
+6151,c812457a810dde39,2025-05-10,UFC 315: Muhammad vs. Della Maddalena,Ion Cutelaba,Modestas Bukauskas,0,1,favorite_won,0,1.4395604729652405,2.0,2,favorite,0.7197802364826202
+6152,18a7dc86279066f8,2025-05-17,UFC Fight Night: Burns vs. Morales,HyunSung Park,Carlos Hernandez,1,0,favorite_won,1,1.458133041858673,2.0,2,favorite,0.7290665209293365
+6153,66887532be2de5ee,2025-05-17,UFC Fight Night: Burns vs. Morales,Denise Gomes,Elise Reed,1,0,favorite_won,1,1.529701292514801,2.0,2,favorite,0.7648506462574005
+6154,8ba31cf0b3164b72,2025-05-17,UFC Fight Night: Burns vs. Morales,Jared Gordon,Thiago Moises,1,0,favorite_won,1,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6155,a81ad236a2f221f2,2025-05-17,UFC Fight Night: Burns vs. Morales,Michael Morales,Gilbert Burns,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6156,a9a6cca4bbf7a5db,2025-05-17,UFC Fight Night: Burns vs. Morales,Matheus Camilo,Gabe Green,0,1,favorite_won,0,1.6571428775787354,2.0,2,favorite,0.8285714387893677
+6157,afdd95ae7b7cdb0c,2025-05-17,UFC Fight Night: Burns vs. Morales,Tecia Pennington,Luana Pinheiro,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6158,b3044bf646306e7f,2025-05-17,UFC Fight Night: Burns vs. Morales,Nursulton Ruziboev,Dustin Stoltzfus,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6159,d6e2bc6e6c0cc4fe,2025-05-17,UFC Fight Night: Burns vs. Morales,Yadier del Valle,Connor Matthews,1,0,favorite_won,1,1.5305642485618591,2.0,2,favorite,0.7652821242809296
+6160,dcb27eef6441268c,2025-05-17,UFC Fight Night: Burns vs. Morales,Mairon Santos,Sodiq Yusuff,1,0,favorite_won,1,1.332417607307434,2.0,2,favorite,0.666208803653717
+6161,f75fe8b384b0db11,2025-05-17,UFC Fight Night: Burns vs. Morales,Luana Santos,Tainara Lisboa,1,0,favorite_won,1,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6162,fe2acfdaaaec3dba,2025-05-17,UFC Fight Night: Burns vs. Morales,Melquizael Costa,Julian Erosa,1,0,favorite_won,1,1.4340866208076477,2.0,2,favorite,0.7170433104038239
+6163,106918bfbe24335d,2025-05-31,UFC Fight Night: Blanchfield vs. Barber,Macy Chiasson,Ketlen Vieira,0,1,favorite_won,0,1.2558737993240356,2.0,2,favorite,0.6279368996620178
+6164,212527d462690304,2025-05-31,UFC Fight Night: Blanchfield vs. Barber,Mateusz Gamrot,Ludovit Klein,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6165,2521fed000747f47,2025-05-31,UFC Fight Night: Blanchfield vs. Barber,Jordan Leavitt,Kurt Holobaugh,1,0,favorite_won,1,1.4359238147735596,2.0,2,favorite,0.7179619073867798
+6166,305d8c85b35a7d4e,2025-05-31,UFC Fight Night: Blanchfield vs. Barber,Billy Ray Goff,Ramiz Brahimaj,0,1,favorite_won,0,1.4896551966667175,2.0,2,favorite,0.7448275983333588
+6167,73240bea13ed5e71,2025-05-31,UFC Fight Night: Blanchfield vs. Barber,Rayanne dos Santos,Alice Ardelean,0,1,favorite_won,0,1.4359238147735596,2.0,2,favorite,0.7179619073867798
+6168,7aaa810540132a4b,2025-05-31,UFC Fight Night: Blanchfield vs. Barber,Dustin Jacoby,Bruno Lopes,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6169,baa2ee0bf7f97079,2025-05-31,UFC Fight Night: Blanchfield vs. Barber,Allan Nascimento,Jafel Filho,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6170,01100a90b584215d,2025-06-07,UFC 316: Dvalishvili vs. O'Malley 2,Azamat Murzakanov,Brendson Ribeiro,1,0,favorite_won,1,1.5527734756469727,2.0,2,favorite,0.7763867378234863
+6171,0e8599eca8ccfa32,2025-06-07,UFC 316: Dvalishvili vs. O'Malley 2,MarQuel Mederos,Mark Choinski,1,0,favorite_won,1,1.4395604729652405,2.0,2,favorite,0.7197802364826202
+6172,2129acab2280bd29,2025-06-07,UFC 316: Dvalishvili vs. O'Malley 2,Kevin Holland,Vicente Luque,1,0,favorite_won,1,1.3960189819335938,2.0,2,favorite,0.6980094909667969
+6173,2e4064e0e6d4d92e,2025-06-07,UFC 316: Dvalishvili vs. O'Malley 2,Quillan Salkilld,Yanal Ashmouz,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6174,81b84b34f0357fa5,2025-06-07,UFC 316: Dvalishvili vs. O'Malley 2,Kayla Harrison,Julianna Pena,1,0,favorite_won,1,1.7199994325637817,2.0,2,favorite,0.8599997162818909
+6175,9f4a0de31375ba04,2025-06-07,UFC 316: Dvalishvili vs. O'Malley 2,JooSang Yoo,Jeka Saragih,1,0,favorite_won,1,1.698051929473877,2.0,2,favorite,0.8490259647369385
+6176,ac977a0389682124,2025-06-07,UFC 316: Dvalishvili vs. O'Malley 2,Serghei Spivac,Waldo Cortes-Acosta,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6177,b6a87389bdc36a00,2025-06-07,UFC 316: Dvalishvili vs. O'Malley 2,Joshua Van,Bruno Silva,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6178,d078e9046aa86307,2025-06-07,UFC 316: Dvalishvili vs. O'Malley 2,Wang Cong,Ariane da Silva,1,0,favorite_won,1,1.4893653988838196,2.0,2,favorite,0.7446826994419098
+6179,df5dac45fc585fb0,2025-06-07,UFC 316: Dvalishvili vs. O'Malley 2,Patchy Mix,Mario Bautista,0,1,favorite_won,0,1.1333333849906921,2.0,2,favorite,0.5666666924953461
+6180,e28e829800466aca,2025-06-07,UFC 316: Dvalishvili vs. O'Malley 2,Joe Pyfer,Kelvin Gastelum,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6181,e61d83e4e1f9c4d7,2025-06-07,UFC 316: Dvalishvili vs. O'Malley 2,Merab Dvalishvili,Sean O'Malley,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6182,f0488a4486a64af0,2025-06-07,UFC 316: Dvalishvili vs. O'Malley 2,Khaos Williams,Andreas Gustafsson,0,1,favorite_won,0,1.458133041858673,2.0,2,favorite,0.7290665209293365
+6183,1714950933f88ab9,2025-06-14,UFC Fight Night: Usman vs. Buckley,Raoni Barcelos,Cody Garbrandt,1,0,favorite_won,1,1.458133041858673,2.0,2,favorite,0.7290665209293365
+6184,2ae7404681deb3b3,2025-06-14,UFC Fight Night: Usman vs. Buckley,Ange Loosa,Phil Rowe,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6185,59c4fdb3c0673066,2025-06-14,UFC Fight Night: Usman vs. Buckley,Ricky Simon,Cameron Smotherman,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6186,79dfbbdd14fbbd11,2025-06-14,UFC Fight Night: Usman vs. Buckley,Rose Namajunas,Miranda Maverick,1,0,favorite_won,1,1.3821176290512085,2.0,2,favorite,0.6910588145256042
+6187,ab325ea526824723,2025-06-14,UFC Fight Night: Usman vs. Buckley,Jamey-Lyn Horth,Vanessa Demopoulos,1,0,favorite_won,1,1.8571428656578064,2.0,2,favorite,0.9285714328289032
+6188,b39b8ff0d7de211a,2025-06-14,UFC Fight Night: Usman vs. Buckley,Jose Ochoa,Cody Durden,1,0,favorite_won,1,1.3960189819335938,2.0,2,favorite,0.6980094909667969
+6189,d75b3d3c2b209b75,2025-06-14,UFC Fight Night: Usman vs. Buckley,Joaquin Buckley,Kamaru Usman,0,1,favorite_won,0,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6190,e5bd7e6e2a50a843,2025-06-14,UFC Fight Night: Usman vs. Buckley,Edmen Shahbazyan,Andre Petroski,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6191,e861e9cc0118c670,2025-06-14,UFC Fight Night: Usman vs. Buckley,Michael Chiesa,Court McGee,1,0,favorite_won,1,1.4896551966667175,2.0,2,favorite,0.7448275983333588
+6192,ec2034b134ae71cd,2025-06-14,UFC Fight Night: Usman vs. Buckley,Oumar Sy,Alonzo Menifield,0,1,favorite_won,0,1.5527734756469727,2.0,2,favorite,0.7763867378234863
+6193,f6454f2e508626ec,2025-06-14,UFC Fight Night: Usman vs. Buckley,Malcolm Wellmaker,Kris Moutinho,1,0,favorite_won,1,1.698051929473877,2.0,2,favorite,0.8490259647369385
+6194,03bc32bdb5a33496,2025-06-21,UFC Fight Night: Hill vs. Rountree Jr.,Jamahal Hill,Khalil Rountree Jr.,0,1,favorite_won,0,1.4395604729652405,2.0,2,favorite,0.7197802364826202
+6195,19764211af05674c,2025-06-21,UFC Fight Night: Hill vs. Rountree Jr.,Muhammad Naimov,Bogdan Grad,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6196,2bfc0212f2cae65b,2025-06-21,UFC Fight Night: Hill vs. Rountree Jr.,Irina Alekseeva,Klaudia Sygula,0,1,favorite_won,0,1.4359238147735596,2.0,2,favorite,0.7179619073867798
+6197,36ec204f47e4d613,2025-06-21,UFC Fight Night: Hill vs. Rountree Jr.,Myktybek Orolbai,Tofiq Musayev,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6198,5fcf18bcd2a020f1,2025-06-21,UFC Fight Night: Hill vs. Rountree Jr.,JunYong Park,Ismail Naurdiev,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6199,7513a00037094075,2025-06-21,UFC Fight Night: Hill vs. Rountree Jr.,Nazim Sadykhov,Nikolas Motta,1,0,favorite_won,1,1.5147058367729187,2.0,2,favorite,0.7573529183864594
+6200,8c140756bf43dcc2,2025-06-21,UFC Fight Night: Hill vs. Rountree Jr.,Tagir Ulanbekov,Azat Maksum,1,0,favorite_won,1,1.5147058367729187,2.0,2,favorite,0.7573529183864594
+6201,8e5744c664fec3e9,2025-06-21,UFC Fight Night: Hill vs. Rountree Jr.,Curtis Blaydes,Rizvan Kuniev,1,0,favorite_won,1,1.458133041858673,2.0,2,favorite,0.7290665209293365
+6202,a12d3a6c8aaf87ca,2025-06-21,UFC Fight Night: Hill vs. Rountree Jr.,Hamdy Abdelwahab,Mohammed Usman,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6203,a1afc16e21d1a807,2025-06-21,UFC Fight Night: Hill vs. Rountree Jr.,Ignacio Bahamondes,Rafael Fiziev,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6204,e512b80bbaea36c2,2025-06-21,UFC Fight Night: Hill vs. Rountree Jr.,Oban Elliott,Seokhyeon Ko,0,1,favorite_won,0,1.5147058367729187,2.0,2,favorite,0.7573529183864594
+6205,fff3218758c513b8,2025-06-21,UFC Fight Night: Hill vs. Rountree Jr.,Melissa Mullins,Daria Zhelezniakova,0,1,favorite_won,0,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6206,043172689e415438,2025-06-28,UFC 317: Topuria vs. Oliveira,Jhonata Diniz,Alvin Hines,1,0,favorite_won,1,1.5527734756469727,2.0,2,favorite,0.7763867378234863
+6207,1ea9ad3b6e1cba79,2025-06-28,UFC 317: Topuria vs. Oliveira,Beneil Dariush,Renato Moicano,1,0,favorite_won,1,1.2942820191383362,2.0,2,favorite,0.6471410095691681
+6208,2f523b757f7f33a2,2025-06-28,UFC 317: Topuria vs. Oliveira,Jose Delgado,Hyder Amil,1,0,favorite_won,1,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6209,7a64d63e12618ba7,2025-06-28,UFC 317: Topuria vs. Oliveira,Ilia Topuria,Charles Oliveira,1,0,favorite_won,1,1.5527734756469727,2.0,2,favorite,0.7763867378234863
+6210,815ff62ca8e217be,2025-06-28,UFC 317: Topuria vs. Oliveira,Tracy Cortez,Viviane Araujo,1,0,favorite_won,1,1.4359238147735596,2.0,2,favorite,0.7179619073867798
+6211,8308464729ea7c40,2025-06-28,UFC 317: Topuria vs. Oliveira,Alexandre Pantoja,Kai Kara-France,1,0,favorite_won,1,1.6034114956855774,2.0,2,favorite,0.8017057478427887
+6212,958522de54ccc536,2025-06-28,UFC 317: Topuria vs. Oliveira,Gregory Rodrigues,Jack Hermansson,1,0,favorite_won,1,1.4359238147735596,2.0,2,favorite,0.7179619073867798
+6213,9bff9fe298e63357,2025-06-28,UFC 317: Topuria vs. Oliveira,Jacobe Smith,Niko Price,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6214,d7be78c400e7e0f9,2025-06-28,UFC 317: Topuria vs. Oliveira,Terrance McKinney,Viacheslav Borshchev,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6215,f6a3c78f15ff26c7,2025-06-28,UFC 317: Topuria vs. Oliveira,Felipe Lima,Payton Talbott,0,1,favorite_won,0,1.2588778734207153,2.0,2,favorite,0.6294389367103577
+6216,f722b96ae6862843,2025-06-28,UFC 317: Topuria vs. Oliveira,Joshua Van,Brandon Royval,1,0,favorite_won,1,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6217,0adfc21045c02555,2025-07-12,UFC Fight Night: Lewis vs. Teixeira,Tallison Teixeira,Derrick Lewis,0,1,favorite_won,0,1.6571428775787354,2.0,2,favorite,0.8285714387893677
+6218,120d66cb0da0f3c3,2025-07-12,UFC Fight Night: Lewis vs. Teixeira,Fatima Kline,Melissa Martinez,1,0,favorite_won,1,1.5305642485618591,2.0,2,favorite,0.7652821242809296
+6219,236f811290163dca,2025-07-12,UFC Fight Night: Lewis vs. Teixeira,Chris Curtis,Max Griffin,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6220,2a03bc4c491b4c9a,2025-07-12,UFC Fight Night: Lewis vs. Teixeira,Gabriel Bonfim,Stephen Thompson,1,0,favorite_won,1,1.5305642485618591,2.0,2,favorite,0.7652821242809296
+6221,46bc1338a50cbeac,2025-07-12,UFC Fight Night: Lewis vs. Teixeira,Eduarda Moura,Lauren Murphy,1,0,favorite_won,1,1.8571428656578064,2.0,2,favorite,0.9285714328289032
+6222,4b75d3b7738cb278,2025-07-12,UFC Fight Night: Lewis vs. Teixeira,Vitor Petrino,Austen Lane,1,0,favorite_won,1,1.5147058367729187,2.0,2,favorite,0.7573529183864594
+6223,4e5d4a36eaaa3a78,2025-07-12,UFC Fight Night: Lewis vs. Teixeira,Morgan Charriere,Nate Landwehr,1,0,favorite_won,1,1.4359238147735596,2.0,2,favorite,0.7179619073867798
+6224,5c650ae2193ab1bc,2025-07-12,UFC Fight Night: Lewis vs. Teixeira,Kennedy Nzechukwu,Valter Walker,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6225,7f33fbdc35afd721,2025-07-12,UFC Fight Night: Lewis vs. Teixeira,Mike Davis,Mitch Ramirez,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6226,b19bf99c7eb796bc,2025-07-12,UFC Fight Night: Lewis vs. Teixeira,Junior Tafa,Tuco Tokkos,0,1,favorite_won,0,1.403358280658722,2.0,2,favorite,0.701679140329361
+6227,d5e3be7a07c48b08,2025-07-12,UFC Fight Night: Lewis vs. Teixeira,Chidi Njokuani,Jake Matthews,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6228,f368475c366c6d85,2025-07-12,UFC Fight Night: Lewis vs. Teixeira,Steve Garcia,Calvin Kattar,1,0,favorite_won,1,1.2720727920532227,2.0,2,favorite,0.6360363960266113
+6229,37bc72d5d211b189,2025-07-19,UFC 318: Holloway vs. Poirier 3,Islam Dulatov,Adam Fugitt,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6230,8e1feda9141602f1,2025-07-19,UFC 318: Holloway vs. Poirier 3,Brendan Allen,Marvin Vettori,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6231,d7507e2741fd4d05,2025-07-19,UFC 318: Holloway vs. Poirier 3,Max Holloway,Dustin Poirier,1,0,favorite_won,1,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6232,017a825c7820d12e,2025-07-26,UFC Fight Night: Whittaker vs. De Ridder,Da'Mon Blackshear,Davey Grant,0,1,favorite_won,0,1.5527734756469727,2.0,2,favorite,0.7763867378234863
+6233,0a598768f5c8d540,2025-07-26,UFC Fight Night: Whittaker vs. De Ridder,Marcus Buchecha,Martin Buday,0,1,favorite_won,0,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6234,23ddf51ce630028d,2025-07-26,UFC Fight Night: Whittaker vs. De Ridder,Steven Nguyen,Mohammad Yahya,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6235,3e6067763978d862,2025-07-26,UFC Fight Night: Whittaker vs. De Ridder,Amanda Ribas,Tabatha Ricci,0,1,favorite_won,0,1.4118773937225342,2.0,2,favorite,0.7059386968612671
+6236,582d66ce97309e29,2025-07-26,UFC Fight Night: Whittaker vs. De Ridder,Shara Magomedov,Marc-Andre Barriault,1,0,favorite_won,1,1.5305642485618591,2.0,2,favorite,0.7652821242809296
+6237,6b8be0ee3e569ad2,2025-07-26,UFC Fight Night: Whittaker vs. De Ridder,Robert Whittaker,Reinier de Ridder,0,1,favorite_won,0,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6238,77f960d82cda0b76,2025-07-26,UFC Fight Night: Whittaker vs. De Ridder,Nikita Krylov,Bogdan Guskov,0,1,favorite_won,0,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6239,7c075e3383198e14,2025-07-26,UFC Fight Night: Whittaker vs. De Ridder,Carlos Leal,Muslim Salikhov,0,1,favorite_won,0,1.1462686359882355,2.0,2,favorite,0.5731343179941177
+6240,887c61da1a78a5e1,2025-07-26,UFC Fight Night: Whittaker vs. De Ridder,Asu Almabayev,Jose Ochoa,1,0,favorite_won,1,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6241,d4d4ee045b0ca695,2025-07-26,UFC Fight Night: Whittaker vs. De Ridder,Petr Yan,Marcus McGhee,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6242,e72c691b7c68b03a,2025-07-26,UFC Fight Night: Whittaker vs. De Ridder,Bryce Mitchell,Said Nurmagomedov,1,0,favorite_won,1,1.2720727920532227,2.0,2,favorite,0.6360363960266113
+6243,f9dac7702609669f,2025-07-26,UFC Fight Night: Whittaker vs. De Ridder,Ibo Aslan,Billy Elekana,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6244,07c2af68b6dbc4ec,2025-08-02,UFC Fight Night: Taira vs. Park,Austin Bashi,John Yannis,1,0,favorite_won,1,1.5147058367729187,2.0,2,favorite,0.7573529183864594
+6245,111e66eb922449e4,2025-08-02,UFC Fight Night: Taira vs. Park,Kevin Vallejos,Danny Silva,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6246,282c8c6c1ed82bfb,2025-08-02,UFC Fight Night: Taira vs. Park,Tatsuro Taira,HyunSung Park,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6247,426a69e343822ab3,2025-08-02,UFC Fight Night: Taira vs. Park,Mateusz Rebecki,Chris Duncan,0,1,favorite_won,0,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6248,45781930d64da456,2025-08-02,UFC Fight Night: Taira vs. Park,Rodolfo Vieira,Tresean Gore,1,0,favorite_won,1,1.6571428775787354,2.0,2,favorite,0.8285714387893677
+6249,878941394f9e3538,2025-08-02,UFC Fight Night: Taira vs. Park,Esteban Ribovics,Elves Brener,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6250,ac57250e3de89d5d,2025-08-02,UFC Fight Night: Taira vs. Park,Elizeu Zaleski dos Santos,Neil Magny,0,1,favorite_won,0,1.2631549835205078,2.0,2,favorite,0.6315774917602539
+6251,b3c695728e177fd4,2025-08-02,UFC Fight Night: Taira vs. Park,Andrey Pulyaev,Nick Klein,1,0,favorite_won,1,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6252,b47db03affb279c3,2025-08-02,UFC Fight Night: Taira vs. Park,Rafael Estevam,Felipe Bunes,1,0,favorite_won,1,1.698051929473877,2.0,2,favorite,0.8490259647369385
+6253,c62ed8a6002b5360,2025-08-02,UFC Fight Night: Taira vs. Park,Karol Rosa,Nora Cornolle,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6254,d98d6b2c13557a87,2025-08-02,UFC Fight Night: Taira vs. Park,Piera Rodriguez,Ketlen Souza,1,0,favorite_won,1,1.458133041858673,2.0,2,favorite,0.7290665209293365
+6255,eeeffa7f514e0c0e,2025-08-02,UFC Fight Night: Taira vs. Park,Rinya Nakamura,Nathan Fletcher,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6256,37d58369782cb86b,2025-08-09,UFC Fight Night: Dolidze vs. Hernandez,Steve Erceg,Ode Osbourne,1,0,favorite_won,1,1.5305642485618591,2.0,2,favorite,0.7652821242809296
+6257,3d6571790c21527c,2025-08-09,UFC Fight Night: Dolidze vs. Hernandez,Julius Walker,Rafael Cerqueira,1,0,favorite_won,1,1.5527734756469727,2.0,2,favorite,0.7763867378234863
+6258,646c79a7ecd12e5f,2025-08-09,UFC Fight Night: Dolidze vs. Hernandez,Iasmin Lucindo,Angela Hill,1,0,favorite_won,1,1.4722222089767456,2.0,2,favorite,0.7361111044883728
+6259,68fe62bac7fd8bb0,2025-08-09,UFC Fight Night: Dolidze vs. Hernandez,Anthony Hernandez,Roman Dolidze,1,0,favorite_won,1,1.4896551966667175,2.0,2,favorite,0.7448275983333588
+6260,6ef50ed03b116b60,2025-08-09,UFC Fight Night: Dolidze vs. Hernandez,Gabriella Fernandes,Julija Stoliarenko,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6261,75a84211f50c53f5,2025-08-09,UFC Fight Night: Dolidze vs. Hernandez,Christian Leroy Duncan,Eryk Anders,1,0,favorite_won,1,1.5527734756469727,2.0,2,favorite,0.7763867378234863
+6262,7d923267c44dd93b,2025-08-09,UFC Fight Night: Dolidze vs. Hernandez,Uros Medic,Gilbert Urbina,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6263,857e8facd8ff7c36,2025-08-09,UFC Fight Night: Dolidze vs. Hernandez,Cody Brundage,Eric McConico,0,1,favorite_won,0,1.3404634594917297,2.0,2,favorite,0.6702317297458649
+6264,98d6771af9b0ebe5,2025-08-09,UFC Fight Night: Dolidze vs. Hernandez,Christian Rodriguez,Andre Fili,0,1,favorite_won,0,1.4359238147735596,2.0,2,favorite,0.7179619073867798
+6265,ae7a8f19743e8154,2025-08-09,UFC Fight Night: Dolidze vs. Hernandez,Elijah Smith,Toshiomi Kazama,1,0,favorite_won,1,1.8409090638160706,2.0,2,favorite,0.9204545319080353
+6266,aef44145740741b3,2025-08-09,UFC Fight Night: Dolidze vs. Hernandez,Joselyne Edwards,Priscila Cachoeira,1,0,favorite_won,1,1.8571428656578064,2.0,2,favorite,0.9285714328289032
+6267,ed5383b50ffcdded,2025-08-09,UFC Fight Night: Dolidze vs. Hernandez,Jean Matsumoto,Miles Johns,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6268,12cedec11b37ddc0,2025-08-16,UFC 319: Du Plessis vs. Chimaev,Khamzat Chimaev,Dricus Du Plessis,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6269,1d8dc0fb5d47357f,2025-08-16,UFC 319: Du Plessis vs. Chimaev,Chase Hooper,Alexander Hernandez,0,1,favorite_won,0,2.0,2.0,2,favorite,1.0
+6270,42585ce706c086de,2025-08-16,UFC 319: Du Plessis vs. Chimaev,Carlos Prates,Geoff Neal,1,0,favorite_won,1,1.3960189819335938,2.0,2,favorite,0.6980094909667969
+6271,5b880d10b0ed7acc,2025-08-16,UFC 319: Du Plessis vs. Chimaev,Michal Oleksiejczuk,Gerald Meerschaert,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6272,5efd13a12be06706,2025-08-16,UFC 319: Du Plessis vs. Chimaev,Baisangur Susurkaev,Eric Nolan,1,0,favorite_won,1,1.5527734756469727,2.0,2,favorite,0.7763867378234863
+6273,68c423c7119004f3,2025-08-16,UFC 319: Du Plessis vs. Chimaev,Alibi Idiris,Joseph Morales,0,1,favorite_won,0,1.674242377281189,2.0,2,favorite,0.8371211886405945
+6274,82338ba457fbe87f,2025-08-16,UFC 319: Du Plessis vs. Chimaev,Kai Asakura,Tim Elliott,0,1,favorite_won,0,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6275,88020d22cf905792,2025-08-16,UFC 319: Du Plessis vs. Chimaev,Karine Silva,Dione Barbosa,1,0,favorite_won,1,1.3960189819335938,2.0,2,favorite,0.6980094909667969
+6276,9939d7073462e07e,2025-08-16,UFC 319: Du Plessis vs. Chimaev,Michael Page,Jared Cannonier,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6277,9fa6a029f7f8241c,2025-08-16,UFC 319: Du Plessis vs. Chimaev,Aaron Pico,Lerone Murphy,0,1,favorite_won,0,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6278,a2eafd9e1d5031b1,2025-08-16,UFC 319: Du Plessis vs. Chimaev,Loopy Godinez,Jessica Andrade,1,0,favorite_won,1,1.2720727920532227,2.0,2,favorite,0.6360363960266113
+6279,bc63f1b2e52f603e,2025-08-16,UFC 319: Du Plessis vs. Chimaev,Edson Barboza,Drakkar Klose,0,1,favorite_won,0,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6280,0b1460c666e66d39,2025-08-23,UFC Fight Night: Walker vs. Zhang,Gauge Young,Maheshate,1,0,favorite_won,1,1.4340866208076477,2.0,2,favorite,0.7170433104038239
+6281,130e622d4d2aee3e,2025-08-23,UFC Fight Night: Walker vs. Zhang,Michel Pereira,Kyle Daukaus,0,1,favorite_won,0,1.458133041858673,2.0,2,favorite,0.7290665209293365
+6282,1452c20d964c0a63,2025-08-23,UFC Fight Night: Walker vs. Zhang,Taiyilake Nueraji,Kiefer Crosbie,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6283,1ab1ed99a4bc5494,2025-08-23,UFC Fight Night: Walker vs. Zhang,Lone'er Kavanagh,Charles Johnson,0,1,favorite_won,0,1.3960189819335938,2.0,2,favorite,0.6980094909667969
+6284,2eecf0c36192e40c,2025-08-23,UFC Fight Night: Walker vs. Zhang,Zhang Mingyang,Johnny Walker,0,1,favorite_won,0,1.550000011920929,2.0,2,favorite,0.7750000059604645
+6285,2f6065fe0804d1d8,2025-08-23,UFC Fight Night: Walker vs. Zhang,SuYoung You,Xiao Long,1,0,favorite_won,1,1.2720727920532227,2.0,2,favorite,0.6360363960266113
+6286,5538d15c4eeac3b3,2025-08-23,UFC Fight Night: Walker vs. Zhang,Sergei Pavlovich,Waldo Cortes-Acosta,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6287,58080e8989927500,2025-08-23,UFC Fight Night: Walker vs. Zhang,Aljamain Sterling,Brian Ortega,1,0,favorite_won,1,1.698051929473877,2.0,2,favorite,0.8490259647369385
+6288,7fc5f1dc2df84ac7,2025-08-23,UFC Fight Night: Walker vs. Zhang,Diyar Nurgozhay,Uran Satybaldiev,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6289,ce6bd165bef82bd7,2025-08-23,UFC Fight Night: Walker vs. Zhang,Sumudaerji,Kevin Borjas,1,0,favorite_won,1,1.2720727920532227,2.0,2,favorite,0.6360363960266113
+6290,f0b7caa90faf47e5,2025-08-23,UFC Fight Night: Walker vs. Zhang,Yizha,Westin Wilson,1,0,favorite_won,1,1.5527734756469727,2.0,2,favorite,0.7763867378234863
+6291,f55749e32ce5c6f3,2025-08-23,UFC Fight Night: Walker vs. Zhang,Rongzhu,Austin Hubbard,1,0,favorite_won,1,1.4896551966667175,2.0,2,favorite,0.7448275983333588
+6292,0149e875b31e57f8,2025-09-06,UFC Fight Night: Imavov vs. Borralho,Modestas Bukauskas,Paul Craig,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6293,23dbe713c4294c66,2025-09-06,UFC Fight Night: Imavov vs. Borralho,Marcin Tybura,Ante Delija,0,1,favorite_won,0,1.4395604729652405,2.0,2,favorite,0.7197802364826202
+6294,4080b4310d82b42d,2025-09-06,UFC Fight Night: Imavov vs. Borralho,Oumar Sy,Brendson Ribeiro,1,0,favorite_won,1,1.5305642485618591,2.0,2,favorite,0.7652821242809296
+6295,420211200a35c1d1,2025-09-06,UFC Fight Night: Imavov vs. Borralho,Sam Patterson,Trey Waters,1,0,favorite_won,1,1.3404634594917297,2.0,2,favorite,0.6702317297458649
+6296,5bcd8abf6da01dae,2025-09-06,UFC Fight Night: Imavov vs. Borralho,Caio Borralho,Nassourdine Imavov,0,1,favorite_won,0,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6297,5cd2dd6075fadcce,2025-09-06,UFC Fight Night: Imavov vs. Borralho,Harry Hardwick,Kaue Fernandes,0,1,favorite_won,0,1.4340866208076477,2.0,2,favorite,0.7170433104038239
+6298,69b31593175f77ec,2025-09-06,UFC Fight Night: Imavov vs. Borralho,Mason Jones,Bolaji Oki,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6299,a38010639e61885c,2025-09-06,UFC Fight Night: Imavov vs. Borralho,Sam Hughes,Shauna Bannon,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6300,a47123ae6e048f11,2025-09-06,UFC Fight Night: Imavov vs. Borralho,Axel Sola,Rhys McKee,1,0,favorite_won,1,1.2720727920532227,2.0,2,favorite,0.6360363960266113
+6301,b3253e2c2d111030,2025-09-06,UFC Fight Night: Imavov vs. Borralho,Brad Tavares,Robert Bryczek,0,1,favorite_won,0,1.458133041858673,2.0,2,favorite,0.7290665209293365
+6302,b53031bf4bd0a330,2025-09-06,UFC Fight Night: Imavov vs. Borralho,William Gomis,Robert Ruchala,1,0,favorite_won,1,1.6571428775787354,2.0,2,favorite,0.8285714387893677
+6303,d14fea43712707f0,2025-09-06,UFC Fight Night: Imavov vs. Borralho,Mauricio Ruffy,Benoit Saint Denis,0,1,favorite_won,0,0.8190476596355438,2.0,2,favorite,0.4095238298177719
+6304,d56a59a4c79cf515,2025-09-06,UFC Fight Night: Imavov vs. Borralho,Andreas Gustafsson,Rinat Fakhretdinov,0,1,favorite_won,0,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6305,07a378b257aad5a9,2025-09-13,UFC Fight Night: Lopes vs. Silva,Dusko Todorovic,Jose Daniel Medina,1,0,favorite_won,1,1.5147058367729187,2.0,2,favorite,0.7573529183864594
+6306,114d2f6fcd3f6f00,2025-09-13,UFC Fight Night: Lopes vs. Silva,Kelvin Gastelum,Dustin Stoltzfus,1,0,favorite_won,1,1.3960189819335938,2.0,2,favorite,0.6980094909667969
+6307,202c47db69768356,2025-09-13,UFC Fight Night: Lopes vs. Silva,Diego Ferreira,Alexander Hernandez,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6308,352839a03b428e74,2025-09-13,UFC Fight Night: Lopes vs. Silva,Joaquim Silva,Claudio Puelles,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6309,3dc1a6335d890650,2025-09-13,UFC Fight Night: Lopes vs. Silva,Luis Gurule,Jesus Aguilar,0,1,favorite_won,0,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6310,3dd2fde7bff79c51,2025-09-13,UFC Fight Night: Lopes vs. Silva,Daniil Donchenko,Rodrigo Sezinando,1,0,favorite_won,1,1.511864423751831,2.0,2,favorite,0.7559322118759155
+6311,7cbfeba85f86d1bf,2025-09-13,UFC Fight Night: Lopes vs. Silva,Jared Gordon,Rafa Garcia,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6312,8a884a7930d75ca9,2025-09-13,UFC Fight Night: Lopes vs. Silva,Santiago Luna,Quang Le,1,0,favorite_won,1,1.2720727920532227,2.0,2,favorite,0.6360363960266113
+6313,944b929130b23c2a,2025-09-13,UFC Fight Night: Lopes vs. Silva,Rob Font,David Martinez,0,1,favorite_won,0,0.9379543662071228,2.0,2,favorite,0.4689771831035614
+6314,9474f64347aade7a,2025-09-13,UFC Fight Night: Lopes vs. Silva,Tatiana Suarez,Amanda Lemos,1,0,favorite_won,1,1.8571428656578064,2.0,2,favorite,0.9285714328289032
+6315,a1e193425e716b42,2025-09-13,UFC Fight Night: Lopes vs. Silva,Alessandro Costa,Alden Coria,0,1,favorite_won,0,1.511864423751831,2.0,2,favorite,0.7559322118759155
+6316,c4a6174b0698652e,2025-09-13,UFC Fight Night: Lopes vs. Silva,Alice Pereira,Montse Rendon,0,1,favorite_won,0,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6317,de1a3734be60e6a1,2025-09-13,UFC Fight Night: Lopes vs. Silva,Jean Silva,Diego Lopes,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6318,20971ed9a842b0cb,2025-11-08,UFC Fight Night: Bonfim vs. Brown,Chris Padilla,Ismael Bonfim,1,0,favorite_won,1,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6319,238c274c90587e21,2025-11-08,UFC Fight Night: Bonfim vs. Brown,Daniel Marcos,Miles Johns,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6320,4e224ebb6394611d,2025-11-08,UFC Fight Night: Bonfim vs. Brown,Gabriel Bonfim,Randy Brown,1,0,favorite_won,1,1.2720727920532227,2.0,2,favorite,0.6360363960266113
+6321,80eae31bc0a94a65,2025-11-08,UFC Fight Night: Bonfim vs. Brown,Jacqueline Cavalcanti,Mayra Bueno Silva,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6322,84b66bf7fba2d59d,2025-11-08,UFC Fight Night: Bonfim vs. Brown,Zach Reese,Jackson McVey,1,0,favorite_won,1,1.4046555161476135,2.0,2,favorite,0.7023277580738068
+6323,87dcb3eab20f6ac1,2025-11-08,UFC Fight Night: Bonfim vs. Brown,Josh Hokit,Max Gimenis,1,0,favorite_won,1,1.5305642485618591,2.0,2,favorite,0.7652821242809296
+6324,9126633d921afb57,2025-11-08,UFC Fight Night: Bonfim vs. Brown,Denise Gomes,Tecia Pennington,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6325,ac4343150638b635,2025-11-08,UFC Fight Night: Bonfim vs. Brown,Marco Tulio,Christian Leroy Duncan,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6326,b23fa678cc65cf5b,2025-11-08,UFC Fight Night: Bonfim vs. Brown,Uros Medic,Muslim Salikhov,1,0,favorite_won,1,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6327,c6d56aad93f98249,2025-11-08,UFC Fight Night: Bonfim vs. Brown,Ricky Simon,Raoni Barcelos,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6328,e3d657dd88864ba7,2025-11-08,UFC Fight Night: Bonfim vs. Brown,Hyder Amil,Jamall Emmers,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6329,f7e9bd2d6f81aeae,2025-11-08,UFC Fight Night: Bonfim vs. Brown,Joseph Morales,Matt Schnell,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6330,00ee51bba08b7a08,2025-11-22,UFC Fight Night: Tsarukyan vs. Hooker,Tagir Ulanbekov,Kyoji Horiguchi,0,1,favorite_won,0,1.511864423751831,2.0,2,favorite,0.7559322118759155
+6331,335064c3380e2f10,2025-11-22,UFC Fight Night: Tsarukyan vs. Hooker,Ismail Naurdiev,Ryan Loder,1,0,favorite_won,1,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6332,443f30a4a856584a,2025-11-22,UFC Fight Night: Tsarukyan vs. Hooker,Asu Almabayev,Alex Perez,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6333,46f81d5ecd974c1c,2025-11-22,UFC Fight Night: Tsarukyan vs. Hooker,Nurullo Aliev,Shem Rock,1,0,favorite_won,1,1.511864423751831,2.0,2,favorite,0.7559322118759155
+6334,5e6a74db89f5410c,2025-11-22,UFC Fight Night: Tsarukyan vs. Hooker,Luke Riley,Bogdan Grad,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6335,5f5b626e67529056,2025-11-22,UFC Fight Night: Tsarukyan vs. Hooker,Arman Tsarukyan,Dan Hooker,1,0,favorite_won,1,1.8571428656578064,2.0,2,favorite,0.9285714328289032
+6336,6f0231915cc28507,2025-11-22,UFC Fight Night: Tsarukyan vs. Hooker,Aleksandre Topuria,Bekzat Almakhan,1,0,favorite_won,1,1.2720727920532227,2.0,2,favorite,0.6360363960266113
+6337,870d374f8d9af65a,2025-11-22,UFC Fight Night: Tsarukyan vs. Hooker,Volkan Oezdemir,Alonzo Menifield,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6338,8ed609d80e135d94,2025-11-22,UFC Fight Night: Tsarukyan vs. Hooker,Myktybek Orolbai,Jack Hermansson,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6339,9027e156c6f1988a,2025-11-22,UFC Fight Night: Tsarukyan vs. Hooker,Denzel Freeman,Marek Bujlo,1,0,favorite_won,1,1.511864423751831,2.0,2,favorite,0.7559322118759155
+6340,b2218930b982d9b6,2025-11-22,UFC Fight Night: Tsarukyan vs. Hooker,Ian Machado Garry,Belal Muhammad,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6341,c49485cedb878cf0,2025-11-22,UFC Fight Night: Tsarukyan vs. Hooker,Saygid Izagakhmaev,Nicolas Dalby,0,1,favorite_won,0,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6342,e8307c7686c42d8c,2025-11-22,UFC Fight Night: Tsarukyan vs. Hooker,Waldo Cortes Acosta,Shamil Gaziev,1,0,favorite_won,1,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6343,f5564a9eeebd4ea0,2025-11-22,UFC Fight Night: Tsarukyan vs. Hooker,Abdul Rakhman Yakhyaev,Rafael Cerqueira,1,0,favorite_won,1,1.4896551966667175,2.0,2,favorite,0.7448275983333588
+6344,0fca825e14429c1f,2025-12-13,UFC Fight Night: Royval vs. Kape,Yaroslav Amosov,Neil Magny,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6345,225e93ebed9b71b8,2025-12-13,UFC Fight Night: Royval vs. Kape,Joanderson Brito,Isaac Thomson,1,0,favorite_won,1,1.3960189819335938,2.0,2,favorite,0.6980094909667969
+6346,24bb03f0a3415fbe,2025-12-13,UFC Fight Night: Royval vs. Kape,Kevin Vallejos,Giga Chikadze,1,0,favorite_won,1,1.4896551966667175,2.0,2,favorite,0.7448275983333588
+6347,71170fb7ade3e1f4,2025-12-13,UFC Fight Night: Royval vs. Kape,Tereza Bleda,Jamey-Lyn Horth,0,1,favorite_won,0,1.4359238147735596,2.0,2,favorite,0.7179619073867798
+6348,93ca562453f65b8d,2025-12-13,UFC Fight Night: Royval vs. Kape,Melquizael Costa,Morgan Charriere,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6349,a2523a8565fe4361,2025-12-13,UFC Fight Night: Royval vs. Kape,Steven Asplund,Sean Sharaf,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6350,a5a81a39ccf9b680,2025-12-13,UFC Fight Night: Royval vs. Kape,Manel Kape,Brandon Royval,1,0,favorite_won,1,1.400765597820282,2.0,2,favorite,0.700382798910141
+6351,ac56a1052c4c8f63,2025-12-13,UFC Fight Night: Royval vs. Kape,Guilherme Pat,Allen Frye Jr.,1,0,favorite_won,1,1.458133041858673,2.0,2,favorite,0.7290665209293365
+6352,ceb5b0f1f6daddf6,2025-12-13,UFC Fight Night: Royval vs. Kape,Luana Santos,Melissa Croden,1,0,favorite_won,1,1.1620246767997742,2.0,2,favorite,0.5810123383998871
+6353,d000cb692343cdcd,2025-12-13,UFC Fight Night: Royval vs. Kape,Cezary Oleksiejczuk,Cesar Almeida,1,0,favorite_won,1,1.3960189819335938,2.0,2,favorite,0.6980094909667969
+6354,007e8e0d4a39d82c,2026-01-24,UFC 324: Gaethje vs. Pimblett,Sean O'Malley,Song Yadong,1,0,favorite_won,1,1.458133041858673,2.0,2,favorite,0.7290665209293365
+6355,210fc45074fba464,2026-01-24,UFC 324: Gaethje vs. Pimblett,Ty Miller,Adam Fugitt,1,0,favorite_won,1,1.4896551966667175,2.0,2,favorite,0.7448275983333588
+6356,33be2456161c14c3,2026-01-24,UFC 324: Gaethje vs. Pimblett,Ateba Gautier,Andrey Pulyaev,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6357,6c9f4799990c3c33,2026-01-24,UFC 324: Gaethje vs. Pimblett,Umar Nurmagomedov,Deiveson Figueiredo,1,0,favorite_won,1,1.698051929473877,2.0,2,favorite,0.8490259647369385
+6358,780cab0cd07589e4,2026-01-24,UFC 324: Gaethje vs. Pimblett,Modestas Bukauskas,Nikita Krylov,0,1,favorite_won,0,1.0828713178634644,2.0,2,favorite,0.5414356589317322
+6359,836a188a90e479a5,2026-01-24,UFC 324: Gaethje vs. Pimblett,Jean Silva,Arnold Allen,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6360,abfb3ed6dcb0e1f0,2026-01-24,UFC 324: Gaethje vs. Pimblett,Josh Hokit,Denzel Freeman,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6361,b5aafe149bec4306,2026-01-24,UFC 324: Gaethje vs. Pimblett,Charles Johnson,Alex Perez,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6362,d63c9aa4f4873001,2026-01-24,UFC 324: Gaethje vs. Pimblett,Natalia Silva,Rose Namajunas,1,0,favorite_won,1,1.511864423751831,2.0,2,favorite,0.7559322118759155
+6363,d93ee3860196c4ae,2026-01-24,UFC 324: Gaethje vs. Pimblett,Waldo Cortes Acosta,Derrick Lewis,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6364,fa4b3f5ce8055921,2026-01-24,UFC 324: Gaethje vs. Pimblett,Paddy Pimblett,Justin Gaethje,0,1,favorite_won,0,1.4118773937225342,2.0,2,favorite,0.7059386968612671
+6365,0047f8aadca1936f,2026-01-31,UFC 325: Volkanovski vs. Lopes 2,Jacob Malkoun,Torrez Finney,1,0,favorite_won,1,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6366,32e9bc4d0a19a923,2026-01-31,UFC 325: Volkanovski vs. Lopes 2,Quillan Salkilld,Jamie Mullarkey,1,0,favorite_won,1,1.511864423751831,2.0,2,favorite,0.7559322118759155
+6367,47362cae6ba0e077,2026-01-31,UFC 325: Volkanovski vs. Lopes 2,Cam Rowston,Cody Brundage,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6368,4c1e7e1765a5438a,2026-01-31,UFC 325: Volkanovski vs. Lopes 2,Yizha,Kaan Ofli,0,1,favorite_won,0,1.3960189819335938,2.0,2,favorite,0.6980094909667969
+6369,57d7a683b85bb87b,2026-01-31,UFC 325: Volkanovski vs. Lopes 2,Rafael Fiziev,Mauricio Ruffy,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6370,5c73e0013b859664,2026-01-31,UFC 325: Volkanovski vs. Lopes 2,Sulangrangbo,Lawrence Lui,0,1,favorite_won,0,1.511864423751831,2.0,2,favorite,0.7559322118759155
+6371,67765535bd0b6bdf,2026-01-31,UFC 325: Volkanovski vs. Lopes 2,Tallison Teixeira,Tai Tuivasa,1,0,favorite_won,1,1.4896551966667175,2.0,2,favorite,0.7448275983333588
+6372,780bae82bdfc7112,2026-01-31,UFC 325: Volkanovski vs. Lopes 2,Sebastian Szalay,Keiichiro Nakamura,0,1,favorite_won,0,1.2942820191383362,2.0,2,favorite,0.6471410095691681
+6373,78912b78aa946375,2026-01-31,UFC 325: Volkanovski vs. Lopes 2,Jonathan Micallef,Oban Elliott,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6374,a7ae8f6eb5fc3a79,2026-01-31,UFC 325: Volkanovski vs. Lopes 2,Benoit Saint Denis,Dan Hooker,1,0,favorite_won,1,1.5305642485618591,2.0,2,favorite,0.7652821242809296
+6375,ad14c502c9c5a7e9,2026-01-31,UFC 325: Volkanovski vs. Lopes 2,Dom Mar Fan,Sangwook Kim,1,0,favorite_won,1,1.2942820191383362,2.0,2,favorite,0.6471410095691681
+6376,b06b43670238c2d8,2026-01-31,UFC 325: Volkanovski vs. Lopes 2,Alexander Volkanovski,Diego Lopes,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6377,d94f1b32a81e3fa1,2026-01-31,UFC 325: Volkanovski vs. Lopes 2,Billy Elekana,Junior Tafa,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6378,2a26c0cfa06265b7,2026-02-07,UFC Fight Night: Bautista vs. Oliveira,Farid Basharat,Jean Matsumoto,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6379,2bbfbb234c255249,2026-02-07,UFC Fight Night: Bautista vs. Oliveira,Klaudia Sygula,Priscila Cachoeira,1,0,favorite_won,1,1.6034114956855774,2.0,2,favorite,0.8017057478427887
+6380,6cca11f353a2b42d,2026-02-07,UFC Fight Night: Bautista vs. Oliveira,Dustin Jacoby,Julius Walker,1,0,favorite_won,1,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6381,84e8ccc3c97c2b4c,2026-02-07,UFC Fight Night: Bautista vs. Oliveira,Wang Cong,Eduarda Moura,1,0,favorite_won,1,1.4359238147735596,2.0,2,favorite,0.7179619073867798
+6382,86df0e75f41784d8,2026-02-07,UFC Fight Night: Bautista vs. Oliveira,Javid Basharat,Gianni Vazquez,1,0,favorite_won,1,1.636791169643402,2.0,2,favorite,0.818395584821701
+6383,8fea32ab0445859c,2026-02-07,UFC Fight Night: Bautista vs. Oliveira,Michal Oleksiejczuk,Marc-Andre Barriault,1,0,favorite_won,1,1.698051929473877,2.0,2,favorite,0.8490259647369385
+6384,9d30c887e8bd8824,2026-02-07,UFC Fight Night: Bautista vs. Oliveira,Muin Gafurov,Jakub Wiklacz,0,1,favorite_won,0,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6385,a5c5f76cf0a7c784,2026-02-07,UFC Fight Night: Bautista vs. Oliveira,Jailton Almeida,Rizvan Kuniev,0,1,favorite_won,0,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6386,abefaf1807941ee4,2026-02-07,UFC Fight Night: Bautista vs. Oliveira,Nikolay Veretennikov,Niko Price,1,0,favorite_won,1,1.4896551966667175,2.0,2,favorite,0.7448275983333588
+6387,cc5c5a8cff4c1ae9,2026-02-07,UFC Fight Night: Bautista vs. Oliveira,Ketlen Souza,Bruna Brasil,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6388,dbbf8334a2600895,2026-02-07,UFC Fight Night: Bautista vs. Oliveira,Kyoji Horiguchi,Amir Albazi,1,0,favorite_won,1,1.4901899099349976,2.0,2,favorite,0.7450949549674988
+6389,f964d2dda87f25f0,2026-02-07,UFC Fight Night: Bautista vs. Oliveira,Daniil Donchenko,Alex Morono,1,0,favorite_won,1,1.5305642485618591,2.0,2,favorite,0.7652821242809296
+6390,fb4b1754d510b0d0,2026-02-07,UFC Fight Night: Bautista vs. Oliveira,Mario Bautista,Vinicius Oliveira,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6391,04b7bcc0e8488604,2026-02-21,UFC Fight Night: Strickland vs. Hernandez,Ante Delija,Serghei Spivac,0,1,favorite_won,0,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6392,202d3277e569ad03,2026-02-21,UFC Fight Night: Strickland vs. Hernandez,Carlos Leal,Chidi Njokuani,1,0,favorite_won,1,0.8190476596355438,2.0,2,favorite,0.4095238298177719
+6393,372d1dee0db8dbee,2026-02-21,UFC Fight Night: Strickland vs. Hernandez,Michel Pereira,Zach Reese,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6394,508e622130b0a84d,2026-02-21,UFC Fight Night: Strickland vs. Hernandez,Jean-Paul Lebosnoyani,Phil Rowe,1,0,favorite_won,1,1.458133041858673,2.0,2,favorite,0.7290665209293365
+6395,54437b8dba3a6110,2026-02-21,UFC Fight Night: Strickland vs. Hernandez,Jacobe Smith,Josiah Harrell,1,0,favorite_won,1,1.800000011920929,2.0,2,favorite,0.9000000059604645
+6396,5b97f47cdd355cbe,2026-02-21,UFC Fight Night: Strickland vs. Hernandez,Yadier del Valle,Jordan Leavitt,0,1,favorite_won,0,1.5305642485618591,2.0,2,favorite,0.7652821242809296
+6397,6e78d874097a3d22,2026-02-21,UFC Fight Night: Strickland vs. Hernandez,Carli Judice,Juliana Miller,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6398,8d740c844353ae0e,2026-02-21,UFC Fight Night: Strickland vs. Hernandez,Anthony Hernandez,Sean Strickland,0,1,favorite_won,0,1.511864423751831,2.0,2,favorite,0.7559322118759155
+6399,8f9896e60047007f,2026-02-21,UFC Fight Night: Strickland vs. Hernandez,Punahele Soriano,Ramiz Brahimaj,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6400,ac39c1f00ae31e58,2026-02-21,UFC Fight Night: Strickland vs. Hernandez,Alden Coria,Luis Gurule,1,0,favorite_won,1,1.5305642485618591,2.0,2,favorite,0.7652821242809296
+6401,dc6f6c8228390ebb,2026-02-21,UFC Fight Night: Strickland vs. Hernandez,Melquizael Costa,Dan Ige,1,0,favorite_won,1,1.4359238147735596,2.0,2,favorite,0.7179619073867798
+6402,dd12bf51c5ed7f1e,2026-02-21,UFC Fight Night: Strickland vs. Hernandez,Geoff Neal,Uros Medic,0,1,favorite_won,0,1.273796796798706,2.0,2,favorite,0.636898398399353
+6403,fd56a469e4589ebc,2026-02-21,UFC Fight Night: Strickland vs. Hernandez,Joselyne Edwards,Nora Cornolle,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6404,1330b5c21269fe92,2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,Brandon Moreno,Lone'er Kavanagh,0,1,favorite_won,0,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6405,15068d7b095ca9bd,2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,Imanol Rodriguez,Kevin Borjas,1,0,favorite_won,1,1.5305642485618591,2.0,2,favorite,0.7652821242809296
+6406,25ab195cefbce1d0,2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,Cristian Quinonez,Kris Moutinho,1,0,favorite_won,1,1.8571428656578064,2.0,2,favorite,0.9285714328289032
+6407,36d12b31957e94db,2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,David Martinez,Marlon Vera,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6408,3b76a00f5d0400eb,2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,Santiago Luna,Angel Pacheco,1,0,favorite_won,1,1.5527734756469727,2.0,2,favorite,0.7763867378234863
+6409,44d58943ac8e47e1,2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,Ernesta Kareckaite,Regina Tarin,0,1,favorite_won,0,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6410,45ec0c5f19c9adbe,2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,Ryan Gandra,Jose Daniel Medina,1,0,favorite_won,1,1.511864423751831,2.0,2,favorite,0.7559322118759155
+6411,581292ffe5b09344,2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,Francis Marshall,Erik Silva,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6412,6154ee95d3f4fc32,2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,Javier Reyes,Douglas Silva de Andrade,1,0,favorite_won,1,1.458133041858673,2.0,2,favorite,0.7290665209293365
+6413,7df505d8260ba680,2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,Edgar Chairez,Felipe Bunes,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6414,81f3d28d30d17378,2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,Daniel Zellhuber,King Green,0,1,favorite_won,0,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6415,c40b934d2666e351,2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,Ailin Perez,Macy Chiasson,1,0,favorite_won,1,1.4340866208076477,2.0,2,favorite,0.7170433104038239
+6416,c6a85b67fdd2ef3d,2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,Damian Pinas,Wes Schultz,1,0,favorite_won,1,1.511864423751831,2.0,2,favorite,0.7559322118759155
+6417,6a4738656c493ee9,2026-03-07,UFC 326: Holloway vs. Oliveira 2,Gregory Rodrigues,Brunno Ferreira,1,0,favorite_won,1,1.2720727920532227,2.0,2,favorite,0.6360363960266113
+6418,6feb49a6b7e8433c,2026-03-07,UFC 326: Holloway vs. Oliveira 2,Alberto Montes,Ricky Turcios,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6419,9c8d5dbd8905a715,2026-03-07,UFC 326: Holloway vs. Oliveira 2,Donte Johnson,Cody Brundage,1,0,favorite_won,1,1.698051929473877,2.0,2,favorite,0.8490259647369385
+6420,a22fd3735819d858,2026-03-07,UFC 326: Holloway vs. Oliveira 2,Sumudaerji,Jesus Aguilar,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6421,a5abdc461cb1538e,2026-03-07,UFC 326: Holloway vs. Oliveira 2,Luke Fernandez,Rodolfo Bellato,0,1,favorite_won,0,1.3960189819335938,2.0,2,favorite,0.6980094909667969
+6422,bed89a91da9d04c1,2026-03-07,UFC 326: Holloway vs. Oliveira 2,Raul Rosas Jr.,Rob Font,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6423,cc03e698c4b7da52,2026-03-07,UFC 326: Holloway vs. Oliveira 2,Rafael Tobias,Diyar Nurgozhay,0,1,favorite_won,0,1.2720727920532227,2.0,2,favorite,0.6360363960266113
+6424,d564db29997e1371,2026-03-07,UFC 326: Holloway vs. Oliveira 2,Caio Borralho,Reinier de Ridder,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6425,f02c0adc4ae629c6,2026-03-07,UFC 326: Holloway vs. Oliveira 2,Drew Dober,Michael Johnson,1,0,favorite_won,1,1.376202642917633,2.0,2,favorite,0.6881013214588165
+6426,f030febede41c661,2026-03-07,UFC 326: Holloway vs. Oliveira 2,Max Holloway,Charles Oliveira,0,1,favorite_won,0,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6427,f661ef429055f8c1,2026-03-07,UFC 326: Holloway vs. Oliveira 2,Nyamjargal Tumendemberel,Cody Durden,1,0,favorite_won,1,1.1333333849906921,2.0,2,favorite,0.5666666924953461
+6428,244285b7fd0ddece,2026-03-14,UFC Fight Night: Emmett vs. Vallejos,Piera Rodriguez,Sam Hughes,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6429,2c330a6f7f1e55f0,2026-03-14,UFC Fight Night: Emmett vs. Vallejos,Vitor Petrino,Steven Asplund,1,0,favorite_won,1,0.8190476596355438,2.0,2,favorite,0.4095238298177719
+6430,32d371462c539bee,2026-03-14,UFC Fight Night: Emmett vs. Vallejos,Hecher Sosa,Luan Lacerda,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6431,3b7b771b9578383d,2026-03-14,UFC Fight Night: Emmett vs. Vallejos,Gillian Robertson,Amanda Lemos,1,0,favorite_won,1,1.511864423751831,2.0,2,favorite,0.7559322118759155
+6432,8bee5192baec71d8,2026-03-14,UFC Fight Night: Emmett vs. Vallejos,Jose Delgado,Andre Fili,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6433,8cab057e6549afd0,2026-03-14,UFC Fight Night: Emmett vs. Vallejos,Bia Mesquita,Montse Rendon,1,0,favorite_won,1,1.698051929473877,2.0,2,favorite,0.8490259647369385
+6434,c769dd861357af9f,2026-03-14,UFC Fight Night: Emmett vs. Vallejos,Manoel Sousa,Bolaji Oki,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6435,cff81d681a01ae18,2026-03-14,UFC Fight Night: Emmett vs. Vallejos,Eryk Anders,Brad Tavares,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6436,db7694f4513120d5,2026-03-14,UFC Fight Night: Emmett vs. Vallejos,Oumar Sy,Ion Cutelaba,0,1,favorite_won,0,1.6571428775787354,2.0,2,favorite,0.8285714387893677
+6437,e0acd0cf4930671b,2026-03-14,UFC Fight Night: Emmett vs. Vallejos,Marwan Rahiki,Harry Hardwick,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6438,f26c0bdf7689aea2,2026-03-14,UFC Fight Night: Emmett vs. Vallejos,Myktybek Orolbai,Chris Curtis,1,0,favorite_won,1,1.5305642485618591,2.0,2,favorite,0.7652821242809296
+6439,f44b4e998b6829f6,2026-03-14,UFC Fight Night: Emmett vs. Vallejos,Elijah Smith,SuYoung You,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6440,f594fc5c2bc6237e,2026-03-14,UFC Fight Night: Emmett vs. Vallejos,Kevin Vallejos,Josh Emmett,1,0,favorite_won,1,1.5527734756469727,2.0,2,favorite,0.7763867378234863
+6441,fc9168fd102e2e66,2026-03-14,UFC Fight Night: Emmett vs. Vallejos,Charles Johnson,Bruno Silva,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6442,216bc9b661485017,2026-03-21,UFC Fight Night: Evloev vs. Murphy,Shanelle Dyer,Ravena Oliveira,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6443,346e3897c2ead99a,2026-03-21,UFC Fight Night: Evloev vs. Murphy,Movsar Evloev,Lerone Murphy,1,0,favorite_won,1,1.4359238147735596,2.0,2,favorite,0.7179619073867798
+6444,3b9f50f07d9a1601,2026-03-21,UFC Fight Night: Evloev vs. Murphy,Losene Keita,Nathaniel Wood,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6445,3ee578ddd071ad4c,2026-03-21,UFC Fight Night: Evloev vs. Murphy,Mason Jones,Axel Sola,1,0,favorite_won,1,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6446,43e26b46cbb51985,2026-03-21,UFC Fight Night: Evloev vs. Murphy,Iwo Baraniewski,Austen Lane,1,0,favorite_won,1,1.5305642485618591,2.0,2,favorite,0.7652821242809296
+6447,4e58bcc0d27042fd,2026-03-21,UFC Fight Night: Evloev vs. Murphy,Kurtis Campbell,Danny Silva,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6448,562d916f55918901,2026-03-21,UFC Fight Night: Evloev vs. Murphy,Christian Leroy Duncan,Roman Dolidze,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6449,5ee11b727e89e8ad,2026-03-21,UFC Fight Night: Evloev vs. Murphy,Michael Page,Sam Patterson,1,0,favorite_won,1,1.458133041858673,2.0,2,favorite,0.7290665209293365
+6450,8817bd21b6d0a989,2026-03-21,UFC Fight Night: Evloev vs. Murphy,Mantas Kondratavicius,Antonio Trocoli,1,0,favorite_won,1,1.4896551966667175,2.0,2,favorite,0.7448275983333588
+6451,90187edeeda7e6d6,2026-03-21,UFC Fight Night: Evloev vs. Murphy,Mario Pinto,Felipe Franco,1,0,favorite_won,1,1.698051929473877,2.0,2,favorite,0.8490259647369385
+6452,bbe0f3653de9f6a8,2026-03-21,UFC Fight Night: Evloev vs. Murphy,Abdul-Kareem Al-Selwady,Shem Rock,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6453,bfd17ed83ec5b598,2026-03-21,UFC Fight Night: Evloev vs. Murphy,Brando Pericic,Louie Sutherland,1,0,favorite_won,1,1.458133041858673,2.0,2,favorite,0.7290665209293365
+6454,fa534aaa5b997a69,2026-03-21,UFC Fight Night: Evloev vs. Murphy,Luke Riley,Michael Aswell Jr.,1,0,favorite_won,1,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6455,08d4e3864c44f8a5,2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,Tyrell Fortune,Marcin Tybura,1,0,favorite_won,1,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6456,1c50e43770ba84fc,2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,Casey O'Neill,Gabriella Fernandes,1,0,favorite_won,1,1.2720727920532227,2.0,2,favorite,0.6360363960266113
+6457,6102e7a6dcbc62f0,2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,Michael Chiesa,Niko Price,1,0,favorite_won,1,1.8571428656578064,2.0,2,favorite,0.9285714328289032
+6458,689384b01b40ef5c,2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,Chase Hooper,Lance Gibson Jr.,0,1,favorite_won,0,1.4200654029846191,2.0,2,favorite,0.7100327014923096
+6459,796e1151896195aa,2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,Alexia Thainara,Bruna Brasil,1,0,favorite_won,1,1.698051929473877,2.0,2,favorite,0.8490259647369385
+6460,85e94a6c071fd9fa,2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,Israel Adesanya,Joe Pyfer,0,1,favorite_won,0,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6461,9a0ecee6e8ca173f,2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,Maycee Barber,Alexa Grasso,0,1,favorite_won,0,1.2942820191383362,2.0,2,favorite,0.6471410095691681
+6462,a76e14495e61cf19,2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,Terrance McKinney,Kyle Nelson,1,0,favorite_won,1,1.2562143802642822,2.0,2,favorite,0.6281071901321411
+6463,dbf1ee1a1912c735,2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,Navajo Stirling,Bruno Lopes,1,0,favorite_won,1,1.473796784877777,2.0,2,favorite,0.7368983924388885
+6464,e32dc26b11d1f81d,2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,Mansur Abdul-Malik,Yousri Belgaroui,0,1,favorite_won,0,1.2071301341056824,2.0,2,favorite,0.6035650670528412
+6465,f9f5071b993a5f4b,2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,Lerryan Douglas,Julian Erosa,1,0,favorite_won,1,1.4896551966667175,2.0,2,favorite,0.7448275983333588
+6466,fa96d6252579b51e,2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,Ignacio Bahamondes,Tofiq Musayev,0,1,favorite_won,0,1.3960189819335938,2.0,2,favorite,0.6980094909667969

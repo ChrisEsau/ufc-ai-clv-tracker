@@ -1,0 +1,75 @@
+model_id: moneyline_xgboost_v13_ensemble_top60
+model_family: moneyline
+artifact_name: moneyline_xgboost_v13_ensemble_top60
+algorithm: xgboost
+architecture: ensemble_member
+member:
+  member_id: market_aware_dog
+  probability_group: dog
+  target_column: dog_won
+  perspective: dog
+  top_n: 60
+  include_market_features: true
+  weight: 1.0
+  random_state: 504
+status: draft
+generated_at: '2026-07-06T17:18:22.291312+00:00'
+config_path: configs/models/moneyline_xgboost_v13_ensemble_top60.yaml
+artifacts_output_dir: models/moneyline/moneyline_xgboost_v13_ensemble_top60/members/market_aware_dog
+feature_count: 69
+data:
+  feature_view_path: data/features/moneyline_favdog_market_feature_view.parquet
+  date_column: date
+split:
+  mode: train_calibration_test
+  train_start_date: '2018-01-01'
+  train_end_date: '2023-12-31'
+  calibration_end_date: '2024-12-31'
+calibration:
+  enabled: true
+  method: isotonic
+early_stopping:
+  enabled: false
+  rounds: 100
+  metric: logloss
+  verbose: false
+training:
+  early_stopping_enabled: false
+  early_stopping_rounds: null
+  early_stopping_metric: null
+  best_iteration: null
+  best_score: null
+params:
+  n_estimators: 350
+  max_depth: 2
+  learning_rate: 0.02
+  subsample: 0.8
+  colsample_bytree: 0.7
+  random_state: 504
+  eval_metric: logloss
+  min_child_weight: 15
+  reg_alpha: 1.0
+  reg_lambda: 12.0
+  objective: binary:logistic
+  n_jobs: 2
+metrics:
+  accuracy: 0.700990099009901
+  log_loss: 0.570316028341558
+  roc_auc: 0.6798499702911468
+  brier_score: 0.1947535890254073
+  threshold: 0.42
+  positive_pick_rate_percent: 17.82178217821782
+  negative_pick_rate_percent: 82.17821782178218
+  actual_positive_rate_percent: 30.297029702970296
+  row_count: 505
+raw_metrics:
+  accuracy: 0.7029702970297029
+  log_loss: 0.568593878945959
+  roc_auc: 0.6843805704099821
+  brier_score: 0.19364445838708114
+  threshold: 0.44
+  positive_pick_rate_percent: 15.643564356435643
+  negative_pick_rate_percent: 84.35643564356435
+  actual_positive_rate_percent: 30.297029702970296
+  row_count: 505
+best_threshold: 0.42

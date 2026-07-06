@@ -1,0 +1,3 @@
+model_id,probability_group,target_column,member_count,row_count,best_threshold,accuracy,log_loss,roc_auc,brier_score,threshold,positive_pick_rate_percent,negative_pick_rate_percent,actual_positive_rate_percent
+moneyline_xgboost_v13_ensemble_top60,dog,dog_won,2,505,0.4,0.700990099009901,0.5865703232833583,0.6594901218062983,0.20019967680531858,0.4,1.188118811881188,98.8118811881188,30.297029702970296
+moneyline_xgboost_v13_ensemble_top60,favorite,favorite_won,2,505,0.58,0.699009900990099,0.6109739108241146,0.6591094771241829,0.20117945049231012,0.58,98.21782178217822,1.7821782178217838,69.7029702970297

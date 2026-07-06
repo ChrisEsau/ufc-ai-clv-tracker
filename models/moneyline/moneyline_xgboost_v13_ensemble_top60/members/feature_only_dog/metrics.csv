@@ -1,0 +1,10 @@
+metric,value
+accuracy,0.697029702970297
+log_loss,0.6167759890025584
+roc_auc,0.5621657754010695
+brier_score,0.21177057533903723
+threshold,0.4
+positive_pick_rate_percent,0.39603960396039606
+negative_pick_rate_percent,99.60396039603961
+actual_positive_rate_percent,30.297029702970296
+row_count,505.0

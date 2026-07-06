@@ -1,0 +1,5 @@
+member_id,probability_group,target_column,artifact_dir,feature_count,train_rows,calibration_rows,test_rows,best_threshold,accuracy,roc_auc,log_loss,brier_score,weight,uses_calibration
+feature_only_favorite,favorite,favorite_won,models/moneyline/moneyline_xgboost_v13_ensemble_top60/members/feature_only_favorite,60,2664,381,505,0.4,0.695049504950495,0.5597890671420083,0.6869648339146753,0.21408118440690027,1.0,True
+feature_only_dog,dog,dog_won,models/moneyline/moneyline_xgboost_v13_ensemble_top60/members/feature_only_dog,60,2664,381,505,0.4,0.697029702970297,0.5621657754010695,0.6167759890025584,0.21177057533903723,1.0,True
+market_aware_favorite,favorite,favorite_won,models/moneyline/moneyline_xgboost_v13_ensemble_top60/members/market_aware_favorite,69,2664,381,505,0.4,0.699009900990099,0.6737875074272134,0.5927593305763076,0.19492837710614885,1.0,True
+market_aware_dog,dog,dog_won,models/moneyline/moneyline_xgboost_v13_ensemble_top60/members/market_aware_dog,69,2664,381,505,0.42,0.700990099009901,0.6798499702911468,0.570316028341558,0.1947535890254073,1.0,True
