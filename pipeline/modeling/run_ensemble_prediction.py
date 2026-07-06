@@ -349,6 +349,36 @@ def add_favorite_dog_market_columns(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+
+def prefer_calibrated_from_config(config: Mapping[str, Any]) -> bool:
+    """Return whether ensemble members should use calibrated_model.joblib.
+
+    Default remains calibrated_model for backward compatibility.
+    Set prediction.probability_artifact: raw_model to reproduce raw-probability experiments.
+    """
+    prediction_config = config.get("prediction", {}) or {}
+    artifact = str(prediction_config.get("probability_artifact", "calibrated_model")).strip().lower()
+
+    aliases = {
+        "calibrated": "calibrated_model",
+        "calibrated_model.joblib": "calibrated_model",
+        "raw": "raw_model",
+        "raw_model.joblib": "raw_model",
+    }
+    artifact = aliases.get(artifact, artifact)
+
+    if artifact == "calibrated_model":
+        return True
+    if artifact == "raw_model":
+        return False
+
+    raise ValueError(
+        "Unsupported prediction.probability_artifact: "
+        f"{prediction_config.get('probability_artifact')!r}. "
+        "Expected raw_model or calibrated_model."
+    )
+
+
 def load_member_model(member_dir: Path, *, prefer_calibrated: bool = True) -> tuple[Any, Path]:
     calibrated = member_dir / "calibrated_model.joblib"
     raw = member_dir / "raw_model.joblib"
@@ -802,11 +832,18 @@ def main() -> None:
         raise ValueError("No live fights had both red and blue moneyline odds.")
 
     details = add_favorite_dog_market_columns(usable)
+    prefer_calibrated = prefer_calibrated_from_config(config)
+    if args.raw:
+        prefer_calibrated = False
+
+    probability_artifact = "calibrated_model" if prefer_calibrated else "raw_model"
+    print(f"Probability artifact: {probability_artifact}")
+
     details = score_members(
         df=details,
         config=config,
         manifest=manifest,
-        prefer_calibrated=not args.raw,
+        prefer_calibrated=prefer_calibrated,
     )
     details = combine_member_probabilities(details, config=config)
     details = apply_decision_rule(details, config=config)
