@@ -19,6 +19,7 @@ The trainer supports:
 """
 
 from __future__ import annotations
+from dataclasses import replace
 
 import argparse
 import json
@@ -149,13 +150,16 @@ def resolve_member_features(
     clean_fight_features: list[str],
     market_features: list[str],
 ) -> list[str]:
-    """Resolve concrete dataframe columns for one ensemble member."""
+    """Resolve feature columns for one ensemble member.
 
-    if member_config.get("feature_columns"):
-        return normalize_string_list(
-            member_config["feature_columns"],
-            label=f"{member_config.get('member_id')}.feature_columns",
-        )
+    Feature resolution order:
+    1. member.clean_fight_features, if provided
+    2. global features.clean_fight_features
+    3. optional member.top_n slicing
+    4. perspective prefixing
+    5. optional market features
+    """
+    member_id = str(member_config.get("member_id", "")).strip()
 
     perspective = str(member_config.get("perspective", "")).strip().lower()
     if perspective in {"favorite", "fav", "regular"}:
@@ -167,17 +171,29 @@ def resolve_member_features(
             f"Unsupported member perspective for {member_config.get('member_id')}: {perspective}"
         )
 
+    # Member-specific SHAP feature lists should override the global feature list.
+    # This keeps older configs backward-compatible because they simply omit this key.
+    member_clean_features = member_config.get("clean_fight_features")
+    if member_clean_features:
+        selected_clean_features = normalize_string_list(
+            member_clean_features,
+            label=f"ensemble.members.{member_id}.clean_fight_features",
+        )
+    else:
+        selected_clean_features = list(clean_fight_features)
+
+    # Keep existing top_n behavior. If a member-specific list is provided,
+    # top_n slices that member-specific list. If not, it slices the global list.
     top_n = member_config.get("top_n")
-    selected_clean_features = clean_fight_features
     if top_n is not None:
-        selected_clean_features = clean_fight_features[: int(top_n)]
+        selected_clean_features = selected_clean_features[: int(top_n)]
 
     columns = [f"{prefix}{feature}" for feature in selected_clean_features]
 
     if bool(member_config.get("include_market_features", False)):
         columns.extend(market_features)
 
-    return list(dict.fromkeys(columns))
+    return columns
 
 
 def validate_required_columns(
@@ -204,7 +220,7 @@ def build_split(
     date_column = str((config.get("data") or {}).get("date_column", "date"))
 
     if mode == "train_calibration_test":
-        return build_temporal_train_calibration_test_split(
+        split = build_temporal_train_calibration_test_split(
             df=df,
             feature_columns=feature_columns,
             train_start_date=train_start_date,
@@ -213,6 +229,47 @@ def build_split(
             target_col=target_column,
             date_col=date_column,
         )
+
+        # Optional bounded test window for walk-forward model-lab runs.
+        # The shared temporal split helper defaults to:
+        #   test = date > calibration_end_date
+        # For true walk-forward folds, configs may provide:
+        #   test_start_date <= test date <= test_end_date
+        test_start_date = str(split_config.get("test_start_date") or "").strip() or None
+        test_end_date = str(split_config.get("test_end_date") or "").strip() or None
+
+        if test_start_date or test_end_date:
+            test_df = split.test_df.copy()
+            test_dates = pd.to_datetime(test_df[date_column], errors="coerce")
+            mask = pd.Series(True, index=test_df.index)
+
+            if test_start_date:
+                mask &= test_dates.ge(pd.to_datetime(test_start_date))
+
+            if test_end_date:
+                mask &= test_dates.le(pd.to_datetime(test_end_date))
+
+            bounded_test_df = test_df.loc[mask].copy()
+
+            if bounded_test_df.empty:
+                raise ValueError(
+                    "Bounded test split is empty: "
+                    f"test_start_date={test_start_date}, test_end_date={test_end_date}"
+                )
+
+            replacement_values = {
+                "test_df": bounded_test_df,
+            }
+
+            if hasattr(split, "X_test"):
+                replacement_values["X_test"] = bounded_test_df[feature_columns].copy()
+
+            if hasattr(split, "y_test"):
+                replacement_values["y_test"] = bounded_test_df[target_column].astype(int).copy()
+
+            split = replace(split, **replacement_values)
+
+        return split
 
     if mode == "train_test":
         return build_temporal_train_test_split(

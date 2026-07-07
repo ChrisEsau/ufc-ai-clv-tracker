@@ -35,6 +35,7 @@ import pandas as pd
 import yaml
 
 from pipeline.training.calibration import predict_positive_class_probability
+from pipeline.modeling.confidence import score_prediction_confidence
 from pipeline.prediction.live_feature_builder import (
     build_live_model_features,
     write_live_feature_outputs,
@@ -696,6 +697,11 @@ def build_model_outcomes(details: pd.DataFrame, config: dict[str, Any], predicti
         model_pick_fighter = row["ensemble_pick_fighter"]
         model_pick_probability = row["ensemble_pick_probability"]
 
+        confidence_payload = score_prediction_confidence(
+            row,
+            model_pick_probability=float(model_pick_probability),
+        ).to_dict()
+
         for spec in side_specs:
             output_row = {
                 "prediction_run_id": prediction_run_id,
@@ -736,6 +742,8 @@ def build_model_outcomes(details: pd.DataFrame, config: dict[str, Any], predicti
             for col in quality_cols:
                 if col in details.columns:
                     output_row[col] = row.get(col)
+
+            output_row.update(confidence_payload)
 
             rows.append(output_row)
 
