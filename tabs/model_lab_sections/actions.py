@@ -48,8 +48,8 @@ def _render_actions_with_status(context: dict[str, Any]) -> None:
     ensemble_prediction_inputs = {
         "config_path": context["config_path"],
         "use_raw": "true",
-        "write_canonical": "false",
-        "build_betting_outcomes": "false",
+        "write_canonical": "true",
+        "build_betting_outcomes": "true",
         "betting_model_mode": "single",
     }
 
