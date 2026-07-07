@@ -45,8 +45,15 @@ def _render_actions_with_status(context: dict[str, Any]) -> None:
         "model_family": context["model_family"],
         "model_id": context["model_id"],
     }
+    ensemble_prediction_inputs = {
+        "config_path": context["config_path"],
+        "use_raw": "true",
+        "write_canonical": "false",
+        "build_betting_outcomes": "false",
+        "betting_model_mode": "single",
+    }
 
-    c1, c2, c3, c4, c5 = st.columns(5)
+    c1, c2, c3, c4, c5, c6 = st.columns(6)
     with c1:
         _dispatch_button_with_status(
             "Build Fighter State",
@@ -80,6 +87,18 @@ def _render_actions_with_status(context: dict[str, Any]) -> None:
             f"mlab_predict_{context['model_id']}",
         )
     with c5:
+        architecture_type = str(
+            ((context.get("config") or {}).get("architecture") or {}).get("type", "")
+        ).lower()
+        is_ensemble = architecture_type == "market_aware_ensemble"
+        _dispatch_button_with_status(
+            "Run Ensemble",
+            mlw.WORKFLOWS["ensemble_prediction"],
+            ensemble_prediction_inputs,
+            not bool(is_ensemble and ensemble_prediction_inputs["config_path"]),
+            f"mlab_ensemble_predict_{context['model_id']}",
+        )
+    with c6:
         model_mode = st.selectbox("Betting Mode", ["production", "all", "single"], key="mlab_betting_mode")
         _dispatch_button_with_status(
             "Run Outcomes",

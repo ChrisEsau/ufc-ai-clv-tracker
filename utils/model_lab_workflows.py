@@ -26,6 +26,7 @@ WORKFLOWS = {
     "feature_view": "run-build-feature-view-v2.yml",
     "training": "run-train-model-v2.yml",
     "prediction": "run-prediction-v2.yml",
+    "ensemble_prediction": "run-ensemble-prediction-v2.yml",
     "betting_outcomes": "run-betting-outcomes-v2.yml",
 }
 
