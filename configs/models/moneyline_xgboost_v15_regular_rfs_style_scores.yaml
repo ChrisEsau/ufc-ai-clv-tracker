@@ -1,0 +1,287 @@
+model_id: moneyline_xgboost_v15_regular_rfs_style_scores
+model_family: moneyline
+artifact_name: moneyline_xgboost_v15_regular_rfs_style_scores
+algorithm: xgboost
+feature_sources:
+- moneyline_rfs_feature_view
+features:
+  selection_mode: explicit
+  expected_feature_count: 88
+  allow_unsafe_features: true
+  feature_columns:
+  - rfs_def_exp_late_head_damage_allowed_delta_diff
+  - recent_form_recent_avg_fight_time_diff
+  - sub_avg_diff
+  - recent_form_str_acc_diff
+  - weight_diff
+  - recent_form_avg_fight_time_diff
+  - rfs_def_exp_late_td_defense_decay_diff
+  - rfs_wrestle_exp_td_persistence_score_diff
+  - rfs_suppress_ewm_opp_late_output_delta_diff
+  - ewm_recent_avg_fight_time_diff
+  - rfs_def_exp_opp_total_accuracy_allowed_slope_diff
+  - rfs_wrestle_last3_sig_ground_strikes_per_control_min_diff
+  - rfs_traj_ewm_td_attempt_slope_diff
+  - chin_risk_diff
+  - recent_form_splm_diff
+  - ko_win_concentration_diff
+  - decision_dependency_abs_diff
+  - striking_edge_x_avg_opp_elo
+  - rfs_def_ewm_late_td_defense_decay_diff
+  - avg_opponent_elo_diff
+  - recent_form_avg_opponent_elo_diff
+  - ewm_td_def_diff
+  - style_submission_grappler_score_diff
+  - recent_form_kd_absorbed_avg_diff
+  - recent_form_sub_avg_diff
+  - sapm_diff
+  - striking_edge_x_ewm_avg_opp_elo
+  - recent_form_sub_win_rate_diff
+  - recent_form_win_streak_diff
+  - ewm_recent_sapm_diff
+  - rfs_traj_ewm_control_seconds_slope_diff
+  - ewm_recent_splm_diff
+  - recent_form_finish_rate_diff
+  - worst_loss_elo_diff
+  - recent_form_ctrl_per_min_diff
+  - ewm_ctrl_per_min_diff
+  - ewm_kd_avg_diff
+  - ewm_sapm_diff
+  - str_def_diff
+  - ewm_loss_streak_diff
+  - rfs_suppress_last3_opp_distance_accuracy_delta_diff
+  - ewm_wins_diff
+  - ewm_days_since_last_fight_diff
+  - rfs_suppress_last3_opp_phase_mix_disruption_diff
+  - striking_edge
+  - ewm_str_def_diff
+  - submission_dependency_abs_diff
+  - rfs_traj_exp_td_accuracy_slope_diff
+  - recent_form_ctrl_against_per_min_diff
+  - rfs_def_last3_late_total_damage_allowed_delta_diff
+  - kd_avg_diff
+  - recent_form_recent_td_avg_diff
+  - ewm_td_acc_diff
+  - recent_form_finish_loss_rate_diff
+  - ewm_ko_rate_diff
+  - ewm_win_pct_diff
+  - reach_striking_combo
+  - recent_form_recent_splm_diff
+  - ko_dependency_abs_diff
+  - rfs_suppress_exp_opp_phase_mix_disruption_diff
+  - r_pre_style_control_wrestler_score
+  - b_pre_style_control_wrestler_score
+  - r_pre_style_ko_finisher_score
+  - b_pre_style_ko_finisher_score
+  - r_pre_style_submission_grappler_score
+  - b_pre_style_submission_grappler_score
+  - r_pre_style_decision_technician_score
+  - b_pre_style_decision_technician_score
+  - r_pre_style_all_round_finisher_score
+  - b_pre_style_all_round_finisher_score
+  - r_pre_style_primary_score
+  - b_pre_style_primary_score
+  - r_pre_style_score_spread
+  - b_pre_style_score_spread
+  - style_control_wrestler_score_diff
+  - style_ko_finisher_score_diff
+  - style_decision_technician_score_diff
+  - style_all_round_finisher_score_diff
+  - style_primary_score_diff
+  - style_score_spread_diff
+  - style_control_wrestler_score_abs_diff
+  - style_ko_finisher_score_abs_diff
+  - style_submission_grappler_score_abs_diff
+  - style_decision_technician_score_abs_diff
+  - style_all_round_finisher_score_abs_diff
+  - style_edge_control_wrestler_vs_ko_finisher_net
+  - style_edge_decision_technician_vs_submission_grappler_net
+  - style_edge_ko_finisher_vs_decision_technician_net
+  selected_bundles:
+  - rfs_top60_v13_clean_fight_features
+  - style_scores_v1
+  include_features: []
+  exclude_features: []
+  resolved_features:
+  - rfs_def_exp_late_head_damage_allowed_delta_diff
+  - recent_form_recent_avg_fight_time_diff
+  - sub_avg_diff
+  - recent_form_str_acc_diff
+  - weight_diff
+  - recent_form_avg_fight_time_diff
+  - rfs_def_exp_late_td_defense_decay_diff
+  - rfs_wrestle_exp_td_persistence_score_diff
+  - rfs_suppress_ewm_opp_late_output_delta_diff
+  - ewm_recent_avg_fight_time_diff
+  - rfs_def_exp_opp_total_accuracy_allowed_slope_diff
+  - rfs_wrestle_last3_sig_ground_strikes_per_control_min_diff
+  - rfs_traj_ewm_td_attempt_slope_diff
+  - chin_risk_diff
+  - recent_form_splm_diff
+  - ko_win_concentration_diff
+  - decision_dependency_abs_diff
+  - striking_edge_x_avg_opp_elo
+  - rfs_def_ewm_late_td_defense_decay_diff
+  - avg_opponent_elo_diff
+  - recent_form_avg_opponent_elo_diff
+  - ewm_td_def_diff
+  - style_submission_grappler_score_diff
+  - recent_form_kd_absorbed_avg_diff
+  - recent_form_sub_avg_diff
+  - sapm_diff
+  - striking_edge_x_ewm_avg_opp_elo
+  - recent_form_sub_win_rate_diff
+  - recent_form_win_streak_diff
+  - ewm_recent_sapm_diff
+  - rfs_traj_ewm_control_seconds_slope_diff
+  - ewm_recent_splm_diff
+  - recent_form_finish_rate_diff
+  - worst_loss_elo_diff
+  - recent_form_ctrl_per_min_diff
+  - ewm_ctrl_per_min_diff
+  - ewm_kd_avg_diff
+  - ewm_sapm_diff
+  - str_def_diff
+  - ewm_loss_streak_diff
+  - rfs_suppress_last3_opp_distance_accuracy_delta_diff
+  - ewm_wins_diff
+  - ewm_days_since_last_fight_diff
+  - rfs_suppress_last3_opp_phase_mix_disruption_diff
+  - striking_edge
+  - ewm_str_def_diff
+  - submission_dependency_abs_diff
+  - rfs_traj_exp_td_accuracy_slope_diff
+  - recent_form_ctrl_against_per_min_diff
+  - rfs_def_last3_late_total_damage_allowed_delta_diff
+  - kd_avg_diff
+  - recent_form_recent_td_avg_diff
+  - ewm_td_acc_diff
+  - recent_form_finish_loss_rate_diff
+  - ewm_ko_rate_diff
+  - ewm_win_pct_diff
+  - reach_striking_combo
+  - recent_form_recent_splm_diff
+  - ko_dependency_abs_diff
+  - rfs_suppress_exp_opp_phase_mix_disruption_diff
+  - r_pre_style_control_wrestler_score
+  - b_pre_style_control_wrestler_score
+  - r_pre_style_ko_finisher_score
+  - b_pre_style_ko_finisher_score
+  - r_pre_style_submission_grappler_score
+  - b_pre_style_submission_grappler_score
+  - r_pre_style_decision_technician_score
+  - b_pre_style_decision_technician_score
+  - r_pre_style_all_round_finisher_score
+  - b_pre_style_all_round_finisher_score
+  - r_pre_style_primary_score
+  - b_pre_style_primary_score
+  - r_pre_style_score_spread
+  - b_pre_style_score_spread
+  - style_control_wrestler_score_diff
+  - style_ko_finisher_score_diff
+  - style_decision_technician_score_diff
+  - style_all_round_finisher_score_diff
+  - style_primary_score_diff
+  - style_score_spread_diff
+  - style_control_wrestler_score_abs_diff
+  - style_ko_finisher_score_abs_diff
+  - style_submission_grappler_score_abs_diff
+  - style_decision_technician_score_abs_diff
+  - style_all_round_finisher_score_abs_diff
+  - style_edge_control_wrestler_vs_ko_finisher_net
+  - style_edge_decision_technician_vs_submission_grappler_net
+  - style_edge_ko_finisher_vs_decision_technician_net
+data:
+  rolling_features_path: data/features/moneyline_rfs_feature_view.parquet
+  target_column: target
+  date_column: date
+split:
+  mode: train_calibration_test
+  train_end_date: '2023-12-31'
+  calibration_end_date: '2024-12-31'
+  train_start_date: '2018-01-01'
+symmetry:
+  enabled: true
+  mode: flip_all
+  source: feature_view_flipped
+calibration:
+  enabled: true
+  method: isotonic
+params:
+  n_estimators: 500
+  max_depth: 5
+  learning_rate: 0.03
+  subsample: 0.8
+  colsample_bytree: 0.8
+  min_child_weight: 1.0
+  reg_lambda: 1.0
+  reg_alpha: 0.0
+  random_state: 42
+  eval_metric: logloss
+metrics:
+  threshold_min: 0.4
+  threshold_max: 0.6
+  threshold_step: 0.01
+  confidence_bucket_edges:
+  - 0.5
+  - 0.55
+  - 0.6
+  - 0.65
+  - 0.7
+  - 0.75
+  - 0.8
+  - 0.85
+  - 0.9
+  - 0.95
+  - 1.0
+artifacts:
+  output_dir: models/moneyline/moneyline_xgboost_v15_regular_rfs_style_scores
+  save_raw_model: true
+  save_calibrated_model: true
+  save_feature_columns: true
+  save_metrics: true
+  save_threshold_sweep: true
+  save_confidence_buckets: true
+  save_model_card: true
+prediction:
+  probability:
+    clip_low: 0.02
+    clip_high: 0.98
+  threshold:
+    source: best_sweep
+    value: 0.5
+  format: binary_matchup
+  market_key: moneyline
+  prediction_type: binary_matchup
+  positive_class: red
+  outcomes:
+    positive:
+      outcome_side: red
+      label_source: red_fighter
+    negative:
+      outcome_side: blue
+      label_source: blue_fighter
+  output:
+    canonical_artifact: model_outcomes
+    path: data/predictions/model_outcomes.parquet
+    model_scoped_path_template: data/predictions/by_model/{model_id}/model_outcomes.parquet
+market:
+  source: the_odds_api
+  sport: mma_mixed_martial_arts
+  regions:
+  - us
+  bookmakers:
+  - draftkings
+  markets:
+  - h2h
+market_key: moneyline
+status: draft
+early_stopping:
+  enabled: true
+  rounds: 100
+  metric: logloss
+  verbose: false
+notes:
+- Regular red/blue moneyline experiment; no favorite/dog perspective transform.
+- Uses moneyline_rfs_feature_view and its prebuilt flipped companion for symmetry.
+- allow_unsafe_features is enabled only to permit raw side-specific style score columns.
