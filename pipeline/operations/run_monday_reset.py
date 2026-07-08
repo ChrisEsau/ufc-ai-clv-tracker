@@ -29,6 +29,9 @@ from utils.operations_status_writer import (
 RUNBOOK_ID = "monday_reset_v1"
 INGEST_MISSING_EVENTS_AUDIT_PATH = AUDITS_DIR / "ufc_missing_event_ingestion_audit.parquet"
 BET_SETTLEMENT_AUDIT_PATH = AUDITS_DIR / "ufc_bet_settlement_audit.parquet"
+ROUND_STATS_QUEUE_PATH = Path("data/status/ufc_round_stats_backfill_queue.parquet")
+ROUND_STATS_DATASET_PATH = Path("data/fight_details/ufc_round_stats.parquet")
+ROUND_STATS_VALIDATION_PATH = AUDITS_DIR / "ufc_round_stats_validation.parquet"
 
 
 @dataclass(frozen=True)
@@ -111,7 +114,16 @@ def _complete_step_status(message: str) -> None:
     complete_step(message, runbook_id=RUNBOOK_ID)
 
 
-def run_monday_reset(*, mode: str, max_events: int | None, auto_append: bool, run_bankroll: bool, run_clv: bool) -> list[StepResult]:
+def run_monday_reset(
+    *,
+    mode: str,
+    max_events: int | None,
+    auto_append: bool,
+    run_bankroll: bool,
+    run_clv: bool,
+    run_round_stats: bool,
+    round_stats_max_fights: int,
+) -> list[StepResult]:
     print("=" * 80)
     print("UFC MONDAY RESET ORCHESTRATOR")
     print("=" * 80)
@@ -120,10 +132,12 @@ def run_monday_reset(*, mode: str, max_events: int | None, auto_append: bool, ru
     print("Auto append:", auto_append)
     print("Run bankroll:", run_bankroll)
     print("Run CLV:", run_clv)
+    print("Run round stats:", run_round_stats)
+    print("Round-stats max fights:", round_stats_max_fights)
 
     ensure_data_dirs()
     results: list[StepResult] = []
-    step_total = 5
+    step_total = 6
     start_runbook(
         runbook_id=RUNBOOK_ID,
         mode=mode,
@@ -164,7 +178,41 @@ def run_monday_reset(*, mode: str, max_events: int | None, auto_append: bool, ru
             _record(results, "update_master_dataset", "Update Master Dataset", "skipped", "No ingestion audit rows were produced.")
             _complete_step_status("Skipped Update Master Dataset")
 
-        _record_step_status("refresh_platform_status", "Refresh Platform Status", 3, step_total)
+        _record_step_status("ingest_completed_round_stats", "Ingest Completed Round Stats", 3, step_total)
+        if run_round_stats:
+            _run_command_step(
+                results,
+                "ingest_completed_round_stats",
+                "Ingest Completed Round Stats",
+                _python_module(
+                    "pipeline.round_stats.run_ingest_completed_round_stats",
+                    "--max-fights",
+                    str(round_stats_max_fights),
+                    "--sleep-seconds",
+                    "10",
+                    "--jitter-seconds",
+                    "5",
+                    "--max-failures",
+                    "3",
+                ),
+                [
+                    ROUND_STATS_QUEUE_PATH,
+                    ROUND_STATS_DATASET_PATH,
+                    ROUND_STATS_VALIDATION_PATH,
+                ],
+            )
+            _complete_step_status("Completed Ingest Completed Round Stats")
+        else:
+            _record(
+                results,
+                "ingest_completed_round_stats",
+                "Ingest Completed Round Stats",
+                "skipped",
+                "run_round_stats=false",
+            )
+            _complete_step_status("Skipped Ingest Completed Round Stats")
+
+        _record_step_status("refresh_platform_status", "Refresh Platform Status", 4, step_total)
         _run_function_step(
             results,
             "refresh_platform_status",
@@ -181,7 +229,7 @@ def run_monday_reset(*, mode: str, max_events: int | None, auto_append: bool, ru
         )
         _complete_step_status("Completed Refresh Platform Status")
 
-        _record_step_status("reconcile_performance", "Reconcile Performance", 4, step_total)
+        _record_step_status("reconcile_performance", "Reconcile Performance", 5, step_total)
         _run_command_step(
             results,
             "settle_open_bets",
@@ -212,7 +260,7 @@ def run_monday_reset(*, mode: str, max_events: int | None, auto_append: bool, ru
             _record(results, "run_clv_tracker", "Run CLV Tracker", "skipped", "run_clv=false")
         _complete_step_status("Completed Reconcile Performance")
 
-        _record_step_status("initialize_upcoming_event", "Initialize Upcoming Event", 5, step_total)
+        _record_step_status("initialize_upcoming_event", "Initialize Upcoming Event", 6, step_total)
         _run_command_step(
             results,
             "build_fighter_state",
@@ -301,6 +349,17 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--skip-bankroll", action="store_true")
     parser.add_argument("--skip-clv", action="store_true")
+    parser.add_argument(
+        "--skip-round-stats",
+        action="store_true",
+        help="Skip completed-fight round-stats ingestion.",
+    )
+    parser.add_argument(
+        "--round-stats-max-fights",
+        type=int,
+        default=25,
+        help="Maximum missing completed fights to scrape into the round-stats dataset.",
+    )
     return parser.parse_args(argv)
 
 
@@ -313,6 +372,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         auto_append=bool(args.auto_append),
         run_bankroll=not bool(args.skip_bankroll),
         run_clv=not bool(args.skip_clv),
+        run_round_stats=not bool(args.skip_round_stats),
+        round_stats_max_fights=int(args.round_stats_max_fights),
     )
 
 
