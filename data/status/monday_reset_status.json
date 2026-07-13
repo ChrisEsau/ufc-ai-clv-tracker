@@ -1,10 +1,10 @@
 {
-  "completed_at": "2026-07-06T13:04:00.019747+00:00",
-  "current_step_id": "initialize_upcoming_event",
-  "current_step_name": "Initialize Upcoming Event",
+  "completed_at": "2026-07-13T10:45:58.880298+00:00",
+  "current_step_id": "ingest_completed_round_stats",
+  "current_step_name": "Ingest Completed Round Stats",
   "current_substep_id": null,
   "current_substep_name": null,
-  "error": null,
+  "error": "Command '['/opt/hostedtoolcache/Python/3.11.15/x64/bin/python', '-m', 'pipeline.round_stats.run_ingest_completed_round_stats', '--max-fights', '25', '--sleep-seconds', '10', '--jitter-seconds', '5', '--max-failures', '3']' returned non-zero exit status 1.",
   "history": [
     {
       "event": "runbook_started",
@@ -13,7 +13,7 @@
       "step_name": null,
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-07-06T12:53:08.014415+00:00"
+      "timestamp": "2026-07-13T10:34:27.165974+00:00"
     },
     {
       "event": "step_started",
@@ -22,7 +22,7 @@
       "step_name": "Process Completed Events",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-07-06T12:53:08.014828+00:00"
+      "timestamp": "2026-07-13T10:34:27.166397+00:00"
     },
     {
       "event": "step_completed",
@@ -31,7 +31,7 @@
       "step_name": "Process Completed Events",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-07-06T12:53:24.779244+00:00"
+      "timestamp": "2026-07-13T10:41:04.047059+00:00"
     },
     {
       "event": "step_started",
@@ -40,7 +40,7 @@
       "step_name": "Update Master Dataset",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-07-06T12:53:24.779660+00:00"
+      "timestamp": "2026-07-13T10:41:04.047471+00:00"
     },
     {
       "event": "step_completed",
@@ -49,80 +49,35 @@
       "step_name": "Update Master Dataset",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-07-06T12:53:24.780972+00:00"
+      "timestamp": "2026-07-13T10:41:04.048493+00:00"
     },
     {
       "event": "step_started",
-      "message": "Started step: Refresh Platform Status",
-      "step_id": "refresh_platform_status",
-      "step_name": "Refresh Platform Status",
+      "message": "Started step: Ingest Completed Round Stats",
+      "step_id": "ingest_completed_round_stats",
+      "step_name": "Ingest Completed Round Stats",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-07-06T12:53:24.781355+00:00"
+      "timestamp": "2026-07-13T10:41:04.048888+00:00"
     },
     {
-      "event": "step_completed",
-      "message": "Completed Refresh Platform Status",
-      "step_id": "refresh_platform_status",
-      "step_name": "Refresh Platform Status",
+      "event": "runbook_failed",
+      "message": "Command '['/opt/hostedtoolcache/Python/3.11.15/x64/bin/python', '-m', 'pipeline.round_stats.run_ingest_completed_round_stats', '--max-fights', '25', '--sleep-seconds', '10', '--jitter-seconds', '5', '--max-failures', '3']' returned non-zero exit status 1.",
+      "step_id": "ingest_completed_round_stats",
+      "step_name": "Ingest Completed Round Stats",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-07-06T13:03:04.732479+00:00"
-    },
-    {
-      "event": "step_started",
-      "message": "Started step: Reconcile Performance",
-      "step_id": "reconcile_performance",
-      "step_name": "Reconcile Performance",
-      "substep_id": null,
-      "substep_name": null,
-      "timestamp": "2026-07-06T13:03:04.732960+00:00"
-    },
-    {
-      "event": "step_completed",
-      "message": "Completed Reconcile Performance",
-      "step_id": "reconcile_performance",
-      "step_name": "Reconcile Performance",
-      "substep_id": null,
-      "substep_name": null,
-      "timestamp": "2026-07-06T13:03:06.466476+00:00"
-    },
-    {
-      "event": "step_started",
-      "message": "Started step: Initialize Upcoming Event",
-      "step_id": "initialize_upcoming_event",
-      "step_name": "Initialize Upcoming Event",
-      "substep_id": null,
-      "substep_name": null,
-      "timestamp": "2026-07-06T13:03:06.467012+00:00"
-    },
-    {
-      "event": "step_completed",
-      "message": "Completed Initialize Upcoming Event",
-      "step_id": "initialize_upcoming_event",
-      "step_name": "Initialize Upcoming Event",
-      "substep_id": null,
-      "substep_name": null,
-      "timestamp": "2026-07-06T13:04:00.019149+00:00"
-    },
-    {
-      "event": "runbook_completed",
-      "message": "Monday Reset completed",
-      "step_id": "initialize_upcoming_event",
-      "step_name": "Initialize Upcoming Event",
-      "substep_id": null,
-      "substep_name": null,
-      "timestamp": "2026-07-06T13:04:00.019752+00:00"
+      "timestamp": "2026-07-13T10:45:58.880305+00:00"
     }
   ],
-  "message": "Monday Reset completed",
+  "message": "Runbook failed",
   "mode": "production",
   "runbook_id": "monday_reset_v1",
-  "started_at": "2026-07-06T12:53:08.014390+00:00",
-  "status": "completed",
-  "step_index": 5,
-  "step_total": 5,
+  "started_at": "2026-07-13T10:34:27.165968+00:00",
+  "status": "failed",
+  "step_index": 3,
+  "step_total": 6,
   "substep_index": null,
   "substep_total": 1,
-  "updated_at": "2026-07-06T13:04:00.019913+00:00"
+  "updated_at": "2026-07-13T10:45:58.880480+00:00"
 }
