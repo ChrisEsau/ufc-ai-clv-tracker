@@ -154,11 +154,29 @@ def main() -> None:
     if not new_rows.empty:
         combined = pd.concat([existing, new_rows], ignore_index=True) if not existing.empty else new_rows
         combined = combined.drop_duplicates(["fight_id", "fighter_id", "round"], keep="last")
+
+        # Parquet requires one consistent type per column. Historical rows may
+        # store event_date as strings while newly scraped rows use Timestamps.
+        if "event_date" in combined.columns:
+            combined["event_date"] = pd.to_datetime(
+                combined["event_date"],
+                errors="coerce",
+            ).dt.strftime("%Y-%m-%d")
+
         combined.to_parquet(output_path, index=False)
 
     if audit_path.exists():
         old_audit = pd.read_parquet(audit_path)
         audit = pd.concat([old_audit, audit], ignore_index=True)
+
+    # Queue dates may arrive as pandas Timestamps while older audit rows are
+    # strings. Normalize before writing the combined audit parquet.
+    if "date" in audit.columns:
+        audit["date"] = pd.to_datetime(
+            audit["date"],
+            errors="coerce",
+        ).dt.strftime("%Y-%m-%d")
+
     audit.to_parquet(audit_path, index=False)
 
     queue.to_parquet(queue_path, index=False)
