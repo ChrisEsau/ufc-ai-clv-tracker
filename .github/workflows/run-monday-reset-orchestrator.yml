@@ -6,7 +6,7 @@ on:
       mode:
         description: "Run mode"
         required: true
-        default: "test"
+        default: "production"
         type: choice
         options:
           - test
@@ -19,7 +19,7 @@ on:
       auto_append:
         description: "Append staged rows to master after all hard checks pass"
         required: true
-        default: false
+        default: true
         type: boolean
       skip_bankroll:
         description: "Skip bankroll status refresh"
