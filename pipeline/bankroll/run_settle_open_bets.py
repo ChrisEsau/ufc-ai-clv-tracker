@@ -77,6 +77,61 @@ def _side_matches_winner(bet: pd.Series, master_row: pd.Series) -> bool | None:
     return None
 
 
+def _match_master_fight(
+    bet: pd.Series,
+    master: pd.DataFrame,
+) -> tuple[pd.DataFrame, str]:
+    """Resolve a ledger bet to exactly one completed master fight.
+
+    First try the canonical UFCStats fight_id. If the ledger contains the
+    live-pipeline composite matchup ID, fall back to event_id plus the
+    unordered pair of fighter IDs.
+    """
+
+    fight_id = _safe_text(bet.get("fight_id"))
+
+    exact_matches = master[
+        master["fight_id"].astype(str).str.strip() == fight_id
+    ]
+    if not exact_matches.empty:
+        return exact_matches, "matched_by_fight_id"
+
+    event_id = _safe_text(bet.get("event_id"))
+    participant_ids = {
+        part.strip()
+        for part in fight_id.split("__")
+        if part.strip()
+    }
+
+    required_columns = {"event_id", "r_id", "b_id"}
+    if (
+        not event_id
+        or len(participant_ids) != 2
+        or not required_columns.issubset(master.columns)
+    ):
+        return pd.DataFrame(columns=master.columns), "skipped_no_master_match"
+
+    event_rows = master[
+        master["event_id"].astype(str).str.strip() == event_id
+    ].copy()
+
+    if event_rows.empty:
+        return event_rows, "skipped_no_master_match"
+
+    r_ids = event_rows["r_id"].fillna("").astype(str).str.strip()
+    b_ids = event_rows["b_id"].fillna("").astype(str).str.strip()
+
+    fallback_matches = event_rows[
+        r_ids.isin(participant_ids)
+        & b_ids.isin(participant_ids)
+    ]
+
+    if fallback_matches.empty:
+        return fallback_matches, "skipped_no_master_match"
+
+    return fallback_matches, "matched_by_event_and_fighter_ids"
+
+
 def _settle_one_open_bet(bet: pd.Series, master: pd.DataFrame, dry_run: bool) -> dict[str, Any]:
     fight_id = _safe_text(bet.get("fight_id"))
     bet_id = _safe_text(bet.get("bet_id"))
@@ -109,19 +164,27 @@ def _settle_one_open_bet(bet: pd.Series, master: pd.DataFrame, dry_run: bool) ->
         audit.update(match_status="skipped_invalid_odds_or_stake", settlement_status="skipped_invalid_odds_or_stake")
         return audit
 
-    matches = master[master["fight_id"].astype(str).str.strip() == fight_id]
+    matches, match_status = _match_master_fight(bet, master)
+
     if matches.empty:
-        audit.update(match_status="skipped_no_master_match", settlement_status="skipped_no_master_match")
+        audit.update(
+            match_status="skipped_no_master_match",
+            settlement_status="skipped_no_master_match",
+        )
         return audit
+
     if len(matches) > 1:
-        audit.update(match_status="skipped_multiple_master_matches", settlement_status="skipped_multiple_master_matches")
+        audit.update(
+            match_status="skipped_multiple_master_matches",
+            settlement_status="skipped_multiple_master_matches",
+        )
         return audit
 
     master_row = matches.iloc[0]
     winner, winner_id = _winner_from_master(master_row)
     audit["matched_winner"] = winner
     audit["matched_winner_id"] = winner_id
-    audit["match_status"] = "matched_by_fight_id"
+    audit["match_status"] = match_status
 
     side_won = _side_matches_winner(bet, master_row)
     if side_won is None:
@@ -195,7 +258,7 @@ def run_settle_open_bets(*, dry_run: bool = False) -> pd.DataFrame:
                 "result": audit["bet_result"],
                 "profit_loss": audit["profit_loss"],
                 "settled_timestamp": run_timestamp,
-                "notes": "Auto-settled by Monday Reset using fight_id match.",
+                "notes": f"Auto-settled by Monday Reset using {audit['match_status']}.",
             }
 
     if not audit_rows:
