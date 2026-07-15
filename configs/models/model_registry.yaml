@@ -53,8 +53,8 @@ models:
     algorithm: xgboost
     config_path: configs/models/moneyline_xgboost_v8.yaml
     artifact_dir: models/moneyline/moneyline_xgboost_v8
-    status: production
-    dashboard_selectable: true
+    status: draft
+    dashboard_selectable: false
     outcome_architecture: true
   moneyline_xgboost_v9:
     display_name: Moneyline XGBoost V8 Experiment
@@ -110,13 +110,13 @@ models:
     architecture: market_aware_ensemble
     config_path: configs/models/moneyline_xgboost_v13_ensemble_top60.yaml
     artifact_dir: models/moneyline/moneyline_xgboost_v13_ensemble_top60
-    status: draft
-    dashboard_selectable: false
+    status: production
+    dashboard_selectable: true
     outcome_architecture: true
 active_models:
   moneyline:
-    primary: moneyline_xgboost_v8
-    moneyline: moneyline_xgboost_v8
+    primary: moneyline_xgboost_v13_ensemble_top60
+    moneyline: moneyline_xgboost_v13_ensemble_top60
   prop:
     primary: prop_over_under_2_5_xgboost_v1
     over_under_2_5: prop_over_under_2_5_xgboost_v1

@@ -72,8 +72,6 @@ jobs:
             --max-events "${{ inputs.max_events }}"
           )
 
-          find data/predictions/by_model -path '*/model_outcomes.parquet' -type f -print0 2>/dev/null | xargs -0 -r git add -f
-
           if [ "${{ inputs.auto_append }}" = "true" ]; then
             ARGS+=(--auto-append)
           fi
@@ -93,6 +91,13 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
+
+          # Stage model-scoped outputs after Monday Reset has generated them.
+          find data/predictions/by_model -type f \(
+            -name 'model_outcomes.parquet' -o
+            -name 'ensemble_details.parquet' -o
+            -name 'ensemble_exclusions.parquet'
+          \) -print0 2>/dev/null | xargs -0 -r git add -f
 
           git add -f \
             data/status/monday_reset_status.json \

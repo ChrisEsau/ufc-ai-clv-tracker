@@ -191,8 +191,8 @@ prediction:
     ensemble_details_path_template: data/predictions/by_model/{model_id}/ensemble_details.parquet
   probability_artifact: raw_model
 market_key: moneyline
-status: draft
-dashboard_selectable: false
+status: production
+dashboard_selectable: true
 early_stopping:
   enabled: false
   rounds: 100

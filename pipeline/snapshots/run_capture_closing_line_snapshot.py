@@ -134,10 +134,69 @@ def _ensure_columns(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
     return out[columns]
 
 
+def _stabilize_snapshot_dtypes(df: pd.DataFrame) -> pd.DataFrame:
+    """Normalize mixed historical/new values before writing parquet."""
+
+    out = df.copy()
+
+    numeric_columns = [
+        "model_probability",
+        "model_pick_probability",
+        "model_confidence",
+        "confidence_score",
+        "confidence_pct",
+        "american_odds",
+        "decimal_odds",
+        "implied_probability",
+        "edge",
+        "edge_pct",
+        "ev",
+        "ev_pct",
+        "ev_dollars_at_100",
+        "full_kelly_fraction",
+        "fractional_kelly_fraction",
+        "recommended_stake",
+        "max_stake",
+        "betting_rows",
+        "closing_rows",
+        "bet_candidates",
+        "unique_fights",
+        "unique_markets",
+        "unique_bookmakers",
+    ]
+
+    bool_columns = [
+        "is_official_closing_snapshot",
+        "is_model_pick",
+        "passes_edge_filter",
+        "passes_confidence_filter",
+        "passes_odds_filter",
+        "passes_market_data_filter",
+        "is_bet_candidate",
+        "passes_validation",
+    ]
+
+    for column in numeric_columns:
+        if column in out.columns:
+            out[column] = pd.to_numeric(out[column], errors="coerce")
+
+    for column in bool_columns:
+        if column in out.columns:
+            out[column] = out[column].astype("boolean")
+
+    for column in out.columns:
+        if column not in numeric_columns and column not in bool_columns:
+            if out[column].dtype == "object":
+                out[column] = out[column].astype("string")
+
+    return out
+
+
 def _append_parquet(path: Path, new_rows: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
     existing = _read_optional_parquet(path)
     combined = pd.concat([existing, new_rows], ignore_index=True, sort=False) if not existing.empty else new_rows.copy()
-    return _ensure_columns(combined, columns)
+    combined = _ensure_columns(combined, columns)
+    return _stabilize_snapshot_dtypes(combined)
 
 
 def _prepare_closing_rows(

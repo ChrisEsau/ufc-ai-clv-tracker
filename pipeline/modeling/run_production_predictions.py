@@ -98,6 +98,7 @@ def _select_production_models(registry: dict[str, Any]) -> list[dict[str, Any]]:
                 "model_family": model_family,
                 "market_key": market_key,
                 "status": status,
+                "architecture": str(entry.get("architecture") or "").strip().lower(),
                 "config_path": str(entry.get("config_path")),
                 "model_outcomes_path": _model_output_path(model_id=str(model_id), entry=entry),
             }
@@ -110,22 +111,38 @@ def _select_production_models(registry: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _run_prediction_for_model(model: dict[str, Any], *, registry_path: Path, prefer_raw_model: bool) -> None:
-    command = [
-        sys.executable,
-        "-m",
-        "pipeline.modeling.run_prediction",
-        "--registry-path",
-        str(registry_path),
-        "--model-family",
-        str(model["model_family"]),
-        "--market-key",
-        str(model["market_key"]),
-        "--model-id",
-        str(model["model_id"]),
-    ]
-    if prefer_raw_model:
-        command.append("--prefer-raw-model")
+    """Dispatch each production model through its compatible prediction runner."""
 
+    architecture = str(model.get("architecture") or "").strip().lower()
+
+    if architecture == "market_aware_ensemble":
+        command = [
+            sys.executable,
+            "-m",
+            "pipeline.modeling.run_ensemble_prediction",
+            "--config",
+            str(model["config_path"]),
+        ]
+        if prefer_raw_model:
+            command.append("--raw")
+    else:
+        command = [
+            sys.executable,
+            "-m",
+            "pipeline.modeling.run_prediction",
+            "--registry-path",
+            str(registry_path),
+            "--model-family",
+            str(model["model_family"]),
+            "--market-key",
+            str(model["market_key"]),
+            "--model-id",
+            str(model["model_id"]),
+        ]
+        if prefer_raw_model:
+            command.append("--prefer-raw-model")
+
+    print("Architecture:", architecture or "standard")
     print("RUN:", " ".join(command), flush=True)
     subprocess.run(command, check=True)
 
