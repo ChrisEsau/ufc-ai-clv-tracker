@@ -890,7 +890,7 @@
   "dispatched_runbooks": [],
   "due_runbooks": [],
   "errors": [],
-  "last_checked_at": "2026-07-18T19:16:12.428057+00:00",
+  "last_checked_at": "2026-07-18T20:53:38.902056+00:00",
   "next_due_runbook": {
     "catchup_grace_minutes": 180,
     "display_name": "Fight Day Monitor",
@@ -899,26 +899,8 @@
     "scheduled_time": "17:30",
     "workflow_file": "run-fight-day-monitor.yml"
   },
-  "skipped_runbooks": [
-    {
-      "catchup_grace_minutes": 1440,
-      "dispatch_key": "market_refresh_v2:2026-07-17T15:00:America/Chicago",
-      "display_name": "Market Refresh",
-      "inputs": {
-        "max_draftkings_events": "all",
-        "mode": "production",
-        "model_mode": "production",
-        "snapshot_model_mode": "production"
-      },
-      "minutes_late": 1396.21,
-      "reason": "already_dispatched",
-      "runbook_id": "market_refresh_v2",
-      "scheduled_at_local": "2026-07-17T15:00:00-05:00",
-      "scheduled_time": "15:00",
-      "workflow_file": "run-market-refresh-orchestrator.yml"
-    }
-  ],
+  "skipped_runbooks": [],
   "status": "completed",
   "timezone": "America/Chicago",
-  "updated_at": "2026-07-18T19:16:12.435932+00:00"
+  "updated_at": "2026-07-18T20:53:38.906815+00:00"
 }
