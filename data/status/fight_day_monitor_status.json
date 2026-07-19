@@ -1,5 +1,5 @@
 {
-  "completed_at": "2026-07-18T23:00:27.448214+00:00",
+  "completed_at": "2026-07-19T00:02:15.603925+00:00",
   "current_step_id": "capture_closing_lines",
   "current_step_name": "Capture Closing Lines",
   "current_substep_id": "capture_closing_line_snapshot",
@@ -13,7 +13,7 @@
       "step_name": null,
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-07-18T22:54:41.449157+00:00"
+      "timestamp": "2026-07-18T23:57:51.301539+00:00"
     },
     {
       "event": "step_started",
@@ -22,7 +22,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-07-18T22:54:41.449749+00:00"
+      "timestamp": "2026-07-18T23:57:51.302137+00:00"
     },
     {
       "event": "substep_started",
@@ -31,7 +31,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_event_index",
       "substep_name": "Build DraftKings Event Index",
-      "timestamp": "2026-07-18T22:54:41.450102+00:00"
+      "timestamp": "2026-07-18T23:57:51.302520+00:00"
     },
     {
       "event": "substep_completed",
@@ -40,7 +40,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_event_index",
       "substep_name": "Build DraftKings Event Index",
-      "timestamp": "2026-07-18T22:54:42.588526+00:00"
+      "timestamp": "2026-07-18T23:57:52.331307+00:00"
     },
     {
       "event": "substep_started",
@@ -49,7 +49,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_card_filter",
       "substep_name": "Match DraftKings Events To Card",
-      "timestamp": "2026-07-18T22:54:42.589138+00:00"
+      "timestamp": "2026-07-18T23:57:52.332134+00:00"
     },
     {
       "event": "substep_completed",
@@ -58,7 +58,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_card_filter",
       "substep_name": "Match DraftKings Events To Card",
-      "timestamp": "2026-07-18T22:54:43.256964+00:00"
+      "timestamp": "2026-07-18T23:57:52.971293+00:00"
     },
     {
       "event": "substep_started",
@@ -67,7 +67,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_matched_discovery",
       "substep_name": "Discover DraftKings Markets",
-      "timestamp": "2026-07-18T22:54:43.257449+00:00"
+      "timestamp": "2026-07-18T23:57:52.971754+00:00"
     },
     {
       "event": "substep_completed",
@@ -76,7 +76,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_matched_discovery",
       "substep_name": "Discover DraftKings Markets",
-      "timestamp": "2026-07-18T23:00:10.794556+00:00"
+      "timestamp": "2026-07-19T00:02:02.332873+00:00"
     },
     {
       "event": "substep_started",
@@ -85,7 +85,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_normalize_markets",
       "substep_name": "Normalize DraftKings Markets",
-      "timestamp": "2026-07-18T23:00:10.795078+00:00"
+      "timestamp": "2026-07-19T00:02:02.333398+00:00"
     },
     {
       "event": "substep_completed",
@@ -94,7 +94,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_normalize_markets",
       "substep_name": "Normalize DraftKings Markets",
-      "timestamp": "2026-07-18T23:00:11.300197+00:00"
+      "timestamp": "2026-07-19T00:02:02.838629+00:00"
     },
     {
       "event": "substep_started",
@@ -103,7 +103,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "fanduel_event_index",
       "substep_name": "Build FanDuel Event Index",
-      "timestamp": "2026-07-18T23:00:11.300744+00:00"
+      "timestamp": "2026-07-19T00:02:02.839181+00:00"
     },
     {
       "event": "substep_completed",
@@ -112,7 +112,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "fanduel_event_index",
       "substep_name": "Build FanDuel Event Index",
-      "timestamp": "2026-07-18T23:00:12.213848+00:00"
+      "timestamp": "2026-07-19T00:02:03.771148+00:00"
     },
     {
       "event": "substep_started",
@@ -121,7 +121,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "fanduel_card_filter",
       "substep_name": "Match FanDuel Events To Card",
-      "timestamp": "2026-07-18T23:00:12.214477+00:00"
+      "timestamp": "2026-07-19T00:02:03.771921+00:00"
     },
     {
       "event": "substep_completed",
@@ -130,7 +130,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "fanduel_card_filter",
       "substep_name": "Match FanDuel Events To Card",
-      "timestamp": "2026-07-18T23:00:12.836037+00:00"
+      "timestamp": "2026-07-19T00:02:04.423178+00:00"
     },
     {
       "event": "substep_started",
@@ -139,7 +139,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "fanduel_matched_discovery",
       "substep_name": "Discover FanDuel Markets",
-      "timestamp": "2026-07-18T23:00:12.836619+00:00"
+      "timestamp": "2026-07-19T00:02:04.423744+00:00"
     },
     {
       "event": "substep_completed",
@@ -148,7 +148,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "fanduel_matched_discovery",
       "substep_name": "Discover FanDuel Markets",
-      "timestamp": "2026-07-18T23:00:21.632914+00:00"
+      "timestamp": "2026-07-19T00:02:10.437102+00:00"
     },
     {
       "event": "substep_started",
@@ -157,7 +157,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "fanduel_normalize_markets",
       "substep_name": "Normalize FanDuel Markets",
-      "timestamp": "2026-07-18T23:00:21.633472+00:00"
+      "timestamp": "2026-07-19T00:02:10.437664+00:00"
     },
     {
       "event": "substep_completed",
@@ -166,7 +166,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "fanduel_normalize_markets",
       "substep_name": "Normalize FanDuel Markets",
-      "timestamp": "2026-07-18T23:00:22.081073+00:00"
+      "timestamp": "2026-07-19T00:02:10.891251+00:00"
     },
     {
       "event": "substep_started",
@@ -175,7 +175,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "merge_market_catalogs",
       "substep_name": "Merge Provider Market Catalogs",
-      "timestamp": "2026-07-18T23:00:22.081686+00:00"
+      "timestamp": "2026-07-19T00:02:10.892030+00:00"
     },
     {
       "event": "substep_completed",
@@ -184,7 +184,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "merge_market_catalogs",
       "substep_name": "Merge Provider Market Catalogs",
-      "timestamp": "2026-07-18T23:00:22.528939+00:00"
+      "timestamp": "2026-07-19T00:02:11.347744+00:00"
     },
     {
       "event": "substep_started",
@@ -193,7 +193,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "update_target_event_commence_time",
       "substep_name": "Update Target Event Commence Time",
-      "timestamp": "2026-07-18T23:00:22.529562+00:00"
+      "timestamp": "2026-07-19T00:02:11.348351+00:00"
     },
     {
       "event": "substep_completed",
@@ -202,7 +202,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "update_target_event_commence_time",
       "substep_name": "Update Target Event Commence Time",
-      "timestamp": "2026-07-18T23:00:22.963585+00:00"
+      "timestamp": "2026-07-19T00:02:11.777751+00:00"
     },
     {
       "event": "substep_started",
@@ -211,7 +211,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "match_markets",
       "substep_name": "Match Merged Markets To Live Card",
-      "timestamp": "2026-07-18T23:00:22.964651+00:00"
+      "timestamp": "2026-07-19T00:02:11.778687+00:00"
     },
     {
       "event": "substep_completed",
@@ -220,7 +220,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "match_markets",
       "substep_name": "Match Merged Markets To Live Card",
-      "timestamp": "2026-07-18T23:00:25.815190+00:00"
+      "timestamp": "2026-07-19T00:02:13.988952+00:00"
     },
     {
       "event": "step_completed",
@@ -229,7 +229,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "match_markets",
       "substep_name": "Match Merged Markets To Live Card",
-      "timestamp": "2026-07-18T23:00:25.815854+00:00"
+      "timestamp": "2026-07-19T00:02:13.989614+00:00"
     },
     {
       "event": "step_started",
@@ -238,7 +238,7 @@
       "step_name": "Recalculate Betting Board",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-07-18T23:00:25.816435+00:00"
+      "timestamp": "2026-07-19T00:02:13.990213+00:00"
     },
     {
       "event": "substep_started",
@@ -247,7 +247,7 @@
       "step_name": "Recalculate Betting Board",
       "substep_id": "run_betting_outcomes_v2",
       "substep_name": "Run Betting Outcomes V2",
-      "timestamp": "2026-07-18T23:00:25.817053+00:00"
+      "timestamp": "2026-07-19T00:02:13.990735+00:00"
     },
     {
       "event": "substep_completed",
@@ -256,7 +256,7 @@
       "step_name": "Recalculate Betting Board",
       "substep_id": "run_betting_outcomes_v2",
       "substep_name": "Run Betting Outcomes V2",
-      "timestamp": "2026-07-18T23:00:26.375828+00:00"
+      "timestamp": "2026-07-19T00:02:14.542114+00:00"
     },
     {
       "event": "step_completed",
@@ -265,7 +265,7 @@
       "step_name": "Recalculate Betting Board",
       "substep_id": "run_betting_outcomes_v2",
       "substep_name": "Run Betting Outcomes V2",
-      "timestamp": "2026-07-18T23:00:26.376487+00:00"
+      "timestamp": "2026-07-19T00:02:14.542812+00:00"
     },
     {
       "event": "step_started",
@@ -274,7 +274,7 @@
       "step_name": "Capture Model-Market Snapshot",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-07-18T23:00:26.377115+00:00"
+      "timestamp": "2026-07-19T00:02:14.543514+00:00"
     },
     {
       "event": "substep_started",
@@ -283,7 +283,7 @@
       "step_name": "Capture Model-Market Snapshot",
       "substep_id": "capture_model_market_snapshots",
       "substep_name": "Capture Model-Market Snapshots",
-      "timestamp": "2026-07-18T23:00:26.378691+00:00"
+      "timestamp": "2026-07-19T00:02:14.544131+00:00"
     },
     {
       "event": "substep_completed",
@@ -292,7 +292,7 @@
       "step_name": "Capture Model-Market Snapshot",
       "substep_id": "capture_model_market_snapshots",
       "substep_name": "Capture Model-Market Snapshots",
-      "timestamp": "2026-07-18T23:00:26.976198+00:00"
+      "timestamp": "2026-07-19T00:02:15.127696+00:00"
     },
     {
       "event": "step_completed",
@@ -301,7 +301,7 @@
       "step_name": "Capture Model-Market Snapshot",
       "substep_id": "capture_model_market_snapshots",
       "substep_name": "Capture Model-Market Snapshots",
-      "timestamp": "2026-07-18T23:00:26.976966+00:00"
+      "timestamp": "2026-07-19T00:02:15.128526+00:00"
     },
     {
       "event": "step_started",
@@ -310,7 +310,7 @@
       "step_name": "Capture Closing Lines",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-07-18T23:00:26.977655+00:00"
+      "timestamp": "2026-07-19T00:02:15.129362+00:00"
     },
     {
       "event": "substep_started",
@@ -319,7 +319,7 @@
       "step_name": "Capture Closing Lines",
       "substep_id": "capture_closing_line_snapshot",
       "substep_name": "Capture Closing-Line Snapshot",
-      "timestamp": "2026-07-18T23:00:26.978282+00:00"
+      "timestamp": "2026-07-19T00:02:15.130004+00:00"
     },
     {
       "event": "substep_completed",
@@ -328,7 +328,7 @@
       "step_name": "Capture Closing Lines",
       "substep_id": "capture_closing_line_snapshot",
       "substep_name": "Capture Closing-Line Snapshot",
-      "timestamp": "2026-07-18T23:00:27.446745+00:00"
+      "timestamp": "2026-07-19T00:02:15.602439+00:00"
     },
     {
       "event": "step_completed",
@@ -337,7 +337,7 @@
       "step_name": "Capture Closing Lines",
       "substep_id": "capture_closing_line_snapshot",
       "substep_name": "Capture Closing-Line Snapshot",
-      "timestamp": "2026-07-18T23:00:27.447488+00:00"
+      "timestamp": "2026-07-19T00:02:15.603261+00:00"
     },
     {
       "event": "runbook_completed",
@@ -346,17 +346,17 @@
       "step_name": "Capture Closing Lines",
       "substep_id": "capture_closing_line_snapshot",
       "substep_name": "Capture Closing-Line Snapshot",
-      "timestamp": "2026-07-18T23:00:27.448218+00:00"
+      "timestamp": "2026-07-19T00:02:15.603929+00:00"
     }
   ],
   "message": "Fight Day Monitor completed",
   "mode": "production",
   "runbook_id": "fight_day_monitor_v1",
-  "started_at": "2026-07-18T22:54:41.449152+00:00",
+  "started_at": "2026-07-18T23:57:51.301530+00:00",
   "status": "completed",
   "step_index": 4,
   "step_total": 4,
   "substep_index": 1,
   "substep_total": 1,
-  "updated_at": "2026-07-18T23:00:27.448372+00:00"
+  "updated_at": "2026-07-19T00:02:15.604109+00:00"
 }
