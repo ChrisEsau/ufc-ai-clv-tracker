@@ -93,10 +93,10 @@ jobs:
           git config user.email "github-actions@github.com"
 
           # Stage model-scoped outputs after Monday Reset has generated them.
-          find data/predictions/by_model -type f \(
-            -name 'model_outcomes.parquet' -o
-            -name 'ensemble_details.parquet' -o
-            -name 'ensemble_exclusions.parquet'
+          find data/predictions/by_model -type f \( \
+            -name 'model_outcomes.parquet' -o \
+            -name 'ensemble_details.parquet' -o \
+            -name 'ensemble_exclusions.parquet' \
           \) -print0 2>/dev/null | xargs -0 -r git add -f
 
           git add -f \
