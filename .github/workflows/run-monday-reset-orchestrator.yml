@@ -59,6 +59,12 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install Google Chrome
+        run: |
+          wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo apt install -y ./google-chrome-stable_current_amd64.deb
+          google-chrome --version
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -123,8 +129,19 @@ jobs:
             data/audits/market_intelligence_history_audit.parquet \
             data/market/market_signals.parquet \
             data/audits/market_signals_audit.parquet \
+            data/fight_details/ufc_round_stats.parquet \
+            data/status/ufc_round_stats_backfill_queue.parquet \
+            data/audits/ufc_round_stats_validation.parquet \
             data/features/fighter_state_history.parquet \
             data/features/latest_fighter_state.parquet \
+            data/features/round_fighter_state_history.parquet \
+            data/features/round_latest_fighter_state.parquet \
+            data/features/round_fighter_suppression_p0_2_history.parquet \
+            data/features/round_latest_fighter_suppression_p0_2.parquet \
+            data/features/round_fighter_wrestling_p0_3_history.parquet \
+            data/features/round_latest_fighter_wrestling_p0_3.parquet \
+            data/features/round_fighter_defense_p1_4_history.parquet \
+            data/features/round_latest_fighter_defense_p1_4.parquet \
             data/features/moneyline_feature_view.parquet \
             data/predictions/live_model_features.parquet \
             data/predictions/model_outcomes.parquet \

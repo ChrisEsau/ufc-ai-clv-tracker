@@ -201,7 +201,47 @@ def run_monday_reset(
                     ROUND_STATS_VALIDATION_PATH,
                 ],
             )
-            _complete_step_status("Completed Ingest Completed Round Stats")
+            _run_command_step(
+                results,
+                "build_round_fighter_state",
+                "Build Round Fighter State",
+                _python_module("pipeline.round_stats.build_round_fighter_state"),
+                [
+                    "data/features/round_fighter_state_history.parquet",
+                    "data/features/round_latest_fighter_state.parquet",
+                ],
+            )
+            _run_command_step(
+                results,
+                "build_round_fighter_suppression",
+                "Build Round Fighter Suppression",
+                _python_module("pipeline.round_stats.build_round_fighter_suppression"),
+                [
+                    "data/features/round_fighter_suppression_p0_2_history.parquet",
+                    "data/features/round_latest_fighter_suppression_p0_2.parquet",
+                ],
+            )
+            _run_command_step(
+                results,
+                "build_round_fighter_wrestling",
+                "Build Round Fighter Wrestling",
+                _python_module("pipeline.round_stats.build_round_fighter_wrestling"),
+                [
+                    "data/features/round_fighter_wrestling_p0_3_history.parquet",
+                    "data/features/round_latest_fighter_wrestling_p0_3.parquet",
+                ],
+            )
+            _run_command_step(
+                results,
+                "build_round_fighter_defense",
+                "Build Round Fighter Defense",
+                _python_module("pipeline.round_stats.build_round_fighter_defense"),
+                [
+                    "data/features/round_fighter_defense_p1_4_history.parquet",
+                    "data/features/round_latest_fighter_defense_p1_4.parquet",
+                ],
+            )
+            _complete_step_status("Completed Ingest Completed Round Stats and refreshed RFS state")
         else:
             _record(
                 results,
