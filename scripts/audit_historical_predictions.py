@@ -10,26 +10,10 @@ What it does
 2. Optionally recovers older committed prediction artifacts from Git history.
 3. Auto-discovers a completed-fight results dataset, or accepts --results PATH.
 4. Grades moneyline model picks against actual winners.
-5. Writes row-level audit, model summary, calibration, unmatched rows, and
-   source diagnostics.
+5. Writes both all-snapshot and latest pre-fight performance summaries.
 
 The script is read-only with respect to the production pipeline. It writes only
 inside --output-dir (default: data/audits/prediction_performance).
-
-Typical usage
--------------
-python scripts/audit_historical_predictions.py
-
-Explicit paths:
-python scripts/audit_historical_predictions.py \
-  --results data/processed/ufc_master_dataset.parquet \
-  --prediction-path data/predictions/model_outcomes.parquet
-
-Skip Git-history recovery:
-python scripts/audit_historical_predictions.py --no-git-history
-
-Inspect candidate result files without grading:
-python scripts/audit_historical_predictions.py --list-result-candidates
 """
 
 from __future__ import annotations
@@ -64,7 +48,6 @@ PREDICTION_REQUIRED_ANY = (
     {"red_fighter", "blue_fighter", "model_probability"},
 )
 
-# Common result schema aliases. The script normalizes the first available alias.
 ALIASES: dict[str, tuple[str, ...]] = {
     "fight_id": (
         "fight_id", "bout_id", "match_id", "ufcstats_fight_id",
@@ -80,20 +63,20 @@ ALIASES: dict[str, tuple[str, ...]] = {
         "event_date", "date", "commence_time", "event_datetime",
     ),
     "red_fighter": (
-        "red_fighter", "r_fighter", "fighter_red", "red_name",
-        "fighter_1", "fighter1", "fighter_a", "r_name",
+        "red_fighter", "r_fighter", "r_name", "fighter_red", "red_name",
+        "fighter_1", "fighter1", "fighter_a",
     ),
     "blue_fighter": (
-        "blue_fighter", "b_fighter", "fighter_blue", "blue_name",
-        "fighter_2", "fighter2", "fighter_b", "b_name",
+        "blue_fighter", "b_fighter", "b_name", "fighter_blue", "blue_name",
+        "fighter_2", "fighter2", "fighter_b",
     ),
     "red_fighter_id": (
-        "red_fighter_id", "r_fighter_id", "fighter_red_id",
-        "fighter_1_id", "fighter1_id", "fighter_a_id", "r_id",
+        "red_fighter_id", "r_fighter_id", "r_id", "fighter_red_id",
+        "fighter_1_id", "fighter1_id", "fighter_a_id",
     ),
     "blue_fighter_id": (
-        "blue_fighter_id", "b_fighter_id", "fighter_blue_id",
-        "fighter_2_id", "fighter2_id", "fighter_b_id", "b_id",
+        "blue_fighter_id", "b_fighter_id", "b_id", "fighter_blue_id",
+        "fighter_2_id", "fighter2_id", "fighter_b_id",
     ),
     "winner": (
         "winner", "winner_name", "winning_fighter", "result_winner",
@@ -136,70 +119,17 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Audit historical UFC predictions against completed fight results."
     )
-    parser.add_argument(
-        "--repo-root",
-        default=".",
-        help="Repository root. Default: current directory.",
-    )
-    parser.add_argument(
-        "--results",
-        default=None,
-        help="Explicit completed-results parquet or CSV path.",
-    )
-    parser.add_argument(
-        "--prediction-path",
-        action="append",
-        default=[],
-        help="Explicit prediction parquet/CSV path. May be supplied multiple times.",
-    )
-    parser.add_argument(
-        "--prediction-git-path",
-        action="append",
-        default=[],
-        help=(
-            "Repository-relative prediction path to recover from Git history. "
-            "May be supplied multiple times."
-        ),
-    )
-    parser.add_argument(
-        "--output-dir",
-        default=str(DEFAULT_OUTPUT_DIR),
-        help=f"Audit output directory. Default: {DEFAULT_OUTPUT_DIR}",
-    )
-    parser.add_argument(
-        "--no-git-history",
-        action="store_true",
-        help="Do not recover overwritten prediction artifacts from Git history.",
-    )
-    parser.add_argument(
-        "--max-git-commits",
-        type=int,
-        default=500,
-        help="Maximum historical commits to inspect per prediction path.",
-    )
-    parser.add_argument(
-        "--model-id",
-        action="append",
-        default=[],
-        help="Restrict audit to one or more model IDs.",
-    )
-    parser.add_argument(
-        "--market-key",
-        action="append",
-        default=[],
-        help="Restrict audit to one or more market keys.",
-    )
-    parser.add_argument(
-        "--min-pick-probability",
-        type=float,
-        default=0.0,
-        help="Only grade picks at or above this probability.",
-    )
-    parser.add_argument(
-        "--list-result-candidates",
-        action="store_true",
-        help="Print ranked result-file candidates and exit.",
-    )
+    parser.add_argument("--repo-root", default=".")
+    parser.add_argument("--results", default=None)
+    parser.add_argument("--prediction-path", action="append", default=[])
+    parser.add_argument("--prediction-git-path", action="append", default=[])
+    parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR))
+    parser.add_argument("--no-git-history", action="store_true")
+    parser.add_argument("--max-git-commits", type=int, default=500)
+    parser.add_argument("--model-id", action="append", default=[])
+    parser.add_argument("--market-key", action="append", default=[])
+    parser.add_argument("--min-pick-probability", type=float, default=0.0)
+    parser.add_argument("--list-result-candidates", action="store_true")
     return parser.parse_args()
 
 
@@ -268,6 +198,25 @@ def first_existing_column(columns: Iterable[str], aliases: Iterable[str]) -> str
     return None
 
 
+def normalize_person(value: object) -> str:
+    if pd.isna(value):
+        return ""
+    text = str(value).lower().strip()
+    text = text.replace("’", "'")
+    text = re.sub(r"\b(jr|sr|ii|iii|iv)\b\.?", "", text)
+    text = re.sub(r"[^a-z0-9]+", "", text)
+    return text
+
+
+def normalize_identifier(value: object) -> str:
+    if pd.isna(value):
+        return ""
+    text = str(value).strip().lower()
+    if text.endswith(".0") and text[:-2].isdigit():
+        text = text[:-2]
+    return text
+
+
 def standardize_results(raw_df: pd.DataFrame) -> pd.DataFrame:
     df = normalized_columns(raw_df)
     rename: dict[str, str] = {}
@@ -279,7 +228,6 @@ def standardize_results(raw_df: pd.DataFrame) -> pd.DataFrame:
 
     df = df.rename(columns=rename)
 
-    # Infer winner from corner-result columns.
     if "winner" not in df.columns:
         winner = pd.Series(pd.NA, index=df.index, dtype="object")
 
@@ -298,24 +246,15 @@ def standardize_results(raw_df: pd.DataFrame) -> pd.DataFrame:
         if "winner_side" in df.columns:
             side = df["winner_side"].astype(str).str.lower().str.strip()
             if "red_fighter" in df.columns:
-                winner.loc[side.isin({"red", "r", "fighter_1", "fighter1", "a"})] = (
-                    df.loc[
-                        side.isin({"red", "r", "fighter_1", "fighter1", "a"}),
-                        "red_fighter",
-                    ]
-                )
+                mask = side.isin({"red", "r", "fighter_1", "fighter1", "a"})
+                winner.loc[mask] = df.loc[mask, "red_fighter"]
             if "blue_fighter" in df.columns:
-                winner.loc[side.isin({"blue", "b", "fighter_2", "fighter2", "b"})] = (
-                    df.loc[
-                        side.isin({"blue", "b", "fighter_2", "fighter2", "b"}),
-                        "blue_fighter",
-                    ]
-                )
+                mask = side.isin({"blue", "b", "fighter_2", "fighter2"})
+                winner.loc[mask] = df.loc[mask, "blue_fighter"]
 
         if winner.notna().any():
             df["winner"] = winner
 
-    # Infer winner ID from winner name and fighter IDs when possible.
     if (
         "winner_id" not in df.columns
         and {"winner", "red_fighter", "blue_fighter"}.issubset(df.columns)
@@ -403,7 +342,6 @@ def default_git_prediction_paths(repo_root: Path) -> list[str]:
         except ValueError:
             continue
 
-    # Stable canonical paths may not exist in the current checkout.
     paths.update(
         {
             "data/predictions/model_outcomes.parquet",
@@ -427,14 +365,7 @@ def recover_git_predictions(
     for git_path in git_paths:
         try:
             log_result = run_command(
-                [
-                    "git",
-                    "log",
-                    "--all",
-                    "--format=%H",
-                    "--",
-                    git_path,
-                ],
+                ["git", "log", "--all", "--format=%H", "--", git_path],
                 cwd=repo_root,
             )
         except subprocess.CalledProcessError as exc:
@@ -484,33 +415,13 @@ def recover_git_predictions(
     return loaded
 
 
-def normalize_person(value: object) -> str:
-    if pd.isna(value):
-        return ""
-    text = str(value).lower().strip()
-    text = text.replace("’", "'")
-    text = re.sub(r"\b(jr|sr|ii|iii|iv)\b\.?", "", text)
-    text = re.sub(r"[^a-z0-9]+", "", text)
-    return text
-
-
-def normalize_identifier(value: object) -> str:
-    if pd.isna(value):
-        return ""
-    text = str(value).strip().lower()
-    if text.endswith(".0") and text[:-2].isdigit():
-        text = text[:-2]
-    return text
-
-
 def normalize_predictions(frames: list[LoadedFrame]) -> pd.DataFrame:
     normalized: list[pd.DataFrame] = []
 
     for loaded in frames:
         df = normalized_columns(loaded.frame)
 
-        required = {"model_probability"}
-        if not required.issubset(df.columns):
+        if "model_probability" not in df.columns:
             continue
 
         df["_prediction_source"] = loaded.source
@@ -522,10 +433,9 @@ def normalize_predictions(frames: list[LoadedFrame]) -> pd.DataFrame:
                 df["prediction_timestamp"], errors="coerce", utc=True
             )
 
-        if "model_probability" in df.columns:
-            df["model_probability"] = pd.to_numeric(
-                df["model_probability"], errors="coerce"
-            )
+        df["model_probability"] = pd.to_numeric(
+            df["model_probability"], errors="coerce"
+        )
 
         if "model_pick_probability" not in df.columns:
             if "model_confidence" in df.columns:
@@ -546,7 +456,6 @@ def normalize_predictions(frames: list[LoadedFrame]) -> pd.DataFrame:
 
     combined = pd.concat(normalized, ignore_index=True, sort=False)
 
-    # Keep one copy of identical prediction outcomes recovered from multiple paths.
     dedupe_columns = [
         column
         for column in (
@@ -613,12 +522,12 @@ def score_result_candidate(path: Path) -> tuple[float, dict[str, object]]:
     for token in ("master", "fight", "result", "historical", "completed", "bout"):
         if token in path_text:
             score += 0.5
-    for token in ("prediction", "live_card", "feature", "audit"):
+    for token in (
+        "prediction", "live_card", "feature", "audit",
+        "upcoming", "queue", "status", "staging",
+    ):
         if token in path_text:
-            score -= 3
-    for token in ("upcoming", "queue", "/status/", "/staging/"):
-        if token in path_text:
-            score -= 25
+            score -= 10
 
     return score, {"columns": columns, "resolved": resolved}
 
@@ -949,7 +858,6 @@ def grade_predictions(
             audit_rows.append(record)
             continue
 
-        # This standalone version grades moneyline/matchup winner predictions.
         is_moneyline = (
             market_key in {"", "h2h", "moneyline", "winner", "fight_winner"}
             or model_family == "moneyline"
@@ -969,7 +877,6 @@ def grade_predictions(
         )
         record["actual_winner"] = actual_winner
 
-        # Include selected result details without overwriting prediction fields.
         for column in (
             "winner_id",
             "method",
@@ -1015,7 +922,6 @@ def safe_roc_auc(y_true: np.ndarray, probabilities: np.ndarray) -> float:
 
         return float(roc_auc_score(y_true, probabilities))
     except Exception:
-        # Mann-Whitney U / rank-sum implementation with average ranks for ties.
         ranks = pd.Series(probabilities).rank(method="average").to_numpy()
         positive_rank_sum = ranks[y_true == 1].sum()
         auc = (
@@ -1055,7 +961,6 @@ def summarize_group(group: pd.DataFrame) -> pd.Series:
             "avg_pick_probability": float(probabilities.mean()),
             "brier_score": float(np.mean((probabilities - y) ** 2)),
             "log_loss": safe_log_loss(y, probabilities),
-            # This AUC answers: do higher-confidence picks win more often?
             "roc_auc_pick_correctness": safe_roc_auc(y, probabilities),
         }
     )
@@ -1140,6 +1045,100 @@ def build_calibration(graded: pd.DataFrame) -> pd.DataFrame:
     return calibration
 
 
+def select_latest_prefight_predictions(graded: pd.DataFrame) -> pd.DataFrame:
+    """Keep one latest available prediction per model, fight, and market.
+
+    The model-market snapshot is append-only and may contain sportsbook copies,
+    repeated captures, and multiple prediction runs before one fight.
+    """
+
+    if graded.empty:
+        return graded.copy()
+
+    df = graded.copy()
+
+    red_id = df.get("red_fighter_id", pd.Series(pd.NA, index=df.index)).map(
+        normalize_identifier
+    )
+    blue_id = df.get("blue_fighter_id", pd.Series(pd.NA, index=df.index)).map(
+        normalize_identifier
+    )
+    fighter_id_key = pd.Series("", index=df.index, dtype="object")
+    has_ids = red_id.ne("") & blue_id.ne("")
+    fighter_id_key.loc[has_ids] = [
+        "__".join(sorted(pair))
+        for pair in zip(red_id.loc[has_ids], blue_id.loc[has_ids])
+    ]
+
+    red_name = df.get("red_fighter", pd.Series(pd.NA, index=df.index)).map(
+        normalize_person
+    )
+    blue_name = df.get("blue_fighter", pd.Series(pd.NA, index=df.index)).map(
+        normalize_person
+    )
+    fighter_name_key = pd.Series("", index=df.index, dtype="object")
+    has_names = red_name.ne("") & blue_name.ne("")
+    fighter_name_key.loc[has_names] = [
+        "__".join(sorted(pair))
+        for pair in zip(red_name.loc[has_names], blue_name.loc[has_names])
+    ]
+
+    fight_id_key = df.get(
+        "fight_id", pd.Series(pd.NA, index=df.index)
+    ).map(normalize_identifier)
+
+    df["_audit_fight_key"] = np.where(
+        fighter_id_key.ne(""),
+        "ids:" + fighter_id_key,
+        np.where(
+            fighter_name_key.ne(""),
+            "names:" + fighter_name_key,
+            "fight_id:" + fight_id_key,
+        ),
+    )
+
+    if "prediction_timestamp" in df.columns:
+        df["prediction_timestamp"] = pd.to_datetime(
+            df["prediction_timestamp"], errors="coerce", utc=True
+        )
+    else:
+        df["prediction_timestamp"] = pd.NaT
+
+    if "actual_event_date" in df.columns:
+        event_date = pd.to_datetime(
+            df["actual_event_date"], errors="coerce", utc=True
+        )
+        prefight_cutoff = event_date.dt.normalize() + pd.Timedelta(days=1)
+        valid_prefight = (
+            df["prediction_timestamp"].isna()
+            | prefight_cutoff.isna()
+            | df["prediction_timestamp"].lt(prefight_cutoff)
+        )
+        df = df.loc[valid_prefight].copy()
+
+    group_columns = [
+        column
+        for column in ("model_id", "market_key", "_audit_fight_key")
+        if column in df.columns
+    ]
+    if not group_columns:
+        return df.drop(columns=["_audit_fight_key"], errors="ignore")
+
+    df["_timestamp_sort"] = df["prediction_timestamp"].fillna(
+        pd.Timestamp("1900-01-01", tz="UTC")
+    )
+    df = df.sort_values(
+        group_columns + ["_timestamp_sort"],
+        ascending=[True] * len(group_columns) + [True],
+    )
+    latest = df.groupby(group_columns, dropna=False, as_index=False).tail(1)
+
+    return latest.drop(
+        columns=["_audit_fight_key", "_timestamp_sort"],
+        errors="ignore",
+    ).reset_index(drop=True)
+
+
 def write_outputs(
     output_dir: Path,
     audit: pd.DataFrame,
@@ -1149,19 +1148,50 @@ def write_outputs(
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    graded = audit.loc[audit["audit_status"].eq("graded")].copy()
-    if not graded.empty:
-        graded["is_correct"] = graded["is_correct"].astype(bool)
+    graded_all = audit.loc[audit["audit_status"].eq("graded")].copy()
+    if not graded_all.empty:
+        graded_all["is_correct"] = graded_all["is_correct"].astype(bool)
 
-    summary = build_summary(graded)
-    calibration = build_calibration(graded)
+    graded_latest = select_latest_prefight_predictions(graded_all)
+
+    all_snapshot_summary = build_summary(graded_all)
+    latest_prefight_summary = build_summary(graded_latest)
+    all_snapshot_calibration = build_calibration(graded_all)
+    latest_prefight_calibration = build_calibration(graded_latest)
     unmatched = audit.loc[~audit["audit_status"].eq("graded")].copy()
 
     audit.to_parquet(output_dir / "prediction_audit_rows.parquet", index=False)
     audit.to_csv(output_dir / "prediction_audit_rows.csv", index=False)
-    summary.to_csv(output_dir / "model_performance_summary.csv", index=False)
-    calibration.to_csv(output_dir / "model_calibration.csv", index=False)
-    unmatched.to_csv(output_dir / "unmatched_or_ungraded_predictions.csv", index=False)
+    graded_latest.to_parquet(
+        output_dir / "latest_prefight_prediction_rows.parquet", index=False
+    )
+    graded_latest.to_csv(
+        output_dir / "latest_prefight_prediction_rows.csv", index=False
+    )
+
+    latest_prefight_summary.to_csv(
+        output_dir / "model_performance_summary.csv", index=False
+    )
+    latest_prefight_summary.to_csv(
+        output_dir / "latest_prefight_model_performance_summary.csv", index=False
+    )
+    all_snapshot_summary.to_csv(
+        output_dir / "all_snapshot_model_performance_summary.csv", index=False
+    )
+
+    latest_prefight_calibration.to_csv(
+        output_dir / "model_calibration.csv", index=False
+    )
+    latest_prefight_calibration.to_csv(
+        output_dir / "latest_prefight_model_calibration.csv", index=False
+    )
+    all_snapshot_calibration.to_csv(
+        output_dir / "all_snapshot_model_calibration.csv", index=False
+    )
+
+    unmatched.to_csv(
+        output_dir / "unmatched_or_ungraded_predictions.csv", index=False
+    )
     prediction_sources.to_csv(
         output_dir / "prediction_source_inventory.csv", index=False
     )
@@ -1183,8 +1213,13 @@ def write_outputs(
     diagnostics = {
         "selected_results_path": str(result_path),
         "prediction_rows_total": int(len(audit)),
-        "graded_rows": int(len(graded)),
+        "graded_snapshot_rows": int(len(graded_all)),
+        "graded_latest_prefight_rows": int(len(graded_latest)),
+        "duplicate_or_earlier_snapshot_rows_removed": int(
+            len(graded_all) - len(graded_latest)
+        ),
         "unmatched_or_ungraded_rows": int(len(unmatched)),
+        "official_summary": str(output_dir / "model_performance_summary.csv"),
         "result_candidates": candidate_payload,
     }
     (output_dir / "audit_diagnostics.json").write_text(
@@ -1197,18 +1232,33 @@ def write_outputs(
     for filename in (
         "prediction_audit_rows.parquet",
         "prediction_audit_rows.csv",
+        "latest_prefight_prediction_rows.parquet",
+        "latest_prefight_prediction_rows.csv",
         "model_performance_summary.csv",
+        "latest_prefight_model_performance_summary.csv",
+        "all_snapshot_model_performance_summary.csv",
         "model_calibration.csv",
+        "latest_prefight_model_calibration.csv",
+        "all_snapshot_model_calibration.csv",
         "unmatched_or_ungraded_predictions.csv",
         "prediction_source_inventory.csv",
         "audit_diagnostics.json",
     ):
         print(output_dir / filename)
 
-    if not summary.empty:
-        print("\nModel performance summary")
+    print("\nEvaluation row counts")
+    print("=" * 80)
+    print(f"All graded snapshots: {len(graded_all):,}")
+    print(f"Latest pre-fight model/fight rows: {len(graded_latest):,}")
+    print(
+        "Earlier or duplicate snapshots removed: "
+        f"{len(graded_all) - len(graded_latest):,}"
+    )
+
+    if not latest_prefight_summary.empty:
+        print("\nOfficial model performance: latest pre-fight prediction per fight")
         print("=" * 80)
-        display = summary.copy()
+        display = latest_prefight_summary.copy()
         for column in (
             "accuracy",
             "avg_pick_probability",
@@ -1226,6 +1276,23 @@ def write_outputs(
         if not unmatched.empty and "audit_reason" in unmatched.columns:
             print("\nTop audit failure reasons:")
             print(unmatched["audit_reason"].value_counts().head(10).to_string())
+
+    if not all_snapshot_summary.empty:
+        print("\nAll-snapshot comparison")
+        print("=" * 80)
+        display = all_snapshot_summary.copy()
+        for column in (
+            "accuracy",
+            "avg_pick_probability",
+            "brier_score",
+            "log_loss",
+            "roc_auc_pick_correctness",
+        ):
+            if column in display.columns:
+                display[column] = display[column].map(
+                    lambda value: f"{value:.4f}" if pd.notna(value) else ""
+                )
+        print(display.to_string(index=False))
 
 
 def main() -> int:
