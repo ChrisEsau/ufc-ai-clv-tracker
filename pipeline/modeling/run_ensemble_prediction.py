@@ -214,10 +214,9 @@ def prepare_moneyline_market(market_df: pd.DataFrame) -> pd.DataFrame:
     if ml.empty:
         raise ValueError("No moneyline rows found in market outcomes.")
 
-    # Prefer DraftKings when available because the live pipeline currently uses
-    # DraftKings as the primary book. Fall back to all books if DK is absent.
-    if "DraftKings" in set(ml["bookmaker"].dropna().astype(str)):
-        ml = ml[ml["bookmaker"].astype(str).eq("DraftKings")].copy()
+    # Keep all available bookmakers here. Book preference is applied below
+    # per fight and fighter, allowing FanDuel to serve as a fallback whenever
+    # DraftKings does not offer both sides of a specific matchup.
 
     ml["american_odds"] = safe_numeric(ml["american_odds"])
     ml["implied_probability"] = safe_numeric(ml["implied_probability"])
