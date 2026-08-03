@@ -326,10 +326,10 @@ def _status_badge(result: str) -> str:
     return f'<span class="bankroll-badge {css}">{_escape(str(result or "Open").title())}</span>'
 
 
-def _ledger_table(ledger: pd.DataFrame, limit: int = 5) -> str:
+def _ledger_table(ledger: pd.DataFrame) -> str:
     if ledger.empty:
         return "<table class='bankroll-table'><tbody><tr><td>No official bets have been added to the ledger yet.</td></tr></tbody></table>"
-    display = ledger.copy().head(limit)
+    display = ledger.copy()
     rows = []
     for _, row in display.iterrows():
         rows.append(
@@ -352,7 +352,7 @@ def _ledger_table(ledger: pd.DataFrame, limit: int = 5) -> str:
     return (
         "<table class='bankroll-table'><thead><tr>"
         "<th>Date</th><th>Event</th><th>Fight</th><th>Pick</th><th>Bet Type</th><th class='bankroll-right'>Odds Taken</th><th class='bankroll-right'>Stake</th><th class='bankroll-center'>Result</th><th class='bankroll-right'>Profit / Loss</th><th class='bankroll-right'>Closing Odds</th><th class='bankroll-right'>CLV</th><th class='bankroll-right'>Model Prob</th><th class='bankroll-right'>EV</th>"
-        "</tr></thead><tbody>" + "".join(rows) + "</tbody></table><div class='bankroll-kpi-caption' style='text-align:center; padding:.75rem;'>View Full Bet Ledger →</div>"
+        "</tr></thead><tbody>" + "".join(rows) + "</tbody></table>"
     )
 
 
@@ -958,7 +958,13 @@ def render_bankroll():
         _render_open_exposure(open_bets)
         st.html('</div></div>')
 
-    st.html('<div class="bankroll-card" style="margin-top:.7rem;"><div class="bankroll-card-title">Bet Ledger (All Time)</div><div class="bankroll-chart-wrap">' + _ledger_table(ledger) + '</div></div>')
+    st.html(
+        '<div class="bankroll-card" style="margin-top:.7rem;">'
+        '<div class="bankroll-card-title">Bet Ledger (All Time)</div>'
+        '<div class="bankroll-chart-wrap" style="max-height:520px; overflow:auto;">'
+        + _ledger_table(ledger)
+        + '</div></div>'
+    )
 
     st.html('<div class="bankroll-small-grid">')
     c1, c2, c3, c4, c5 = st.columns(5)
