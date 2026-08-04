@@ -31,8 +31,10 @@ from pipeline.simulation.artifacts import (
     SIMULATION_TRAINING_DATASET_PATH,
     ensure_simulation_dirs,
 )
+from pipeline.simulation.historical_training import (
+    build_historical_simulation_training_dataset,
+)
 from pipeline.simulation.parameter_models import validate_training_targets
-from pipeline.simulation.training_dataset import build_simulation_training_dataset
 
 
 DEFAULT_STATE_PATHS: Mapping[str, Path] = {
@@ -106,6 +108,13 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _audit_value(audit: pd.DataFrame, check: str) -> object | None:
+    match = audit.loc[audit["check"].eq(check), "value"]
+    if match.empty:
+        return None
+    return match.iloc[0]
+
+
 def main() -> None:
     args = build_parser().parse_args()
     ensure_data_dirs()
@@ -118,7 +127,7 @@ def main() -> None:
         require_all_rfs=args.require_all_rfs,
     )
 
-    result = build_simulation_training_dataset(
+    result = build_historical_simulation_training_dataset(
         round_stats_df=rounds,
         master_df=master,
         state_sources=state_sources,
@@ -131,6 +140,15 @@ def main() -> None:
     result.audit.to_parquet(args.audit_output, index=False)
 
     dataset = result.dataset
+    excluded_fights = _audit_value(
+        result.audit,
+        "historical_excluded_nonstandard_round_fights",
+    )
+    excluded_rows = _audit_value(
+        result.audit,
+        "historical_excluded_nonstandard_fighter_round_rows",
+    )
+
     print("=" * 80)
     print("UFC SIMULATOR FIGHTER-ROUND TRAINING DATASET")
     print("=" * 80)
@@ -139,6 +157,10 @@ def main() -> None:
     print(f"Fighters: {dataset['fighter_id'].nunique():,}")
     print(f"Columns: {len(dataset.columns):,}")
     print(f"RFS sources joined: {', '.join(state_sources) if state_sources else 'none'}")
+    if excluded_fights is not None:
+        print(f"Excluded nonstandard/missing scheduled-round fights: {int(excluded_fights):,}")
+    if excluded_rows is not None:
+        print(f"Excluded fighter-round rows from those fights: {int(excluded_rows):,}")
     print(f"Training dataset: {args.output}")
     print(f"Validation audit: {args.audit_output}")
     print("Shadow-only artifact. No production model or betting contract was changed.")
