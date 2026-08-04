@@ -29,9 +29,6 @@ from pipeline.simulation.training_dataset import (
 
 SUPPORTED_SCHEDULED_ROUNDS = frozenset({3, 5})
 
-# These values are fight-level context governed by the master dataset. Historical
-# round files may carry duplicate copies, but those copies must not create merge
-# suffixes or override the authoritative master values.
 MASTER_AUTHORITATIVE_CONTEXT_COLUMNS = (
     "division",
     "title_fight",
@@ -43,9 +40,6 @@ MASTER_AUTHORITATIVE_CONTEXT_COLUMNS = (
     "winner_id",
 )
 
-# The first simulator parameter registry does not yet model strike location or
-# distance/clinch phase allocation. These are realized observations from the
-# target round and would be direct leakage if left in the feature namespace.
 UNREGISTERED_TARGET_ROUND_OBSERVATION_COLUMNS = (
     "head_landed",
     "head_attempted",
@@ -59,15 +53,25 @@ UNREGISTERED_TARGET_ROUND_OBSERVATION_COLUMNS = (
     "clinch_attempted",
 )
 
-# Source-only fields do not belong in modeling artifacts. ``ctrl_sec`` is a raw
-# duplicate of the standardized ``control_seconds`` observation used to create
-# explicit targets and prior-round context.
+CONTROL_SECONDS_SOURCE_COLUMNS = (
+    "control_seconds",
+    "ctrl_seconds",
+    "ctrl_sec",
+    "control_time_seconds",
+    "control_time_sec",
+    "control_time",
+    "ctrl",
+    "control",
+)
+
 SOURCE_ONLY_ROUND_COLUMNS = (
     "ctrl_sec",
     "ctrl_seconds",
     "control_time",
     "control_time_sec",
     "control_time_seconds",
+    "ctrl",
+    "control",
     "event_date",
     "event_url",
     "fight_url",
@@ -88,13 +92,13 @@ class HistoricalEligibilitySummary:
     eligible_round_rows: int
     excluded_round_rows: int
     scheduled_round_distribution: Mapping[str, int]
+    control_seconds_source_column: str
     dropped_round_context_columns: tuple[str, ...]
     dropped_target_round_observation_columns: tuple[str, ...]
     dropped_source_only_columns: tuple[str, ...]
 
 
 def _scheduled_round_distribution(values: pd.Series) -> dict[str, int]:
-    """Return a JSON-safe distribution including missing values."""
     numeric = pd.to_numeric(values, errors="coerce")
     labels = numeric.map(lambda value: "missing" if pd.isna(value) else str(int(value)))
     counts = labels.value_counts(dropna=False).sort_index()
@@ -105,22 +109,33 @@ def _present_columns(df: pd.DataFrame, candidates: tuple[str, ...]) -> tuple[str
     return tuple(column for column in candidates if column in df.columns)
 
 
+def _canonicalize_control_seconds(rounds: pd.DataFrame) -> tuple[pd.DataFrame, str]:
+    """Create the canonical control_seconds observation before aliases are removed."""
+    out = rounds.copy()
+    source = next(
+        (column for column in CONTROL_SECONDS_SOURCE_COLUMNS if column in out.columns),
+        None,
+    )
+    if source is None:
+        raise SimulationTrainingDataError(
+            "round stats is missing control time; checked: "
+            f"{list(CONTROL_SECONDS_SOURCE_COLUMNS)}"
+        )
+    if "control_seconds" not in out.columns:
+        out["control_seconds"] = out[source]
+    return out, source
+
+
 def select_standard_round_history(
     round_stats_df: pd.DataFrame,
     master_df: pd.DataFrame,
     state_sources: Mapping[str, pd.DataFrame] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, pd.DataFrame], HistoricalEligibilitySummary]:
-    """Select simulator-compatible fights and enforce the historical source boundary.
-
-    Eligibility is evaluated only among fights that have round-stat rows. Master
-    fights without round data are outside this training build and are therefore
-    not counted as exclusions.
-    """
-    required_round_columns = ["fight_id"]
-    required_master_columns = ["fight_id", "total_rounds"]
-
-    missing_round = [column for column in required_round_columns if column not in round_stats_df]
-    missing_master = [column for column in required_master_columns if column not in master_df]
+    """Select simulator-compatible fights and enforce the historical source boundary."""
+    missing_round = [column for column in ["fight_id"] if column not in round_stats_df]
+    missing_master = [
+        column for column in ["fight_id", "total_rounds"] if column not in master_df
+    ]
     if missing_round:
         raise SimulationTrainingDataError(
             f"round stats is missing historical eligibility columns: {missing_round}"
@@ -155,6 +170,9 @@ def select_standard_round_history(
     eligible_rounds = round_stats_df[
         round_stats_df["fight_id"].isin(eligible_fight_ids)
     ].copy()
+    eligible_rounds, control_seconds_source = _canonicalize_control_seconds(
+        eligible_rounds
+    )
 
     dropped_round_context_columns = _present_columns(
         eligible_rounds,
@@ -190,15 +208,14 @@ def select_standard_round_history(
     summary = HistoricalEligibilitySummary(
         candidate_fights=int(candidate_master["fight_id"].nunique()),
         eligible_fights=int(eligible_master["fight_id"].nunique()),
-        excluded_fights=int(
-            candidate_master.loc[~eligible_mask, "fight_id"].nunique()
-        ),
+        excluded_fights=int(candidate_master.loc[~eligible_mask, "fight_id"].nunique()),
         candidate_round_rows=int(len(round_stats_df)),
         eligible_round_rows=int(len(eligible_rounds)),
         excluded_round_rows=int(len(round_stats_df) - len(eligible_rounds)),
         scheduled_round_distribution=_scheduled_round_distribution(
             candidate_master["total_rounds"]
         ),
+        control_seconds_source_column=control_seconds_source,
         dropped_round_context_columns=dropped_round_context_columns,
         dropped_target_round_observation_columns=dropped_target_round_observation_columns,
         dropped_source_only_columns=dropped_source_only_columns,
@@ -208,16 +225,12 @@ def select_standard_round_history(
 
 
 def _eligibility_audit(summary: HistoricalEligibilitySummary) -> pd.DataFrame:
-    distribution = json.dumps(
-        summary.scheduled_round_distribution,
-        sort_keys=True,
-    )
     rows = [
         (
             "historical_candidate_fights_with_round_data",
             summary.candidate_fights,
             summary.candidate_fights > 0,
-            distribution,
+            json.dumps(summary.scheduled_round_distribution, sort_keys=True),
         ),
         (
             "historical_eligible_standard_round_fights",
@@ -248,6 +261,12 @@ def _eligibility_audit(summary: HistoricalEligibilitySummary) -> pd.DataFrame:
             summary.excluded_round_rows,
             True,
             "Intentionally excluded with their parent fights",
+        ),
+        (
+            "control_seconds_source_column",
+            1,
+            True,
+            summary.control_seconds_source_column,
         ),
         (
             "round_context_columns_dropped_in_favor_of_master",
