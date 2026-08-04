@@ -1,0 +1,138 @@
+name: Simulator Strike Pace Stability
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/round-fight-simulator-v0
+    paths:
+      - ".github/workflows/run-simulation-sig-attempt-stability.yml"
+      - "pipeline/simulation/sig_attempt_stability.py"
+      - "pipeline/simulation/run_sig_attempt_stability.py"
+      - "pipeline/simulation/sig_attempt_calibration.py"
+      - "pipeline/simulation/sig_attempt_model.py"
+      - "pipeline/simulation/run_train_sig_attempt_model.py"
+      - "pipeline/simulation/artifacts.py"
+      - "tests/test_simulation_sig_attempt_stability.py"
+      - "tests/test_simulation_sig_attempt_calibration.py"
+      - "tests/test_simulation_sig_attempt_model.py"
+
+permissions:
+  contents: read
+
+jobs:
+  compact-rfs-stability:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout simulator branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run simulator stability tests
+        run: |
+          python -m unittest tests.test_simulation_sig_attempt_model
+          python -m unittest tests.test_simulation_sig_attempt_calibration
+          python -m unittest tests.test_simulation_sig_attempt_stability
+          python -m unittest tests.test_simulation_terminal_round
+          python -m compileall -q pipeline/simulation
+
+      - name: Build leakage-safe fighter-round table
+        run: |
+          python -m pipeline.simulation.run_build_training_dataset
+
+      - name: Rebuild reference strike benchmark
+        run: |
+          python -m pipeline.simulation.run_train_sig_attempt_model
+
+      - name: Run compact RFS stability experiment
+        run: |
+          python -m pipeline.simulation.run_sig_attempt_stability
+
+      - name: Publish stability summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path(
+              "data/model_lab/simulation/models/sig_attempt_pace_v0/"
+              "stability/summary.json"
+          )
+          summary = json.loads(path.read_text(encoding="utf-8"))
+          calibrated = [
+              row
+              for row in summary["aggregate_metrics"]
+              if row["calibration"] == "sequential_mean_calibrated"
+          ]
+          calibrated.sort(key=lambda row: row["count_poisson_deviance"])
+
+          with Path("sig_attempt_stability_summary.md").open(
+              "w", encoding="utf-8"
+          ) as handle:
+              handle.write("# Significant-strike compact RFS stability\n\n")
+              handle.write(
+                  f"- Best compact model: **{summary['best_compact_model']}**\n"
+              )
+              handle.write(
+                  "- Best compact calibrated Poisson deviance: "
+                  f"**{summary['best_compact_poisson_deviance']:.4f}**\n"
+              )
+              handle.write(
+                  f"- Stability gate: **{summary['best_compact_gate_status']}**\n"
+              )
+              if summary["best_compact_blocking_reasons"]:
+                  handle.write(
+                      "- Blocking reasons: "
+                      f"`{summary['best_compact_blocking_reasons']}`\n"
+                  )
+              handle.write("\n## Calibrated aggregate metrics\n\n")
+              handle.write("| Model | Poisson deviance | Bias | Rows |\n")
+              handle.write("|---|---:|---:|---:|\n")
+              for row in calibrated:
+                  handle.write(
+                      f"| {row['model_name']} | "
+                      f"{row['count_poisson_deviance']:.4f} | "
+                      f"{row['mean_count_bias']:.3f} | "
+                      f"{row['rows']:,} |\n"
+                  )
+              handle.write("\n## Candidate gates\n\n")
+              handle.write(
+                  "| Candidate | Status | Aggregate improvement | Latest-year improvement | "
+                  "Winning years | Worst subgroup | Bias |\n"
+              )
+              handle.write("|---|---|---:|---:|---:|---:|---:|\n")
+              for row in summary["gates"]:
+                  handle.write(
+                      f"| {row['candidate_model']} | {row['gate_status']} | "
+                      f"{row['aggregate_poisson_improvement']:.2%} | "
+                      f"{row['latest_year_poisson_improvement']:.2%} | "
+                      f"{row['winning_years']}/{row['evaluated_years']} | "
+                      f"{row['worst_subgroup_poisson_improvement']:.2%} | "
+                      f"{row['mean_count_bias']:.3f} |\n"
+                  )
+          PY
+
+          cat sig_attempt_stability_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload strike stability artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-sig-attempt-stability-v0
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6
+          path: |
+            data/model_lab/simulation/models/sig_attempt_pace_v0/**
+            data/audits/simulation_fighter_round_training_audit.parquet
+            sig_attempt_stability_summary.md
