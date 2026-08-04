@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import unittest
 
+import numpy as np
 import pandas as pd
 
 from pipeline.simulation.sig_attempt_model import (
+    _fighter_history_prediction,
     prepare_sig_attempt_dataset,
     select_model_columns,
 )
@@ -96,6 +98,16 @@ class SigAttemptModelTests(unittest.TestCase):
             float(original_f3["fighter_prior_sig_attempt_rate_exp"]),
             float(mutated_f3["fighter_prior_sig_attempt_rate_exp"]),
         )
+
+    def test_missing_history_fallback_returns_finite_predictions(self):
+        prepared = prepare_sig_attempt_dataset(make_training_rows())
+        round_rate = np.full(len(prepared), 5.5, dtype=float)
+
+        prediction = _fighter_history_prediction(prepared, round_rate)
+
+        self.assertTrue(np.isfinite(prediction).all())
+        first_fight = prepared["fight_id"].eq("F1").to_numpy()
+        np.testing.assert_allclose(prediction[first_fight], 5.5)
 
     def test_rfs_ablation_feature_sets_are_separate(self):
         prepared = prepare_sig_attempt_dataset(make_training_rows())
