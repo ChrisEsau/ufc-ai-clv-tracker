@@ -369,9 +369,13 @@ def _fighter_history_prediction(
     frame: pd.DataFrame,
     round_rate: np.ndarray,
 ) -> np.ndarray:
+    # pandas 3 copy-on-write can expose a read-only NumPy view for native
+    # float64 parquet columns. The cold-start fallback mutates this temporary
+    # array, so request an explicit writable copy rather than relying on dtype
+    # conversion to allocate one.
     fighter_rate = pd.to_numeric(
         frame["fighter_prior_sig_attempt_rate_exp"], errors="coerce"
-    ).to_numpy(dtype=float)
+    ).to_numpy(dtype=float, copy=True)
     exposure = pd.to_numeric(
         frame["fighter_prior_exposure_minutes"], errors="coerce"
     ).fillna(0.0).to_numpy(dtype=float)
