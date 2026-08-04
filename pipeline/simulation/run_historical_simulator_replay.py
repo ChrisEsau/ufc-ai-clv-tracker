@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from pipeline.common.paths import MODEL_LAB_DIR
+from pipeline.common.paths import MASTER_PATH, MODEL_LAB_DIR
 from pipeline.simulation.artifacts import SIMULATION_TRAINING_DATASET_PATH
 from pipeline.simulation.historical_simulator_replay import (
     metric_lookup,
@@ -22,11 +22,54 @@ OUTPUT_DIR = MODEL_LAB_DIR / "simulation" / "historical_replay_v0"
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Replay the full heuristic simulator")
     parser.add_argument("--input", type=Path, default=SIMULATION_TRAINING_DATASET_PATH)
+    parser.add_argument("--master", type=Path, default=MASTER_PATH)
     parser.add_argument("--test-year", type=int, default=2026)
     parser.add_argument("--simulations-per-fight", type=int, default=750)
     parser.add_argument("--seed", type=int, default=91)
     parser.add_argument("--max-fights", type=int, default=None)
     return parser
+
+
+def _method_family(value: object) -> str:
+    text = "" if pd.isna(value) else str(value).strip().lower()
+    if "ko" in text or "tko" in text:
+        return "ko_tko"
+    if "sub" in text:
+        return "submission"
+    if "dec" in text:
+        return "decision"
+    return "other"
+
+
+def _attach_scoring_labels(training: pd.DataFrame, master: pd.DataFrame) -> pd.DataFrame:
+    """Attach realized labels after the leakage-safe model table is built."""
+    required = ["fight_id", "winner_id", "method", "match_time_sec"]
+    missing = [column for column in required if column not in master.columns]
+    if missing:
+        raise ValueError(f"Master fight table is missing replay labels: {missing}")
+
+    labels = master.loc[
+        master["fight_id"].isin(training["fight_id"].unique()),
+        required,
+    ].copy()
+    labels["method_family"] = labels["method"].map(_method_family)
+    labels["match_time_sec"] = pd.to_numeric(
+        labels["match_time_sec"], errors="coerce"
+    )
+    if labels.duplicated(["fight_id"]).any():
+        raise ValueError("Master fight table has duplicate fight_id labels")
+    if labels[["winner_id", "match_time_sec"]].isna().any().any():
+        raise ValueError("Master replay labels contain missing winner/time values")
+
+    labeled = training.merge(
+        labels[["fight_id", "winner_id", "method_family", "match_time_sec"]],
+        on="fight_id",
+        how="left",
+        validate="many_to_one",
+    )
+    if labeled[["winner_id", "method_family", "match_time_sec"]].isna().any().any():
+        raise ValueError("Some simulator training fights are missing master scoring labels")
+    return labeled
 
 
 def main() -> None:
@@ -35,10 +78,16 @@ def main() -> None:
         raise FileNotFoundError(
             f"Training table not found: {args.input}. Run the simulator training builder first."
         )
+    if not args.master.exists():
+        raise FileNotFoundError(f"Master fight table not found: {args.master}")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
+    training = pd.read_parquet(args.input)
+    master = pd.read_parquet(args.master)
+    labeled_training = _attach_scoring_labels(training, master)
+
     result = run_historical_simulator_replay(
-        pd.read_parquet(args.input),
+        labeled_training,
         test_year=args.test_year,
         simulations_per_fight=args.simulations_per_fight,
         seed=args.seed,
