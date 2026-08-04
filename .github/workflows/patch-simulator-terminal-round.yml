@@ -1,0 +1,165 @@
+name: Apply Simulator Terminal Round Patch
+
+on:
+  push:
+    branches:
+      - feature/round-fight-simulator-v0
+    paths:
+      - ".github/workflows/patch-simulator-terminal-round.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch-source:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout simulator branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/round-fight-simulator-v0
+          fetch-depth: 0
+
+      - name: Patch terminal round accounting
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("pipeline/simulation/engine.py")
+          text = path.read_text(encoding="utf-8")
+
+          version_marker = ')\n\n\nSIMULATOR_VERSION = "round_simulator_v0"'
+          version_replacement = (
+              ')\nfrom pipeline.simulation.terminal_round import ('
+              '\n    RoundPerformance,'
+              '\n    thin_round_performance,'
+              '\n)\n\n\nSIMULATOR_VERSION = "round_simulator_v0_1"'
+          )
+          if text.count(version_marker) != 1:
+              raise SystemExit("Could not identify simulator import/version marker")
+          text = text.replace(version_marker, version_replacement, 1)
+
+          prefix, simulate_marker, remainder = text.partition("def simulate_fight(")
+          if not simulate_marker:
+              raise SystemExit("Could not locate simulate_fight")
+          simulate_body, end_marker, suffix = remainder.partition("\n\ndef _mean(")
+          if not end_marker:
+              raise SystemExit("Could not locate end of simulate_fight")
+
+          before_finish, finish_marker, after_finish = simulate_body.partition(
+              "        if finish is not None:\n"
+          )
+          if not finish_marker:
+              raise SystemExit("Could not locate terminal finish block")
+          old_finish_body, update_marker, remaining_body = after_finish.partition(
+              "\n        _update_dynamic_state("
+          )
+          if not update_marker:
+              raise SystemExit("Could not locate post-finish dynamic update")
+          if "            break" not in old_finish_body:
+              raise SystemExit("Terminal finish block does not contain expected break")
+
+          new_finish = '''        if finish is not None:
+              winner_corner, method = finish
+              finish_round = round_number
+              time_fraction = float(rng.beta(1.5 + 0.15 * round_number, 1.35))
+              finish_time_seconds = max(
+                  1.0,
+                  min(matchup.round_seconds, time_fraction * matchup.round_seconds),
+              )
+              exposure_fraction = finish_time_seconds / matchup.round_seconds
+
+              red_partial = thin_round_performance(
+                  rng,
+                  RoundPerformance(
+                      sig_attempted=red_attempts,
+                      sig_landed=red_landed,
+                      takedowns_attempted=red_td_attempts,
+                      takedowns_landed=red_td_landed,
+                      control_seconds=red_control,
+                      knockdowns=red_kd,
+                  ),
+                  exposure_fraction,
+              )
+              blue_partial = thin_round_performance(
+                  rng,
+                  RoundPerformance(
+                      sig_attempted=blue_attempts,
+                      sig_landed=blue_landed,
+                      takedowns_attempted=blue_td_attempts,
+                      takedowns_landed=blue_td_landed,
+                      control_seconds=blue_control,
+                      knockdowns=blue_kd,
+                  ),
+                  exposure_fraction,
+              )
+
+              # Full latent round lines were already added above. Replace them
+              # with only the portion realized before the terminal event.
+              red_dynamic.sig_attempted += red_partial.sig_attempted - red_attempts
+              red_dynamic.sig_landed += red_partial.sig_landed - red_landed
+              red_dynamic.takedowns_attempted += (
+                  red_partial.takedowns_attempted - red_td_attempts
+              )
+              red_dynamic.takedowns_landed += (
+                  red_partial.takedowns_landed - red_td_landed
+              )
+              red_dynamic.control_seconds += red_partial.control_seconds - red_control
+              red_dynamic.knockdowns += red_partial.knockdowns - red_kd
+
+              blue_dynamic.sig_attempted += blue_partial.sig_attempted - blue_attempts
+              blue_dynamic.sig_landed += blue_partial.sig_landed - blue_landed
+              blue_dynamic.takedowns_attempted += (
+                  blue_partial.takedowns_attempted - blue_td_attempts
+              )
+              blue_dynamic.takedowns_landed += (
+                  blue_partial.takedowns_landed - blue_td_landed
+              )
+              blue_dynamic.control_seconds += blue_partial.control_seconds - blue_control
+              blue_dynamic.knockdowns += blue_partial.knockdowns - blue_kd
+
+              # An unfinished terminal round is not a completed judge-scored
+              # round. Undo the score bookkeeping performed for the latent line.
+              if red_won_round:
+                  red_dynamic.rounds_won -= 1
+              else:
+                  blue_dynamic.rounds_won -= 1
+              red_dynamic.score_total -= red_score
+              blue_dynamic.score_total -= blue_score
+
+              total_fight_seconds = (
+                  (round_number - 1) * matchup.round_seconds
+                  + finish_time_seconds
+              )
+              break
+          '''
+
+          simulate_body = (
+              before_finish
+              + new_finish
+              + update_marker
+              + remaining_body
+          )
+          path.write_text(
+              prefix + simulate_marker + simulate_body + end_marker + suffix,
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Run terminal round regression tests
+        run: |
+          python -m pip install --quiet numpy
+          python -m unittest tests.test_simulation_terminal_round
+          python -m unittest tests.test_round_simulator
+          python -m compileall -q pipeline/simulation
+          git diff --check
+
+      - name: Commit mechanics fix and remove one-time workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/patch-simulator-terminal-round.yml
+          git add pipeline/simulation/engine.py pipeline/simulation/terminal_round.py tests/test_simulation_terminal_round.py
+          git commit -m "Correct partial terminal round accounting"
+          git push origin HEAD:feature/round-fight-simulator-v0
