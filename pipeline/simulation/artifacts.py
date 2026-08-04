@@ -52,6 +52,31 @@ SIG_ATTEMPT_REPLAY_PAIR_DIAGNOSTICS_PATH = (
 SIG_ATTEMPT_REPLAY_ROWS_PATH = SIG_ATTEMPT_REPLAY_DIR / "replay_rows.parquet"
 SIG_ATTEMPT_REPLAY_SUMMARY_PATH = SIG_ATTEMPT_REPLAY_DIR / "replay_summary.json"
 
+SIG_ATTEMPT_STABILITY_DIR = SIG_ATTEMPT_MODEL_DIR / "stability"
+SIG_ATTEMPT_STABILITY_RAW_PREDICTIONS_PATH = (
+    SIG_ATTEMPT_STABILITY_DIR / "raw_walk_forward_predictions.parquet"
+)
+SIG_ATTEMPT_STABILITY_CALIBRATED_PREDICTIONS_PATH = (
+    SIG_ATTEMPT_STABILITY_DIR / "calibrated_walk_forward_predictions.parquet"
+)
+SIG_ATTEMPT_STABILITY_FOLD_METRICS_PATH = (
+    SIG_ATTEMPT_STABILITY_DIR / "fold_metrics.csv"
+)
+SIG_ATTEMPT_STABILITY_AGGREGATE_METRICS_PATH = (
+    SIG_ATTEMPT_STABILITY_DIR / "aggregate_metrics.csv"
+)
+SIG_ATTEMPT_STABILITY_SUBGROUP_METRICS_PATH = (
+    SIG_ATTEMPT_STABILITY_DIR / "subgroup_metrics.csv"
+)
+SIG_ATTEMPT_STABILITY_FEATURE_IMPORTANCE_PATH = (
+    SIG_ATTEMPT_STABILITY_DIR / "feature_importance.csv"
+)
+SIG_ATTEMPT_STABILITY_FEATURE_MANIFEST_PATH = (
+    SIG_ATTEMPT_STABILITY_DIR / "feature_manifest.csv"
+)
+SIG_ATTEMPT_STABILITY_GATES_PATH = SIG_ATTEMPT_STABILITY_DIR / "stability_gates.csv"
+SIG_ATTEMPT_STABILITY_SUMMARY_PATH = SIG_ATTEMPT_STABILITY_DIR / "summary.json"
+
 
 def ensure_simulation_dirs() -> None:
     """Create generated-artifact folders used only by simulator research."""
@@ -62,6 +87,7 @@ def ensure_simulation_dirs() -> None:
         SIG_ATTEMPT_MODEL_DIR,
         SIG_ATTEMPT_CALIBRATION_DIR,
         SIG_ATTEMPT_REPLAY_DIR,
+        SIG_ATTEMPT_STABILITY_DIR,
         SIMULATION_TRAINING_AUDIT_PATH.parent,
     ):
         path.mkdir(parents=True, exist_ok=True)
