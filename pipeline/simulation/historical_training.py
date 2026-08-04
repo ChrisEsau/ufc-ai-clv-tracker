@@ -1,10 +1,15 @@
-"""Historical eligibility layer for simulator parameter-training data.
+"""Historical eligibility and source-boundary rules for simulator training data.
 
 The round-level simulation kernel currently supports standard UFC bouts scheduled
 for three or five five-minute rounds. Historical source data also contains legacy,
-nonstandard, and missing scheduled-round values. Those rows must be excluded
-explicitly and audited rather than silently coerced or allowed to fail the entire
-training build.
+nonstandard, and missing scheduled-round values. Those rows are excluded and
+audited rather than silently coerced.
+
+Historical round files may also contain scraper metadata, duplicate fight-level
+context, and target-round phase statistics that are not registered simulator
+targets. This module removes those columns before they can reach the modeling
+table while preserving the canonical observations required to construct targets
+and prior-round context inside ``training_dataset``.
 """
 
 from __future__ import annotations
@@ -38,6 +43,39 @@ MASTER_AUTHORITATIVE_CONTEXT_COLUMNS = (
     "winner_id",
 )
 
+# The first simulator parameter registry does not yet model strike location or
+# distance/clinch phase allocation. These are realized observations from the
+# target round and would be direct leakage if left in the feature namespace.
+UNREGISTERED_TARGET_ROUND_OBSERVATION_COLUMNS = (
+    "head_landed",
+    "head_attempted",
+    "body_landed",
+    "body_attempted",
+    "leg_landed",
+    "leg_attempted",
+    "distance_landed",
+    "distance_attempted",
+    "clinch_landed",
+    "clinch_attempted",
+)
+
+# Source-only fields do not belong in modeling artifacts. ``ctrl_sec`` is a raw
+# duplicate of the standardized ``control_seconds`` observation used to create
+# explicit targets and prior-round context.
+SOURCE_ONLY_ROUND_COLUMNS = (
+    "ctrl_sec",
+    "ctrl_seconds",
+    "control_time",
+    "control_time_sec",
+    "control_time_seconds",
+    "event_date",
+    "event_url",
+    "fight_url",
+    "fighter_url",
+    "opponent_url",
+    "fight_order",
+)
+
 
 @dataclass(frozen=True)
 class HistoricalEligibilitySummary:
@@ -51,6 +89,8 @@ class HistoricalEligibilitySummary:
     excluded_round_rows: int
     scheduled_round_distribution: Mapping[str, int]
     dropped_round_context_columns: tuple[str, ...]
+    dropped_target_round_observation_columns: tuple[str, ...]
+    dropped_source_only_columns: tuple[str, ...]
 
 
 def _scheduled_round_distribution(values: pd.Series) -> dict[str, int]:
@@ -61,12 +101,16 @@ def _scheduled_round_distribution(values: pd.Series) -> dict[str, int]:
     return {str(label): int(count) for label, count in counts.items()}
 
 
+def _present_columns(df: pd.DataFrame, candidates: tuple[str, ...]) -> tuple[str, ...]:
+    return tuple(column for column in candidates if column in df.columns)
+
+
 def select_standard_round_history(
     round_stats_df: pd.DataFrame,
     master_df: pd.DataFrame,
     state_sources: Mapping[str, pd.DataFrame] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, pd.DataFrame], HistoricalEligibilitySummary]:
-    """Select only historical fights compatible with the current simulator.
+    """Select simulator-compatible fights and enforce the historical source boundary.
 
     Eligibility is evaluated only among fights that have round-stat rows. Master
     fights without round data are outside this training build and are therefore
@@ -112,15 +156,26 @@ def select_standard_round_history(
         round_stats_df["fight_id"].isin(eligible_fight_ids)
     ].copy()
 
-    dropped_round_context_columns = tuple(
-        column
-        for column in MASTER_AUTHORITATIVE_CONTEXT_COLUMNS
-        if column in eligible_rounds.columns
+    dropped_round_context_columns = _present_columns(
+        eligible_rounds,
+        MASTER_AUTHORITATIVE_CONTEXT_COLUMNS,
     )
-    if dropped_round_context_columns:
-        eligible_rounds = eligible_rounds.drop(
-            columns=list(dropped_round_context_columns)
-        )
+    dropped_target_round_observation_columns = _present_columns(
+        eligible_rounds,
+        UNREGISTERED_TARGET_ROUND_OBSERVATION_COLUMNS,
+    )
+    dropped_source_only_columns = _present_columns(
+        eligible_rounds,
+        SOURCE_ONLY_ROUND_COLUMNS,
+    )
+
+    columns_to_drop = sorted(
+        set(dropped_round_context_columns)
+        | set(dropped_target_round_observation_columns)
+        | set(dropped_source_only_columns)
+    )
+    if columns_to_drop:
+        eligible_rounds = eligible_rounds.drop(columns=columns_to_drop)
 
     filtered_states: dict[str, pd.DataFrame] = {}
     for source_name, source_df in (state_sources or {}).items():
@@ -145,6 +200,8 @@ def select_standard_round_history(
             candidate_master["total_rounds"]
         ),
         dropped_round_context_columns=dropped_round_context_columns,
+        dropped_target_round_observation_columns=dropped_target_round_observation_columns,
+        dropped_source_only_columns=dropped_source_only_columns,
     )
 
     return eligible_rounds, eligible_master, filtered_states, summary
@@ -197,6 +254,18 @@ def _eligibility_audit(summary: HistoricalEligibilitySummary) -> pd.DataFrame:
             len(summary.dropped_round_context_columns),
             True,
             json.dumps(list(summary.dropped_round_context_columns)),
+        ),
+        (
+            "unregistered_target_round_observations_dropped",
+            len(summary.dropped_target_round_observation_columns),
+            True,
+            json.dumps(list(summary.dropped_target_round_observation_columns)),
+        ),
+        (
+            "source_only_round_columns_dropped",
+            len(summary.dropped_source_only_columns),
+            True,
+            json.dumps(list(summary.dropped_source_only_columns)),
         ),
     ]
     return pd.DataFrame(rows, columns=["check", "value", "passed", "detail"])
