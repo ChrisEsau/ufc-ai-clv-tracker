@@ -9,7 +9,7 @@ on:
       - ".github/workflows/run-simulation-training-audit.yml"
       - "pipeline/simulation/**"
       - "tests/test_round_simulator.py"
-      - "tests/test_simulation_training_dataset.py"
+      - "tests/test_simulation_*.py"
 
 permissions:
   contents: read
@@ -49,7 +49,7 @@ jobs:
       - name: Run simulator unit tests
         run: |
           python -m unittest discover -s tests -p 'test_round_simulator.py'
-          python -m unittest discover -s tests -p 'test_simulation_training_dataset.py'
+          python -m unittest discover -s tests -p 'test_simulation_*.py'
           python -m compileall -q pipeline/simulation
 
       - name: Build real fighter-round training table
@@ -64,7 +64,6 @@ jobs:
           import json
           from pathlib import Path
 
-          import numpy as np
           import pandas as pd
 
           training_path = Path(
@@ -205,27 +204,60 @@ jobs:
           paired_rows_ok = bool(
               df.groupby(["fight_id", "round"])["fighter_id"].nunique().eq(2).all()
           )
+
+          forbidden_target_round_columns = {
+              "sig_str_landed",
+              "sig_str_attempted",
+              "total_str_landed",
+              "total_str_attempted",
+              "td_landed",
+              "td_attempted",
+              "control_seconds",
+              "ctrl_sec",
+              "ctrl_seconds",
+              "control_time",
+              "control_time_sec",
+              "control_time_seconds",
+              "kd",
+              "sub_att",
+              "ground_landed",
+              "ground_attempted",
+              "head_landed",
+              "head_attempted",
+              "body_landed",
+              "body_attempted",
+              "leg_landed",
+              "leg_attempted",
+              "distance_landed",
+              "distance_attempted",
+              "clinch_landed",
+              "clinch_attempted",
+          }
           raw_current_round_columns = sorted(
+              forbidden_target_round_columns.intersection(df.columns)
+          )
+          source_only_columns = sorted(
               column
-              for column in (
-                  "sig_str_landed",
-                  "sig_str_attempted",
-                  "total_str_landed",
-                  "total_str_attempted",
-                  "td_landed",
-                  "td_attempted",
-                  "control_seconds",
-                  "kd",
-                  "sub_att",
-                  "ground_landed",
-                  "ground_attempted",
-              )
-              if column in df
+              for column in df.columns
+              if column.endswith("_url")
+              or column in {"event_date", "fight_order"}
           )
           realized_rfs_columns = sorted(
               column
               for column in rfs_columns
               if "_fight_" in column
+          )
+
+          validation_pass = bool(
+              validation["passed"].fillna(False).astype(bool).all()
+          )
+          audit_pass = bool(
+              duplicate_keys == 0
+              and paired_rows_ok
+              and not raw_current_round_columns
+              and not source_only_columns
+              and not realized_rfs_columns
+              and validation_pass
           )
 
           summary = {
@@ -243,6 +275,7 @@ jobs:
               "rfs_feature_column_count": len(rfs_columns),
               "rfs_coverage_column_count": len(coverage_columns),
               "raw_current_round_predictor_columns": raw_current_round_columns,
+              "source_only_modeling_columns": source_only_columns,
               "realized_target_fight_rfs_columns": realized_rfs_columns,
               "validation_checks": validation.to_dict(orient="records"),
               "target_positive_rates": {
@@ -250,13 +283,7 @@ jobs:
                   for row in target_rows
                   if row["kind"] == "binary"
               },
-              "audit_pass": bool(
-                  duplicate_keys == 0
-                  and paired_rows_ok
-                  and not raw_current_round_columns
-                  and not realized_rfs_columns
-                  and validation["passed"].fillna(False).astype(bool).all()
-              ),
+              "audit_pass": audit_pass,
           }
 
           target_report.to_csv(report_dir / "target_distributions.csv", index=False)
@@ -279,6 +306,8 @@ jobs:
               handle.write(f"- Columns: **{summary['columns']:,}**\n")
               handle.write(f"- Date range: **{summary['date_min']} to {summary['date_max']}**\n")
               handle.write(f"- RFS feature columns: **{summary['rfs_feature_column_count']}**\n")
+              handle.write(f"- Raw target-round leakage columns: **{len(raw_current_round_columns)}**\n")
+              handle.write(f"- Source-only modeling columns: **{len(source_only_columns)}**\n")
               handle.write(f"- Audit pass: **{summary['audit_pass']}**\n\n")
               handle.write("## Binary target rates\n\n")
               for target, rate in summary["target_positive_rates"].items():
@@ -299,3 +328,20 @@ jobs:
             data/audits/simulation_fighter_round_training_audit.parquet
             data/model_lab/simulation/audit_report/**
             simulation_audit_summary.md
+
+      - name: Enforce historical audit gate
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          summary_path = Path(
+              "data/model_lab/simulation/audit_report/historical_training_summary.json"
+          )
+          summary = json.loads(summary_path.read_text(encoding="utf-8"))
+          if not summary.get("audit_pass"):
+              raise SystemExit(
+                  "Historical simulator training audit failed. Inspect the uploaded artifact."
+              )
+          print("Historical simulator training audit passed.")
+          PY
