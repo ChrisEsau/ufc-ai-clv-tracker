@@ -168,7 +168,11 @@ class HistoricalSignificantStrikeProvider:
         frame["round"] = frame["round"].astype(int)
         self.model_name = str(model_name)
         self.model_version = str(model_version)
-        self._rows = frame.set_index(key_columns, verify_integrity=True)
+        self._rows = frame.set_index(key_columns)
+        if not self._rows.index.is_unique:
+            raise RoundParameterProviderError(
+                "calibrated provider index is not unique after normalization"
+            )
 
     def __len__(self) -> int:
         return int(len(self._rows))
