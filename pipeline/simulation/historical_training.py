@@ -24,6 +24,20 @@ from pipeline.simulation.training_dataset import (
 
 SUPPORTED_SCHEDULED_ROUNDS = frozenset({3, 5})
 
+# These values are fight-level context governed by the master dataset. Historical
+# round files may carry duplicate copies, but those copies must not create merge
+# suffixes or override the authoritative master values.
+MASTER_AUTHORITATIVE_CONTEXT_COLUMNS = (
+    "division",
+    "title_fight",
+    "method",
+    "method_family",
+    "finish_round",
+    "match_time_sec",
+    "total_rounds",
+    "winner_id",
+)
+
 
 @dataclass(frozen=True)
 class HistoricalEligibilitySummary:
@@ -36,6 +50,7 @@ class HistoricalEligibilitySummary:
     eligible_round_rows: int
     excluded_round_rows: int
     scheduled_round_distribution: Mapping[str, int]
+    dropped_round_context_columns: tuple[str, ...]
 
 
 def _scheduled_round_distribution(values: pd.Series) -> dict[str, int]:
@@ -97,6 +112,16 @@ def select_standard_round_history(
         round_stats_df["fight_id"].isin(eligible_fight_ids)
     ].copy()
 
+    dropped_round_context_columns = tuple(
+        column
+        for column in MASTER_AUTHORITATIVE_CONTEXT_COLUMNS
+        if column in eligible_rounds.columns
+    )
+    if dropped_round_context_columns:
+        eligible_rounds = eligible_rounds.drop(
+            columns=list(dropped_round_context_columns)
+        )
+
     filtered_states: dict[str, pd.DataFrame] = {}
     for source_name, source_df in (state_sources or {}).items():
         if "fight_id" not in source_df.columns:
@@ -119,6 +144,7 @@ def select_standard_round_history(
         scheduled_round_distribution=_scheduled_round_distribution(
             candidate_master["total_rounds"]
         ),
+        dropped_round_context_columns=dropped_round_context_columns,
     )
 
     return eligible_rounds, eligible_master, filtered_states, summary
@@ -165,6 +191,12 @@ def _eligibility_audit(summary: HistoricalEligibilitySummary) -> pd.DataFrame:
             summary.excluded_round_rows,
             True,
             "Intentionally excluded with their parent fights",
+        ),
+        (
+            "round_context_columns_dropped_in_favor_of_master",
+            len(summary.dropped_round_context_columns),
+            True,
+            json.dumps(list(summary.dropped_round_context_columns)),
         ),
     ]
     return pd.DataFrame(rows, columns=["check", "value", "passed", "detail"])
