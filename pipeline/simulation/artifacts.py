@@ -40,6 +40,18 @@ SIG_ATTEMPT_CALIBRATION_SUMMARY_PATH = (
     SIG_ATTEMPT_CALIBRATION_DIR / "calibration_summary.json"
 )
 
+SIG_ATTEMPT_REPLAY_DIR = SIG_ATTEMPT_MODEL_DIR / "replay"
+SIG_ATTEMPT_REPLAY_AGGREGATE_PATH = SIG_ATTEMPT_REPLAY_DIR / "aggregate_metrics.csv"
+SIG_ATTEMPT_REPLAY_INTERVAL_PATH = SIG_ATTEMPT_REPLAY_DIR / "interval_coverage.csv"
+SIG_ATTEMPT_REPLAY_BY_YEAR_PATH = SIG_ATTEMPT_REPLAY_DIR / "metrics_by_year.csv"
+SIG_ATTEMPT_REPLAY_BY_ROUND_PATH = SIG_ATTEMPT_REPLAY_DIR / "metrics_by_round.csv"
+SIG_ATTEMPT_REPLAY_DECILES_PATH = SIG_ATTEMPT_REPLAY_DIR / "calibration_deciles.csv"
+SIG_ATTEMPT_REPLAY_PAIR_DIAGNOSTICS_PATH = (
+    SIG_ATTEMPT_REPLAY_DIR / "pair_diagnostics.csv"
+)
+SIG_ATTEMPT_REPLAY_ROWS_PATH = SIG_ATTEMPT_REPLAY_DIR / "replay_rows.parquet"
+SIG_ATTEMPT_REPLAY_SUMMARY_PATH = SIG_ATTEMPT_REPLAY_DIR / "replay_summary.json"
+
 
 def ensure_simulation_dirs() -> None:
     """Create generated-artifact folders used only by simulator research."""
@@ -49,6 +61,7 @@ def ensure_simulation_dirs() -> None:
         SIMULATION_MODELS_DIR,
         SIG_ATTEMPT_MODEL_DIR,
         SIG_ATTEMPT_CALIBRATION_DIR,
+        SIG_ATTEMPT_REPLAY_DIR,
         SIMULATION_TRAINING_AUDIT_PATH.parent,
     ):
         path.mkdir(parents=True, exist_ok=True)
