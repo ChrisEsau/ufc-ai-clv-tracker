@@ -39,7 +39,8 @@ def make_round_rows() -> pd.DataFrame:
                         "total_str_attempted": 23 + round_number,
                         "td_landed": 0,
                         "td_attempted": 1,
-                        "control_seconds": 15,
+                        # The real historical artifact uses this alias rather than
+                        # the canonical control_seconds column.
                         "ctrl_sec": 15,
                         "kd": 0,
                         "sub_att": 0,
@@ -112,6 +113,8 @@ class HistoricalTrainingBoundaryTests(unittest.TestCase):
         self.assertEqual(set(master["fight_id"]), {"F1"})
         self.assertEqual(summary.excluded_fights, 1)
         self.assertEqual(summary.excluded_round_rows, 2)
+        self.assertEqual(summary.control_seconds_source_column, "ctrl_sec")
+        self.assertIn("control_seconds", rounds.columns)
 
         forbidden = set(UNREGISTERED_TARGET_ROUND_OBSERVATION_COLUMNS)
         forbidden.update(SOURCE_ONLY_ROUND_COLUMNS)
@@ -127,6 +130,7 @@ class HistoricalTrainingBoundaryTests(unittest.TestCase):
 
         self.assertEqual(len(dataset), 6)
         self.assertIn("target_sig_attempted", dataset.columns)
+        self.assertIn("target_control_seconds", dataset.columns)
         self.assertIn("prior_sig_str_attempted_cumulative", dataset.columns)
         self.assertFalse(
             set(UNREGISTERED_TARGET_ROUND_OBSERVATION_COLUMNS).intersection(dataset.columns)
