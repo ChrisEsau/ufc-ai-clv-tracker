@@ -23,6 +23,23 @@ SIG_ATTEMPT_MODEL_BUNDLE_PATH = SIG_ATTEMPT_MODEL_DIR / "holdout_model_bundle.jo
 SIG_ATTEMPT_SUMMARY_PATH = SIG_ATTEMPT_MODEL_DIR / "benchmark_summary.json"
 SIG_ATTEMPT_MODEL_CARD_PATH = SIG_ATTEMPT_MODEL_DIR / "model_card.md"
 
+SIG_ATTEMPT_CALIBRATION_DIR = SIG_ATTEMPT_MODEL_DIR / "calibration"
+SIG_ATTEMPT_CALIBRATION_SCHEDULE_PATH = (
+    SIG_ATTEMPT_CALIBRATION_DIR / "sequential_calibration_schedule.csv"
+)
+SIG_ATTEMPT_CALIBRATED_PREDICTIONS_PATH = (
+    SIG_ATTEMPT_CALIBRATION_DIR / "calibrated_walk_forward_predictions.parquet"
+)
+SIG_ATTEMPT_CALIBRATION_METRICS_PATH = (
+    SIG_ATTEMPT_CALIBRATION_DIR / "calibration_metrics.csv"
+)
+SIG_ATTEMPT_FINAL_PARAMETERS_PATH = (
+    SIG_ATTEMPT_CALIBRATION_DIR / "final_distribution_parameters.csv"
+)
+SIG_ATTEMPT_CALIBRATION_SUMMARY_PATH = (
+    SIG_ATTEMPT_CALIBRATION_DIR / "calibration_summary.json"
+)
+
 
 def ensure_simulation_dirs() -> None:
     """Create generated-artifact folders used only by simulator research."""
@@ -31,6 +48,7 @@ def ensure_simulation_dirs() -> None:
         SIMULATION_TRAINING_DIR,
         SIMULATION_MODELS_DIR,
         SIG_ATTEMPT_MODEL_DIR,
+        SIG_ATTEMPT_CALIBRATION_DIR,
         SIMULATION_TRAINING_AUDIT_PATH.parent,
     ):
         path.mkdir(parents=True, exist_ok=True)
