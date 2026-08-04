@@ -109,6 +109,26 @@ class SigAttemptModelTests(unittest.TestCase):
         first_fight = prepared["fight_id"].eq("F1").to_numpy()
         np.testing.assert_allclose(prediction[first_fight], 5.5)
 
+    def test_missing_history_fallback_accepts_read_only_float64_view(self):
+        prepared = prepare_sig_attempt_dataset(make_training_rows())
+        frame = prepared.loc[prepared["fight_id"].isin(["F1", "F2"])].copy()
+        frame["fighter_prior_sig_attempt_rate_exp"] = pd.to_numeric(
+            frame["fighter_prior_sig_attempt_rate_exp"], errors="coerce"
+        ).astype("float64")
+        frame["fighter_prior_exposure_minutes"] = pd.to_numeric(
+            frame["fighter_prior_exposure_minutes"], errors="coerce"
+        ).astype("float64")
+
+        backing = frame["fighter_prior_sig_attempt_rate_exp"].to_numpy(copy=False)
+        backing.setflags(write=False)
+        round_rate = np.full(len(frame), 5.5, dtype=float)
+
+        prediction = _fighter_history_prediction(frame, round_rate)
+
+        self.assertTrue(np.isfinite(prediction).all())
+        cold_start = frame["fight_id"].eq("F1").to_numpy()
+        np.testing.assert_allclose(prediction[cold_start], 5.5)
+
     def test_rfs_ablation_feature_sets_are_separate(self):
         prepared = prepare_sig_attempt_dataset(make_training_rows())
         context_numeric, _ = select_model_columns(prepared, include_rfs=False)
