@@ -70,7 +70,7 @@ class SigAttemptCalibrationTests(unittest.TestCase):
             minimum_prior_rows=1_000,
         )
         mutated = calibrate_walk_forward_predictions(
-            make_predictions(year_2023_actual=100.0),
+            make_predictions(year_2023_actual=10.0),
             minimum_prior_rows=1_000,
         )
 
