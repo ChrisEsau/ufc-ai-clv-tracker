@@ -17,6 +17,7 @@ from pipeline.simulation.historical_simulator_replay import (
 
 
 OUTPUT_DIR = MODEL_LAB_DIR / "simulation" / "historical_replay_v0"
+SCOREABLE_METHODS = frozenset({"decision", "ko_tko", "submission"})
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -42,7 +43,13 @@ def _method_family(value: object) -> str:
 
 
 def _attach_scoring_labels(training: pd.DataFrame, master: pd.DataFrame) -> pd.DataFrame:
-    """Attach realized labels after the leakage-safe model table is built."""
+    """Attach only scoreable realized labels after feature construction.
+
+    Draws, no-contests, overturned bouts, and rows without a complete winner/time
+    cannot be scored by the current two-corner simulator contract. They are
+    excluded from replay evaluation without changing the leakage-safe training
+    artifact or any fighter's pre-fight historical state.
+    """
     required = ["fight_id", "winner_id", "method", "match_time_sec"]
     missing = [column for column in required if column not in master.columns]
     if missing:
@@ -56,19 +63,29 @@ def _attach_scoring_labels(training: pd.DataFrame, master: pd.DataFrame) -> pd.D
     labels["match_time_sec"] = pd.to_numeric(
         labels["match_time_sec"], errors="coerce"
     )
+    labels["winner_id"] = labels["winner_id"].astype("string").str.strip()
     if labels.duplicated(["fight_id"]).any():
         raise ValueError("Master fight table has duplicate fight_id labels")
-    if labels[["winner_id", "match_time_sec"]].isna().any().any():
-        raise ValueError("Master replay labels contain missing winner/time values")
+
+    scoreable = (
+        labels["winner_id"].notna()
+        & labels["winner_id"].ne("")
+        & labels["match_time_sec"].notna()
+        & labels["match_time_sec"].ge(0)
+        & labels["method_family"].isin(SCOREABLE_METHODS)
+    )
+    labels = labels.loc[scoreable].copy()
+    if labels.empty:
+        raise ValueError("No scoreable master fight labels were available for replay")
 
     labeled = training.merge(
         labels[["fight_id", "winner_id", "method_family", "match_time_sec"]],
         on="fight_id",
-        how="left",
+        how="inner",
         validate="many_to_one",
     )
-    if labeled[["winner_id", "method_family", "match_time_sec"]].isna().any().any():
-        raise ValueError("Some simulator training fights are missing master scoring labels")
+    if labeled.empty:
+        raise ValueError("No training rows matched scoreable master fight labels")
     return labeled
 
 
