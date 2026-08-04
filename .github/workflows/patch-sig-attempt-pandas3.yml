@@ -28,24 +28,23 @@ jobs:
 
           path = Path("pipeline/simulation/sig_attempt_model.py")
           text = path.read_text(encoding="utf-8")
-          old = '''    fighter_rate = pd.to_numeric(
-              frame["fighter_prior_sig_attempt_rate_exp"], errors="coerce"
-          ).to_numpy(dtype=float)
-          exposure = pd.to_numeric(
-              frame["fighter_prior_exposure_minutes"], errors="coerce"
-          ).fillna(0.0).to_numpy(dtype=float)
-          '''
-          new = '''    fighter_rate = pd.to_numeric(
-              frame["fighter_prior_sig_attempt_rate_exp"], errors="coerce"
-          ).to_numpy(dtype=float, copy=True)
-          exposure = pd.to_numeric(
-              frame["fighter_prior_exposure_minutes"], errors="coerce"
-          ).fillna(0.0).to_numpy(dtype=float, copy=True)
-          '''
-          count = text.count(old)
-          if count != 1:
-              raise SystemExit(f"Expected one compatibility block; found {count}")
-          path.write_text(text.replace(old, new), encoding="utf-8")
+          prefix, marker, remainder = text.partition("def _fighter_history_prediction(")
+          if not marker:
+              raise SystemExit("Could not locate _fighter_history_prediction")
+          function_body, next_marker, suffix = remainder.partition("\n\ndef _metric_row(")
+          if not next_marker:
+              raise SystemExit("Could not locate end of _fighter_history_prediction")
+          count = function_body.count(".to_numpy(dtype=float)")
+          if count != 2:
+              raise SystemExit(
+                  f"Expected two writable-array conversions in function; found {count}"
+              )
+          function_body = function_body.replace(
+              ".to_numpy(dtype=float)",
+              ".to_numpy(dtype=float, copy=True)",
+          )
+          patched = prefix + marker + function_body + next_marker + suffix
+          path.write_text(patched, encoding="utf-8")
           PY
 
       - name: Run focused regression test
