@@ -22,9 +22,13 @@ from pipeline.simulation.contracts import (
     SimulationSummary,
     SimulatorConfig,
 )
+from pipeline.simulation.terminal_round import (
+    RoundPerformance,
+    thin_round_performance,
+)
 
 
-SIMULATOR_VERSION = "round_simulator_v0"
+SIMULATOR_VERSION = "round_simulator_v0_1"
 REGIMES = (
     "distance_tactical",
     "high_volume",
@@ -537,8 +541,74 @@ def simulate_fight(
             winner_corner, method = finish
             finish_round = round_number
             time_fraction = float(rng.beta(1.5 + 0.15 * round_number, 1.35))
-            finish_time_seconds = max(1.0, min(matchup.round_seconds, time_fraction * matchup.round_seconds))
-            total_fight_seconds = (round_number - 1) * matchup.round_seconds + finish_time_seconds
+            finish_time_seconds = max(
+                1.0,
+                min(matchup.round_seconds, time_fraction * matchup.round_seconds),
+            )
+            exposure_fraction = finish_time_seconds / matchup.round_seconds
+
+            red_partial = thin_round_performance(
+                rng,
+                RoundPerformance(
+                    sig_attempted=red_attempts,
+                    sig_landed=red_landed,
+                    takedowns_attempted=red_td_attempts,
+                    takedowns_landed=red_td_landed,
+                    control_seconds=red_control,
+                    knockdowns=red_kd,
+                ),
+                exposure_fraction,
+            )
+            blue_partial = thin_round_performance(
+                rng,
+                RoundPerformance(
+                    sig_attempted=blue_attempts,
+                    sig_landed=blue_landed,
+                    takedowns_attempted=blue_td_attempts,
+                    takedowns_landed=blue_td_landed,
+                    control_seconds=blue_control,
+                    knockdowns=blue_kd,
+                ),
+                exposure_fraction,
+            )
+
+            # Full latent round lines were already added above. Replace them
+            # with only the portion realized before the terminal event.
+            red_dynamic.sig_attempted += red_partial.sig_attempted - red_attempts
+            red_dynamic.sig_landed += red_partial.sig_landed - red_landed
+            red_dynamic.takedowns_attempted += (
+                red_partial.takedowns_attempted - red_td_attempts
+            )
+            red_dynamic.takedowns_landed += (
+                red_partial.takedowns_landed - red_td_landed
+            )
+            red_dynamic.control_seconds += red_partial.control_seconds - red_control
+            red_dynamic.knockdowns += red_partial.knockdowns - red_kd
+
+            blue_dynamic.sig_attempted += blue_partial.sig_attempted - blue_attempts
+            blue_dynamic.sig_landed += blue_partial.sig_landed - blue_landed
+            blue_dynamic.takedowns_attempted += (
+                blue_partial.takedowns_attempted - blue_td_attempts
+            )
+            blue_dynamic.takedowns_landed += (
+                blue_partial.takedowns_landed - blue_td_landed
+            )
+            blue_dynamic.control_seconds += blue_partial.control_seconds - blue_control
+            blue_dynamic.knockdowns += blue_partial.knockdowns - blue_kd
+
+            # An unfinished terminal round is not a completed judge-scored
+            # round. Undo the score bookkeeping performed for the latent line.
+            if red_won_round:
+                red_dynamic.rounds_won -= 1
+            else:
+                blue_dynamic.rounds_won -= 1
+            red_dynamic.score_total -= red_score
+            blue_dynamic.score_total -= blue_score
+
+            total_fight_seconds = (
+                (round_number - 1) * matchup.round_seconds
+                + finish_time_seconds
+            )
             break
 
         _update_dynamic_state(
