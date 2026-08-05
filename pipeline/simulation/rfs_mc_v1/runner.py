@@ -1,0 +1,258 @@
+"""Shadow-only activity runner for RFS Monte Carlo V1.
+
+This module currently runs activity-only simulation paths.
+
+Implemented:
+- ten 30-second segments per round
+- three- or five-round schedules
+- explicit seeded NumPy generators
+- deterministic path reproduction
+- red and blue fight-level activity totals
+
+Not implemented:
+- dynamic fatigue or damage
+- KO/TKO or submission finishes
+- scoring or decision outcomes
+- production artifact writes
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Mapping
+
+import numpy as np
+
+from pipeline.simulation.rfs_mc_v1.contracts import (
+    MatchupSimulationRequest,
+)
+from pipeline.simulation.rfs_mc_v1.segment_engine import (
+    SEGMENTS_PER_ROUND,
+    SegmentMatchupActivity,
+    aggregate_segment_activity,
+    generate_matchup_segment,
+)
+
+
+@dataclass(frozen=True)
+class ActivityPathResult:
+    """Activity-only output from one simulated fight path."""
+
+    path_index: int
+    seed: int
+    scheduled_rounds: int
+
+    segments: tuple[SegmentMatchupActivity, ...]
+
+    red_totals: Mapping[str, int]
+    blue_totals: Mapping[str, int]
+
+    def __post_init__(self) -> None:
+        if self.path_index < 0:
+            raise ValueError("path_index cannot be negative")
+
+        if self.scheduled_rounds not in {3, 5}:
+            raise ValueError("scheduled_rounds must be 3 or 5")
+
+        expected_segments = (
+            self.scheduled_rounds * SEGMENTS_PER_ROUND
+        )
+
+        if len(self.segments) != expected_segments:
+            raise ValueError(
+                f"Expected {expected_segments} segments, "
+                f"received {len(self.segments)}"
+            )
+
+
+@dataclass(frozen=True)
+class ActivitySimulationResult:
+    """Collection of activity-only Monte Carlo paths."""
+
+    simulator_version: str
+    calibration_version: str
+    seed: int
+    path_count: int
+
+    red_fighter_id: str
+    blue_fighter_id: str
+    scheduled_rounds: int
+
+    paths: tuple[ActivityPathResult, ...]
+
+    def __post_init__(self) -> None:
+        if self.path_count <= 0:
+            raise ValueError("path_count must be positive")
+
+        if len(self.paths) != self.path_count:
+            raise ValueError(
+                "paths length must equal path_count"
+            )
+
+
+def _aggregate_matchup_side(
+    segments: list[SegmentMatchupActivity],
+    *,
+    side: str,
+) -> Mapping[str, int]:
+    """Aggregate red or blue activity across a complete path."""
+
+    if side not in {"red", "blue"}:
+        raise ValueError("side must be 'red' or 'blue'")
+
+    fighter_segments = [
+        getattr(segment, side)
+        for segment in segments
+    ]
+
+    return aggregate_segment_activity(fighter_segments)
+
+
+def simulate_activity_path(
+    request: MatchupSimulationRequest,
+    *,
+    path_index: int,
+    seed: int,
+) -> ActivityPathResult:
+    """Simulate one complete activity-only fight path."""
+
+    if path_index < 0:
+        raise ValueError("path_index cannot be negative")
+
+    rng = np.random.default_rng(seed)
+
+    scheduled_rounds = (
+        request.red_profile.scheduled_rounds
+    )
+
+    segments: list[SegmentMatchupActivity] = []
+
+    for round_number in range(1, scheduled_rounds + 1):
+        for segment_number in range(
+            1,
+            SEGMENTS_PER_ROUND + 1,
+        ):
+            segments.append(
+                generate_matchup_segment(
+                    red_profile=request.red_profile,
+                    blue_profile=request.blue_profile,
+                    round_number=round_number,
+                    segment_number=segment_number,
+                    rng=rng,
+                )
+            )
+
+    return ActivityPathResult(
+        path_index=path_index,
+        seed=seed,
+        scheduled_rounds=scheduled_rounds,
+        segments=tuple(segments),
+        red_totals=_aggregate_matchup_side(
+            segments,
+            side="red",
+        ),
+        blue_totals=_aggregate_matchup_side(
+            segments,
+            side="blue",
+        ),
+    )
+
+
+def simulate_activity_paths(
+    request: MatchupSimulationRequest,
+) -> ActivitySimulationResult:
+    """Run deterministic activity-only Monte Carlo paths.
+
+    A root seed sequence spawns one independent child seed per path.
+    Identical requests reproduce identical path results.
+    """
+
+    root_seed = np.random.SeedSequence(request.seed)
+    child_sequences = root_seed.spawn(request.path_count)
+
+    paths: list[ActivityPathResult] = []
+
+    for path_index, child_sequence in enumerate(
+        child_sequences
+    ):
+        child_seed = int(
+            child_sequence.generate_state(
+                1,
+                dtype=np.uint64,
+            )[0]
+        )
+
+        paths.append(
+            simulate_activity_path(
+                request,
+                path_index=path_index,
+                seed=child_seed,
+            )
+        )
+
+    return ActivitySimulationResult(
+        simulator_version=request.simulator_version,
+        calibration_version=request.calibration_version,
+        seed=request.seed,
+        path_count=request.path_count,
+        red_fighter_id=request.red_profile.fighter_id,
+        blue_fighter_id=request.blue_profile.fighter_id,
+        scheduled_rounds=(
+            request.red_profile.scheduled_rounds
+        ),
+        paths=tuple(paths),
+    )
+
+
+def summarize_activity_simulation(
+    result: ActivitySimulationResult,
+) -> dict[str, object]:
+    """Summarize activity distributions across simulation paths."""
+
+    metrics = (
+        "sig_str_attempted",
+        "sig_str_landed",
+        "td_attempted",
+        "td_landed",
+        "control_seconds",
+        "ground_str_attempted",
+        "ground_str_landed",
+        "submission_attempts",
+        "knockdowns",
+    )
+
+    summary: dict[str, object] = {
+        "simulator_version": result.simulator_version,
+        "calibration_version": result.calibration_version,
+        "seed": result.seed,
+        "path_count": result.path_count,
+        "red_fighter_id": result.red_fighter_id,
+        "blue_fighter_id": result.blue_fighter_id,
+        "scheduled_rounds": result.scheduled_rounds,
+        "red": {},
+        "blue": {},
+    }
+
+    for side in ("red", "blue"):
+        side_summary: dict[str, dict[str, float]] = {}
+
+        for metric in metrics:
+            values = np.array(
+                [
+                    getattr(path, f"{side}_totals")[metric]
+                    for path in result.paths
+                ],
+                dtype=float,
+            )
+
+            side_summary[metric] = {
+                "mean": float(values.mean()),
+                "std": float(values.std(ddof=0)),
+                "p05": float(np.quantile(values, 0.05)),
+                "p50": float(np.quantile(values, 0.50)),
+                "p95": float(np.quantile(values, 0.95)),
+            }
+
+        summary[side] = side_summary
+
+    return summary
