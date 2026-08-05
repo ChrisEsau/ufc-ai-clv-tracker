@@ -11,6 +11,7 @@ from pipeline.simulation.component_provider_engine import (
     run_simulation_with_component_providers,
 )
 from pipeline.simulation.contracts import SimulatorConfig
+from pipeline.simulation.dynamic_strike_provider import DynamicPrefightStrikeProvider
 from pipeline.simulation.engine import run_simulation
 from pipeline.simulation.finish_hazard_holdout import (
     CounterfactualFinishHazardResult,
@@ -46,6 +47,7 @@ SURVIVAL_VARIANTS = (
     "class_finish_hazard_provider",
     "survival_finish_hazard_provider",
     "strike_and_survival_finish_providers",
+    "dynamic_strike_and_survival_finish_providers",
 )
 
 
@@ -71,7 +73,7 @@ def run_historical_survival_provider_replay(
     finish_model_name: str = "xgb_prefight_context",
     group_prior_rows: float = 200.0,
 ) -> HistoricalSurvivalReplayResult:
-    """Compare class-only and round-survival finish-provider paths."""
+    """Compare class, survival, static-strike, and dynamic-strike paths."""
     if simulations_per_fight <= 0:
         raise HistoricalSimulatorReplayError("simulations_per_fight must be positive")
 
@@ -123,7 +125,12 @@ def run_historical_survival_provider_replay(
     }
     for index, record in enumerate(matchups):
         matchup = record["matchup"]
-        strike_provider = StaticPrefightStrikeProvider(
+        static_strike_provider = StaticPrefightStrikeProvider(
+            matchup,
+            mean_calibration_factor=strike_calibration.mean_calibration_factor,
+            gamma_poisson_alpha=strike_calibration.gamma_poisson_overdispersion,
+        )
+        dynamic_strike_provider = DynamicPrefightStrikeProvider(
             matchup,
             mean_calibration_factor=strike_calibration.mean_calibration_factor,
             gamma_poisson_alpha=strike_calibration.gamma_poisson_overdispersion,
@@ -148,7 +155,13 @@ def run_historical_survival_provider_replay(
             "strike_and_survival_finish_providers": run_simulation_with_component_providers(
                 matchup,
                 runtime,
-                strike_provider=strike_provider,
+                strike_provider=static_strike_provider,
+                finish_provider=survival_provider,
+            )[0],
+            "dynamic_strike_and_survival_finish_providers": run_simulation_with_component_providers(
+                matchup,
+                runtime,
+                strike_provider=dynamic_strike_provider,
                 finish_provider=survival_provider,
             )[0],
         }
