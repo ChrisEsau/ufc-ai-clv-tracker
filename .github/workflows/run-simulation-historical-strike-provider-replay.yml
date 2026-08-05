@@ -1,0 +1,132 @@
+name: Simulator Historical Strike Provider Replay
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/round-fight-simulator-v0
+    paths:
+      - ".github/workflows/run-simulation-historical-strike-provider-replay.yml"
+      - "pipeline/simulation/provider_engine.py"
+      - "pipeline/simulation/historical_strike_provider_replay.py"
+      - "pipeline/simulation/run_historical_strike_provider_replay.py"
+      - "tests/test_simulation_provider_engine.py"
+
+permissions:
+  contents: read
+
+jobs:
+  replay-strike-provider:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout simulator branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run provider ablation tests
+        run: |
+          python -m unittest tests.test_simulation_provider_engine
+          python -m unittest tests.test_simulation_historical_simulator_replay
+          python -m unittest tests.test_round_simulator
+          python -m unittest tests.test_simulation_terminal_round
+          python -m compileall -q pipeline/simulation
+
+      - name: Build leakage-safe fighter-round table
+        run: |
+          python -m pipeline.simulation.run_build_training_dataset
+
+      - name: Compare heuristic and absolute strike-provider mechanics
+        run: |
+          python -m pipeline.simulation.run_historical_strike_provider_replay \
+            --test-year 2026 \
+            --simulations-per-fight 500 \
+            --seed 91
+
+      - name: Publish provider comparison summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path(
+              "data/model_lab/simulation/historical_replay_v0/"
+              "strike_provider/summary.json"
+          )
+          summary = json.loads(path.read_text(encoding="utf-8"))
+          strike = summary["fighter_sig_attempt_mae"]
+          method = summary["method_log_loss"]
+          winner = summary["winner_brier"]
+          calibration = summary["strike_calibration"]
+
+          with Path("historical_strike_provider_summary.md").open(
+              "w", encoding="utf-8"
+          ) as handle:
+              handle.write("# Historical absolute strike-provider ablation\n\n")
+              handle.write(f"- Holdout fights: **{summary['fights']:,}**\n")
+              handle.write(
+                  f"- Monte Carlo paths per fight: **{summary['simulations_per_fight']:,}**\n"
+              )
+              handle.write(
+                  "- Pre-holdout mean calibration factor: "
+                  f"**{calibration['mean_calibration_factor']:.4f}**\n"
+              )
+              handle.write(
+                  "- Pre-holdout gamma-Poisson alpha: "
+                  f"**{calibration['gamma_poisson_overdispersion']:.4f}**\n\n"
+              )
+              handle.write("## Key metrics\n\n")
+              handle.write("| Metric | Heuristic | Absolute provider | Baseline |\n")
+              handle.write("|---|---:|---:|---:|\n")
+              handle.write(
+                  "| Fighter strike-attempt MAE | "
+                  f"{strike['heuristic_simulator']:.3f} | "
+                  f"{strike['absolute_strike_provider']:.3f} | "
+                  f"{strike['historical_baseline']:.3f} |\n"
+              )
+              handle.write(
+                  "| Method log loss | "
+                  f"{method['heuristic_simulator']:.4f} | "
+                  f"{method['absolute_strike_provider']:.4f} | — |\n"
+              )
+              handle.write(
+                  "| Winner Brier | "
+                  f"{winner['heuristic_simulator']:.4f} | "
+                  f"{winner['absolute_strike_provider']:.4f} | — |\n\n"
+              )
+              handle.write("## Aggregate behavior\n\n")
+              handle.write(
+                  "| Quantity | Actual | Heuristic | Absolute provider |\n"
+              )
+              handle.write("|---|---:|---:|---:|\n")
+              for row in summary["aggregate_comparison"]:
+                  handle.write(
+                      f"| {row['quantity']} | {row['actual']:.4f} | "
+                      f"{row['heuristic_simulator']:.4f} | "
+                      f"{row['absolute_strike_provider']:.4f} |\n"
+                  )
+          PY
+
+          cat historical_strike_provider_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload provider replay artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-historical-strike-provider-replay-v0
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6
+          path: |
+            data/model_lab/simulation/historical_replay_v0/strike_provider/**
+            data/audits/simulation_fighter_round_training_audit.parquet
+            historical_strike_provider_summary.md
