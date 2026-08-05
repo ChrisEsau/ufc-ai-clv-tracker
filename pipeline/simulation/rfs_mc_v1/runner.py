@@ -415,3 +415,284 @@ def simulate_stateful_activity_paths(
         )
 
     return tuple(paths)
+
+
+@dataclass(frozen=True)
+class FightPathOutcome:
+    """Terminal outcome for one simulated fight path."""
+
+    winner: str | None
+    loser: str | None
+    method: str
+    finish_round: int | None
+    finish_segment: int | None
+    elapsed_seconds: int
+
+    def __post_init__(self) -> None:
+        if self.method not in {
+            "ko_tko",
+            "submission",
+            "decision",
+        }:
+            raise ValueError(f"Unsupported outcome method: {self.method}")
+
+        if self.method == "decision":
+            if self.finish_round is not None:
+                raise ValueError(
+                    "Decision outcome cannot have finish_round"
+                )
+            if self.finish_segment is not None:
+                raise ValueError(
+                    "Decision outcome cannot have finish_segment"
+                )
+        else:
+            if self.winner not in {"red", "blue"}:
+                raise ValueError(
+                    "Finish outcome requires a winner"
+                )
+            if self.loser not in {"red", "blue"}:
+                raise ValueError(
+                    "Finish outcome requires a loser"
+                )
+            if self.winner == self.loser:
+                raise ValueError("winner and loser must differ")
+            if self.finish_round is None:
+                raise ValueError(
+                    "Finish outcome requires finish_round"
+                )
+            if self.finish_segment is None:
+                raise ValueError(
+                    "Finish outcome requires finish_segment"
+                )
+
+        if self.elapsed_seconds <= 0:
+            raise ValueError("elapsed_seconds must be positive")
+
+
+@dataclass(frozen=True)
+class FinishAwareSegmentTrace:
+    """Activity, state, and finish evaluation for one segment."""
+
+    activity: SegmentMatchupActivity
+    red_state: object
+    blue_state: object
+    finish_result: object
+
+
+@dataclass(frozen=True)
+class FinishAwarePathResult:
+    """Complete fight path that may terminate before the scheduled distance."""
+
+    path_index: int
+    seed: int
+    scheduled_rounds: int
+
+    traces: tuple[FinishAwareSegmentTrace, ...]
+    outcome: FightPathOutcome
+
+    red_totals: Mapping[str, int]
+    blue_totals: Mapping[str, int]
+
+    final_red_state: object
+    final_blue_state: object
+
+    def __post_init__(self) -> None:
+        if self.path_index < 0:
+            raise ValueError("path_index cannot be negative")
+
+        maximum_segments = (
+            self.scheduled_rounds * SEGMENTS_PER_ROUND
+        )
+
+        if not 1 <= len(self.traces) <= maximum_segments:
+            raise ValueError(
+                "Finish-aware path must contain between one and "
+                f"{maximum_segments} traces"
+            )
+
+        if self.outcome.method == "decision":
+            if len(self.traces) != maximum_segments:
+                raise ValueError(
+                    "Decision path must complete all scheduled segments"
+                )
+        elif len(self.traces) >= maximum_segments:
+            # A finish may occur in the final scheduled segment.
+            expected_final_round = self.scheduled_rounds
+            expected_final_segment = SEGMENTS_PER_ROUND
+
+            if (
+                self.outcome.finish_round != expected_final_round
+                or self.outcome.finish_segment
+                != expected_final_segment
+            ):
+                raise ValueError(
+                    "Full-length finish must occur in the final segment"
+                )
+
+
+def simulate_finish_aware_path(
+    request: MatchupSimulationRequest,
+    *,
+    path_index: int,
+    seed: int,
+) -> FinishAwarePathResult:
+    """Simulate one stateful fight path with competing finish hazards."""
+
+    from copy import deepcopy
+
+    from pipeline.simulation.rfs_mc_v1.dynamic_state import (
+        apply_between_round_recovery,
+        initialize_dynamic_state,
+        update_dynamic_state,
+    )
+    from pipeline.simulation.rfs_mc_v1.finish_engine import (
+        sample_competing_finish,
+    )
+
+    if path_index < 0:
+        raise ValueError("path_index cannot be negative")
+
+    rng = np.random.default_rng(seed)
+
+    red_state = initialize_dynamic_state(request.red_profile)
+    blue_state = initialize_dynamic_state(request.blue_profile)
+
+    activities: list[SegmentMatchupActivity] = []
+    traces: list[FinishAwareSegmentTrace] = []
+
+    scheduled_rounds = request.red_profile.scheduled_rounds
+    outcome: FightPathOutcome | None = None
+
+    for round_number in range(1, scheduled_rounds + 1):
+        for segment_number in range(
+            1,
+            SEGMENTS_PER_ROUND + 1,
+        ):
+            activity = generate_matchup_segment(
+                red_profile=request.red_profile,
+                blue_profile=request.blue_profile,
+                round_number=round_number,
+                segment_number=segment_number,
+                rng=rng,
+            )
+
+            red_state = update_dynamic_state(
+                state=red_state,
+                own_activity=activity.red,
+                opponent_activity=activity.blue,
+                profile=request.red_profile,
+            )
+            blue_state = update_dynamic_state(
+                state=blue_state,
+                own_activity=activity.blue,
+                opponent_activity=activity.red,
+                profile=request.blue_profile,
+            )
+
+            finish_result = sample_competing_finish(
+                red_state=red_state,
+                blue_state=blue_state,
+                red_activity=activity.red,
+                blue_activity=activity.blue,
+                red_profile=request.red_profile,
+                blue_profile=request.blue_profile,
+                rng=rng,
+            )
+
+            activities.append(activity)
+            traces.append(
+                FinishAwareSegmentTrace(
+                    activity=activity,
+                    red_state=deepcopy(red_state),
+                    blue_state=deepcopy(blue_state),
+                    finish_result=finish_result,
+                )
+            )
+
+            if finish_result.finished:
+                elapsed_seconds = (
+                    (round_number - 1)
+                    * SEGMENTS_PER_ROUND
+                    * 30
+                    + segment_number * 30
+                )
+
+                outcome = FightPathOutcome(
+                    winner=finish_result.winner,
+                    loser=finish_result.loser,
+                    method=finish_result.method.value,
+                    finish_round=round_number,
+                    finish_segment=segment_number,
+                    elapsed_seconds=elapsed_seconds,
+                )
+                break
+
+        if outcome is not None:
+            break
+
+        if round_number < scheduled_rounds:
+            red_state = apply_between_round_recovery(red_state)
+            blue_state = apply_between_round_recovery(blue_state)
+
+    if outcome is None:
+        outcome = FightPathOutcome(
+            winner=None,
+            loser=None,
+            method="decision",
+            finish_round=None,
+            finish_segment=None,
+            elapsed_seconds=(
+                scheduled_rounds
+                * SEGMENTS_PER_ROUND
+                * 30
+            ),
+        )
+
+    return FinishAwarePathResult(
+        path_index=path_index,
+        seed=seed,
+        scheduled_rounds=scheduled_rounds,
+        traces=tuple(traces),
+        outcome=outcome,
+        red_totals=_aggregate_matchup_side(
+            activities,
+            side="red",
+        ),
+        blue_totals=_aggregate_matchup_side(
+            activities,
+            side="blue",
+        ),
+        final_red_state=deepcopy(red_state),
+        final_blue_state=deepcopy(blue_state),
+    )
+
+
+def simulate_finish_aware_paths(
+    request: MatchupSimulationRequest,
+) -> tuple[FinishAwarePathResult, ...]:
+    """Run deterministic finish-aware Monte Carlo fight paths."""
+
+    root_seed = np.random.SeedSequence(request.seed)
+    child_sequences = root_seed.spawn(request.path_count)
+
+    paths: list[FinishAwarePathResult] = []
+
+    for path_index, child_sequence in enumerate(
+        child_sequences
+    ):
+        child_seed = int(
+            child_sequence.generate_state(
+                1,
+                dtype=np.uint64,
+            )[0]
+        )
+
+        paths.append(
+            simulate_finish_aware_path(
+                request,
+                path_index=path_index,
+                seed=child_seed,
+            )
+        )
+
+    return tuple(paths)
