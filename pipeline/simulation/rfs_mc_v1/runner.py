@@ -776,3 +776,144 @@ def simulate_scored_paths(
         score_finish_aware_path(path)
         for path in simulate_finish_aware_paths(request)
     )
+
+
+def summarize_scored_paths(
+    results: tuple[ScoredFightPathResult, ...],
+) -> dict[str, object]:
+    """Aggregate scored paths into matchup-level simulation probabilities."""
+
+    if not results:
+        raise ValueError("At least one scored path is required")
+
+    path_count = len(results)
+
+    outcome_counts = {
+        "red": 0,
+        "blue": 0,
+        "draw": 0,
+    }
+    method_counts = {
+        "red_ko_tko": 0,
+        "red_submission": 0,
+        "red_decision": 0,
+        "blue_ko_tko": 0,
+        "blue_submission": 0,
+        "blue_decision": 0,
+        "draw": 0,
+    }
+
+    finish_rounds: list[int] = []
+    finish_seconds: list[int] = []
+
+    red_score_totals: list[int] = []
+    blue_score_totals: list[int] = []
+
+    for result in results:
+        outcome = result.path.outcome
+
+        if outcome.winner == "red":
+            outcome_counts["red"] += 1
+        elif outcome.winner == "blue":
+            outcome_counts["blue"] += 1
+        else:
+            outcome_counts["draw"] += 1
+
+        if outcome.method == "decision":
+            if outcome.winner == "red":
+                method_counts["red_decision"] += 1
+            elif outcome.winner == "blue":
+                method_counts["blue_decision"] += 1
+            else:
+                method_counts["draw"] += 1
+
+            if result.decision is not None:
+                red_score_totals.append(result.decision.red_total)
+                blue_score_totals.append(result.decision.blue_total)
+        else:
+            method_key = f"{outcome.winner}_{outcome.method}"
+            method_counts[method_key] += 1
+
+            if outcome.finish_round is not None:
+                finish_rounds.append(outcome.finish_round)
+
+            finish_seconds.append(outcome.elapsed_seconds)
+
+    def probability(count: int) -> float:
+        return float(count / path_count)
+
+    summary: dict[str, object] = {
+        "path_count": path_count,
+        "red_win_probability": probability(
+            outcome_counts["red"]
+        ),
+        "blue_win_probability": probability(
+            outcome_counts["blue"]
+        ),
+        "draw_probability": probability(
+            outcome_counts["draw"]
+        ),
+        "method_probabilities": {
+            key: probability(value)
+            for key, value in method_counts.items()
+        },
+        "distance_probability": probability(
+            sum(
+                outcome.method == "decision"
+                for outcome in (
+                    result.path.outcome
+                    for result in results
+                )
+            )
+        ),
+        "finish_probability": probability(
+            sum(
+                outcome.method != "decision"
+                for outcome in (
+                    result.path.outcome
+                    for result in results
+                )
+            )
+        ),
+    }
+
+    if finish_rounds:
+        finish_round_values = np.array(
+            finish_rounds,
+            dtype=float,
+        )
+        finish_time_values = np.array(
+            finish_seconds,
+            dtype=float,
+        )
+
+        summary["finish_distribution"] = {
+            "mean_round": float(
+                finish_round_values.mean()
+            ),
+            "median_round": float(
+                np.median(finish_round_values)
+            ),
+            "mean_elapsed_seconds": float(
+                finish_time_values.mean()
+            ),
+            "median_elapsed_seconds": float(
+                np.median(finish_time_values)
+            ),
+        }
+    else:
+        summary["finish_distribution"] = None
+
+    if red_score_totals:
+        summary["decision_score_distribution"] = {
+            "mean_red_score": float(
+                np.mean(red_score_totals)
+            ),
+            "mean_blue_score": float(
+                np.mean(blue_score_totals)
+            ),
+        }
+    else:
+        summary["decision_score_distribution"] = None
+
+    return summary
