@@ -7,11 +7,14 @@ on:
       - feature/round-fight-simulator-v0
     paths:
       - ".github/workflows/run-simulation-historical-survival-replay.yml"
+      - "pipeline/simulation/component_provider_engine.py"
+      - "pipeline/simulation/dynamic_strike_provider.py"
       - "pipeline/simulation/finish_survival_calibration.py"
       - "pipeline/simulation/historical_replay_evaluation.py"
       - "pipeline/simulation/historical_survival_provider_replay.py"
       - "pipeline/simulation/run_historical_survival_provider_replay.py"
       - "pipeline/simulation/run_historical_simulator_replay.py"
+      - "tests/test_simulation_dynamic_strike_provider.py"
       - "tests/test_simulation_finish_survival_calibration.py"
       - "tests/test_simulation_historical_replay_evaluation.py"
       - "tests/test_simulation_replay_label_time.py"
@@ -38,10 +41,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run survival and cohort evaluation tests
+      - name: Run survival, dynamic strike, and cohort evaluation tests
         run: |
           python -m unittest tests.test_simulation_replay_label_time
           python -m unittest tests.test_simulation_finish_survival_calibration
+          python -m unittest tests.test_simulation_dynamic_strike_provider
           python -m unittest tests.test_simulation_historical_replay_evaluation
           python -m unittest tests.test_simulation_finish_hazard_provider
           python -m unittest tests.test_simulation_finish_hazard_model
@@ -92,13 +96,15 @@ jobs:
               "class_finish_hazard_provider",
               "survival_finish_hazard_provider",
               "strike_and_survival_finish_providers",
+              "dynamic_strike_and_survival_finish_providers",
               "historical_baseline",
           ]
           labels = {
               "heuristic_simulator": "Heuristic",
               "class_finish_hazard_provider": "Class finish",
               "survival_finish_hazard_provider": "Survival finish",
-              "strike_and_survival_finish_providers": "Strike + survival (blocked)",
+              "strike_and_survival_finish_providers": "Static strike + survival (blocked)",
+              "dynamic_strike_and_survival_finish_providers": "Dynamic strike + survival",
               "historical_baseline": "Historical baseline",
           }
           primary = [
@@ -123,10 +129,11 @@ jobs:
                   f"- Bootstrap samples: **{summary['bootstrap_samples']:,}**\n"
               )
               handle.write(
-                  f"- Recommended variant: **{summary['recommended_variant']}**\n"
+                  f"- Recommended variant before this ablation: **{summary['recommended_variant']}**\n"
               )
               handle.write("- Single-card replay role: **smoke test only**\n")
               handle.write("- Static strike provider: **blocked comparison only**\n")
+              handle.write("- Dynamic strike provider: **shadow ablation under evaluation**\n")
               handle.write("- Status: **shadow-only**\n\n")
 
               handle.write("## Overall metrics with 95% bootstrap intervals\n\n")
@@ -145,13 +152,15 @@ jobs:
                           f"{row['direction']} |\n"
                       )
 
-              handle.write("\n## Paired deltas: recommended minus comparator\n\n")
+              handle.write("\n## Paired deltas: survival finish minus comparator\n\n")
               handle.write(
-                  "Negative favors the recommended model for lower-is-better metrics; "
-                  "positive favors it for higher-is-better metrics.\n\n"
+                  "Negative favors survival finish for lower-is-better metrics; "
+                  "positive favors it for higher-is-better metrics. The dynamic "
+                  "row therefore shows whether the new provider beats or trails "
+                  "the current selected variant.\n\n"
               )
               handle.write(
-                  "| Comparator | Metric | Delta | 95% interval | Favors recommended | CI supports |\n"
+                  "| Comparator | Metric | Delta | 95% interval | Favors survival | CI supports |\n"
               )
               handle.write("|---|---|---:|---:|---|---|\n")
               selected_paired = paired.loc[paired["metric"].isin(primary)]
@@ -202,16 +211,17 @@ jobs:
 
               handle.write("\n## Aggregate behavior\n\n")
               handle.write(
-                  "| Quantity | Actual | Heuristic | Class finish | Survival finish | Strike + survival |\n"
+                  "| Quantity | Actual | Heuristic | Class finish | Survival finish | Static strike + survival | Dynamic strike + survival |\n"
               )
-              handle.write("|---|---:|---:|---:|---:|---:|\n")
+              handle.write("|---|---:|---:|---:|---:|---:|---:|\n")
               for row in summary["aggregate_comparison"]:
                   handle.write(
                       f"| {row['quantity']} | {row['actual']:.4f} | "
                       f"{row['heuristic_simulator']:.4f} | "
                       f"{row['class_finish_hazard_provider']:.4f} | "
                       f"{row['survival_finish_hazard_provider']:.4f} | "
-                      f"{row['strike_and_survival_finish_providers']:.4f} |\n"
+                      f"{row['strike_and_survival_finish_providers']:.4f} | "
+                      f"{row['dynamic_strike_and_survival_finish_providers']:.4f} |\n"
                   )
           PY
 
