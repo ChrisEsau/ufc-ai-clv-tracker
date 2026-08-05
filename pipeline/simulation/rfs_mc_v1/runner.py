@@ -256,3 +256,162 @@ def summarize_activity_simulation(
         summary[side] = side_summary
 
     return summary
+
+
+@dataclass(frozen=True)
+class StatefulSegmentTrace:
+    """One segment plus fighter states immediately after that segment."""
+
+    activity: SegmentMatchupActivity
+    red_state: object
+    blue_state: object
+
+
+@dataclass(frozen=True)
+class StatefulActivityPathResult:
+    """One complete activity path with evolving fighter states."""
+
+    path_index: int
+    seed: int
+    scheduled_rounds: int
+
+    traces: tuple[StatefulSegmentTrace, ...]
+
+    red_totals: Mapping[str, int]
+    blue_totals: Mapping[str, int]
+
+    final_red_state: object
+    final_blue_state: object
+
+    def __post_init__(self) -> None:
+        if self.path_index < 0:
+            raise ValueError("path_index cannot be negative")
+
+        expected_segments = (
+            self.scheduled_rounds * SEGMENTS_PER_ROUND
+        )
+
+        if len(self.traces) != expected_segments:
+            raise ValueError(
+                f"Expected {expected_segments} traces, "
+                f"received {len(self.traces)}"
+            )
+
+
+def simulate_stateful_activity_path(
+    request: MatchupSimulationRequest,
+    *,
+    path_index: int,
+    seed: int,
+) -> StatefulActivityPathResult:
+    """Simulate one full path while evolving independent fighter states."""
+
+    from copy import deepcopy
+
+    from pipeline.simulation.rfs_mc_v1.dynamic_state import (
+        apply_between_round_recovery,
+        initialize_dynamic_state,
+        update_dynamic_state,
+    )
+
+    if path_index < 0:
+        raise ValueError("path_index cannot be negative")
+
+    rng = np.random.default_rng(seed)
+
+    red_state = initialize_dynamic_state(request.red_profile)
+    blue_state = initialize_dynamic_state(request.blue_profile)
+
+    activities: list[SegmentMatchupActivity] = []
+    traces: list[StatefulSegmentTrace] = []
+
+    scheduled_rounds = request.red_profile.scheduled_rounds
+
+    for round_number in range(1, scheduled_rounds + 1):
+        for segment_number in range(
+            1,
+            SEGMENTS_PER_ROUND + 1,
+        ):
+            activity = generate_matchup_segment(
+                red_profile=request.red_profile,
+                blue_profile=request.blue_profile,
+                round_number=round_number,
+                segment_number=segment_number,
+                rng=rng,
+            )
+
+            red_state = update_dynamic_state(
+                state=red_state,
+                own_activity=activity.red,
+                opponent_activity=activity.blue,
+                profile=request.red_profile,
+            )
+
+            blue_state = update_dynamic_state(
+                state=blue_state,
+                own_activity=activity.blue,
+                opponent_activity=activity.red,
+                profile=request.blue_profile,
+            )
+
+            activities.append(activity)
+
+            traces.append(
+                StatefulSegmentTrace(
+                    activity=activity,
+                    red_state=deepcopy(red_state),
+                    blue_state=deepcopy(blue_state),
+                )
+            )
+
+        if round_number < scheduled_rounds:
+            red_state = apply_between_round_recovery(red_state)
+            blue_state = apply_between_round_recovery(blue_state)
+
+    return StatefulActivityPathResult(
+        path_index=path_index,
+        seed=seed,
+        scheduled_rounds=scheduled_rounds,
+        traces=tuple(traces),
+        red_totals=_aggregate_matchup_side(
+            activities,
+            side="red",
+        ),
+        blue_totals=_aggregate_matchup_side(
+            activities,
+            side="blue",
+        ),
+        final_red_state=deepcopy(red_state),
+        final_blue_state=deepcopy(blue_state),
+    )
+
+
+def simulate_stateful_activity_paths(
+    request: MatchupSimulationRequest,
+) -> tuple[StatefulActivityPathResult, ...]:
+    """Run reproducible stateful activity paths."""
+
+    root_seed = np.random.SeedSequence(request.seed)
+    child_sequences = root_seed.spawn(request.path_count)
+
+    paths: list[StatefulActivityPathResult] = []
+
+    for path_index, child_sequence in enumerate(
+        child_sequences
+    ):
+        child_seed = int(
+            child_sequence.generate_state(
+                1,
+                dtype=np.uint64,
+            )[0]
+        )
+
+        paths.append(
+            simulate_stateful_activity_path(
+                request,
+                path_index=path_index,
+                seed=child_seed,
+            )
+        )
+
+    return tuple(paths)
