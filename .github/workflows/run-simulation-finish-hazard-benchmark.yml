@@ -1,0 +1,104 @@
+name: Simulator Finish Hazard Benchmark
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/round-fight-simulator-v0
+    paths:
+      - ".github/workflows/run-simulation-finish-hazard-benchmark.yml"
+      - "pipeline/simulation/finish_hazard_model.py"
+      - "pipeline/simulation/run_train_finish_hazard_model.py"
+      - "tests/test_simulation_finish_hazard_model.py"
+
+permissions:
+  contents: read
+
+jobs:
+  finish-hazard-benchmark:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout simulator branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run finish hazard tests
+        run: |
+          python -m unittest tests.test_simulation_finish_hazard_model
+          python -m unittest tests.test_simulation_training_dataset
+          python -m compileall -q pipeline/simulation
+
+      - name: Build leakage-safe fighter-round table
+        run: |
+          python -m pipeline.simulation.run_build_training_dataset
+
+      - name: Run competing-risk finish hazard benchmark
+        run: |
+          python -m pipeline.simulation.run_train_finish_hazard_model
+
+      - name: Publish finish hazard summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path(
+              "data/model_lab/simulation/models/finish_hazard_prefight_v0/summary.json"
+          )
+          summary = json.loads(path.read_text(encoding="utf-8"))
+          with Path("finish_hazard_benchmark_summary.md").open(
+              "w", encoding="utf-8"
+          ) as handle:
+              handle.write("# Pre-fight competing-risk finish hazard benchmark\n\n")
+              handle.write(
+                  f"- Best candidate: **{summary['best_candidate']}**\n"
+              )
+              handle.write(
+                  f"- Aggregate log loss: **{summary['best_candidate_log_loss']:.4f}**\n"
+              )
+              handle.write(
+                  f"- Baseline log loss: **{summary['baseline_log_loss']:.4f}**\n"
+              )
+              handle.write(
+                  "- Aggregate improvement: "
+                  f"**{summary['aggregate_log_loss_improvement']:.2%}**\n"
+              )
+              handle.write(
+                  f"- {summary['latest_year']} improvement: "
+                  f"**{summary['latest_log_loss_improvement']:.2%}**\n"
+              )
+              handle.write(f"- Gate: **{summary['gate_status']}**\n\n")
+              handle.write("## Calibrated class rates\n\n")
+              handle.write("| Class | Actual | Predicted | Error |\n")
+              handle.write("|---|---:|---:|---:|\n")
+              for row in summary["class_rates"]:
+                  handle.write(
+                      f"| {row['class']} | {row['actual_rate']:.3%} | "
+                      f"{row['predicted_rate']:.3%} | {row['error']:.3%} |\n"
+                  )
+          PY
+
+          cat finish_hazard_benchmark_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload finish hazard artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-finish-hazard-prefight-v0
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6
+          path: |
+            data/model_lab/simulation/models/finish_hazard_prefight_v0/**
+            data/audits/simulation_fighter_round_training_audit.parquet
+            finish_hazard_benchmark_summary.md
