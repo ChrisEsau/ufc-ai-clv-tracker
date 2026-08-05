@@ -213,3 +213,169 @@ def build_profile_from_history(
         prior_fight_count_column=prior_fight_count_column,
         prior_valid_count_column=prior_valid_count_column,
     )
+
+
+def select_latest_prior_rows_by_family(
+    histories: Mapping[str, pd.DataFrame],
+    *,
+    fighter_id: str,
+    target_date: Any,
+) -> dict[str, pd.Series]:
+    """Select one strictly prior state row from each required RFS family."""
+
+    if not histories:
+        raise ProfileBuilderError("At least one RFS history is required")
+
+    selected: dict[str, pd.Series] = {}
+
+    for family_name, history in histories.items():
+        try:
+            selected[family_name] = select_latest_prior_row(
+                history,
+                fighter_id=fighter_id,
+                target_date=target_date,
+            )
+        except ProfileBuilderError as exc:
+            raise ProfileBuilderError(
+                f"Unable to select {family_name!r} state: {exc}"
+            ) from exc
+
+    return selected
+
+
+def build_composite_profile_from_histories(
+    histories: Mapping[str, pd.DataFrame],
+    *,
+    fighter_id: str,
+    target_date: Any,
+    scheduled_rounds: int,
+    weight_class: str | None,
+    gender: str | None,
+    parameter_definitions: Any,
+) -> FighterSimulationProfile:
+    """Build one profile by combining approved parameters across RFS families.
+
+    Each family independently selects its latest row strictly before the target
+    date. This prevents a future or target-fight row from entering the profile.
+    """
+
+    selected_rows = select_latest_prior_rows_by_family(
+        histories,
+        fighter_id=fighter_id,
+        target_date=target_date,
+    )
+
+    parameters: dict[str, ParameterEstimate] = {}
+    prior_fight_counts: list[int] = []
+    valid_counts: list[int] = []
+    fighter_names: set[str] = set()
+
+    for definition in parameter_definitions:
+        family_key = definition.family.value
+
+        if family_key not in selected_rows:
+            raise ProfileBuilderError(
+                f"Missing history for RFS family {family_key!r}"
+            )
+
+        row = selected_rows[family_key]
+
+        required = {
+            "fighter_id",
+            "fighter_name",
+            "date",
+            definition.source_column,
+            definition.prior_fight_count_column,
+            definition.prior_valid_count_column,
+        }
+
+        missing = required - set(row.index)
+        if missing:
+            raise ProfileBuilderError(
+                f"Family {family_key!r} is missing fields: "
+                f"{sorted(missing)}"
+            )
+
+        if str(row["fighter_id"]) != fighter_id:
+            raise ProfileBuilderError(
+                f"Family {family_key!r} returned the wrong fighter"
+            )
+
+        state_date = _normalize_date(row["date"])
+        target_ts = _normalize_date(target_date)
+
+        if state_date >= target_ts:
+            raise ProfileBuilderError(
+                f"Family {family_key!r} contains target-date leakage"
+            )
+
+        prior_fight_count = int(row[definition.prior_fight_count_column])
+        prior_valid_count = int(row[definition.prior_valid_count_column])
+
+        prior_fight_counts.append(prior_fight_count)
+        valid_counts.append(prior_valid_count)
+        fighter_names.add(str(row["fighter_name"]))
+
+        parameters[definition.name] = make_parameter_estimate(
+            value=row[definition.source_column],
+            prior_valid_count=prior_valid_count,
+        )
+
+    if len(fighter_names) != 1:
+        raise ProfileBuilderError(
+            f"RFS families disagree on fighter name: {sorted(fighter_names)}"
+        )
+
+    # Use the minimum observed count across families so profile experience never
+    # overstates the weakest required family.
+    prior_fight_count = min(prior_fight_counts)
+    valid_round_fight_count = min(valid_counts)
+
+    return FighterSimulationProfile(
+        fighter_id=fighter_id,
+        fighter_name=next(iter(fighter_names)),
+        target_date=str(_normalize_date(target_date).date()),
+        weight_class=weight_class,
+        gender=gender,
+        scheduled_rounds=scheduled_rounds,
+        prior_fight_count=prior_fight_count,
+        valid_round_fight_count=valid_round_fight_count,
+        parameters=parameters,
+        is_low_experience=prior_fight_count < 3,
+    )
+
+
+def load_default_rfs_histories(
+    *,
+    feature_root: str = "data/features",
+) -> dict[str, pd.DataFrame]:
+    """Load the four currently approved RFS history artifacts."""
+
+    root = pd.io.common.stringify_path(feature_root)
+
+    paths = {
+        "trajectory": (
+            f"{root}/round_fighter_state_history.parquet"
+        ),
+        "suppression": (
+            f"{root}/round_fighter_suppression_p0_2_history.parquet"
+        ),
+        "wrestling": (
+            f"{root}/round_fighter_wrestling_p0_3_history.parquet"
+        ),
+        "defense": (
+            f"{root}/round_fighter_defense_p1_4_history.parquet"
+        ),
+    }
+
+    histories: dict[str, pd.DataFrame] = {}
+
+    for family_name, path in paths.items():
+        try:
+            histories[family_name] = pd.read_parquet(path)
+        except Exception as exc:
+            raise ProfileBuilderError(
+                f"Unable to load {family_name!r} history from {path}: {exc}"
+            ) from exc
+
+    return histories
