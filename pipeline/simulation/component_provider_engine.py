@@ -7,6 +7,10 @@ controlled historical ablations with optional providers:
 - strike provider only: absolute significant-strike attempt distributions;
 - finish provider only: calibrated mutually exclusive fight-round hazards;
 - both providers: both component replacements in the same simulated path.
+
+Strike providers may optionally expose a context-aware method. That method is
+called with state created only by earlier simulated rounds, allowing round-two-plus
+pace to react to the current Monte Carlo path without reading realized fight data.
 """
 
 from __future__ import annotations
@@ -21,6 +25,7 @@ from pipeline.simulation.contracts import (
     SimulationSummary,
     SimulatorConfig,
 )
+from pipeline.simulation.dynamic_strike_provider import DynamicStrikeRoundContext
 from pipeline.simulation.engine import (
     REGIMES,
     SIMULATOR_VERSION,
@@ -72,6 +77,79 @@ def _sample_provider_finish(
         3: ("blue", "ko_tko"),
         4: ("blue", "submission"),
     }[selected]
+
+
+def _component_provider_strike_round(
+    rng: np.random.Generator,
+    provider: SignificantStrikeParameterProvider,
+    key: RoundParameterKey,
+    fighter,
+    opponent,
+    dynamic: _DynamicState,
+    opponent_dynamic: _DynamicState,
+    matchup: MatchupSimulationInput,
+) -> tuple[int, int]:
+    """Sample static or path-context strike parameters without changing accuracy."""
+    contextual_method = getattr(
+        provider,
+        "significant_strike_attempts_with_context",
+        None,
+    )
+    if contextual_method is None:
+        return _provider_strike_round(
+            rng,
+            provider,
+            key,
+            fighter,
+            opponent,
+            dynamic,
+            opponent_dynamic,
+            matchup.round_seconds,
+        )
+
+    context = DynamicStrikeRoundContext(
+        key=key,
+        opponent_id=str(opponent.fighter_id),
+        scheduled_rounds=int(matchup.scheduled_rounds),
+        round_seconds=int(matchup.round_seconds),
+        fighter_fatigue=float(dynamic.fatigue),
+        fighter_damage=float(dynamic.damage),
+        fighter_confidence=float(dynamic.confidence),
+        opponent_fatigue=float(opponent_dynamic.fatigue),
+        opponent_damage=float(opponent_dynamic.damage),
+        opponent_confidence=float(opponent_dynamic.confidence),
+        fighter_sig_attempted=int(dynamic.sig_attempted),
+        fighter_sig_landed=int(dynamic.sig_landed),
+        opponent_sig_attempted=int(opponent_dynamic.sig_attempted),
+        opponent_sig_landed=int(opponent_dynamic.sig_landed),
+        fighter_control_seconds=float(dynamic.control_seconds),
+        opponent_control_seconds=float(opponent_dynamic.control_seconds),
+        fighter_knockdowns=int(dynamic.knockdowns),
+        opponent_knockdowns=int(opponent_dynamic.knockdowns),
+        fighter_rounds_won=int(dynamic.rounds_won),
+        opponent_rounds_won=int(opponent_dynamic.rounds_won),
+    )
+    parameters = contextual_method(context)
+    attempts = parameters.sample_count(
+        rng,
+        exposure_seconds=float(matchup.round_seconds),
+    )
+
+    # The provider owns attempt volume. Accuracy remains the existing heuristic
+    # contract so this ablation isolates dynamic volume generation.
+    defense_effect = 0.52 + 0.48 * (1.0 - opponent.sig_defense)
+    fatigue_accuracy = 1.0 - 0.12 * dynamic.fatigue
+    opponent_damage_opening = 1.0 + 0.08 * opponent_dynamic.damage
+    accuracy = _clamp(
+        fighter.sig_accuracy
+        * defense_effect
+        * fatigue_accuracy
+        * opponent_damage_opening,
+        0.08,
+        0.78,
+    )
+    landed = int(rng.binomial(attempts, accuracy)) if attempts else 0
+    return attempts, landed
 
 
 def simulate_fight_with_component_providers(
@@ -138,7 +216,7 @@ def simulate_fight_with_component_providers(
                 config.strike_overdispersion,
             )
         else:
-            red_attempts, red_landed = _provider_strike_round(
+            red_attempts, red_landed = _component_provider_strike_round(
                 rng,
                 strike_provider,
                 RoundParameterKey(matchup.fight_id, red.fighter_id, round_number),
@@ -146,9 +224,9 @@ def simulate_fight_with_component_providers(
                 blue,
                 red_dynamic,
                 blue_dynamic,
-                matchup.round_seconds,
+                matchup,
             )
-            blue_attempts, blue_landed = _provider_strike_round(
+            blue_attempts, blue_landed = _component_provider_strike_round(
                 rng,
                 strike_provider,
                 RoundParameterKey(matchup.fight_id, blue.fighter_id, round_number),
@@ -156,7 +234,7 @@ def simulate_fight_with_component_providers(
                 red,
                 blue_dynamic,
                 red_dynamic,
-                matchup.round_seconds,
+                matchup,
             )
 
         red_td_attempts, red_td_landed, red_control = _takedown_round(
@@ -424,7 +502,7 @@ def run_simulation_with_component_providers(
     summary = summarize_outcomes(matchup, runtime, outcomes)
     suffixes = []
     if strike_provider is not None:
-        suffixes.append("strike")
+        suffixes.append(str(getattr(strike_provider, "simulator_suffix", "strike")))
     if finish_provider is not None:
         suffixes.append("finish")
     version = f"{COMPONENT_PROVIDER_VERSION}_{'_'.join(suffixes)}"
