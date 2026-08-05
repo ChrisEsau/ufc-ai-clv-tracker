@@ -8,10 +8,12 @@ on:
     paths:
       - ".github/workflows/run-simulation-historical-survival-replay.yml"
       - "pipeline/simulation/finish_survival_calibration.py"
+      - "pipeline/simulation/historical_replay_evaluation.py"
       - "pipeline/simulation/historical_survival_provider_replay.py"
       - "pipeline/simulation/run_historical_survival_provider_replay.py"
       - "pipeline/simulation/run_historical_simulator_replay.py"
       - "tests/test_simulation_finish_survival_calibration.py"
+      - "tests/test_simulation_historical_replay_evaluation.py"
       - "tests/test_simulation_replay_label_time.py"
 
 permissions:
@@ -36,10 +38,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run survival calibration tests
+      - name: Run survival and cohort evaluation tests
         run: |
           python -m unittest tests.test_simulation_replay_label_time
           python -m unittest tests.test_simulation_finish_survival_calibration
+          python -m unittest tests.test_simulation_historical_replay_evaluation
           python -m unittest tests.test_simulation_finish_hazard_provider
           python -m unittest tests.test_simulation_finish_hazard_model
           python -m unittest tests.test_simulation_provider_engine
@@ -56,25 +59,34 @@ jobs:
         run: |
           python -m pipeline.simulation.run_train_finish_hazard_model
 
-      - name: Replay round-survival calibrated variants
+      - name: Replay and evaluate historical cohort
         run: |
           python -m pipeline.simulation.run_historical_survival_provider_replay \
             --test-year 2026 \
             --simulations-per-fight 500 \
             --seed 91 \
-            --group-prior-rows 200
+            --group-prior-rows 200 \
+            --minimum-subgroup-fights 10 \
+            --bootstrap-samples 500
 
-      - name: Publish survival replay summary
+      - name: Publish large-cohort replay summary
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
 
-          path = Path(
+          import pandas as pd
+
+          root = Path(
               "data/model_lab/simulation/historical_replay_v0/"
-              "survival_components/summary.json"
+              "survival_components"
           )
-          summary = json.loads(path.read_text(encoding="utf-8"))
+          summary = json.loads((root / "summary.json").read_text(encoding="utf-8"))
+          bootstrap = pd.read_csv(root / "bootstrap_metrics.csv")
+          subgroup = pd.read_csv(root / "subgroup_metrics.csv")
+          paired = pd.read_csv(root / "paired_variant_deltas.csv")
+          calibration = pd.read_csv(root / "calibration_diagnostics.csv")
+
           ordered = [
               "heuristic_simulator",
               "class_finish_hazard_provider",
@@ -86,42 +98,108 @@ jobs:
               "heuristic_simulator": "Heuristic",
               "class_finish_hazard_provider": "Class finish",
               "survival_finish_hazard_provider": "Survival finish",
-              "strike_and_survival_finish_providers": "Strike + survival",
+              "strike_and_survival_finish_providers": "Strike + survival (blocked)",
               "historical_baseline": "Historical baseline",
           }
+          primary = [
+              "winner_brier",
+              "winner_accuracy",
+              "method_log_loss",
+              "goes_distance_brier",
+              "fight_time_mae",
+              "fighter_sig_attempt_mae",
+          ]
 
           with Path("historical_survival_replay_summary.md").open(
               "w", encoding="utf-8"
           ) as handle:
-              handle.write("# Historical round-survival finish replay\n\n")
+              handle.write("# Large-cohort historical simulator evaluation\n\n")
+              handle.write(f"- Decision unit: **{summary['decision_unit']}**\n")
               handle.write(f"- Holdout fights: **{summary['fights']:,}**\n")
               handle.write(
                   f"- Paths per fight and variant: **{summary['simulations_per_fight']:,}**\n"
               )
               handle.write(
-                  f"- Survival schedule rows: **{summary['survival_schedule_rows']:,}**\n"
+                  f"- Bootstrap samples: **{summary['bootstrap_samples']:,}**\n"
               )
               handle.write(
-                  f"- Calibration source: **{summary['survival_calibration_source']}**\n\n"
+                  f"- Recommended variant: **{summary['recommended_variant']}**\n"
               )
-              handle.write("## Metrics\n\n")
+              handle.write("- Single-card replay role: **smoke test only**\n")
+              handle.write("- Static strike provider: **blocked comparison only**\n")
+              handle.write("- Status: **shadow-only**\n\n")
+
+              handle.write("## Overall metrics with 95% bootstrap intervals\n\n")
               handle.write(
-                  "| Model | Winner Brier | Winner accuracy | Method log loss | "
-                  "Method accuracy | Distance Brier | Time MAE | Time bias | Strike MAE |\n"
+                  "| Model | Metric | Estimate | 95% interval | Direction |\n"
               )
-              handle.write("|---|---:|---:|---:|---:|---:|---:|---:|---:|\n")
+              handle.write("|---|---|---:|---:|---|\n")
+              overall = bootstrap.loc[bootstrap["metric"].isin(primary)]
               for name in ordered:
-                  row = summary["metrics"][name]
+                  rows = overall.loc[overall["variant"].eq(name)]
+                  for _, row in rows.iterrows():
+                      handle.write(
+                          f"| {labels[name]} | {row['metric']} | "
+                          f"{row['estimate']:.4f} | "
+                          f"[{row['ci_lower_95']:.4f}, {row['ci_upper_95']:.4f}] | "
+                          f"{row['direction']} |\n"
+                      )
+
+              handle.write("\n## Paired deltas: recommended minus comparator\n\n")
+              handle.write(
+                  "Negative favors the recommended model for lower-is-better metrics; "
+                  "positive favors it for higher-is-better metrics.\n\n"
+              )
+              handle.write(
+                  "| Comparator | Metric | Delta | 95% interval | Favors recommended | CI supports |\n"
+              )
+              handle.write("|---|---|---:|---:|---|---|\n")
+              selected_paired = paired.loc[paired["metric"].isin(primary)]
+              for _, row in selected_paired.iterrows():
                   handle.write(
-                      f"| {labels[name]} | {row['winner_brier']:.4f} | "
-                      f"{row['winner_accuracy']:.2%} | "
-                      f"{row['method_log_loss']:.4f} | "
-                      f"{row['method_accuracy']:.2%} | "
-                      f"{row['goes_distance_brier']:.4f} | "
-                      f"{row['fight_time_mae']:.1f} | "
-                      f"{row['fight_time_bias']:.1f} | "
-                      f"{row['fighter_sig_attempt_mae']:.2f} |\n"
+                      f"| {labels.get(row['comparator_variant'], row['comparator_variant'])} | "
+                      f"{row['metric']} | {row['reference_minus_comparator']:.4f} | "
+                      f"[{row['ci_lower_95']:.4f}, {row['ci_upper_95']:.4f}] | "
+                      f"{'yes' if row['favors_reference'] else 'no'} | "
+                      f"{'yes' if row['confidence_interval_supports_reference'] else 'no'} |\n"
                   )
+
+              handle.write("\n## Recommended variant by experience depth\n\n")
+              experience = subgroup.loc[
+                  subgroup["variant"].eq(summary["recommended_variant"])
+                  & subgroup["segment"].eq("experience")
+              ]
+              handle.write(
+                  "| Experience band | Fights | Winner Brier | Winner accuracy | Method log loss | Distance Brier |\n"
+              )
+              handle.write("|---|---:|---:|---:|---:|---:|\n")
+              for _, row in experience.iterrows():
+                  handle.write(
+                      f"| {row['subgroup']} | {int(row['fights'])} | "
+                      f"{row['winner_brier']:.4f} | {row['winner_accuracy']:.2%} | "
+                      f"{row['method_log_loss']:.4f} | "
+                      f"{row['goes_distance_brier']:.4f} |\n"
+                  )
+
+              handle.write("\n## Recommended winner-confidence calibration\n\n")
+              confidence = calibration.loc[
+                  calibration["variant"].eq(summary["recommended_variant"])
+                  & calibration["calibration_type"].eq(
+                      "predicted_winner_confidence"
+                  )
+              ]
+              handle.write(
+                  "| Confidence band | Fights | Mean confidence | Observed accuracy | Gap |\n"
+              )
+              handle.write("|---|---:|---:|---:|---:|\n")
+              for _, row in confidence.iterrows():
+                  handle.write(
+                      f"| {row['band']} | {int(row['fights'])} | "
+                      f"{row['mean_probability']:.2%} | "
+                      f"{row['observed_rate']:.2%} | "
+                      f"{row['absolute_gap']:.2%} |\n"
+                  )
+
               handle.write("\n## Aggregate behavior\n\n")
               handle.write(
                   "| Quantity | Actual | Heuristic | Class finish | Survival finish | Strike + survival |\n"
@@ -134,19 +212,6 @@ jobs:
                       f"{row['class_finish_hazard_provider']:.4f} | "
                       f"{row['survival_finish_hazard_provider']:.4f} | "
                       f"{row['strike_and_survival_finish_providers']:.4f} |\n"
-                  )
-              handle.write("\n## Survival factors\n\n")
-              handle.write(
-                  "| Scheduled rounds | Round | Prior rows | Actual terminal | Predicted terminal | Odds factor |\n"
-              )
-              handle.write("|---:|---:|---:|---:|---:|---:|\n")
-              for row in summary["survival_schedule"]:
-                  handle.write(
-                      f"| {row['total_rounds']} | {row['round']} | "
-                      f"{row['prior_rows']:,} | "
-                      f"{row['actual_terminal_rate']:.3%} | "
-                      f"{row['predicted_terminal_rate']:.3%} | "
-                      f"{row['terminal_odds_factor']:.4f} |\n"
                   )
           PY
 
