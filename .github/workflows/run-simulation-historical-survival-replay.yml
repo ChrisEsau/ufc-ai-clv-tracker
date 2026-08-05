@@ -1,0 +1,163 @@
+name: Simulator Historical Survival Replay
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/round-fight-simulator-v0
+    paths:
+      - ".github/workflows/run-simulation-historical-survival-replay.yml"
+      - "pipeline/simulation/finish_survival_calibration.py"
+      - "pipeline/simulation/historical_survival_provider_replay.py"
+      - "pipeline/simulation/run_historical_survival_provider_replay.py"
+      - "tests/test_simulation_finish_survival_calibration.py"
+
+permissions:
+  contents: read
+
+jobs:
+  historical-survival-replay:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout simulator branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run survival calibration tests
+        run: |
+          python -m unittest tests.test_simulation_finish_survival_calibration
+          python -m unittest tests.test_simulation_finish_hazard_provider
+          python -m unittest tests.test_simulation_finish_hazard_model
+          python -m unittest tests.test_simulation_provider_engine
+          python -m unittest tests.test_simulation_historical_simulator_replay
+          python -m unittest tests.test_round_simulator
+          python -m unittest tests.test_simulation_terminal_round
+          python -m compileall -q pipeline/simulation
+
+      - name: Build leakage-safe fighter-round table
+        run: |
+          python -m pipeline.simulation.run_build_training_dataset
+
+      - name: Rebuild finish hazard walk-forward artifacts
+        run: |
+          python -m pipeline.simulation.run_train_finish_hazard_model
+
+      - name: Replay round-survival calibrated variants
+        run: |
+          python -m pipeline.simulation.run_historical_survival_provider_replay \
+            --test-year 2026 \
+            --simulations-per-fight 500 \
+            --seed 91 \
+            --group-prior-rows 200
+
+      - name: Publish survival replay summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path(
+              "data/model_lab/simulation/historical_replay_v0/"
+              "survival_components/summary.json"
+          )
+          summary = json.loads(path.read_text(encoding="utf-8"))
+          ordered = [
+              "heuristic_simulator",
+              "class_finish_hazard_provider",
+              "survival_finish_hazard_provider",
+              "strike_and_survival_finish_providers",
+              "historical_baseline",
+          ]
+          labels = {
+              "heuristic_simulator": "Heuristic",
+              "class_finish_hazard_provider": "Class finish",
+              "survival_finish_hazard_provider": "Survival finish",
+              "strike_and_survival_finish_providers": "Strike + survival",
+              "historical_baseline": "Historical baseline",
+          }
+
+          with Path("historical_survival_replay_summary.md").open(
+              "w", encoding="utf-8"
+          ) as handle:
+              handle.write("# Historical round-survival finish replay\n\n")
+              handle.write(f"- Holdout fights: **{summary['fights']:,}**\n")
+              handle.write(
+                  f"- Paths per fight and variant: **{summary['simulations_per_fight']:,}**\n"
+              )
+              handle.write(
+                  f"- Survival schedule rows: **{summary['survival_schedule_rows']:,}**\n"
+              )
+              handle.write(
+                  f"- Calibration source: **{summary['survival_calibration_source']}**\n\n"
+              )
+              handle.write("## Metrics\n\n")
+              handle.write(
+                  "| Model | Winner Brier | Winner accuracy | Method log loss | "
+                  "Method accuracy | Distance Brier | Time MAE | Time bias | Strike MAE |\n"
+              )
+              handle.write("|---|---:|---:|---:|---:|---:|---:|---:|---:|\n")
+              for name in ordered:
+                  row = summary["metrics"][name]
+                  handle.write(
+                      f"| {labels[name]} | {row['winner_brier']:.4f} | "
+                      f"{row['winner_accuracy']:.2%} | "
+                      f"{row['method_log_loss']:.4f} | "
+                      f"{row['method_accuracy']:.2%} | "
+                      f"{row['goes_distance_brier']:.4f} | "
+                      f"{row['fight_time_mae']:.1f} | "
+                      f"{row['fight_time_bias']:.1f} | "
+                      f"{row['fighter_sig_attempt_mae']:.2f} |\n"
+                  )
+              handle.write("\n## Aggregate behavior\n\n")
+              handle.write(
+                  "| Quantity | Actual | Heuristic | Class finish | Survival finish | Strike + survival |\n"
+              )
+              handle.write("|---|---:|---:|---:|---:|---:|\n")
+              for row in summary["aggregate_comparison"]:
+                  handle.write(
+                      f"| {row['quantity']} | {row['actual']:.4f} | "
+                      f"{row['heuristic_simulator']:.4f} | "
+                      f"{row['class_finish_hazard_provider']:.4f} | "
+                      f"{row['survival_finish_hazard_provider']:.4f} | "
+                      f"{row['strike_and_survival_finish_providers']:.4f} |\n"
+                  )
+              handle.write("\n## Survival factors\n\n")
+              handle.write(
+                  "| Scheduled rounds | Round | Prior rows | Actual terminal | Predicted terminal | Odds factor |\n"
+              )
+              handle.write("|---:|---:|---:|---:|---:|---:|\n")
+              for row in summary["survival_schedule"]:
+                  handle.write(
+                      f"| {row['total_rounds']} | {row['round']} | "
+                      f"{row['prior_rows']:,} | "
+                      f"{row['actual_terminal_rate']:.3%} | "
+                      f"{row['predicted_terminal_rate']:.3%} | "
+                      f"{row['terminal_odds_factor']:.4f} |\n"
+                  )
+          PY
+
+          cat historical_survival_replay_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload survival replay artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-historical-survival-replay-v0
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6
+          path: |
+            data/model_lab/simulation/historical_replay_v0/survival_components/**
+            data/model_lab/simulation/models/finish_hazard_prefight_v0/**
+            data/audits/simulation_fighter_round_training_audit.parquet
+            historical_survival_replay_summary.md
