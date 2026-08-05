@@ -14,6 +14,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any, Mapping
 
+import numpy as np
 import pandas as pd
 
 from pipeline.simulation.rfs_mc_v1.contracts import (
@@ -243,6 +244,60 @@ def select_latest_prior_rows_by_family(
     return selected
 
 
+def make_historical_fallback_estimate(
+    history: pd.DataFrame,
+    *,
+    source_column: str,
+    target_date: Any,
+) -> ParameterEstimate:
+    """Build a leakage-safe fallback from prior historical family values.
+
+    This is used only when an individual fighter parameter is missing or
+    nonnumeric despite an otherwise valid prior RFS row.
+    """
+
+    if source_column not in history.columns:
+        raise ProfileBuilderError(
+            f"Fallback source column {source_column!r} is missing"
+        )
+
+    if "date" not in history.columns:
+        raise ProfileBuilderError(
+            "Fallback history requires a date column"
+        )
+
+    target_ts = _normalize_date(target_date)
+
+    prior = history.loc[
+        pd.to_datetime(history["date"]) < target_ts,
+        source_column,
+    ]
+
+    numeric = pd.to_numeric(
+        prior,
+        errors="coerce",
+    ).dropna()
+
+    if numeric.empty:
+        raise ProfileBuilderError(
+            f"No prior fallback values available for "
+            f"{source_column!r}"
+        )
+
+    value = float(numeric.median())
+    sample_size = float(len(numeric))
+
+    return ParameterEstimate(
+        value=value,
+        source=ProfileSource.GLOBAL,
+        effective_sample_size=sample_size,
+        uncertainty=float(
+            1.0 / np.sqrt(max(sample_size, 1.0))
+        ),
+    )
+
+
+
 def build_composite_profile_from_histories(
     histories: Mapping[str, pd.DataFrame],
     *,
@@ -316,10 +371,25 @@ def build_composite_profile_from_histories(
         valid_counts.append(prior_valid_count)
         fighter_names.add(str(row["fighter_name"]))
 
-        parameters[definition.name] = make_parameter_estimate(
-            value=row[definition.source_column],
-            prior_valid_count=prior_valid_count,
-        )
+        raw_value = row[definition.source_column]
+        numeric_value = pd.to_numeric(
+            pd.Series([raw_value]),
+            errors="coerce",
+        ).iloc[0]
+
+        if pd.isna(numeric_value):
+            parameters[definition.name] = (
+                make_historical_fallback_estimate(
+                    histories[family_key],
+                    source_column=definition.source_column,
+                    target_date=target_date,
+                )
+            )
+        else:
+            parameters[definition.name] = make_parameter_estimate(
+                value=numeric_value,
+                prior_valid_count=prior_valid_count,
+            )
 
     if len(fighter_names) != 1:
         raise ProfileBuilderError(
