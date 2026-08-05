@@ -10,7 +10,9 @@ on:
       - "pipeline/simulation/finish_survival_calibration.py"
       - "pipeline/simulation/historical_survival_provider_replay.py"
       - "pipeline/simulation/run_historical_survival_provider_replay.py"
+      - "pipeline/simulation/run_historical_simulator_replay.py"
       - "tests/test_simulation_finish_survival_calibration.py"
+      - "tests/test_simulation_replay_label_time.py"
 
 permissions:
   contents: read
@@ -36,6 +38,7 @@ jobs:
 
       - name: Run survival calibration tests
         run: |
+          python -m unittest tests.test_simulation_replay_label_time
           python -m unittest tests.test_simulation_finish_survival_calibration
           python -m unittest tests.test_simulation_finish_hazard_provider
           python -m unittest tests.test_simulation_finish_hazard_model
