@@ -1,0 +1,205 @@
+name: Simulator Historical Hierarchical Finish
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/round-fight-simulator-v0
+    paths:
+      - ".github/workflows/run-simulation-historical-hierarchical-finish.yml"
+      - "pipeline/simulation/hierarchical_finish_hazard_model.py"
+      - "pipeline/simulation/hierarchical_finish_hazard_holdout.py"
+      - "pipeline/simulation/historical_hierarchical_finish_replay.py"
+      - "pipeline/simulation/run_train_hierarchical_finish_hazard_model.py"
+      - "pipeline/simulation/run_historical_hierarchical_finish_replay.py"
+      - "pipeline/simulation/historical_submission_diagnostics.py"
+      - "tests/test_simulation_hierarchical_finish_hazard_model.py"
+
+permissions:
+  contents: read
+
+jobs:
+  historical-hierarchical-finish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout simulator branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run hierarchical finish and simulator tests
+        run: |
+          python -m unittest tests.test_simulation_hierarchical_finish_hazard_model
+          python -m unittest tests.test_simulation_finish_hazard_model
+          python -m unittest tests.test_simulation_finish_hazard_provider
+          python -m unittest tests.test_simulation_finish_survival_calibration
+          python -m unittest tests.test_simulation_historical_submission_diagnostics
+          python -m unittest tests.test_simulation_historical_replay_evaluation
+          python -m unittest tests.test_simulation_replay_label_time
+          python -m unittest tests.test_simulation_historical_simulator_replay
+          python -m unittest tests.test_round_simulator
+          python -m compileall -q pipeline/simulation
+
+      - name: Build leakage-safe fighter-round table
+        run: |
+          python -m pipeline.simulation.run_build_training_dataset
+
+      - name: Rebuild current five-class finish artifacts
+        run: |
+          python -m pipeline.simulation.run_train_finish_hazard_model
+
+      - name: Train hierarchical finish artifacts
+        run: |
+          python -m pipeline.simulation.run_train_hierarchical_finish_hazard_model
+
+      - name: Replay hierarchical finish providers
+        run: |
+          python -m pipeline.simulation.run_historical_hierarchical_finish_replay \
+            --test-year 2026 \
+            --simulations-per-fight 500 \
+            --seed 91 \
+            --group-prior-rows 200 \
+            --minimum-subgroup-fights 10 \
+            --bootstrap-samples 500
+
+      - name: Publish hierarchical finish summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          import pandas as pd
+
+          root = Path(
+              "data/model_lab/simulation/historical_replay_v0/"
+              "hierarchical_finish"
+          )
+          model_root = Path(
+              "data/model_lab/simulation/models/finish_hazard_hierarchical_v0"
+          )
+          summary = json.loads((root / "summary.json").read_text(encoding="utf-8"))
+          model_summary = json.loads(
+              (model_root / "summary.json").read_text(encoding="utf-8")
+          )
+          paired = pd.read_csv(root / "paired_variant_deltas.csv")
+
+          variants = [
+              "survival_finish_hazard_provider",
+              "hierarchical_class_finish_hazard_provider",
+              "hierarchical_survival_finish_hazard_provider",
+              "historical_baseline",
+          ]
+          labels = {
+              "survival_finish_hazard_provider": "Current survival finish",
+              "hierarchical_class_finish_hazard_provider": "Hierarchical class",
+              "hierarchical_survival_finish_hazard_provider": "Hierarchical survival",
+              "historical_baseline": "Historical baseline",
+          }
+          primary = [
+              "winner_brier",
+              "winner_accuracy",
+              "method_log_loss",
+              "method_accuracy",
+              "goes_distance_brier",
+              "fight_time_mae",
+              "fighter_sig_attempt_mae",
+          ]
+
+          with Path("historical_hierarchical_finish_summary.md").open(
+              "w", encoding="utf-8"
+          ) as handle:
+              handle.write("# Hierarchical finish-provider historical ablation\n\n")
+              handle.write(f"- Holdout fights: **{summary['fights']:,}**\n")
+              handle.write(
+                  f"- Paths per fight and variant: **{summary['simulations_per_fight']:,}**\n"
+              )
+              handle.write(
+                  f"- Hierarchical walk-forward candidate: **{model_summary['best_candidate']}**\n"
+              )
+              handle.write(
+                  f"- Research gate: **{summary['research_gate_status']}**\n"
+              )
+              handle.write(
+                  f"- Selected after ablation: **{summary['selected_variant_after_ablation']}**\n"
+              )
+              handle.write("- Status: **shadow-only**\n\n")
+
+              handle.write("## Full-simulator metrics\n\n")
+              handle.write("| Variant | Metric | Value |\n")
+              handle.write("|---|---|---:|\n")
+              for variant in variants:
+                  values = summary["metrics"][variant]
+                  for metric in primary:
+                      handle.write(
+                          f"| {labels[variant]} | {metric} | {values[metric]:.6f} |\n"
+                      )
+
+              handle.write("\n## Promotion checks\n\n")
+              handle.write("| Check | Passed |\n")
+              handle.write("|---|---|\n")
+              for check, passed in summary["gate_checks"].items():
+                  handle.write(f"| {check} | {'yes' if passed else 'no'} |\n")
+
+              handle.write("\n## Submission audit comparison\n\n")
+              handle.write("| Metric | Current | Hierarchical |\n")
+              handle.write("|---|---:|---:|\n")
+              current = summary["current_submission_audit"]["metrics"]
+              hierarchical = summary["hierarchical_submission_audit"]["metrics"]
+              for metric in (
+                  "provider_mean_submission_probability",
+                  "provider_submission_brier",
+                  "provider_submission_binary_log_loss",
+                  "submission_method_detection_rate",
+                  "submission_side_accuracy",
+                  "submission_side_brier",
+                  "simulator_winner_accuracy_on_submissions",
+                  "expected_submission_round_mae",
+              ):
+                  handle.write(
+                      f"| {metric} | {current[metric]:.6f} | "
+                      f"{hierarchical[metric]:.6f} |\n"
+                  )
+
+              handle.write("\n## Paired bootstrap deltas\n\n")
+              handle.write(
+                  "The reference is the current survival finish provider.\n\n"
+              )
+              handle.write(
+                  "| Comparator | Metric | Reference minus comparator | 95% interval | CI supports reference |\n"
+              )
+              handle.write("|---|---|---:|---:|---|\n")
+              selected = paired.loc[paired["metric"].isin(primary)]
+              for _, row in selected.iterrows():
+                  handle.write(
+                      f"| {labels.get(row['comparator_variant'], row['comparator_variant'])} | "
+                      f"{row['metric']} | {row['reference_minus_comparator']:.6f} | "
+                      f"[{row['ci_lower_95']:.6f}, {row['ci_upper_95']:.6f}] | "
+                      f"{'yes' if row['confidence_interval_supports_reference'] else 'no'} |\n"
+                  )
+          PY
+
+          cat historical_hierarchical_finish_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload hierarchical finish artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-historical-hierarchical-finish-v0
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6
+          path: |
+            data/model_lab/simulation/historical_replay_v0/hierarchical_finish/**
+            data/model_lab/simulation/models/finish_hazard_hierarchical_v0/**
+            data/model_lab/simulation/models/finish_hazard_prefight_v0/**
+            data/audits/simulation_fighter_round_training_audit.parquet
+            historical_hierarchical_finish_summary.md
