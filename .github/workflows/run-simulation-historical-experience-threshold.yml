@@ -37,7 +37,7 @@ jobs:
         run: |
           python -m unittest tests.test_simulation_historical_experience_threshold
           python -m unittest tests.test_simulation_historical_replay_evaluation
-          python -m unittest tests.test_simulation_hierarchical_finish_model
+          python -m unittest tests.test_simulation_hierarchical_finish_hazard_model
           python -m unittest tests.test_simulation_finish_survival_calibration
           python -m unittest tests.test_simulation_replay_label_time
           python -m compileall -q pipeline/simulation
@@ -52,7 +52,7 @@ jobs:
 
       - name: Train hierarchical finish artifacts
         run: |
-          python -m pipeline.simulation.run_train_hierarchical_finish_model
+          python -m pipeline.simulation.run_train_hierarchical_finish_hazard_model
 
       - name: Rebuild hierarchical comparison replay
         run: |
