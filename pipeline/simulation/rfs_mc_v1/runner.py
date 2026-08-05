@@ -696,3 +696,83 @@ def simulate_finish_aware_paths(
         )
 
     return tuple(paths)
+
+
+@dataclass(frozen=True)
+class ScoredFightPathResult:
+    """Finish-aware path with an optional completed scorecard."""
+
+    path: FinishAwarePathResult
+    decision: object | None
+
+    def __post_init__(self) -> None:
+        if self.path.outcome.method == "decision":
+            if self.decision is None:
+                raise ValueError(
+                    "Decision path requires a scorecard"
+                )
+        elif self.decision is not None:
+            raise ValueError(
+                "Finished path cannot have a decision scorecard"
+            )
+
+
+def score_finish_aware_path(
+    path: FinishAwarePathResult,
+) -> ScoredFightPathResult:
+    """Attach a decision scorecard when a path reaches distance."""
+
+    if path.outcome.method != "decision":
+        return ScoredFightPathResult(
+            path=path,
+            decision=None,
+        )
+
+    from pipeline.simulation.rfs_mc_v1.scoring import (
+        score_decision,
+    )
+
+    decision = score_decision(
+        (
+            trace.activity
+            for trace in path.traces
+        ),
+        scheduled_rounds=path.scheduled_rounds,
+    )
+
+    scored_outcome = FightPathOutcome(
+        winner=decision.winner,
+        loser=decision.loser,
+        method="decision",
+        finish_round=None,
+        finish_segment=None,
+        elapsed_seconds=path.outcome.elapsed_seconds,
+    )
+
+    scored_path = FinishAwarePathResult(
+        path_index=path.path_index,
+        seed=path.seed,
+        scheduled_rounds=path.scheduled_rounds,
+        traces=path.traces,
+        outcome=scored_outcome,
+        red_totals=path.red_totals,
+        blue_totals=path.blue_totals,
+        final_red_state=path.final_red_state,
+        final_blue_state=path.final_blue_state,
+    )
+
+    return ScoredFightPathResult(
+        path=scored_path,
+        decision=decision,
+    )
+
+
+def simulate_scored_paths(
+    request: MatchupSimulationRequest,
+) -> tuple[ScoredFightPathResult, ...]:
+    """Run finish-aware paths and score all distance outcomes."""
+
+    return tuple(
+        score_finish_aware_path(path)
+        for path in simulate_finish_aware_paths(request)
+    )
