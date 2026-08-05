@@ -1,0 +1,126 @@
+name: Simulator Historical Trained Component Replay
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/round-fight-simulator-v0
+    paths:
+      - ".github/workflows/run-simulation-historical-trained-component-replay.yml"
+      - "pipeline/simulation/historical_trained_component_replay.py"
+      - "pipeline/simulation/run_historical_trained_component_replay.py"
+      - "pipeline/simulation/finish_hazard_holdout.py"
+      - "pipeline/simulation/finish_hazard_provider.py"
+      - "pipeline/simulation/finish_hazard_model.py"
+      - "pipeline/simulation/provider_engine.py"
+      - "tests/test_simulation_historical_trained_component_replay.py"
+
+permissions:
+  contents: read
+
+jobs:
+  replay-trained-components:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout simulator branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run trained-component replay tests
+        run: |
+          python -m unittest tests.test_simulation_finish_hazard_model
+          python -m unittest tests.test_simulation_provider_engine
+          python -m unittest tests.test_simulation_historical_simulator_replay
+          python -m unittest tests.test_simulation_historical_trained_component_replay
+          python -m compileall -q pipeline/simulation
+
+      - name: Build leakage-safe fighter-round table
+        run: |
+          python -m pipeline.simulation.run_build_training_dataset
+
+      - name: Train competing-risk finish hazards
+        run: |
+          python -m pipeline.simulation.run_train_finish_hazard_model
+
+      - name: Replay heuristic, strike-only, and trained-finish variants
+        run: |
+          python -m pipeline.simulation.run_historical_trained_component_replay \
+            --test-year 2026 \
+            --simulations-per-fight 500 \
+            --seed 91
+
+      - name: Publish replay comparison
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path(
+              "data/model_lab/simulation/historical_trained_component_replay_v0"
+          )
+          summary = json.loads((root / "summary.json").read_text(encoding="utf-8"))
+          rows = summary["variant_comparison"]
+          gate = summary["promotion_gate"]
+
+          with Path("trained_component_replay_summary.md").open(
+              "w", encoding="utf-8"
+          ) as handle:
+              handle.write("# Historical trained-component simulator replay\n\n")
+              handle.write(
+                  f"- Holdout fights: **{summary['fights']}**\n"
+                  f"- Simulations per fight: **{summary['simulations_per_fight']}**\n"
+                  f"- Finish model: **{summary['finish_model']}**\n\n"
+              )
+              handle.write(
+                  "| Variant | Winner Brier | Method log loss | Distance Brier | "
+                  "Time MAE | Strike MAE | Decision | KO/TKO | Submission | Attempts |\n"
+              )
+              handle.write(
+                  "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n"
+              )
+              for row in rows:
+                  handle.write(
+                      f"| {row['variant']} | {row['winner_brier']:.4f} | "
+                      f"{row['method_log_loss']:.4f} | "
+                      f"{row['goes_distance_brier']:.4f} | "
+                      f"{row['fight_time_mae']:.1f} | "
+                      f"{row['strike_attempt_mae']:.2f} | "
+                      f"{row['predicted_decision_rate']:.2%} | "
+                      f"{row['predicted_ko_tko_rate']:.2%} | "
+                      f"{row['predicted_submission_rate']:.2%} | "
+                      f"{row['predicted_fighter_sig_attempted']:.1f} |\n"
+                  )
+              handle.write("\n## Promotion gates\n\n")
+              handle.write(
+                  f"- Winner beats baseline: **{gate['winner_beats_baseline']}**\n"
+                  f"- Method beats baseline: **{gate['method_beats_baseline']}**\n"
+                  f"- Distance beats baseline: **{gate['distance_beats_baseline']}**\n"
+                  f"- Status: **{gate['status']}**\n"
+              )
+          PY
+
+          cat trained_component_replay_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload trained-component replay artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-historical-trained-component-replay-v0
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6
+          path: |
+            data/model_lab/simulation/historical_trained_component_replay_v0/**
+            data/model_lab/simulation/models/finish_hazard_prefight_v0/**
+            data/audits/simulation_fighter_round_training_audit.parquet
+            trained_component_replay_summary.md
