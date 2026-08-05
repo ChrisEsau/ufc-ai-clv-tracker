@@ -10,6 +10,10 @@ import pandas as pd
 
 from pipeline.common.paths import MASTER_PATH, MODEL_LAB_DIR
 from pipeline.simulation.artifacts import SIMULATION_TRAINING_DATASET_PATH
+from pipeline.simulation.historical_replay_evaluation import (
+    RECOMMENDED_VARIANT,
+    evaluate_historical_replay_cohort,
+)
 from pipeline.simulation.historical_survival_provider_replay import (
     SURVIVAL_VARIANTS,
     run_historical_survival_provider_replay,
@@ -53,6 +57,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--seed", type=int, default=91)
     parser.add_argument("--max-fights", type=int, default=None)
     parser.add_argument("--group-prior-rows", type=float, default=200.0)
+    parser.add_argument("--minimum-subgroup-fights", type=int, default=10)
+    parser.add_argument("--bootstrap-samples", type=int, default=500)
     return parser
 
 
@@ -104,13 +110,41 @@ def main() -> None:
         finish_model_name=args.finish_model,
         group_prior_rows=args.group_prior_rows,
     )
+    evaluation = evaluate_historical_replay_cohort(
+        result.fight_predictions,
+        labeled_training,
+        recommended_variant=RECOMMENDED_VARIANT,
+        minimum_group_size=args.minimum_subgroup_fights,
+        bootstrap_samples=args.bootstrap_samples,
+        seed=args.seed,
+    )
 
-    for variant, frame in result.fight_predictions.items():
+    for variant, frame in evaluation.enriched_predictions.items():
         frame.to_parquet(OUTPUT_DIR / f"{variant}_predictions.parquet", index=False)
     result.metrics.to_csv(OUTPUT_DIR / "metrics.csv", index=False)
     result.aggregate_comparison.to_csv(
         OUTPUT_DIR / "aggregate_comparison.csv", index=False
     )
+    evaluation.subgroup_metrics.to_csv(
+        OUTPUT_DIR / "subgroup_metrics.csv", index=False
+    )
+    evaluation.calibration.to_csv(
+        OUTPUT_DIR / "calibration_diagnostics.csv", index=False
+    )
+    evaluation.bootstrap_metrics.to_csv(
+        OUTPUT_DIR / "bootstrap_metrics.csv", index=False
+    )
+    evaluation.paired_variant_deltas.to_csv(
+        OUTPUT_DIR / "paired_variant_deltas.csv", index=False
+    )
+    evaluation.stability_metrics.to_csv(
+        OUTPUT_DIR / "stability_metrics.csv", index=False
+    )
+    (OUTPUT_DIR / "evaluation_summary.json").write_text(
+        json.dumps(evaluation.summary, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
     result.class_finish_predictions.predictions.to_parquet(
         OUTPUT_DIR / "class_counterfactual_finish_predictions.parquet", index=False
     )
@@ -168,14 +202,17 @@ def main() -> None:
 
     summary = {
         "status": "shadow_only",
+        "decision_unit": "large_historical_cohort",
+        "single_card_role": "smoke_test_only",
+        "recommended_variant": RECOMMENDED_VARIANT,
         "test_year": int(args.test_year),
         "fights": int(len(result.fight_predictions[SURVIVAL_VARIANTS[0]])),
         "simulations_per_fight": int(args.simulations_per_fight),
         "finish_model_name": args.finish_model,
         "group_prior_rows": float(args.group_prior_rows),
-        "survival_calibration_source": (
-            "prior_walk_forward_round_survival"
-        ),
+        "minimum_subgroup_fights": int(args.minimum_subgroup_fights),
+        "bootstrap_samples": int(args.bootstrap_samples),
+        "survival_calibration_source": "prior_walk_forward_round_survival",
         "survival_schedule_rows": int(
             len(result.survival_finish_predictions.schedule)
         ),
@@ -186,6 +223,7 @@ def main() -> None:
             "fight_time_mae": best_time,
             "fighter_sig_attempt_mae": best_strikes,
         },
+        "large_cohort_evaluation": evaluation.summary,
         "aggregate_comparison": result.aggregate_comparison.to_dict(
             orient="records"
         ),
@@ -197,6 +235,14 @@ def main() -> None:
             "aggregate_comparison": str(
                 OUTPUT_DIR / "aggregate_comparison.csv"
             ),
+            "subgroup_metrics": str(OUTPUT_DIR / "subgroup_metrics.csv"),
+            "calibration": str(OUTPUT_DIR / "calibration_diagnostics.csv"),
+            "bootstrap_metrics": str(OUTPUT_DIR / "bootstrap_metrics.csv"),
+            "paired_variant_deltas": str(
+                OUTPUT_DIR / "paired_variant_deltas.csv"
+            ),
+            "stability_metrics": str(OUTPUT_DIR / "stability_metrics.csv"),
+            "evaluation_summary": str(OUTPUT_DIR / "evaluation_summary.json"),
             "survival_schedule": str(
                 OUTPUT_DIR / "survival_calibration_schedule.csv"
             ),
@@ -212,6 +258,10 @@ def main() -> None:
     print(result.metrics.to_string(index=False))
     print("\nAggregate comparison:")
     print(result.aggregate_comparison.to_string(index=False))
+    print("\nLarge-cohort bootstrap metrics:")
+    print(evaluation.bootstrap_metrics.to_string(index=False))
+    print("\nPaired deltas against the recommended survival variant:")
+    print(evaluation.paired_variant_deltas.to_string(index=False))
     print("\nSurvival schedule:")
     print(result.survival_finish_predictions.schedule.to_string(index=False))
     print(f"\nSummary: {OUTPUT_DIR / 'summary.json'}")
