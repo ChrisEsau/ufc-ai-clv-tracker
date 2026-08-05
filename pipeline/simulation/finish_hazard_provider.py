@@ -84,7 +84,12 @@ class FinishHazardProvider(Protocol):
 
 
 class HistoricalFinishHazardProvider:
-    """Lookup provider backed by counterfactual holdout predictions."""
+    """Lookup provider backed by counterfactual holdout predictions.
+
+    The constructor validates the DataFrame once, then converts every row to a
+    compact dictionary. Monte Carlo paths can therefore perform millions of
+    provider lookups without repeated pandas indexing inside the simulation loop.
+    """
 
     REQUIRED_COLUMNS = (
         "fight_id",
@@ -135,9 +140,17 @@ class HistoricalFinishHazardProvider:
             raise FinishHazardProviderError(
                 "Finish predictions contain duplicate fight-round keys"
             )
+
         self.model_name = str(model_name)
         self.model_version = str(model_version)
-        self._rows = frame.set_index(keys)
+        self._rows: dict[tuple[str, int], tuple[float, float, float, float, float]] = {}
+        for row, values in zip(
+            frame[["fight_id", "round"]].itertuples(index=False),
+            probabilities,
+        ):
+            self._rows[(str(row.fight_id), int(row.round))] = tuple(
+                float(value) for value in values
+            )
 
     def __len__(self) -> int:
         return int(len(self._rows))
@@ -145,26 +158,18 @@ class HistoricalFinishHazardProvider:
     def finish_hazards(self, key: FinishHazardKey) -> FinishHazardProbabilities:
         lookup = (str(key.fight_id), int(key.round))
         try:
-            row = self._rows.loc[lookup]
+            values = self._rows[lookup]
         except KeyError as exc:
             raise FinishHazardProviderError(
                 f"No finish hazards found for {lookup}"
             ) from exc
-        if isinstance(row, pd.DataFrame):
-            raise FinishHazardProviderError(
-                f"Finish provider resolved multiple rows for {lookup}"
-            )
-        values = {
-            name: float(row[f"calibrated_prob_{name}"])
-            for name in FINISH_CLASSES
-        }
         return FinishHazardProbabilities(
             key=key,
-            no_finish=values["no_finish"],
-            red_ko_tko=values["red_ko_tko"],
-            red_submission=values["red_submission"],
-            blue_ko_tko=values["blue_ko_tko"],
-            blue_submission=values["blue_submission"],
+            no_finish=values[0],
+            red_ko_tko=values[1],
+            red_submission=values[2],
+            blue_ko_tko=values[3],
+            blue_submission=values[4],
             model_name=self.model_name,
             model_version=self.model_version,
         )
