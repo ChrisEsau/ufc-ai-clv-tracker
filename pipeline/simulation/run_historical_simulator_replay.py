@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from pipeline.common.fight_time import repair_elapsed_match_time
 from pipeline.common.paths import MASTER_PATH, MODEL_LAB_DIR
 from pipeline.simulation.artifacts import SIMULATION_TRAINING_DATASET_PATH
 from pipeline.simulation.historical_simulator_replay import (
@@ -43,21 +44,68 @@ def _method_family(value: object) -> str:
 
 
 def _attach_scoring_labels(training: pd.DataFrame, master: pd.DataFrame) -> pd.DataFrame:
-    """Attach only scoreable realized labels after feature construction.
+    """Attach scoreable labels with one validated elapsed-time definition.
+
+    The authoritative master may store ``match_time_sec`` as either total elapsed
+    fight time or the clock inside the final round. The leakage-safe simulator
+    training builder already repairs that ambiguity before creating
+    ``target_elapsed_fight_seconds``. Historical replay therefore repairs master
+    labels, verifies exact agreement with the training target at fight grain, and
+    scores against that validated elapsed value.
 
     Draws, no-contests, overturned bouts, and rows without a complete winner/time
     cannot be scored by the current two-corner simulator contract. They are
-    excluded from replay evaluation without changing the leakage-safe training
-    artifact or any fighter's pre-fight historical state.
+    excluded from replay evaluation without changing the training artifact or any
+    fighter's pre-fight historical state.
     """
-    required = ["fight_id", "winner_id", "method", "match_time_sec"]
-    missing = [column for column in required if column not in master.columns]
-    if missing:
-        raise ValueError(f"Master fight table is missing replay labels: {missing}")
+    master_required = [
+        "fight_id",
+        "winner_id",
+        "method",
+        "finish_round",
+        "match_time_sec",
+    ]
+    training_required = ["fight_id", "target_elapsed_fight_seconds"]
+    missing_master = [column for column in master_required if column not in master]
+    missing_training = [
+        column for column in training_required if column not in training
+    ]
+    if missing_master:
+        raise ValueError(f"Master fight table is missing replay labels: {missing_master}")
+    if missing_training:
+        raise ValueError(
+            "Simulator training table is missing repaired elapsed-time targets: "
+            f"{missing_training}"
+        )
 
-    labels = master.loc[
-        master["fight_id"].isin(training["fight_id"].unique()),
-        required,
+    elapsed = training[["fight_id", "target_elapsed_fight_seconds"]].copy()
+    elapsed["target_elapsed_fight_seconds"] = pd.to_numeric(
+        elapsed["target_elapsed_fight_seconds"], errors="coerce"
+    )
+    consistency = elapsed.groupby("fight_id", dropna=False)[
+        "target_elapsed_fight_seconds"
+    ].agg(["min", "max", "count"])
+    inconsistent = (
+        consistency["min"].isna()
+        | consistency["max"].isna()
+        | consistency["min"].ne(consistency["max"])
+    )
+    if inconsistent.any():
+        sample = consistency.loc[inconsistent].head(10).reset_index().to_dict(
+            orient="records"
+        )
+        raise ValueError(
+            "Training elapsed-time targets are missing or inconsistent within fights: "
+            f"{sample}"
+        )
+    elapsed = consistency[["min"]].rename(
+        columns={"min": "target_elapsed_fight_seconds"}
+    ).reset_index()
+
+    repaired_master = repair_elapsed_match_time(master)
+    labels = repaired_master.loc[
+        repaired_master["fight_id"].isin(training["fight_id"].unique()),
+        master_required,
     ].copy()
     labels["method_family"] = labels["method"].map(_method_family)
     labels["match_time_sec"] = pd.to_numeric(
@@ -66,6 +114,29 @@ def _attach_scoring_labels(training: pd.DataFrame, master: pd.DataFrame) -> pd.D
     labels["winner_id"] = labels["winner_id"].astype("string").str.strip()
     if labels.duplicated(["fight_id"]).any():
         raise ValueError("Master fight table has duplicate fight_id labels")
+
+    labels = labels.merge(
+        elapsed,
+        on="fight_id",
+        how="inner",
+        validate="one_to_one",
+    )
+    comparable = labels["match_time_sec"].notna() & labels[
+        "target_elapsed_fight_seconds"
+    ].notna()
+    mismatch = comparable & (
+        labels["match_time_sec"] - labels["target_elapsed_fight_seconds"]
+    ).abs().gt(1e-6)
+    if mismatch.any():
+        sample = labels.loc[
+            mismatch,
+            ["fight_id", "finish_round", "match_time_sec", "target_elapsed_fight_seconds"],
+        ].head(10).to_dict(orient="records")
+        raise ValueError(
+            "Repaired master elapsed time disagrees with simulator training targets: "
+            f"{sample}"
+        )
+    labels["match_time_sec"] = labels["target_elapsed_fight_seconds"]
 
     scoreable = (
         labels["winner_id"].notna()
