@@ -262,3 +262,290 @@ def test_distance_calibration_is_validated(
             DistanceTransitionCalibration(),
             **{field_name: value},
         )
+
+
+@pytest.mark.parametrize(
+    "current_owner",
+    [
+        FighterSide.RED,
+        FighterSide.BLUE,
+    ],
+)
+def test_clinch_probabilities_sum_to_one(
+    current_owner: FighterSide,
+) -> None:
+    from pipeline.simulation.rfs_mc_v2_shared_state.transition_engine import (
+        build_clinch_transition_distribution,
+    )
+
+    distribution = build_clinch_transition_distribution(
+        parameters(),
+        parameters(),
+        current_owner=current_owner,
+    )
+
+    assert fsum(
+        option.probability
+        for option in distribution.options
+    ) == pytest.approx(1.0, abs=1e-12)
+
+
+def test_neutral_clinch_favors_owner_takedown() -> None:
+    from pipeline.simulation.rfs_mc_v2_shared_state.transition_engine import (
+        build_clinch_transition_distribution,
+    )
+
+    distribution = build_clinch_transition_distribution(
+        parameters(),
+        parameters(),
+        current_owner=FighterSide.RED,
+    )
+
+    assert distribution.probability(
+        TransitionEvent.TAKEDOWN,
+        FighterSide.RED,
+    ) > distribution.probability(
+        TransitionEvent.TAKEDOWN,
+        FighterSide.BLUE,
+    )
+
+
+def test_neutral_clinch_most_often_stays_with_owner() -> None:
+    from pipeline.simulation.rfs_mc_v2_shared_state.transition_engine import (
+        build_clinch_transition_distribution,
+    )
+
+    distribution = build_clinch_transition_distribution(
+        parameters(),
+        parameters(),
+        current_owner=FighterSide.RED,
+    )
+
+    stay = distribution.probability(
+        TransitionEvent.STAY,
+        None,
+    )
+
+    assert stay == max(
+        option.probability
+        for option in distribution.options
+    )
+
+
+def test_owner_retention_increases_clinch_stay() -> None:
+    from pipeline.simulation.rfs_mc_v2_shared_state.transition_engine import (
+        build_clinch_transition_distribution,
+    )
+
+    baseline = build_clinch_transition_distribution(
+        parameters(),
+        parameters(),
+        current_owner=FighterSide.RED,
+    )
+
+    favorable = build_clinch_transition_distribution(
+        parameters(
+            clinch_retention=0.95,
+            phase_imposition=0.90,
+        ),
+        parameters(
+            clinch_escape_ability=0.10,
+            phase_resistance=0.15,
+        ),
+        current_owner=FighterSide.RED,
+    )
+
+    assert favorable.probability(
+        TransitionEvent.STAY,
+        None,
+    ) > baseline.probability(
+        TransitionEvent.STAY,
+        None,
+    )
+
+
+def test_defender_escape_increases_clinch_break() -> None:
+    from pipeline.simulation.rfs_mc_v2_shared_state.transition_engine import (
+        build_clinch_transition_distribution,
+    )
+
+    baseline = build_clinch_transition_distribution(
+        parameters(),
+        parameters(),
+        current_owner=FighterSide.RED,
+    )
+
+    favorable = build_clinch_transition_distribution(
+        parameters(
+            clinch_retention=0.10,
+            phase_imposition=0.20,
+        ),
+        parameters(
+            clinch_escape_ability=0.95,
+            phase_resistance=0.90,
+        ),
+        current_owner=FighterSide.RED,
+    )
+
+    assert favorable.probability(
+        TransitionEvent.CLINCH_BREAK,
+        None,
+    ) > baseline.probability(
+        TransitionEvent.CLINCH_BREAK,
+        None,
+    )
+
+
+def test_defender_imposition_increases_ownership_change() -> None:
+    from pipeline.simulation.rfs_mc_v2_shared_state.transition_engine import (
+        build_clinch_transition_distribution,
+    )
+
+    baseline = build_clinch_transition_distribution(
+        parameters(),
+        parameters(),
+        current_owner=FighterSide.RED,
+    )
+
+    favorable = build_clinch_transition_distribution(
+        parameters(
+            clinch_retention=0.10,
+            phase_resistance=0.10,
+        ),
+        parameters(
+            phase_imposition=0.95,
+            clinch_retention=0.90,
+        ),
+        current_owner=FighterSide.RED,
+    )
+
+    assert favorable.probability(
+        TransitionEvent.OWNERSHIP_CHANGE,
+        FighterSide.BLUE,
+    ) > baseline.probability(
+        TransitionEvent.OWNERSHIP_CHANGE,
+        FighterSide.BLUE,
+    )
+
+
+def test_owner_takedown_traits_increase_clinch_takedown() -> None:
+    from pipeline.simulation.rfs_mc_v2_shared_state.transition_engine import (
+        build_clinch_transition_distribution,
+    )
+
+    baseline = build_clinch_transition_distribution(
+        parameters(),
+        parameters(),
+        current_owner=FighterSide.RED,
+    )
+
+    favorable = build_clinch_transition_distribution(
+        parameters(
+            takedown_entry_tendency=0.95,
+            takedown_completion_ability=0.95,
+            takedown_persistence=0.90,
+            failed_takedown_persistence=0.90,
+            clinch_retention=0.90,
+            phase_imposition=0.90,
+        ),
+        parameters(
+            takedown_resistance=0.10,
+            phase_resistance=0.15,
+        ),
+        current_owner=FighterSide.RED,
+    )
+
+    assert favorable.probability(
+        TransitionEvent.TAKEDOWN,
+        FighterSide.RED,
+    ) > baseline.probability(
+        TransitionEvent.TAKEDOWN,
+        FighterSide.RED,
+    )
+
+
+def test_swapping_clinch_owner_preserves_symmetry() -> None:
+    from pipeline.simulation.rfs_mc_v2_shared_state.transition_engine import (
+        build_clinch_transition_distribution,
+    )
+
+    red = parameters(
+        clinch_retention=0.80,
+        takedown_completion_ability=0.75,
+        phase_imposition=0.70,
+    )
+    blue = parameters(
+        clinch_escape_ability=0.65,
+        takedown_resistance=0.70,
+        phase_resistance=0.60,
+    )
+
+    original = build_clinch_transition_distribution(
+        red,
+        blue,
+        current_owner=FighterSide.RED,
+    )
+    swapped = build_clinch_transition_distribution(
+        blue,
+        red,
+        current_owner=FighterSide.BLUE,
+    )
+
+    assert original.probability(
+        TransitionEvent.STAY,
+        None,
+    ) == pytest.approx(
+        swapped.probability(
+            TransitionEvent.STAY,
+            None,
+        )
+    )
+
+    assert original.probability(
+        TransitionEvent.TAKEDOWN,
+        FighterSide.RED,
+    ) == pytest.approx(
+        swapped.probability(
+            TransitionEvent.TAKEDOWN,
+            FighterSide.BLUE,
+        )
+    )
+
+    assert original.probability(
+        TransitionEvent.OWNERSHIP_CHANGE,
+        FighterSide.BLUE,
+    ) == pytest.approx(
+        swapped.probability(
+            TransitionEvent.OWNERSHIP_CHANGE,
+            FighterSide.RED,
+        )
+    )
+
+
+@pytest.mark.parametrize(
+    ("field_name", "value"),
+    [
+        ("stay_base_weight", 0.0),
+        ("break_base_weight", -1.0),
+        ("ownership_change_base_weight", float("nan")),
+        ("owner_takedown_base_weight", 0.0),
+        ("defender_takedown_base_weight", -0.01),
+        ("matchup_effect_strength", -0.01),
+    ],
+)
+def test_clinch_calibration_is_validated(
+    field_name: str,
+    value: float,
+) -> None:
+    from pipeline.simulation.rfs_mc_v2_shared_state.transition_engine import (
+        ClinchTransitionCalibration,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=field_name,
+    ):
+        replace(
+            ClinchTransitionCalibration(),
+            **{field_name: value},
+        )

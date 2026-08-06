@@ -322,3 +322,252 @@ def build_distance_transition_distribution(
         source_phase=FightPhase.DISTANCE,
         options=options,
     )
+
+
+@dataclass(frozen=True)
+class ClinchTransitionCalibration:
+    """Provisional relative weights for clinch transitions.
+
+    Neutral fighter parameters with a known clinch owner produce:
+
+    - 45.0% remain in the clinch with the current owner
+    - 25.0% break back to distance
+    - 10.0% change clinch ownership
+    - 15.0% current-owner takedown
+    - 5.0% defender takedown
+
+    These are structural starting values, not final UFC calibration.
+    """
+
+    stay_base_weight: float = 4.5
+    break_base_weight: float = 2.5
+    ownership_change_base_weight: float = 1.0
+    owner_takedown_base_weight: float = 1.5
+    defender_takedown_base_weight: float = 0.5
+
+    matchup_effect_strength: float = 1.0
+
+    def __post_init__(self) -> None:
+        positive_fields = {
+            "stay_base_weight": self.stay_base_weight,
+            "break_base_weight": self.break_base_weight,
+            "ownership_change_base_weight": (
+                self.ownership_change_base_weight
+            ),
+            "owner_takedown_base_weight": (
+                self.owner_takedown_base_weight
+            ),
+            "defender_takedown_base_weight": (
+                self.defender_takedown_base_weight
+            ),
+        }
+
+        for name, value in positive_fields.items():
+            if not isfinite(value) or value <= 0.0:
+                raise ValueError(
+                    f"{name} must be finite and positive"
+                )
+
+        if (
+            not isfinite(self.matchup_effect_strength)
+            or self.matchup_effect_strength < 0.0
+        ):
+            raise ValueError(
+                "matchup_effect_strength must be finite "
+                "and nonnegative"
+            )
+
+
+def _clinch_stay_score(
+    owner: FighterTransitionParameters,
+    defender: FighterTransitionParameters,
+) -> float:
+    """Calculate the owner's ability to retain the clinch."""
+
+    return (
+        0.45 * owner.clinch_retention
+        + 0.25 * owner.phase_imposition
+        + 0.20 * (
+            1.0 - defender.clinch_escape_ability
+        )
+        + 0.10 * (
+            1.0 - defender.phase_resistance
+        )
+    )
+
+
+def _clinch_break_score(
+    owner: FighterTransitionParameters,
+    defender: FighterTransitionParameters,
+) -> float:
+    """Calculate the shared tendency to break back to distance."""
+
+    return (
+        0.50 * defender.clinch_escape_ability
+        + 0.25 * defender.phase_resistance
+        + 0.15 * (
+            1.0 - owner.clinch_retention
+        )
+        + 0.10 * (
+            1.0 - owner.phase_imposition
+        )
+    )
+
+
+def _clinch_ownership_change_score(
+    owner: FighterTransitionParameters,
+    defender: FighterTransitionParameters,
+) -> float:
+    """Calculate the defender's ability to take clinch ownership."""
+
+    return (
+        0.35 * defender.phase_imposition
+        + 0.25 * defender.clinch_retention
+        + 0.20 * (
+            1.0 - owner.clinch_retention
+        )
+        + 0.20 * (
+            1.0 - owner.phase_resistance
+        )
+    )
+
+
+def _clinch_takedown_score(
+    attacker: FighterTransitionParameters,
+    defender: FighterTransitionParameters,
+    *,
+    attacker_is_owner: bool,
+) -> float:
+    """Calculate a takedown score from the clinch.
+
+    Both fighters use their general takedown matchup score. The current
+    owner receives additional value from clinch retention, while the
+    defender relies on broad phase-imposition ability.
+    """
+
+    positional_trait = (
+        attacker.clinch_retention
+        if attacker_is_owner
+        else attacker.phase_imposition
+    )
+
+    return (
+        0.85 * _takedown_score(
+            attacker,
+            defender,
+        )
+        + 0.15 * positional_trait
+    )
+
+
+def build_clinch_transition_distribution(
+    red: FighterTransitionParameters,
+    blue: FighterTransitionParameters,
+    *,
+    current_owner: FighterSide,
+    calibration: ClinchTransitionCalibration | None = None,
+) -> TransitionDistribution:
+    """Build one shared transition distribution from the clinch."""
+
+    selected_calibration = (
+        calibration
+        if calibration is not None
+        else ClinchTransitionCalibration()
+    )
+
+    if current_owner is FighterSide.RED:
+        owner = red
+        defender = blue
+        owner_side = FighterSide.RED
+        defender_side = FighterSide.BLUE
+    else:
+        owner = blue
+        defender = red
+        owner_side = FighterSide.BLUE
+        defender_side = FighterSide.RED
+
+    strength = selected_calibration.matchup_effect_strength
+
+    raw_options = (
+        (
+            TransitionEvent.STAY,
+            None,
+            selected_calibration.stay_base_weight
+            * _matchup_multiplier(
+                _clinch_stay_score(
+                    owner,
+                    defender,
+                ),
+                strength=strength,
+            ),
+        ),
+        (
+            TransitionEvent.CLINCH_BREAK,
+            None,
+            selected_calibration.break_base_weight
+            * _matchup_multiplier(
+                _clinch_break_score(
+                    owner,
+                    defender,
+                ),
+                strength=strength,
+            ),
+        ),
+        (
+            TransitionEvent.OWNERSHIP_CHANGE,
+            defender_side,
+            selected_calibration.ownership_change_base_weight
+            * _matchup_multiplier(
+                _clinch_ownership_change_score(
+                    owner,
+                    defender,
+                ),
+                strength=strength,
+            ),
+        ),
+        (
+            TransitionEvent.TAKEDOWN,
+            owner_side,
+            selected_calibration.owner_takedown_base_weight
+            * _matchup_multiplier(
+                _clinch_takedown_score(
+                    owner,
+                    defender,
+                    attacker_is_owner=True,
+                ),
+                strength=strength,
+            ),
+        ),
+        (
+            TransitionEvent.TAKEDOWN,
+            defender_side,
+            selected_calibration.defender_takedown_base_weight
+            * _matchup_multiplier(
+                _clinch_takedown_score(
+                    defender,
+                    owner,
+                    attacker_is_owner=False,
+                ),
+                strength=strength,
+            ),
+        ),
+    )
+
+    total_weight = fsum(
+        weight
+        for _, _, weight in raw_options
+    )
+
+    options = tuple(
+        TransitionProbability(
+            event=event,
+            actor=actor,
+            probability=weight / total_weight,
+        )
+        for event, actor, weight in raw_options
+    )
+
+    return TransitionDistribution(
+        source_phase=FightPhase.CLINCH,
+        options=options,
+    )
