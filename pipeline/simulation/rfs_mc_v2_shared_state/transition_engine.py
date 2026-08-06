@@ -1,0 +1,324 @@
+"""Shared transition-probability engine for RFS Monte Carlo V2.
+
+Milestone 2A implements only transitions from the distance phase.
+
+The engine produces one normalized probability distribution shared by both
+fighters. It does not sample the transition or generate fight activity.
+Dynamic fighter state is intentionally excluded from this milestone.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from math import exp, fsum, isfinite
+
+from pipeline.simulation.rfs_mc_v1.contracts import FightPhase
+from pipeline.simulation.rfs_mc_v2_shared_state.contracts import FighterSide
+from pipeline.simulation.rfs_mc_v2_shared_state.transition_contracts import (
+    TransitionEvent,
+)
+from pipeline.simulation.rfs_mc_v2_shared_state.transition_parameters import (
+    FighterTransitionParameters,
+)
+
+
+@dataclass(frozen=True)
+class TransitionProbability:
+    """One possible shared transition and its probability."""
+
+    event: TransitionEvent
+    actor: FighterSide | None
+    probability: float
+
+    def __post_init__(self) -> None:
+        if (
+            not isfinite(self.probability)
+            or not 0.0 <= self.probability <= 1.0
+        ):
+            raise ValueError(
+                "transition probability must be between 0 and 1"
+            )
+
+        actor_required = {
+            TransitionEvent.CLINCH_ENTRY,
+            TransitionEvent.TAKEDOWN,
+            TransitionEvent.OWNERSHIP_CHANGE,
+            TransitionEvent.GROUND_ESCAPE,
+            TransitionEvent.SCRAMBLE_TO_CLINCH,
+            TransitionEvent.REVERSAL,
+        }
+
+        actor_forbidden = {
+            TransitionEvent.STAY,
+            TransitionEvent.CLINCH_BREAK,
+        }
+
+        if self.event in actor_required and self.actor is None:
+            raise ValueError(
+                f"{self.event.value} requires an actor"
+            )
+
+        if self.event in actor_forbidden and self.actor is not None:
+            raise ValueError(
+                f"{self.event.value} cannot have an actor"
+            )
+
+
+@dataclass(frozen=True)
+class TransitionDistribution:
+    """Normalized transition choices from one shared phase."""
+
+    source_phase: FightPhase
+    options: tuple[TransitionProbability, ...]
+
+    def __post_init__(self) -> None:
+        if not self.options:
+            raise ValueError(
+                "transition distribution cannot be empty"
+            )
+
+        total_probability = fsum(
+            option.probability
+            for option in self.options
+        )
+
+        if abs(total_probability - 1.0) > 1e-12:
+            raise ValueError(
+                "transition probabilities must sum to one"
+            )
+
+        keys = [
+            (option.event, option.actor)
+            for option in self.options
+        ]
+
+        if len(keys) != len(set(keys)):
+            raise ValueError(
+                "transition distribution contains duplicate options"
+            )
+
+    def probability(
+        self,
+        event: TransitionEvent,
+        actor: FighterSide | None,
+    ) -> float:
+        """Return the probability for one transition option."""
+
+        for option in self.options:
+            if option.event is event and option.actor is actor:
+                return option.probability
+
+        raise KeyError(
+            f"transition option not found: "
+            f"{event.value}, actor={actor}"
+        )
+
+
+@dataclass(frozen=True)
+class DistanceTransitionCalibration:
+    """Uncalibrated starting weights for distance transitions.
+
+    These are relative weights, not final probabilities. Neutral fighter
+    parameters produce approximately:
+
+    - 63% remain at distance
+    - 11% red clinch entry
+    - 11% blue clinch entry
+    - 8% red takedown
+    - 8% blue takedown
+
+    These defaults are structural starting values and must later be
+    calibrated against observed UFC phase transitions.
+    """
+
+    stay_base_weight: float = 6.0
+    clinch_entry_base_weight: float = 1.0
+    takedown_base_weight: float = 0.75
+
+    matchup_effect_strength: float = 1.0
+
+    def __post_init__(self) -> None:
+        positive_fields = {
+            "stay_base_weight": self.stay_base_weight,
+            "clinch_entry_base_weight": (
+                self.clinch_entry_base_weight
+            ),
+            "takedown_base_weight": self.takedown_base_weight,
+        }
+
+        for name, value in positive_fields.items():
+            if not isfinite(value) or value <= 0.0:
+                raise ValueError(
+                    f"{name} must be finite and positive"
+                )
+
+        if (
+            not isfinite(self.matchup_effect_strength)
+            or self.matchup_effect_strength < 0.0
+        ):
+            raise ValueError(
+                "matchup_effect_strength must be finite "
+                "and nonnegative"
+            )
+
+
+def _matchup_multiplier(
+    score: float,
+    *,
+    strength: float,
+) -> float:
+    """Convert a zero-to-one matchup score into a positive multiplier.
+
+    A neutral score of 0.5 produces a multiplier of 1.0.
+
+    At the default strength:
+
+    - score 0.0 produces approximately 0.37
+    - score 0.5 produces 1.00
+    - score 1.0 produces approximately 2.72
+    """
+
+    return exp(
+        2.0 * strength * (score - 0.5)
+    )
+
+
+def _distance_stay_score(
+    red: FighterTransitionParameters,
+    blue: FighterTransitionParameters,
+) -> float:
+    """Calculate the shared tendency to remain at distance."""
+
+    return (
+        red.distance_retention
+        + blue.distance_retention
+        + red.phase_resistance
+        + blue.phase_resistance
+    ) / 4.0
+
+
+def _clinch_entry_score(
+    attacker: FighterTransitionParameters,
+    defender: FighterTransitionParameters,
+) -> float:
+    """Calculate one fighter's distance-to-clinch matchup score."""
+
+    return (
+        0.45 * attacker.clinch_entry_tendency
+        + 0.25 * attacker.phase_imposition
+        + 0.20 * (
+            1.0 - defender.clinch_entry_resistance
+        )
+        + 0.10 * (
+            1.0 - defender.phase_resistance
+        )
+    )
+
+
+def _takedown_score(
+    attacker: FighterTransitionParameters,
+    defender: FighterTransitionParameters,
+) -> float:
+    """Calculate one fighter's distance-to-ground matchup score."""
+
+    return (
+        0.25 * attacker.takedown_entry_tendency
+        + 0.20 * attacker.takedown_completion_ability
+        + 0.15 * attacker.takedown_persistence
+        + 0.10 * attacker.failed_takedown_persistence
+        + 0.15 * attacker.phase_imposition
+        + 0.10 * (
+            1.0 - defender.takedown_resistance
+        )
+        + 0.05 * (
+            1.0 - defender.phase_resistance
+        )
+    )
+
+
+def build_distance_transition_distribution(
+    red: FighterTransitionParameters,
+    blue: FighterTransitionParameters,
+    *,
+    calibration: DistanceTransitionCalibration | None = None,
+) -> TransitionDistribution:
+    """Build one shared transition distribution from distance.
+
+    Red and blue do not sample phases independently. Their competing
+    matchup scores are converted into one normalized distribution.
+    """
+
+    selected_calibration = (
+        calibration
+        if calibration is not None
+        else DistanceTransitionCalibration()
+    )
+
+    strength = selected_calibration.matchup_effect_strength
+
+    raw_options = (
+        (
+            TransitionEvent.STAY,
+            None,
+            selected_calibration.stay_base_weight
+            * _matchup_multiplier(
+                _distance_stay_score(red, blue),
+                strength=strength,
+            ),
+        ),
+        (
+            TransitionEvent.CLINCH_ENTRY,
+            FighterSide.RED,
+            selected_calibration.clinch_entry_base_weight
+            * _matchup_multiplier(
+                _clinch_entry_score(red, blue),
+                strength=strength,
+            ),
+        ),
+        (
+            TransitionEvent.CLINCH_ENTRY,
+            FighterSide.BLUE,
+            selected_calibration.clinch_entry_base_weight
+            * _matchup_multiplier(
+                _clinch_entry_score(blue, red),
+                strength=strength,
+            ),
+        ),
+        (
+            TransitionEvent.TAKEDOWN,
+            FighterSide.RED,
+            selected_calibration.takedown_base_weight
+            * _matchup_multiplier(
+                _takedown_score(red, blue),
+                strength=strength,
+            ),
+        ),
+        (
+            TransitionEvent.TAKEDOWN,
+            FighterSide.BLUE,
+            selected_calibration.takedown_base_weight
+            * _matchup_multiplier(
+                _takedown_score(blue, red),
+                strength=strength,
+            ),
+        ),
+    )
+
+    total_weight = fsum(
+        weight
+        for _, _, weight in raw_options
+    )
+
+    options = tuple(
+        TransitionProbability(
+            event=event,
+            actor=actor,
+            probability=weight / total_weight,
+        )
+        for event, actor, weight in raw_options
+    )
+
+    return TransitionDistribution(
+        source_phase=FightPhase.DISTANCE,
+        options=options,
+    )
