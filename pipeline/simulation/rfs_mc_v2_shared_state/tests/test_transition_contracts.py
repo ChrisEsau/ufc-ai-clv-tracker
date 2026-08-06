@@ -19,6 +19,7 @@ def state(
     owner: FighterSide | None,
     age: int,
     quality: float = 0.0,
+    segment: int = 1,
 ) -> SharedFightState:
     """Build a shared state in segment one."""
 
@@ -28,7 +29,7 @@ def state(
         phase_age_segments=age,
         position_quality=quality,
         round_number=1,
-        segment_number=1,
+        segment_number=segment,
     )
 
 
@@ -43,6 +44,7 @@ def test_distance_stay_is_legal() -> None:
             FightPhase.DISTANCE,
             owner=None,
             age=1,
+            segment=2,
         ),
         event=TransitionEvent.STAY,
         actor=None,
@@ -61,8 +63,9 @@ def test_red_can_enter_clinch() -> None:
         next_state=state(
             FightPhase.CLINCH,
             owner=FighterSide.RED,
-            age=1,
+            age=0,
             quality=0.35,
+            segment=2,
         ),
         event=TransitionEvent.CLINCH_ENTRY,
         actor=FighterSide.RED,
@@ -81,8 +84,9 @@ def test_blue_can_complete_takedown() -> None:
         next_state=state(
             FightPhase.GROUND,
             owner=FighterSide.BLUE,
-            age=1,
+            age=0,
             quality=0.55,
+            segment=2,
         ),
         event=TransitionEvent.TAKEDOWN,
         actor=FighterSide.BLUE,
@@ -102,7 +106,8 @@ def test_clinch_can_break_to_distance() -> None:
         next_state=state(
             FightPhase.DISTANCE,
             owner=None,
-            age=1,
+            age=0,
+            segment=2,
         ),
         event=TransitionEvent.CLINCH_BREAK,
         actor=None,
@@ -120,8 +125,9 @@ def test_clinch_ownership_can_change() -> None:
         next_state=state(
             FightPhase.CLINCH,
             owner=FighterSide.BLUE,
-            age=1,
+            age=0,
             quality=0.30,
+            segment=2,
         ),
         event=TransitionEvent.OWNERSHIP_CHANGE,
         actor=FighterSide.BLUE,
@@ -139,7 +145,8 @@ def test_ground_defender_can_escape() -> None:
         next_state=state(
             FightPhase.DISTANCE,
             owner=None,
-            age=1,
+            age=0,
+            segment=2,
         ),
         event=TransitionEvent.GROUND_ESCAPE,
         actor=FighterSide.BLUE,
@@ -157,8 +164,9 @@ def test_ground_defender_can_reverse() -> None:
         next_state=state(
             FightPhase.GROUND,
             owner=FighterSide.BLUE,
-            age=1,
+            age=0,
             quality=0.35,
+            segment=2,
         ),
         event=TransitionEvent.REVERSAL,
         actor=FighterSide.BLUE,
@@ -179,8 +187,9 @@ def test_illegal_event_phase_pair_is_rejected() -> None:
             next_state=state(
                 FightPhase.GROUND,
                 owner=FighterSide.RED,
-                age=1,
+                age=0,
                 quality=0.50,
+            segment=2,
             ),
             event=TransitionEvent.CLINCH_ENTRY,
             actor=FighterSide.RED,
@@ -201,8 +210,9 @@ def test_takedown_actor_must_own_ground() -> None:
             next_state=state(
                 FightPhase.GROUND,
                 owner=FighterSide.BLUE,
-                age=1,
+                age=0,
                 quality=0.50,
+            segment=2,
             ),
             event=TransitionEvent.TAKEDOWN,
             actor=FighterSide.RED,
@@ -226,6 +236,57 @@ def test_stay_cannot_change_owner() -> None:
                 owner=FighterSide.BLUE,
                 age=3,
                 quality=0.40,
+            segment=2,
+            ),
+            event=TransitionEvent.STAY,
+            actor=None,
+        )
+
+
+def test_transition_must_advance_to_next_segment() -> None:
+    """A transition result belongs to the following segment."""
+
+    with pytest.raises(
+        ValueError,
+        match="advance to the next segment",
+    ):
+        SharedTransition(
+            previous_state=state(
+                FightPhase.DISTANCE,
+                owner=None,
+                age=1,
+                segment=4,
+            ),
+            next_state=state(
+                FightPhase.DISTANCE,
+                owner=None,
+                age=2,
+                segment=4,
+            ),
+            event=TransitionEvent.STAY,
+            actor=None,
+        )
+
+
+def test_end_of_round_uses_round_reset() -> None:
+    """Segment ten cannot transition into another same-round state."""
+
+    with pytest.raises(
+        ValueError,
+        match="end-of-round state",
+    ):
+        SharedTransition(
+            previous_state=state(
+                FightPhase.DISTANCE,
+                owner=None,
+                age=3,
+                segment=10,
+            ),
+            next_state=state(
+                FightPhase.DISTANCE,
+                owner=None,
+                age=4,
+                segment=10,
             ),
             event=TransitionEvent.STAY,
             actor=None,

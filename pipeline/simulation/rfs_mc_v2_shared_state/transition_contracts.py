@@ -7,6 +7,7 @@ from enum import Enum
 
 from pipeline.simulation.rfs_mc_v1.contracts import FightPhase
 from pipeline.simulation.rfs_mc_v2_shared_state.contracts import (
+    SEGMENTS_PER_ROUND,
     FighterSide,
     SharedFightState,
 )
@@ -85,9 +86,16 @@ class SharedTransition:
                 "a transition cannot cross round boundaries"
             )
 
-        if previous.segment_number != next_state.segment_number:
+        if previous.segment_number >= SEGMENTS_PER_ROUND:
             raise ValueError(
-                "a transition must occur within one segment"
+                "end-of-round state must use the round reset"
+            )
+
+        expected_next_segment = previous.segment_number + 1
+
+        if next_state.segment_number != expected_next_segment:
+            raise ValueError(
+                "a transition must advance to the next segment"
             )
 
         phase_pair = (
@@ -105,7 +113,7 @@ class SharedTransition:
         expected_phase_age = (
             previous.phase_age_segments + 1
             if self.event is TransitionEvent.STAY
-            else 1
+            else 0
         )
 
         if (
