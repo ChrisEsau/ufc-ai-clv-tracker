@@ -571,3 +571,225 @@ def build_clinch_transition_distribution(
         source_phase=FightPhase.CLINCH,
         options=options,
     )
+
+
+@dataclass(frozen=True)
+class GroundTransitionCalibration:
+    """Provisional relative weights for ground transitions.
+
+    Neutral fighter parameters with a known ground owner produce:
+
+    - 55% remain grounded with the current owner
+    - 20% defender escapes to distance
+    - 15% defender scrambles into clinch ownership
+    - 10% defender reverses ground ownership
+
+    These are structural starting values, not final UFC calibration.
+    """
+
+    stay_base_weight: float = 5.5
+    escape_base_weight: float = 2.0
+    scramble_base_weight: float = 1.5
+    reversal_base_weight: float = 1.0
+
+    matchup_effect_strength: float = 1.0
+
+    def __post_init__(self) -> None:
+        positive_fields = {
+            "stay_base_weight": self.stay_base_weight,
+            "escape_base_weight": self.escape_base_weight,
+            "scramble_base_weight": self.scramble_base_weight,
+            "reversal_base_weight": self.reversal_base_weight,
+        }
+
+        for name, value in positive_fields.items():
+            if not isfinite(value) or value <= 0.0:
+                raise ValueError(
+                    f"{name} must be finite and positive"
+                )
+
+        if (
+            not isfinite(self.matchup_effect_strength)
+            or self.matchup_effect_strength < 0.0
+        ):
+            raise ValueError(
+                "matchup_effect_strength must be finite "
+                "and nonnegative"
+            )
+
+
+def _ground_stay_score(
+    owner: FighterTransitionParameters,
+    defender: FighterTransitionParameters,
+) -> float:
+    """Calculate the owner's ability to retain ground control."""
+
+    return (
+        0.50 * owner.ground_retention
+        + 0.25 * owner.phase_imposition
+        + 0.15 * (
+            1.0 - defender.ground_escape_ability
+        )
+        + 0.10 * (
+            1.0 - defender.reversal_ability
+        )
+    )
+
+
+def _ground_escape_score(
+    owner: FighterTransitionParameters,
+    defender: FighterTransitionParameters,
+) -> float:
+    """Calculate the defender's ability to stand up to distance."""
+
+    return (
+        0.50 * defender.ground_escape_ability
+        + 0.25 * defender.phase_resistance
+        + 0.15 * (
+            1.0 - owner.ground_retention
+        )
+        + 0.10 * (
+            1.0 - owner.phase_imposition
+        )
+    )
+
+
+def _ground_scramble_score(
+    owner: FighterTransitionParameters,
+    defender: FighterTransitionParameters,
+) -> float:
+    """Calculate the defender's ability to scramble into a clinch."""
+
+    return (
+        0.35 * defender.ground_escape_ability
+        + 0.30 * defender.phase_imposition
+        + 0.20 * (
+            1.0 - owner.ground_retention
+        )
+        + 0.15 * (
+            1.0 - owner.phase_resistance
+        )
+    )
+
+
+def _ground_reversal_score(
+    owner: FighterTransitionParameters,
+    defender: FighterTransitionParameters,
+) -> float:
+    """Calculate the defender's ability to reverse ground ownership."""
+
+    return (
+        0.50 * defender.reversal_ability
+        + 0.20 * defender.phase_imposition
+        + 0.15 * (
+            1.0 - owner.ground_retention
+        )
+        + 0.15 * (
+            1.0 - owner.phase_resistance
+        )
+    )
+
+
+def build_ground_transition_distribution(
+    red: FighterTransitionParameters,
+    blue: FighterTransitionParameters,
+    *,
+    current_owner: FighterSide,
+    calibration: GroundTransitionCalibration | None = None,
+) -> TransitionDistribution:
+    """Build one shared transition distribution from the ground.
+
+    The current owner may retain the position. All other V2 ground
+    transitions are defensive actions by the current non-owner.
+    """
+
+    selected_calibration = (
+        calibration
+        if calibration is not None
+        else GroundTransitionCalibration()
+    )
+
+    if current_owner is FighterSide.RED:
+        owner = red
+        defender = blue
+        defender_side = FighterSide.BLUE
+    elif current_owner is FighterSide.BLUE:
+        owner = blue
+        defender = red
+        defender_side = FighterSide.RED
+    else:
+        raise ValueError(
+            "current_owner must be red or blue"
+        )
+
+    strength = selected_calibration.matchup_effect_strength
+
+    raw_options = (
+        (
+            TransitionEvent.STAY,
+            None,
+            selected_calibration.stay_base_weight
+            * _matchup_multiplier(
+                _ground_stay_score(
+                    owner,
+                    defender,
+                ),
+                strength=strength,
+            ),
+        ),
+        (
+            TransitionEvent.GROUND_ESCAPE,
+            defender_side,
+            selected_calibration.escape_base_weight
+            * _matchup_multiplier(
+                _ground_escape_score(
+                    owner,
+                    defender,
+                ),
+                strength=strength,
+            ),
+        ),
+        (
+            TransitionEvent.SCRAMBLE_TO_CLINCH,
+            defender_side,
+            selected_calibration.scramble_base_weight
+            * _matchup_multiplier(
+                _ground_scramble_score(
+                    owner,
+                    defender,
+                ),
+                strength=strength,
+            ),
+        ),
+        (
+            TransitionEvent.REVERSAL,
+            defender_side,
+            selected_calibration.reversal_base_weight
+            * _matchup_multiplier(
+                _ground_reversal_score(
+                    owner,
+                    defender,
+                ),
+                strength=strength,
+            ),
+        ),
+    )
+
+    total_weight = fsum(
+        weight
+        for _, _, weight in raw_options
+    )
+
+    options = tuple(
+        TransitionProbability(
+            event=event,
+            actor=actor,
+            probability=weight / total_weight,
+        )
+        for event, actor, weight in raw_options
+    )
+
+    return TransitionDistribution(
+        source_phase=FightPhase.GROUND,
+        options=options,
+    )

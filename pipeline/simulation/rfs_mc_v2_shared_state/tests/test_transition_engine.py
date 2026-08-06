@@ -549,3 +549,310 @@ def test_clinch_calibration_is_validated(
             ClinchTransitionCalibration(),
             **{field_name: value},
         )
+
+
+@pytest.mark.parametrize(
+    "current_owner",
+    [
+        FighterSide.RED,
+        FighterSide.BLUE,
+    ],
+)
+def test_ground_probabilities_sum_to_one(
+    current_owner: FighterSide,
+) -> None:
+    from pipeline.simulation.rfs_mc_v2_shared_state.transition_engine import (
+        build_ground_transition_distribution,
+    )
+
+    distribution = build_ground_transition_distribution(
+        parameters(),
+        parameters(),
+        current_owner=current_owner,
+    )
+
+    assert fsum(
+        option.probability
+        for option in distribution.options
+    ) == pytest.approx(1.0, abs=1e-12)
+
+
+def test_neutral_ground_most_often_stays_with_owner() -> None:
+    from pipeline.simulation.rfs_mc_v2_shared_state.transition_engine import (
+        build_ground_transition_distribution,
+    )
+
+    distribution = build_ground_transition_distribution(
+        parameters(),
+        parameters(),
+        current_owner=FighterSide.RED,
+    )
+
+    stay = distribution.probability(
+        TransitionEvent.STAY,
+        None,
+    )
+
+    assert stay == max(
+        option.probability
+        for option in distribution.options
+    )
+
+
+def test_neutral_ground_defensive_outcomes_are_ordered() -> None:
+    from pipeline.simulation.rfs_mc_v2_shared_state.transition_engine import (
+        build_ground_transition_distribution,
+    )
+
+    distribution = build_ground_transition_distribution(
+        parameters(),
+        parameters(),
+        current_owner=FighterSide.RED,
+    )
+
+    escape = distribution.probability(
+        TransitionEvent.GROUND_ESCAPE,
+        FighterSide.BLUE,
+    )
+    scramble = distribution.probability(
+        TransitionEvent.SCRAMBLE_TO_CLINCH,
+        FighterSide.BLUE,
+    )
+    reversal = distribution.probability(
+        TransitionEvent.REVERSAL,
+        FighterSide.BLUE,
+    )
+
+    assert escape > scramble > reversal
+
+
+def test_owner_retention_increases_ground_stay() -> None:
+    from pipeline.simulation.rfs_mc_v2_shared_state.transition_engine import (
+        build_ground_transition_distribution,
+    )
+
+    baseline = build_ground_transition_distribution(
+        parameters(),
+        parameters(),
+        current_owner=FighterSide.RED,
+    )
+
+    favorable = build_ground_transition_distribution(
+        parameters(
+            ground_retention=0.95,
+            phase_imposition=0.90,
+            phase_resistance=0.90,
+        ),
+        parameters(
+            ground_escape_ability=0.10,
+            reversal_ability=0.10,
+        ),
+        current_owner=FighterSide.RED,
+    )
+
+    assert favorable.probability(
+        TransitionEvent.STAY,
+        None,
+    ) > baseline.probability(
+        TransitionEvent.STAY,
+        None,
+    )
+
+
+def test_defender_escape_increases_ground_escape() -> None:
+    from pipeline.simulation.rfs_mc_v2_shared_state.transition_engine import (
+        build_ground_transition_distribution,
+    )
+
+    baseline = build_ground_transition_distribution(
+        parameters(),
+        parameters(),
+        current_owner=FighterSide.RED,
+    )
+
+    favorable = build_ground_transition_distribution(
+        parameters(
+            ground_retention=0.10,
+            phase_imposition=0.15,
+        ),
+        parameters(
+            ground_escape_ability=0.95,
+            phase_resistance=0.90,
+        ),
+        current_owner=FighterSide.RED,
+    )
+
+    assert favorable.probability(
+        TransitionEvent.GROUND_ESCAPE,
+        FighterSide.BLUE,
+    ) > baseline.probability(
+        TransitionEvent.GROUND_ESCAPE,
+        FighterSide.BLUE,
+    )
+
+
+def test_defender_scramble_traits_increase_scramble() -> None:
+    from pipeline.simulation.rfs_mc_v2_shared_state.transition_engine import (
+        build_ground_transition_distribution,
+    )
+
+    baseline = build_ground_transition_distribution(
+        parameters(),
+        parameters(),
+        current_owner=FighterSide.RED,
+    )
+
+    favorable = build_ground_transition_distribution(
+        parameters(
+            ground_retention=0.10,
+            phase_resistance=0.15,
+        ),
+        parameters(
+            ground_escape_ability=0.90,
+            phase_imposition=0.95,
+        ),
+        current_owner=FighterSide.RED,
+    )
+
+    assert favorable.probability(
+        TransitionEvent.SCRAMBLE_TO_CLINCH,
+        FighterSide.BLUE,
+    ) > baseline.probability(
+        TransitionEvent.SCRAMBLE_TO_CLINCH,
+        FighterSide.BLUE,
+    )
+
+
+def test_defender_reversal_ability_increases_reversal() -> None:
+    from pipeline.simulation.rfs_mc_v2_shared_state.transition_engine import (
+        build_ground_transition_distribution,
+    )
+
+    baseline = build_ground_transition_distribution(
+        parameters(),
+        parameters(),
+        current_owner=FighterSide.RED,
+    )
+
+    favorable = build_ground_transition_distribution(
+        parameters(
+            ground_retention=0.10,
+            phase_resistance=0.10,
+        ),
+        parameters(
+            reversal_ability=0.95,
+            phase_imposition=0.90,
+        ),
+        current_owner=FighterSide.RED,
+    )
+
+    assert favorable.probability(
+        TransitionEvent.REVERSAL,
+        FighterSide.BLUE,
+    ) > baseline.probability(
+        TransitionEvent.REVERSAL,
+        FighterSide.BLUE,
+    )
+
+
+def test_ground_defensive_actions_belong_to_defender() -> None:
+    from pipeline.simulation.rfs_mc_v2_shared_state.transition_engine import (
+        build_ground_transition_distribution,
+    )
+
+    distribution = build_ground_transition_distribution(
+        parameters(),
+        parameters(),
+        current_owner=FighterSide.RED,
+    )
+
+    for event in (
+        TransitionEvent.GROUND_ESCAPE,
+        TransitionEvent.SCRAMBLE_TO_CLINCH,
+        TransitionEvent.REVERSAL,
+    ):
+        assert distribution.probability(
+            event,
+            FighterSide.BLUE,
+        ) > 0.0
+
+
+def test_swapping_ground_owner_preserves_symmetry() -> None:
+    from pipeline.simulation.rfs_mc_v2_shared_state.transition_engine import (
+        build_ground_transition_distribution,
+    )
+
+    red = parameters(
+        ground_retention=0.85,
+        phase_imposition=0.75,
+        phase_resistance=0.70,
+    )
+    blue = parameters(
+        ground_escape_ability=0.70,
+        reversal_ability=0.65,
+        phase_resistance=0.60,
+    )
+
+    original = build_ground_transition_distribution(
+        red,
+        blue,
+        current_owner=FighterSide.RED,
+    )
+    swapped = build_ground_transition_distribution(
+        blue,
+        red,
+        current_owner=FighterSide.BLUE,
+    )
+
+    assert original.probability(
+        TransitionEvent.STAY,
+        None,
+    ) == pytest.approx(
+        swapped.probability(
+            TransitionEvent.STAY,
+            None,
+        )
+    )
+
+    for event in (
+        TransitionEvent.GROUND_ESCAPE,
+        TransitionEvent.SCRAMBLE_TO_CLINCH,
+        TransitionEvent.REVERSAL,
+    ):
+        assert original.probability(
+            event,
+            FighterSide.BLUE,
+        ) == pytest.approx(
+            swapped.probability(
+                event,
+                FighterSide.RED,
+            )
+        )
+
+
+@pytest.mark.parametrize(
+    ("field_name", "value"),
+    [
+        ("stay_base_weight", 0.0),
+        ("escape_base_weight", -1.0),
+        ("scramble_base_weight", float("nan")),
+        ("reversal_base_weight", 0.0),
+        ("matchup_effect_strength", -0.01),
+    ],
+)
+def test_ground_calibration_is_validated(
+    field_name: str,
+    value: float,
+) -> None:
+    from pipeline.simulation.rfs_mc_v2_shared_state.transition_engine import (
+        GroundTransitionCalibration,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=field_name,
+    ):
+        replace(
+            GroundTransitionCalibration(),
+            **{field_name: value},
+        )
