@@ -16,7 +16,7 @@ Out of scope:
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Mapping
 
 import numpy as np
@@ -83,6 +83,16 @@ class SegmentActivity:
         if self.ground_str_landed > self.ground_str_attempted:
             raise ValueError(
                 "ground_str_landed cannot exceed ground_str_attempted"
+            )
+
+        if (
+            self.submission_attempts > 0
+            and self.phase != FightPhase.GROUND
+            and self.control_seconds <= 0
+        ):
+            raise ValueError(
+                "submission attempts require ground phase "
+                "or positive control time"
             )
 
         if self.control_seconds > SEGMENT_SECONDS:
@@ -217,6 +227,8 @@ def _profile_value(
 
 def build_activity_parameters(
     profile: FighterSimulationProfile,
+    *,
+    round_number: int = 1,
 ) -> ActivityParameters:
     """Map a fighter profile into initial segment activity parameters.
 
@@ -245,6 +257,11 @@ def build_activity_parameters(
         "sig_accuracy_trajectory",
         default=0.0,
     )
+    late_td_output_ratio = _profile_value(
+        profile,
+        "late_td_output_ratio",
+        default=1.0,
+    )
     control_per_td_attempt = _profile_value(
         profile,
         "control_per_td_attempt",
@@ -260,27 +277,64 @@ def build_activity_parameters(
         "submission_pressure",
         default=0.0,
     )
-    knockdowns_absorbed = _profile_value(
+    opening_sig_attempts_per_min = _profile_value(
         profile,
-        "knockdowns_absorbed",
-        default=0.0,
+        "opening_sig_attempts",
+        default=8.0,
+    )
+    opening_sig_landed_per_min = _profile_value(
+        profile,
+        "opening_sig_landed",
+        default=3.6,
+    )
+    opening_kd_per_sig_landed = _profile_value(
+        profile,
+        "opening_kd_per_sig_landed",
+        default=_profile_value(
+            profile,
+            "offensive_kd_per_sig_landed",
+            default=0.015,
+        ),
+    )
+
+    opening_kd_estimate = profile.parameters.get(
+        "opening_kd_per_sig_landed"
+    )
+    opening_kd_sample_size = (
+        float(opening_kd_estimate.effective_sample_size)
+        if opening_kd_estimate is not None
+        else 0.0
+    )
+    late_sig_output_ratio = _profile_value(
+        profile,
+        "late_sig_output_ratio",
+        default=1.0,
+    )
+
+    # RFS inputs have different natural scales. Convert them through
+    # bounded transforms rather than treating raw values as direct rates.
+    wrestling_signal = float(
+        np.tanh(wrestling_persistence / 10.0)
+    )
+    phase_signal = float(
+        np.tanh(phase_disruption / 10.0)
     )
 
     ground_probability = float(
         np.clip(
             0.15
-            + 0.03 * wrestling_persistence
-            + 0.01 * phase_disruption,
-            0.05,
-            0.50,
+            + 0.06 * wrestling_signal
+            + 0.02 * phase_signal,
+            0.08,
+            0.30,
         )
     )
 
     clinch_probability = float(
         np.clip(
-            0.15 + 0.01 * phase_disruption,
-            0.05,
-            0.35,
+            0.15 + 0.03 * phase_signal,
+            0.10,
+            0.22,
         )
     )
 
@@ -306,59 +360,191 @@ def build_activity_parameters(
     clinch_probability /= phase_total
     ground_probability /= phase_total
 
+    trajectory_signal = float(
+        np.tanh(sig_attempt_trajectory / 20.0)
+    )
+    accuracy_signal = float(
+        np.tanh(sig_accuracy_trajectory / 10.0)
+    )
+    control_signal = float(
+        np.tanh(control_per_td_attempt / 60.0)
+    )
+    damage_conversion_signal = float(
+        np.tanh(control_to_damage / 10.0)
+    )
+    submission_signal = float(
+        np.tanh(submission_pressure / 5.0)
+    )
+    late_td_signal = float(
+        np.tanh(
+            (late_td_output_ratio - 1.0)
+            / 0.50
+        )
+    )
+    if round_number <= 0:
+        raise SegmentEngineError(
+            "round_number must be positive"
+        )
+
+    # Opening rates are stored per minute. Each simulation segment lasts
+    # thirty seconds, so divide by two for the segment Poisson mean.
+    opening_sig_attempt_rate = float(
+        np.clip(
+            opening_sig_attempts_per_min / 2.0,
+            1.0,
+            8.0,
+        )
+    )
+
+    if opening_sig_attempts_per_min > 0:
+        opening_sig_accuracy = float(
+            np.clip(
+                opening_sig_landed_per_min
+                / opening_sig_attempts_per_min,
+                0.20,
+                0.75,
+            )
+        )
+    else:
+        opening_sig_accuracy = 0.45
+
+    # Trajectory changes the fighter after the opening round rather than
+    # defining the opening baseline.
+    round_progress = {
+        1: 0.00,
+        2: 0.35,
+        3: 0.65,
+        4: 0.85,
+        5: 1.00,
+    }.get(round_number, 1.00)
+
+    late_output_signal = float(
+        np.tanh(
+            (late_sig_output_ratio - 1.0)
+            / 0.50
+        )
+    )
+
+    sustained_rate_multiplier = float(
+        np.clip(
+            1.0
+            + 0.35 * trajectory_signal
+            + 0.25 * late_output_signal,
+            0.45,
+            1.60,
+        )
+    )
+
+    sustained_sig_attempt_rate = (
+        opening_sig_attempt_rate
+        * sustained_rate_multiplier
+    )
+
     sig_attempt_rate = float(
         np.clip(
-            4.0 + 0.20 * sig_attempt_trajectory,
-            0.10,
-            15.0,
+            opening_sig_attempt_rate
+            + round_progress
+            * (
+                sustained_sig_attempt_rate
+                - opening_sig_attempt_rate
+            ),
+            1.0,
+            8.0,
+        )
+    )
+
+    sustained_sig_accuracy = float(
+        np.clip(
+            opening_sig_accuracy
+            + 0.08 * accuracy_signal,
+            0.20,
+            0.75,
         )
     )
 
     sig_accuracy = float(
         np.clip(
-            0.45 + 0.02 * sig_accuracy_trajectory,
-            0.05,
-            0.90,
+            opening_sig_accuracy
+            + round_progress
+            * (
+                sustained_sig_accuracy
+                - opening_sig_accuracy
+            ),
+            0.20,
+            0.75,
         )
+    )
+
+    # Opening takedown pressure comes from wrestling persistence.
+    # Later rounds blend toward the fighter's observed late takedown output.
+    opening_td_attempt_rate = float(
+        np.clip(
+            0.30 + 0.18 * wrestling_signal,
+            0.08,
+            0.60,
+        )
+    )
+
+    sustained_td_multiplier = float(
+        np.clip(
+            1.0 + 0.60 * late_td_signal,
+            0.40,
+            1.60,
+        )
+    )
+
+    sustained_td_attempt_rate = (
+        opening_td_attempt_rate
+        * sustained_td_multiplier
     )
 
     td_attempt_rate = float(
         np.clip(
-            0.30 + 0.05 * wrestling_persistence,
-            0.0,
-            3.0,
+            opening_td_attempt_rate
+            + round_progress
+            * (
+                sustained_td_attempt_rate
+                - opening_td_attempt_rate
+            ),
+            0.05,
+            0.80,
         )
     )
 
     mean_control_seconds = float(
         np.clip(
-            8.0 + 0.05 * control_per_td_attempt,
-            0.0,
-            SEGMENT_SECONDS,
+            8.0 + 4.0 * control_signal,
+            4.0,
+            12.0,
         )
     )
 
     ground_attempt_rate = float(
         np.clip(
-            1.0 + 0.25 * control_to_damage,
-            0.0,
-            10.0,
+            1.5 + 1.0 * damage_conversion_signal,
+            0.5,
+            2.5,
         )
     )
 
+    # Fighter-level tendency to pursue submissions after reaching
+    # a viable ground or control position. Current position quality is
+    # applied separately inside the segment generator.
     submission_attempt_rate = float(
         np.clip(
-            0.05 + 0.03 * submission_pressure,
-            0.0,
-            2.0,
+            0.10 + 0.20 * submission_signal,
+            0.05,
+            0.35,
         )
     )
 
+    # Preserve the fighter-specific observed power signal.
+    # Path-specific energy and matchup pressure modify this value later.
     knockdown_probability = float(
         np.clip(
-            0.015 + 0.002 * knockdowns_absorbed,
-            0.0,
-            0.20,
+            opening_kd_per_sig_landed,
+            0.001,
+            0.060,
         )
     )
 
@@ -472,7 +658,12 @@ def generate_segment_activity(
     ground_str_landed = 0
     submission_attempts = 0
 
-    if phase is FightPhase.GROUND or control_seconds > 0:
+    submission_eligible = (
+        phase == FightPhase.GROUND
+        or control_seconds > 0
+    )
+
+    if submission_eligible:
         ground_str_attempted = int(
             rng.poisson(parameters.ground_attempt_rate)
         )
@@ -482,13 +673,19 @@ def generate_segment_activity(
                 parameters.ground_accuracy,
             )
         )
-        submission_attempts = int(
-            rng.poisson(parameters.submission_attempt_rate)
+        submission_attempts = _sample_submission_attempts(
+            parameters=parameters,
+            phase=phase,
+            control_seconds=control_seconds,
+            td_landed=td_landed,
+            rng=rng,
         )
 
     knockdowns = int(
-        sig_str_landed > 0
-        and rng.random() < parameters.knockdown_probability
+        rng.binomial(
+            sig_str_landed,
+            parameters.knockdown_probability,
+        )
     )
 
     return SegmentActivity(
@@ -505,6 +702,455 @@ def generate_segment_activity(
     )
 
 
+def _submission_attempt_lambda(
+    *,
+    parameters: ActivityParameters,
+    phase: FightPhase,
+    control_seconds: int,
+    td_landed: int,
+) -> float:
+    """Return the Poisson rate for one submission opportunity.
+
+    Attempts are impossible without a ground phase or positive control.
+    Viable positions become more dangerous with longer control and a
+    takedown completed during the segment.
+    """
+
+    eligible = (
+        phase == FightPhase.GROUND
+        or control_seconds > 0
+    )
+
+    if not eligible:
+        return 0.0
+
+    control_fraction = float(
+        np.clip(
+            control_seconds / SEGMENT_SECONDS,
+            0.0,
+            1.0,
+        )
+    )
+
+    # Ground position supplies a stronger baseline than incidental
+    # clinch control. Sustained control and a fresh takedown increase
+    # the quality of the opportunity.
+    phase_quality = (
+        0.75
+        if phase == FightPhase.GROUND
+        else 0.50
+    )
+
+    position_quality = (
+        phase_quality
+        + control_fraction
+        + (0.20 if td_landed > 0 else 0.0)
+    )
+
+    return float(
+        np.clip(
+            parameters.submission_attempt_rate
+            * position_quality,
+            0.0,
+            0.75,
+        )
+    )
+
+
+def _sample_submission_attempts(
+    *,
+    parameters: ActivityParameters,
+    phase: FightPhase,
+    control_seconds: int,
+    td_landed: int,
+    rng: np.random.Generator,
+) -> int:
+    """Sample attempts only from an eligible grappling position."""
+
+    attempt_lambda = _submission_attempt_lambda(
+        parameters=parameters,
+        phase=phase,
+        control_seconds=control_seconds,
+        td_landed=td_landed,
+    )
+
+    if attempt_lambda <= 0.0:
+        return 0
+
+    return int(rng.poisson(attempt_lambda))
+
+
+def _round_progress(round_number: int) -> float:
+    """Return bounded progress from the opening round to late fight."""
+
+    return {
+        1: 0.00,
+        2: 0.35,
+        3: 0.65,
+        4: 0.85,
+        5: 1.00,
+    }.get(round_number, 1.00)
+
+
+def _effective_td_accuracy(
+    *,
+    attacker_profile: FighterSimulationProfile,
+    defender_profile: FighterSimulationProfile,
+    base_accuracy: float,
+    round_number: int,
+) -> float:
+    """Resolve attacker takedown offense against defender resistance."""
+
+    wrestling_persistence = _profile_value(
+        attacker_profile,
+        "wrestling_persistence",
+        default=0.0,
+    )
+    td_to_control_conversion = _profile_value(
+        attacker_profile,
+        "td_to_control_conversion",
+        default=0.0,
+    )
+
+    # Suppression deltas are opponent-relative. Negative opponent accuracy
+    # deltas indicate that this defender historically reduced TD accuracy.
+    opponent_td_accuracy_suppression = _profile_value(
+        defender_profile,
+        "opponent_td_accuracy_suppression",
+        default=0.0,
+    )
+    late_td_defense_decay = _profile_value(
+        defender_profile,
+        "late_td_defense_decay",
+        default=0.0,
+    )
+
+    attacker_signal = float(
+        np.tanh(
+            wrestling_persistence / 10.0
+            + td_to_control_conversion / 10.0
+        )
+    )
+
+    defender_resistance_signal = float(
+        np.tanh(
+            -opponent_td_accuracy_suppression / 0.20
+        )
+    )
+
+    defense_decay_signal = float(
+        np.tanh(late_td_defense_decay / 0.20)
+    )
+
+    effective_accuracy = (
+        base_accuracy
+        + 0.10 * attacker_signal
+        - 0.14 * defender_resistance_signal
+        + 0.10
+        * _round_progress(round_number)
+        * defense_decay_signal
+    )
+
+    return float(
+        np.clip(
+            effective_accuracy,
+            0.08,
+            0.72,
+        )
+    )
+
+
+
+def _apply_opponent_striking_interaction(
+    *,
+    attacker_profile: FighterSimulationProfile,
+    defender_profile: FighterSimulationProfile,
+    parameters: ActivityParameters,
+    round_number: int,
+) -> ActivityParameters:
+    """Adjust striking opportunity using defender-relative RFS deltas.
+
+    The suppression-family source columns are signed opponent deltas:
+
+        opponent actual performance - opponent baseline performance
+
+    Therefore:
+
+    - negative values indicate genuine suppression;
+    - positive values indicate that opponents exceeded baseline.
+
+    Opponent-output acceleration is also signed. A strongly negative value
+    indicates that opponents historically reduced their output as fights
+    progressed against this defender.
+    """
+
+    opponent_sig_attempt_delta = _profile_value(
+        defender_profile,
+        "opponent_sig_attempt_suppression",
+        default=0.0,
+    )
+    opponent_sig_accuracy_delta = _profile_value(
+        defender_profile,
+        "opponent_sig_accuracy_suppression",
+        default=0.0,
+    )
+    opponent_output_acceleration = _profile_value(
+        defender_profile,
+        "opponent_output_acceleration",
+        default=0.0,
+    )
+
+    # Convert signed raw deltas into bounded effects.
+    #
+    # Negative attempt/accuracy deltas become positive suppression signals.
+    # Positive deltas become negative signals and modestly increase the
+    # attacker's expected opportunity.
+    attempt_suppression_signal = float(
+        np.tanh(
+            -opponent_sig_attempt_delta / 12.0
+        )
+    )
+    accuracy_suppression_signal = float(
+        np.tanh(
+            -opponent_sig_accuracy_delta / 0.10
+        )
+    )
+
+    # Negative acceleration means opponents tend to decelerate against this
+    # defender. Apply this progressively rather than fully in Round 1.
+    output_deceleration_signal = float(
+        np.tanh(
+            -opponent_output_acceleration / 20.0
+        )
+    )
+
+    round_progress = _round_progress(round_number)
+
+    attempt_multiplier = float(
+        np.clip(
+            1.0
+            - 0.12 * attempt_suppression_signal
+            - 0.18
+            * round_progress
+            * output_deceleration_signal,
+            0.65,
+            1.20,
+        )
+    )
+
+    accuracy_adjustment = float(
+        -0.04 * accuracy_suppression_signal
+        - 0.03
+        * round_progress
+        * output_deceleration_signal
+    )
+
+    return replace(
+        parameters,
+        sig_attempt_rate=float(
+            np.clip(
+                parameters.sig_attempt_rate
+                * attempt_multiplier,
+                0.75,
+                8.0,
+            )
+        ),
+        sig_accuracy=float(
+            np.clip(
+                parameters.sig_accuracy
+                + accuracy_adjustment,
+                0.20,
+                0.75,
+            )
+        ),
+    )
+
+def _thin_striking_activity(
+    *,
+    activity: SegmentActivity,
+    attempt_multiplier: float,
+    power_multiplier: float,
+    forced_phase: FightPhase | None,
+    rng: np.random.Generator,
+) -> SegmentActivity:
+    """Reduce striking opportunity after opponent wrestling pressure."""
+
+    attempt_multiplier = float(
+        np.clip(attempt_multiplier, 0.0, 1.0)
+    )
+    power_multiplier = float(
+        np.clip(power_multiplier, 0.0, 1.0)
+    )
+
+    retained_attempts = int(
+        rng.binomial(
+            activity.sig_str_attempted,
+            attempt_multiplier,
+        )
+    )
+
+    original_accuracy = (
+        activity.sig_str_landed
+        / activity.sig_str_attempted
+        if activity.sig_str_attempted > 0
+        else 0.0
+    )
+
+    retained_landed = int(
+        rng.binomial(
+            retained_attempts,
+            float(np.clip(original_accuracy, 0.0, 1.0)),
+        )
+    )
+
+    # Preserve the fighter's underlying power signal, but reduce how much
+    # of it is available while defending wrestling.
+    if retained_landed > 0:
+        original_kd_per_landed = (
+            activity.knockdowns
+            / activity.sig_str_landed
+            if activity.sig_str_landed > 0
+            else 0.0
+        )
+
+        adjusted_kd_probability = float(
+            np.clip(
+                original_kd_per_landed * power_multiplier,
+                0.0,
+                1.0,
+            )
+        )
+
+        probability_any_kd = float(
+            1.0
+            - (
+                1.0 - adjusted_kd_probability
+            ) ** retained_landed
+        )
+
+        retained_knockdowns = int(
+            rng.random() < probability_any_kd
+        )
+    else:
+        retained_knockdowns = 0
+
+    adjusted_phase = (
+        forced_phase
+        if forced_phase is not None
+        else activity.phase
+    )
+
+    retains_ground_context = (
+        adjusted_phase == FightPhase.GROUND
+    )
+    retains_submission_context = (
+        retains_ground_context
+        or activity.control_seconds > 0
+    )
+
+    return replace(
+        activity,
+        phase=adjusted_phase,
+        sig_str_attempted=retained_attempts,
+        sig_str_landed=retained_landed,
+        ground_str_attempted=(
+            activity.ground_str_attempted
+            if retains_ground_context
+            else 0
+        ),
+        ground_str_landed=(
+            activity.ground_str_landed
+            if retains_ground_context
+            else 0
+        ),
+        submission_attempts=(
+            activity.submission_attempts
+            if retains_submission_context
+            else 0
+        ),
+        knockdowns=retained_knockdowns,
+    )
+
+
+def _apply_opponent_wrestling_pressure(
+    *,
+    activity: SegmentActivity,
+    opponent_activity: SegmentActivity,
+    rng: np.random.Generator,
+) -> SegmentActivity:
+    """Suppress striking according to opponent TD attempts and success."""
+
+    if opponent_activity.td_landed > 0:
+        # A completed takedown sharply removes clean striking opportunity.
+        return _thin_striking_activity(
+            activity=activity,
+            attempt_multiplier=0.35,
+            power_multiplier=0.30,
+            forced_phase=FightPhase.GROUND,
+            rng=rng,
+        )
+
+    if opponent_activity.td_attempted > 0:
+        # Even failed shots disrupt stance, combinations, and planted power.
+        attempt_multiplier = max(
+            0.60,
+            1.0
+            - 0.12 * opponent_activity.td_attempted,
+        )
+        power_multiplier = max(
+            0.55,
+            1.0
+            - 0.18 * opponent_activity.td_attempted,
+        )
+
+        return _thin_striking_activity(
+            activity=activity,
+            attempt_multiplier=attempt_multiplier,
+            power_multiplier=power_multiplier,
+            forced_phase=FightPhase.CLINCH,
+            rng=rng,
+        )
+
+    return activity
+
+
+
+def _apply_energy_to_power(
+    parameters: ActivityParameters,
+    *,
+    energy: float,
+) -> ActivityParameters:
+    """Scale fighter-specific knockdown power by current path energy.
+
+    Full energy preserves the fighter's complete observed power signal.
+    Exhaustion reduces power toward a nonzero floor without regressing
+    the fighter toward a population-average puncher.
+    """
+
+    bounded_energy = float(
+        np.clip(
+            energy,
+            0.0,
+            1.0,
+        )
+    )
+
+    power_multiplier = float(
+        0.30 + 0.70 * bounded_energy
+    )
+
+    return replace(
+        parameters,
+        knockdown_probability=float(
+            np.clip(
+                parameters.knockdown_probability
+                * power_multiplier,
+                0.0001,
+                0.060,
+            )
+        ),
+    )
+
 def generate_matchup_segment(
     *,
     red_profile: FighterSimulationProfile,
@@ -512,17 +1158,91 @@ def generate_matchup_segment(
     round_number: int,
     segment_number: int,
     rng: np.random.Generator,
+    red_energy: float = 1.0,
+    blue_energy: float = 1.0,
 ) -> SegmentMatchupActivity:
     """Generate red and blue activity for one shared fight segment."""
 
-    red_parameters = build_activity_parameters(red_profile)
-    blue_parameters = build_activity_parameters(blue_profile)
+    red_parameters = build_activity_parameters(
+        red_profile,
+        round_number=round_number,
+    )
+    blue_parameters = build_activity_parameters(
+        blue_profile,
+        round_number=round_number,
+    )
+
+    # Resolve each fighter's nominal offense against the opponent's signed
+    # suppression and defensive-trajectory profile before sampling activity.
+    red_parameters = _apply_opponent_striking_interaction(
+        attacker_profile=red_profile,
+        defender_profile=blue_profile,
+        parameters=red_parameters,
+        round_number=round_number,
+    )
+    blue_parameters = _apply_opponent_striking_interaction(
+        attacker_profile=blue_profile,
+        defender_profile=red_profile,
+        parameters=blue_parameters,
+        round_number=round_number,
+    )
+
+    red_parameters = _apply_energy_to_power(
+        red_parameters,
+        energy=red_energy,
+    )
+    blue_parameters = _apply_energy_to_power(
+        blue_parameters,
+        energy=blue_energy,
+    )
+
+    red_parameters = replace(
+        red_parameters,
+        td_accuracy=_effective_td_accuracy(
+            attacker_profile=red_profile,
+            defender_profile=blue_profile,
+            base_accuracy=red_parameters.td_accuracy,
+            round_number=round_number,
+        ),
+    )
+    blue_parameters = replace(
+        blue_parameters,
+        td_accuracy=_effective_td_accuracy(
+            attacker_profile=blue_profile,
+            defender_profile=red_profile,
+            base_accuracy=blue_parameters.td_accuracy,
+            round_number=round_number,
+        ),
+    )
+
+    red_activity = generate_segment_activity(
+        red_parameters,
+        rng,
+    )
+    blue_activity = generate_segment_activity(
+        blue_parameters,
+        rng,
+    )
+
+    # Apply each fighter's sampled wrestling pressure to the opponent's
+    # striking opportunity. Use the original activities so the two
+    # adjustments do not recursively affect one another.
+    adjusted_red_activity = _apply_opponent_wrestling_pressure(
+        activity=red_activity,
+        opponent_activity=blue_activity,
+        rng=rng,
+    )
+    adjusted_blue_activity = _apply_opponent_wrestling_pressure(
+        activity=blue_activity,
+        opponent_activity=red_activity,
+        rng=rng,
+    )
 
     return SegmentMatchupActivity(
         round_number=round_number,
         segment_number=segment_number,
-        red=generate_segment_activity(red_parameters, rng),
-        blue=generate_segment_activity(blue_parameters, rng),
+        red=adjusted_red_activity,
+        blue=adjusted_blue_activity,
     )
 
 

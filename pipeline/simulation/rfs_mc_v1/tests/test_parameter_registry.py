@@ -14,6 +14,9 @@ ARTIFACTS = {
     RFSFamily.TRAJECTORY: (
         "data/features/round_fighter_state_history.parquet"
     ),
+    RFSFamily.OPENING_OFFENSE: (
+        "data/features/round_fighter_state_history.parquet"
+    ),
     RFSFamily.SUPPRESSION: (
         "data/features/round_fighter_suppression_p0_2_history.parquet"
     ),
@@ -22,6 +25,9 @@ ARTIFACTS = {
     ),
     RFSFamily.DEFENSE: (
         "data/features/round_fighter_defense_p1_4_history.parquet"
+    ),
+    RFSFamily.SUBMISSION_RESULTS: (
+        "data/features/rfs_mc_v1_submission_history.parquet"
     ),
 }
 

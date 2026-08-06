@@ -6,7 +6,7 @@ mechanics, finish formulas, scoring weights, or calibration coefficients.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from typing import Mapping
 
@@ -15,9 +15,11 @@ class RFSFamily(str, Enum):
     """Implemented Round Fighter State source families."""
 
     TRAJECTORY = "trajectory"
+    OPENING_OFFENSE = "opening_offense"
     SUPPRESSION = "suppression"
     WRESTLING = "wrestling"
     DEFENSE = "defense"
+    SUBMISSION_RESULTS = "submission_results"
 
 
 @dataclass(frozen=True)
@@ -30,6 +32,7 @@ class ProfileParameterDefinition:
     prior_fight_count_column: str
     prior_valid_count_column: str
     description: str
+    fallback_source_column: str | None = None
 
 
 TRAJECTORY_PARAMETERS: tuple[ProfileParameterDefinition, ...] = (
@@ -80,6 +83,58 @@ TRAJECTORY_PARAMETERS: tuple[ProfileParameterDefinition, ...] = (
         prior_fight_count_column="rfs_traj_prior_fight_count",
         prior_valid_count_column="rfs_traj_prior_valid_trajectory_count",
         description="Late-round control persistence ratio.",
+    ),
+)
+
+
+OPENING_OFFENSE_PARAMETERS: tuple[ProfileParameterDefinition, ...] = (
+    ProfileParameterDefinition(
+        name="opening_sig_attempts",
+        family=RFSFamily.OPENING_OFFENSE,
+        source_column="rfs_open_ewm_round1_sig_attempted_per_min",
+        prior_fight_count_column="rfs_open_prior_fight_count",
+        prior_valid_count_column="rfs_open_prior_valid_opening_count",
+        description="EWM Round 1 significant-strike attempts.",
+    ),
+    ProfileParameterDefinition(
+        name="opening_sig_landed",
+        family=RFSFamily.OPENING_OFFENSE,
+        source_column="rfs_open_ewm_round1_sig_landed_per_min",
+        prior_fight_count_column="rfs_open_prior_fight_count",
+        prior_valid_count_column="rfs_open_prior_valid_opening_count",
+        description="EWM Round 1 significant strikes landed.",
+    ),
+    ProfileParameterDefinition(
+        name="opening_head_landed",
+        family=RFSFamily.OPENING_OFFENSE,
+        source_column="rfs_open_ewm_round1_head_landed_per_min",
+        prior_fight_count_column="rfs_open_prior_fight_count",
+        prior_valid_count_column="rfs_open_prior_valid_opening_count",
+        description="EWM Round 1 head strikes landed.",
+    ),
+    ProfileParameterDefinition(
+        name="opening_ground_landed",
+        family=RFSFamily.OPENING_OFFENSE,
+        source_column="rfs_open_ewm_round1_ground_landed_per_min",
+        prior_fight_count_column="rfs_open_prior_fight_count",
+        prior_valid_count_column="rfs_open_prior_valid_opening_count",
+        description="EWM Round 1 ground strikes landed.",
+    ),
+    ProfileParameterDefinition(
+        name="opening_knockdowns",
+        family=RFSFamily.OPENING_OFFENSE,
+        source_column="rfs_open_ewm_round1_kd_per_min",
+        prior_fight_count_column="rfs_open_prior_fight_count",
+        prior_valid_count_column="rfs_open_prior_valid_opening_count",
+        description="EWM Round 1 knockdowns.",
+    ),
+    ProfileParameterDefinition(
+        name="opening_kd_per_sig_landed",
+        family=RFSFamily.OPENING_OFFENSE,
+        source_column="rfs_open_ewm_round1_kd_per_sig_landed",
+        prior_fight_count_column="rfs_open_prior_fight_count",
+        prior_valid_count_column="rfs_open_prior_valid_opening_count",
+        description="EWM Round 1 knockdowns per significant strike landed.",
     ),
 )
 
@@ -248,11 +303,96 @@ DEFENSE_PARAMETERS: tuple[ProfileParameterDefinition, ...] = (
 )
 
 
+
+SUBMISSION_RESULT_PARAMETERS: tuple[
+    ProfileParameterDefinition,
+    ...
+] = (
+    ProfileParameterDefinition(
+        name="prior_submission_wins",
+        family=RFSFamily.SUBMISSION_RESULTS,
+        source_column="rfs_sub_career_submission_wins",
+        prior_fight_count_column="rfs_sub_career_fight_count",
+        prior_valid_count_column=(
+            "rfs_sub_career_valid_fight_count"
+        ),
+        description=(
+            "Submission wins recorded before the target fight."
+        ),
+    ),
+    ProfileParameterDefinition(
+        name="prior_submission_win_rate",
+        family=RFSFamily.SUBMISSION_RESULTS,
+        source_column=(
+            "rfs_sub_career_submission_win_rate"
+        ),
+        prior_fight_count_column="rfs_sub_career_fight_count",
+        prior_valid_count_column=(
+            "rfs_sub_career_valid_fight_count"
+        ),
+        description=(
+            "Prior submission wins divided by prior fights."
+        ),
+    ),
+    ProfileParameterDefinition(
+        name="prior_submission_conversion_rate",
+        family=RFSFamily.SUBMISSION_RESULTS,
+        source_column=(
+            "rfs_sub_career_smoothed_conversion_rate"
+        ),
+        prior_fight_count_column="rfs_sub_career_fight_count",
+        prior_valid_count_column=(
+            "rfs_sub_career_valid_fight_count"
+        ),
+        description=(
+            "Beta-smoothed prior submission wins per "
+            "recorded submission attempt."
+        ),
+    ),
+    ProfileParameterDefinition(
+        name="prior_submission_loss_rate",
+        family=RFSFamily.SUBMISSION_RESULTS,
+        source_column=(
+            "rfs_sub_career_submission_loss_rate"
+        ),
+        prior_fight_count_column="rfs_sub_career_fight_count",
+        prior_valid_count_column=(
+            "rfs_sub_career_valid_fight_count"
+        ),
+        description=(
+            "Prior submission losses divided by prior fights."
+        ),
+    ),
+)
+
+
 PROFILE_PARAMETER_DEFINITIONS: tuple[ProfileParameterDefinition, ...] = (
     *TRAJECTORY_PARAMETERS,
+    *OPENING_OFFENSE_PARAMETERS,
     *SUPPRESSION_PARAMETERS,
     *WRESTLING_PARAMETERS,
     *DEFENSE_PARAMETERS,
+    *SUBMISSION_RESULT_PARAMETERS,
+)
+
+
+LAST3_PROFILE_PARAMETER_DEFINITIONS: tuple[
+    ProfileParameterDefinition,
+    ...
+] = tuple(
+    replace(
+        definition,
+        source_column=definition.source_column.replace(
+            "_ewm_",
+            "_last3_",
+        ),
+        fallback_source_column=definition.source_column,
+        description=definition.description.replace(
+            "EWM ",
+            "Last-3 ",
+        ),
+    )
+    for definition in PROFILE_PARAMETER_DEFINITIONS
 )
 
 

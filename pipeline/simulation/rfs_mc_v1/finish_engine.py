@@ -14,6 +14,7 @@ import numpy as np
 
 from pipeline.simulation.rfs_mc_v1.contracts import (
     DynamicFighterState,
+    FightPhase,
     FighterSimulationProfile,
 )
 from pipeline.simulation.rfs_mc_v1.segment_engine import SegmentActivity
@@ -45,6 +46,21 @@ class FinishHazardParameters:
     submission_control_weight: float = 0.035
     submission_energy_loss_weight: float = 0.65
     submission_defense_loss_weight: float = 0.55
+
+    # Attacker historical finishing ability.
+    submission_attacker_skill_weight: float = 2.00
+
+    # Quality of the current grappling position.
+    submission_position_quality_weight: float = 1.75
+
+    # Defender historical and current vulnerability.
+    submission_vulnerability_weight: float = 1.25
+
+    # A fresh attacker converts attempts more effectively.
+    submission_attacker_energy_weight: float = 0.75
+
+    # Additional attempts in one segment increase danger, but are capped.
+    submission_extra_attempt_weight: float = 0.40
 
     minimum_hazard: float = 0.0
     maximum_hazard: float = 0.85
@@ -151,23 +167,271 @@ def _bounded_hazard(
     )
 
 
+def _profile_value(
+    profile: FighterSimulationProfile,
+    name: str,
+    *,
+    default: float = 0.0,
+) -> float:
+    """Read one finite simulation-profile value."""
+
+    estimate = profile.parameters.get(name)
+
+    if estimate is None:
+        return default
+
+    value = float(estimate.value)
+
+    if not np.isfinite(value):
+        return default
+
+    return value
+
+
+def _submission_is_eligible(
+    activity: SegmentActivity,
+) -> bool:
+    """Return whether a submission finish may be evaluated.
+
+    A submission requires an actual generated submission attempt and
+    either a ground phase or positive control time.
+    """
+
+    return bool(
+        activity.submission_attempts > 0
+        and (
+            activity.phase is FightPhase.GROUND
+            or activity.control_seconds > 0
+        )
+    )
+
+
+def _attacker_submission_skill(
+    profile: FighterSimulationProfile,
+) -> float:
+    """Combine historical submission finishing signals."""
+
+    conversion_rate = float(
+        np.clip(
+            _profile_value(
+                profile,
+                "prior_submission_conversion_rate",
+                default=0.10,
+            ),
+            0.0,
+            1.0,
+        )
+    )
+
+    win_rate = float(
+        np.clip(
+            _profile_value(
+                profile,
+                "prior_submission_win_rate",
+            )
+            / 0.30,
+            0.0,
+            1.0,
+        )
+    )
+
+    prior_wins = max(
+        _profile_value(
+            profile,
+            "prior_submission_wins",
+        ),
+        0.0,
+    )
+
+    win_count_signal = float(
+        1.0 - np.exp(-prior_wins / 2.0)
+    )
+
+    submission_pressure = float(
+        np.clip(
+            _profile_value(
+                profile,
+                "submission_pressure",
+            )
+            / 0.80,
+            0.0,
+            1.0,
+        )
+    )
+
+    skill = (
+        0.45 * conversion_rate
+        + 0.20 * win_rate
+        + 0.15 * win_count_signal
+        + 0.20 * submission_pressure
+    )
+
+    return float(np.clip(skill, 0.0, 1.0))
+
+
+def _submission_position_quality(
+    *,
+    activity: SegmentActivity,
+    attacker_profile: FighterSimulationProfile,
+) -> float:
+    """Estimate the quality of the current submission position."""
+
+    control_fraction = float(
+        np.clip(
+            activity.control_seconds / 30.0,
+            0.0,
+            1.0,
+        )
+    )
+
+    control_stability = float(
+        np.clip(
+            _profile_value(
+                attacker_profile,
+                "control_stability",
+            ),
+            0.0,
+            1.0,
+        )
+    )
+
+    control_per_td_attempt = float(
+        np.clip(
+            _profile_value(
+                attacker_profile,
+                "control_per_td_attempt",
+            )
+            / 30.0,
+            0.0,
+            1.0,
+        )
+    )
+
+    td_to_control_conversion = float(
+        np.clip(
+            _profile_value(
+                attacker_profile,
+                "td_to_control_conversion",
+            ),
+            0.0,
+            1.0,
+        )
+    )
+
+    position_quality = (
+        0.35 * control_fraction
+        + 0.30 * control_stability
+        + 0.20 * control_per_td_attempt
+        + 0.15 * td_to_control_conversion
+    )
+
+    return float(
+        np.clip(position_quality, 0.0, 1.0)
+    )
+
+
+def _defender_submission_vulnerability(
+    *,
+    defender_state: DynamicFighterState,
+    defender_profile: FighterSimulationProfile,
+) -> float:
+    """Combine prior submission losses and current deterioration."""
+
+    historical_loss_rate = float(
+        np.clip(
+            _profile_value(
+                defender_profile,
+                "prior_submission_loss_rate",
+            )
+            / 0.25,
+            0.0,
+            1.0,
+        )
+    )
+
+    current_danger = float(
+        np.clip(
+            defender_state.submission_danger,
+            0.0,
+            1.0,
+        )
+    )
+
+    energy_loss = float(
+        np.clip(
+            1.0 - defender_state.energy,
+            0.0,
+            1.0,
+        )
+    )
+
+    defense_loss = float(
+        np.clip(
+            1.0 - defender_state.defensive_stability,
+            0.0,
+            1.0,
+        )
+    )
+
+    vulnerability = (
+        0.35 * historical_loss_rate
+        + 0.35 * current_danger
+        + 0.15 * energy_loss
+        + 0.15 * defense_loss
+    )
+
+    return float(
+        np.clip(vulnerability, 0.0, 1.0)
+    )
+
+
 def calculate_finish_hazards(
     *,
     defender_state: DynamicFighterState,
     attacker_activity: SegmentActivity,
     defender_profile: FighterSimulationProfile,
+    attacker_state: DynamicFighterState | None = None,
+    attacker_profile: FighterSimulationProfile | None = None,
     parameters: FinishHazardParameters = (
         DEFAULT_FINISH_HAZARD_PARAMETERS
     ),
 ) -> FighterFinishHazards:
-    """Calculate finish hazards against one defender."""
+    """Calculate KO/TKO and submission hazards against one defender."""
 
     defender_state.validate()
 
-    head_damage = max(defender_state.head_damage, 0.0)
-    chin_loss = 1.0 - defender_state.chin_integrity
-    defense_loss = 1.0 - defender_state.defensive_stability
-    energy_loss = 1.0 - defender_state.energy
+    # Optional defaults preserve compatibility with older direct tests.
+    if attacker_state is not None:
+        attacker_state.validate()
+
+    if attacker_profile is None:
+        attacker_profile = defender_profile
+
+    head_damage = max(
+        defender_state.head_damage,
+        0.0,
+    )
+    chin_loss = float(
+        np.clip(
+            1.0 - defender_state.chin_integrity,
+            0.0,
+            1.0,
+        )
+    )
+    defense_loss = float(
+        np.clip(
+            1.0 - defender_state.defensive_stability,
+            0.0,
+            1.0,
+        )
+    )
+    energy_loss = float(
+        np.clip(
+            1.0 - defender_state.energy,
+            0.0,
+            1.0,
+        )
+    )
 
     ko_linear = (
         parameters.ko_intercept
@@ -183,6 +447,56 @@ def calculate_finish_hazards(
         * attacker_activity.knockdowns
     )
 
+    ko_hazard = _bounded_hazard(
+        ko_linear,
+        parameters,
+    )
+
+    # No attempt means no submission finish.
+    if not _submission_is_eligible(
+        attacker_activity
+    ):
+        return FighterFinishHazards(
+            ko_tko=ko_hazard,
+            submission=0.0,
+        )
+
+    attacker_skill = _attacker_submission_skill(
+        attacker_profile
+    )
+
+    position_quality = _submission_position_quality(
+        activity=attacker_activity,
+        attacker_profile=attacker_profile,
+    )
+
+    defender_vulnerability = (
+        _defender_submission_vulnerability(
+            defender_state=defender_state,
+            defender_profile=defender_profile,
+        )
+    )
+
+    attacker_energy = (
+        1.0
+        if attacker_state is None
+        else float(
+            np.clip(
+                attacker_state.energy,
+                0.0,
+                1.0,
+            )
+        )
+    )
+
+    extra_attempts = float(
+        np.clip(
+            attacker_activity.submission_attempts - 1,
+            0,
+            2,
+        )
+    )
+
     submission_linear = (
         parameters.submission_intercept
         + parameters.submission_danger_weight
@@ -191,19 +505,30 @@ def calculate_finish_hazards(
         * attacker_activity.submission_attempts
         + parameters.submission_control_weight
         * attacker_activity.control_seconds
-        + parameters.submission_energy_loss_weight * energy_loss
-        + parameters.submission_defense_loss_weight * defense_loss
+        + parameters.submission_energy_loss_weight
+        * energy_loss
+        + parameters.submission_defense_loss_weight
+        * defense_loss
+        + parameters.submission_attacker_skill_weight
+        * attacker_skill
+        + parameters.submission_position_quality_weight
+        * position_quality
+        + parameters.submission_vulnerability_weight
+        * defender_vulnerability
+        + parameters.submission_attacker_energy_weight
+        * attacker_energy
+        + parameters.submission_extra_attempt_weight
+        * extra_attempts
     )
 
-    # Reserved for later calibration and hierarchical profile modifiers.
-    _ = defender_profile
+    submission_hazard = _bounded_hazard(
+        submission_linear,
+        parameters,
+    )
 
     return FighterFinishHazards(
-        ko_tko=_bounded_hazard(ko_linear, parameters),
-        submission=_bounded_hazard(
-            submission_linear,
-            parameters,
-        ),
+        ko_tko=ko_hazard,
+        submission=submission_hazard,
     )
 
 
@@ -235,14 +560,18 @@ def sample_competing_finish(
 
     red_hazards = calculate_finish_hazards(
         defender_state=blue_state,
+        attacker_state=red_state,
         attacker_activity=red_activity,
         defender_profile=blue_profile,
+        attacker_profile=red_profile,
         parameters=parameters,
     )
     blue_hazards = calculate_finish_hazards(
         defender_state=red_state,
+        attacker_state=blue_state,
         attacker_activity=blue_activity,
         defender_profile=red_profile,
+        attacker_profile=blue_profile,
         parameters=parameters,
     )
 

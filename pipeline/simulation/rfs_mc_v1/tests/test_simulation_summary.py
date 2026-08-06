@@ -1,5 +1,7 @@
 """Tests for simulation aggregation and CLI parsing."""
 
+import pytest
+
 from pipeline.simulation.rfs_mc_v1.contracts import (
     FighterSimulationProfile,
     MatchupSimulationRequest,
@@ -77,7 +79,7 @@ def test_summary_probabilities_sum_to_one() -> None:
         + summary["draw_probability"]
     )
 
-    assert total == 1.0
+    assert total == pytest.approx(1.0)
 
 
 def test_finish_and_distance_probabilities_sum_to_one() -> None:
@@ -91,7 +93,7 @@ def test_finish_and_distance_probabilities_sum_to_one() -> None:
         + summary["distance_probability"]
     )
 
-    assert total == 1.0
+    assert total == pytest.approx(1.0)
 
 
 def test_method_probabilities_sum_to_one() -> None:
@@ -104,7 +106,7 @@ def test_method_probabilities_sum_to_one() -> None:
         summary["method_probabilities"].values()
     )
 
-    assert total == 1.0
+    assert total == pytest.approx(1.0)
 
 
 def test_cli_parser_accepts_required_arguments() -> None:

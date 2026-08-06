@@ -344,6 +344,9 @@ def build_composite_profile_from_histories(
             definition.prior_valid_count_column,
         }
 
+        if definition.fallback_source_column is not None:
+            required.add(definition.fallback_source_column)
+
         missing = required - set(row.index)
         if missing:
             raise ProfileBuilderError(
@@ -377,11 +380,31 @@ def build_composite_profile_from_histories(
             errors="coerce",
         ).iloc[0]
 
+        # Last-3 variants first fall back to this fighter's EWM value.
+        if (
+            pd.isna(numeric_value)
+            and definition.fallback_source_column is not None
+        ):
+            fallback_raw_value = row[
+                definition.fallback_source_column
+            ]
+            numeric_value = pd.to_numeric(
+                pd.Series([fallback_raw_value]),
+                errors="coerce",
+            ).iloc[0]
+
+        # If both fighter-level values are missing, use the existing
+        # leakage-safe historical median.
         if pd.isna(numeric_value):
+            historical_source_column = (
+                definition.fallback_source_column
+                or definition.source_column
+            )
+
             parameters[definition.name] = (
                 make_historical_fallback_estimate(
                     histories[family_key],
-                    source_column=definition.source_column,
+                    source_column=historical_source_column,
                     target_date=target_date,
                 )
             )
@@ -419,12 +442,15 @@ def load_default_rfs_histories(
     *,
     feature_root: str = "data/features",
 ) -> dict[str, pd.DataFrame]:
-    """Load the four currently approved RFS history artifacts."""
+    """Load the currently approved RFS history families."""
 
     root = pd.io.common.stringify_path(feature_root)
 
     paths = {
         "trajectory": (
+            f"{root}/round_fighter_state_history.parquet"
+        ),
+        "opening_offense": (
             f"{root}/round_fighter_state_history.parquet"
         ),
         "suppression": (
@@ -435,6 +461,9 @@ def load_default_rfs_histories(
         ),
         "defense": (
             f"{root}/round_fighter_defense_p1_4_history.parquet"
+        ),
+        "submission_results": (
+            f"{root}/rfs_mc_v1_submission_history.parquet"
         ),
     }
 

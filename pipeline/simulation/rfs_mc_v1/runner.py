@@ -338,6 +338,8 @@ def simulate_stateful_activity_path(
                 round_number=round_number,
                 segment_number=segment_number,
                 rng=rng,
+                red_energy=red_state.energy,
+                blue_energy=blue_state.energy,
             )
 
             red_state = update_dynamic_state(
@@ -574,6 +576,8 @@ def simulate_finish_aware_path(
                 round_number=round_number,
                 segment_number=segment_number,
                 rng=rng,
+                red_energy=red_state.energy,
+                blue_energy=blue_state.energy,
             )
 
             red_state = update_dynamic_state(
@@ -809,6 +813,13 @@ def summarize_scored_paths(
     red_score_totals: list[int] = []
     blue_score_totals: list[int] = []
 
+    # Temporary scoring diagnostics used to identify why simulated
+    # scorecards end in draws.
+    draw_scorecard_counts: dict[str, int] = {}
+    draw_round_pattern_counts: dict[str, int] = {}
+    draws_with_ten_eight = 0
+    draws_with_ten_ten = 0
+
     for result in results:
         outcome = result.path.outcome
 
@@ -828,8 +839,48 @@ def summarize_scored_paths(
                 method_counts["draw"] += 1
 
             if result.decision is not None:
-                red_score_totals.append(result.decision.red_total)
-                blue_score_totals.append(result.decision.blue_total)
+                decision = result.decision
+
+                red_score_totals.append(decision.red_total)
+                blue_score_totals.append(decision.blue_total)
+
+                if outcome.winner is None:
+                    scorecard_key = (
+                        f"{decision.red_total}-{decision.blue_total}"
+                    )
+                    draw_scorecard_counts[scorecard_key] = (
+                        draw_scorecard_counts.get(scorecard_key, 0) + 1
+                    )
+
+                    round_pattern = "/".join(
+                        f"{round_score.red_points}-"
+                        f"{round_score.blue_points}"
+                        for round_score in decision.round_scores
+                    )
+                    draw_round_pattern_counts[round_pattern] = (
+                        draw_round_pattern_counts.get(
+                            round_pattern,
+                            0,
+                        )
+                        + 1
+                    )
+
+                    if any(
+                        8
+                        in {
+                            round_score.red_points,
+                            round_score.blue_points,
+                        }
+                        for round_score in decision.round_scores
+                    ):
+                        draws_with_ten_eight += 1
+
+                    if any(
+                        round_score.red_points == 10
+                        and round_score.blue_points == 10
+                        for round_score in decision.round_scores
+                    ):
+                        draws_with_ten_ten += 1
         else:
             method_key = f"{outcome.winner}_{outcome.method}"
             method_counts[method_key] += 1
@@ -873,6 +924,22 @@ def summarize_scored_paths(
                     result.path.outcome
                     for result in results
                 )
+            )
+        ),
+    }
+
+    summary["draw_diagnostics"] = {
+        "draw_count": outcome_counts["draw"],
+        "draws_with_ten_eight": draws_with_ten_eight,
+        "draws_with_ten_ten": draws_with_ten_ten,
+        "scorecard_counts": dict(
+            sorted(draw_scorecard_counts.items())
+        ),
+        "round_pattern_counts": dict(
+            sorted(
+                draw_round_pattern_counts.items(),
+                key=lambda item: item[1],
+                reverse=True,
             )
         ),
     }

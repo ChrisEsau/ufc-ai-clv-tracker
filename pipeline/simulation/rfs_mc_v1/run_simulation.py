@@ -22,11 +22,17 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
+
 from pipeline.simulation.rfs_mc_v1.contracts import (
     MatchupSimulationRequest,
 )
 from pipeline.simulation.rfs_mc_v1.parameter_registry import (
+    LAST3_PROFILE_PARAMETER_DEFINITIONS,
     PROFILE_PARAMETER_DEFINITIONS,
+)
+from pipeline.simulation.rfs_mc_v1.offensive_power import (
+    augment_profile_with_offensive_power,
 )
 from pipeline.simulation.rfs_mc_v1.profile_builder import (
     build_composite_profile_from_histories,
@@ -89,6 +95,15 @@ def build_parser() -> argparse.ArgumentParser:
         default="data/features",
     )
     parser.add_argument(
+        "--profile-source",
+        choices=("ewm", "last3"),
+        default="ewm",
+        help=(
+            "RFS profile aggregation source. Last-3 uses fighter EWM "
+            "as a fallback when a Last-3 value is unavailable."
+        ),
+    )
+    parser.add_argument(
         "--output",
         type=Path,
         default=None,
@@ -105,6 +120,15 @@ def run_from_args(args: argparse.Namespace) -> dict[str, Any]:
         feature_root=args.feature_root,
     )
 
+    parameter_definitions = (
+        LAST3_PROFILE_PARAMETER_DEFINITIONS
+        if args.profile_source == "last3"
+        else PROFILE_PARAMETER_DEFINITIONS
+    )
+    round_stats = pd.read_parquet(
+        "data/fight_details/ufc_round_stats.parquet"
+    )
+
     red_profile = build_composite_profile_from_histories(
         histories,
         fighter_id=args.red_fighter_id,
@@ -112,7 +136,7 @@ def run_from_args(args: argparse.Namespace) -> dict[str, Any]:
         scheduled_rounds=args.scheduled_rounds,
         weight_class=args.weight_class,
         gender=args.gender,
-        parameter_definitions=PROFILE_PARAMETER_DEFINITIONS,
+        parameter_definitions=parameter_definitions,
     )
 
     blue_profile = build_composite_profile_from_histories(
@@ -122,7 +146,16 @@ def run_from_args(args: argparse.Namespace) -> dict[str, Any]:
         scheduled_rounds=args.scheduled_rounds,
         weight_class=args.weight_class,
         gender=args.gender,
-        parameter_definitions=PROFILE_PARAMETER_DEFINITIONS,
+        parameter_definitions=parameter_definitions,
+    )
+
+    red_profile = augment_profile_with_offensive_power(
+        red_profile,
+        round_stats,
+    )
+    blue_profile = augment_profile_with_offensive_power(
+        blue_profile,
+        round_stats,
     )
 
     request = MatchupSimulationRequest(

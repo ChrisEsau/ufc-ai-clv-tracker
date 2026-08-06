@@ -46,8 +46,16 @@ class ScoringParameters:
 
     control_second_weight: float = 0.015
 
-    even_round_margin: float = 0.75
+    # Close rounds should normally have a 10-9 winner. Reserve 10-10
+    # scoring for an exact tie in the simulated judging score.
+    even_round_margin: float = 0.0
     ten_eight_margin: float = 8.00
+
+    # A 10-8 requires dominance beyond a large arithmetic margin.
+    ten_eight_knockdown_advantage: int = 1
+    ten_eight_submission_advantage: int = 2
+    ten_eight_effective_margin: float = 15.00
+    ten_eight_effective_ratio: float = 2.50
 
     def __post_init__(self) -> None:
         for name, value in vars(self).items():
@@ -57,6 +65,11 @@ class ScoringParameters:
         if self.ten_eight_margin <= self.even_round_margin:
             raise ValueError(
                 "ten_eight_margin must exceed even_round_margin"
+            )
+
+        if self.ten_eight_effective_ratio < 1.0:
+            raise ValueError(
+                "ten_eight_effective_ratio must be at least 1.0"
             )
 
 
@@ -232,6 +245,70 @@ def aggregate_fighter_round_metrics(
     )
 
 
+def _is_ten_eight_round(
+    *,
+    winner_metrics: FighterRoundMetrics,
+    loser_metrics: FighterRoundMetrics,
+    score_margin: float,
+    parameters: ScoringParameters,
+) -> bool:
+    """Return whether a winning performance merits a 10-8 round.
+
+    A large weighted-score margin is necessary but not sufficient.
+    The winner must also demonstrate meaningful damage, near-finish
+    grappling, or overwhelming effective-offense dominance.
+    """
+
+    if score_margin < parameters.ten_eight_margin:
+        return False
+
+    knockdown_advantage = (
+        winner_metrics.knockdowns
+        - loser_metrics.knockdowns
+    )
+    submission_advantage = (
+        winner_metrics.submission_attempts
+        - loser_metrics.submission_attempts
+    )
+    effective_margin = (
+        winner_metrics.effective_score
+        - loser_metrics.effective_score
+    )
+
+    if loser_metrics.effective_score > 0:
+        effective_ratio = (
+            winner_metrics.effective_score
+            / loser_metrics.effective_score
+        )
+    else:
+        effective_ratio = (
+            float("inf")
+            if winner_metrics.effective_score > 0
+            else 1.0
+        )
+
+    damage_dominance = (
+        knockdown_advantage
+        >= parameters.ten_eight_knockdown_advantage
+    )
+    submission_dominance = (
+        submission_advantage
+        >= parameters.ten_eight_submission_advantage
+    )
+    overwhelming_effective_offense = (
+        effective_margin
+        >= parameters.ten_eight_effective_margin
+        and effective_ratio
+        >= parameters.ten_eight_effective_ratio
+    )
+
+    return (
+        damage_dominance
+        or submission_dominance
+        or overwhelming_effective_offense
+    )
+
+
 def score_round(
     *,
     round_number: int,
@@ -274,20 +351,28 @@ def score_round(
         blue_points = 10
     elif margin > 0:
         winner = RoundWinner.RED
-        red_points = 10
-        blue_points = (
-            8
-            if absolute_margin >= parameters.ten_eight_margin
-            else 9
+
+        is_ten_eight = _is_ten_eight_round(
+            winner_metrics=red_metrics,
+            loser_metrics=blue_metrics,
+            score_margin=absolute_margin,
+            parameters=parameters,
         )
+
+        red_points = 10
+        blue_points = 8 if is_ten_eight else 9
     else:
         winner = RoundWinner.BLUE
-        blue_points = 10
-        red_points = (
-            8
-            if absolute_margin >= parameters.ten_eight_margin
-            else 9
+
+        is_ten_eight = _is_ten_eight_round(
+            winner_metrics=blue_metrics,
+            loser_metrics=red_metrics,
+            score_margin=absolute_margin,
+            parameters=parameters,
         )
+
+        blue_points = 10
+        red_points = 8 if is_ten_eight else 9
 
     return RoundScore(
         round_number=round_number,
@@ -357,15 +442,34 @@ def score_decision(
         for round_score in round_scores
     )
 
-    if red_total > blue_total:
+    # Simplified simulator decision rule:
+    # the fighter who wins more rounds wins the fight.
+    #
+    # Ten-eight scores remain available as round diagnostics, but point
+    # totals do not override the number of rounds won.
+    if red_rounds_won > blue_rounds_won:
         winner = "red"
         loser = "blue"
-    elif blue_total > red_total:
+    elif blue_rounds_won > red_rounds_won:
         winner = "blue"
         loser = "red"
     else:
-        winner = None
-        loser = None
+        # Exact 10-10 rounds can theoretically leave the round-win count
+        # tied. Draws are disabled, so use the latest decisive round.
+        decisive_rounds = [
+            round_score
+            for round_score in round_scores
+            if round_score.winner is not RoundWinner.EVEN
+        ]
+
+        if decisive_rounds:
+            winner = decisive_rounds[-1].winner.value
+            loser = "blue" if winner == "red" else "red"
+        else:
+            # Fully identical scorecards are extremely rare. Use a stable
+            # fallback so identical inputs remain reproducible.
+            winner = "red"
+            loser = "blue"
 
     return DecisionResult(
         winner=winner,

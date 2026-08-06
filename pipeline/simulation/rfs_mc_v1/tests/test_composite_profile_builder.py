@@ -43,9 +43,11 @@ def make_histories() -> dict[str, pd.DataFrame]:
         family: make_family_history(family=family)
         for family in (
             "trajectory",
+            "opening_offense",
             "suppression",
             "wrestling",
             "defense",
+            "submission_results",
         )
     }
 

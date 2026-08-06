@@ -48,6 +48,7 @@ def make_profile() -> FighterSimulationProfile:
 
 def make_activity(
     *,
+    phase: FightPhase = FightPhase.DISTANCE,
     sig_attempted: int = 8,
     sig_landed: int = 4,
     td_attempted: int = 1,
@@ -59,7 +60,7 @@ def make_activity(
     knockdowns: int = 0,
 ) -> SegmentActivity:
     return SegmentActivity(
-        phase=FightPhase.DISTANCE,
+        phase=phase,
         sig_str_attempted=sig_attempted,
         sig_str_landed=sig_landed,
         td_attempted=td_attempted,
@@ -165,6 +166,7 @@ def test_cumulative_activity_updates() -> None:
     state = initialize_dynamic_state(profile)
 
     activity = make_activity(
+        phase=FightPhase.GROUND,
         sig_attempted=9,
         ground_attempted=3,
         td_attempted=2,

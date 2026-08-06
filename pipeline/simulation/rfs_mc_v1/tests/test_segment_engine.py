@@ -160,3 +160,163 @@ def test_aggregate_segment_activity() -> None:
     assert totals["knockdowns"] == sum(
         segment.knockdowns for segment in segments
     )
+
+
+def test_extreme_profile_values_produce_bounded_activity_rates() -> None:
+    profile = make_profile("extreme")
+
+    replacements = {
+        "sig_attempt_trajectory": 1000.0,
+        "sig_accuracy_trajectory": 1000.0,
+        "wrestling_persistence": 1000.0,
+        "control_per_td_attempt": 1000.0,
+        "control_to_damage": 1000.0,
+        "submission_pressure": 1000.0,
+        "knockdowns_absorbed": 1000.0,
+    }
+
+    parameters = dict(profile.parameters)
+
+    for name, value in replacements.items():
+        parameters[name] = ParameterEstimate(
+            value=value,
+            source=ProfileSource.FIGHTER,
+            effective_sample_size=4.0,
+            uncertainty=0.5,
+        )
+
+    extreme_profile = FighterSimulationProfile(
+        fighter_id=profile.fighter_id,
+        fighter_name=profile.fighter_name,
+        target_date=profile.target_date,
+        weight_class=profile.weight_class,
+        gender=profile.gender,
+        scheduled_rounds=profile.scheduled_rounds,
+        prior_fight_count=profile.prior_fight_count,
+        valid_round_fight_count=profile.valid_round_fight_count,
+        is_low_experience=profile.is_low_experience,
+        parameters=parameters,
+    )
+
+    activity = build_activity_parameters(extreme_profile)
+
+    assert 2.5 <= activity.sig_attempt_rate <= 5.5
+    assert 0.32 <= activity.sig_accuracy <= 0.58
+    assert 0.12 <= activity.td_attempt_rate <= 0.48
+    assert 4.0 <= activity.mean_control_seconds <= 12.0
+    assert 0.5 <= activity.ground_attempt_rate <= 2.5
+    assert 0.05 <= activity.submission_attempt_rate <= 0.35
+    assert 0.008 <= activity.knockdown_probability <= 0.020
+
+
+def test_absorbed_knockdowns_do_not_increase_offensive_knockdown_rate() -> None:
+    base = make_profile("base")
+    base_parameters = build_activity_parameters(base)
+
+    parameters = dict(base.parameters)
+    parameters["knockdowns_absorbed"] = ParameterEstimate(
+        value=10.0,
+        source=ProfileSource.FIGHTER,
+        effective_sample_size=4.0,
+        uncertainty=0.5,
+    )
+
+    vulnerable = FighterSimulationProfile(
+        fighter_id="vulnerable",
+        fighter_name="Vulnerable Fighter",
+        target_date=base.target_date,
+        weight_class=base.weight_class,
+        gender=base.gender,
+        scheduled_rounds=base.scheduled_rounds,
+        prior_fight_count=base.prior_fight_count,
+        valid_round_fight_count=base.valid_round_fight_count,
+        is_low_experience=base.is_low_experience,
+        parameters=parameters,
+    )
+
+    vulnerable_parameters = build_activity_parameters(vulnerable)
+
+    assert (
+        vulnerable_parameters.knockdown_probability
+        <= base_parameters.knockdown_probability
+    )
+
+
+def test_extreme_profile_values_produce_bounded_activity_rates() -> None:
+    profile = make_profile("extreme")
+
+    replacements = {
+        "sig_attempt_trajectory": 1000.0,
+        "sig_accuracy_trajectory": 1000.0,
+        "wrestling_persistence": 1000.0,
+        "control_per_td_attempt": 1000.0,
+        "control_to_damage": 1000.0,
+        "submission_pressure": 1000.0,
+        "knockdowns_absorbed": 1000.0,
+    }
+
+    parameters = dict(profile.parameters)
+
+    for name, value in replacements.items():
+        parameters[name] = ParameterEstimate(
+            value=value,
+            source=ProfileSource.FIGHTER,
+            effective_sample_size=4.0,
+            uncertainty=0.5,
+        )
+
+    extreme_profile = FighterSimulationProfile(
+        fighter_id=profile.fighter_id,
+        fighter_name=profile.fighter_name,
+        target_date=profile.target_date,
+        weight_class=profile.weight_class,
+        gender=profile.gender,
+        scheduled_rounds=profile.scheduled_rounds,
+        prior_fight_count=profile.prior_fight_count,
+        valid_round_fight_count=profile.valid_round_fight_count,
+        is_low_experience=profile.is_low_experience,
+        parameters=parameters,
+    )
+
+    activity = build_activity_parameters(extreme_profile)
+
+    assert 2.5 <= activity.sig_attempt_rate <= 5.5
+    assert 0.32 <= activity.sig_accuracy <= 0.58
+    assert 0.12 <= activity.td_attempt_rate <= 0.48
+    assert 4.0 <= activity.mean_control_seconds <= 12.0
+    assert 0.5 <= activity.ground_attempt_rate <= 2.5
+    assert 0.05 <= activity.submission_attempt_rate <= 0.35
+    assert 0.008 <= activity.knockdown_probability <= 0.020
+
+
+def test_absorbed_knockdowns_do_not_increase_offensive_knockdown_rate() -> None:
+    base = make_profile("base")
+    base_parameters = build_activity_parameters(base)
+
+    parameters = dict(base.parameters)
+    parameters["knockdowns_absorbed"] = ParameterEstimate(
+        value=10.0,
+        source=ProfileSource.FIGHTER,
+        effective_sample_size=4.0,
+        uncertainty=0.5,
+    )
+
+    vulnerable = FighterSimulationProfile(
+        fighter_id="vulnerable",
+        fighter_name="Vulnerable Fighter",
+        target_date=base.target_date,
+        weight_class=base.weight_class,
+        gender=base.gender,
+        scheduled_rounds=base.scheduled_rounds,
+        prior_fight_count=base.prior_fight_count,
+        valid_round_fight_count=base.valid_round_fight_count,
+        is_low_experience=base.is_low_experience,
+        parameters=parameters,
+    )
+
+    vulnerable_parameters = build_activity_parameters(vulnerable)
+
+    assert (
+        vulnerable_parameters.knockdown_probability
+        <= base_parameters.knockdown_probability
+    )
