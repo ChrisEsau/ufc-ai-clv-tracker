@@ -1,0 +1,185 @@
+"""Transition contracts for the V2 shared fight-state engine."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from enum import Enum
+
+from pipeline.simulation.rfs_mc_v1.contracts import FightPhase
+from pipeline.simulation.rfs_mc_v2_shared_state.contracts import (
+    FighterSide,
+    SharedFightState,
+)
+
+
+class TransitionEvent(str, Enum):
+    """Supported physical transitions between shared fight phases."""
+
+    STAY = "stay"
+
+    CLINCH_ENTRY = "clinch_entry"
+    TAKEDOWN = "takedown"
+
+    CLINCH_BREAK = "clinch_break"
+    OWNERSHIP_CHANGE = "ownership_change"
+
+    GROUND_ESCAPE = "ground_escape"
+    SCRAMBLE_TO_CLINCH = "scramble_to_clinch"
+    REVERSAL = "reversal"
+
+
+LEGAL_EVENT_PHASES = {
+    TransitionEvent.STAY: {
+        (FightPhase.DISTANCE, FightPhase.DISTANCE),
+        (FightPhase.CLINCH, FightPhase.CLINCH),
+        (FightPhase.GROUND, FightPhase.GROUND),
+    },
+    TransitionEvent.CLINCH_ENTRY: {
+        (FightPhase.DISTANCE, FightPhase.CLINCH),
+    },
+    TransitionEvent.TAKEDOWN: {
+        (FightPhase.DISTANCE, FightPhase.GROUND),
+        (FightPhase.CLINCH, FightPhase.GROUND),
+    },
+    TransitionEvent.CLINCH_BREAK: {
+        (FightPhase.CLINCH, FightPhase.DISTANCE),
+    },
+    TransitionEvent.OWNERSHIP_CHANGE: {
+        (FightPhase.CLINCH, FightPhase.CLINCH),
+    },
+    TransitionEvent.GROUND_ESCAPE: {
+        (FightPhase.GROUND, FightPhase.DISTANCE),
+    },
+    TransitionEvent.SCRAMBLE_TO_CLINCH: {
+        (FightPhase.GROUND, FightPhase.CLINCH),
+    },
+    TransitionEvent.REVERSAL: {
+        (FightPhase.GROUND, FightPhase.GROUND),
+    },
+}
+
+
+@dataclass(frozen=True)
+class SharedTransition:
+    """One coherent phase transition shared by both fighters.
+
+    ``actor`` is the fighter responsible for the transition when one
+    fighter must be identified. It is not used for neutral stays or
+    clinch breaks in V2 Milestone 1.
+    """
+
+    previous_state: SharedFightState
+    next_state: SharedFightState
+
+    event: TransitionEvent
+    actor: FighterSide | None
+
+    def __post_init__(self) -> None:
+        """Validate physical and ownership consistency."""
+
+        previous = self.previous_state
+        next_state = self.next_state
+
+        if previous.round_number != next_state.round_number:
+            raise ValueError(
+                "a transition cannot cross round boundaries"
+            )
+
+        if previous.segment_number != next_state.segment_number:
+            raise ValueError(
+                "a transition must occur within one segment"
+            )
+
+        phase_pair = (
+            previous.phase,
+            next_state.phase,
+        )
+
+        if phase_pair not in LEGAL_EVENT_PHASES[self.event]:
+            raise ValueError(
+                f"illegal phase pair for {self.event.value}: "
+                f"{previous.phase.value} -> "
+                f"{next_state.phase.value}"
+            )
+
+        expected_phase_age = (
+            previous.phase_age_segments + 1
+            if self.event is TransitionEvent.STAY
+            else 1
+        )
+
+        if (
+            next_state.phase_age_segments
+            != expected_phase_age
+        ):
+            raise ValueError(
+                "next phase_age_segments is inconsistent "
+                "with the transition event"
+            )
+
+        if self.event is TransitionEvent.STAY:
+            if self.actor is not None:
+                raise ValueError(
+                    "stay transition cannot have an actor"
+                )
+
+            if previous.phase_owner != next_state.phase_owner:
+                raise ValueError(
+                    "stay transition cannot change phase owner"
+                )
+
+        elif self.event in {
+            TransitionEvent.CLINCH_ENTRY,
+            TransitionEvent.TAKEDOWN,
+            TransitionEvent.SCRAMBLE_TO_CLINCH,
+        }:
+            if self.actor is None:
+                raise ValueError(
+                    f"{self.event.value} requires an actor"
+                )
+
+            if next_state.phase_owner is not self.actor:
+                raise ValueError(
+                    f"{self.event.value} actor must own "
+                    "the resulting phase"
+                )
+
+        elif self.event is TransitionEvent.CLINCH_BREAK:
+            if self.actor is not None:
+                raise ValueError(
+                    "clinch break actor is not modeled yet"
+                )
+
+        elif self.event in {
+            TransitionEvent.OWNERSHIP_CHANGE,
+            TransitionEvent.REVERSAL,
+        }:
+            if self.actor is None:
+                raise ValueError(
+                    f"{self.event.value} requires an actor"
+                )
+
+            if previous.phase_owner == next_state.phase_owner:
+                raise ValueError(
+                    f"{self.event.value} must change ownership"
+                )
+
+            if next_state.phase_owner is not self.actor:
+                raise ValueError(
+                    f"{self.event.value} actor must become "
+                    "the new phase owner"
+                )
+
+        elif self.event is TransitionEvent.GROUND_ESCAPE:
+            if previous.phase_owner is None:
+                raise ValueError(
+                    "ground escape requires a prior owner"
+                )
+
+            expected_actor = previous.phase_owner.opponent
+
+            if self.actor is not expected_actor:
+                raise ValueError(
+                    "ground escape actor must be the "
+                    "previous ground defender"
+                )
