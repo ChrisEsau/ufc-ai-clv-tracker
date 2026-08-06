@@ -383,6 +383,34 @@ def test_wilson_interval_respects_probability_bounds(
     assert selected.lower_bound <= selected.upper_bound
 
 
+def test_zero_success_wilson_lower_bound_is_exact_zero() -> None:
+    selected = ProbabilityEstimate(
+        count=0,
+        total=100,
+    )
+
+    assert selected.lower_bound == 0.0
+    assert (
+        selected.lower_bound
+        <= selected.probability
+        <= selected.upper_bound
+    )
+
+
+def test_all_success_wilson_upper_bound_is_exact_one() -> None:
+    selected = ProbabilityEstimate(
+        count=100,
+        total=100,
+    )
+
+    assert selected.upper_bound == 1.0
+    assert (
+        selected.lower_bound
+        <= selected.probability
+        <= selected.upper_bound
+    )
+
+
 def test_larger_population_produces_narrower_interval() -> None:
     small = ProbabilityEstimate(
         count=50,

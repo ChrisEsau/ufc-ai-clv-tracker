@@ -194,15 +194,28 @@ class ProbabilityEstimate:
             / denominator
         )
 
+        lower_bound = max(
+            0.0,
+            center - half_width,
+        )
+        upper_bound = min(
+            1.0,
+            center + half_width,
+        )
+
+        # Wilson endpoints are mathematically exact at
+        # zero successes and at an all-success population.
+        # Explicitly clamp them to avoid floating-point
+        # residue excluding the observed proportion.
+        if self.count == 0:
+            lower_bound = 0.0
+
+        if self.count == self.total:
+            upper_bound = 1.0
+
         return (
-            max(
-                0.0,
-                center - half_width,
-            ),
-            min(
-                1.0,
-                center + half_width,
-            ),
+            lower_bound,
+            upper_bound,
         )
 
 
