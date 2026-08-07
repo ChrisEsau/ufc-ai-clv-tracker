@@ -46,6 +46,13 @@ class DynamicAggregateRule(str, Enum):
     SUM = "sum"
 
 
+class DynamicAggregatePerspective(str, Enum):
+    """Which reciprocal fighter row supplies an aggregate."""
+
+    FIGHTER = "fighter"
+    OPPONENT = "opponent"
+
+
 class DynamicResponseFormula(str, Enum):
     """Locked formula category for one Dynamic Response feature."""
 
@@ -69,6 +76,7 @@ class DynamicResponseAggregateSpec:
     feature_name: str
     rule: DynamicAggregateRule
     source_column: str
+    perspective: DynamicAggregatePerspective
     description: str
 
     def __post_init__(self) -> None:
@@ -98,6 +106,15 @@ class DynamicResponseAggregateSpec:
         if not isinstance(self.source_column, str):
             raise TypeError(
                 "source_column must be a string"
+            )
+
+        if not isinstance(
+            self.perspective,
+            DynamicAggregatePerspective,
+        ):
+            raise TypeError(
+                "perspective must be "
+                "DynamicAggregatePerspective"
             )
 
         if (
@@ -236,6 +253,10 @@ def _aggregate(
     rule: DynamicAggregateRule,
     source_column: str,
     description: str,
+    *,
+    perspective: DynamicAggregatePerspective = (
+        DynamicAggregatePerspective.FIGHTER
+    ),
 ) -> DynamicResponseAggregateSpec:
     """Build one aggregate declaration."""
 
@@ -243,6 +264,7 @@ def _aggregate(
         feature_name=_name(suffix),
         rule=rule,
         source_column=source_column,
+        perspective=perspective,
         description=description,
     )
 
@@ -272,6 +294,9 @@ def _evidence(
 
 UNIQUE = DynamicAggregateRule.UNIQUE_COUNT
 SUM = DynamicAggregateRule.SUM
+
+FIGHTER = DynamicAggregatePerspective.FIGHTER
+OPPONENT = DynamicAggregatePerspective.OPPONENT
 
 SAFE_RATIO = DynamicResponseFormula.SAFE_RATIO
 PER_ROUND = DynamicResponseFormula.PER_OBSERVED_ROUND
@@ -352,41 +377,29 @@ DYNAMIC_RESPONSE_AGGREGATE_SPECS: tuple[
         "knockdowns_absorbed",
         SUM,
         "kd",
-        (
-            "Placeholder aggregate source used only after reciprocal "
-            "opponent assignment; the builder must populate this value "
-            "from the opponent's knockdowns."
-        ),
+        "Opponent knockdowns absorbed by the fighter.",
+        perspective=OPPONENT,
     ),
     _aggregate(
         "head_strikes_absorbed",
         SUM,
         "head_landed",
-        (
-            "Placeholder aggregate source used only after reciprocal "
-            "opponent assignment; the builder must populate this value "
-            "from the opponent's landed head strikes."
-        ),
+        "Opponent landed head strikes absorbed by the fighter.",
+        perspective=OPPONENT,
     ),
     _aggregate(
         "ground_strikes_absorbed",
         SUM,
         "ground_landed",
-        (
-            "Placeholder aggregate source used only after reciprocal "
-            "opponent assignment; the builder must populate this value "
-            "from the opponent's landed ground strikes."
-        ),
+        "Opponent landed ground strikes absorbed by the fighter.",
+        perspective=OPPONENT,
     ),
     _aggregate(
         "opponent_control_seconds",
         SUM,
         "ctrl_sec",
-        (
-            "Placeholder aggregate source used only after reciprocal "
-            "opponent assignment; the builder must populate this value "
-            "from the opponent's control seconds."
-        ),
+        "Opponent control seconds recorded against the fighter.",
+        perspective=OPPONENT,
     ),
 )
 

@@ -13,6 +13,7 @@ from pipeline.round_stats.rfs_dynamic_response_feature_contracts import (
     DYNAMIC_RESPONSE_PREFIX,
     DYNAMIC_RESPONSE_TARGET_EVIDENCE,
     DYNAMIC_RESPONSE_TARGETS,
+    DynamicAggregatePerspective,
     DynamicAggregateRule,
     DynamicResponseAggregateSpec,
     DynamicResponseEvidenceSpec,
@@ -135,6 +136,7 @@ def test_invalid_aggregate_contract_rejects_unknown_source() -> None:
             ),
             rule=DynamicAggregateRule.SUM,
             source_column="not_a_real_round_column",
+            perspective=DynamicAggregatePerspective.FIGHTER,
             description="Invalid source test.",
         )
 
