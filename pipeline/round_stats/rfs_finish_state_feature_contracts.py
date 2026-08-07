@@ -581,7 +581,7 @@ FINISH_STATE_EVIDENCE_SPECS: tuple[
             _name("distance_strikes_landed"),
         ),
         (_name("distance_strikes_landed"),),
-        unit_interval=True,
+        unit_interval=False,
         description=(
             "Knockdowns divided by landed distance strikes; this is "
             "a proxy because UFCStats does not identify knockdown phase."
@@ -624,7 +624,7 @@ FINISH_STATE_EVIDENCE_SPECS: tuple[
             _name("takedowns_landed"),
             _name("ground_strike_attempts"),
         ),
-        unit_interval=True,
+        unit_interval=False,
         description=(
             "Submission attempts divided by observable ground-entry "
             "and ground-activity opportunities."
