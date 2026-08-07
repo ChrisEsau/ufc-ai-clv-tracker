@@ -444,9 +444,9 @@ CALIBRATION_FAMILY_COMPRESSION = {
 # This is a shadow calibration experiment, not a production lock.
 # ---------------------------------------------------------------------------
 CALIBRATION_FAMILY_GAMMA = {
-    "direct_rate": 0.36,
-    "direct_probability": 1.15,
-    "transition_latent": 0.55,
+    "direct_rate": 1.00,
+    "direct_probability": 1.00,
+    "transition_latent": 1.00,
 
     # Held linear pending stronger evidence.
     "phase_control": 1.00,
