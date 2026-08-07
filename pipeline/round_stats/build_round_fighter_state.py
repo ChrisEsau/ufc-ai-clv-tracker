@@ -22,6 +22,19 @@ import re
 
 import pandas as pd
 
+from pipeline.round_stats.build_round_fighter_phase_baseline import (
+    build_round_fighter_phase_baseline,
+)
+from pipeline.round_stats.build_round_fighter_phase_interaction import (
+    build_round_fighter_phase_interaction,
+)
+from pipeline.round_stats.build_round_fighter_dynamic_response import (
+    build_round_fighter_dynamic_response,
+)
+from pipeline.round_stats.build_round_fighter_finish_state import (
+    build_round_fighter_finish_state,
+)
+
 from pipeline.common.fight_time import repair_elapsed_match_time
 from pipeline.round_stats.round_state_formulas import (
     late_diff,
@@ -956,13 +969,256 @@ def build_latest_round_fighter_state(history_df: pd.DataFrame) -> pd.DataFrame:
 
     return latest_df
 
+
+RFS_FAMILY_PREFIXES = (
+    "rfs_phase_base_",
+    "rfs_phase_interact_",
+    "rfs_dynamic_response_",
+    "rfs_finish_state_",
+)
+
+
+def _family_feature_columns(
+    df: pd.DataFrame,
+    prefix: str,
+) -> list[str]:
+    """Return only feature columns owned by one RFS family."""
+
+    columns = [
+        column
+        for column in df.columns
+        if column.startswith(prefix)
+    ]
+
+    if not columns:
+        raise RoundFighterStateBuildError(
+            f"RFS family output has no columns using prefix: {prefix}"
+        )
+
+    return columns
+
+
+def _merge_rfs_family(
+    base_df: pd.DataFrame,
+    family_df: pd.DataFrame,
+    *,
+    keys: list[str],
+    prefix: str,
+    label: str,
+) -> pd.DataFrame:
+    """Merge one family without importing duplicate metadata columns."""
+
+    missing_base_keys = [
+        key for key in keys
+        if key not in base_df.columns
+    ]
+    missing_family_keys = [
+        key for key in keys
+        if key not in family_df.columns
+    ]
+
+    if missing_base_keys:
+        raise RoundFighterStateBuildError(
+            f"{label} base output is missing merge keys: "
+            f"{missing_base_keys}"
+        )
+
+    if missing_family_keys:
+        raise RoundFighterStateBuildError(
+            f"{label} family output is missing merge keys: "
+            f"{missing_family_keys}"
+        )
+
+    base_duplicates = int(
+        base_df.duplicated(subset=keys).sum()
+    )
+    family_duplicates = int(
+        family_df.duplicated(subset=keys).sum()
+    )
+
+    if base_duplicates:
+        raise RoundFighterStateBuildError(
+            f"{label} base output has duplicate merge keys: "
+            f"{base_duplicates}"
+        )
+
+    if family_duplicates:
+        raise RoundFighterStateBuildError(
+            f"{label} family output has duplicate merge keys: "
+            f"{family_duplicates}"
+        )
+
+    feature_columns = _family_feature_columns(
+        family_df,
+        prefix,
+    )
+
+    collisions = sorted(
+        set(feature_columns).intersection(base_df.columns)
+    )
+
+    if collisions:
+        raise RoundFighterStateBuildError(
+            f"{label} feature-column collisions detected: "
+            f"{collisions}"
+        )
+
+    family_subset = family_df[
+        [*keys, *feature_columns]
+    ].copy()
+
+    original_row_count = len(base_df)
+
+    merged = base_df.merge(
+        family_subset,
+        on=keys,
+        how="left",
+        validate="one_to_one",
+    )
+
+    if len(merged) != original_row_count:
+        raise RoundFighterStateBuildError(
+            f"{label} merge changed row count from "
+            f"{original_row_count} to {len(merged)}"
+        )
+
+    unmatched_count = int(
+        merged[feature_columns]
+        .isna()
+        .all(axis=1)
+        .sum()
+    )
+
+    if unmatched_count:
+        raise RoundFighterStateBuildError(
+            f"{label} merge left {unmatched_count} unmatched rows"
+        )
+
+    return merged
+
+
+def _read_finish_state_outcomes(
+    master_path: str | Path,
+) -> pd.DataFrame:
+    """Read the authoritative outcome fields required by Finish State."""
+
+    path = Path(master_path)
+
+    if not path.exists():
+        raise RoundFighterStateBuildError(
+            f"Master outcome input not found: {path}"
+        )
+
+    required_columns = [
+        "fight_id",
+        "winner",
+        "winner_id",
+        "method",
+        "finish_round",
+    ]
+
+    outcomes = pd.read_parquet(
+        path,
+        columns=required_columns,
+    )
+
+    missing_columns = [
+        column
+        for column in required_columns
+        if column not in outcomes.columns
+    ]
+
+    if missing_columns:
+        raise RoundFighterStateBuildError(
+            "Master outcome input is missing columns: "
+            f"{missing_columns}"
+        )
+
+    return outcomes
+
+
 def build_round_fighter_state(
     round_stats_path: str | Path = ROUND_STATS_PATH,
+    master_path: str | Path = MASTER_PATH,
 ) -> RoundFighterStateBuildResult:
-    """Build history and latest Round Fighter State artifacts."""
-    round_stats_df = read_round_stats(round_stats_path)
-    history_df = build_round_fighter_state_history(round_stats_df)
-    latest_df = build_latest_round_fighter_state(history_df)
+    """Build the shared leakage-safe Round Fighter State artifacts."""
+
+    round_stats_df = read_round_stats(
+        round_stats_path
+    )
+
+    # Legacy trajectory/opening state remains the authoritative
+    # metadata and row-grain foundation for the shared artifact.
+    history_df = build_round_fighter_state_history(
+        round_stats_df
+    )
+    latest_df = build_latest_round_fighter_state(
+        history_df
+    )
+
+    phase_baseline = (
+        build_round_fighter_phase_baseline(
+            round_stats_df
+        )
+    )
+    phase_interaction = (
+        build_round_fighter_phase_interaction(
+            round_stats_df
+        )
+    )
+    dynamic_response = (
+        build_round_fighter_dynamic_response(
+            round_stats_df
+        )
+    )
+
+    outcomes_df = _read_finish_state_outcomes(
+        master_path
+    )
+    finish_state = build_round_fighter_finish_state(
+        round_stats_df,
+        outcomes_df,
+    )
+
+    families = (
+        (
+            "Phase Baseline",
+            "rfs_phase_base_",
+            phase_baseline,
+        ),
+        (
+            "Phase Interaction",
+            "rfs_phase_interact_",
+            phase_interaction,
+        ),
+        (
+            "Dynamic Response",
+            "rfs_dynamic_response_",
+            dynamic_response,
+        ),
+        (
+            "Finish State",
+            "rfs_finish_state_",
+            finish_state,
+        ),
+    )
+
+    for label, prefix, result in families:
+        history_df = _merge_rfs_family(
+            history_df,
+            result.history,
+            keys=["fight_id", "fighter_id"],
+            prefix=prefix,
+            label=f"{label} history",
+        )
+
+        latest_df = _merge_rfs_family(
+            latest_df,
+            result.latest,
+            keys=["fighter_id"],
+            prefix=prefix,
+            label=f"{label} latest",
+        )
 
     return RoundFighterStateBuildResult(
         history_df=history_df,
