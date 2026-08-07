@@ -1526,7 +1526,7 @@
   "dispatched_runbooks": [],
   "due_runbooks": [],
   "errors": [],
-  "last_checked_at": "2026-08-07T21:41:22.584237+00:00",
+  "last_checked_at": "2026-08-07T22:38:57.204403+00:00",
   "next_due_runbook": {
     "catchup_grace_minutes": 180,
     "display_name": "Fight Day Monitor",
@@ -1546,7 +1546,7 @@
         "model_mode": "production",
         "snapshot_model_mode": "production"
       },
-      "minutes_late": 821.38,
+      "minutes_late": 878.95,
       "reason": "already_dispatched",
       "runbook_id": "market_refresh_v2",
       "scheduled_at_local": "2026-08-07T03:00:00-05:00",
@@ -1563,7 +1563,7 @@
         "model_mode": "production",
         "snapshot_model_mode": "production"
       },
-      "minutes_late": 101.38,
+      "minutes_late": 158.95,
       "reason": "already_dispatched",
       "runbook_id": "market_refresh_v2",
       "scheduled_at_local": "2026-08-07T15:00:00-05:00",
@@ -1573,5 +1573,5 @@
   ],
   "status": "completed",
   "timezone": "America/Chicago",
-  "updated_at": "2026-08-07T21:41:22.591246+00:00"
+  "updated_at": "2026-08-07T22:38:57.224105+00:00"
 }
