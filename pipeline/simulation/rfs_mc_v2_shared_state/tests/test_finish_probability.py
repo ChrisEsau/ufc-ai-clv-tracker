@@ -1717,3 +1717,44 @@ def test_segment_finish_calculation_requires_calibration() -> None:
             phase_parameters(),
             "invalid",
         )
+
+
+def test_attacker_power_scales_only_generic_landed_ko_hazard() -> None:
+    """Power decay scales landed conversion without double-scaling KD bonus."""
+
+    activity = distance_activity(
+        red_landed=1,
+        red_knockdowns=1,
+    )
+
+    calibration = knockout_calibration(
+        distance_landed_probability=0.10,
+        distance_knockdown_probability=0.20,
+        maximum_segment_probability=1.0,
+    )
+
+    full_power = calculate_knockout_finish_probability(
+        activity,
+        FighterSide.RED,
+        fighter_state(),
+        calibration,
+        attacker_power_multiplier=1.0,
+    )
+
+    half_power = calculate_knockout_finish_probability(
+        activity,
+        FighterSide.RED,
+        fighter_state(),
+        calibration,
+        attacker_power_multiplier=0.5,
+    )
+
+    # Full power:
+    #   1 - (1 - 0.10) * (1 - 0.20) = 0.28
+    #
+    # Half power:
+    #   landed hazard becomes 0.05
+    #   KD bonus remains 0.20
+    #   1 - (1 - 0.05) * (1 - 0.20) = 0.24
+    assert full_power == pytest.approx(0.28)
+    assert half_power == pytest.approx(0.24)

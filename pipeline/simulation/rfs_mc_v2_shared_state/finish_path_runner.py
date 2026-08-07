@@ -49,6 +49,7 @@ from pipeline.simulation.rfs_mc_v2_shared_state.dynamic_transition_effect_calibr
 )
 from pipeline.simulation.rfs_mc_v2_shared_state.effective_phase_parameters import (
     build_effective_phase_parameters,
+    calculate_capability_multipliers,
 )
 from pipeline.simulation.rfs_mc_v2_shared_state.effective_transition_parameters import (
     build_effective_transition_parameters,
@@ -183,6 +184,25 @@ def run_finish_enabled_dynamic_path(
 
             dynamic_state_before = current_dynamic_state
 
+            # Resolve the same live capability multipliers used to build
+            # temporary effective phase parameters. Finish conversion needs
+            # the attacker's current power separately so generic landed-
+            # strike KO hazard decays with finishing potency.
+            red_capability_multipliers = (
+                calculate_capability_multipliers(
+                    dynamic_state_before.red,
+                    red_dynamic_parameters,
+                    phase_effect_calibration,
+                )
+            )
+            blue_capability_multipliers = (
+                calculate_capability_multipliers(
+                    dynamic_state_before.blue,
+                    blue_dynamic_parameters,
+                    phase_effect_calibration,
+                )
+            )
+
             red_effective_phase = (
                 build_effective_phase_parameters(
                     red_phase_baseline,
@@ -231,6 +251,12 @@ def run_finish_enabled_dynamic_path(
                     red_effective_phase,
                     blue_effective_phase,
                     finish_probability_calibration,
+                    red_power_multiplier=(
+                        red_capability_multipliers.power
+                    ),
+                    blue_power_multiplier=(
+                        blue_capability_multipliers.power
+                    ),
                 )
             )
 

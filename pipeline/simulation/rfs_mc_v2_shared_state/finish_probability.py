@@ -235,6 +235,8 @@ def calculate_knockout_finish_probability(
     attacker: FighterSide,
     defender_state: FighterDynamicState,
     calibration: KnockoutFinishCalibration,
+    *,
+    attacker_power_multiplier: float = 1.0,
 ) -> float:
     """Calculate one fighter's KO/TKO probability for the segment."""
 
@@ -274,6 +276,11 @@ def calculate_knockout_finish_probability(
             "calibration must be KnockoutFinishCalibration"
         )
 
+    selected_attacker_power_multiplier = _validate_probability(
+        "attacker_power_multiplier",
+        attacker_power_multiplier,
+    )
+
     fighter_activity = (
         activity.red
         if attacker is FighterSide.RED
@@ -289,7 +296,10 @@ def calculate_knockout_finish_probability(
                 (
                     (
                         fighter_activity.sig_str_landed,
-                        calibration.distance_landed_probability,
+                        (
+                            calibration.distance_landed_probability
+                            * selected_attacker_power_multiplier
+                        ),
                     ),
                     (
                         fighter_activity.knockdowns,
@@ -308,7 +318,10 @@ def calculate_knockout_finish_probability(
                 (
                     (
                         fighter_activity.clinch_str_landed,
-                        calibration.clinch_landed_probability,
+                        (
+                            calibration.clinch_landed_probability
+                            * selected_attacker_power_multiplier
+                        ),
                     ),
                     (
                         fighter_activity.damaging_clinch_strikes,
@@ -327,7 +340,10 @@ def calculate_knockout_finish_probability(
                 (
                     (
                         fighter_activity.ground_str_landed,
-                        calibration.ground_landed_probability,
+                        (
+                            calibration.ground_landed_probability
+                            * selected_attacker_power_multiplier
+                        ),
                     ),
                 )
             )
@@ -476,6 +492,9 @@ def calculate_segment_finish_probabilities(
     red_effective_phase: FighterPhaseParameters,
     blue_effective_phase: FighterPhaseParameters,
     calibration: FinishProbabilityCalibration,
+    *,
+    red_power_multiplier: float = 1.0,
+    blue_power_multiplier: float = 1.0,
 ) -> SegmentFinishProbabilities:
     """Calculate deterministic finish probabilities for one segment."""
 
@@ -528,12 +547,14 @@ def calculate_segment_finish_probabilities(
         FighterSide.RED,
         dynamic_state.blue,
         calibration.knockout,
+        attacker_power_multiplier=red_power_multiplier,
     )
     blue_knockout = calculate_knockout_finish_probability(
         activity,
         FighterSide.BLUE,
         dynamic_state.red,
         calibration.knockout,
+        attacker_power_multiplier=blue_power_multiplier,
     )
 
     red_submission = 0.0
