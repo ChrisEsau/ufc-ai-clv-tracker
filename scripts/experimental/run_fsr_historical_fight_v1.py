@@ -65,7 +65,7 @@ from pipeline.simulation.rfs_mc_v2_shared_state.transition_parameters import (
     FighterTransitionParameters,
 )
 
-from scripts.calibrate_rfs_mc_v2_power_decay_v1 import (
+from scripts.calibrate_rfs_mc_v2_dynamic_adversity_v2 import (
     Candidate,
     V1_KNOCKDOWN_BONUS_HAZARD,
     V1_LANDED_KO_HAZARD,
