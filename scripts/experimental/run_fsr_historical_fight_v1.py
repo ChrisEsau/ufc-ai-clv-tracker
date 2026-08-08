@@ -497,14 +497,13 @@ def load_power_card(
     fight_id: str,
     fighter_id: str,
 ) -> dict[str, float]:
-    """Read latest V1.1 POST power/durability state."""
+    """Read authoritative V1.2 PRE-target power/chin/absorption card."""
 
-    # The V1.1 script intentionally retained this historical filename.
     path = (
         OUTPUT_DIR
         / (
             f"fsr_{fight_id}"
-            "_power_durability_v1_history.csv"
+            "_power_chin_absorption_v1_2_target_card.csv"
         )
     )
 
@@ -515,13 +514,8 @@ def load_power_card(
         .astype(str)
     )
 
-    df["event_date"] = pd.to_datetime(
-        df["event_date"]
-    )
-
     rows = df.loc[
-        df["fighter_id"]
-        == fighter_id
+        df["fighter_id"] == fighter_id
     ].copy()
 
     if rows.empty:
@@ -531,26 +525,23 @@ def load_power_card(
             "damage_absorption": 50.0,
         }
 
-    row = (
-        rows
-        .sort_values(
-            [
-                "event_date",
-                "fight_id",
-            ]
+    if len(rows) != 1:
+        raise RuntimeError(
+            "Expected exactly one V1.2 target-card row for "
+            f"fighter {fighter_id}; found {len(rows)}"
         )
-        .iloc[-1]
-    )
+
+    row = rows.iloc[0]
 
     return {
         "finishing_power": float(
-            row["finishing_power_post"]
+            row["finishing_power"]
         ),
         "chin_resistance": float(
-            row["chin_resistance_post"]
+            row["chin_resistance"]
         ),
         "damage_absorption": float(
-            row["damage_absorption_post"]
+            row["damage_absorption"]
         ),
     }
 
@@ -562,7 +553,7 @@ def build_full_card(
     dict[str, float],
     int,
 ]:
-    """Combine 9-skill FSR V0 with V1.1 power/durability."""
+    """Combine 9-skill FSR V0 with V1.2 power/chin/absorption."""
 
     card, fight_count = (
         load_v0_card(
@@ -839,11 +830,11 @@ def build_phase(
                     "finishing_power"
                 ]
             ),
-            defense_rating=(
-                opponent[
-                    "damage_resistance"
-                ]
-            ),
+            # V1.2: knockdown generation is driven by offensive
+            # finishing power. Defender chin is reserved for subsequent
+            # KO/TKO conversion, while damage_absorption is cumulative-
+            # damage tolerance and should not affect acute knockdowns.
+            defense_rating=50.0,
         )
     )
 
@@ -954,7 +945,7 @@ def build_phase(
 def build_dynamic(
     fighter: dict[str, float],
 ) -> FighterDynamicParameters:
-    """Use FSR durability; other dynamic traits remain neutral in V1.1."""
+    """Use V1.2 damage absorption; other dynamic traits remain neutral."""
 
     return FighterDynamicParameters(
         fatigue_accumulation_resistance=0.50,
@@ -1197,12 +1188,32 @@ def run_population_diagnostics(
         "blue_intrinsic_power_multiplier" in path_signature.parameters
     )
 
+    supports_intrinsic_chin = (
+        "red_intrinsic_ko_vulnerability_multiplier"
+        in path_signature.parameters
+        and
+        "blue_intrinsic_ko_vulnerability_multiplier"
+        in path_signature.parameters
+    )
+
     red_intrinsic = intrinsic_power_multiplier(
         red_card["finishing_power"]
     )
 
     blue_intrinsic = intrinsic_power_multiplier(
         blue_card["finishing_power"]
+    )
+
+    red_ko_vulnerability = (
+        intrinsic_ko_vulnerability_multiplier(
+            red_card["chin_resistance"]
+        )
+    )
+
+    blue_ko_vulnerability = (
+        intrinsic_ko_vulnerability_multiplier(
+            blue_card["chin_resistance"]
+        )
     )
 
     # -------------------------------------------------------------------------
@@ -1226,6 +1237,16 @@ def run_population_diagnostics(
             kwargs.update(
                 red_intrinsic_power_multiplier=red_intrinsic,
                 blue_intrinsic_power_multiplier=blue_intrinsic,
+            )
+
+        if supports_intrinsic_chin:
+            kwargs.update(
+                red_intrinsic_ko_vulnerability_multiplier=(
+                    red_ko_vulnerability
+                ),
+                blue_intrinsic_ko_vulnerability_multiplier=(
+                    blue_ko_vulnerability
+                ),
             )
 
         path_result = run_finish_enabled_dynamic_path(
@@ -2468,7 +2489,7 @@ def main() -> None:
 
     print()
     print("=" * 100)
-    print("FSR V1.1 -> MC V2 MATCHUP PARAMETERS")
+    print("FSR V1.2 -> MC V2 MATCHUP PARAMETERS")
     print("=" * 100)
 
     print_matchup_parameters(
@@ -2559,6 +2580,22 @@ def main() -> None:
                 intrinsic_power_multiplier(
                     blue_card[
                         "finishing_power"
+                    ]
+                )
+            ),
+
+            red_intrinsic_ko_vulnerability_multiplier=(
+                intrinsic_ko_vulnerability_multiplier(
+                    red_card[
+                        "chin_resistance"
+                    ]
+                )
+            ),
+
+            blue_intrinsic_ko_vulnerability_multiplier=(
+                intrinsic_ko_vulnerability_multiplier(
+                    blue_card[
+                        "chin_resistance"
                     ]
                 )
             ),

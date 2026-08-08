@@ -1969,6 +1969,9 @@ print(
 print("=" * 100)
 
 
+target_card_rows = []
+
+
 for fighter_id in target_ids:
 
     name = target_names[
@@ -2016,6 +2019,17 @@ for fighter_id in target_ids:
         ),
     )
 
+    target_card_rows.append(
+        {
+            "fighter_id": fighter_id,
+            "fighter_name": name,
+            "prior_ufc_fights": fight_counts[fighter_id],
+            "finishing_power": power[fighter_id],
+            "chin_resistance": target_chin,
+            "damage_absorption": damage_absorption[fighter_id],
+        }
+    )
+
 
 # =============================================================================
 # Audit artifact
@@ -2025,6 +2039,26 @@ OUTPUT_DIR.mkdir(
     parents=True,
     exist_ok=True,
 )
+
+
+target_card_path = (
+    OUTPUT_DIR
+    / (
+        f"fsr_{TARGET_FIGHT_ID}"
+        "_power_chin_absorption_v1_2_target_card.csv"
+    )
+)
+
+pd.DataFrame(
+    target_card_rows
+).to_csv(
+    target_card_path,
+    index=False,
+)
+
+print()
+print("Saved V1.2 target pre-fight card:")
+print(target_card_path)
 
 
 output_path = (
