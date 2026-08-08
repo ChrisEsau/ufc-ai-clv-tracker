@@ -96,6 +96,10 @@ POWER_SCRIPT = Path(
     "scripts/experimental/fsr_power_durability_v1_2.py"
 )
 
+CARDIO_SCRIPT = Path(
+    "scripts/experimental/fsr_cardio_v1.py"
+)
+
 
 # =============================================================================
 # Adapter controls -- frozen from current FSR experiment
@@ -395,6 +399,11 @@ def run_rating_builders(
             str(POWER_SCRIPT),
             fight_id,
         ],
+        [
+            sys.executable,
+            str(CARDIO_SCRIPT),
+            fight_id,
+        ],
     ]
 
     for command in commands:
@@ -546,6 +555,69 @@ def load_power_card(
     }
 
 
+def load_cardio_card(
+    fight_id: str,
+    fighter_id: str,
+) -> dict[str, float]:
+    """Read authoritative leakage-safe FSR Cardio V1 target card."""
+
+    path = (
+        OUTPUT_DIR
+        / f"fsr_{fight_id}_cardio_v1_target_card.csv"
+    )
+
+    df = pd.read_csv(path)
+
+    df["fighter_id"] = (
+        df["fighter_id"]
+        .astype(str)
+    )
+
+    rows = df.loc[
+        df["fighter_id"] == fighter_id
+    ].copy()
+
+    if rows.empty:
+        # Neutral fallback preserves the existing benchmark behavior.
+        return {
+            "fatigue_accumulation_resistance_engine": 0.50,
+            "fatigue_performance_resilience_engine": 0.50,
+            "recovery_ability_engine": 0.50,
+            "fatigue_accumulation_resistance_rating": 50.0,
+            "fatigue_performance_resilience_rating": 50.0,
+            "recovery_ability_rating": 50.0,
+        }
+
+    if len(rows) != 1:
+        raise RuntimeError(
+            "Expected exactly one FSR Cardio V1 target-card row for "
+            f"fighter {fighter_id}; found {len(rows)}"
+        )
+
+    row = rows.iloc[0]
+
+    return {
+        "fatigue_accumulation_resistance_engine": float(
+            row["fatigue_accumulation_resistance_engine"]
+        ),
+        "fatigue_performance_resilience_engine": float(
+            row["fatigue_performance_resilience_engine"]
+        ),
+        "recovery_ability_engine": float(
+            row["recovery_ability_engine"]
+        ),
+        "fatigue_accumulation_resistance_rating": float(
+            row["fatigue_accumulation_resistance_rating"]
+        ),
+        "fatigue_performance_resilience_rating": float(
+            row["fatigue_performance_resilience_rating"]
+        ),
+        "recovery_ability_rating": float(
+            row["recovery_ability_rating"]
+        ),
+    }
+
+
 def build_full_card(
     fight_id: str,
     fighter_id: str,
@@ -564,6 +636,13 @@ def build_full_card(
 
     card.update(
         load_power_card(
+            fight_id,
+            fighter_id,
+        )
+    )
+
+    card.update(
+        load_cardio_card(
             fight_id,
             fighter_id,
         )
@@ -945,12 +1024,24 @@ def build_phase(
 def build_dynamic(
     fighter: dict[str, float],
 ) -> FighterDynamicParameters:
-    """Use V1.2 damage absorption; other dynamic traits remain neutral."""
+    """Use FSR cardio plus V1.2 damage absorption dynamic traits."""
 
     return FighterDynamicParameters(
-        fatigue_accumulation_resistance=0.50,
-        fatigue_performance_resilience=0.50,
-        recovery_ability=0.50,
+        fatigue_accumulation_resistance=(
+            fighter[
+                "fatigue_accumulation_resistance_engine"
+            ]
+        ),
+        fatigue_performance_resilience=(
+            fighter[
+                "fatigue_performance_resilience_engine"
+            ]
+        ),
+        recovery_ability=(
+            fighter[
+                "recovery_ability_engine"
+            ]
+        ),
 
         damage_resistance=(
             normalized_skill(
@@ -987,6 +1078,9 @@ def print_card(
             "finishing_power",
             "chin_resistance",
             "damage_absorption",
+            "fatigue_accumulation_resistance_rating",
+            "fatigue_performance_resilience_rating",
+            "recovery_ability_rating",
         ]
     ):
         print(
