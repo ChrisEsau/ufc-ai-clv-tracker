@@ -101,6 +101,10 @@ def run_finish_enabled_dynamic_path(
     finish_probability_calibration: FinishProbabilityCalibration,
     scheduled_rounds: int,
     seed: int,
+    red_intrinsic_power_multiplier: float = 1.0,
+    blue_intrinsic_power_multiplier: float = 1.0,
+    red_intrinsic_ko_vulnerability_multiplier: float = 1.0,
+    blue_intrinsic_ko_vulnerability_multiplier: float = 1.0,
     shared_path_calibration: SharedPathCalibration | None = None,
 ) -> FinishEnabledDynamicPath:
     """Generate one dynamic fight path that stops at a sampled finish."""
@@ -252,10 +256,18 @@ def run_finish_enabled_dynamic_path(
                     blue_effective_phase,
                     finish_probability_calibration,
                     red_power_multiplier=(
-                        red_capability_multipliers.power
+                        red_intrinsic_power_multiplier
+                        * red_capability_multipliers.power
                     ),
                     blue_power_multiplier=(
-                        blue_capability_multipliers.power
+                        blue_intrinsic_power_multiplier
+                        * blue_capability_multipliers.power
+                    ),
+                    red_ko_vulnerability_multiplier=(
+                        red_intrinsic_ko_vulnerability_multiplier
+                    ),
+                    blue_ko_vulnerability_multiplier=(
+                        blue_intrinsic_ko_vulnerability_multiplier
                     ),
                 )
             )

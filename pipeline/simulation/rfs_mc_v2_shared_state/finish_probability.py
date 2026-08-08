@@ -82,6 +82,35 @@ def _validate_probability(
     return selected
 
 
+def _validate_nonnegative_multiplier(
+    name: str,
+    value: float,
+) -> float:
+    """Validate a finite nonnegative multiplicative factor.
+
+    Unlike probabilities, power multipliers may legally exceed 1.0.
+    """
+
+    if not isinstance(value, (int, float)):
+        raise TypeError(
+            f"{name} must be numeric"
+        )
+
+    selected = float(value)
+
+    if not math.isfinite(selected):
+        raise ValueError(
+            f"{name} must be finite"
+        )
+
+    if selected < 0.0:
+        raise ValueError(
+            f"{name} cannot be negative"
+        )
+
+    return selected
+
+
 @dataclass(frozen=True)
 class FighterSegmentFinishProbabilities:
     """Method-specific finish probabilities for one fighter."""
@@ -237,6 +266,7 @@ def calculate_knockout_finish_probability(
     calibration: KnockoutFinishCalibration,
     *,
     attacker_power_multiplier: float = 1.0,
+    defender_ko_vulnerability_multiplier: float = 1.0,
 ) -> float:
     """Calculate one fighter's KO/TKO probability for the segment."""
 
@@ -276,9 +306,19 @@ def calculate_knockout_finish_probability(
             "calibration must be KnockoutFinishCalibration"
         )
 
-    selected_attacker_power_multiplier = _validate_probability(
-        "attacker_power_multiplier",
-        attacker_power_multiplier,
+    selected_attacker_power_multiplier = (
+        _validate_nonnegative_multiplier(
+            "attacker_power_multiplier",
+            attacker_power_multiplier,
+        )
+    )
+
+
+    selected_defender_ko_vulnerability_multiplier = (
+        _validate_nonnegative_multiplier(
+            "defender_ko_vulnerability_multiplier",
+            defender_ko_vulnerability_multiplier,
+        )
     )
 
     fighter_activity = (
@@ -297,8 +337,11 @@ def calculate_knockout_finish_probability(
                     (
                         fighter_activity.sig_str_landed,
                         (
-                            calibration.distance_landed_probability
-                            * selected_attacker_power_multiplier
+                            min(
+                                1.0,
+                                calibration.distance_landed_probability
+                                * selected_attacker_power_multiplier,
+                            )
                         ),
                     ),
                     (
@@ -319,8 +362,11 @@ def calculate_knockout_finish_probability(
                     (
                         fighter_activity.clinch_str_landed,
                         (
-                            calibration.clinch_landed_probability
-                            * selected_attacker_power_multiplier
+                            min(
+                                1.0,
+                                calibration.clinch_landed_probability
+                                * selected_attacker_power_multiplier,
+                            )
                         ),
                     ),
                     (
@@ -341,8 +387,11 @@ def calculate_knockout_finish_probability(
                     (
                         fighter_activity.ground_str_landed,
                         (
-                            calibration.ground_landed_probability
-                            * selected_attacker_power_multiplier
+                            min(
+                                1.0,
+                                calibration.ground_landed_probability
+                                * selected_attacker_power_multiplier,
+                            )
                         ),
                     ),
                 )
@@ -369,7 +418,11 @@ def calculate_knockout_finish_probability(
 
     return min(
         calibration.maximum_segment_probability,
-        event_probability * state_amplifier,
+        (
+            event_probability
+            * selected_defender_ko_vulnerability_multiplier
+            * state_amplifier
+        ),
     )
 
 
@@ -495,6 +548,8 @@ def calculate_segment_finish_probabilities(
     *,
     red_power_multiplier: float = 1.0,
     blue_power_multiplier: float = 1.0,
+    red_ko_vulnerability_multiplier: float = 1.0,
+    blue_ko_vulnerability_multiplier: float = 1.0,
 ) -> SegmentFinishProbabilities:
     """Calculate deterministic finish probabilities for one segment."""
 
@@ -548,6 +603,9 @@ def calculate_segment_finish_probabilities(
         dynamic_state.blue,
         calibration.knockout,
         attacker_power_multiplier=red_power_multiplier,
+        defender_ko_vulnerability_multiplier=(
+            blue_ko_vulnerability_multiplier
+        ),
     )
     blue_knockout = calculate_knockout_finish_probability(
         activity,
@@ -555,6 +613,9 @@ def calculate_segment_finish_probabilities(
         dynamic_state.red,
         calibration.knockout,
         attacker_power_multiplier=blue_power_multiplier,
+        defender_ko_vulnerability_multiplier=(
+            red_ko_vulnerability_multiplier
+        ),
     )
 
     red_submission = 0.0

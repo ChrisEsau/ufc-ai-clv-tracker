@@ -205,6 +205,10 @@ def run_matchup_monte_carlo(
     simulation_count: int,
     seed_start: int,
     scheduled_rounds: int,
+    red_intrinsic_power_multiplier: float = 1.0,
+    blue_intrinsic_power_multiplier: float = 1.0,
+    red_intrinsic_ko_vulnerability_multiplier: float = 1.0,
+    blue_intrinsic_ko_vulnerability_multiplier: float = 1.0,
     scoring_calibration: RoundScoringCalibration | None = None,
     variability_calibration: JudgeVariabilityCalibration | None = None,
     shared_path_calibration: SharedPathCalibration | None = None,
@@ -304,6 +308,18 @@ def run_matchup_monte_carlo(
             ),
             scheduled_rounds=scheduled_rounds,
             seed=seed,
+            red_intrinsic_power_multiplier=(
+                red_intrinsic_power_multiplier
+            ),
+            blue_intrinsic_power_multiplier=(
+                blue_intrinsic_power_multiplier
+            ),
+            red_intrinsic_ko_vulnerability_multiplier=(
+                red_intrinsic_ko_vulnerability_multiplier
+            ),
+            blue_intrinsic_ko_vulnerability_multiplier=(
+                blue_intrinsic_ko_vulnerability_multiplier
+            ),
             shared_path_calibration=(
                 shared_path_calibration
             ),
