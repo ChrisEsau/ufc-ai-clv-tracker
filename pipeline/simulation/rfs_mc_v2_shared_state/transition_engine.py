@@ -1,10 +1,8 @@
 """Shared transition-probability engine for RFS Monte Carlo V2.
 
-Milestone 2A implements only transitions from the distance phase.
-
 The engine produces one normalized probability distribution shared by both
 fighters. It does not sample the transition or generate fight activity.
-Dynamic fighter state is intentionally excluded from this milestone.
+Dynamic fighter state is intentionally excluded from this module.
 """
 
 from __future__ import annotations
@@ -215,23 +213,72 @@ def _clinch_entry_score(
     )
 
 
-def _takedown_score(
+def _takedown_propensity_score(
+    attacker: FighterTransitionParameters,
+) -> float:
+    """Return the attacker's willingness to create takedown opportunities."""
+
+    return (
+        0.60 * attacker.takedown_entry_tendency
+        + 0.25 * attacker.takedown_persistence
+        + 0.15 * attacker.failed_takedown_persistence
+    )
+
+
+def _takedown_propensity_multiplier(
+    attacker: FighterTransitionParameters,
+) -> float:
+    """Scale takedown opportunity while preserving neutral calibration.
+
+    Neutral propensity (0.5) maps to 1.0, zero propensity maps to 0.0, and
+    maximal propensity maps to 2.0. This keeps neutral base weights unchanged
+    while allowing true low-use wrestlers to approach zero takedown probability.
+    """
+
+    return 2.0 * _takedown_propensity_score(attacker)
+
+
+def _takedown_conversion_score(
     attacker: FighterTransitionParameters,
     defender: FighterTransitionParameters,
 ) -> float:
-    """Calculate one fighter's distance-to-ground matchup score."""
+    """Calculate success quality conditional on takedown initiation."""
 
     return (
-        0.25 * attacker.takedown_entry_tendency
-        + 0.20 * attacker.takedown_completion_ability
-        + 0.15 * attacker.takedown_persistence
-        + 0.10 * attacker.failed_takedown_persistence
-        + 0.15 * attacker.phase_imposition
-        + 0.10 * (
+        0.45 * attacker.takedown_completion_ability
+        + 0.20 * attacker.phase_imposition
+        + 0.25 * (
             1.0 - defender.takedown_resistance
         )
-        + 0.05 * (
+        + 0.10 * (
             1.0 - defender.phase_resistance
+        )
+    )
+
+
+def _takedown_weight(
+    attacker: FighterTransitionParameters,
+    defender: FighterTransitionParameters,
+    *,
+    base_weight: float,
+    strength: float,
+) -> float:
+    """Return one completed-takedown transition weight.
+
+    A completed takedown requires both initiation propensity and a favorable
+    conversion matchup. Multiplication prevents conversion skill from creating
+    a takedown floor for fighters with near-zero wrestling propensity.
+    """
+
+    return (
+        base_weight
+        * _takedown_propensity_multiplier(attacker)
+        * _matchup_multiplier(
+            _takedown_conversion_score(
+                attacker,
+                defender,
+            ),
+            strength=strength,
         )
     )
 
@@ -287,18 +334,20 @@ def build_distance_transition_distribution(
         (
             TransitionEvent.TAKEDOWN,
             FighterSide.RED,
-            selected_calibration.takedown_base_weight
-            * _matchup_multiplier(
-                _takedown_score(red, blue),
+            _takedown_weight(
+                red,
+                blue,
+                base_weight=selected_calibration.takedown_base_weight,
                 strength=strength,
             ),
         ),
         (
             TransitionEvent.TAKEDOWN,
             FighterSide.BLUE,
-            selected_calibration.takedown_base_weight
-            * _matchup_multiplier(
-                _takedown_score(blue, red),
+            _takedown_weight(
+                blue,
+                red,
+                base_weight=selected_calibration.takedown_base_weight,
                 strength=strength,
             ),
         ),
@@ -432,18 +481,13 @@ def _clinch_ownership_change_score(
     )
 
 
-def _clinch_takedown_score(
+def _clinch_takedown_conversion_score(
     attacker: FighterTransitionParameters,
     defender: FighterTransitionParameters,
     *,
     attacker_is_owner: bool,
 ) -> float:
-    """Calculate a takedown score from the clinch.
-
-    Both fighters use their general takedown matchup score. The current
-    owner receives additional value from clinch retention, while the
-    defender relies on broad phase-imposition ability.
-    """
+    """Calculate clinch conversion quality after wrestling initiation."""
 
     positional_trait = (
         attacker.clinch_retention
@@ -452,11 +496,35 @@ def _clinch_takedown_score(
     )
 
     return (
-        0.85 * _takedown_score(
+        0.85 * _takedown_conversion_score(
             attacker,
             defender,
         )
         + 0.15 * positional_trait
+    )
+
+
+def _clinch_takedown_weight(
+    attacker: FighterTransitionParameters,
+    defender: FighterTransitionParameters,
+    *,
+    attacker_is_owner: bool,
+    base_weight: float,
+    strength: float,
+) -> float:
+    """Return one completed-takedown transition weight from the clinch."""
+
+    return (
+        base_weight
+        * _takedown_propensity_multiplier(attacker)
+        * _matchup_multiplier(
+            _clinch_takedown_conversion_score(
+                attacker,
+                defender,
+                attacker_is_owner=attacker_is_owner,
+            ),
+            strength=strength,
+        )
     )
 
 
@@ -528,12 +596,12 @@ def build_clinch_transition_distribution(
         (
             TransitionEvent.TAKEDOWN,
             owner_side,
-            selected_calibration.owner_takedown_base_weight
-            * _matchup_multiplier(
-                _clinch_takedown_score(
-                    owner,
-                    defender,
-                    attacker_is_owner=True,
+            _clinch_takedown_weight(
+                owner,
+                defender,
+                attacker_is_owner=True,
+                base_weight=(
+                    selected_calibration.owner_takedown_base_weight
                 ),
                 strength=strength,
             ),
@@ -541,12 +609,12 @@ def build_clinch_transition_distribution(
         (
             TransitionEvent.TAKEDOWN,
             defender_side,
-            selected_calibration.defender_takedown_base_weight
-            * _matchup_multiplier(
-                _clinch_takedown_score(
-                    defender,
-                    owner,
-                    attacker_is_owner=False,
+            _clinch_takedown_weight(
+                defender,
+                owner,
+                attacker_is_owner=False,
+                base_weight=(
+                    selected_calibration.defender_takedown_base_weight
                 ),
                 strength=strength,
             ),
