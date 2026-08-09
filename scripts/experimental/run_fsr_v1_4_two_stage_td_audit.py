@@ -1,17 +1,18 @@
-"""Audit the V1.4 two-stage MC takedown mechanism across archetypes.
+"""Audit V1.4 multi-attempt MC takedown sequences across archetypes.
 
 Shadow/research only. This script does not modify FSR ratings, production
 artifacts, finish calibration, judging, cardio, or simulator source.
 
-The MC now separates:
+The MC separates:
 
-    style propensity -> TAKEDOWN ATTEMPT
-    conversion matchup -> SUCCESS or FAILURE
+    style propensity -> wrestling sequence initiation
+    conversion matchup -> per-shot success/failure
+    failed-shot persistence -> additional attempts in the same 30-second segment
 
-This audit therefore measures attempts and completed takedowns separately. It
-uses the leakage-safe PRE-fight EWM TD-attempt and TD-completion states only as
-scale references; they are not exact matchup targets because opponent defense
-should change realized completion.
+This audit measures initiated sequences, total attempts, completed takedowns,
+failed attempts, completion rate, and mean attempts per sequence separately.
+Leakage-safe PRE-fight EWM TD states are scale references, not exact matchup
+targets because opponent defense should change realized completion.
 """
 
 from __future__ import annotations
@@ -38,7 +39,8 @@ from pipeline.simulation.rfs_mc_v2_shared_state.transition_engine import (
     GroundTransitionCalibration,
 )
 
-from scripts.experimental import run_fsr_v1_4_td_contrast_grid as prior
+from scripts.experimental import run_fsr_v1_4_td_contrast_grid as contrast
+from scripts.experimental import run_fsr_v1_4_transition_style_grid as style
 
 
 DEFAULT_SIMULATIONS = 500
@@ -52,7 +54,7 @@ OUTPUT_PATH = Path(
 
 @dataclass(frozen=True)
 class Candidate:
-    """Attempt-weight calibration while conversion semantics stay frozen."""
+    """Sequence-initiation weight calibration with chain logic frozen."""
 
     name: str
     td_weight_scale: float
@@ -63,12 +65,13 @@ CANDIDATES = (
     Candidate("attempt_x1_00", 1.00),
     Candidate("attempt_x1_25", 1.25),
     Candidate("attempt_x1_50", 1.50),
+    Candidate("attempt_x1_75", 1.75),
     Candidate("attempt_x2_00", 2.00),
 )
 
 
 def calibration(candidate: Candidate) -> SharedPathCalibration:
-    """Scale only total takedown-attempt opportunity weights."""
+    """Scale only wrestling-sequence initiation opportunity weights."""
 
     scale = candidate.td_weight_scale
     return SharedPathCalibration(
@@ -107,13 +110,15 @@ def run_candidate(
     simulations: int,
     seed_start: int,
 ) -> dict[str, float]:
-    """Count phase exposure plus TD attempts, failures, and successes."""
+    """Count phase exposure plus wrestling sequences and every shot inside them."""
 
     totals = {
         "segments": 0.0,
         "distance": 0.0,
         "clinch": 0.0,
         "ground": 0.0,
+        "red_sequences": 0.0,
+        "blue_sequences": 0.0,
         "red_attempts": 0.0,
         "blue_attempts": 0.0,
         "red_success": 0.0,
@@ -157,16 +162,21 @@ def run_candidate(
                 if transition.actor is FighterSide.RED
                 else "blue"
             )
-            totals[f"{side}_attempts"] += 1.0
+            attempt_count = max(1, int(transition.attempt_count))
+
+            totals[f"{side}_sequences"] += 1.0
+            totals[f"{side}_attempts"] += float(attempt_count)
+
             if phase is FightPhase.DISTANCE:
-                totals[f"{side}_attempts_distance"] += 1.0
+                totals[f"{side}_attempts_distance"] += float(attempt_count)
             elif phase is FightPhase.CLINCH:
-                totals[f"{side}_attempts_clinch"] += 1.0
+                totals[f"{side}_attempts_clinch"] += float(attempt_count)
 
             if transition.event is TransitionEvent.TAKEDOWN:
                 totals[f"{side}_success"] += 1.0
+                totals[f"{side}_failed"] += float(attempt_count - 1)
             else:
-                totals[f"{side}_failed"] += 1.0
+                totals[f"{side}_failed"] += float(attempt_count)
 
     fighter_rounds = float(simulations * scheduled_rounds)
     segments = totals["segments"]
@@ -177,8 +187,10 @@ def run_candidate(
     }
 
     for side in ("red", "blue"):
+        sequences = totals[f"{side}_sequences"]
         attempts = totals[f"{side}_attempts"]
         successes = totals[f"{side}_success"]
+        result[f"{side}_td_sequences_per_round"] = sequences / fighter_rounds
         result[f"{side}_td_attempts_per_round"] = attempts / fighter_rounds
         result[f"{side}_td_success_per_round"] = successes / fighter_rounds
         result[f"{side}_td_failed_per_round"] = (
@@ -186,6 +198,9 @@ def run_candidate(
         )
         result[f"{side}_td_completion_rate"] = (
             successes / attempts if attempts > 0.0 else 0.0
+        )
+        result[f"{side}_mean_attempts_per_sequence"] = (
+            attempts / sequences if sequences > 0.0 else 0.0
         )
         result[f"{side}_td_attempts_distance_per_round"] = (
             totals[f"{side}_attempts_distance"] / fighter_rounds
@@ -214,7 +229,7 @@ def main() -> None:
         raise ValueError("--simulations must be positive")
 
     rounds = pd.read_parquet(
-        prior.ROUND_STATS_PATH,
+        style.ROUND_STATS_PATH,
         columns=[
             "fight_id",
             "fighter_id",
@@ -227,11 +242,11 @@ def main() -> None:
     rounds["fighter_id"] = rounds["fighter_id"].astype(str)
 
     history = pd.read_parquet(
-        prior.RFS_HISTORY_PATH,
+        style.RFS_HISTORY_PATH,
         columns=[
             "fight_id",
             "fighter_id",
-            *prior.STYLE_COLUMNS.values(),
+            *style.STYLE_COLUMNS.values(),
             TD_COMPLETION_COLUMN,
         ],
     )
@@ -240,7 +255,7 @@ def main() -> None:
 
     rows: list[dict[str, object]] = []
 
-    for archetype, fight_id in prior.TARGET_FIGHTS:
+    for archetype, fight_id in style.TARGET_FIGHTS:
         target = rounds.loc[rounds["fight_id"] == fight_id].copy()
         if target.empty:
             continue
@@ -256,11 +271,11 @@ def main() -> None:
         ].iloc[0]
         scheduled_rounds = int(float(red_row["total_rounds"]))
 
-        target_card_path = prior.v1_1.OUTPUT_DIR / (
+        target_card_path = style.v1_1.OUTPUT_DIR / (
             f"fsr_{fight_id}_locked_families_v1_1_target_card.csv"
         )
         if not target_card_path.exists():
-            prior.v1_1.run_rating_builders(fight_id)
+            style.v1_1.run_rating_builders(fight_id)
 
         cards: dict[str, dict[str, float]] = {}
         names: dict[str, str] = {}
@@ -268,11 +283,11 @@ def main() -> None:
 
         for side, fighter_row in (("red", red_row), ("blue", blue_row)):
             fighter_id = str(fighter_row["fighter_id"])
-            card, _ = prior.v1_1.load_locked_card(
+            card, _ = style.v1_1.load_locked_card(
                 fight_id,
                 fighter_id,
             )
-            card = prior.attach_style(
+            card = style.attach_style(
                 card,
                 history,
                 fight_id=fight_id,
@@ -292,13 +307,13 @@ def main() -> None:
                 else completion
             )
 
-        # Linear V1.4 style is deliberate here. The MC odds transform inverts
-        # t/(t+1), so no Hill exponent should be layered on top for this audit.
-        red_transition = prior.build_transition(
+        # Linear V1.4 style is deliberate. The MC odds transform inverts
+        # t/(t+1), while persistence now controls repeat shots separately.
+        red_transition = contrast.build_transition(
             cards["red"],
             hill_power=1.0,
         )
-        blue_transition = prior.build_transition(
+        blue_transition = contrast.build_transition(
             cards["blue"],
             hill_power=1.0,
         )
@@ -341,12 +356,12 @@ def main() -> None:
 
     result = pd.DataFrame(rows)
     if result.empty:
-        raise RuntimeError("No two-stage TD audit rows produced")
+        raise RuntimeError("No chain-wrestling TD audit rows produced")
 
     print()
-    print("=" * 190)
-    print("V1.4 TWO-STAGE TAKEDOWN AUDIT")
-    print("=" * 190)
+    print("=" * 210)
+    print("V1.4 MULTI-ATTEMPT TAKEDOWN AUDIT")
+    print("=" * 210)
     display = [
         "candidate",
         "archetype",
@@ -356,12 +371,16 @@ def main() -> None:
         "clinch_phase_pct",
         "ground_phase_pct",
         "red_historical_td_attempts_per_round",
+        "red_td_sequences_per_round",
         "red_td_attempts_per_round",
+        "red_mean_attempts_per_sequence",
         "red_historical_td_completion_rate",
         "red_td_completion_rate",
         "red_td_success_per_round",
         "blue_historical_td_attempts_per_round",
+        "blue_td_sequences_per_round",
         "blue_td_attempts_per_round",
+        "blue_mean_attempts_per_sequence",
         "blue_historical_td_completion_rate",
         "blue_td_completion_rate",
         "blue_td_success_per_round",
@@ -430,9 +449,9 @@ def main() -> None:
     )
 
     print()
-    print("=" * 190)
+    print("=" * 210)
     print("ATTEMPT-SCALE SUMMARY")
-    print("=" * 190)
+    print("=" * 210)
     print(
         summary.to_string(
             index=False,
