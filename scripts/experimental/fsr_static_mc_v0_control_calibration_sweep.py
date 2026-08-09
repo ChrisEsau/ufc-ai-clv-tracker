@@ -1,12 +1,12 @@
-"""Calibration sweep for FSR Static MC V0 control persistence.
+"""Finalist validation for FSR Static MC V0 control persistence.
 
-This shadow-only research script sweeps the 30-second source priors for:
+This shadow-only research script compares the two control-calibration finalists:
 
-- ground exit probability;
-- clinch separation probability.
+- ground exit 30s = 0.20, clinch separation 30s = 0.25
+- ground exit 30s = 0.25, clinch separation 30s = 0.20
 
-It does not modify the simulator's committed constants.  For each candidate pair
-it temporarily injects equivalent 10-second hazards, replays the same leakage-safe
+It does not modify the simulator's committed constants. For each finalist it
+temporarily injects equivalent 10-second hazards, replays the same leakage-safe
 full-distance historical cohort, and scores the resulting fighter totals.
 
 The primary calibration cohort is three-round full-distance fights. Five-round
@@ -25,15 +25,17 @@ import scripts.experimental.fsr_static_mc_v0 as mc
 from scripts.experimental.fsr_static_mc_v0_decision_stats_audit import (
     FSR_PATH,
     RFS_PATH,
-    RFS,
     _attach_realized,
     _decision_fight_table,
     _load_frames,
     _simulate_fight,
 )
 
-GROUND_EXIT_GRID_30S = (0.20, 0.25, 0.30, 0.35, 0.40)
-CLINCH_SEPARATE_GRID_30S = (0.20, 0.25, 0.30, 0.35)
+# Finalists selected from the broad control-persistence sweep.
+CONTROL_FINALISTS_30S = (
+    (0.20, 0.25),
+    (0.25, 0.20),
+)
 
 OUTPUT_PATH = Path(
     "data/simulation/rfs_mc_v2_shared_state/"
@@ -78,9 +80,8 @@ def _cohort_summary(frame: pd.DataFrame, prefix: str) -> dict[str, float]:
         frame, "sim_ground_control_seconds"
     )
 
-    # Primary score: absolute relative-bias tradeoff. Control receives the most
-    # weight because this sweep exists to fix control persistence; TD and strike
-    # attempt volume protect already-useful calibration from collateral damage.
+    # Control is the primary objective. TD and significant-strike attempt
+    # volume protect already-useful calibration from collateral damage.
     control = abs(out[f"{prefix}_control_seconds_rel_bias"])
     td = abs(out[f"{prefix}_td_att_rel_bias"])
     sig = abs(out[f"{prefix}_sig_att_rel_bias"])
@@ -157,6 +158,11 @@ def _run_candidate(
                 seed=seed + fight_i * 100_003,
             )
         )
+        if fight_i == 1 or fight_i % 100 == 0 or fight_i == len(fight_ids):
+            print(
+                f"[control finalists] fight {fight_i:,}/{len(fight_ids):,}",
+                flush=True,
+            )
 
     sim = pd.DataFrame(rows)
     selected = decisions[decisions["fight_id"].isin(fight_ids)].copy()
@@ -169,7 +175,7 @@ def _print_ranked(results: pd.DataFrame) -> None:
         "ground_exit_30s",
         "clinch_separate_30s",
         "score",
-        "r3_control_sim_mean",
+        "r3_control_seconds_sim_mean",
         "r3_control_seconds_real_mean",
         "r3_control_seconds_rel_bias",
         "r3_clinch_control_sim_mean",
@@ -178,26 +184,30 @@ def _print_ranked(results: pd.DataFrame) -> None:
         "r3_td_att_real_mean",
         "r3_sig_att_sim_mean",
         "r3_sig_att_real_mean",
-        "r5_control_sim_mean",
+        "r3_sub_att_sim_mean",
+        "r3_sub_att_real_mean",
+        "r3_reversals_sim_mean",
+        "r3_reversals_real_mean",
+        "r5_control_seconds_sim_mean",
         "r5_control_seconds_real_mean",
+        "r5_control_seconds_rel_bias",
     ]
     available = [c for c in columns if c in results.columns]
-    print("\nCONTROL CALIBRATION SWEEP — RANKED")
-    print("=" * 180)
+    print("\nCONTROL CALIBRATION FINALISTS — RANKED")
+    print("=" * 190)
     print(
         results[available]
-        .head(20)
         .to_string(index=False, float_format=lambda x: f"{x:.4f}")
     )
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Sweep ground-exit and clinch-separation priors for Static MC V0"
+        description="Validate two control-persistence finalists for Static MC V0"
     )
     parser.add_argument("--fsr-path", type=Path, default=FSR_PATH)
     parser.add_argument("--rfs-path", type=Path, default=RFS_PATH)
-    parser.add_argument("--max-fights", type=int, default=300)
+    parser.add_argument("--max-fights", type=int, default=500)
     parser.add_argument("--sims-per-fight", type=int, default=20)
     parser.add_argument("--seed", type=int, default=4109)
     parser.add_argument("--output", type=Path, default=OUTPUT_PATH)
@@ -212,15 +222,15 @@ def main() -> None:
 
     n3 = sum(int(rounds_map[fid]) == 3 for fid in fight_ids)
     n5 = sum(int(rounds_map[fid]) == 5 for fid in fight_ids)
-    combinations = len(GROUND_EXIT_GRID_30S) * len(CLINCH_SEPARATE_GRID_30S)
+    combinations = len(CONTROL_FINALISTS_30S)
     paths_per_candidate = len(fight_ids) * args.sims_per_fight
     print(
-        f"[control sweep] cohort={len(fight_ids):,} fights "
+        f"[control finalists] cohort={len(fight_ids):,} fights "
         f"({n3:,} three-round, {n5:,} five-round)",
         flush=True,
     )
     print(
-        f"[control sweep] {combinations} candidates x {paths_per_candidate:,} paths "
+        f"[control finalists] {combinations} finalists x {paths_per_candidate:,} paths "
         f"= {combinations * paths_per_candidate:,} total paths",
         flush=True,
     )
@@ -230,48 +240,48 @@ def main() -> None:
     result_rows: list[dict[str, float]] = []
 
     try:
-        candidate_no = 0
-        for ground_exit in GROUND_EXIT_GRID_30S:
-            for clinch_sep in CLINCH_SEPARATE_GRID_30S:
-                candidate_no += 1
-                print(
-                    f"[control sweep] candidate {candidate_no:02d}/{combinations}: "
-                    f"ground_exit_30s={ground_exit:.2f}, "
-                    f"clinch_separate_30s={clinch_sep:.2f}",
-                    flush=True,
-                )
-                audit = _run_candidate(
-                    fsr=fsr,
-                    decisions=decisions,
-                    fight_ids=fight_ids,
-                    rounds_map=rounds_map,
-                    sims_per_fight=args.sims_per_fight,
-                    seed=args.seed,
-                    ground_exit_30s=ground_exit,
-                    clinch_separate_30s=clinch_sep,
-                )
+        for candidate_no, (ground_exit, clinch_sep) in enumerate(
+            CONTROL_FINALISTS_30S,
+            1,
+        ):
+            print(
+                f"[control finalists] candidate {candidate_no}/{combinations}: "
+                f"ground_exit_30s={ground_exit:.2f}, "
+                f"clinch_separate_30s={clinch_sep:.2f}",
+                flush=True,
+            )
+            audit = _run_candidate(
+                fsr=fsr,
+                decisions=decisions,
+                fight_ids=fight_ids,
+                rounds_map=rounds_map,
+                sims_per_fight=args.sims_per_fight,
+                seed=args.seed,
+                ground_exit_30s=ground_exit,
+                clinch_separate_30s=clinch_sep,
+            )
 
-                row: dict[str, float] = {
-                    "ground_exit_30s": ground_exit,
-                    "clinch_separate_30s": clinch_sep,
-                    "fighter_rows": float(len(audit)),
-                }
-                r3 = audit[audit["scheduled_rounds"] == 3]
-                r5 = audit[audit["scheduled_rounds"] == 5]
-                if len(r3):
-                    row.update(_cohort_summary(r3, "r3"))
-                if len(r5):
-                    row.update(_cohort_summary(r5, "r5"))
+            row: dict[str, float] = {
+                "ground_exit_30s": ground_exit,
+                "clinch_separate_30s": clinch_sep,
+                "fighter_rows": float(len(audit)),
+            }
+            r3 = audit[audit["scheduled_rounds"] == 3]
+            r5 = audit[audit["scheduled_rounds"] == 5]
+            if len(r3):
+                row.update(_cohort_summary(r3, "r3"))
+            if len(r5):
+                row.update(_cohort_summary(r5, "r5"))
 
-                # Three-round performance is primary. Five-round performance is
-                # a smaller secondary guardrail rather than an equal objective.
-                r3_score = row.get("r3_calibration_score", np.nan)
-                r5_score = row.get("r5_calibration_score", np.nan)
-                if np.isfinite(r5_score):
-                    row["score"] = float(r3_score + 0.25 * r5_score)
-                else:
-                    row["score"] = float(r3_score)
-                result_rows.append(row)
+            # Three-round performance is primary. Five-round performance is a
+            # smaller secondary guardrail rather than an equal objective.
+            r3_score = row.get("r3_calibration_score", np.nan)
+            r5_score = row.get("r5_calibration_score", np.nan)
+            if np.isfinite(r5_score):
+                row["score"] = float(r3_score + 0.25 * r5_score)
+            else:
+                row["score"] = float(r3_score)
+            result_rows.append(row)
     finally:
         # Never leave the imported simulator module mutated after research.
         mc.GROUND_EXIT_BASE = original_ground
@@ -286,33 +296,30 @@ def main() -> None:
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     results.to_parquet(args.output, index=False)
-    print(f"\n[control sweep] wrote {args.output}", flush=True)
+    print(f"\n[control finalists] wrote {args.output}", flush=True)
 
     best = results.iloc[0]
-    print("\nBEST RESEARCH CANDIDATE")
+    print("\nBEST VALIDATION FINALIST")
     print("-" * 80)
     print(f"ground exit 30s base      : {best['ground_exit_30s']:.2f}")
     print(f"clinch separation 30s base: {best['clinch_separate_30s']:.2f}")
     print(f"weighted score            : {best['score']:.4f}")
-    if "r3_control_sim_mean" in best:
-        print(
-            f"3R control                : {best['r3_control_sim_mean']:.2f}s sim vs "
-            f"{best['r3_control_seconds_real_mean']:.2f}s real"
-        )
-    if "r3_td_att_sim_mean" in best:
-        print(
-            f"3R TD attempts            : {best['r3_td_att_sim_mean']:.3f} sim vs "
-            f"{best['r3_td_att_real_mean']:.3f} real"
-        )
-    if "r3_sig_att_sim_mean" in best:
-        print(
-            f"3R sig attempts           : {best['r3_sig_att_sim_mean']:.2f} sim vs "
-            f"{best['r3_sig_att_real_mean']:.2f} real"
-        )
+    print(
+        f"3R control                : {best['r3_control_seconds_sim_mean']:.2f}s sim vs "
+        f"{best['r3_control_seconds_real_mean']:.2f}s real"
+    )
+    print(
+        f"3R TD attempts            : {best['r3_td_att_sim_mean']:.3f} sim vs "
+        f"{best['r3_td_att_real_mean']:.3f} real"
+    )
+    print(
+        f"3R sig attempts           : {best['r3_sig_att_sim_mean']:.2f} sim vs "
+        f"{best['r3_sig_att_real_mean']:.2f} real"
+    )
 
     print(
-        "\nNOTE: this script only ranks research candidates. It does not promote or "
-        "change the committed simulator priors."
+        "\nNOTE: finalist validation only. This script does not promote or change "
+        "the committed simulator priors."
     )
 
 
