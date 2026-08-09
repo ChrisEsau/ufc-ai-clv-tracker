@@ -20,6 +20,7 @@ class TransitionEvent(str, Enum):
 
     CLINCH_ENTRY = "clinch_entry"
     TAKEDOWN = "takedown"
+    TAKEDOWN_ATTEMPT_FAILED = "takedown_attempt_failed"
 
     CLINCH_BREAK = "clinch_break"
     OWNERSHIP_CHANGE = "ownership_change"
@@ -41,6 +42,10 @@ LEGAL_EVENT_PHASES = {
     TransitionEvent.TAKEDOWN: {
         (FightPhase.DISTANCE, FightPhase.GROUND),
         (FightPhase.CLINCH, FightPhase.GROUND),
+    },
+    TransitionEvent.TAKEDOWN_ATTEMPT_FAILED: {
+        (FightPhase.DISTANCE, FightPhase.DISTANCE),
+        (FightPhase.CLINCH, FightPhase.CLINCH),
     },
     TransitionEvent.CLINCH_BREAK: {
         (FightPhase.CLINCH, FightPhase.DISTANCE),
@@ -64,9 +69,9 @@ LEGAL_EVENT_PHASES = {
 class SharedTransition:
     """One coherent phase transition shared by both fighters.
 
-    ``actor`` is the fighter responsible for the transition when one
-    fighter must be identified. It is not used for neutral stays or
-    clinch breaks in V2 Milestone 1.
+    ``actor`` is the fighter responsible for the transition when one fighter
+    must be identified. A failed takedown retains the current phase but is a
+    distinct physical event rather than a neutral ``STAY``.
     """
 
     previous_state: SharedFightState
@@ -110,16 +115,15 @@ class SharedTransition:
                 f"{next_state.phase.value}"
             )
 
+        # A failed shot is a new physical exchange even though the broad phase
+        # is unchanged, so it resets phase age rather than behaving as STAY.
         expected_phase_age = (
             previous.phase_age_segments + 1
             if self.event is TransitionEvent.STAY
             else 0
         )
 
-        if (
-            next_state.phase_age_segments
-            != expected_phase_age
-        ):
+        if next_state.phase_age_segments != expected_phase_age:
             raise ValueError(
                 "next phase_age_segments is inconsistent "
                 "with the transition event"
@@ -150,6 +154,17 @@ class SharedTransition:
                 raise ValueError(
                     f"{self.event.value} actor must own "
                     "the resulting phase"
+                )
+
+        elif self.event is TransitionEvent.TAKEDOWN_ATTEMPT_FAILED:
+            if self.actor is None:
+                raise ValueError(
+                    "takedown_attempt_failed requires an actor"
+                )
+
+            if previous.phase_owner != next_state.phase_owner:
+                raise ValueError(
+                    "failed takedown cannot change phase ownership"
                 )
 
         elif self.event is TransitionEvent.CLINCH_BREAK:
