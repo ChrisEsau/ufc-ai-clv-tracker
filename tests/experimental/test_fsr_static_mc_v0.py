@@ -3,8 +3,12 @@ from __future__ import annotations
 import pandas as pd
 
 from scripts.experimental.fsr_static_mc_v0 import (
+    CLINCH_SEPARATE_BASE,
+    CLINCH_SEPARATE_BASE_30S,
     DISTANCE_CLINCH_BASE,
     DISTANCE_CLINCH_BASE_30S,
+    GROUND_EXIT_BASE,
+    GROUND_EXIT_BASE_30S,
     SEGMENT_SECONDS,
     SEGMENTS_PER_ROUND,
     StaticFSRMCV0,
@@ -68,6 +72,13 @@ def test_30_second_hazard_is_rescaled_to_equivalent_10_second_hazard():
     assert DISTANCE_CLINCH_BASE == expected
     reconstructed_30s = 1.0 - (1.0 - DISTANCE_CLINCH_BASE) ** 3
     assert abs(reconstructed_30s - DISTANCE_CLINCH_BASE_30S) < 1e-12
+
+
+def test_provisional_control_persistence_priors_are_locked():
+    assert GROUND_EXIT_BASE_30S == 0.20
+    assert CLINCH_SEPARATE_BASE_30S == 0.25
+    assert GROUND_EXIT_BASE == _rescale_interval_prob(0.20, 30, 10)
+    assert CLINCH_SEPARATE_BASE == _rescale_interval_prob(0.25, 30, 10)
 
 
 def test_td_success_probability_improves_with_conversion_edge():
