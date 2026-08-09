@@ -157,3 +157,22 @@ def test_competing_distance_transition_includes_both_fighters_td_hazards():
     clinch_actors = {actor for name, _, actor in captured if name == "clinch"}
     assert td_actors == {0, 1}
     assert clinch_actors == {0, 1}
+
+
+def test_clinch_initiator_becomes_and_remains_controller_on_entry():
+    sim = StaticFSRMCV0(_profile("red"), _profile("blue"), rounds=1, seed=6)
+
+    # Force fighter 1 to win the competing distance event as a clinch entry.
+    sim._sample_competing_event = lambda events: ("clinch", 1)
+    note = sim._distance_transition()
+
+    assert "enters clinch" in note
+    assert sim.phase == "CLINCH"
+    assert sim.clinch_initiator == 1
+    assert sim.clinch_controller == 1
+
+    # A persisting clinch must not reassign ownership.
+    sim._sample_competing_event = lambda events: None
+    sim._clinch_transition()
+    assert sim.clinch_controller == 1
+    assert sim.stats[1].clinch_control_seconds == SEGMENT_SECONDS
