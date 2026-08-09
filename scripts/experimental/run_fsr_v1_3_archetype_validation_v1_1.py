@@ -2,20 +2,18 @@
 
 Shadow/research only.
 
-The original archetype validator required an exact event_date match before
-checking fighter names. Some local UFCStats datasets can store an event date one
-day differently from the curated reference date. This wrapper changes only the
-fight-ID resolver:
+This wrapper changes only curated-fight resolution behavior. It does not change
+FSR equations, PRE-fight leakage rules, V1.2 activity conversion, V1.3 finish
+hazards, cardio, judging, simulator mechanics, seeds, or output metrics.
 
+Behavior:
 1. find every historical fight containing the exact unordered normalized
    fighter pair;
-2. compute the absolute date distance from the curated reference date;
-3. select the unique nearest fight;
-4. reject ambiguous ties.
-
-All FSR equations, PRE-fight leakage rules, V1.2 activity conversion, V1.3
-finish hazards, cardio, judging, simulator mechanics, seeds, and output metrics
-remain unchanged.
+2. use the curated date only to disambiguate repeat matchups;
+3. before launching the validator, audit every curated fight against the local
+   UFCStats parquet;
+4. report and skip unavailable curated fights instead of aborting the whole
+   cross-archetype batch.
 """
 
 from __future__ import annotations
@@ -96,8 +94,67 @@ def resolve_fight_id(
     return resolved_fight_id
 
 
+def available_curated_fights() -> tuple[validation.FightSpec, ...]:
+    """Return only curated fights that exist unambiguously in local round data."""
+
+    rounds = pd.read_parquet(validation.base.ROUND_PATH)
+    rounds["event_date"] = pd.to_datetime(rounds["event_date"])
+    rounds["fight_id"] = rounds["fight_id"].astype(str)
+
+    available: list[validation.FightSpec] = []
+    skipped: list[tuple[validation.FightSpec, str]] = []
+
+    print()
+    print("CURATED FIGHT AVAILABILITY AUDIT")
+    print("-" * 90)
+
+    for spec in validation.CURATED_FIGHTS:
+        try:
+            fight_id = resolve_fight_id(rounds, spec)
+        except RuntimeError as exc:
+            skipped.append((spec, str(exc)))
+            print(
+                f"SKIP  {spec.archetype}: {spec.fighter_a} vs {spec.fighter_b}"
+            )
+            print(f"      {exc}")
+            continue
+
+        available.append(spec)
+        print(
+            f"PASS  {spec.archetype}: {spec.fighter_a} vs {spec.fighter_b} "
+            f"-> {fight_id}"
+        )
+
+    print()
+    print(
+        f"Available curated fights: {len(available)} / "
+        f"{len(validation.CURATED_FIGHTS)}"
+    )
+
+    if skipped:
+        print(
+            "Unavailable curated examples are excluded from this diagnostic "
+            "batch only; no simulator/model behavior is changed."
+        )
+
+    if len(available) < 4:
+        raise RuntimeError(
+            "Fewer than four curated fights are available; insufficient "
+            "cross-archetype coverage for this checkpoint."
+        )
+
+    return tuple(available)
+
+
 def main() -> None:
+    # Install the robust resolver used by the underlying validator.
     validation.resolve_fight_id = resolve_fight_id
+
+    # Filter only the diagnostic cohort. The model/simulator configuration is
+    # untouched and every surviving fight still uses leakage-safe PRE-fight
+    # cards and the frozen V1.3 calibration.
+    validation.CURATED_FIGHTS = available_curated_fights()
+
     validation.main()
 
 
