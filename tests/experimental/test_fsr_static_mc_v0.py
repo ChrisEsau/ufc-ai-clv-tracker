@@ -47,19 +47,14 @@ def test_balanced_profile_has_zero_relative_style_preferences():
 def test_v0_is_deterministic_for_fixed_seed():
     red = _profile("red")
     blue = _profile("blue")
-
     first = StaticFSRMCV0(red, blue, rounds=1, seed=123).run()
     second = StaticFSRMCV0(red, blue, rounds=1, seed=123).run()
-
     assert first.events == second.events
     assert first.stats == second.stats
 
 
 def test_v0_emits_thirty_ten_second_segments_per_round_and_valid_phases():
-    red = _profile("red")
-    blue = _profile("blue")
-    path = StaticFSRMCV0(red, blue, rounds=2, seed=5).run()
-
+    path = StaticFSRMCV0(_profile("red"), _profile("blue"), rounds=2, seed=5).run()
     assert SEGMENT_SECONDS == 10
     assert SEGMENTS_PER_ROUND == 30
     assert len(path.events) == 2 * SEGMENTS_PER_ROUND
@@ -79,10 +74,8 @@ def test_td_success_probability_improves_with_conversion_edge():
     weak = _profile("weak", wrestling_conversion=42.0)
     strong = _profile("strong", wrestling_conversion=58.0)
     defender = _profile("def", td_defense=50.0)
-
     weak_sim = StaticFSRMCV0(weak, defender, rounds=1, seed=1)
     strong_sim = StaticFSRMCV0(strong, defender, rounds=1, seed=1)
-
     assert strong_sim._td_success_prob(0) > weak_sim._td_success_prob(0)
 
 
@@ -90,43 +83,77 @@ def test_wrestling_entry_increases_td_attempt_hazard():
     low = _profile("low", wrestling_entry=42.0)
     high = _profile("high", wrestling_entry=58.0)
     opponent = _profile("opp")
-
     low_sim = StaticFSRMCV0(low, opponent, rounds=1, seed=1)
     high_sim = StaticFSRMCV0(high, opponent, rounds=1, seed=1)
-
     assert high_sim._td_attempt_hazard(0, "DISTANCE") > low_sim._td_attempt_hazard(0, "DISTANCE")
 
 
 def test_successful_takedown_sets_attacker_as_ground_controller():
-    attacker = _profile("attacker", wrestling_conversion=90.0)
-    defender = _profile("defender", td_defense=10.0)
-    sim = StaticFSRMCV0(attacker, defender, rounds=1, seed=1)
-
-    # With this extreme edge, success probability is effectively certain for
-    # the deterministic unit test.
+    sim = StaticFSRMCV0(
+        _profile("attacker", wrestling_conversion=90.0),
+        _profile("defender", td_defense=10.0),
+        rounds=1,
+        seed=1,
+    )
     note = sim._attempt_takedown(0, "DISTANCE")
-
     assert "TD SUCCESS" in note
     assert sim.phase == "GROUND"
     assert sim.ground_controller == 0
 
 
 def test_reversal_swaps_ground_controller_when_reversal_occurs():
-    top = _profile("top", control_imposition=10.0)
-    bottom = _profile("bottom", reversal_ability=90.0, control_resistance=90.0)
-    sim = StaticFSRMCV0(top, bottom, rounds=1, seed=2)
+    sim = StaticFSRMCV0(
+        _profile("top", control_imposition=10.0),
+        _profile("bottom", reversal_ability=90.0, control_resistance=90.0),
+        rounds=1,
+        seed=2,
+    )
     sim.phase = "GROUND"
     sim.ground_controller = 0
-
-    # Force the exit and reversal decisions while leaving the ownership logic
-    # itself under test.
     sim._ground_exit_hazard = lambda controller: 1.0
     sim._reversal_probability = lambda bottom_i, controller_i: 1.0
     sim._maybe_submission_attempt = lambda fighter, **kwargs: False
-
     note = sim._ground_transition()
-
     assert "REVERSAL" in note
     assert sim.phase == "GROUND"
     assert sim.ground_controller == 1
     assert sim.stats[1].reversals == 1
+
+
+def test_ground_control_is_recorded_separately_and_in_total():
+    sim = StaticFSRMCV0(_profile("top"), _profile("bottom"), rounds=1, seed=3)
+    sim.phase = "GROUND"
+    sim.ground_controller = 0
+    sim._ground_exit_hazard = lambda controller: 0.0
+    sim._maybe_submission_attempt = lambda fighter, **kwargs: False
+    sim._ground_transition()
+    assert sim.stats[0].ground_control_seconds == SEGMENT_SECONDS
+    assert sim.stats[0].clinch_control_seconds == 0
+    assert sim.stats[0].control_seconds == SEGMENT_SECONDS
+
+
+def test_clinch_control_is_recorded_separately_and_in_total():
+    sim = StaticFSRMCV0(_profile("red"), _profile("blue"), rounds=1, seed=4)
+    sim.phase = "CLINCH"
+    sim.clinch_controller = 1
+    sim._sample_competing_event = lambda events: None
+    sim._clinch_transition()
+    assert sim.stats[1].clinch_control_seconds == SEGMENT_SECONDS
+    assert sim.stats[1].ground_control_seconds == 0
+    assert sim.stats[1].control_seconds == SEGMENT_SECONDS
+
+
+def test_competing_distance_transition_includes_both_fighters_td_hazards():
+    sim = StaticFSRMCV0(_profile("red"), _profile("blue"), rounds=1, seed=5)
+    captured = []
+
+    def capture(events):
+        captured.extend(events)
+        return None
+
+    sim._sample_competing_event = capture
+    sim._distance_transition()
+    td_actors = {actor for name, _, actor in captured if name == "td"}
+    clinch_actors = {actor for name, _, actor in captured if name == "clinch"}
+    assert td_actors == {0, 1}
+    assert clinch_actors == {0, 1}
