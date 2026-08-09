@@ -1,4 +1,4 @@
-"""Regression tests for two-stage takedown transition semantics."""
+"""Regression tests for two-stage and chain-wrestling takedown semantics."""
 
 from dataclasses import replace
 
@@ -47,8 +47,8 @@ def neutral_parameters() -> FighterTransitionParameters:
     )
 
 
-def attempt_probability(distribution, side: FighterSide) -> float:
-    """Return success + failure probability for one fighter's TD attempt."""
+def sequence_probability(distribution, side: FighterSide) -> float:
+    """Return terminal success + failure probability for an initiated chain."""
 
     return (
         distribution.probability(
@@ -62,8 +62,27 @@ def attempt_probability(distribution, side: FighterSide) -> float:
     )
 
 
-def test_neutral_distance_attempt_mass_is_preserved() -> None:
-    """Neutral initiation keeps the pre-split 0.75 relative attempt weight."""
+def expected_attempts_from_distribution(
+    distribution,
+    side: FighterSide,
+) -> float:
+    """Return unconditional expected attempts contributed by one fighter."""
+
+    return sum(
+        option.probability * option.attempt_count
+        for option in distribution.options
+        if (
+            option.actor is side
+            and option.event in {
+                TransitionEvent.TAKEDOWN,
+                TransitionEvent.TAKEDOWN_ATTEMPT_FAILED,
+            }
+        )
+    )
+
+
+def test_neutral_distance_sequence_mass_is_preserved() -> None:
+    """Chain expansion must preserve the old 0.75 initiation weight."""
 
     distribution = build_distance_transition_distribution(
         neutral_parameters(),
@@ -71,29 +90,27 @@ def test_neutral_distance_attempt_mass_is_preserved() -> None:
     )
 
     total_weight = 6.0 + 1.0 + 1.0 + 0.75 + 0.75
-    expected_attempt = 0.75 / total_weight
+    expected_sequence = 0.75 / total_weight
 
-    assert attempt_probability(
+    assert sequence_probability(
         distribution,
         FighterSide.RED,
-    ) == pytest.approx(expected_attempt)
-    assert attempt_probability(
+    ) == pytest.approx(expected_sequence)
+    assert sequence_probability(
         distribution,
         FighterSide.BLUE,
-    ) == pytest.approx(expected_attempt)
+    ) == pytest.approx(expected_sequence)
 
-    assert distribution.probability(
-        TransitionEvent.TAKEDOWN,
+    # Multiple-attempt chains make expected attempts larger than sequence
+    # initiation probability even though initiation mass itself is unchanged.
+    assert expected_attempts_from_distribution(
+        distribution,
         FighterSide.RED,
-    ) == pytest.approx(expected_attempt * 0.36)
-    assert distribution.probability(
-        TransitionEvent.TAKEDOWN_ATTEMPT_FAILED,
-        FighterSide.RED,
-    ) == pytest.approx(expected_attempt * 0.64)
+    ) > expected_sequence
 
 
-def test_neutral_clinch_attempt_mass_is_preserved() -> None:
-    """Owner/defender neutral attempt masses remain 15% and 5%."""
+def test_neutral_clinch_sequence_mass_is_preserved() -> None:
+    """Owner/defender neutral sequence masses remain 15% and 5%."""
 
     distribution = build_clinch_transition_distribution(
         neutral_parameters(),
@@ -101,77 +118,64 @@ def test_neutral_clinch_attempt_mass_is_preserved() -> None:
         current_owner=FighterSide.RED,
     )
 
-    assert attempt_probability(
+    assert sequence_probability(
         distribution,
         FighterSide.RED,
     ) == pytest.approx(0.15)
-    assert attempt_probability(
+    assert sequence_probability(
         distribution,
         FighterSide.BLUE,
     ) == pytest.approx(0.05)
 
-    assert distribution.probability(
-        TransitionEvent.TAKEDOWN,
-        FighterSide.RED,
-    ) == pytest.approx(0.15 * 0.36)
-    assert distribution.probability(
-        TransitionEvent.TAKEDOWN_ATTEMPT_FAILED,
-        FighterSide.RED,
-    ) == pytest.approx(0.15 * 0.64)
-
 
 def zero_propensity_elite_converter() -> FighterTransitionParameters:
-    """Strong success skills cannot create a shot without initiation."""
+    """Strong success skills cannot create a wrestling sequence."""
 
     return replace(
         neutral_parameters(),
         takedown_entry_tendency=0.0,
-        takedown_persistence=0.0,
-        failed_takedown_persistence=0.0,
+        takedown_persistence=1.0,
+        failed_takedown_persistence=1.0,
         takedown_completion_ability=1.0,
         phase_imposition=1.0,
         clinch_retention=1.0,
     )
 
 
-def test_zero_propensity_has_zero_distance_attempt_probability() -> None:
+def test_zero_propensity_has_zero_distance_sequence_probability() -> None:
     distribution = build_distance_transition_distribution(
         zero_propensity_elite_converter(),
         neutral_parameters(),
     )
 
-    assert attempt_probability(
+    assert sequence_probability(
         distribution,
         FighterSide.RED,
     ) == pytest.approx(0.0)
 
 
-def test_zero_propensity_has_zero_owner_clinch_attempt_probability() -> None:
+def test_zero_propensity_has_zero_owner_clinch_sequence_probability() -> None:
     distribution = build_clinch_transition_distribution(
         zero_propensity_elite_converter(),
         neutral_parameters(),
         current_owner=FighterSide.RED,
     )
 
-    assert attempt_probability(
+    assert sequence_probability(
         distribution,
         FighterSide.RED,
     ) == pytest.approx(0.0)
 
 
-def test_more_propensity_increases_attempts() -> None:
+def test_more_propensity_increases_sequence_initiation() -> None:
     neutral = neutral_parameters()
     low = replace(
         neutral,
         takedown_entry_tendency=0.10,
-        takedown_persistence=0.10,
-        failed_takedown_persistence=0.10,
     )
     high = replace(
         neutral,
         takedown_entry_tendency=0.90,
-        takedown_persistence=0.90,
-        failed_takedown_persistence=0.90,
     )
 
     low_distribution = build_distance_transition_distribution(
@@ -183,17 +187,17 @@ def test_more_propensity_increases_attempts() -> None:
         neutral,
     )
 
-    assert attempt_probability(
+    assert sequence_probability(
         high_distribution,
         FighterSide.RED,
-    ) > attempt_probability(
+    ) > sequence_probability(
         low_distribution,
         FighterSide.RED,
     )
 
 
-def test_conversion_skill_changes_success_not_attempt_frequency() -> None:
-    """At fixed propensity, skill only changes the success/failure split."""
+def test_conversion_skill_changes_success_not_sequence_frequency() -> None:
+    """At fixed propensity, skill only changes terminal success/failure mix."""
 
     neutral = neutral_parameters()
     low = replace(
@@ -214,11 +218,11 @@ def test_conversion_skill_changes_success_not_attempt_frequency() -> None:
         neutral,
     )
 
-    assert attempt_probability(
+    assert sequence_probability(
         high_distribution,
         FighterSide.RED,
     ) == pytest.approx(
-        attempt_probability(
+        sequence_probability(
             low_distribution,
             FighterSide.RED,
         )
@@ -230,16 +234,105 @@ def test_conversion_skill_changes_success_not_attempt_frequency() -> None:
         TransitionEvent.TAKEDOWN,
         FighterSide.RED,
     )
-    assert high_distribution.probability(
-        TransitionEvent.TAKEDOWN_ATTEMPT_FAILED,
+
+
+def test_failed_shot_persistence_changes_attempts_not_sequence_frequency() -> None:
+    """Chain persistence creates repeat shots without creating new initiations."""
+
+    neutral = neutral_parameters()
+    low = replace(
+        neutral,
+        takedown_persistence=0.05,
+        failed_takedown_persistence=0.05,
+    )
+    high = replace(
+        neutral,
+        takedown_persistence=0.95,
+        failed_takedown_persistence=0.95,
+    )
+
+    low_distribution = build_distance_transition_distribution(
+        low,
+        neutral,
+    )
+    high_distribution = build_distance_transition_distribution(
+        high,
+        neutral,
+    )
+
+    assert sequence_probability(
+        high_distribution,
         FighterSide.RED,
-    ) < low_distribution.probability(
-        TransitionEvent.TAKEDOWN_ATTEMPT_FAILED,
+    ) == pytest.approx(
+        sequence_probability(
+            low_distribution,
+            FighterSide.RED,
+        )
+    )
+    assert expected_attempts_from_distribution(
+        high_distribution,
+        FighterSide.RED,
+    ) > expected_attempts_from_distribution(
+        low_distribution,
         FighterSide.RED,
     )
 
 
-def test_failed_distance_shot_stays_at_distance_and_resets_age() -> None:
+def test_chain_distribution_contains_multi_attempt_terminal_outcomes() -> None:
+    """Strong persistence must expose attempt-count-specific outcomes."""
+
+    attacker = replace(
+        neutral_parameters(),
+        takedown_persistence=0.95,
+        failed_takedown_persistence=0.95,
+    )
+    distribution = build_distance_transition_distribution(
+        attacker,
+        neutral_parameters(),
+    )
+
+    attempt_counts = {
+        option.attempt_count
+        for option in distribution.options
+        if (
+            option.actor is FighterSide.RED
+            and option.event in {
+                TransitionEvent.TAKEDOWN,
+                TransitionEvent.TAKEDOWN_ATTEMPT_FAILED,
+            }
+        )
+    }
+
+    assert {1, 2, 3, 4}.issubset(attempt_counts)
+
+
+def test_successful_third_shot_carries_three_attempts_to_transition() -> None:
+    state = SharedFightState(
+        phase=FightPhase.DISTANCE,
+        phase_owner=None,
+        phase_age_segments=3,
+        position_quality=0.0,
+        round_number=1,
+        segment_number=4,
+    )
+    option = TransitionProbability(
+        event=TransitionEvent.TAKEDOWN,
+        actor=FighterSide.RED,
+        probability=1.0,
+        attempt_count=3,
+    )
+
+    transition = apply_transition_option(
+        state,
+        option,
+    )
+
+    assert transition.attempt_count == 3
+    assert transition.next_state.phase is FightPhase.GROUND
+    assert transition.next_state.phase_owner is FighterSide.RED
+
+
+def test_failed_four_shot_chain_stays_at_distance_and_carries_count() -> None:
     state = SharedFightState(
         phase=FightPhase.DISTANCE,
         phase_owner=None,
@@ -252,6 +345,7 @@ def test_failed_distance_shot_stays_at_distance_and_resets_age() -> None:
         event=TransitionEvent.TAKEDOWN_ATTEMPT_FAILED,
         actor=FighterSide.RED,
         probability=1.0,
+        attempt_count=4,
     )
 
     transition = apply_transition_option(
@@ -259,12 +353,13 @@ def test_failed_distance_shot_stays_at_distance_and_resets_age() -> None:
         option,
     )
 
+    assert transition.attempt_count == 4
     assert transition.next_state.phase is FightPhase.DISTANCE
     assert transition.next_state.phase_owner is None
     assert transition.next_state.phase_age_segments == 0
 
 
-def test_failed_clinch_shot_preserves_existing_owner() -> None:
+def test_failed_clinch_chain_preserves_existing_owner() -> None:
     state = SharedFightState(
         phase=FightPhase.CLINCH,
         phase_owner=FighterSide.RED,
@@ -277,6 +372,7 @@ def test_failed_clinch_shot_preserves_existing_owner() -> None:
         event=TransitionEvent.TAKEDOWN_ATTEMPT_FAILED,
         actor=FighterSide.BLUE,
         probability=1.0,
+        attempt_count=2,
     )
 
     transition = apply_transition_option(
@@ -284,6 +380,7 @@ def test_failed_clinch_shot_preserves_existing_owner() -> None:
         option,
     )
 
+    assert transition.attempt_count == 2
     assert transition.next_state.phase is FightPhase.CLINCH
     assert transition.next_state.phase_owner is FighterSide.RED
     assert transition.next_state.position_quality == pytest.approx(0.4)
