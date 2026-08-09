@@ -3,8 +3,12 @@ from __future__ import annotations
 import pandas as pd
 
 from scripts.experimental.fsr_static_mc_v0 import (
+    DISTANCE_CLINCH_BASE,
+    DISTANCE_CLINCH_BASE_30S,
+    SEGMENT_SECONDS,
     SEGMENTS_PER_ROUND,
     StaticFSRMCV0,
+    _rescale_interval_prob,
     _style_preferences,
 )
 
@@ -51,15 +55,24 @@ def test_v0_is_deterministic_for_fixed_seed():
     assert first.stats == second.stats
 
 
-def test_v0_emits_ten_segments_per_round_and_valid_phases():
+def test_v0_emits_thirty_ten_second_segments_per_round_and_valid_phases():
     red = _profile("red")
     blue = _profile("blue")
     path = StaticFSRMCV0(red, blue, rounds=2, seed=5).run()
 
+    assert SEGMENT_SECONDS == 10
+    assert SEGMENTS_PER_ROUND == 30
     assert len(path.events) == 2 * SEGMENTS_PER_ROUND
     valid = {"DISTANCE", "CLINCH", "GROUND"}
     assert all(e["phase_start"] in valid for e in path.events)
     assert all(e["phase_end"] in valid for e in path.events)
+
+
+def test_30_second_hazard_is_rescaled_to_equivalent_10_second_hazard():
+    expected = _rescale_interval_prob(DISTANCE_CLINCH_BASE_30S, 30, 10)
+    assert DISTANCE_CLINCH_BASE == expected
+    reconstructed_30s = 1.0 - (1.0 - DISTANCE_CLINCH_BASE) ** 3
+    assert abs(reconstructed_30s - DISTANCE_CLINCH_BASE_30S) < 1e-12
 
 
 def test_td_success_probability_improves_with_conversion_edge():
@@ -82,3 +95,38 @@ def test_wrestling_entry_increases_td_attempt_hazard():
     high_sim = StaticFSRMCV0(high, opponent, rounds=1, seed=1)
 
     assert high_sim._td_attempt_hazard(0, "DISTANCE") > low_sim._td_attempt_hazard(0, "DISTANCE")
+
+
+def test_successful_takedown_sets_attacker_as_ground_controller():
+    attacker = _profile("attacker", wrestling_conversion=90.0)
+    defender = _profile("defender", td_defense=10.0)
+    sim = StaticFSRMCV0(attacker, defender, rounds=1, seed=1)
+
+    # With this extreme edge, success probability is effectively certain for
+    # the deterministic unit test.
+    note = sim._attempt_takedown(0, "DISTANCE")
+
+    assert "TD SUCCESS" in note
+    assert sim.phase == "GROUND"
+    assert sim.ground_controller == 0
+
+
+def test_reversal_swaps_ground_controller_when_reversal_occurs():
+    top = _profile("top", control_imposition=10.0)
+    bottom = _profile("bottom", reversal_ability=90.0, control_resistance=90.0)
+    sim = StaticFSRMCV0(top, bottom, rounds=1, seed=2)
+    sim.phase = "GROUND"
+    sim.ground_controller = 0
+
+    # Force the exit and reversal decisions while leaving the ownership logic
+    # itself under test.
+    sim._ground_exit_hazard = lambda controller: 1.0
+    sim._reversal_probability = lambda bottom_i, controller_i: 1.0
+    sim._maybe_submission_attempt = lambda fighter, **kwargs: False
+
+    note = sim._ground_transition()
+
+    assert "REVERSAL" in note
+    assert sim.phase == "GROUND"
+    assert sim.ground_controller == 1
+    assert sim.stats[1].reversals == 1
