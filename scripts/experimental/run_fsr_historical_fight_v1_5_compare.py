@@ -18,7 +18,7 @@ untouched and changes only the activity adapter:
 
 The historical whole-round RFS activity observations are converted to the
 per-active-30-second units consumed by MC V2 using the same neutral V1.4 phase
-exposure reference introduced in V1.2/V1.4.  This is an adapter experiment, not
+exposure reference introduced in V1.2/V1.4. This is an adapter experiment, not
 an assertion that UFCStats exposes exact phase seconds.
 
 Usage
@@ -30,6 +30,7 @@ PYTHONPATH=. python \
 
 from __future__ import annotations
 
+from dataclasses import replace
 from math import isfinite
 from pathlib import Path
 
@@ -169,7 +170,7 @@ def _control_means_v1_5(
     """Convert RFS control tendency into matchup-adjusted owner-segment means.
 
     UFCStats records combined control time without exact clinch/ground
-    allocation.  Preserve the existing adapter's neutral 6:8 clinch-to-ground
+    allocation. Preserve the existing adapter's neutral 6:8 clinch-to-ground
     control-duration shape, then choose the common scale so the fighter's RFS
     control-seconds-per-round tendency is reproduced under neutral V1.4 owner
     exposure before opponent adjustment.
@@ -277,32 +278,22 @@ def build_phase_v1_5(
         fallback_ground=phase.ground_owner.control_seconds_mean,
     )
 
-    return phase.__class__(
-        distance=phase.distance.__class__(
+    return replace(
+        phase,
+        distance=replace(
+            phase.distance,
             sig_strike_attempt_rate=distance_rate,
-            sig_strike_accuracy=phase.distance.sig_strike_accuracy,
-            knockdown_probability_per_landed=(
-                phase.distance.knockdown_probability_per_landed
-            ),
         ),
-        clinch=phase.clinch.__class__(
+        clinch=replace(
+            phase.clinch,
             clinch_strike_attempt_rate=clinch_rate,
-            clinch_strike_accuracy=phase.clinch.clinch_strike_accuracy,
             control_seconds_mean=clinch_control,
-            damaging_clinch_probability=(
-                phase.clinch.damaging_clinch_probability
-            ),
         ),
-        ground_owner=phase.ground_owner.__class__(
+        ground_owner=replace(
+            phase.ground_owner,
             ground_strike_attempt_rate=ground_rate,
-            ground_strike_accuracy=phase.ground_owner.ground_strike_accuracy,
             control_seconds_mean=ground_control,
-            submission_attempt_rate=phase.ground_owner.submission_attempt_rate,
-            position_advancement_probability=(
-                phase.ground_owner.position_advancement_probability
-            ),
         ),
-        ground_defender=phase.ground_defender,
     )
 
 
@@ -325,19 +316,31 @@ def print_matchup_parameters_v1_5(
 
     print(
         "RFS distance att/rnd   :",
-        round(float(card.get("style_distance_attempts_per_round", float("nan"))), 4),
+        round(
+            float(card.get("style_distance_attempts_per_round", float("nan"))),
+            4,
+        ),
     )
     print(
         "RFS clinch att/rnd     :",
-        round(float(card.get("style_clinch_attempts_per_round", float("nan"))), 4),
+        round(
+            float(card.get("style_clinch_attempts_per_round", float("nan"))),
+            4,
+        ),
     )
     print(
         "RFS ground att/rnd     :",
-        round(float(card.get("style_ground_attempts_per_round", float("nan"))), 4),
+        round(
+            float(card.get("style_ground_attempts_per_round", float("nan"))),
+            4,
+        ),
     )
     print(
         "RFS control sec/rnd    :",
-        round(float(card.get("style_control_seconds_per_round", float("nan"))), 4),
+        round(
+            float(card.get("style_control_seconds_per_round", float("nan"))),
+            4,
+        ),
     )
     print(
         "V1.5 clinch att/seg    :",
@@ -404,6 +407,40 @@ def print_actual_result_v1_5(fight_id: str) -> None:
     print(f"Winner: {winner} | Method: {method}{time_text}")
 
 
+def run_round_comparison_diagnostics_v1_5(**kwargs) -> None:
+    """Reuse V1.4 diagnostics without overwriting the preserved V1.4 CSV."""
+
+    original_output_dir = base.OUTPUT_DIR
+    v1_5_output_dir = original_output_dir / "v1_5"
+    base.OUTPUT_DIR = v1_5_output_dir
+
+    try:
+        v1_4_compare.run_round_comparison_diagnostics(**kwargs)
+    finally:
+        base.OUTPUT_DIR = original_output_dir
+
+    fight_id = str(kwargs["fight_id"])
+    temporary_path = (
+        v1_5_output_dir
+        / f"fsr_{fight_id}_v1_4_round_actual_comparison.csv"
+    )
+    final_path = (
+        v1_5_output_dir
+        / f"fsr_{fight_id}_v1_5_round_actual_comparison.csv"
+    )
+
+    if not temporary_path.exists():
+        raise RuntimeError(
+            "V1.5 diagnostic replay did not create its expected comparison CSV: "
+            f"{temporary_path}"
+        )
+
+    temporary_path.replace(final_path)
+
+    print()
+    print(f"V1.5 round comparison artifact: {final_path}")
+
+
 def install_v1_5() -> None:
     """Install V1.5 only on top of the preserved V1.4 shadow checkpoint."""
 
@@ -421,9 +458,9 @@ def install_v1_5() -> None:
     base.build_full_card = build_full_card_v1_5
     base.build_phase = build_phase_v1_5
     base.print_matchup_parameters = print_matchup_parameters_v1_5
+    base.run_population_diagnostics = run_round_comparison_diagnostics_v1_5
 
-    # The V1.4 comparison diagnostic calls this module-level helper. Replace
-    # only the display helper so simulator/round comparison behavior is intact.
+    # The reused comparison diagnostic calls this module-level display helper.
     v1_4_compare._print_actual_result = print_actual_result_v1_5
 
 
