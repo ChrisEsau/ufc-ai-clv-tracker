@@ -30,6 +30,12 @@ class TransitionEvent(str, Enum):
     REVERSAL = "reversal"
 
 
+TAKEDOWN_EVENTS = {
+    TransitionEvent.TAKEDOWN,
+    TransitionEvent.TAKEDOWN_ATTEMPT_FAILED,
+}
+
+
 LEGAL_EVENT_PHASES = {
     TransitionEvent.STAY: {
         (FightPhase.DISTANCE, FightPhase.DISTANCE),
@@ -70,8 +76,10 @@ class SharedTransition:
     """One coherent phase transition shared by both fighters.
 
     ``actor`` is the fighter responsible for the transition when one fighter
-    must be identified. A failed takedown retains the current phase but is a
-    distinct physical event rather than a neutral ``STAY``.
+    must be identified. ``attempt_count`` records how many takedown attempts
+    occurred inside a sampled wrestling sequence. Simulator-generated takedown
+    events always populate it; zero remains accepted for legacy hand-built test
+    fixtures and is interpreted as one attempt by downstream audit code.
     """
 
     previous_state: SharedFightState
@@ -79,12 +87,22 @@ class SharedTransition:
 
     event: TransitionEvent
     actor: FighterSide | None
+    attempt_count: int = 0
 
     def __post_init__(self) -> None:
         """Validate physical and ownership consistency."""
 
         previous = self.previous_state
         next_state = self.next_state
+
+        if type(self.attempt_count) is not int:
+            raise TypeError("attempt_count must be an integer")
+        if self.attempt_count < 0:
+            raise ValueError("attempt_count cannot be negative")
+        if self.event not in TAKEDOWN_EVENTS and self.attempt_count != 0:
+            raise ValueError(
+                "attempt_count is only valid for takedown events"
+            )
 
         if previous.round_number != next_state.round_number:
             raise ValueError(
@@ -115,8 +133,9 @@ class SharedTransition:
                 f"{next_state.phase.value}"
             )
 
-        # A failed shot is a new physical exchange even though the broad phase
-        # is unchanged, so it resets phase age rather than behaving as STAY.
+        # A failed shot/chain is a new physical exchange even though the broad
+        # phase is unchanged, so it resets phase age rather than behaving as
+        # a neutral STAY.
         expected_phase_age = (
             previous.phase_age_segments + 1
             if self.event is TransitionEvent.STAY
