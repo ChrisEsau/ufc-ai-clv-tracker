@@ -129,9 +129,9 @@ def apply_transition_option(
         next_phase_age = 0
 
     elif event is TransitionEvent.TAKEDOWN_ATTEMPT_FAILED:
-        # A failed shot is a real physical exchange but does not establish a
-        # new broad phase. Distance remains ownerless; clinch ownership stays
-        # with whoever controlled the clinch before the attempt.
+        # A failed wrestling sequence is a real physical exchange but does not
+        # establish a new broad phase. Distance remains ownerless; clinch
+        # ownership stays with whoever controlled the clinch before the chain.
         next_phase = current_state.phase
         next_owner = current_state.phase_owner
         next_position_quality = current_state.position_quality
@@ -189,12 +189,13 @@ def apply_transition_option(
     )
 
     # SharedTransition performs the final legal-phase, actor, ownership,
-    # timing, and phase-age validation.
+    # timing, phase-age, and attempt-count validation.
     return SharedTransition(
         previous_state=current_state,
         next_state=next_state,
         event=event,
         actor=actor,
+        attempt_count=option.attempt_count,
     )
 
 
