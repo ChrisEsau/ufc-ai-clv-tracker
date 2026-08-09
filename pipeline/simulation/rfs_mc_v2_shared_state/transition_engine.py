@@ -3,12 +3,21 @@
 The engine produces one normalized probability distribution shared by both
 fighters. It does not sample the transition or generate fight activity.
 Dynamic fighter state is intentionally excluded from this module.
+
+Takedowns are modeled in two conceptual stages inside the same end-of-segment
+distribution:
+
+1. wrestling propensity creates a takedown-attempt opportunity;
+2. matchup conversion resolves that attempt as success or failure.
+
+This keeps one deterministic transition sample per segment while preventing
+wrestling skill from creating attempts for fighters who rarely initiate them.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from math import exp, fsum, isfinite
+from math import exp, fsum, isfinite, log
 
 from pipeline.simulation.rfs_mc_v1.contracts import FightPhase
 from pipeline.simulation.rfs_mc_v2_shared_state.contracts import FighterSide
@@ -40,12 +49,12 @@ class TransitionProbability:
         actor_required = {
             TransitionEvent.CLINCH_ENTRY,
             TransitionEvent.TAKEDOWN,
+            TransitionEvent.TAKEDOWN_ATTEMPT_FAILED,
             TransitionEvent.OWNERSHIP_CHANGE,
             TransitionEvent.GROUND_ESCAPE,
             TransitionEvent.SCRAMBLE_TO_CLINCH,
             TransitionEvent.REVERSAL,
         }
-
         actor_forbidden = {
             TransitionEvent.STAY,
             TransitionEvent.CLINCH_BREAK,
@@ -79,7 +88,6 @@ class TransitionDistribution:
             option.probability
             for option in self.options
         )
-
         if abs(total_probability - 1.0) > 1e-12:
             raise ValueError(
                 "transition probabilities must sum to one"
@@ -89,7 +97,6 @@ class TransitionDistribution:
             (option.event, option.actor)
             for option in self.options
         ]
-
         if len(keys) != len(set(keys)):
             raise ValueError(
                 "transition distribution contains duplicate options"
@@ -114,19 +121,12 @@ class TransitionDistribution:
 
 @dataclass(frozen=True)
 class DistanceTransitionCalibration:
-    """Uncalibrated starting weights for distance transitions.
+    """Provisional relative weights for distance transitions.
 
-    These are relative weights, not final probabilities. Neutral fighter
-    parameters produce approximately:
-
-    - 63% remain at distance
-    - 11% red clinch entry
-    - 11% blue clinch entry
-    - 8% red takedown
-    - 8% blue takedown
-
-    These defaults are structural starting values and must later be
-    calibrated against observed UFC phase transitions.
+    ``takedown_base_weight`` is now the total *attempt* opportunity weight.
+    Neutral propensity preserves the old total wrestling opportunity mass,
+    while ``takedown_success_base_probability`` controls how much of that mass
+    becomes a completed takedown versus an explicit failed attempt.
     """
 
     stay_base_weight: float = 6.0
@@ -134,16 +134,121 @@ class DistanceTransitionCalibration:
     takedown_base_weight: float = 0.75
 
     matchup_effect_strength: float = 1.0
+    takedown_success_base_probability: float = 0.36
+    takedown_success_effect_strength: float = 1.0
 
     def __post_init__(self) -> None:
         positive_fields = {
             "stay_base_weight": self.stay_base_weight,
-            "clinch_entry_base_weight": (
-                self.clinch_entry_base_weight
-            ),
+            "clinch_entry_base_weight": self.clinch_entry_base_weight,
             "takedown_base_weight": self.takedown_base_weight,
         }
+        for name, value in positive_fields.items():
+            if not isfinite(value) or value <= 0.0:
+                raise ValueError(
+                    f"{name} must be finite and positive"
+                )
 
+        nonnegative_fields = {
+            "matchup_effect_strength": self.matchup_effect_strength,
+            "takedown_success_effect_strength": (
+                self.takedown_success_effect_strength
+            ),
+        }
+        for name, value in nonnegative_fields.items():
+            if not isfinite(value) or value < 0.0:
+                raise ValueError(
+                    f"{name} must be finite and nonnegative"
+                )
+
+        if (
+            not isfinite(self.takedown_success_base_probability)
+            or not 0.0 < self.takedown_success_base_probability < 1.0
+        ):
+            raise ValueError(
+                "takedown_success_base_probability must be "
+                "finite and between zero and one"
+            )
+
+
+@dataclass(frozen=True)
+class ClinchTransitionCalibration:
+    """Provisional relative weights for clinch transitions.
+
+    Owner and defender takedown base weights now represent attempt opportunity
+    mass. Conversion splits each attempt between success and failure.
+    """
+
+    stay_base_weight: float = 4.5
+    break_base_weight: float = 2.5
+    ownership_change_base_weight: float = 1.0
+    owner_takedown_base_weight: float = 1.5
+    defender_takedown_base_weight: float = 0.5
+
+    matchup_effect_strength: float = 1.0
+    takedown_success_base_probability: float = 0.36
+    takedown_success_effect_strength: float = 1.0
+
+    def __post_init__(self) -> None:
+        positive_fields = {
+            "stay_base_weight": self.stay_base_weight,
+            "break_base_weight": self.break_base_weight,
+            "ownership_change_base_weight": (
+                self.ownership_change_base_weight
+            ),
+            "owner_takedown_base_weight": (
+                self.owner_takedown_base_weight
+            ),
+            "defender_takedown_base_weight": (
+                self.defender_takedown_base_weight
+            ),
+        }
+        for name, value in positive_fields.items():
+            if not isfinite(value) or value <= 0.0:
+                raise ValueError(
+                    f"{name} must be finite and positive"
+                )
+
+        nonnegative_fields = {
+            "matchup_effect_strength": self.matchup_effect_strength,
+            "takedown_success_effect_strength": (
+                self.takedown_success_effect_strength
+            ),
+        }
+        for name, value in nonnegative_fields.items():
+            if not isfinite(value) or value < 0.0:
+                raise ValueError(
+                    f"{name} must be finite and nonnegative"
+                )
+
+        if (
+            not isfinite(self.takedown_success_base_probability)
+            or not 0.0 < self.takedown_success_base_probability < 1.0
+        ):
+            raise ValueError(
+                "takedown_success_base_probability must be "
+                "finite and between zero and one"
+            )
+
+
+@dataclass(frozen=True)
+class GroundTransitionCalibration:
+    """Provisional relative weights for ground transitions."""
+
+    stay_base_weight: float = 5.5
+    escape_base_weight: float = 2.0
+    scramble_base_weight: float = 1.5
+    reversal_base_weight: float = 1.0
+
+    matchup_effect_strength: float = 1.0
+
+    def __post_init__(self) -> None:
+        positive_fields = {
+            "stay_base_weight": self.stay_base_weight,
+            "escape_base_weight": self.escape_base_weight,
+            "scramble_base_weight": self.scramble_base_weight,
+            "reversal_base_weight": self.reversal_base_weight,
+        }
         for name, value in positive_fields.items():
             if not isfinite(value) or value <= 0.0:
                 raise ValueError(
@@ -165,19 +270,65 @@ def _matchup_multiplier(
     *,
     strength: float,
 ) -> float:
-    """Convert a zero-to-one matchup score into a positive multiplier.
-
-    A neutral score of 0.5 produces a multiplier of 1.0.
-
-    At the default strength:
-
-    - score 0.0 produces approximately 0.37
-    - score 0.5 produces 1.00
-    - score 1.0 produces approximately 2.72
-    """
+    """Convert a zero-to-one matchup score into a positive multiplier."""
 
     return exp(
         2.0 * strength * (score - 0.5)
+    )
+
+
+def _probability_from_matchup_score(
+    score: float,
+    *,
+    base_probability: float,
+    strength: float,
+) -> float:
+    """Shift a neutral base probability by a centered matchup score.
+
+    A score of 0.5 returns ``base_probability`` exactly. The transformation is
+    performed on log odds so matchup skill changes conversion probability but
+    cannot change the total number of attempts created by propensity.
+    """
+
+    log_odds = (
+        log(base_probability / (1.0 - base_probability))
+        + 2.0 * strength * (score - 0.5)
+    )
+
+    if log_odds >= 0.0:
+        return 1.0 / (1.0 + exp(-log_odds))
+
+    odds = exp(log_odds)
+    return odds / (1.0 + odds)
+
+
+def _normalize_options(
+    source_phase: FightPhase,
+    raw_options: tuple[
+        tuple[TransitionEvent, FighterSide | None, float], ...
+    ],
+) -> TransitionDistribution:
+    """Normalize positive/zero relative option weights."""
+
+    total_weight = fsum(
+        weight
+        for _, _, weight in raw_options
+    )
+    if not isfinite(total_weight) or total_weight <= 0.0:
+        raise ValueError(
+            "transition option weights must sum to a finite positive value"
+        )
+
+    return TransitionDistribution(
+        source_phase=source_phase,
+        options=tuple(
+            TransitionProbability(
+                event=event,
+                actor=actor,
+                probability=weight / total_weight,
+            )
+            for event, actor, weight in raw_options
+        ),
     )
 
 
@@ -204,19 +355,15 @@ def _clinch_entry_score(
     return (
         0.45 * attacker.clinch_entry_tendency
         + 0.25 * attacker.phase_imposition
-        + 0.20 * (
-            1.0 - defender.clinch_entry_resistance
-        )
-        + 0.10 * (
-            1.0 - defender.phase_resistance
-        )
+        + 0.20 * (1.0 - defender.clinch_entry_resistance)
+        + 0.10 * (1.0 - defender.phase_resistance)
     )
 
 
 def _takedown_propensity_score(
     attacker: FighterTransitionParameters,
 ) -> float:
-    """Return the attacker's willingness to create takedown opportunities."""
+    """Return the attacker's willingness to initiate takedowns."""
 
     return (
         0.60 * attacker.takedown_entry_tendency
@@ -228,58 +375,51 @@ def _takedown_propensity_score(
 def _takedown_propensity_multiplier(
     attacker: FighterTransitionParameters,
 ) -> float:
-    """Scale takedown opportunity while preserving neutral calibration.
-
-    Neutral propensity (0.5) maps to 1.0, zero propensity maps to 0.0, and
-    maximal propensity maps to 2.0. This keeps neutral base weights unchanged
-    while allowing true low-use wrestlers to approach zero takedown probability.
-    """
+    """Map neutral propensity to 1x and zero propensity to zero attempts."""
 
     return 2.0 * _takedown_propensity_score(attacker)
+
+
+def _takedown_attempt_weight(
+    attacker: FighterTransitionParameters,
+    *,
+    base_weight: float,
+) -> float:
+    """Return total takedown-attempt opportunity weight."""
+
+    return (
+        base_weight
+        * _takedown_propensity_multiplier(attacker)
+    )
 
 
 def _takedown_conversion_score(
     attacker: FighterTransitionParameters,
     defender: FighterTransitionParameters,
 ) -> float:
-    """Calculate success quality conditional on takedown initiation."""
+    """Calculate conversion quality conditional on an initiated shot."""
 
     return (
         0.45 * attacker.takedown_completion_ability
         + 0.20 * attacker.phase_imposition
-        + 0.25 * (
-            1.0 - defender.takedown_resistance
-        )
-        + 0.10 * (
-            1.0 - defender.phase_resistance
-        )
+        + 0.25 * (1.0 - defender.takedown_resistance)
+        + 0.10 * (1.0 - defender.phase_resistance)
     )
 
 
-def _takedown_weight(
+def _distance_takedown_success_probability(
     attacker: FighterTransitionParameters,
     defender: FighterTransitionParameters,
-    *,
-    base_weight: float,
-    strength: float,
+    calibration: DistanceTransitionCalibration,
 ) -> float:
-    """Return one completed-takedown transition weight.
+    """Resolve one distance-shot attempt into success probability."""
 
-    A completed takedown requires both initiation propensity and a favorable
-    conversion matchup. Multiplication prevents conversion skill from creating
-    a takedown floor for fighters with near-zero wrestling propensity.
-    """
-
-    return (
-        base_weight
-        * _takedown_propensity_multiplier(attacker)
-        * _matchup_multiplier(
-            _takedown_conversion_score(
-                attacker,
-                defender,
-            ),
-            strength=strength,
-        )
+    return _probability_from_matchup_score(
+        _takedown_conversion_score(attacker, defender),
+        base_probability=(
+            calibration.takedown_success_base_probability
+        ),
+        strength=calibration.takedown_success_effect_strength,
     )
 
 
@@ -291,23 +431,42 @@ def build_distance_transition_distribution(
 ) -> TransitionDistribution:
     """Build one shared transition distribution from distance.
 
-    Red and blue do not sample phases independently. Their competing
-    matchup scores are converted into one normalized distribution.
+    A takedown attempt's total probability is determined only by propensity.
+    Conversion quality then splits that attempt mass between ``TAKEDOWN`` and
+    ``TAKEDOWN_ATTEMPT_FAILED``.
     """
 
-    selected_calibration = (
+    selected = (
         calibration
         if calibration is not None
         else DistanceTransitionCalibration()
     )
+    strength = selected.matchup_effect_strength
 
-    strength = selected_calibration.matchup_effect_strength
+    red_attempt = _takedown_attempt_weight(
+        red,
+        base_weight=selected.takedown_base_weight,
+    )
+    blue_attempt = _takedown_attempt_weight(
+        blue,
+        base_weight=selected.takedown_base_weight,
+    )
+    red_success = _distance_takedown_success_probability(
+        red,
+        blue,
+        selected,
+    )
+    blue_success = _distance_takedown_success_probability(
+        blue,
+        red,
+        selected,
+    )
 
     raw_options = (
         (
             TransitionEvent.STAY,
             None,
-            selected_calibration.stay_base_weight
+            selected.stay_base_weight
             * _matchup_multiplier(
                 _distance_stay_score(red, blue),
                 strength=strength,
@@ -316,7 +475,7 @@ def build_distance_transition_distribution(
         (
             TransitionEvent.CLINCH_ENTRY,
             FighterSide.RED,
-            selected_calibration.clinch_entry_base_weight
+            selected.clinch_entry_base_weight
             * _matchup_multiplier(
                 _clinch_entry_score(red, blue),
                 strength=strength,
@@ -325,7 +484,7 @@ def build_distance_transition_distribution(
         (
             TransitionEvent.CLINCH_ENTRY,
             FighterSide.BLUE,
-            selected_calibration.clinch_entry_base_weight
+            selected.clinch_entry_base_weight
             * _matchup_multiplier(
                 _clinch_entry_score(blue, red),
                 strength=strength,
@@ -334,97 +493,29 @@ def build_distance_transition_distribution(
         (
             TransitionEvent.TAKEDOWN,
             FighterSide.RED,
-            _takedown_weight(
-                red,
-                blue,
-                base_weight=selected_calibration.takedown_base_weight,
-                strength=strength,
-            ),
+            red_attempt * red_success,
+        ),
+        (
+            TransitionEvent.TAKEDOWN_ATTEMPT_FAILED,
+            FighterSide.RED,
+            red_attempt * (1.0 - red_success),
         ),
         (
             TransitionEvent.TAKEDOWN,
             FighterSide.BLUE,
-            _takedown_weight(
-                blue,
-                red,
-                base_weight=selected_calibration.takedown_base_weight,
-                strength=strength,
-            ),
+            blue_attempt * blue_success,
+        ),
+        (
+            TransitionEvent.TAKEDOWN_ATTEMPT_FAILED,
+            FighterSide.BLUE,
+            blue_attempt * (1.0 - blue_success),
         ),
     )
 
-    total_weight = fsum(
-        weight
-        for _, _, weight in raw_options
+    return _normalize_options(
+        FightPhase.DISTANCE,
+        raw_options,
     )
-
-    options = tuple(
-        TransitionProbability(
-            event=event,
-            actor=actor,
-            probability=weight / total_weight,
-        )
-        for event, actor, weight in raw_options
-    )
-
-    return TransitionDistribution(
-        source_phase=FightPhase.DISTANCE,
-        options=options,
-    )
-
-
-@dataclass(frozen=True)
-class ClinchTransitionCalibration:
-    """Provisional relative weights for clinch transitions.
-
-    Neutral fighter parameters with a known clinch owner produce:
-
-    - 45.0% remain in the clinch with the current owner
-    - 25.0% break back to distance
-    - 10.0% change clinch ownership
-    - 15.0% current-owner takedown
-    - 5.0% defender takedown
-
-    These are structural starting values, not final UFC calibration.
-    """
-
-    stay_base_weight: float = 4.5
-    break_base_weight: float = 2.5
-    ownership_change_base_weight: float = 1.0
-    owner_takedown_base_weight: float = 1.5
-    defender_takedown_base_weight: float = 0.5
-
-    matchup_effect_strength: float = 1.0
-
-    def __post_init__(self) -> None:
-        positive_fields = {
-            "stay_base_weight": self.stay_base_weight,
-            "break_base_weight": self.break_base_weight,
-            "ownership_change_base_weight": (
-                self.ownership_change_base_weight
-            ),
-            "owner_takedown_base_weight": (
-                self.owner_takedown_base_weight
-            ),
-            "defender_takedown_base_weight": (
-                self.defender_takedown_base_weight
-            ),
-        }
-
-        for name, value in positive_fields.items():
-            if not isfinite(value) or value <= 0.0:
-                raise ValueError(
-                    f"{name} must be finite and positive"
-                )
-
-        if (
-            not isfinite(self.matchup_effect_strength)
-            or self.matchup_effect_strength < 0.0
-        ):
-            raise ValueError(
-                "matchup_effect_strength must be finite "
-                "and nonnegative"
-            )
 
 
 def _clinch_stay_score(
@@ -436,12 +527,8 @@ def _clinch_stay_score(
     return (
         0.45 * owner.clinch_retention
         + 0.25 * owner.phase_imposition
-        + 0.20 * (
-            1.0 - defender.clinch_escape_ability
-        )
-        + 0.10 * (
-            1.0 - defender.phase_resistance
-        )
+        + 0.20 * (1.0 - defender.clinch_escape_ability)
+        + 0.10 * (1.0 - defender.phase_resistance)
     )
 
 
@@ -454,12 +541,8 @@ def _clinch_break_score(
     return (
         0.50 * defender.clinch_escape_ability
         + 0.25 * defender.phase_resistance
-        + 0.15 * (
-            1.0 - owner.clinch_retention
-        )
-        + 0.10 * (
-            1.0 - owner.phase_imposition
-        )
+        + 0.15 * (1.0 - owner.clinch_retention)
+        + 0.10 * (1.0 - owner.phase_imposition)
     )
 
 
@@ -472,12 +555,8 @@ def _clinch_ownership_change_score(
     return (
         0.35 * defender.phase_imposition
         + 0.25 * defender.clinch_retention
-        + 0.20 * (
-            1.0 - owner.clinch_retention
-        )
-        + 0.20 * (
-            1.0 - owner.phase_resistance
-        )
+        + 0.20 * (1.0 - owner.clinch_retention)
+        + 0.20 * (1.0 - owner.phase_resistance)
     )
 
 
@@ -487,7 +566,7 @@ def _clinch_takedown_conversion_score(
     *,
     attacker_is_owner: bool,
 ) -> float:
-    """Calculate clinch conversion quality after wrestling initiation."""
+    """Calculate clinch conversion quality after initiation."""
 
     positional_trait = (
         attacker.clinch_retention
@@ -496,35 +575,30 @@ def _clinch_takedown_conversion_score(
     )
 
     return (
-        0.85 * _takedown_conversion_score(
-            attacker,
-            defender,
-        )
+        0.85 * _takedown_conversion_score(attacker, defender)
         + 0.15 * positional_trait
     )
 
 
-def _clinch_takedown_weight(
+def _clinch_takedown_success_probability(
     attacker: FighterTransitionParameters,
     defender: FighterTransitionParameters,
     *,
     attacker_is_owner: bool,
-    base_weight: float,
-    strength: float,
+    calibration: ClinchTransitionCalibration,
 ) -> float:
-    """Return one completed-takedown transition weight from the clinch."""
+    """Resolve one clinch-shot attempt into success probability."""
 
-    return (
-        base_weight
-        * _takedown_propensity_multiplier(attacker)
-        * _matchup_multiplier(
-            _clinch_takedown_conversion_score(
-                attacker,
-                defender,
-                attacker_is_owner=attacker_is_owner,
-            ),
-            strength=strength,
-        )
+    return _probability_from_matchup_score(
+        _clinch_takedown_conversion_score(
+            attacker,
+            defender,
+            attacker_is_owner=attacker_is_owner,
+        ),
+        base_probability=(
+            calibration.takedown_success_base_probability
+        ),
+        strength=calibration.takedown_success_effect_strength,
     )
 
 
@@ -537,7 +611,7 @@ def build_clinch_transition_distribution(
 ) -> TransitionDistribution:
     """Build one shared transition distribution from the clinch."""
 
-    selected_calibration = (
+    selected = (
         calibration
         if calibration is not None
         else ClinchTransitionCalibration()
@@ -548,142 +622,93 @@ def build_clinch_transition_distribution(
         defender = blue
         owner_side = FighterSide.RED
         defender_side = FighterSide.BLUE
-    else:
+    elif current_owner is FighterSide.BLUE:
         owner = blue
         defender = red
         owner_side = FighterSide.BLUE
         defender_side = FighterSide.RED
+    else:
+        raise ValueError(
+            "current_owner must be red or blue"
+        )
 
-    strength = selected_calibration.matchup_effect_strength
+    strength = selected.matchup_effect_strength
+
+    owner_attempt = _takedown_attempt_weight(
+        owner,
+        base_weight=selected.owner_takedown_base_weight,
+    )
+    defender_attempt = _takedown_attempt_weight(
+        defender,
+        base_weight=selected.defender_takedown_base_weight,
+    )
+    owner_success = _clinch_takedown_success_probability(
+        owner,
+        defender,
+        attacker_is_owner=True,
+        calibration=selected,
+    )
+    defender_success = _clinch_takedown_success_probability(
+        defender,
+        owner,
+        attacker_is_owner=False,
+        calibration=selected,
+    )
 
     raw_options = (
         (
             TransitionEvent.STAY,
             None,
-            selected_calibration.stay_base_weight
+            selected.stay_base_weight
             * _matchup_multiplier(
-                _clinch_stay_score(
-                    owner,
-                    defender,
-                ),
+                _clinch_stay_score(owner, defender),
                 strength=strength,
             ),
         ),
         (
             TransitionEvent.CLINCH_BREAK,
             None,
-            selected_calibration.break_base_weight
+            selected.break_base_weight
             * _matchup_multiplier(
-                _clinch_break_score(
-                    owner,
-                    defender,
-                ),
+                _clinch_break_score(owner, defender),
                 strength=strength,
             ),
         ),
         (
             TransitionEvent.OWNERSHIP_CHANGE,
             defender_side,
-            selected_calibration.ownership_change_base_weight
+            selected.ownership_change_base_weight
             * _matchup_multiplier(
-                _clinch_ownership_change_score(
-                    owner,
-                    defender,
-                ),
+                _clinch_ownership_change_score(owner, defender),
                 strength=strength,
             ),
         ),
         (
             TransitionEvent.TAKEDOWN,
             owner_side,
-            _clinch_takedown_weight(
-                owner,
-                defender,
-                attacker_is_owner=True,
-                base_weight=(
-                    selected_calibration.owner_takedown_base_weight
-                ),
-                strength=strength,
-            ),
+            owner_attempt * owner_success,
+        ),
+        (
+            TransitionEvent.TAKEDOWN_ATTEMPT_FAILED,
+            owner_side,
+            owner_attempt * (1.0 - owner_success),
         ),
         (
             TransitionEvent.TAKEDOWN,
             defender_side,
-            _clinch_takedown_weight(
-                defender,
-                owner,
-                attacker_is_owner=False,
-                base_weight=(
-                    selected_calibration.defender_takedown_base_weight
-                ),
-                strength=strength,
-            ),
+            defender_attempt * defender_success,
+        ),
+        (
+            TransitionEvent.TAKEDOWN_ATTEMPT_FAILED,
+            defender_side,
+            defender_attempt * (1.0 - defender_success),
         ),
     )
 
-    total_weight = fsum(
-        weight
-        for _, _, weight in raw_options
+    return _normalize_options(
+        FightPhase.CLINCH,
+        raw_options,
     )
-
-    options = tuple(
-        TransitionProbability(
-            event=event,
-            actor=actor,
-            probability=weight / total_weight,
-        )
-        for event, actor, weight in raw_options
-    )
-
-    return TransitionDistribution(
-        source_phase=FightPhase.CLINCH,
-        options=options,
-    )
-
-
-@dataclass(frozen=True)
-class GroundTransitionCalibration:
-    """Provisional relative weights for ground transitions.
-
-    Neutral fighter parameters with a known ground owner produce:
-
-    - 55% remain grounded with the current owner
-    - 20% defender escapes to distance
-    - 15% defender scrambles into clinch ownership
-    - 10% defender reverses ground ownership
-
-    These are structural starting values, not final UFC calibration.
-    """
-
-    stay_base_weight: float = 5.5
-    escape_base_weight: float = 2.0
-    scramble_base_weight: float = 1.5
-    reversal_base_weight: float = 1.0
-
-    matchup_effect_strength: float = 1.0
-
-    def __post_init__(self) -> None:
-        positive_fields = {
-            "stay_base_weight": self.stay_base_weight,
-            "escape_base_weight": self.escape_base_weight,
-            "scramble_base_weight": self.scramble_base_weight,
-            "reversal_base_weight": self.reversal_base_weight,
-        }
-
-        for name, value in positive_fields.items():
-            if not isfinite(value) or value <= 0.0:
-                raise ValueError(
-                    f"{name} must be finite and positive"
-                )
-
-        if (
-            not isfinite(self.matchup_effect_strength)
-            or self.matchup_effect_strength < 0.0
-        ):
-            raise ValueError(
-                "matchup_effect_strength must be finite "
-                "and nonnegative"
-            )
 
 
 def _ground_stay_score(
@@ -695,12 +720,8 @@ def _ground_stay_score(
     return (
         0.50 * owner.ground_retention
         + 0.25 * owner.phase_imposition
-        + 0.15 * (
-            1.0 - defender.ground_escape_ability
-        )
-        + 0.10 * (
-            1.0 - defender.reversal_ability
-        )
+        + 0.15 * (1.0 - defender.ground_escape_ability)
+        + 0.10 * (1.0 - defender.reversal_ability)
     )
 
 
@@ -713,12 +734,8 @@ def _ground_escape_score(
     return (
         0.50 * defender.ground_escape_ability
         + 0.25 * defender.phase_resistance
-        + 0.15 * (
-            1.0 - owner.ground_retention
-        )
-        + 0.10 * (
-            1.0 - owner.phase_imposition
-        )
+        + 0.15 * (1.0 - owner.ground_retention)
+        + 0.10 * (1.0 - owner.phase_imposition)
     )
 
 
@@ -731,12 +748,8 @@ def _ground_scramble_score(
     return (
         0.35 * defender.ground_escape_ability
         + 0.30 * defender.phase_imposition
-        + 0.20 * (
-            1.0 - owner.ground_retention
-        )
-        + 0.15 * (
-            1.0 - owner.phase_resistance
-        )
+        + 0.20 * (1.0 - owner.ground_retention)
+        + 0.15 * (1.0 - owner.phase_resistance)
     )
 
 
@@ -749,12 +762,8 @@ def _ground_reversal_score(
     return (
         0.50 * defender.reversal_ability
         + 0.20 * defender.phase_imposition
-        + 0.15 * (
-            1.0 - owner.ground_retention
-        )
-        + 0.15 * (
-            1.0 - owner.phase_resistance
-        )
+        + 0.15 * (1.0 - owner.ground_retention)
+        + 0.15 * (1.0 - owner.phase_resistance)
     )
 
 
@@ -765,13 +774,9 @@ def build_ground_transition_distribution(
     current_owner: FighterSide,
     calibration: GroundTransitionCalibration | None = None,
 ) -> TransitionDistribution:
-    """Build one shared transition distribution from the ground.
+    """Build one shared transition distribution from the ground."""
 
-    The current owner may retain the position. All other V2 ground
-    transitions are defensive actions by the current non-owner.
-    """
-
-    selected_calibration = (
+    selected = (
         calibration
         if calibration is not None
         else GroundTransitionCalibration()
@@ -790,74 +795,47 @@ def build_ground_transition_distribution(
             "current_owner must be red or blue"
         )
 
-    strength = selected_calibration.matchup_effect_strength
-
+    strength = selected.matchup_effect_strength
     raw_options = (
         (
             TransitionEvent.STAY,
             None,
-            selected_calibration.stay_base_weight
+            selected.stay_base_weight
             * _matchup_multiplier(
-                _ground_stay_score(
-                    owner,
-                    defender,
-                ),
+                _ground_stay_score(owner, defender),
                 strength=strength,
             ),
         ),
         (
             TransitionEvent.GROUND_ESCAPE,
             defender_side,
-            selected_calibration.escape_base_weight
+            selected.escape_base_weight
             * _matchup_multiplier(
-                _ground_escape_score(
-                    owner,
-                    defender,
-                ),
+                _ground_escape_score(owner, defender),
                 strength=strength,
             ),
         ),
         (
             TransitionEvent.SCRAMBLE_TO_CLINCH,
             defender_side,
-            selected_calibration.scramble_base_weight
+            selected.scramble_base_weight
             * _matchup_multiplier(
-                _ground_scramble_score(
-                    owner,
-                    defender,
-                ),
+                _ground_scramble_score(owner, defender),
                 strength=strength,
             ),
         ),
         (
             TransitionEvent.REVERSAL,
             defender_side,
-            selected_calibration.reversal_base_weight
+            selected.reversal_base_weight
             * _matchup_multiplier(
-                _ground_reversal_score(
-                    owner,
-                    defender,
-                ),
+                _ground_reversal_score(owner, defender),
                 strength=strength,
             ),
         ),
     )
 
-    total_weight = fsum(
-        weight
-        for _, _, weight in raw_options
-    )
-
-    options = tuple(
-        TransitionProbability(
-            event=event,
-            actor=actor,
-            probability=weight / total_weight,
-        )
-        for event, actor, weight in raw_options
-    )
-
-    return TransitionDistribution(
-        source_phase=FightPhase.GROUND,
-        options=options,
+    return _normalize_options(
+        FightPhase.GROUND,
+        raw_options,
     )
