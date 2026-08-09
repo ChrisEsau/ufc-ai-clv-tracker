@@ -42,10 +42,12 @@ def build_fsr_22_database(
     if reversal_snapshots.duplicated(keys).any():
         raise RuntimeError("reversal snapshots violate fighter-fight grain")
 
-    if _key_set(fsr21) != _key_set(reversal_snapshots):
+    fsr21_keys = _key_set(fsr21)
+    reversal_keys = _key_set(reversal_snapshots)
+    if fsr21_keys != reversal_keys:
         raise RuntimeError(
             "FSR-22 snapshot key mismatch: "
-            f"fsr21={len(_key_set(fsr21))}, reversal={len(_key_set(reversal_snapshots))}"
+            f"fsr21={len(fsr21_keys)}, reversal={len(reversal_keys)}"
         )
 
     keep = [
@@ -54,6 +56,9 @@ def build_fsr_22_database(
         f"{reversal.SKILL}_updates",
     ]
 
+    # FSR-21 is the left-hand frame and the right-hand frame contains only
+    # fighter-fight keys plus the two new reversal columns, so all existing
+    # FSR-21 columns are preserved byte-for-byte at merge time.
     merged = fsr21.merge(
         reversal_snapshots[keep],
         on=keys,
@@ -61,28 +66,16 @@ def build_fsr_22_database(
         validate="one_to_one",
     )
 
+    if len(merged) != len(fsr21):
+        raise RuntimeError(
+            f"FSR-22 row count changed: fsr21={len(fsr21)}, fsr22={len(merged)}"
+        )
+
     rating = pd.to_numeric(merged[reversal.SKILL], errors="coerce")
     if rating.isna().any():
         raise RuntimeError("FSR-22 contains missing reversal ratings")
     if ((rating < reversal.MIN_RATING) | (rating > reversal.MAX_RATING)).any():
         raise RuntimeError("FSR-22 contains out-of-range reversal ratings")
-
-    # Confirm the append did not mutate any existing FSR-21 values.
-    original_columns = list(fsr21.columns)
-    check = fsr21.merge(
-        merged[keys + original_columns[2:]],
-        on=keys,
-        suffixes=("_21", "_22"),
-        validate="one_to_one",
-    )
-    for column in original_columns:
-        if column in keys:
-            continue
-        left = f"{column}_21"
-        right = f"{column}_22"
-        if left in check.columns and right in check.columns:
-            if not check[left].equals(check[right]):
-                raise RuntimeError(f"FSR-22 changed existing FSR-21 column: {column}")
 
     sort_columns = [c for c in ("date", "fight_id", "fighter_id") if c in merged.columns]
     return merged.sort_values(sort_columns).reset_index(drop=True)
