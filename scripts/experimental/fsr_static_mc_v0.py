@@ -50,11 +50,14 @@ MODIFIER_SCALE = 6.0
 CALIBRATION_INTERVAL_SECONDS = 30
 
 # Locked 30-second research priors; converted to equivalent 10-second hazards.
+# Control-persistence priors are provisional V0 values selected from the
+# decision-only calibration finalists. They should be revalidated after the
+# dynamic fatigue/damage state engine is enabled.
 DISTANCE_CLINCH_BASE_30S = 0.04
 DISTANCE_TD_ATTEMPT_BASE_30S = 0.10
-CLINCH_SEPARATE_BASE_30S = 0.30
+CLINCH_SEPARATE_BASE_30S = 0.25
 CLINCH_TD_ATTEMPT_BASE_30S = 0.24
-GROUND_EXIT_BASE_30S = 0.40
+GROUND_EXIT_BASE_30S = 0.20
 TD_SUCCESS_LOGIT_OFFSET = -0.40
 
 
