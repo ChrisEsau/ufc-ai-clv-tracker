@@ -2,14 +2,18 @@
 
 Purpose
 -------
-Generate inspectable 30-second MMA fight paths from FSR-26 profiles before
+Generate inspectable 10-second MMA fight paths from FSR-26 profiles before
 adding the dynamic state engine or a detailed finish model.
 
 V0 deliberately includes:
 - distance / clinch / ground phase state
-- calibrated hierarchical transition priors
+- calibrated hierarchical transition priors rescaled from 30s to 10s
 - takedown attempt vs takedown success split
+- explicit ground top/bottom ownership
+- takedown initiator becomes top fighter on a successful takedown
+- reversals swap top/bottom ownership
 - phase-specific striking attempts and landed strikes
+- top-fighter weighted ground striking
 - ground control, escapes, reversals, submission attempts
 - deterministic seeding and verbose segment path output
 
@@ -38,34 +42,78 @@ FSR_PATH = Path(
     "fsr_26_prefight_snapshots.parquet"
 )
 
-SEGMENT_SECONDS = 30
-SEGMENTS_PER_ROUND = 10
+SEGMENT_SECONDS = 10
+SEGMENTS_PER_ROUND = 30
 DEFAULT_ROUNDS = 3
 RATING_SCALE = 12.0
 MODIFIER_SCALE = 6.0
 
-# Starting priors from hierarchical TD-attempt/success research V2.
-DISTANCE_CLINCH_BASE = 0.04
-DISTANCE_TD_ATTEMPT_BASE = 0.10
-CLINCH_SEPARATE_BASE = 0.30
-CLINCH_TD_ATTEMPT_BASE = 0.24
-GROUND_EXIT_BASE = 0.40
+# The research calibration was performed on 30-second hazards. Keep those as
+# the source priors and convert them to equivalent 10-second hazards so changing
+# the simulator clock does not silently change the calibrated event frequency.
+CALIBRATION_INTERVAL_SECONDS = 30
+DISTANCE_CLINCH_BASE_30S = 0.04
+DISTANCE_TD_ATTEMPT_BASE_30S = 0.10
+CLINCH_SEPARATE_BASE_30S = 0.30
+CLINCH_TD_ATTEMPT_BASE_30S = 0.24
+GROUND_EXIT_BASE_30S = 0.40
 TD_SUCCESS_LOGIT_OFFSET = -0.40
 
-# V0 event-rate priors. These are intentionally simple placeholders used only
-# to create plausible paths. They are NOT locked calibration constants.
-STRIKE_ATTEMPTS_PER_SEGMENT_BASE = {
+
+def _rescale_interval_prob(p: float, from_seconds: int, to_seconds: int) -> float:
+    """Convert an event probability between interval lengths under constant hazard."""
+    if not 0.0 <= p <= 1.0:
+        raise ValueError(f"probability must be in [0, 1], got {p}")
+    if from_seconds <= 0 or to_seconds <= 0:
+        raise ValueError("interval lengths must be positive")
+    return 1.0 - (1.0 - p) ** (to_seconds / from_seconds)
+
+
+DISTANCE_CLINCH_BASE = _rescale_interval_prob(
+    DISTANCE_CLINCH_BASE_30S, CALIBRATION_INTERVAL_SECONDS, SEGMENT_SECONDS
+)
+DISTANCE_TD_ATTEMPT_BASE = _rescale_interval_prob(
+    DISTANCE_TD_ATTEMPT_BASE_30S, CALIBRATION_INTERVAL_SECONDS, SEGMENT_SECONDS
+)
+CLINCH_SEPARATE_BASE = _rescale_interval_prob(
+    CLINCH_SEPARATE_BASE_30S, CALIBRATION_INTERVAL_SECONDS, SEGMENT_SECONDS
+)
+CLINCH_TD_ATTEMPT_BASE = _rescale_interval_prob(
+    CLINCH_TD_ATTEMPT_BASE_30S, CALIBRATION_INTERVAL_SECONDS, SEGMENT_SECONDS
+)
+GROUND_EXIT_BASE = _rescale_interval_prob(
+    GROUND_EXIT_BASE_30S, CALIBRATION_INTERVAL_SECONDS, SEGMENT_SECONDS
+)
+
+# V0 event-rate priors. The original placeholders were expressed per 30-second
+# segment. Poisson rates scale linearly with exposure time.
+STRIKE_ATTEMPTS_PER_30S_BASE = {
     "DISTANCE": 5.0,
     "CLINCH": 1.2,
     "GROUND": 1.6,
+}
+STRIKE_ATTEMPTS_PER_SEGMENT_BASE = {
+    phase: rate * (SEGMENT_SECONDS / CALIBRATION_INTERVAL_SECONDS)
+    for phase, rate in STRIKE_ATTEMPTS_PER_30S_BASE.items()
 }
 STRIKE_ACCURACY_BASE = {
     "DISTANCE": 0.40,
     "CLINCH": 0.68,
     "GROUND": 0.70,
 }
-SUB_ATTEMPT_BASE_PER_GROUND_SEGMENT = 0.045
+SUB_ATTEMPT_BASE_PER_30S_GROUND = 0.045
+SUB_ATTEMPT_BASE_PER_GROUND_SEGMENT = _rescale_interval_prob(
+    SUB_ATTEMPT_BASE_PER_30S_GROUND,
+    CALIBRATION_INTERVAL_SECONDS,
+    SEGMENT_SECONDS,
+)
 REVERSAL_SHARE_OF_GROUND_EXITS = 0.18
+
+# A controlled bottom fighter can strike, but their meaningful ground offense is
+# much more restricted than the top fighter's GNP. This is a V0 plausibility
+# prior, not a locked population calibration constant.
+BOTTOM_GROUND_STRIKE_RATE_MULTIPLIER = 0.20
+BOTTOM_SUBMISSION_RATE_MULTIPLIER = 0.55
 
 PHASE_PRESSURE = {
     "DISTANCE": "distance_striking_pressure",
@@ -245,8 +293,6 @@ class StaticFSRMCV0:
 
     def _initiative_actor(self, phase: str) -> int:
         if phase == "GROUND" and self.ground_controller is not None:
-            # Controller has more offensive initiative, but bottom fighter can
-            # still create escape/reversal/submission moments.
             if self.rng.random() < 0.68:
                 return self.ground_controller
             return self._other(self.ground_controller)
@@ -307,7 +353,9 @@ class StaticFSRMCV0:
             _value(self.fighters[bottom], "reversal_ability")
             - _value(self.fighters[controller], "control_imposition")
         ) / RATING_SCALE
-        modifier = exp(float(np.clip(0.60 * escape_edge + 0.40 * reversal_edge, -1.5, 1.5)))
+        modifier = exp(
+            float(np.clip(0.60 * escape_edge + 0.40 * reversal_edge, -1.5, 1.5))
+        )
         return _prob(GROUND_EXIT_BASE * modifier, high=0.90)
 
     def _reversal_probability(self, bottom: int, controller: int) -> float:
@@ -318,9 +366,19 @@ class StaticFSRMCV0:
         base_logit = _logit(REVERSAL_SHARE_OF_GROUND_EXITS)
         return _sigmoid(base_logit + 0.75 * edge)
 
-    def _strike_attempts(self, fighter: int, phase: str) -> int:
+    def _strike_attempts(
+        self,
+        fighter: int,
+        phase: str,
+        *,
+        rate_multiplier: float = 1.0,
+    ) -> int:
         pressure = _value(self.fighters[fighter], PHASE_PRESSURE[phase])
-        lam = STRIKE_ATTEMPTS_PER_SEGMENT_BASE[phase] * _modifier(pressure - 50.0, scale=12.0)
+        lam = (
+            STRIKE_ATTEMPTS_PER_SEGMENT_BASE[phase]
+            * _modifier(pressure - 50.0, scale=12.0)
+            * rate_multiplier
+        )
         return int(self.rng.poisson(max(lam, 0.0)))
 
     def _strike_accuracy(self, fighter: int, phase: str) -> float:
@@ -330,29 +388,67 @@ class StaticFSRMCV0:
         edge = (precision - defense) / RATING_SCALE
         return _sigmoid(_logit(STRIKE_ACCURACY_BASE[phase]) + edge)
 
+    def _generate_strikes_for_fighter(
+        self,
+        fighter: int,
+        phase: str,
+        *,
+        rate_multiplier: float = 1.0,
+    ) -> str | None:
+        attempts = self._strike_attempts(
+            fighter,
+            phase,
+            rate_multiplier=rate_multiplier,
+        )
+        accuracy = self._strike_accuracy(fighter, phase)
+        landed = int(self.rng.binomial(attempts, accuracy)) if attempts else 0
+        self.stats[fighter].sig_att += attempts
+        self.stats[fighter].sig_landed += landed
+        if not attempts:
+            return None
+        return f"{self.names[fighter]} {landed}/{attempts} sig"
+
     def _generate_striking(self, phase: str) -> list[str]:
         notes: list[str] = []
+
+        if phase == "GROUND" and self.ground_controller is not None:
+            controller = self.ground_controller
+            bottom = self._other(controller)
+
+            top_note = self._generate_strikes_for_fighter(controller, "GROUND")
+            if top_note:
+                notes.append(f"{top_note} (top)")
+
+            bottom_note = self._generate_strikes_for_fighter(
+                bottom,
+                "GROUND",
+                rate_multiplier=BOTTOM_GROUND_STRIKE_RATE_MULTIPLIER,
+            )
+            if bottom_note:
+                notes.append(f"{bottom_note} (bottom)")
+            return notes
+
         for fighter in (0, 1):
-            attempts = self._strike_attempts(fighter, phase)
-            accuracy = self._strike_accuracy(fighter, phase)
-            landed = int(self.rng.binomial(attempts, accuracy)) if attempts else 0
-            self.stats[fighter].sig_att += attempts
-            self.stats[fighter].sig_landed += landed
-            if attempts:
-                notes.append(f"{self.names[fighter]} {landed}/{attempts} sig")
+            note = self._generate_strikes_for_fighter(fighter, phase)
+            if note:
+                notes.append(note)
         return notes
 
-    def _maybe_submission_attempt(self, fighter: int) -> bool:
+    def _maybe_submission_attempt(
+        self,
+        fighter: int,
+        *,
+        rate_multiplier: float = 1.0,
+    ) -> bool:
         pressure = _value(self.fighters[fighter], "submission_pressure")
-        p = _prob(SUB_ATTEMPT_BASE_PER_GROUND_SEGMENT * _modifier(pressure - 50.0, scale=10.0), 0.35)
+        base = SUB_ATTEMPT_BASE_PER_GROUND_SEGMENT * rate_multiplier
+        p = _prob(base * _modifier(pressure - 50.0, scale=10.0), 0.35)
         if self.rng.random() < p:
             self.stats[fighter].sub_att += 1
             return True
         return False
 
     def _distance_transition(self, actor: int) -> str:
-        # Entry events compete. Takedown attempt and clinch entry are separate
-        # hazards; if both would occur, choose one proportional to hazards.
         p_clinch = self._distance_clinch_hazard(actor)
         p_td = self._td_attempt_hazard(actor, "DISTANCE")
         total = min(p_clinch + p_td, 0.90)
@@ -388,11 +484,13 @@ class StaticFSRMCV0:
         if self.rng.random() < success_p:
             self.stats[attacker].td_landed += 1
             self.phase = "GROUND"
+            # Explicit positional ownership: the successful TD attacker starts
+            # the next segment on top and receives control credit while top.
             self.ground_controller = attacker
             self.clinch_initiator = None
             return (
                 f"{self.names[attacker]} TD SUCCESS "
-                f"({success_p:.2f}) from {source_phase.lower()}"
+                f"({success_p:.2f}) from {source_phase.lower()} -> TOP"
             )
         return (
             f"{self.names[attacker]} TD failed "
@@ -404,13 +502,18 @@ class StaticFSRMCV0:
         controller = self.ground_controller
         bottom = self._other(controller)
 
-        # Controller receives this segment's coarse control credit.
+        # A segment beginning on the ground credits the current top fighter with
+        # the full 10 seconds of coarse control. Any transition affects the next
+        # segment, keeping the discrete-time state accounting unambiguous.
         self.stats[controller].control_seconds += SEGMENT_SECONDS
 
         notes: list[str] = []
         if self._maybe_submission_attempt(controller):
-            notes.append(f"{self.names[controller]} submission attempt")
-        if self._maybe_submission_attempt(bottom):
+            notes.append(f"{self.names[controller]} submission attempt from top")
+        if self._maybe_submission_attempt(
+            bottom,
+            rate_multiplier=BOTTOM_SUBMISSION_RATE_MULTIPLIER,
+        ):
             notes.append(f"{self.names[bottom]} submission attempt from bottom")
 
         p_exit = self._ground_exit_hazard(controller)
@@ -421,8 +524,12 @@ class StaticFSRMCV0:
         p_rev = self._reversal_probability(bottom, controller)
         if self.rng.random() < p_rev:
             self.stats[bottom].reversals += 1
+            # Reversal keeps the fight on the ground but swaps ownership for the
+            # next 10-second segment.
             self.ground_controller = bottom
-            notes.append(f"{self.names[bottom]} REVERSAL")
+            notes.append(
+                f"{self.names[bottom]} REVERSAL -> {self.names[bottom]} top"
+            )
             return "; ".join(notes)
 
         self.phase = "DISTANCE"
@@ -430,16 +537,23 @@ class StaticFSRMCV0:
         notes.append(f"{self.names[bottom]} escapes to distance")
         return "; ".join(notes)
 
+    @staticmethod
+    def _clock_start(segment_no: int) -> str:
+        elapsed = (segment_no - 1) * SEGMENT_SECONDS
+        remaining = 5 * 60 - elapsed
+        minutes, seconds = divmod(remaining, 60)
+        return f"{minutes}:{seconds:02d}"
+
     def run(self) -> FightPath:
         events: list[dict[str, Any]] = []
         for round_no in range(1, self.rounds + 1):
-            # UFC rounds restart standing.
             self.phase = "DISTANCE"
             self.ground_controller = None
             self.clinch_initiator = None
 
             for segment_no in range(1, SEGMENTS_PER_ROUND + 1):
                 phase_start = self.phase
+                controller_start = self.ground_controller
                 for s in self.stats:
                     s.phase_segments[phase_start] += 1
 
@@ -457,11 +571,23 @@ class StaticFSRMCV0:
                     {
                         "round": round_no,
                         "segment": segment_no,
-                        "clock_start": f"{5 - ((segment_no - 1) * 30) // 60}:{30 if segment_no % 2 == 0 else 0:02d}",
+                        "clock_start": self._clock_start(segment_no),
                         "phase_start": phase_start,
                         "phase_end": self.phase,
                         "initiative": self.names[actor],
-                        "striking": "; ".join(strike_notes) if strike_notes else "no sig attempts",
+                        "top_start": (
+                            self.names[controller_start]
+                            if controller_start is not None
+                            else None
+                        ),
+                        "top_end": (
+                            self.names[self.ground_controller]
+                            if self.ground_controller is not None
+                            else None
+                        ),
+                        "striking": "; ".join(strike_notes)
+                        if strike_notes
+                        else "no sig attempts",
                         "transition": transition_note,
                     }
                 )
@@ -471,13 +597,14 @@ class StaticFSRMCV0:
 
 def print_path(path: FightPath, names: list[str]) -> None:
     print("\n" + "=" * 110)
-    print("FSR STATIC MC V0 — PLAUSIBILITY PATH")
+    print("FSR STATIC MC V0 — 10-SECOND PLAUSIBILITY PATH")
     print("=" * 110)
     for event in path.events:
+        top = f" | top={event['top_start']}" if event["top_start"] else ""
         print(
-            f"R{event['round']} S{event['segment']:02d} "
+            f"R{event['round']} {event['clock_start']} S{event['segment']:02d} "
             f"[{event['phase_start']:8s} -> {event['phase_end']:8s}] "
-            f"{event['striking']} | {event['transition']}"
+            f"{event['striking']} | {event['transition']}{top}"
         )
 
     print("\nSUMMARY")
@@ -498,7 +625,10 @@ def print_path(path: FightPath, names: list[str]) -> None:
             )
             print(f"  path phase occupancy: {shares}")
 
-    print("\nV0 NOTE: finishes, judging, fatigue, damage state, adversity, recovery, and urgency are disabled.")
+    print(
+        "\nV0 NOTE: finishes, judging, fatigue, damage state, adversity, "
+        "recovery, and urgency are disabled."
+    )
 
 
 def _default_matchup(frame: pd.DataFrame) -> tuple[pd.Series, pd.Series]:
