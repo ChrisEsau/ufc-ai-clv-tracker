@@ -6,17 +6,18 @@ reservoir + between-round recovery engine.
 Hard contract
 -------------
 The MC does not invent fighter-specific stamina parameters and does not reach
-back into raw RFS features.  Each supplied FSR profile must contain:
+back into raw RFS features. Each supplied FSR profile must contain finite values
+for:
 
 - stamina_capacity
 - stamina_depletion_resistance
 - stamina_performance_resilience
 - stamina_recovery_ability
 
-Those fields are built by ``build_fsr_32_database.py``.  In the first shadow
+Those fields are built by ``build_fsr_32_database.py``. In the first shadow
 version the three ratings are exact aliases of the existing leakage-safe FSR
 cardio traits and the starting capacity is explicitly persisted on every FSR
-row.  Future changes to those fighter parameters therefore belong in FSR
+row. Future changes to those fighter parameters therefore belong in FSR
 creation, not in this simulator.
 
 The locked age mechanic, locked KD curve, damage reservoir, KD-collapse logic,
@@ -41,10 +42,8 @@ from scripts.experimental import fsr_static_mc_v0 as base
 FSR_PATH = fsr32.OUTPUT_PATH
 REQUIRED_STAMINA_COLUMNS = set(fsr32.STAMINA_COLUMNS)
 
-# ---------------------------------------------------------------------------
 # Simulator-physics constants. Fighter-specific differences are supplied only
 # by FSR-32. These values remain shadow calibration candidates.
-# ---------------------------------------------------------------------------
 STAMINA_COST_STRIKE_ATTEMPT = 0.70
 STAMINA_COST_TD_ATTEMPT = 3.00
 STAMINA_COST_TD_SUCCESS = 1.00
@@ -70,7 +69,7 @@ POWER_FLOOR_HIGH_RESILIENCE = 0.20
 POWER_EXPONENT_LOW_RESILIENCE = 2.20
 POWER_EXPONENT_HIGH_RESILIENCE = 1.40
 
-# Damage V1 uses rating scale 10 / tail-magnitude scale 80.  This candidate
+# Damage V1 uses rating scale 10 / tail-magnitude scale 80. This candidate
 # intentionally makes a fresh fighter's striking_power more influential, then
 # lets stamina suppress that extra finishing threat as the fight progresses.
 STAMINA_POWER_TAIL_RATING_SCALE = 6.50
@@ -89,20 +88,27 @@ class StaminaState:
         return float(np.clip(self.current / self.capacity, 0.0, 1.0))
 
 
+def _strict_profile_float(profile: pd.Series, name: str) -> float:
+    """Read an explicit fighter parameter with no simulator-side fallback."""
+    if name not in profile.index:
+        raise ValueError(f"FSR profile missing required fighter parameter: {name}")
+    raw = profile[name]
+    try:
+        value = float(raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"FSR fighter parameter {name} is not numeric: {raw!r}") from exc
+    if not np.isfinite(value):
+        raise ValueError(f"FSR fighter parameter {name} is not finite: {raw!r}")
+    return value
+
+
 class StaticFSRMCKOTKOV3Stamina(recovery.StaticFSRMCKOTKOV2RoundRecovery):
     """Current KO/TKO engine plus action-driven FSR-defined stamina."""
 
     def __init__(self, red: pd.Series, blue: pd.Series, *args, **kwargs) -> None:
-        missing = [
-            column
-            for column in sorted(REQUIRED_STAMINA_COLUMNS)
-            if column not in red.index or column not in blue.index
-        ]
-        if missing:
-            raise ValueError(
-                "FSR profiles missing explicit stamina contract columns: "
-                f"{missing}. Build FSR-32 first."
-            )
+        for profile in (red, blue):
+            for column in sorted(REQUIRED_STAMINA_COLUMNS):
+                _strict_profile_float(profile, column)
 
         super().__init__(red, blue, *args, **kwargs)
 
@@ -113,19 +119,18 @@ class StaticFSRMCKOTKOV3Stamina(recovery.StaticFSRMCKOTKOV2RoundRecovery):
         self.stamina_round_events: list[dict[str, Any]] = []
 
         for fighter in self.fighters:
-            capacity = base._value(fighter, fsr32.STAMINA_CAPACITY)
+            capacity = _strict_profile_float(fighter, fsr32.STAMINA_CAPACITY)
             if capacity <= 0.0:
                 raise ValueError(f"stamina_capacity must be positive, got {capacity}")
             self.stamina_state.append(
                 StaminaState(capacity=float(capacity), current=float(capacity))
             )
 
-    # ------------------------------------------------------------------
-    # FSR stamina translation.
-    # ------------------------------------------------------------------
     def _stamina_rating(self, fighter: int, trait: str) -> float:
-        value = base._value(self.fighters[fighter], trait)
-        return float(np.clip(value, 10.0, 90.0))
+        value = _strict_profile_float(self.fighters[fighter], trait)
+        if not 10.0 <= value <= 90.0:
+            raise ValueError(f"FSR stamina rating {trait} outside 10-90: {value}")
+        return value
 
     def _resilience_unit(self, fighter: int) -> float:
         rating = self._stamina_rating(
@@ -176,9 +181,6 @@ class StaticFSRMCKOTKOV3Stamina(recovery.StaticFSRMCKOTKOV2RoundRecovery):
         )
         return float(np.clip(floor + (1.0 - floor) * (s**exponent), 0.0, 1.0))
 
-    # ------------------------------------------------------------------
-    # Stamina bookkeeping.
-    # ------------------------------------------------------------------
     def _spend_stamina(self, fighter: int, base_cost: float, reason: str) -> float:
         if base_cost <= 0.0:
             return 0.0
@@ -207,7 +209,7 @@ class StaticFSRMCKOTKOV3Stamina(recovery.StaticFSRMCKOTKOV2RoundRecovery):
         # Preserve the existing damage-recovery mechanic exactly.
         super()._apply_between_round_recovery(completed_round)
 
-        for fighter_index, fighter in enumerate(self.fighters):
+        for fighter_index, _fighter in enumerate(self.fighters):
             state = self.stamina_state[fighter_index]
             missing = max(0.0, state.capacity - state.current)
             rating = self._stamina_rating(
@@ -232,9 +234,7 @@ class StaticFSRMCKOTKOV3Stamina(recovery.StaticFSRMCKOTKOV2RoundRecovery):
                 }
             )
 
-    # ------------------------------------------------------------------
     # Output suppression and action costs.
-    # ------------------------------------------------------------------
     def _strike_attempts(
         self,
         fighter: int,
@@ -324,9 +324,7 @@ class StaticFSRMCKOTKOV3Stamina(recovery.StaticFSRMCKOTKOV2RoundRecovery):
                 self._spend_stamina(bottom, STAMINA_COST_ESCAPE, "ground_escape")
         return note
 
-    # ------------------------------------------------------------------
     # Stronger fresh striking power, followed by aggressive fatigue decay.
-    # ------------------------------------------------------------------
     def _fresh_tail_probability(self, attacker: int) -> float:
         power = base._value(self.fighters[attacker], "striking_power")
         return damage._sigmoid(
@@ -376,6 +374,10 @@ def load_profiles(path: Path = FSR_PATH) -> pd.DataFrame:
     missing = sorted(required - set(frame.columns))
     if missing:
         raise ValueError(f"FSR-32 artifact missing required MC columns: {missing}")
+    for column in REQUIRED_STAMINA_COLUMNS:
+        values = pd.to_numeric(frame[column], errors="coerce")
+        if values.isna().any() or not np.isfinite(values.to_numpy()).all():
+            raise ValueError(f"FSR-32 contains invalid {column} values")
     frame["fighter_id"] = frame["fighter_id"].astype(str)
     return base._latest_rows(frame).reset_index(drop=True)
 
