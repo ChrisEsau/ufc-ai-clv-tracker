@@ -39,6 +39,15 @@ def _profile(fid: str, **overrides) -> pd.Series:
     return pd.Series(data)
 
 
+def test_selected_shadow_calibration_constants_are_exposed() -> None:
+    assert damage.STRIKE_DAMAGE_SCALE == 0.50
+    assert damage.KD_BASE_LOGIT == -6.40
+    assert damage.KD_RESISTANCE_SCALE == 32.0
+    assert damage.KD_DEPLETION_COEFFICIENT == 1.50
+    assert damage.KD_RECENT_KD_LOGIT_BONUS == 0.50
+    assert damage.RECENT_KD_SEGMENTS == 3
+
+
 def test_capacity_mapping_is_centered_monotonic_and_bounded() -> None:
     low = damage.reservoir_capacity_from_durability(10.0)
     mid = damage.reservoir_capacity_from_durability(50.0)
@@ -77,6 +86,20 @@ def test_landed_strike_depletes_defender_reservoir_without_bonus_kd_damage() -> 
     assert sim.damage_state[1].recent_knockdown
     assert sim.stats[0].knockdowns_scored == 1
     assert sim.stats[1].knockdowns_absorbed == 1
+
+
+def test_selected_damage_scale_is_applied_to_draws() -> None:
+    sim = damage.StaticFSRMCDamageV1(_profile("a"), _profile("b"), rounds=1, seed=22)
+    sim.rng = type(
+        "FixedRNG",
+        (),
+        {
+            "gamma": staticmethod(lambda shape, scale: 4.0),
+            "random": staticmethod(lambda: 1.0),
+        },
+    )()
+
+    assert sim._draw_strike_damage(0) == 4.0 * damage.STRIKE_DAMAGE_SCALE
 
 
 def test_higher_knockdown_resistance_reduces_same_shock_probability() -> None:
