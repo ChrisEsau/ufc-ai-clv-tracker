@@ -5,15 +5,17 @@ candidate. It uses the exact 300-bout historical validation artifact, selects
 only bouts that actually ended by KO/TKO, and reruns their leakage-safe pre-fight
 FSR profiles while tracing first-round mechanics.
 
-Primary question
-----------------
-Why are many actual Round-1 KO/TKO bouts receiving Round-3 MC finish mass?
+Primary questions
+-----------------
+1. Why are many actual Round-1 KO/TKO bouts receiving Round-3 MC finish mass?
+2. Did the leakage-safe FSR traits themselves contain the correct KO-side signal?
 
-The diagnostic separates four possible bottlenecks:
+The diagnostic separates five possible bottlenecks:
 1. first-round strike opportunity/exposure;
 2. first-round knockdown generation;
 3. severe-shock / KD-collapse generation;
-4. correct-side lethality / reservoir depletion.
+4. correct-side lethality / reservoir depletion;
+5. fighter-trait / matchup signal quality in the pre-fight FSR profile.
 
 No simulator constants are changed.
 """
@@ -41,6 +43,36 @@ DEFAULT_PATHS_PER_BOUT = 100
 DEFAULT_SEED = 20260810
 HEARTBEAT_PATHS = 1000
 STRONG = validation.STRONG
+
+# KO-relevant FSR traits. Only columns present in the current FSR artifact are
+# emitted; missing optional traits never get silently substituted.
+KO_FSR_TRAITS = (
+    "striking_power",
+    "knockdown_resistance",
+    "damage_durability",
+    "distance_striking_pressure",
+    "distance_precision",
+    "distance_defense",
+    "clinch_striking_pressure",
+    "clinch_striking_precision",
+    "clinch_striking_defense",
+    "ground_striking_pressure",
+    "ground_striking_precision",
+    "ground_striking_defense",
+)
+
+# Directional attacker-vs-defender matchup edges. Positive means the actual KO
+# winner entered with the more favorable offensive-vs-defensive FSR matchup.
+KO_EDGE_SPECS = (
+    ("power_minus_kd_resistance", "striking_power", "knockdown_resistance"),
+    ("power_minus_durability", "striking_power", "damage_durability"),
+    ("distance_pressure_minus_defense", "distance_striking_pressure", "distance_defense"),
+    ("distance_precision_minus_defense", "distance_precision", "distance_defense"),
+    ("clinch_pressure_minus_defense", "clinch_striking_pressure", "clinch_striking_defense"),
+    ("clinch_precision_minus_defense", "clinch_striking_precision", "clinch_striking_defense"),
+    ("ground_pressure_minus_defense", "ground_striking_pressure", "ground_striking_defense"),
+    ("ground_precision_minus_defense", "ground_striking_precision", "ground_striking_defense"),
+)
 
 
 class TracedStrongKOSim(collapse.StaticFSRMCKOTKOV2KDCollapse):
@@ -91,9 +123,6 @@ class TracedStrongKOSim(collapse.StaticFSRMCKOTKOV2KDCollapse):
             )
             self.r1_end_reservoir_fraction = min(fractions)
 
-            # max_single_strike_damage is cumulative, but during Round 1 that is
-            # exactly the first-round maximum. Convert each attacker's max damage
-            # into a defender-capacity-normalized shock proxy.
             red_max = float(self.stats[0].max_single_strike_damage)
             blue_max = float(self.stats[1].max_single_strike_damage)
             red_to_blue = red_max / float(self.damage_state[1].reservoir_capacity)
@@ -146,6 +175,54 @@ def _scheduled_rounds(row: pd.Series) -> int:
         if rounds in (3, 5):
             return rounds
     return 3
+
+
+def _numeric_value(row: pd.Series, column: str) -> float:
+    if column not in row.index:
+        return float("nan")
+    value = pd.to_numeric(pd.Series([row.get(column)]), errors="coerce").iloc[0]
+    return float(value) if pd.notna(value) else float("nan")
+
+
+def _fsr_signal_row(
+    red: pd.Series,
+    blue: pd.Series,
+    actual_winner_id: str,
+) -> dict[str, object]:
+    """Build leakage-safe KO FSR values and actual-winner directional deltas."""
+    red_id = str(red["fighter_id"])
+    blue_id = str(blue["fighter_id"])
+    if actual_winner_id == red_id:
+        winner, loser = red, blue
+    elif actual_winner_id == blue_id:
+        winner, loser = blue, red
+    else:
+        raise ValueError(
+            f"Actual winner {actual_winner_id} does not match FSR pair {red_id} vs {blue_id}."
+        )
+
+    out: dict[str, object] = {
+        "actual_ko_winner_fighter_id": str(winner["fighter_id"]),
+        "actual_ko_loser_fighter_id": str(loser["fighter_id"]),
+    }
+
+    for trait in KO_FSR_TRAITS:
+        if trait not in winner.index and trait not in loser.index:
+            continue
+        winner_value = _numeric_value(winner, trait)
+        loser_value = _numeric_value(loser, trait)
+        out[f"winner_fsr_{trait}"] = winner_value
+        out[f"loser_fsr_{trait}"] = loser_value
+        out[f"winner_minus_loser_{trait}"] = winner_value - loser_value
+
+    for edge_name, attacker_trait, defender_trait in KO_EDGE_SPECS:
+        if attacker_trait not in winner.index or defender_trait not in loser.index:
+            continue
+        attacker_value = _numeric_value(winner, attacker_trait)
+        defender_value = _numeric_value(loser, defender_trait)
+        out[f"fsr_edge_{edge_name}"] = attacker_value - defender_value
+
+    return out
 
 
 def _run_paths(
@@ -213,11 +290,17 @@ def _run_paths(
     return pd.DataFrame(rows)
 
 
-def _aggregate(paths: pd.DataFrame, validation_frame: pd.DataFrame) -> pd.DataFrame:
+def _aggregate(
+    paths: pd.DataFrame,
+    validation_frame: pd.DataFrame,
+    pairs: dict[str, tuple[pd.Series, pd.Series]],
+) -> pd.DataFrame:
     rows: list[dict[str, object]] = []
     for bout_id, g in paths.groupby("bout_id", sort=False):
         ko_paths = g[g["mc_ko_tko"] == 1]
-        row = {
+        actual_winner_id = str(g["actual_winner_id"].iloc[0])
+        red, blue = pairs[str(bout_id)]
+        row: dict[str, object] = {
             "bout_id": bout_id,
             "rerun_paths": len(g),
             "rerun_p_ko": float(g["mc_ko_tko"].mean()),
@@ -238,6 +321,7 @@ def _aggregate(paths: pd.DataFrame, validation_frame: pd.DataFrame) -> pd.DataFr
                 float(ko_paths["mc_ko_winner_correct"].mean()) if len(ko_paths) else np.nan
             ),
         }
+        row.update(_fsr_signal_row(red, blue, actual_winner_id))
         rows.append(row)
 
     agg = pd.DataFrame(rows)
@@ -256,6 +340,51 @@ def _timing_group(round_value: float) -> str:
     if round_value == 2:
         return "actual R2 KO"
     return "actual R3+ KO"
+
+
+def _print_fsr_signal_summary(work: pd.DataFrame) -> None:
+    edge_cols = [c for c in work.columns if c.startswith("fsr_edge_")]
+    if not edge_cols:
+        print("\nFSR KO SIGNAL")
+        print("No configured KO edge columns were available in the current FSR artifact.")
+        return
+
+    print("\nFSR KO SIGNAL — ACTUAL WINNER VS ACTUAL LOSER")
+    timing = work.copy()
+    timing["actual_timing_group"] = timing["actual_finish_round"].map(_timing_group)
+    grouped = timing.groupby("actual_timing_group", sort=False)
+
+    rows: list[dict[str, object]] = []
+    for group_name, g in grouped:
+        row: dict[str, object] = {"actual_timing_group": group_name, "bouts": len(g)}
+        for col in edge_cols:
+            row[col] = float(pd.to_numeric(g[col], errors="coerce").mean())
+        rows.append(row)
+    print(pd.DataFrame(rows).to_string(index=False, float_format=lambda x: f"{x:.3f}"))
+
+    print("\nFSR EDGE ASSOCIATION WITH SIMULATED KO SIGNAL — ACTUAL KO BOUTS")
+    assoc_rows = []
+    for col in edge_cols:
+        s = pd.to_numeric(work[col], errors="coerce")
+        valid = s.notna() & work["rerun_p_ko"].notna()
+        if valid.sum() < 3:
+            continue
+        assoc_rows.append(
+            {
+                "fsr_edge": col,
+                "n": int(valid.sum()),
+                "spearman_vs_mc_pKO": float(s[valid].corr(work.loc[valid, "rerun_p_ko"], method="spearman")),
+                "spearman_vs_mc_pR1KO": float(s[valid].corr(work.loc[valid, "rerun_p_r1_ko"], method="spearman")),
+                "mean_edge": float(s[valid].mean()),
+                "positive_edge_share": float((s[valid] > 0).mean()),
+            }
+        )
+    if assoc_rows:
+        print(
+            pd.DataFrame(assoc_rows)
+            .sort_values("spearman_vs_mc_pKO", ascending=False)
+            .to_string(index=False, float_format=lambda x: f"{x:.4f}")
+        )
 
 
 def _print_summary(frame: pd.DataFrame) -> None:
@@ -288,6 +417,8 @@ def _print_summary(frame: pd.DataFrame) -> None:
     print("\nPATHWAY BY ACTUAL KO ROUND")
     print(summary.to_string(index=False, float_format=lambda x: f"{x:.4f}"))
 
+    _print_fsr_signal_summary(work)
+
     r1 = work[work["actual_finish_round"] == 1].copy()
     if not r1.empty:
         print("\nACTUAL ROUND-1 KO/TKO BOUTS — KEY FAILURE COUNTS")
@@ -306,7 +437,12 @@ def _print_summary(frame: pd.DataFrame) -> None:
             "rerun_p_r1_kd", "rerun_mean_r1_sig_att", "rerun_mean_r1_sig_landed",
             "rerun_mean_r1_max_shock_fraction", "rerun_mean_r1_collapse_damage",
             "rerun_mean_r1_min_reservoir_fraction", "rerun_p_correct_ko_winner_given_ko",
+            "winner_fsr_striking_power", "loser_fsr_knockdown_resistance",
+            "loser_fsr_damage_durability", "fsr_edge_power_minus_kd_resistance",
+            "fsr_edge_power_minus_durability", "fsr_edge_distance_pressure_minus_defense",
+            "fsr_edge_distance_precision_minus_defense",
         ]
+        display = [c for c in display if c in r1.columns]
         print("\n15 WORST-MISSED ACTUAL R1 KO BOUTS — LOWEST MC P(R1 KO)")
         print(
             r1.sort_values("rerun_p_r1_ko", ascending=True)
@@ -318,6 +454,8 @@ def _print_summary(frame: pd.DataFrame) -> None:
     print("- Low R1 strike attempts/landed -> opportunity/exposure bottleneck.")
     print("- Reasonable R1 exposure but low p(R1 KD) -> shock/KD-generation bottleneck.")
     print("- Reasonable p(R1 KD) but low p(R1 KO) -> KD-collapse/follow-up lethality bottleneck.")
+    print("- Positive KO FSR edge but weak MC output -> simulator translation/mechanics bottleneck.")
+    print("- Weak/negative KO FSR edge for an actual KO winner -> underlying FSR signal miss.")
     print("- Good R1 KO probability but wrong KO side -> fighter-trait / matchup-direction bottleneck.")
     print("- This script changes no simulator constants and is not a calibration sweep.")
 
@@ -345,6 +483,16 @@ def main() -> None:
     )
     pairs = _load_pairs(args.fsr_path, bout_ids)
     print(f"[KO timing diagnostic] matched leakage-safe FSR pairs={len(pairs):,}", flush=True)
+
+    available_traits = sorted(
+        trait for trait in KO_FSR_TRAITS
+        if any(trait in row.index for pair in pairs.values() for row in pair)
+    )
+    print(
+        f"[KO timing diagnostic] KO-relevant FSR traits found={len(available_traits)}: "
+        f"{', '.join(available_traits)}",
+        flush=True,
+    )
     print(
         f"[KO timing diagnostic] paths_per_bout={args.paths_per_bout}; "
         f"total_paths={len(actual_ko) * args.paths_per_bout:,}",
@@ -357,7 +505,7 @@ def main() -> None:
         paths_per_bout=args.paths_per_bout,
         seed=args.seed,
     )
-    result = _aggregate(paths, frame)
+    result = _aggregate(paths, frame, pairs)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     result.to_parquet(args.output, index=False)
