@@ -4,12 +4,15 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from scripts.experimental import fsr_static_mc_damage_v1_ground017 as ground017
 from scripts.experimental import fsr_static_mc_ko_tko_v2 as ko
+from scripts.experimental import fsr_static_mc_v0 as base
 
 
 def _profile(fid: str, **overrides) -> pd.Series:
@@ -39,107 +42,70 @@ def _profile(fid: str, **overrides) -> pd.Series:
     return pd.Series(data)
 
 
-def _params() -> ko.KOParameters:
-    return ko.KOParameters(
-        name="test",
-        base_logit=-12.0,
-        shock_coefficient=40.0,
-        shock_curvature=8.0,
-        depletion_coefficient=3.0,
-        current_kd_logit_bonus=2.0,
-        recent_kd_logit_bonus=1.0,
-    )
+def _sim(seed: int = 7) -> ko.StaticFSRMCKOTKOV2:
+    return ko.StaticFSRMCKOTKOV2(_profile("red"), _profile("blue"), rounds=1, seed=seed)
 
 
-def test_large_shock_is_much_more_dangerous_than_ordinary_shock() -> None:
-    sim = ko.StaticFSRMCKOTKOV2(_profile("a"), _profile("b"), ko_params=_params(), rounds=1, seed=1)
-    state = sim.damage_state[1]
-    ordinary = sim._ko_probability(
-        1,
-        state.reservoir_capacity * 0.01,
-        reservoir_fraction_before=1.0,
-        knockdown_on_strike=False,
-        recent_kd_before=False,
-    )
-    severe = sim._ko_probability(
-        1,
-        state.reservoir_capacity * 0.10,
-        reservoir_fraction_before=1.0,
-        knockdown_on_strike=False,
-        recent_kd_before=False,
-    )
-    assert severe > ordinary * 100.0
+def test_ground_017_variant_is_isolated_from_frozen_v0_constant() -> None:
+    assert ground017.GROUND_EXIT_BASE_30S_SHADOW == pytest.approx(0.17)
+    assert base.GROUND_EXIT_BASE_30S == pytest.approx(0.20)
 
 
-def test_depletion_increases_same_shock_finish_probability() -> None:
-    sim = ko.StaticFSRMCKOTKOV2(_profile("a"), _profile("b"), ko_params=_params(), rounds=1, seed=2)
-    state = sim.damage_state[1]
-    strike_damage = state.reservoir_capacity * 0.06
-    fresh = sim._ko_probability(
-        1,
-        strike_damage,
-        reservoir_fraction_before=1.0,
-        knockdown_on_strike=False,
-        recent_kd_before=False,
-    )
-    state.reservoir_current = state.reservoir_capacity * 0.25
-    depleted = sim._ko_probability(
-        1,
-        strike_damage,
-        reservoir_fraction_before=0.25,
-        knockdown_on_strike=False,
-        recent_kd_before=False,
-    )
-    assert depleted > fresh
+def test_v2_has_no_generic_ko_probability_curve() -> None:
+    assert not hasattr(ko.StaticFSRMCKOTKOV2, "_ko_probability")
 
 
-def test_current_and_recent_kd_are_secondary_finish_modifiers() -> None:
-    sim = ko.StaticFSRMCKOTKOV2(_profile("a"), _profile("b"), ko_params=_params(), rounds=1, seed=3)
-    state = sim.damage_state[1]
-    strike_damage = state.reservoir_capacity * 0.07
-    baseline = sim._ko_probability(
-        1,
-        strike_damage,
-        reservoir_fraction_before=1.0,
-        knockdown_on_strike=False,
-        recent_kd_before=False,
-    )
-    current_kd = sim._ko_probability(
-        1,
-        strike_damage,
-        reservoir_fraction_before=1.0,
-        knockdown_on_strike=True,
-        recent_kd_before=False,
-    )
-    recent_kd = sim._ko_probability(
-        1,
-        strike_damage,
-        reservoir_fraction_before=1.0,
-        knockdown_on_strike=False,
-        recent_kd_before=True,
-    )
-    assert current_kd > baseline
-    assert recent_kd > baseline
+def test_reservoir_exhaustion_causes_deterministic_finish(monkeypatch) -> None:
+    sim = _sim()
+    sim.damage_state[1].reservoir_current = 1.0
+    monkeypatch.setattr(sim, "_draw_strike_damage", lambda attacker: 2.0)
+    monkeypatch.setattr(sim, "_knockdown_probability", lambda defender, strike_damage: 0.0)
+
+    damage_done, knockdowns = sim._apply_landed_strikes(0, 1)
+
+    assert damage_done == pytest.approx(2.0)
+    assert knockdowns == 0
+    assert sim.damage_state[1].reservoir_current == pytest.approx(0.0)
+    assert sim.finish is not None
+    assert sim.finish.winner == 0
+    assert sim.finish.loser == 1
+    assert sim.finish.method == "KO/TKO"
 
 
-def test_kd_does_not_add_bonus_reservoir_damage() -> None:
-    sim = ko.StaticFSRMCKOTKOV2(_profile("a"), _profile("b"), ko_params=_params(), rounds=1, seed=4)
+def test_kd_causing_strike_gets_no_retroactive_bonus(monkeypatch) -> None:
+    sim = _sim()
     before = sim.damage_state[1].reservoir_current
-    sim._draw_strike_damage = lambda attacker: 7.5
-    sim._knockdown_probability = lambda defender, strike_damage: 1.0
-    sim._ko_probability = lambda *args, **kwargs: 0.0
+    monkeypatch.setattr(sim, "_draw_strike_damage", lambda attacker: 7.5)
+    monkeypatch.setattr(sim, "_knockdown_probability", lambda defender, strike_damage: 1.0)
+
     total_damage, knockdowns = sim._apply_landed_strikes(0, 1)
-    assert total_damage == 7.5
+
+    assert total_damage == pytest.approx(7.5)
     assert knockdowns == 1
-    assert sim.damage_state[1].reservoir_current == before - 7.5
+    assert sim.damage_state[1].reservoir_current == pytest.approx(before - 7.5)
+
+
+def test_recent_kd_amplifies_followup_damage(monkeypatch) -> None:
+    sim = _sim()
+    sim.damage_state[1].recent_knockdown_segments = 1
+    before = sim.damage_state[1].reservoir_current
+    monkeypatch.setattr(sim, "_draw_strike_damage", lambda attacker: 2.0)
+    monkeypatch.setattr(sim, "_knockdown_probability", lambda defender, strike_damage: 0.0)
+
+    total_damage, knockdowns = sim._apply_landed_strikes(0, 1)
+
+    assert knockdowns == 0
+    assert total_damage == pytest.approx(4.0)
+    assert sim.damage_state[1].reservoir_current == pytest.approx(before - 4.0)
+    assert sim.finish is None
 
 
 def test_fixed_seed_is_deterministic() -> None:
     red = _profile("red", striking_power=58.0)
     blue = _profile("blue", damage_durability=60.0, knockdown_resistance=57.0)
-    sim1 = ko.StaticFSRMCKOTKOV2(red, blue, ko_params=_params(), rounds=1, seed=123)
+    sim1 = ko.StaticFSRMCKOTKOV2(red, blue, rounds=1, seed=123)
     path1 = sim1.run()
-    sim2 = ko.StaticFSRMCKOTKOV2(red, blue, ko_params=_params(), rounds=1, seed=123)
+    sim2 = ko.StaticFSRMCKOTKOV2(red, blue, rounds=1, seed=123)
     path2 = sim2.run()
     assert path1.events == path2.events
     assert path1.finish == path2.finish
