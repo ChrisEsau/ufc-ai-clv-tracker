@@ -55,6 +55,83 @@ def test_v2_has_no_generic_ko_probability_curve() -> None:
     assert not hasattr(ko.StaticFSRMCKOTKOV2, "_ko_probability")
 
 
+def test_locked_age_curve_constants() -> None:
+    assert ko.AGE_ADJUSTMENT_ONSET_YEARS == pytest.approx(30.0)
+    assert ko.AGE_ADJUSTMENT_POINTS_PER_YEAR == pytest.approx(2.0)
+    assert ko.AGE_ADJUSTED_TRAITS == ("knockdown_resistance", "damage_durability")
+    assert ko.FSR_TRAIT_MIN == pytest.approx(10.0)
+    assert ko.FSR_TRAIT_MAX == pytest.approx(90.0)
+
+
+def test_locked_age_curve_matches_rodriguez_sanity_values() -> None:
+    age = 39.58
+    assert ko.age_adjusted_effective_trait(62.533, age) == pytest.approx(43.373)
+    assert ko.age_adjusted_effective_trait(70.616, age) == pytest.approx(51.456)
+
+
+def test_age_adjustment_starts_only_after_age_30() -> None:
+    assert ko.age_adjusted_effective_trait(60.0, 29.0) == pytest.approx(60.0)
+    assert ko.age_adjusted_effective_trait(60.0, 30.0) == pytest.approx(60.0)
+    assert ko.age_adjusted_effective_trait(60.0, 31.0) == pytest.approx(58.0)
+
+
+def test_age_adjustment_changes_only_validated_traits() -> None:
+    raw = _profile(
+        "fighter",
+        striking_power=67.0,
+        distance_striking_pressure=61.0,
+        wrestling_entry=57.0,
+        knockdown_resistance=72.0,
+        damage_durability=75.0,
+    )
+    effective = ko.apply_locked_age_adjustment(raw, 40.0)
+
+    assert effective["knockdown_resistance"] == pytest.approx(52.0)
+    assert effective["damage_durability"] == pytest.approx(55.0)
+    for trait in raw.index:
+        if trait not in ko.AGE_ADJUSTED_TRAITS:
+            assert effective[trait] == raw[trait]
+
+
+def test_simulator_preserves_raw_fsr_and_uses_effective_age_traits() -> None:
+    red = _profile(
+        "red",
+        striking_power=65.0,
+        knockdown_resistance=62.533,
+        damage_durability=70.616,
+    )
+    blue = _profile("blue")
+
+    sim = ko.StaticFSRMCKOTKOV2(
+        red,
+        blue,
+        rounds=1,
+        seed=11,
+        red_age=39.58,
+        blue_age=30.0,
+    )
+
+    # Historical/raw evidence remains untouched.
+    assert sim.raw_fighters[0]["knockdown_resistance"] == pytest.approx(62.533)
+    assert sim.raw_fighters[0]["damage_durability"] == pytest.approx(70.616)
+    assert red["knockdown_resistance"] == pytest.approx(62.533)
+    assert red["damage_durability"] == pytest.approx(70.616)
+
+    # Working MC profile uses only the locked effective resistance traits.
+    assert sim.fighters[0]["knockdown_resistance"] == pytest.approx(43.373)
+    assert sim.fighters[0]["damage_durability"] == pytest.approx(51.456)
+    assert sim.fighters[0]["striking_power"] == pytest.approx(65.0)
+    assert sim.fighter_ages == [pytest.approx(39.58), pytest.approx(30.0)]
+
+    expected_capacity = ko.damage.reservoir_capacity_from_durability(51.456)
+    assert sim.damage_state[0].reservoir_capacity == pytest.approx(expected_capacity)
+
+
+def test_age_adjustment_is_bounded_to_fsr_contract() -> None:
+    assert ko.age_adjusted_effective_trait(90.0, 100.0) == pytest.approx(10.0)
+    assert ko.age_adjusted_effective_trait(10.0, 20.0) == pytest.approx(10.0)
+
+
 def test_reservoir_exhaustion_causes_deterministic_finish(monkeypatch) -> None:
     sim = _sim()
     sim.damage_state[1].reservoir_current = 1.0
