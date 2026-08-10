@@ -10,14 +10,8 @@ This study is diagnostic-only:
 - UFC bouts 2020-01-01+
 - both fighters have >=3 prior UFC fights
 - leakage-safe pre-fight FSR snapshots
+- current-fight KD outcome comes from RFS history, never from the pre-fight FSR
 - no FSR values or simulator constants are changed
-
-Primary questions
------------------
-1. Does KD resistance continue to predict avoiding a KD at older ages?
-2. Does damage durability continue to predict avoiding a KO/TKO loss at older ages?
-3. Are high ratings systematically over-optimistic at ages 35+, 37+, or 40+?
-4. Does adding age and trait×age interactions improve out-of-fold prediction?
 
 Run from repo root:
     PYTHONPATH=. python scripts/experimental/fsr_age_curve_kd_durability_2020plus_mature.py
@@ -35,15 +29,15 @@ from sklearn.model_selection import RepeatedStratifiedKFold, cross_val_predict
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from pipeline.research import run_post_ko_next_fight_study as age_utils
+from scripts.experimental import fsr_finish_reservoir_traits_v1 as reservoir
 from scripts.experimental import fsr_static_mc_ko_tko_v2_fsr_joint_signal_cv_2020plus_mature as modern
 
 MASTER_PATH = modern.MASTER_PATH
 FSR_PATH = modern.FSR_PATH
+RFS_PATH = reservoir.RFS_PATH
 OUTPUT_PATH = Path(
     "data/simulation/rfs_mc_v2_shared_state/age_curve_kd_durability_2020plus_mature.parquet"
 )
-START_DATE = pd.Timestamp("2020-01-01")
 AGE_BINS = [-np.inf, 27.999, 30.999, 33.999, 36.999, 39.999, np.inf]
 AGE_LABELS = ["<=27", "28-30", "31-33", "34-36", "37-39", "40+"]
 
@@ -56,21 +50,13 @@ def _first_existing(frame: pd.DataFrame, candidates: tuple[str, ...]) -> str | N
 
 
 def _resolve_corner_age(master: pd.DataFrame, corner: str) -> pd.Series:
-    direct = _first_existing(
-        master,
-        (f"{corner}_age", f"{corner}_fighter_age", f"{corner}_age_years"),
-    )
+    direct = _first_existing(master, (f"{corner}_age", f"{corner}_fighter_age", f"{corner}_age_years"))
     if direct is not None:
         return pd.to_numeric(master[direct], errors="coerce")
 
     dob_col = _first_existing(
         master,
-        (
-            f"{corner}_dob",
-            f"{corner}_date_of_birth",
-            f"{corner}_fighter_dob",
-            f"{corner}_fighter_date_of_birth",
-        ),
+        (f"{corner}_dob", f"{corner}_date_of_birth", f"{corner}_fighter_dob", f"{corner}_fighter_date_of_birth"),
     )
     if dob_col is None:
         return pd.Series(np.nan, index=master.index, dtype=float)
@@ -79,7 +65,7 @@ def _resolve_corner_age(master: pd.DataFrame, corner: str) -> pd.Series:
     return (master["event_date"] - dob).dt.days / 365.25
 
 
-def _load_age_map(master_path: Path) -> pd.DataFrame:
+def _load_master_side_metadata(master_path: Path) -> pd.DataFrame:
     raw = pd.read_parquet(master_path).copy()
     date_col = modern._resolve_date_column(raw)
     raw[date_col] = pd.to_datetime(raw[date_col], errors="coerce")
@@ -87,10 +73,21 @@ def _load_age_map(master_path: Path) -> pd.DataFrame:
     raw["fight_id"] = raw["fight_id"].astype(str)
     raw["r_id"] = raw["r_id"].astype(str)
     raw["b_id"] = raw["b_id"].astype(str)
+    raw["winner_id"] = raw["winner_id"].astype(str)
     raw = raw.sort_values(["event_date", "fight_id"]).drop_duplicates("fight_id", keep="last")
     raw["r_age_calc"] = _resolve_corner_age(raw, "r")
     raw["b_age_calc"] = _resolve_corner_age(raw, "b")
     return raw[["fight_id", "r_age_calc", "b_age_calc", "winner_id"]].copy()
+
+
+def _load_kd_outcomes(rfs_path: Path) -> pd.DataFrame:
+    rfs = pd.read_parquet(rfs_path, columns=["fight_id", "fighter_id", reservoir.KD_COL]).copy()
+    rfs["fight_id"] = rfs["fight_id"].astype(str)
+    rfs["fighter_id"] = rfs["fighter_id"].astype(str)
+    rfs[reservoir.KD_COL] = pd.to_numeric(rfs[reservoir.KD_COL], errors="coerce")
+    if rfs.duplicated(["fight_id", "fighter_id"]).any():
+        raise ValueError("RFS KD outcome source violates fighter-fight grain")
+    return rfs.rename(columns={reservoir.KD_COL: "kd_absorbed"})
 
 
 def _numeric(profile: pd.Series, key: str) -> float:
@@ -101,32 +98,23 @@ def _prepare_side_frame() -> pd.DataFrame:
     master = modern._load_master(MASTER_PATH)
     cohort = modern._build_outcome_cohort(master)
     cohort, pairs = modern._load_fsr_pairs_for_cohort(FSR_PATH, cohort)
-    ages = _load_age_map(MASTER_PATH).rename(columns={"fight_id": "bout_id"})
-    cohort = cohort.merge(ages, on="bout_id", how="left", validate="one_to_one")
+
+    meta = _load_master_side_metadata(MASTER_PATH).rename(columns={"fight_id": "bout_id"})
+    cohort = cohort.merge(meta, on="bout_id", how="left", validate="one_to_one")
+    kd_outcomes = _load_kd_outcomes(RFS_PATH)
+    kd_map = kd_outcomes.set_index(["fight_id", "fighter_id"])["kd_absorbed"]
 
     rows: list[dict[str, object]] = []
     for _, bout in cohort.iterrows():
         bout_id = str(bout["bout_id"])
         red, blue = pairs[bout_id]
-        winner_id = str(bout.get("winner_id", ""))
+        winner_id = str(bout["winner_id"])
 
-        # FSR/RFS profiles carry fight-level KD absorbed evidence for the current
-        # outcome row through the historical validation helper inputs. Resolve
-        # the current-fight target columns defensively.
         for side, fighter_id, age, profile in (
             ("r", str(bout["r_id"]), bout["r_age_calc"], red),
             ("b", str(bout["b_id"]), bout["b_age_calc"], blue),
         ):
-            kd_target = np.nan
-            for key in (
-                "rfs_finish_state_fight_knockdowns_absorbed",
-                "fight_knockdowns_absorbed",
-                "knockdowns_absorbed",
-            ):
-                if key in profile.index:
-                    kd_target = pd.to_numeric(profile.get(key), errors="coerce")
-                    break
-
+            kd_target = kd_map.get((bout_id, fighter_id), np.nan)
             rows.append(
                 {
                     "bout_id": bout_id,
@@ -137,12 +125,8 @@ def _prepare_side_frame() -> pd.DataFrame:
                     "knockdown_resistance": _numeric(profile, "knockdown_resistance"),
                     "damage_durability": _numeric(profile, "damage_durability"),
                     "kd_absorbed": kd_target,
-                    "any_kd_absorbed": int(pd.notna(kd_target) and float(kd_target) > 0),
-                    "ko_tko_loss": int(
-                        bool(bout["actual_ko_tko"])
-                        and winner_id
-                        and fighter_id != winner_id
-                    ),
+                    "any_kd_absorbed": np.nan if pd.isna(kd_target) else int(float(kd_target) > 0),
+                    "ko_tko_loss": int(bool(bout["actual_ko_tko"]) and fighter_id != winner_id),
                 }
             )
 
@@ -166,8 +150,6 @@ def _band_summary(frame: pd.DataFrame) -> pd.DataFrame:
         g = frame.loc[frame["age_band"].astype(str).eq(band)].copy()
         if g.empty:
             continue
-        kd_auc = _safe_auc(g["any_kd_absorbed"], -g["knockdown_resistance"])
-        ko_auc = _safe_auc(g["ko_tko_loss"], -g["damage_durability"])
         out.append(
             {
                 "age_band": band,
@@ -177,8 +159,8 @@ def _band_summary(frame: pd.DataFrame) -> pd.DataFrame:
                 "ko_tko_loss_rate": g["ko_tko_loss"].mean(),
                 "mean_kd_resistance": g["knockdown_resistance"].mean(),
                 "mean_durability": g["damage_durability"].mean(),
-                "kd_resistance_auc": kd_auc,
-                "durability_auc": ko_auc,
+                "kd_resistance_auc": _safe_auc(g["any_kd_absorbed"], -g["knockdown_resistance"]),
+                "durability_auc": _safe_auc(g["ko_tko_loss"], -g["damage_durability"]),
             }
         )
     return pd.DataFrame(out)
@@ -218,7 +200,6 @@ def _oof_model(frame: pd.DataFrame, target: str, features: list[str]) -> dict[st
 
 def _model_comparison(frame: pd.DataFrame) -> pd.DataFrame:
     work = frame.copy()
-    work["age_over_30"] = np.maximum(work["age"] - 30.0, 0.0)
     work["age_over_35"] = np.maximum(work["age"] - 35.0, 0.0)
     work["kd_x_age35"] = (work["knockdown_resistance"] - 50.0) * work["age_over_35"]
     work["dur_x_age35"] = (work["damage_durability"] - 50.0) * work["age_over_35"]
@@ -233,8 +214,7 @@ def _model_comparison(frame: pd.DataFrame) -> pd.DataFrame:
     ]
     rows = []
     for name, target, features in specs:
-        metrics = _oof_model(work, target, features)
-        rows.append({"model": name, "target": target, "features": ", ".join(features), **metrics})
+        rows.append({"model": name, "target": target, "features": ", ".join(features), **_oof_model(work, target, features)})
     return pd.DataFrame(rows)
 
 
@@ -251,18 +231,10 @@ def main() -> None:
     print(_band_summary(frame).to_string(index=False, float_format=lambda x: f"{x:.4f}"))
 
     print("\nKD RESISTANCE QUARTILES WITHIN AGE BANDS")
-    print(
-        _quartile_calibration(frame, "knockdown_resistance", "any_kd_absorbed").to_string(
-            index=False, float_format=lambda x: f"{x:.4f}"
-        )
-    )
+    print(_quartile_calibration(frame, "knockdown_resistance", "any_kd_absorbed").to_string(index=False, float_format=lambda x: f"{x:.4f}"))
 
     print("\nDURABILITY QUARTILES WITHIN AGE BANDS")
-    print(
-        _quartile_calibration(frame, "damage_durability", "ko_tko_loss").to_string(
-            index=False, float_format=lambda x: f"{x:.4f}"
-        )
-    )
+    print(_quartile_calibration(frame, "damage_durability", "ko_tko_loss").to_string(index=False, float_format=lambda x: f"{x:.4f}"))
 
     print("\nOUT-OF-FOLD AGE / TRAIT MODEL COMPARISON")
     print(_model_comparison(frame).to_string(index=False, float_format=lambda x: f"{x:.5f}"))
