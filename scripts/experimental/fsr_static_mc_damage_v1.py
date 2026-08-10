@@ -62,19 +62,22 @@ MAX_RESERVOIR_CAPACITY = 120.0
 # reservoir-consumption sweep. Power continues to act primarily on the upper
 # tail rather than multiplying every ordinary strike.
 #
-# Shadow gamma revision (2026-08-10): the prior Gamma(1.60, 1.25) and the new
-# Gamma(1.00, 2.00) both have the same raw mean of 2.0 damage units before the
-# global 0.50 scale. Lowering shape while raising scale therefore preserves
-# average base damage while making ordinary landed strikes more right-tailed.
-# This is an explicit shadow calibration change, not a production lock.
+# Shadow gamma revisions (2026-08-10):
+# - Base severity changed from Gamma(1.60, 1.25) to Gamma(1.00, 2.00).
+#   Both have raw mean 2.0, so the change preserves average base severity while
+#   increasing right-tail mass.
+# - Power-tail severity changed from Gamma(2.00, 3.00) to Gamma(1.25, 4.80).
+#   Both have raw mean 6.0. The lower shape/higher scale makes power-tail events
+#   more variable and more right-tailed without increasing their expected mean.
+# These are explicit shadow calibration changes, not production locks.
 # ---------------------------------------------------------------------------
 STRIKE_DAMAGE_SCALE = 0.50
 BASE_SEVERITY_GAMMA_SHAPE = 1.00
 BASE_SEVERITY_GAMMA_SCALE = 2.00
 POWER_TAIL_BASE_PROBABILITY = 0.06
 POWER_TAIL_RATING_SCALE = 10.0
-TAIL_SEVERITY_GAMMA_SHAPE = 2.0
-TAIL_SEVERITY_GAMMA_SCALE = 3.0
+TAIL_SEVERITY_GAMMA_SHAPE = 1.25
+TAIL_SEVERITY_GAMMA_SCALE = 4.80
 TAIL_MAGNITUDE_POWER_SCALE = 80.0
 
 # ---------------------------------------------------------------------------
