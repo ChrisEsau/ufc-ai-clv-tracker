@@ -18,6 +18,18 @@ if a knockdown occurs:
 if reservoir_current reaches zero:
     -> deterministic KO/TKO stoppage
 
+Locked age mechanic
+-------------------
+When a fighter age is supplied to the simulator, only these two effective traits
+are age-adjusted for simulation use:
+
+- ``knockdown_resistance``
+- ``damage_durability``
+
+The locked curve is linear after age 30 at -2.0 FSR points per year, clipped to
+the established 10-90 FSR bounds. Stored/pre-fight FSR profiles are never
+modified. No other FSR trait is age-adjusted.
+
 Important boundaries
 --------------------
 - The KD-causing strike receives no arbitrary bonus damage merely because it KD'd.
@@ -47,6 +59,54 @@ FSR_PATH = damage.FSR_PATH
 # Architecture-enabling shadow value only. Do not treat as a calibration lock.
 POST_KD_FOLLOWUP_DAMAGE_MULTIPLIER = 2.0
 RESERVOIR_FINISH_EPSILON = 1e-9
+
+# Locked current-ability age translation selected from the mature 2020+
+# historical studies and strong-KD-collapse MC replays. This is deliberately
+# narrow: age changes only the two physiological resistance traits that were
+# empirically validated. Striking power and every other FSR trait are untouched.
+AGE_ADJUSTMENT_ONSET_YEARS = 30.0
+AGE_ADJUSTMENT_POINTS_PER_YEAR = 2.0
+AGE_ADJUSTED_TRAITS = ("knockdown_resistance", "damage_durability")
+FSR_TRAIT_MIN = 10.0
+FSR_TRAIT_MAX = 90.0
+
+
+def age_adjustment_penalty(age: float | None) -> float:
+    """Return the locked FSR-point penalty for a supplied fighter age."""
+    if age is None or pd.isna(age):
+        return 0.0
+    age_value = float(age)
+    if age_value < 0.0:
+        raise ValueError(f"fighter age must be non-negative, got {age_value}")
+    return AGE_ADJUSTMENT_POINTS_PER_YEAR * max(
+        age_value - AGE_ADJUSTMENT_ONSET_YEARS,
+        0.0,
+    )
+
+
+def age_adjusted_effective_trait(value: float, age: float | None) -> float:
+    """Translate one validated resistance trait into its effective MC value."""
+    adjusted = float(value) - age_adjustment_penalty(age)
+    return float(min(max(adjusted, FSR_TRAIT_MIN), FSR_TRAIT_MAX))
+
+
+def apply_locked_age_adjustment(
+    profile: pd.Series,
+    age: float | None,
+) -> pd.Series:
+    """Return an MC working copy with only the locked age traits adjusted."""
+    effective = profile.copy()
+    if age is None or pd.isna(age):
+        return effective
+
+    for trait in AGE_ADJUSTED_TRAITS:
+        if trait not in effective.index:
+            raise ValueError(f"profile missing age-adjusted trait: {trait}")
+        effective[trait] = age_adjusted_effective_trait(
+            base._value(profile, trait),
+            float(age),
+        )
+    return effective
 
 
 @dataclass
@@ -80,8 +140,21 @@ class StaticFSRMCKOTKOV2(ground017.StaticFSRMCDamageV1Ground017):
         *,
         rounds: int = base.DEFAULT_ROUNDS,
         seed: int = 7,
+        red_age: float | None = None,
+        blue_age: float | None = None,
     ) -> None:
-        super().__init__(red, blue, rounds=rounds, seed=seed)
+        # Preserve the leakage-safe historical FSR profiles exactly as supplied.
+        # The MC works from separate copies so the age mechanic cannot rewrite
+        # stored FSR evidence or leak into unrelated trait consumers.
+        self.raw_fighters = [red.copy(), blue.copy()]
+        self.fighter_ages = [
+            None if red_age is None or pd.isna(red_age) else float(red_age),
+            None if blue_age is None or pd.isna(blue_age) else float(blue_age),
+        ]
+        red_effective = apply_locked_age_adjustment(red, self.fighter_ages[0])
+        blue_effective = apply_locked_age_adjustment(blue, self.fighter_ages[1])
+
+        super().__init__(red_effective, blue_effective, rounds=rounds, seed=seed)
         self.finish: FinishResult | None = None
 
     def _apply_landed_strikes(self, attacker: int, landed: int) -> tuple[float, int]:
@@ -271,6 +344,27 @@ class StaticFSRMCKOTKOV2(ground017.StaticFSRMCDamageV1Ground017):
 
 def print_ko_summary(sim: StaticFSRMCKOTKOV2, path: KOPath) -> None:
     damage.print_damage_summary(sim)
+    print("\nLOCKED AGE ADJUSTMENT")
+    print("-" * 100)
+    for i, name in enumerate(sim.names):
+        age = sim.fighter_ages[i]
+        if age is None:
+            print(f"{name}: age not supplied; no age adjustment applied")
+            continue
+        raw = sim.raw_fighters[i]
+        effective = sim.fighters[i]
+        print(
+            f"{name}: age={age:.2f} | "
+            f"KD resistance {base._value(raw, 'knockdown_resistance'):.2f}"
+            f"->{base._value(effective, 'knockdown_resistance'):.2f} | "
+            f"durability {base._value(raw, 'damage_durability'):.2f}"
+            f"->{base._value(effective, 'damage_durability'):.2f}"
+        )
+    print(
+        f"Curve: -{AGE_ADJUSTMENT_POINTS_PER_YEAR:.1f} points/year after age "
+        f"{AGE_ADJUSTMENT_ONSET_YEARS:.0f}; only {', '.join(AGE_ADJUSTED_TRAITS)}."
+    )
+
     print("\nKO/TKO V2 FINISH SUMMARY")
     print("-" * 100)
     if path.finish is None:
@@ -298,6 +392,8 @@ def main() -> None:
     )
     parser.add_argument("--red", help="fighter name or fighter_id")
     parser.add_argument("--blue", help="fighter name or fighter_id")
+    parser.add_argument("--red-age", type=float, help="red fighter age on fight date")
+    parser.add_argument("--blue-age", type=float, help="blue fighter age on fight date")
     parser.add_argument("--rounds", type=int, default=base.DEFAULT_ROUNDS)
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--fsr-path", type=Path, default=FSR_PATH)
@@ -316,7 +412,14 @@ def main() -> None:
         red, blue = base._default_matchup(profiles)
         print("[FSR MC KO/TKO V2] no matchup supplied; using first two profiles.", flush=True)
 
-    sim = StaticFSRMCKOTKOV2(red, blue, rounds=args.rounds, seed=args.seed)
+    sim = StaticFSRMCKOTKOV2(
+        red,
+        blue,
+        rounds=args.rounds,
+        seed=args.seed,
+        red_age=args.red_age,
+        blue_age=args.blue_age,
+    )
     path = sim.run()
     base.print_path(path, sim.names)
     print_ko_summary(sim, path)
