@@ -20,9 +20,9 @@ Not implemented yet
 - stamina/fatigue interactions;
 - calibrated finish rates.
 
-The damage/KD constants below are PROVISIONAL SHADOW CALIBRATION values chosen
-from the V1 mechanics sweeps. They are suitable for the next shadow finish
-experiments, but they are not production calibration locks.
+The damage/KD constants below are SHADOW CALIBRATION locks selected from the V1
+mechanics sweeps and full-path finalist validation. They are not production
+promotion locks.
 """
 
 from __future__ import annotations
@@ -72,14 +72,14 @@ TAIL_SEVERITY_GAMMA_SCALE = 3.0
 TAIL_MAGNITUDE_POWER_SCALE = 80.0
 
 # ---------------------------------------------------------------------------
-# Provisional KD calibration selected from sequential one-factor sweeps:
-# - baseline logit: overall KD frequency;
-# - resistance scale: historical power-resistance separation;
-# - depletion coefficient: fresh vs depleted reservoir susceptibility;
-# - recent-KD bonus: temporary follow-up vulnerability without runaway chains.
+# Shadow KD calibration lock selected from the full-path finalist audit:
+# - shock coefficient 80 makes KD primarily an acute-shock event;
+# - fitted baseline preserves the observed aggregate KD-per-strike target;
+# - resistance scale preserves historical power-vs-resistance separation;
+# - depletion and recent-KD terms remain secondary susceptibility modifiers.
 # ---------------------------------------------------------------------------
-KD_BASE_LOGIT = -6.40
-KD_SHOCK_COEFFICIENT = 12.0
+KD_BASE_LOGIT = -8.635900
+KD_SHOCK_COEFFICIENT = 80.0
 KD_RESISTANCE_SCALE = 32.0
 KD_DEPLETION_COEFFICIENT = 1.50
 KD_RECENT_KD_LOGIT_BONUS = 0.50
@@ -195,7 +195,7 @@ class StaticFSRMCDamageV1(base.StaticFSRMCV0):
         return max(0.0, raw_damage * STRIKE_DAMAGE_SCALE)
 
     def _knockdown_probability(self, defender: int, strike_damage: float) -> float:
-        """Return provisional acute KD probability for one landed strike."""
+        """Return shadow-locked acute KD probability for one landed strike."""
         state = self.damage_state[defender]
         resistance = base._value(self.fighters[defender], "knockdown_resistance")
         shock_fraction = strike_damage / state.reservoir_capacity
@@ -305,7 +305,7 @@ def print_damage_summary(sim: StaticFSRMCDamageV1) -> None:
             f"KD absorbed={stats.knockdowns_absorbed}, KD scored={stats.knockdowns_scored}"
         )
     print(
-        "\nV1 NOTE: reservoir/KD mechanics use provisional shadow calibration; "
+        "\nV1 NOTE: reservoir/KD mechanics use shadow calibration locks; "
         "KO/TKO stoppages, recovery, fatigue, and finish calibration remain disabled."
     )
 
