@@ -25,7 +25,7 @@ import pandas as pd
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import brier_score_loss, log_loss, roc_auc_score
-from sklearn.model_selection import RepeatedStratifiedKFold, cross_val_predict
+from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -178,10 +178,10 @@ def _quartile_calibration(frame: pd.DataFrame, trait: str, target: str) -> pd.Da
 
 def _oof_model(frame: pd.DataFrame, target: str, features: list[str]) -> dict[str, float]:
     work = frame[[target] + features].dropna(subset=[target]).copy()
-    y = work[target].astype(int)
+    y = work[target].astype(int).reset_index(drop=True)
     if y.nunique() < 2:
         return {"auc": np.nan, "logloss": np.nan, "brier": np.nan}
-    X = work[features]
+    X = work[features].reset_index(drop=True)
     model = Pipeline(
         [
             ("imputer", SimpleImputer(strategy="median")),
@@ -189,8 +189,21 @@ def _oof_model(frame: pd.DataFrame, target: str, features: list[str]) -> dict[st
             ("lr", LogisticRegression(C=0.5, max_iter=5000, solver="liblinear")),
         ]
     )
+
     cv = RepeatedStratifiedKFold(n_splits=5, n_repeats=5, random_state=20260810)
-    p = cross_val_predict(model, X, y, cv=cv, method="predict_proba")[:, 1]
+    prediction_sum = np.zeros(len(work), dtype=float)
+    prediction_count = np.zeros(len(work), dtype=int)
+
+    for train_idx, test_idx in cv.split(X, y):
+        model.fit(X.iloc[train_idx], y.iloc[train_idx])
+        fold_p = model.predict_proba(X.iloc[test_idx])[:, 1]
+        prediction_sum[test_idx] += fold_p
+        prediction_count[test_idx] += 1
+
+    if np.any(prediction_count == 0):
+        raise RuntimeError("Repeated CV left one or more rows without an out-of-fold prediction")
+
+    p = prediction_sum / prediction_count
     return {
         "auc": float(roc_auc_score(y, p)),
         "logloss": float(log_loss(y, p)),
