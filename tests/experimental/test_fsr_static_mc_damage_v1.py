@@ -41,7 +41,8 @@ def _profile(fid: str, **overrides) -> pd.Series:
 
 def test_selected_shadow_calibration_constants_are_exposed() -> None:
     assert damage.STRIKE_DAMAGE_SCALE == 0.50
-    assert damage.KD_BASE_LOGIT == -6.40
+    assert damage.KD_BASE_LOGIT == -8.635900
+    assert damage.KD_SHOCK_COEFFICIENT == 80.0
     assert damage.KD_RESISTANCE_SCALE == 32.0
     assert damage.KD_DEPLETION_COEFFICIENT == 1.50
     assert damage.KD_RECENT_KD_LOGIT_BONUS == 0.50
