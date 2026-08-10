@@ -20,9 +20,9 @@ Not implemented yet
 - stamina/fatigue interactions;
 - calibrated finish rates.
 
-All numeric damage/KD constants below are PROVISIONAL mechanics constants.
-They exist only to make the architecture executable for shadow audits. They are
-not historical calibration locks and must not be promoted as such.
+The damage/KD constants below are PROVISIONAL SHADOW CALIBRATION values chosen
+from the V1 mechanics sweeps. They are suitable for the next shadow finish
+experiments, but they are not production calibration locks.
 """
 
 from __future__ import annotations
@@ -50,14 +50,19 @@ REQUIRED_DAMAGE_COLUMNS = {
 }
 
 # ---------------------------------------------------------------------------
-# Provisional mechanics constants. These encode shape/architecture only.
-# Historical aggregate calibration comes later.
+# Reservoir architecture.
 # ---------------------------------------------------------------------------
 AVERAGE_RESERVOIR_CAPACITY = 100.0
 CAPACITY_UNITS_PER_DURABILITY_POINT = 0.50
 MIN_RESERVOIR_CAPACITY = 80.0
 MAX_RESERVOIR_CAPACITY = 120.0
 
+# ---------------------------------------------------------------------------
+# Strike-severity architecture. ``STRIKE_DAMAGE_SCALE`` was selected from the
+# reservoir-consumption sweep. Power continues to act primarily on the upper
+# tail rather than multiplying every ordinary strike.
+# ---------------------------------------------------------------------------
+STRIKE_DAMAGE_SCALE = 0.50
 BASE_SEVERITY_GAMMA_SHAPE = 1.60
 BASE_SEVERITY_GAMMA_SCALE = 1.25
 POWER_TAIL_BASE_PROBABILITY = 0.06
@@ -66,11 +71,18 @@ TAIL_SEVERITY_GAMMA_SHAPE = 2.0
 TAIL_SEVERITY_GAMMA_SCALE = 3.0
 TAIL_MAGNITUDE_POWER_SCALE = 80.0
 
-KD_BASE_LOGIT = -4.80
+# ---------------------------------------------------------------------------
+# Provisional KD calibration selected from sequential one-factor sweeps:
+# - baseline logit: overall KD frequency;
+# - resistance scale: historical power-resistance separation;
+# - depletion coefficient: fresh vs depleted reservoir susceptibility;
+# - recent-KD bonus: temporary follow-up vulnerability without runaway chains.
+# ---------------------------------------------------------------------------
+KD_BASE_LOGIT = -6.40
 KD_SHOCK_COEFFICIENT = 12.0
-KD_RESISTANCE_SCALE = 14.0
-KD_DEPLETION_COEFFICIENT = 1.80
-KD_RECENT_KD_LOGIT_BONUS = 1.00
+KD_RESISTANCE_SCALE = 32.0
+KD_DEPLETION_COEFFICIENT = 1.50
+KD_RECENT_KD_LOGIT_BONUS = 0.50
 RECENT_KD_SEGMENTS = 3
 
 
@@ -167,7 +179,7 @@ class StaticFSRMCDamageV1(base.StaticFSRMCV0):
     def _draw_strike_damage(self, attacker: int) -> float:
         """Draw one landed-strike damage value with a power-sensitive upper tail."""
         power = base._value(self.fighters[attacker], "striking_power")
-        damage = float(
+        raw_damage = float(
             self.rng.gamma(BASE_SEVERITY_GAMMA_SHAPE, BASE_SEVERITY_GAMMA_SCALE)
         )
 
@@ -178,9 +190,9 @@ class StaticFSRMCDamageV1(base.StaticFSRMCV0):
                 self.rng.gamma(TAIL_SEVERITY_GAMMA_SHAPE, TAIL_SEVERITY_GAMMA_SCALE)
             )
             tail *= exp((power - 50.0) / TAIL_MAGNITUDE_POWER_SCALE)
-            damage += tail
+            raw_damage += tail
 
-        return max(0.0, damage)
+        return max(0.0, raw_damage * STRIKE_DAMAGE_SCALE)
 
     def _knockdown_probability(self, defender: int, strike_damage: float) -> float:
         """Return provisional acute KD probability for one landed strike."""
@@ -293,8 +305,8 @@ def print_damage_summary(sim: StaticFSRMCDamageV1) -> None:
             f"KD absorbed={stats.knockdowns_absorbed}, KD scored={stats.knockdowns_scored}"
         )
     print(
-        "\nV1 NOTE: reservoir/KD mechanics are active, but KO/TKO stoppages, "
-        "recovery, fatigue, and numeric finish calibration remain disabled."
+        "\nV1 NOTE: reservoir/KD mechanics use provisional shadow calibration; "
+        "KO/TKO stoppages, recovery, fatigue, and finish calibration remain disabled."
     )
 
 
