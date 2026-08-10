@@ -1,57 +1,52 @@
-"""Shock-driven KO/TKO V2 shadow layer for the FSR static Monte Carlo.
+"""Shadow KO/TKO V2: reservoir-exhaustion finish architecture.
 
-This replaces the *mechanical idea* used by the rejected KO/TKO V1 experiment
-without deleting or rewriting that file. V1 allowed a small generic KO hazard on
-every landed significant strike; repeated ordinary-strike opportunities then
-accumulated into too many high-reservoir/non-KD finishes.
+This replaces the earlier shock-curve experiment. There is NO independent
+``P(KO | strike)`` lottery in this module.
 
-V2 keeps the locked Damage Reservoir V1 + KD model intact and makes acute shock
-the primary KO/TKO signal. The finish curve is intentionally parameterized: no
-single numeric KO calibration is locked in this module. Use the companion
-population audit to compare candidate curves before selecting constants.
+Architecture
+------------
+landed significant strike
+    -> Damage Reservoir V1 severity / striking-power draw
+    -> reservoir depletion
+    -> locked Damage V1 knockdown check
 
-The KO logit uses a nonlinear shock term::
+if a knockdown occurs:
+    -> the existing short-lived ``recent_knockdown`` state becomes active
+    -> subsequent landed strikes during that state receive a provisional
+       follow-up damage multiplier
 
-    shock_signal = shock_fraction + shock_curvature * shock_fraction**2
-
-so ordinary shocks remain very weak while large acute shocks rise rapidly.
-Reservoir depletion, a KD on the current strike, and recent-KD state act as
-secondary susceptibility modifiers.
+if reservoir_current reaches zero:
+    -> deterministic KO/TKO stoppage
 
 Important boundaries
 --------------------
-- no deterministic reservoir-zero finish rule;
-- no bonus reservoir damage when a KD occurs;
-- no hidden consciousness/hurt meter;
-- no generic defender-side per-strike damage-resistance trait;
-- KO constants remain research-only until population calibration.
+- The KD-causing strike receives no arbitrary bonus damage merely because it KD'd.
+- No generic strike-level KO hazard exists.
+- No hidden consciousness/hurt meter exists.
+- Ground persistence uses the isolated 0.17 shadow candidate, leaving prior
+  Damage V1 and frozen V0 baselines unchanged.
+- The post-KD multiplier is intentionally provisional and must be calibrated only
+  after the full finish/dynamic architecture is present enough for useful tests.
 """
-
 from __future__ import annotations
 
+import argparse
 from dataclasses import dataclass
-from math import exp, log
+from pathlib import Path
 from typing import Any
 
-import numpy as np
 import pandas as pd
 
 from scripts.experimental import fsr_static_mc_damage_v1 as damage
+from scripts.experimental import fsr_static_mc_damage_v1_ground017 as ground017
 from scripts.experimental import fsr_static_mc_v0 as base
 
 
-@dataclass(frozen=True)
-class KOParameters:
-    """Research-only KO/TKO curve parameters."""
+FSR_PATH = damage.FSR_PATH
 
-    name: str
-    base_logit: float
-    shock_coefficient: float
-    shock_curvature: float
-    depletion_coefficient: float
-    current_kd_logit_bonus: float
-    recent_kd_logit_bonus: float
-    max_strike_probability: float = 0.95
+# Architecture-enabling shadow value only. Do not treat as a calibration lock.
+POST_KD_FOLLOWUP_DAMAGE_MULTIPLIER = 2.0
+RESERVOIR_FINISH_EPSILON = 1e-9
 
 
 @dataclass
@@ -59,11 +54,10 @@ class FinishResult:
     winner: int
     loser: int
     method: str
-    probability: float
-    strike_damage: float
-    shock_fraction: float
-    reservoir_fraction_before: float
-    reservoir_fraction_after: float
+    raw_strike_damage: float
+    effective_strike_damage: float
+    reservoir_before: float
+    reservoir_after: float
     knockdown_on_strike: bool
     recent_kd_before: bool
     round: int | None = None
@@ -76,82 +70,51 @@ class KOPath(base.FightPath):
     finish: FinishResult | None = None
 
 
-class StaticFSRMCKOTKOV2(damage.StaticFSRMCDamageV1):
-    """Locked Damage V1/KD mechanics plus parameterized shock-driven KO/TKO."""
+class StaticFSRMCKOTKOV2(ground017.StaticFSRMCDamageV1Ground017):
+    """Damage V1 + ground017 + deterministic reservoir-exhaustion KO/TKO."""
 
     def __init__(
         self,
         red: pd.Series,
         blue: pd.Series,
         *,
-        ko_params: KOParameters,
         rounds: int = base.DEFAULT_ROUNDS,
         seed: int = 7,
     ) -> None:
         super().__init__(red, blue, rounds=rounds, seed=seed)
-        self.ko_params = ko_params
         self.finish: FinishResult | None = None
-        self._segment_finish_candidates: list[dict[str, Any]] = []
-
-    def _ko_probability(
-        self,
-        defender: int,
-        strike_damage: float,
-        *,
-        reservoir_fraction_before: float,
-        knockdown_on_strike: bool,
-        recent_kd_before: bool,
-    ) -> float:
-        """Return strike-level KO/TKO probability for the configured curve."""
-        state = self.damage_state[defender]
-        shock_fraction = strike_damage / state.reservoir_capacity
-        depletion = 1.0 - state.reservoir_fraction
-        shock_signal = (
-            shock_fraction
-            + self.ko_params.shock_curvature * shock_fraction * shock_fraction
-        )
-
-        logit_p = (
-            self.ko_params.base_logit
-            + self.ko_params.shock_coefficient * shock_signal
-            + self.ko_params.depletion_coefficient * depletion
-            + (
-                self.ko_params.current_kd_logit_bonus
-                if knockdown_on_strike
-                else 0.0
-            )
-            + (
-                self.ko_params.recent_kd_logit_bonus
-                if recent_kd_before
-                else 0.0
-            )
-        )
-        return float(
-            np.clip(
-                damage._sigmoid(logit_p),
-                0.0,
-                self.ko_params.max_strike_probability,
-            )
-        )
 
     def _apply_landed_strikes(self, attacker: int, landed: int) -> tuple[float, int]:
-        """Apply locked damage/KD mechanics and collect V2 finish candidates."""
+        """Apply landed strikes sequentially and stop only at reservoir exhaustion."""
         defender = self._other(attacker)
         total_damage = 0.0
         knockdowns = 0
 
         for _ in range(int(landed)):
-            state = self.damage_state[defender]
-            reservoir_fraction_before = state.reservoir_fraction
-            recent_kd_before = state.recent_knockdown
-            strike_damage = self._draw_strike_damage(attacker)
+            if self.finish is not None:
+                break
 
-            # Apply reservoir loss once, exactly as Damage V1 does.
+            state = self.damage_state[defender]
+            recent_kd_before = state.recent_knockdown
+            reservoir_before = float(state.reservoir_current)
+
+            # Draw raw severity exactly as Damage Reservoir V1 does.
+            raw_damage = self._draw_strike_damage(attacker)
+
+            # Recent KD represents temporary defensive compromise. The
+            # multiplier applies only to FOLLOW-UP strikes; the strike that first
+            # creates the KD state does not receive a retroactive bonus.
+            effective_damage = raw_damage
+            if recent_kd_before:
+                effective_damage *= POST_KD_FOLLOWUP_DAMAGE_MULTIPLIER
+
             state.reservoir_current = max(
                 0.0,
-                state.reservoir_current - strike_damage,
+                state.reservoir_current - effective_damage,
             )
-            p_kd = self._knockdown_probability(defender, strike_damage)
+
+            # Keep the existing KD probability architecture and coefficients.
+            p_kd = self._knockdown_probability(defender, effective_damage)
             knockdown = self.rng.random() < p_kd
 
             attacker_stats = self.stats[attacker]
@@ -159,17 +122,17 @@ class StaticFSRMCKOTKOV2(damage.StaticFSRMCDamageV1):
             assert isinstance(attacker_stats, damage.DamageFighterStats)
             assert isinstance(defender_stats, damage.DamageFighterStats)
 
-            attacker_stats.damage_dealt += strike_damage
-            defender_stats.damage_absorbed += strike_damage
+            attacker_stats.damage_dealt += effective_damage
+            defender_stats.damage_absorbed += effective_damage
             attacker_stats.max_single_strike_damage = max(
                 attacker_stats.max_single_strike_damage,
-                strike_damage,
+                effective_damage,
             )
             defender_stats.max_single_strike_damage = max(
                 defender_stats.max_single_strike_damage,
-                strike_damage,
+                effective_damage,
             )
-            total_damage += strike_damage
+            total_damage += effective_damage
 
             if knockdown:
                 attacker_stats.knockdowns_scored += 1
@@ -180,83 +143,57 @@ class StaticFSRMCKOTKOV2(damage.StaticFSRMCDamageV1):
                 )
                 knockdowns += 1
 
-            p_finish = self._ko_probability(
-                defender,
-                strike_damage,
-                reservoir_fraction_before=reservoir_fraction_before,
-                knockdown_on_strike=knockdown,
-                recent_kd_before=recent_kd_before,
-            )
-            self._segment_finish_candidates.append(
-                {
-                    "attacker": attacker,
-                    "defender": defender,
-                    "probability": p_finish,
-                    "strike_damage": strike_damage,
-                    "shock_fraction": strike_damage / state.reservoir_capacity,
-                    "reservoir_fraction_before": reservoir_fraction_before,
-                    "reservoir_fraction_after": state.reservoir_fraction,
-                    "knockdown_on_strike": knockdown,
-                    "recent_kd_before": recent_kd_before,
-                }
-            )
+            if state.reservoir_current <= RESERVOIR_FINISH_EPSILON:
+                self.finish = FinishResult(
+                    winner=attacker,
+                    loser=defender,
+                    method="KO/TKO",
+                    raw_strike_damage=float(raw_damage),
+                    effective_strike_damage=float(effective_damage),
+                    reservoir_before=reservoir_before,
+                    reservoir_after=float(state.reservoir_current),
+                    knockdown_on_strike=bool(knockdown),
+                    recent_kd_before=bool(recent_kd_before),
+                )
+                break
 
         return total_damage, knockdowns
 
-    @staticmethod
-    def _probability_to_rate(probability: float) -> float:
-        p = float(np.clip(probability, 0.0, 1.0 - 1e-12))
-        return -log(1.0 - p)
+    def _generate_striking(self, phase: str) -> list[str]:
+        """Generate one segment with randomized fighter resolution order."""
+        self._advance_damage_timers()
+        notes: list[str] = []
 
-    def _resolve_segment_finish(self) -> FinishResult | None:
-        """Resolve at most one KO/TKO from all strike hazards in the segment."""
-        positive: list[tuple[dict[str, Any], float]] = []
-        for candidate in self._segment_finish_candidates:
-            rate = self._probability_to_rate(float(candidate["probability"]))
-            if rate > 0.0:
-                positive.append((candidate, rate))
+        if phase == "GROUND" and self.ground_controller is not None:
+            top = self.ground_controller
+            bottom = self._other(top)
+            actors = [
+                (top, 1.0, "top"),
+                (bottom, base.BOTTOM_GROUND_STRIKE_RATE_MULTIPLIER, "bottom"),
+            ]
+        else:
+            actors = [(0, 1.0, None), (1, 1.0, None)]
 
-        if not positive:
-            return None
-
-        total_rate = sum(rate for _, rate in positive)
-        if self.rng.random() >= 1.0 - exp(-total_rate):
-            return None
-
-        draw = self.rng.random() * total_rate
-        running = 0.0
-        selected = positive[-1][0]
-        for candidate, rate in positive:
-            running += rate
-            if draw <= running:
-                selected = candidate
+        # V2 still works at 10-second segment resolution. Randomizing which
+        # fighter's batch resolves first removes fixed red/blue stoppage bias.
+        for idx in self.rng.permutation(len(actors)):
+            fighter, multiplier, label = actors[int(idx)]
+            note = self._generate_strikes_for_fighter(
+                fighter,
+                phase,
+                rate_multiplier=multiplier,
+            )
+            if note:
+                if label:
+                    note = f"{note} ({label})"
+                notes.append(note)
+            if self.finish is not None:
+                notes.append(
+                    f"STOPPAGE: {self.names[self.finish.winner]} defeats "
+                    f"{self.names[self.finish.loser]} by KO/TKO"
+                )
                 break
 
-        return FinishResult(
-            winner=int(selected["attacker"]),
-            loser=int(selected["defender"]),
-            method="KO/TKO",
-            probability=float(selected["probability"]),
-            strike_damage=float(selected["strike_damage"]),
-            shock_fraction=float(selected["shock_fraction"]),
-            reservoir_fraction_before=float(selected["reservoir_fraction_before"]),
-            reservoir_fraction_after=float(selected["reservoir_fraction_after"]),
-            knockdown_on_strike=bool(selected["knockdown_on_strike"]),
-            recent_kd_before=bool(selected["recent_kd_before"]),
-        )
-
-    def _generate_striking(self, phase: str) -> list[str]:
-        # Advance KD timer exactly once per segment, then generate both fighters'
-        # striking using the V0 sequence while this subclass records KO hazards.
-        self._segment_finish_candidates = []
-        self._advance_damage_timers()
-        notes = base.StaticFSRMCV0._generate_striking(self, phase)
-        self.finish = self._resolve_segment_finish()
-        if self.finish is not None:
-            notes.append(
-                f"STOPPAGE: {self.names[self.finish.winner]} defeats "
-                f"{self.names[self.finish.loser]} by KO/TKO"
-            )
         return notes
 
     def run(self) -> KOPath:
@@ -330,3 +267,60 @@ class StaticFSRMCKOTKOV2(damage.StaticFSRMCDamageV1):
                     return KOPath(events=events, stats=self.stats, finish=self.finish)
 
         return KOPath(events=events, stats=self.stats, finish=None)
+
+
+def print_ko_summary(sim: StaticFSRMCKOTKOV2, path: KOPath) -> None:
+    damage.print_damage_summary(sim)
+    print("\nKO/TKO V2 FINISH SUMMARY")
+    print("-" * 100)
+    if path.finish is None:
+        print("No reservoir-exhaustion KO/TKO stoppage occurred.")
+    else:
+        f = path.finish
+        print(
+            f"{sim.names[f.winner]} def. {sim.names[f.loser]} by {f.method} | "
+            f"R{f.round} {f.clock_start} | raw_damage={f.raw_strike_damage:.2f} | "
+            f"effective_damage={f.effective_strike_damage:.2f} | "
+            f"reservoir {f.reservoir_before:.2f}->{f.reservoir_after:.2f} | "
+            f"KD_on_strike={f.knockdown_on_strike} | "
+            f"recent_KD_before={f.recent_kd_before}"
+        )
+    print(
+        "\nV2 NOTE: reservoir exhaustion is the only KO/TKO trigger. "
+        f"Post-KD follow-up multiplier={POST_KD_FOLLOWUP_DAMAGE_MULTIPLIER:.2f}x "
+        "is provisional shadow architecture, not a calibrated lock."
+    )
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Run shadow reservoir-exhaustion Static FSR MC KO/TKO V2"
+    )
+    parser.add_argument("--red", help="fighter name or fighter_id")
+    parser.add_argument("--blue", help="fighter name or fighter_id")
+    parser.add_argument("--rounds", type=int, default=base.DEFAULT_ROUNDS)
+    parser.add_argument("--seed", type=int, default=7)
+    parser.add_argument("--fsr-path", type=Path, default=FSR_PATH)
+    args = parser.parse_args()
+
+    print(f"[FSR MC KO/TKO V2] loading profiles from {args.fsr_path}", flush=True)
+    profiles = damage.load_profiles(args.fsr_path)
+    print(f"[FSR MC KO/TKO V2] latest fighter profiles: {len(profiles):,}", flush=True)
+
+    if args.red and args.blue:
+        red = base.find_profile(profiles, args.red)
+        blue = base.find_profile(profiles, args.blue)
+    elif args.red or args.blue:
+        raise SystemExit("Provide both --red and --blue, or neither.")
+    else:
+        red, blue = base._default_matchup(profiles)
+        print("[FSR MC KO/TKO V2] no matchup supplied; using first two profiles.", flush=True)
+
+    sim = StaticFSRMCKOTKOV2(red, blue, rounds=args.rounds, seed=args.seed)
+    path = sim.run()
+    base.print_path(path, sim.names)
+    print_ko_summary(sim, path)
+
+
+if __name__ == "__main__":
+    main()
