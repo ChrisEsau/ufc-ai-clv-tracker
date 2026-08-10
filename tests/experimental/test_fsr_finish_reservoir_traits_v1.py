@@ -1,6 +1,15 @@
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
 import pandas as pd
+
+# Ensure the repository root is importable when this test is run directly with
+# ``pytest tests/experimental/test_fsr_finish_reservoir_traits_v1.py``.
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.experimental import fsr_finish_reservoir_traits_v1 as reservoir
 
