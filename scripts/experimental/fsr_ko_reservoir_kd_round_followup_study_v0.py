@@ -47,12 +47,13 @@ OUTPUT_PATH = Path(
 
 OUTCOME_COLUMNS = ["fight_id", "winner", "winner_id", "method", "finish_round"]
 
+# Keep Study 4 inside the existing Finish State reciprocal-opponent contract.
+# body_landed / leg_landed are not exposed by attach_opponent_round_values(),
+# and they are not required for the post-KD hypotheses we are testing here.
 METRICS = [
     "sig_absorbed",
     "head_absorbed",
     "ground_absorbed",
-    "body_absorbed",
-    "leg_absorbed",
 ]
 
 
@@ -82,11 +83,15 @@ def _load(round_stats_path: Path, master_path: Path) -> pd.DataFrame:
 
     work["kd_absorbed"] = pd.to_numeric(work["opponent_kd"], errors="coerce").fillna(0.0)
     work["kd_round"] = (work["kd_absorbed"] > 0).astype(int)
-    work["sig_absorbed"] = pd.to_numeric(work["opponent_sig_str_landed"], errors="coerce").fillna(0.0)
-    work["head_absorbed"] = pd.to_numeric(work["opponent_head_landed"], errors="coerce").fillna(0.0)
-    work["ground_absorbed"] = pd.to_numeric(work["opponent_ground_landed"], errors="coerce").fillna(0.0)
-    work["body_absorbed"] = pd.to_numeric(work["opponent_body_landed"], errors="coerce").fillna(0.0)
-    work["leg_absorbed"] = pd.to_numeric(work["opponent_leg_landed"], errors="coerce").fillna(0.0)
+    work["sig_absorbed"] = pd.to_numeric(
+        work["opponent_sig_str_landed"], errors="coerce"
+    ).fillna(0.0)
+    work["head_absorbed"] = pd.to_numeric(
+        work["opponent_head_landed"], errors="coerce"
+    ).fillna(0.0)
+    work["ground_absorbed"] = pd.to_numeric(
+        work["opponent_ground_landed"], errors="coerce"
+    ).fillna(0.0)
 
     fighter_lost = work["fighter_id"].astype("string") != work["winner_id"]
     ko_loss = fighter_lost & work["method"].isin(KO_TKO_METHODS)
