@@ -1,5 +1,5 @@
 {
-  "completed_at": "2026-08-03T12:19:07.430554+00:00",
+  "completed_at": "2026-08-10T10:48:39.092008+00:00",
   "current_step_id": "initialize_upcoming_event",
   "current_step_name": "Initialize Upcoming Event",
   "current_substep_id": null,
@@ -13,7 +13,7 @@
       "step_name": null,
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-08-03T11:56:11.712101+00:00"
+      "timestamp": "2026-08-10T10:20:42.779032+00:00"
     },
     {
       "event": "step_started",
@@ -22,7 +22,7 @@
       "step_name": "Process Completed Events",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-08-03T11:56:11.712484+00:00"
+      "timestamp": "2026-08-10T10:20:42.779521+00:00"
     },
     {
       "event": "step_completed",
@@ -31,7 +31,7 @@
       "step_name": "Process Completed Events",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-08-03T12:02:37.996611+00:00"
+      "timestamp": "2026-08-10T10:26:16.620649+00:00"
     },
     {
       "event": "step_started",
@@ -40,7 +40,7 @@
       "step_name": "Update Master Dataset",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-08-03T12:02:37.997013+00:00"
+      "timestamp": "2026-08-10T10:26:16.621107+00:00"
     },
     {
       "event": "step_completed",
@@ -49,7 +49,7 @@
       "step_name": "Update Master Dataset",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-08-03T12:02:37.998031+00:00"
+      "timestamp": "2026-08-10T10:26:16.622272+00:00"
     },
     {
       "event": "step_started",
@@ -58,16 +58,16 @@
       "step_name": "Ingest Completed Round Stats",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-08-03T12:02:37.998391+00:00"
+      "timestamp": "2026-08-10T10:26:16.622720+00:00"
     },
     {
       "event": "step_completed",
-      "message": "Completed Ingest Completed Round Stats",
+      "message": "Completed Ingest Completed Round Stats and refreshed RFS state",
       "step_id": "ingest_completed_round_stats",
       "step_name": "Ingest Completed Round Stats",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-08-03T12:11:10.916876+00:00"
+      "timestamp": "2026-08-10T10:38:25.553710+00:00"
     },
     {
       "event": "step_started",
@@ -76,7 +76,7 @@
       "step_name": "Refresh Platform Status",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-08-03T12:11:10.917377+00:00"
+      "timestamp": "2026-08-10T10:38:25.554242+00:00"
     },
     {
       "event": "step_completed",
@@ -85,7 +85,7 @@
       "step_name": "Refresh Platform Status",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-08-03T12:17:58.649760+00:00"
+      "timestamp": "2026-08-10T10:47:26.611738+00:00"
     },
     {
       "event": "step_started",
@@ -94,7 +94,7 @@
       "step_name": "Reconcile Performance",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-08-03T12:17:58.650198+00:00"
+      "timestamp": "2026-08-10T10:47:26.612346+00:00"
     },
     {
       "event": "step_completed",
@@ -103,7 +103,7 @@
       "step_name": "Reconcile Performance",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-08-03T12:18:00.780403+00:00"
+      "timestamp": "2026-08-10T10:47:28.912886+00:00"
     },
     {
       "event": "step_started",
@@ -112,7 +112,7 @@
       "step_name": "Initialize Upcoming Event",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-08-03T12:18:00.780944+00:00"
+      "timestamp": "2026-08-10T10:47:28.913476+00:00"
     },
     {
       "event": "step_completed",
@@ -121,7 +121,7 @@
       "step_name": "Initialize Upcoming Event",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-08-03T12:19:07.430030+00:00"
+      "timestamp": "2026-08-10T10:48:39.091410+00:00"
     },
     {
       "event": "runbook_completed",
@@ -130,17 +130,17 @@
       "step_name": "Initialize Upcoming Event",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-08-03T12:19:07.430559+00:00"
+      "timestamp": "2026-08-10T10:48:39.092013+00:00"
     }
   ],
   "message": "Monday Reset completed",
   "mode": "production",
   "runbook_id": "monday_reset_v1",
-  "started_at": "2026-08-03T11:56:11.712095+00:00",
+  "started_at": "2026-08-10T10:20:42.779026+00:00",
   "status": "completed",
   "step_index": 6,
   "step_total": 6,
   "substep_index": null,
   "substep_total": 1,
-  "updated_at": "2026-08-03T12:19:07.430751+00:00"
+  "updated_at": "2026-08-10T10:48:39.092188+00:00"
 }
