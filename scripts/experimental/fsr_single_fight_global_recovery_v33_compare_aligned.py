@@ -1,4 +1,4 @@
-"""Paired single-fight comparison: recovery baseline vs global-recovery V3.3."""
+"""Paired single-fight comparison: neutral-recovery baseline vs global V3.3."""
 from __future__ import annotations
 
 import argparse
@@ -32,13 +32,23 @@ def main() -> None:
     b_age = float(bout["b_age"]) if pd.notna(bout["b_age"]) else None
     seeds = np.random.default_rng(args.seed).integers(0, 2**31 - 1, size=args.paths, dtype=np.int64)
 
+    # The legacy recovery baseline requires recovery_ability. The new FSR-32
+    # artifact intentionally removes that field, so supply the former neutral
+    # population value only to the frozen comparison baseline.
+    baseline_red = red.copy(deep=True)
+    baseline_blue = blue.copy(deep=True)
+    baseline_red["recovery_ability"] = 50.0
+    baseline_blue["recovery_ability"] = 50.0
+
     baseline = compare._run(
         recovery.StaticFSRMCKOTKOV2RoundRecovery,
-        red, blue, seeds=seeds, rounds=args.rounds, r_age=r_age, b_age=b_age,
+        baseline_red, baseline_blue,
+        seeds=seeds, rounds=args.rounds, r_age=r_age, b_age=b_age,
     )
     candidate = compare._run(
         v33.StaticFSRMCKOTKOV33GlobalRecovery,
-        red, blue, seeds=seeds, rounds=args.rounds, r_age=r_age, b_age=b_age,
+        red, blue,
+        seeds=seeds, rounds=args.rounds, r_age=r_age, b_age=b_age,
     )
 
     names = [base._display_name(red), base._display_name(blue)]
@@ -50,8 +60,9 @@ def main() -> None:
     print(f"event_date: {bout['event_date']}")
     print(f"actual KO/TKO: {int(bout['actual_ko_tko'])}; actual R1 KO: {int(bout['actual_r1_ko'])}")
     print(f"paths: {args.paths}; horizon: {args.rounds} rounds")
+    print("baseline comparison recovery_ability fixed at neutral 50")
     print(
-        f"global recovery: damage={v33.GLOBAL_DAMAGE_RECOVERY_FRACTION:.0%} of missing; "
+        f"V3.3 global recovery: damage={v33.GLOBAL_DAMAGE_RECOVERY_FRACTION:.0%} of missing; "
         f"stamina={v33.GLOBAL_STAMINA_RECOVERY_FRACTION:.0%} of missing"
     )
 
@@ -66,7 +77,7 @@ def main() -> None:
                        index=fields).to_string(float_format=lambda x: f"{float(x):.4f}"))
 
     rows = []
-    for label, pair in (("baseline_recovery", baseline), ("global_recovery_v3_3", candidate)):
+    for label, pair in (("baseline_recovery_neutral50", baseline), ("global_recovery_v3_3", candidate)):
         for i, row in enumerate(pair):
             rows.append({"variant": label, "fighter": names[i], **row})
     frame = pd.DataFrame(rows)
