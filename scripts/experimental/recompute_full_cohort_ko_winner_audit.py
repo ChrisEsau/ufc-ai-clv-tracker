@@ -12,6 +12,8 @@ non-tie KO-side call to be scored incorrect.
 
 This script rejoins canonical winner/corner metadata from ufc_master.parquet by
 bout_id and recomputes directional metrics from the already-saved p_r_ko / p_b_ko.
+Only historical KO/TKO fights within R1-R3 require winner metadata; unrelated
+cohort rows with missing canonical metadata are retained but do not block the audit.
 """
 from __future__ import annotations
 
@@ -36,8 +38,10 @@ def _canonical_master() -> pd.DataFrame:
     raw[date_col] = pd.to_datetime(raw[date_col], errors="coerce")
     raw = raw.dropna(subset=[date_col]).copy()
     raw["fight_id"] = raw["fight_id"].astype(str)
-    for col in ("r_id", "b_id", "winner_id"):
+    for col in ("r_id", "b_id"):
         raw[col] = raw[col].astype(str)
+    # Keep winner_id nullable until after the merge so missing values remain
+    # distinguishable from the literal string "nan".
     raw = (
         raw.sort_values([date_col, "fight_id"])
         .drop_duplicates("fight_id", keep="last")
@@ -65,11 +69,33 @@ def main() -> None:
     master = _canonical_master()
     work = bouts.merge(master, on="bout_id", how="left", validate="one_to_one")
 
-    missing = work["master_winner_id"].isna()
-    if missing.any():
-        raise ValueError(f"Missing canonical winner metadata for {int(missing.sum())} bouts")
+    # Winner-direction accuracy only concerns historical KO/TKO finishes that
+    # occurred inside the simulator's three-round horizon. Do not abort because
+    # some unrelated cohort rows lack canonical winner metadata.
+    actual_round = pd.to_numeric(work["actual_finish_round"], errors="coerce")
+    actual_ko_within_r3 = work["actual_ko_tko"].eq(1) & actual_round.le(3)
 
-    corner_mismatch = (
+    missing_all = work["master_winner_id"].isna()
+    if missing_all.any():
+        print(
+            f"note: {int(missing_all.sum())} cohort bouts lack canonical winner metadata; "
+            "only KO/TKO fights within R1-R3 are required for this audit"
+        )
+
+    missing_target = actual_ko_within_r3 & work["master_winner_id"].isna()
+    if missing_target.any():
+        sample = work.loc[
+            missing_target,
+            ["bout_id", "event_date", "red_name", "blue_name", "actual_method", "actual_finish_round"],
+        ].head(10)
+        raise ValueError(
+            "Missing canonical winner metadata for historical KO/TKO fights inside R1-R3. Examples:\n"
+            + sample.to_string(index=False)
+        )
+
+    # Corner validation likewise only needs rows that actually matched master.
+    matched_master = work["master_r_id"].notna() & work["master_b_id"].notna()
+    corner_mismatch = matched_master & (
         work["r_id"].astype(str).ne(work["master_r_id"].astype(str))
         | work["b_id"].astype(str).ne(work["master_b_id"].astype(str))
     )
@@ -98,15 +124,14 @@ def main() -> None:
         ),
     )
 
-    actual_round = pd.to_numeric(work["actual_finish_round"], errors="coerce")
-    actual_ko_within_r3 = work["actual_ko_tko"].eq(1) & actual_round.le(3)
     ko = work.loc[actual_ko_within_r3].copy()
+    ko["master_winner_id"] = ko["master_winner_id"].astype(str)
 
     ko["actual_ko_winner_side_corrected"] = np.where(
-        ko["master_winner_id"].astype(str).eq(ko["r_id"].astype(str)),
+        ko["master_winner_id"].eq(ko["r_id"].astype(str)),
         "red",
         np.where(
-            ko["master_winner_id"].astype(str).eq(ko["b_id"].astype(str)),
+            ko["master_winner_id"].eq(ko["b_id"].astype(str)),
             "blue",
             "unknown",
         ),
@@ -128,7 +153,7 @@ def main() -> None:
         ko["corrected_direction_tie"],
         np.nan,
         ko["corrected_predicted_ko_winner_id"].astype(str).eq(
-            ko["master_winner_id"].astype(str)
+            ko["master_winner_id"]
         ).astype(float),
     )
 
