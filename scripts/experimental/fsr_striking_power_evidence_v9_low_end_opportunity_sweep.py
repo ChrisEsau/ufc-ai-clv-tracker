@@ -71,25 +71,52 @@ def main() -> None:
 
     rankings, scored = v8.build_v8_rankings(master, rounds)
 
-    # V8 scored is one row per fighter-fight, sourced from R1. Use landed R1
-    # significant strikes as actual clean-strike opportunity to demonstrate
-    # fresh power. Attempts that miss do not reveal impact power.
-    detail = scored[["fighter_id", "fighter_name", "fight_id", "sig_str_landed"]].copy()
-    detail["sig_str_landed"] = pd.to_numeric(detail["sig_str_landed"], errors="coerce").fillna(0.0).clip(lower=0.0)
-    detail["opportunity"] = 1.0 - np.exp(-detail["sig_str_landed"] / OPPORTUNITY_SIG_TAU)
+    # V8 currently groups by fighter_id + fighter_name, so historical name
+    # variants can create multiple rows for one fighter_id. V9 is a fighter-
+    # level audit, therefore normalize both sides of the merge to fighter_id.
+    rankings = (
+        rankings.sort_values(
+            ["fighter_id", "power_evidence_rating_v8", "ufc_r1_fights"],
+            ascending=[True, False, False],
+        )
+        .drop_duplicates("fighter_id", keep="first")
+        .reset_index(drop=True)
+    )
 
-    opp = detail.groupby(["fighter_id", "fighter_name"], as_index=False).agg(
-        ufc_r1_fights=("fight_id", "nunique"),
+    # V8 scored is one row per fighter-fight/name variant, sourced from R1.
+    # Use landed R1 significant strikes as actual clean-strike opportunity to
+    # demonstrate fresh power. Aggregate ONLY by fighter_id so name aliases do
+    # not create duplicate merge keys or split opportunity evidence.
+    detail = scored[["fighter_id", "fighter_name", "fight_id", "sig_str_landed"]].copy()
+    detail["sig_str_landed"] = (
+        pd.to_numeric(detail["sig_str_landed"], errors="coerce")
+        .fillna(0.0)
+        .clip(lower=0.0)
+    )
+    detail["opportunity"] = 1.0 - np.exp(
+        -detail["sig_str_landed"] / OPPORTUNITY_SIG_TAU
+    )
+
+    opp = detail.groupby("fighter_id", as_index=False).agg(
+        ufc_r1_fights_opp=("fight_id", "nunique"),
         total_r1_sig_landed=("sig_str_landed", "sum"),
         opportunity_score=("opportunity", "sum"),
         mean_r1_sig_landed=("sig_str_landed", "mean"),
     )
 
+    if rankings["fighter_id"].duplicated().any():
+        raise RuntimeError("V9 rankings normalization failed: duplicate fighter_id")
+    if opp["fighter_id"].duplicated().any():
+        raise RuntimeError("V9 opportunity normalization failed: duplicate fighter_id")
+
     base = rankings.merge(
-        opp[["fighter_id", "total_r1_sig_landed", "opportunity_score", "mean_r1_sig_landed"]],
+        opp[[
+            "fighter_id", "total_r1_sig_landed", "opportunity_score",
+            "mean_r1_sig_landed",
+        ]],
         on="fighter_id",
         how="left",
-        validate="many_to_one",
+        validate="one_to_one",
     )
     for c in ("total_r1_sig_landed", "opportunity_score", "mean_r1_sig_landed"):
         base[c] = base[c].fillna(0.0)
@@ -100,7 +127,7 @@ def main() -> None:
     print("\n" + "=" * 145)
     print("V9 FRESH STRIKING POWER — LOW-END OPPORTUNITY SWEEP")
     print("=" * 145)
-    print(f"fighters: {len(base):,}")
+    print(f"fighters after fighter_id normalization: {len(base):,}")
     print(f"V8 neutral fighters: {len(neutral):,}")
     print("\nNegative evidence is applied ONLY to V8-neutral fighters.")
     print("opportunity_i = 1 - exp(-R1_SIG_LANDED/20)")
@@ -130,7 +157,6 @@ def main() -> None:
         for p in (1, 5, 10, 25, 50, 75, 90, 95, 99):
             print(f"  all p{p:02d}: {np.percentile(vals, p):.3f}")
 
-        # Show the most strongly evidenced low-power cases under this candidate.
         bottom = out.loc[neutral_mask].nsmallest(max(1, args.show), name)
         print("\n  LOWEST-RATED V8-NEUTRAL FIGHTERS")
         print(bottom[[
@@ -138,7 +164,6 @@ def main() -> None:
             "mean_r1_sig_landed", "opportunity_score",
         ]].to_string(index=False, float_format=lambda x: f"{x:.3f}"))
 
-        # Show fighters near 48-50: little evidence / still largely unknown.
         uncertain = out.loc[neutral_mask].copy()
         uncertain["distance_to_49"] = (uncertain[name] - 49.0).abs()
         uncertain = uncertain.nsmallest(max(1, min(args.show, 12)), "distance_to_49")
