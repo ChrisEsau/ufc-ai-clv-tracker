@@ -1,22 +1,22 @@
-"""Shadow KO/TKO V3.1: rolling effective FSR driven by stamina.
+"""Shadow KO/TKO V3.1: rolling effective striking power driven by stamina.
 
 Contract
 --------
 The stored FSR-32 row is immutable and represents the fighter fresh.
 At the start of each 10-second segment, the simulator derives a temporary
-``effective FSR`` from current stamina.  Every action in that segment uses the
-same effective profile.  Only after the segment resolves are stamina costs
+``effective FSR`` from current stamina. Every action in that segment uses the
+same effective profile. Only after the segment resolves are stamina costs
 applied, so an action is never weakened by the fatigue it creates itself.
 
-Fatigue-sensitive performance traits are reduced by a one-way rating-point
-penalty. Structural damage-resistance traits and the stamina/cardio traits are
-not mutated. Fighter-specific stamina capacity, depletion resistance,
-performance resilience, and recovery ability all come from FSR-32.
+For this calibration candidate fatigue changes *striking_power only*. Output,
+pressure, precision, accuracy, defense, wrestling, control, and submission
+ratings remain at their stored FSR values. Structural damage-resistance traits
+and the stamina/cardio traits are also unchanged.
 
 The locked age mechanic, KD curve, damage reservoir, KD-collapse logic, and
-damage-recovery architecture remain unchanged.  Fresh striking_power has a
-stronger upper-tail translation than Damage V1; fatigue then lowers the
-*effective striking_power rating* used by subsequent segments.
+damage-recovery architecture remain unchanged. Fresh striking_power has the
+stronger upper-tail translation introduced by the shadow experiment; fatigue
+then lowers only the effective striking_power used by subsequent segments.
 """
 from __future__ import annotations
 
@@ -33,10 +33,12 @@ from scripts.experimental import fsr_static_mc_ko_tko_v3_stamina as v3
 from scripts.experimental import fsr_static_mc_v0 as base
 
 
-# Maximum rating-point loss at zero stamina for a fighter with neutral (50)
-# performance resilience. This is a shadow calibration parameter, not a fighter
-# parameter. Fighter-specific differences come only from FSR-32.
-MAX_FATIGUE_RATING_PENALTY = 20.0
+# Nonlinear power-only fatigue candidate.
+# Neutral-resilience penalty = MAX * missing_stamina ** EXPONENT.
+# This keeps fresh fighters near full power and accelerates degradation as the
+# stamina reservoir becomes materially depleted.
+MAX_FATIGUE_RATING_PENALTY = 45.0
+FATIGUE_CURVE_EXPONENT = 1.60
 FATIGUE_RESILIENCE_SCALE = 80.0
 MIN_EFFECTIVE_FSR_RATING = 10.0
 
@@ -44,27 +46,9 @@ MIN_EFFECTIVE_FSR_RATING = 10.0
 ROLLING_POWER_TAIL_RATING_SCALE = 6.50
 ROLLING_TAIL_MAGNITUDE_POWER_SCALE = 55.0
 
-# Traits whose in-fight performance is allowed to deteriorate with fatigue.
-# Structural resistance/durability and the stamina contract itself are excluded.
-FATIGUE_SENSITIVE_TRAITS = {
-    "striking_power",
-    "distance_striking_pressure",
-    "distance_striking_precision",
-    "distance_striking_defense",
-    "clinch_striking_pressure",
-    "clinch_striking_precision",
-    "clinch_striking_defense",
-    "ground_striking_pressure",
-    "ground_striking_precision",
-    "ground_striking_defense",
-    "wrestling_entry",
-    "wrestling_conversion",
-    "td_defense",
-    "control_imposition",
-    "control_resistance",
-    "submission_pressure",
-    "reversal_ability",
-}
+# Explicitly power-only for this experiment. Do not add pressure/precision/etc.
+# without separate evidence and approval.
+FATIGUE_SENSITIVE_TRAITS = {"striking_power"}
 
 
 class StaticFSRMCKOTKOV31RollingFSR(v3.StaticFSRMCKOTKOV3Stamina):
@@ -77,26 +61,27 @@ class StaticFSRMCKOTKOV31RollingFSR(v3.StaticFSRMCKOTKOV3Stamina):
         self.pending_stamina_costs: list[list[tuple[float, str]]] = [[], []]
         self.effective_fsr_events: list[dict[str, Any]] = []
 
-    # ------------------------------------------------------------------
-    # Rolling FSR construction.
-    # ------------------------------------------------------------------
     def _stamina_rating(self, fighter: int, trait: str) -> float:
-        # Cardio traits are underlying FSR parameters and must never be reduced
-        # by the rolling effective profile.
         value = v3._strict_profile_float(self.base_fighters[fighter], trait)
         if not 10.0 <= value <= 90.0:
             raise ValueError(f"FSR stamina rating {trait} outside 10-90: {value}")
         return value
 
     def fatigue_penalty(self, fighter: int) -> float:
-        missing_fraction = 1.0 - self.stamina_state[fighter].fraction
+        missing_fraction = float(np.clip(1.0 - self.stamina_state[fighter].fraction, 0.0, 1.0))
         resilience = self._stamina_rating(
             fighter,
             fsr32.STAMINA_PERFORMANCE_RESILIENCE,
         )
         resilience_multiplier = exp(-(resilience - 50.0) / FATIGUE_RESILIENCE_SCALE)
+        nonlinear_missing = missing_fraction ** FATIGUE_CURVE_EXPONENT
         return float(
-            max(0.0, missing_fraction * MAX_FATIGUE_RATING_PENALTY * resilience_multiplier)
+            max(
+                0.0,
+                nonlinear_missing
+                * MAX_FATIGUE_RATING_PENALTY
+                * resilience_multiplier,
+            )
         )
 
     def _effective_profile(self, fighter: int) -> pd.Series:
@@ -127,10 +112,7 @@ class StaticFSRMCKOTKOV31RollingFSR(v3.StaticFSRMCKOTKOV3Stamina):
                 }
             )
 
-    # ------------------------------------------------------------------
-    # Deferred stamina accounting: queue during the action, spend only after
-    # the complete segment resolves.
-    # ------------------------------------------------------------------
+    # Queue action costs during the segment; spend only after all segment actions.
     def _spend_stamina(self, fighter: int, base_cost: float, reason: str) -> float:
         if base_cost > 0.0:
             self.pending_stamina_costs[fighter].append((float(base_cost), str(reason)))
@@ -141,8 +123,6 @@ class StaticFSRMCKOTKOV31RollingFSR(v3.StaticFSRMCKOTKOV3Stamina):
             pending = self.pending_stamina_costs[fighter]
             self.pending_stamina_costs[fighter] = []
             for base_cost, reason in pending:
-                # Call V3 implementation directly so the cost is actually
-                # deducted now, after all actions in the segment have resolved.
                 v3.StaticFSRMCKOTKOV3Stamina._spend_stamina(
                     self,
                     fighter,
@@ -150,10 +130,8 @@ class StaticFSRMCKOTKOV31RollingFSR(v3.StaticFSRMCKOTKOV3Stamina):
                     reason,
                 )
 
-    # ------------------------------------------------------------------
-    # Remove V3's separate output/power multipliers. Rolling effective FSR is
-    # the sole fatigue feedback mechanism for action quality/rate.
-    # ------------------------------------------------------------------
+    # No stamina output multiplier. Attempts are driven by the stored pressure
+    # traits exactly as in the base simulator; only their stamina cost is queued.
     def _strike_attempts(
         self,
         fighter: int,
@@ -197,7 +175,6 @@ class StaticFSRMCKOTKOV31RollingFSR(v3.StaticFSRMCKOTKOV3Stamina):
             )
         return attempted
 
-    # Fresh/effective striking power is read directly from the rolling profile.
     def _tail_probability(self, attacker: int) -> float:
         power = base._value(self.fighters[attacker], "striking_power")
         return damage._sigmoid(
@@ -241,8 +218,8 @@ class StaticFSRMCKOTKOV31RollingFSR(v3.StaticFSRMCKOTKOV3Stamina):
             self.clinch_initiator = None
 
             for segment_no in range(1, base.SEGMENTS_PER_ROUND + 1):
-                # Snapshot current stamina into one rolling effective FSR for
-                # this whole segment. No action can fatigue itself retroactively.
+                # Snapshot current stamina into one effective power for this
+                # entire segment. The segment cannot fatigue itself retroactively.
                 self._refresh_effective_fighters(round_no, segment_no)
                 self.pending_stamina_costs = [[], []]
 
@@ -312,8 +289,6 @@ class StaticFSRMCKOTKOV31RollingFSR(v3.StaticFSRMCKOTKOV3Stamina):
                     return ko.KOPath(events=events, stats=self.stats, finish=self.finish)
 
             if round_no < self.rounds:
-                # Recovery must read the immutable FSR cardio traits. The V3
-                # override of _stamina_rating already points at base_fighters.
                 self._apply_between_round_recovery(round_no)
 
         return ko.KOPath(events=events, stats=self.stats, finish=None)
