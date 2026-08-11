@@ -10,8 +10,6 @@ This audit does not modify any FSR artifact.
 """
 from __future__ import annotations
 
-from pathlib import Path
-
 import numpy as np
 import pandas as pd
 
@@ -37,6 +35,22 @@ def _winner_ko_table(master: pd.DataFrame) -> pd.DataFrame:
     return fights
 
 
+def _one_row_per_fighter(rankings: pd.DataFrame, rank_col: str) -> pd.DataFrame:
+    """Collapse name-variant duplicates to one row per fighter_id.
+
+    The evidence builders group by (fighter_id, fighter_name), so historical name
+    variants can yield more than one row for the same fighter_id. For this audit
+    the comparison grain is fighter_id. Keep the highest-ranked row as the
+    representative record; this avoids double-counting IDs and makes the merge
+    contract explicit.
+    """
+    return (
+        rankings.sort_values(rank_col, ascending=True)
+        .drop_duplicates(subset=["fighter_id"], keep="first")
+        .reset_index(drop=True)
+    )
+
+
 def main() -> None:
     master = pd.read_parquet(v2.MASTER_PATH)
     rounds = pd.read_parquet(v2.ROUND_STATS_PATH)
@@ -44,6 +58,12 @@ def main() -> None:
 
     v5_rankings, _ = v5.build_v5_rankings(fighter_fights)
     v7_rankings, _ = v7.build_v7_rankings(fighter_fights)
+
+    v5_rankings = _one_row_per_fighter(v5_rankings, "rank_v5")
+    v7_rankings = _one_row_per_fighter(v7_rankings, "rank_v7")
+
+    if v5_rankings["fighter_id"].duplicated().any() or v7_rankings["fighter_id"].duplicated().any():
+        raise RuntimeError("fighter_id is still duplicated after normalization")
 
     compare = v7_rankings[[
         "fighter_id", "fighter_name", "rank_v7", "power_evidence_rating_v7",
@@ -71,11 +91,10 @@ def main() -> None:
         career_later_ko_tko_wins=("is_later_ko_tko", "sum"),
     ).rename(columns={"winner_id": "fighter_id"})
 
-    neutral = neutral.merge(ko_by_fighter, on="fighter_id", how="left")
+    neutral = neutral.merge(ko_by_fighter, on="fighter_id", how="left", validate="one_to_one")
     for c in ("career_ko_tko_wins", "career_r1_ko_tko_wins", "career_later_ko_tko_wins"):
         neutral[c] = neutral[c].fillna(0).astype(int)
 
-    # Directly quantify KD evidence that disappeared under KO-only V7.
     neutral_with_r1_kd = neutral.loc[neutral["r1_kds"].gt(0)].copy()
     neutral_with_any_ko = neutral.loc[neutral["career_ko_tko_wins"].gt(0)].copy()
     neutral_with_master_r1_ko = neutral.loc[neutral["career_r1_ko_tko_wins"].gt(0)].copy()
@@ -87,7 +106,7 @@ def main() -> None:
     print("\n" + "=" * 125)
     print("V7 KD-REMOVAL + KO-COVERAGE AUDIT")
     print("=" * 125)
-    print(f"fighters ranked: {len(compare):,}")
+    print(f"fighters ranked after fighter_id normalization: {len(compare):,}")
     print(f"V7 neutral-50 fighters: {len(neutral):,}")
 
     print("\nQUESTION 1 — DID REMOVING KDs REMOVE POWER EVIDENCE?")
