@@ -1,19 +1,24 @@
 """Build the shadow FSR-32 simulator-facing stamina contract.
 
-FSR-32 preserves FSR-28 unchanged and appends four explicit fighter parameters
+FSR-32 preserves FSR-28 unchanged and appends three explicit fighter parameters
 used by the stamina-aware Monte Carlo:
 
 - stamina_capacity
 - stamina_depletion_resistance
 - stamina_performance_resilience
-- stamina_recovery_ability
 
-The three rating-like parameters are exact aliases of existing leakage-safe FSR
-ratings.  The capacity parameter is explicitly stored in the FSR artifact rather
-than being invented inside the simulator.  This keeps the FSR row as the single
-fighter-definition contract consumed by the MC.
+The two rating-like parameters are exact aliases of existing leakage-safe FSR
+ratings. The capacity parameter is explicitly stored in the FSR artifact rather
+than being invented inside the simulator.
 
-Shadow/research only.  No production schema is modified.
+``recovery_ability`` is intentionally NOT copied into the stamina contract.
+Population audit showed that the historical recovery proxy is effectively
+non-informative for fighter differentiation (81.5% of rows exactly 50, standard
+deviation about 0.30) and is not a direct measurement of physiological recovery
+during the one-minute round break. Between-round stamina recovery therefore
+belongs to simulator physics until a genuinely informative fighter trait exists.
+
+Shadow/research only. No production schema is modified.
 """
 from __future__ import annotations
 
@@ -33,23 +38,20 @@ OUTPUT_PATH = OUTPUT_DIR / "fsr_32_prefight_snapshots.parquet"
 STAMINA_CAPACITY = "stamina_capacity"
 STAMINA_DEPLETION_RESISTANCE = "stamina_depletion_resistance"
 STAMINA_PERFORMANCE_RESILIENCE = "stamina_performance_resilience"
-STAMINA_RECOVERY_ABILITY = "stamina_recovery_ability"
 
-# Initial contract value.  It is deliberately explicit in the FSR artifact so
-# downstream simulators do not own fighter-specific starting stamina state.
+# Explicit fighter starting capacity remains part of FSR rather than being a
+# simulator-side hidden default.
 DEFAULT_STAMINA_CAPACITY = 100.0
 
 STAMINA_SOURCE_COLUMNS = {
     STAMINA_DEPLETION_RESISTANCE: "fatigue_accumulation_resistance",
     STAMINA_PERFORMANCE_RESILIENCE: "fatigue_performance_resilience",
-    STAMINA_RECOVERY_ABILITY: "recovery_ability",
 }
 
 STAMINA_COLUMNS = (
     STAMINA_CAPACITY,
     STAMINA_DEPLETION_RESISTANCE,
     STAMINA_PERFORMANCE_RESILIENCE,
-    STAMINA_RECOVERY_ABILITY,
 )
 
 
@@ -57,11 +59,19 @@ def build_fsr_32_database(fsr_28: pd.DataFrame) -> pd.DataFrame:
     keys = ["fight_id", "fighter_id"]
     base = fsr_28.copy()
 
-    missing = [column for column in [*keys, *STAMINA_SOURCE_COLUMNS.values()] if column not in base.columns]
+    missing = [
+        column
+        for column in [*keys, *STAMINA_SOURCE_COLUMNS.values()]
+        if column not in base.columns
+    ]
     if missing:
         raise RuntimeError(f"FSR-28 missing required stamina-source columns: {missing}")
     if base.duplicated(keys).any():
         raise RuntimeError("FSR-28 violates fighter-fight grain")
+
+    # Remove the deprecated simulator-facing recovery alias if this builder is
+    # run over a previously extended frame rather than pristine FSR-28 input.
+    base = base.drop(columns=["stamina_recovery_ability"], errors="ignore")
 
     base[STAMINA_CAPACITY] = float(DEFAULT_STAMINA_CAPACITY)
     for target, source in STAMINA_SOURCE_COLUMNS.items():
@@ -76,12 +86,11 @@ def build_fsr_32_database(fsr_28: pd.DataFrame) -> pd.DataFrame:
     for column in (
         STAMINA_DEPLETION_RESISTANCE,
         STAMINA_PERFORMANCE_RESILIENCE,
-        STAMINA_RECOVERY_ABILITY,
     ):
         if ((numeric[column] < 10.0) | (numeric[column] > 90.0)).any():
             raise RuntimeError(f"FSR-32 {column} is outside the established 10-90 FSR range")
 
-    # Alias integrity is part of the contract.  Any future independent stamina
+    # Alias integrity is part of the contract. Any future independent stamina
     # learner must intentionally replace this builder rather than silently drift.
     for target, source in STAMINA_SOURCE_COLUMNS.items():
         if not np.allclose(
@@ -111,6 +120,7 @@ def main() -> None:
     print("FSR-32 stamina contract:", flush=True)
     for column in STAMINA_COLUMNS:
         print(f"  - {column}", flush=True)
+    print("  - between-round recovery: simulator-global physics (not FSR)", flush=True)
 
 
 if __name__ == "__main__":
