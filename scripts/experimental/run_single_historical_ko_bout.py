@@ -29,6 +29,10 @@ from scripts.experimental import fsr_32_historical_cohort as cohort32
 from scripts.experimental import fsr_mature_2020plus_full_cohort_ko_validation_r3_d60_s0 as full
 from scripts.experimental import fsr_mature_2020plus_mc_10path_population_audit as population
 from scripts.experimental import fsr_static_mc_v0 as base
+from scripts.experimental.inspect_historical_bout_fsr32 import (
+    HIGHLIGHT_TRAITS,
+    _numeric_fsr_columns,
+)
 
 DEFAULT_PATHS = 1000
 DEFAULT_SEED = 20260811
@@ -88,6 +92,20 @@ def _select_bout(bout_id: str):
     bout = selected.iloc[0].copy()
     pair = pairs[str(bout_id)]
     return bout, pair
+
+
+def _profile_rows(red: pd.Series, blue: pd.Series, traits: list[str]) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for trait in traits:
+        if trait not in red.index or trait not in blue.index:
+            continue
+        rv = pd.to_numeric(pd.Series([red[trait]]), errors="coerce").iloc[0]
+        bv = pd.to_numeric(pd.Series([blue[trait]]), errors="coerce").iloc[0]
+        if pd.isna(rv) and pd.isna(bv):
+            continue
+        diff = rv - bv if pd.notna(rv) and pd.notna(bv) else np.nan
+        rows.append({"trait": trait, "red": rv, "blue": bv, "red_minus_blue": diff})
+    return rows
 
 
 def _run_one_path(
@@ -259,6 +277,8 @@ def main() -> None:
         "blue_name": base._display_name(blue),
         "r_id": r_id,
         "b_id": b_id,
+        "red_age": red_age,
+        "blue_age": blue_age,
         "historical_winner_id": str(master.get("winner_id", "")),
         "historical_winner_side": historical_winner_side,
         "historical_method": historical_method,
@@ -291,7 +311,9 @@ def main() -> None:
     print("SINGLE HISTORICAL BOUT KO/TKO AUDIT — CURRENT LOCKED SHADOW CONFIGURATION")
     print("=" * 112)
     print(f"bout_id: {bout_id}")
-    print(f"historical: {summary['red_name']} (RED) vs {summary['blue_name']} (BLUE)")
+    red_age_text = f"{red_age:.2f}" if red_age is not None else "n/a"
+    blue_age_text = f"{blue_age:.2f}" if blue_age is not None else "n/a"
+    print(f"historical: {summary['red_name']} (RED, age {red_age_text}) vs {summary['blue_name']} (BLUE, age {blue_age_text})")
     print(
         f"actual result: {historical_method}, round {historical_finish_round}; "
         f"winner side={historical_winner_side}"
@@ -299,6 +321,19 @@ def main() -> None:
     print(f"paths: {args.paths:,}")
     print("R2 recovery: damage 20%, stamina 40%")
     print("R3 recovery: damage 60%, stamina 0%")
+
+    print("\nEXACT PREFIGHT FSR-32 INPUTS")
+    print(f"{'trait':36s} {'RED':>12s} {'BLUE':>12s} {'red-blue':>12s}")
+    print("-" * 76)
+    highlight_rows = _profile_rows(red, blue, HIGHLIGHT_TRAITS)
+    for row in highlight_rows:
+        print(
+            f"{row['trait']:36s} "
+            f"{float(row['red']):12.4f} "
+            f"{float(row['blue']):12.4f} "
+            f"{float(row['red_minus_blue']):12.4f}"
+        )
+
     print("\nKO/TKO PROBABILITIES")
     print(f"RED  {summary['red_name']}: {p_red:.2%} ({red_ko:,}/{args.paths:,})")
     print(f"BLUE {summary['blue_name']}: {p_blue:.2%} ({blue_ko:,}/{args.paths:,})")
@@ -323,12 +358,22 @@ def main() -> None:
     bout_dir.mkdir(parents=True, exist_ok=True)
     summary_path = bout_dir / "summary.csv"
     pd.DataFrame([summary]).to_csv(summary_path, index=False)
-    print(f"\nsummary: {summary_path}")
+
+    highlights_path = bout_dir / "fsr32_highlights.csv"
+    pd.DataFrame(highlight_rows).to_csv(highlights_path, index=False)
+
+    all_rows = _profile_rows(red, blue, _numeric_fsr_columns(red, blue))
+    all_numeric_path = bout_dir / "fsr32_all_numeric.csv"
+    pd.DataFrame(all_rows).to_csv(all_numeric_path, index=False)
+
+    print(f"\nsummary:        {summary_path}")
+    print(f"FSR highlights: {highlights_path}")
+    print(f"all numeric FSR: {all_numeric_path}")
 
     if args.save_paths:
         paths_path = bout_dir / "paths.csv"
         paths.to_csv(paths_path, index=False)
-        print(f"paths:   {paths_path}")
+        print(f"paths:          {paths_path}")
 
     print("Research-only audit; no production or stored FSR artifacts are modified.")
 
