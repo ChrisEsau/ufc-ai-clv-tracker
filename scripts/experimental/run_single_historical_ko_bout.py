@@ -108,6 +108,23 @@ def _profile_rows(red: pd.Series, blue: pd.Series, traits: list[str]) -> list[di
     return rows
 
 
+def _round_entry_effective_state(sim) -> dict[int, dict[int, dict[str, float]]]:
+    """Read segment-1 effective state already emitted by the rolling-FSR engine."""
+    result: dict[int, dict[int, dict[str, float]]] = {}
+    for event in sim.effective_fsr_events:
+        round_no = int(event["round"])
+        segment_no = int(event["segment"])
+        fighter = int(event["fighter"])
+        if segment_no != 1 or round_no not in (1, 2, 3):
+            continue
+        result.setdefault(round_no, {})[fighter] = {
+            "stamina_fraction": float(event["stamina_fraction"]),
+            "fatigue_penalty": float(event["fatigue_penalty"]),
+            "effective_striking_power": float(event["effective_striking_power"]),
+        }
+    return result
+
+
 def _run_one_path(
     red: pd.Series,
     blue: pd.Series,
@@ -115,7 +132,7 @@ def _run_one_path(
     seed: int,
     red_age: float | None,
     blue_age: float | None,
-) -> tuple[dict[str, object], dict[int, dict[str, int]]]:
+) -> tuple[dict[str, object], dict[int, dict[str, int]], dict[int, dict[int, dict[str, float]]]]:
     # Prefix runs intentionally mirror the full-cohort validator so R1/R2/R3
     # incremental activity is directly comparable to that benchmark.
     sim1, path1, kd1, fr1 = full._run_prefix(
@@ -198,7 +215,7 @@ def _run_one_path(
         "r3_sig": rounds[3]["sig"],
         "r3_kd": rounds[3]["kd"],
     }
-    return path_row, rounds
+    return path_row, rounds, _round_entry_effective_state(sim3)
 
 
 def main() -> None:
@@ -234,10 +251,17 @@ def main() -> None:
         2: {"reached": 0, "sig": 0, "kd": 0, "ko": 0},
         3: {"reached": 0, "sig": 0, "kd": 0, "ko": 0},
     }
+    effective_samples = {
+        rnd: {
+            fighter: {"stamina_fraction": [], "fatigue_penalty": [], "effective_striking_power": []}
+            for fighter in (0, 1)
+        }
+        for rnd in (1, 2, 3)
+    }
     path_rows: list[dict[str, object]] = []
 
     for i, seed in enumerate(seeds, start=1):
-        path_row, rounds = _run_one_path(
+        path_row, rounds, effective = _run_one_path(
             red,
             blue,
             seed=int(seed),
@@ -248,6 +272,12 @@ def main() -> None:
         for rnd in (1, 2, 3):
             for key in ("reached", "sig", "kd", "ko"):
                 totals[rnd][key] += int(rounds[rnd][key])
+            for fighter in (0, 1):
+                state = effective.get(rnd, {}).get(fighter)
+                if state is None:
+                    continue
+                for key in ("stamina_fraction", "fatigue_penalty", "effective_striking_power"):
+                    effective_samples[rnd][fighter][key].append(float(state[key]))
         if i % 250 == 0 or i == args.paths:
             print(f"paths {i:,}/{args.paths:,}", flush=True)
 
@@ -334,6 +364,36 @@ def main() -> None:
             f"{float(row['red_minus_blue']):12.4f}"
         )
 
+    effective_rows: list[dict[str, object]] = []
+    print("\nROUND-ENTRY EFFECTIVE FSR — MEAN ACROSS PATHS THAT REACHED ROUND")
+    print("Only striking_power is fatigue-sensitive in the current locked candidate.")
+    print(
+        f"{'round':>5s} {'side':>6s} {'paths':>8s} "
+        f"{'stamina':>10s} {'fatigue_pen':>12s} {'eff_power':>11s}"
+    )
+    print("-" * 61)
+    for rnd in (1, 2, 3):
+        for fighter, side in ((0, "RED"), (1, "BLUE")):
+            samples = effective_samples[rnd][fighter]
+            count = len(samples["stamina_fraction"])
+            stamina_mean = float(np.mean(samples["stamina_fraction"])) if count else np.nan
+            penalty_mean = float(np.mean(samples["fatigue_penalty"])) if count else np.nan
+            power_mean = float(np.mean(samples["effective_striking_power"])) if count else np.nan
+            print(
+                f"{rnd:5d} {side:>6s} {count:8,d} "
+                f"{stamina_mean:10.4f} {penalty_mean:12.4f} {power_mean:11.4f}"
+            )
+            effective_rows.append(
+                {
+                    "round": rnd,
+                    "side": side.lower(),
+                    "paths_reached": count,
+                    "stamina_fraction_mean": stamina_mean,
+                    "fatigue_penalty_mean": penalty_mean,
+                    "effective_striking_power_mean": power_mean,
+                }
+            )
+
     print("\nKO/TKO PROBABILITIES")
     print(f"RED  {summary['red_name']}: {p_red:.2%} ({red_ko:,}/{args.paths:,})")
     print(f"BLUE {summary['blue_name']}: {p_blue:.2%} ({blue_ko:,}/{args.paths:,})")
@@ -366,9 +426,13 @@ def main() -> None:
     all_numeric_path = bout_dir / "fsr32_all_numeric.csv"
     pd.DataFrame(all_rows).to_csv(all_numeric_path, index=False)
 
+    effective_path = bout_dir / "round_entry_effective_fsr.csv"
+    pd.DataFrame(effective_rows).to_csv(effective_path, index=False)
+
     print(f"\nsummary:        {summary_path}")
     print(f"FSR highlights: {highlights_path}")
     print(f"all numeric FSR: {all_numeric_path}")
+    print(f"effective FSR:  {effective_path}")
 
     if args.save_paths:
         paths_path = bout_dir / "paths.csv"
