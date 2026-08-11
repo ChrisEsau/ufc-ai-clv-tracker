@@ -35,10 +35,10 @@ from scripts.experimental import fsr_static_mc_v0 as base
 
 # Nonlinear power-only fatigue candidate.
 # Neutral-resilience penalty = MAX * missing_stamina ** EXPONENT.
-# This keeps fresh fighters near full power and accelerates degradation as the
-# stamina reservoir becomes materially depleted.
+# The 2.5 exponent strongly protects fresh power, then accelerates degradation
+# once the stamina reservoir becomes materially depleted.
 MAX_FATIGUE_RATING_PENALTY = 45.0
-FATIGUE_CURVE_EXPONENT = 1.60
+FATIGUE_CURVE_EXPONENT = 2.50
 FATIGUE_RESILIENCE_SCALE = 80.0
 MIN_EFFECTIVE_FSR_RATING = 10.0
 
@@ -130,8 +130,6 @@ class StaticFSRMCKOTKOV31RollingFSR(v3.StaticFSRMCKOTKOV3Stamina):
                     reason,
                 )
 
-    # No stamina output multiplier. Attempts are driven by the stored pressure
-    # traits exactly as in the base simulator; only their stamina cost is queued.
     def _strike_attempts(
         self,
         fighter: int,
@@ -218,8 +216,6 @@ class StaticFSRMCKOTKOV31RollingFSR(v3.StaticFSRMCKOTKOV3Stamina):
             self.clinch_initiator = None
 
             for segment_no in range(1, base.SEGMENTS_PER_ROUND + 1):
-                # Snapshot current stamina into one effective power for this
-                # entire segment. The segment cannot fatigue itself retroactively.
                 self._refresh_effective_fighters(round_no, segment_no)
                 self.pending_stamina_costs = [[], []]
 
@@ -247,7 +243,6 @@ class StaticFSRMCKOTKOV31RollingFSR(v3.StaticFSRMCKOTKOV3Stamina):
                 else:
                     transition_note = self._ground_transition()
 
-                # Action first, fatigue second.
                 self._flush_pending_stamina_costs()
 
                 events.append(
