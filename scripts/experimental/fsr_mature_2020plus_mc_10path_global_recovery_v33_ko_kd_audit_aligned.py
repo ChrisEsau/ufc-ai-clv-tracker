@@ -31,6 +31,26 @@ def _parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
+def _r1_knockdowns_from_events(sim) -> tuple[float, float]:
+    """Count each fighter's KDs that occurred during round 1 from cumulative stats."""
+    r1_red = 0.0
+    r1_blue = 0.0
+    previous_red = 0.0
+    previous_blue = 0.0
+
+    for event in getattr(sim, "events", []):
+        if int(event.get("round", -1)) != 1:
+            continue
+        current_red = float(sim.stats[0].knockdowns_scored)
+        current_blue = float(sim.stats[1].knockdowns_scored)
+        r1_red += max(0.0, current_red - previous_red)
+        r1_blue += max(0.0, current_blue - previous_blue)
+        previous_red = current_red
+        previous_blue = current_blue
+
+    return r1_red, r1_blue
+
+
 def _simulate_one_bout(bout, pair, *, paths, rounds, seeds):
     red, blue = pair
     r_id = str(bout["r_id"])
@@ -41,7 +61,9 @@ def _simulate_one_bout(bout, pair, *, paths, rounds, seeds):
 
     ko_count = r1_ko_count = r_ko = b_ko = actual_winner_ko = 0
     any_kd_count = 0
+    any_r1_kd_count = 0
     r_kd_total = b_kd_total = 0.0
+    r1_r_kd_total = r1_b_kd_total = 0.0
     finish_rounds = []
     r_stamina_end = b_stamina_end = 0.0
     r_fatigue_penalty = b_fatigue_penalty = 0.0
@@ -65,6 +87,32 @@ def _simulate_one_bout(bout, pair, *, paths, rounds, seeds):
         b_kd_total += b_kd
         if (r_kd + b_kd) > 0.0:
             any_kd_count += 1
+
+        # Derive round-1 KD totals from simulator event snapshots when available.
+        r1_r_kd = 0.0
+        r1_b_kd = 0.0
+        if hasattr(result, "events") and result.events:
+            prev_r = prev_b = 0.0
+            for event in result.events:
+                if int(event.get("round", -1)) != 1:
+                    continue
+                # Event rows do not carry KD counters, so use the final R1 totals
+                # recorded in path stats when the path finishes in R1; otherwise
+                # read cumulative counters from any explicit KD event payloads.
+                if "red_kd_after" in event:
+                    cur_r = float(event.get("red_kd_after", prev_r))
+                    cur_b = float(event.get("blue_kd_after", prev_b))
+                    r1_r_kd += max(0.0, cur_r - prev_r)
+                    r1_b_kd += max(0.0, cur_b - prev_b)
+                    prev_r, prev_b = cur_r, cur_b
+            if (r1_r_kd + r1_b_kd) == 0.0 and result.finish is not None and int(result.finish.round) == 1:
+                r1_r_kd = r_kd
+                r1_b_kd = b_kd
+
+        r1_r_kd_total += r1_r_kd
+        r1_b_kd_total += r1_b_kd
+        if (r1_r_kd + r1_b_kd) > 0.0:
+            any_r1_kd_count += 1
 
         r_stamina_end += sim.stamina_state[0].fraction
         b_stamina_end += sim.stamina_state[1].fraction
@@ -126,6 +174,10 @@ def _simulate_one_bout(bout, pair, *, paths, rounds, seeds):
         "mean_r_kd": r_kd_total / paths,
         "mean_b_kd": b_kd_total / paths,
         "mean_total_kd": (r_kd_total + b_kd_total) / paths,
+        "p_any_r1_kd": any_r1_kd_count / paths,
+        "mean_r1_r_kd": r1_r_kd_total / paths,
+        "mean_r1_b_kd": r1_b_kd_total / paths,
+        "mean_total_r1_kd": (r1_r_kd_total + r1_b_kd_total) / paths,
         "mean_sim_finish_round": float(np.mean(finish_rounds)) if finish_rounds else np.nan,
         "mean_r_final_stamina_fraction": r_stamina_end / paths,
         "mean_b_final_stamina_fraction": b_stamina_end / paths,
@@ -160,6 +212,14 @@ def _print_summary(frame: pd.DataFrame, paths: int, rounds: int) -> None:
     print(f"simulated mean total KDs per fight: {frame['mean_total_kd'].mean():.4f}")
     print(f"simulated mean red KDs per fight: {frame['mean_r_kd'].mean():.4f}")
     print(f"simulated mean blue KDs per fight: {frame['mean_b_kd'].mean():.4f}")
+
+    print("\nROUND 1 KD VALUES")
+    print(f"historical fights with >=1 R1 KD target: 20.00%")
+    print(f"simulated paths with >=1 R1 KD: {frame['p_any_r1_kd'].mean():.2%}")
+    print(f"historical mean R1 KDs/fight target: 0.2281")
+    print(f"simulated mean R1 KDs/fight: {frame['mean_total_r1_kd'].mean():.4f}")
+    print(f"simulated mean red R1 KDs/fight: {frame['mean_r1_r_kd'].mean():.4f}")
+    print(f"simulated mean blue R1 KDs/fight: {frame['mean_r1_b_kd'].mean():.4f}")
 
     metrics = []
     for label, target, prob in [
