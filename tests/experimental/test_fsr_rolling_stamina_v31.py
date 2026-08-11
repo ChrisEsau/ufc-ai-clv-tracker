@@ -54,17 +54,35 @@ def _bare_sim(power: float = 60.0, resilience: float = 50.0):
     return sim
 
 
-def test_effective_fsr_is_fresh_at_full_stamina_and_only_declines() -> None:
+def test_effective_power_is_fresh_at_full_stamina_and_only_declines() -> None:
     sim = _bare_sim(power=60.0)
     fresh = sim._effective_profile(0)
     assert fresh["striking_power"] == pytest.approx(60.0)
-    assert fresh["distance_striking_precision"] == pytest.approx(55.0)
 
     sim.stamina_state[0].current = 50.0
     tired = sim._effective_profile(0)
     assert tired["striking_power"] < fresh["striking_power"]
-    assert tired["distance_striking_precision"] < fresh["distance_striking_precision"]
     assert tired["striking_power"] <= sim.base_fighters[0]["striking_power"]
+
+
+def test_non_power_fsr_traits_are_not_fatigued() -> None:
+    sim = _bare_sim(power=60.0)
+    sim.stamina_state[0].current = 35.0
+    tired = sim._effective_profile(0)
+
+    for trait in (
+        "distance_striking_pressure",
+        "distance_striking_precision",
+        "distance_striking_defense",
+        "wrestling_entry",
+        "wrestling_conversion",
+        "td_defense",
+        "control_imposition",
+        "control_resistance",
+        "submission_pressure",
+        "reversal_ability",
+    ):
+        assert tired[trait] == pytest.approx(sim.base_fighters[0][trait])
 
 
 def test_below_50_power_also_declines_with_fatigue() -> None:
@@ -72,6 +90,31 @@ def test_below_50_power_also_declines_with_fatigue() -> None:
     sim.stamina_state[0].current = 50.0
     tired = sim._effective_profile(0)
     assert tired["striking_power"] < 40.0
+
+
+def test_fatigue_curve_is_nonlinear_and_accelerates() -> None:
+    sim = _bare_sim(power=60.0, resilience=50.0)
+
+    sim.stamina_state[0].current = 90.0
+    p90 = sim.fatigue_penalty(0)
+    sim.stamina_state[0].current = 80.0
+    p80 = sim.fatigue_penalty(0)
+    sim.stamina_state[0].current = 50.0
+    p50 = sim.fatigue_penalty(0)
+    sim.stamina_state[0].current = 30.0
+    p30 = sim.fatigue_penalty(0)
+
+    assert 0.0 < p90 < p80 < p50 < p30
+    assert (p50 - p80) > (p80 - p90)
+    assert p90 == pytest.approx(45.0 * (0.10 ** 1.60), rel=1e-6)
+
+
+def test_higher_resilience_reduces_power_penalty() -> None:
+    low = _bare_sim(power=60.0, resilience=40.0)
+    high = _bare_sim(power=60.0, resilience=60.0)
+    low.stamina_state[0].current = 50.0
+    high.stamina_state[0].current = 50.0
+    assert high.fatigue_penalty(0) < low.fatigue_penalty(0)
 
 
 def test_action_cost_is_deferred_until_segment_flush() -> None:
