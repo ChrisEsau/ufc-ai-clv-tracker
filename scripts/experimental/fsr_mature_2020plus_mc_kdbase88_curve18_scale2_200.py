@@ -105,7 +105,10 @@ def main() -> None:
     completed = 0
 
     print("\n" + "=" * 150)
-    print("KD BASE -8.80 + COLLAPSE CURVE 18 — SCALE 2.0 — 200 BOUTS x 10 PATHS")
+    print(
+        f"KD BASE {KD_BASE_LOGIT:.2f} + COLLAPSE CURVE {COLLAPSE_CURVATURE:g} — "
+        f"SCALE {COLLAPSE_SCALE:.1f} — {DEFAULT_BOUTS} BOUTS x {DEFAULT_PATHS} PATHS"
+    )
     print("=" * 150)
     print(f"contact sigma={run87.CONTACT_SIGMA:.2f}; power scale={run87.POWER_MAGNITUDE_SCALE:.0f}")
     print(f"KD base={KD_BASE_LOGIT:.2f}; shock={run87.KD_SHOCK_COEFFICIENT:.0f}; depletion={run87.KD_DEPLETION_COEFFICIENT:.2f}")
