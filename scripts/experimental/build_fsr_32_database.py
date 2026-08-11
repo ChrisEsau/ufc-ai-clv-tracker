@@ -40,6 +40,11 @@ STAMINA_CAPACITY = "stamina_capacity"
 STAMINA_DEPLETION_RESISTANCE = "stamina_depletion_resistance"
 STAMINA_PERFORMANCE_RESILIENCE = "stamina_performance_resilience"
 
+# Legacy symbol only so frozen V3/V3.2 code and tests remain import-compatible.
+# It is intentionally excluded from STAMINA_COLUMNS and is not emitted by the
+# current FSR-32 builder.
+STAMINA_RECOVERY_ABILITY = "stamina_recovery_ability"
+
 DEFAULT_STAMINA_CAPACITY = 100.0
 
 STAMINA_SOURCE_COLUMNS = {
@@ -55,7 +60,7 @@ STAMINA_COLUMNS = (
 
 REMOVED_RECOVERY_COLUMNS = (
     "recovery_ability",
-    "stamina_recovery_ability",
+    STAMINA_RECOVERY_ABILITY,
 )
 
 
@@ -73,7 +78,6 @@ def build_fsr_32_database(fsr_28: pd.DataFrame) -> pd.DataFrame:
     if base.duplicated(keys).any():
         raise RuntimeError("FSR-28 violates fighter-fight grain")
 
-    # The recovery proxy is intentionally removed from the simulator-facing FSR.
     base = base.drop(columns=list(REMOVED_RECOVERY_COLUMNS), errors="ignore")
 
     base[STAMINA_CAPACITY] = float(DEFAULT_STAMINA_CAPACITY)
