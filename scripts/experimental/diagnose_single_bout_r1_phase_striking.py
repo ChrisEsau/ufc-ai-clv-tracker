@@ -1,7 +1,7 @@
-"""Audit R1 phase occupancy and strike attempts/lands for one historical bout.
+"""Audit R1 phase occupancy, striking, takedowns, and ground persistence.
 
 Research-only diagnostic. Reuses the exact current locked shadow KO configuration
-and parses the simulator event log; no simulator physics are modified.
+and parses simulator outputs; no simulator physics are modified.
 """
 from __future__ import annotations
 
@@ -28,8 +28,27 @@ def _parse_striking(text: str, name: str) -> tuple[int, int]:
     return int(match.group(1)), int(match.group(2))
 
 
+def _ground_run_lengths(events: list[dict[str, object]]) -> list[int]:
+    """Return contiguous R1 GROUND phase-start runs in 10-second segments."""
+    runs: list[int] = []
+    current = 0
+    for event in events:
+        if int(event.get("round", 0)) != 1:
+            continue
+        if str(event.get("phase_start", "")) == "GROUND":
+            current += 1
+        elif current:
+            runs.append(current)
+            current = 0
+    if current:
+        runs.append(current)
+    return runs
+
+
 def main() -> None:
-    p = argparse.ArgumentParser(description="Audit R1 phase occupancy and striking for one historical bout")
+    p = argparse.ArgumentParser(
+        description="Audit R1 phase occupancy, striking, takedowns, and ground persistence for one historical bout"
+    )
     p.add_argument("--bout-id", required=True)
     p.add_argument("--paths", type=int, default=DEFAULT_PATHS)
     p.add_argument("--seed", type=int, default=DEFAULT_SEED)
@@ -51,6 +70,12 @@ def main() -> None:
         for side in (0, 1)
         for phase in PHASES
     }
+    td = {
+        0: {"attempts": 0, "landed": 0},
+        1: {"attempts": 0, "landed": 0},
+    }
+    ground_run_segments: list[int] = []
+    paths_with_ground = 0
     total_events = 0
     finish_paths = 0
 
@@ -68,6 +93,16 @@ def main() -> None:
         )
         if path.finish is not None and finish_round == 1:
             finish_paths += 1
+
+        # One-round prefix means these simulator stats are exactly R1 totals.
+        for side in (0, 1):
+            td[side]["attempts"] += int(sim.stats[side].td_att)
+            td[side]["landed"] += int(sim.stats[side].td_landed)
+
+        runs = _ground_run_lengths(path.events)
+        if runs:
+            paths_with_ground += 1
+            ground_run_segments.extend(runs)
 
         for event in path.events:
             if int(event.get("round", 0)) != 1:
@@ -116,6 +151,36 @@ def main() -> None:
                 f" {label:4s}  {names[side]:28.28s} {phase:8s} "
                 f"{mean_landed:8.3f} {mean_attempts:10.3f} {accuracy:9.2%}"
             )
+
+    print("\nR1 TAKEDOWNS — MEAN PER PATH")
+    print(" side  fighter                       landed   attempts  success")
+    for side, label in ((0, "RED"), (1, "BLUE")):
+        attempts = td[side]["attempts"]
+        landed = td[side]["landed"]
+        success = landed / attempts if attempts else np.nan
+        print(
+            f" {label:4s}  {names[side]:28.28s} "
+            f"{landed / args.paths:8.3f} {attempts / args.paths:10.3f} {success:8.2%}"
+        )
+    total_td_att = td[0]["attempts"] + td[1]["attempts"]
+    total_td_land = td[0]["landed"] + td[1]["landed"]
+    print(
+        f" COMBINED: {total_td_land / args.paths:.3f}/{total_td_att / args.paths:.3f} TD per path"
+    )
+
+    print("\nR1 GROUND SEQUENCES")
+    ground_sequences = len(ground_run_segments)
+    print(f"paths with observed ground phase: {paths_with_ground:,}/{args.paths:,} ({paths_with_ground / args.paths:.2%})")
+    print(f"ground sequences:                 {ground_sequences:,} ({ground_sequences / args.paths:.3f} per path)")
+    if ground_run_segments:
+        seconds = np.asarray(ground_run_segments, dtype=float) * float(base.SEGMENT_SECONDS)
+        print(f"mean observed sequence duration:  {seconds.mean():.1f}s")
+        print(f"median observed duration:         {np.median(seconds):.1f}s")
+        print(f"p75 observed duration:            {np.percentile(seconds, 75):.1f}s")
+        print(f"p90 observed duration:            {np.percentile(seconds, 90):.1f}s")
+        print(f"max observed duration:            {seconds.max():.1f}s")
+    else:
+        print("no observed ground sequences")
 
     print("\nR1 TOTALS — MEAN PER PATH")
     for side, label in ((0, "RED"), (1, "BLUE")):
