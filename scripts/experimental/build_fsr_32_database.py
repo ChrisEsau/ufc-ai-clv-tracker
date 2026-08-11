@@ -1,22 +1,23 @@
 """Build the shadow FSR-32 simulator-facing stamina contract.
 
-FSR-32 preserves FSR-28 unchanged and appends three explicit fighter parameters
-used by the stamina-aware Monte Carlo:
+FSR-32 starts from FSR-28 and appends three explicit fighter stamina parameters:
 
 - stamina_capacity
 - stamina_depletion_resistance
 - stamina_performance_resilience
 
-The two rating-like parameters are exact aliases of existing leakage-safe FSR
-ratings. The capacity parameter is explicitly stored in the FSR artifact rather
-than being invented inside the simulator.
+The two rating-like stamina parameters are exact aliases of existing leakage-safe
+FSR cardio traits. The capacity parameter is explicitly stored in the FSR
+artifact rather than being invented inside the simulator.
 
-``recovery_ability`` is intentionally NOT copied into the stamina contract.
-Population audit showed that the historical recovery proxy is effectively
-non-informative for fighter differentiation (81.5% of rows exactly 50, standard
-deviation about 0.30) and is not a direct measurement of physiological recovery
-during the one-minute round break. Between-round stamina recovery therefore
-belongs to simulator physics until a genuinely informative fighter trait exists.
+Recovery is intentionally NOT fighter-specific in this shadow contract.
+Population audit showed that the historical ``recovery_ability`` proxy is
+functionally non-informative for fighter differentiation (81.5% of rows exactly
+50; standard deviation about 0.30) and it is not a direct physiological measure
+of one-minute corner recovery. Both ``recovery_ability`` and the former
+``stamina_recovery_ability`` alias are therefore removed from the FSR-32 output.
+Recovery physics belongs in the simulator until a genuinely informative fighter
+trait exists.
 
 Shadow/research only. No production schema is modified.
 """
@@ -39,8 +40,6 @@ STAMINA_CAPACITY = "stamina_capacity"
 STAMINA_DEPLETION_RESISTANCE = "stamina_depletion_resistance"
 STAMINA_PERFORMANCE_RESILIENCE = "stamina_performance_resilience"
 
-# Explicit fighter starting capacity remains part of FSR rather than being a
-# simulator-side hidden default.
 DEFAULT_STAMINA_CAPACITY = 100.0
 
 STAMINA_SOURCE_COLUMNS = {
@@ -52,6 +51,11 @@ STAMINA_COLUMNS = (
     STAMINA_CAPACITY,
     STAMINA_DEPLETION_RESISTANCE,
     STAMINA_PERFORMANCE_RESILIENCE,
+)
+
+REMOVED_RECOVERY_COLUMNS = (
+    "recovery_ability",
+    "stamina_recovery_ability",
 )
 
 
@@ -69,9 +73,8 @@ def build_fsr_32_database(fsr_28: pd.DataFrame) -> pd.DataFrame:
     if base.duplicated(keys).any():
         raise RuntimeError("FSR-28 violates fighter-fight grain")
 
-    # Remove the deprecated simulator-facing recovery alias if this builder is
-    # run over a previously extended frame rather than pristine FSR-28 input.
-    base = base.drop(columns=["stamina_recovery_ability"], errors="ignore")
+    # The recovery proxy is intentionally removed from the simulator-facing FSR.
+    base = base.drop(columns=list(REMOVED_RECOVERY_COLUMNS), errors="ignore")
 
     base[STAMINA_CAPACITY] = float(DEFAULT_STAMINA_CAPACITY)
     for target, source in STAMINA_SOURCE_COLUMNS.items():
@@ -90,8 +93,6 @@ def build_fsr_32_database(fsr_28: pd.DataFrame) -> pd.DataFrame:
         if ((numeric[column] < 10.0) | (numeric[column] > 90.0)).any():
             raise RuntimeError(f"FSR-32 {column} is outside the established 10-90 FSR range")
 
-    # Alias integrity is part of the contract. Any future independent stamina
-    # learner must intentionally replace this builder rather than silently drift.
     for target, source in STAMINA_SOURCE_COLUMNS.items():
         if not np.allclose(
             pd.to_numeric(base[target], errors="coerce"),
@@ -99,6 +100,9 @@ def build_fsr_32_database(fsr_28: pd.DataFrame) -> pd.DataFrame:
             equal_nan=False,
         ):
             raise RuntimeError(f"FSR-32 alias mismatch: {target} != {source}")
+
+    if any(column in base.columns for column in REMOVED_RECOVERY_COLUMNS):
+        raise RuntimeError("FSR-32 recovery columns were not removed")
 
     sort_cols = [c for c in ("date", "fight_id", "fighter_id") if c in base.columns]
     return base.sort_values(sort_cols).reset_index(drop=True)
@@ -120,7 +124,10 @@ def main() -> None:
     print("FSR-32 stamina contract:", flush=True)
     for column in STAMINA_COLUMNS:
         print(f"  - {column}", flush=True)
-    print("  - between-round recovery: simulator-global physics (not FSR)", flush=True)
+    print("Removed recovery columns:", flush=True)
+    for column in REMOVED_RECOVERY_COLUMNS:
+        print(f"  - {column}", flush=True)
+    print("Between-round recovery is simulator-global physics.", flush=True)
 
 
 if __name__ == "__main__":
