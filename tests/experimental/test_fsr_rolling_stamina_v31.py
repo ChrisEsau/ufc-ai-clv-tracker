@@ -92,21 +92,21 @@ def test_below_50_power_also_declines_with_fatigue() -> None:
     assert tired["striking_power"] < 40.0
 
 
-def test_fatigue_curve_is_nonlinear_and_accelerates() -> None:
+def test_fatigue_curve_protects_fresh_power_and_accelerates() -> None:
     sim = _bare_sim(power=60.0, resilience=50.0)
 
-    sim.stamina_state[0].current = 90.0
-    p90 = sim.fatigue_penalty(0)
-    sim.stamina_state[0].current = 80.0
-    p80 = sim.fatigue_penalty(0)
-    sim.stamina_state[0].current = 50.0
-    p50 = sim.fatigue_penalty(0)
-    sim.stamina_state[0].current = 30.0
-    p30 = sim.fatigue_penalty(0)
+    penalties = {}
+    for stamina in (90.0, 80.0, 70.0, 50.0, 30.0):
+        sim.stamina_state[0].current = stamina
+        penalties[int(stamina)] = sim.fatigue_penalty(0)
 
-    assert 0.0 < p90 < p80 < p50 < p30
-    assert (p50 - p80) > (p80 - p90)
-    assert p90 == pytest.approx(45.0 * (0.10 ** 1.60), rel=1e-6)
+    assert 0.0 < penalties[90] < penalties[80] < penalties[70] < penalties[50] < penalties[30]
+    assert penalties[90] == pytest.approx(45.0 * (0.10 ** 2.50), rel=1e-6)
+    assert penalties[80] == pytest.approx(45.0 * (0.20 ** 2.50), rel=1e-6)
+    assert penalties[50] == pytest.approx(45.0 * (0.50 ** 2.50), rel=1e-6)
+    assert penalties[90] < 0.2
+    assert penalties[80] < 1.0
+    assert (penalties[50] - penalties[70]) > (penalties[70] - penalties[90])
 
 
 def test_higher_resilience_reduces_power_penalty() -> None:
