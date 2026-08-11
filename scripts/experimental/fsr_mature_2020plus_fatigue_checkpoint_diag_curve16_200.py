@@ -98,9 +98,12 @@ def _append_start_checkpoint(rows: list[dict], sim: run87.AuditSim, bout_id: str
 
 def _append_end_checkpoint(rows: list[dict], sim: run87.AuditSim, path, bout_id: str, path_idx: int, round_no: int) -> None:
     checkpoint = f"end_r{round_no}"
+    # The simulator uses 10-second segments, so a five-minute round ends at
+    # segment 30. Use the engine constant rather than hard-coding a segment.
     matching = [
         e for e in path.events
-        if int(e["round"]) == round_no and int(e["segment"]) == 10
+        if int(e["round"]) == round_no
+        and int(e["segment"]) == int(run87.base.SEGMENTS_PER_ROUND)
     ]
     if not matching:
         return
@@ -171,6 +174,7 @@ def main() -> None:
     print("\n" + "=" * 150)
     print("FATIGUE CHECKPOINT DIAGNOSTIC — LOCKED CURVE 16 — 200 BOUTS x 10 PATHS")
     print("=" * 150)
+    print(f"segment seconds={run87.base.SEGMENT_SECONDS}; segments/round={run87.base.SEGMENTS_PER_ROUND}")
     print(f"KD base={run87.KD_BASE_LOGIT:.2f}; shock={run87.KD_SHOCK_COEFFICIENT:.0f}; depletion={run87.KD_DEPLETION_COEFFICIENT:.2f}")
     print(f"collapse scale={COLLAPSE_SCALE:.1f}; curvature={COLLAPSE_CURVATURE:.1f}")
     print(f"fatigue max penalty={v31.MAX_FATIGUE_RATING_PENALTY:.1f}; exponent={v31.FATIGUE_CURVE_EXPONENT:.2f}; resilience scale={v31.FATIGUE_RESILIENCE_SCALE:.1f}")
