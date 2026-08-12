@@ -1,4 +1,4 @@
-"""Run stored-prefight-FSR BASELINE MC with configured fight-night age modifiers.
+"""Run stored-prefight-FSR BASELINE MC with fight-night age modifiers.
 
 Purpose
 -------
@@ -11,19 +11,24 @@ Clean 2026 control for the trajectory experiments:
 - same deterministic per-bout seeds
 - same per-fight persistence / 20-fight checkpoints
 
-Difference from ``run_2026_baseline_full_cohort.py``:
-- no trajectory adjustment is applied
+Age modes
+---------
+Default:
+- no trajectory adjustment
 - stored prefight FSR is passed unchanged into the simulator
-- r_age / b_age are supplied to the simulator so the externally configured
-  fight-night age modifiers in config/fsr_age_modifiers.yaml are applied
+- r_age / b_age are supplied so config/fsr_age_modifiers.yaml applies its
+  enabled+calibrated fight-night age traits
+- striking-power age term remains OFF
 
-Outputs
--------
-data/experimental/2026_baseline_age_full_cohort/
-  progress.csv
-  checkpoint_0020.csv, checkpoint_0040.csv, ...
-  baseline_age_2026_results.csv
-  baseline_age_2026_summary.csv
+With --age-power:
+- everything above remains identical
+- additionally apply the previously calibrated striking-power residual age term:
+    modifier = -0.66104720 * (age - 30)
+- the temporary fight-night profile is clamped to the standard 10-90 FSR range
+- stored FSR artifacts remain immutable
+
+The two modes use separate output directories so progress/checkpoints cannot be
+mixed accidentally.
 """
 from __future__ import annotations
 
@@ -41,10 +46,22 @@ from scripts.experimental import fsr_static_mc_v0 as base
 from scripts.experimental import run_2026_all_but_full_cohort as allbut
 
 YEAR = 2026
-OUT_DIR = Path("data/experimental/2026_baseline_age_full_cohort")
-PROGRESS_PATH = OUT_DIR / "progress.csv"
-FINAL_PATH = OUT_DIR / "baseline_age_2026_results.csv"
-SUMMARY_PATH = OUT_DIR / "baseline_age_2026_summary.csv"
+POWER_AGE_CENTER = 30.0
+POWER_AGE_INTERCEPT = 0.0
+POWER_AGE_LINEAR = -0.66104720
+FSR_MIN = 10.0
+FSR_MAX = 90.0
+
+
+def _paths(age_power: bool) -> tuple[Path, Path, Path, Path]:
+    mode = "power_on" if age_power else "power_off"
+    out_dir = Path("data/experimental/2026_baseline_age_full_cohort") / mode
+    return (
+        out_dir,
+        out_dir / "progress.csv",
+        out_dir / "baseline_age_2026_results.csv",
+        out_dir / "baseline_age_2026_summary.csv",
+    )
 
 
 def _age_value(row: pd.Series, col: str) -> float | None:
@@ -54,6 +71,25 @@ def _age_value(row: pd.Series, col: str) -> float | None:
     return value if np.isfinite(value) else None
 
 
+def _apply_optional_power_age(
+    profile: pd.Series,
+    age: float | None,
+    *,
+    enabled: bool,
+) -> tuple[pd.Series, float]:
+    """Return a temporary profile plus applied striking-power modifier."""
+    effective = profile.copy(deep=True)
+    if not enabled or age is None:
+        return effective, 0.0
+    if "striking_power" not in effective.index or pd.isna(effective["striking_power"]):
+        raise ValueError("profile missing striking_power required by --age-power")
+    modifier = POWER_AGE_INTERCEPT + POWER_AGE_LINEAR * (float(age) - POWER_AGE_CENTER)
+    effective["striking_power"] = float(
+        np.clip(float(effective["striking_power"]) + modifier, FSR_MIN, FSR_MAX)
+    )
+    return effective, float(modifier)
+
+
 def _run_exact_age(
     red: pd.Series,
     blue: pd.Series,
@@ -61,15 +97,21 @@ def _run_exact_age(
     *,
     red_age: float | None,
     blue_age: float | None,
+    age_power: bool,
 ) -> dict[str, float]:
+    # Power is applied to temporary profile copies here. The simulator then
+    # applies the normal YAML-driven age layer to all other configured traits.
+    red_effective, _ = _apply_optional_power_age(red, red_age, enabled=age_power)
+    blue_effective, _ = _apply_optional_power_age(blue, blue_age, enabled=age_power)
+
     counts = {
         "red_ko": 0, "red_sub": 0, "red_dec": 0,
         "blue_ko": 0, "blue_sub": 0, "blue_dec": 0,
     }
     for seed in seeds:
         path = full.StaticFSRMCFullFightV1(
-            red,
-            blue,
+            red_effective,
+            blue_effective,
             rounds=3,
             seed=int(seed),
             red_age=red_age,
@@ -89,6 +131,14 @@ def main() -> None:
     ap.add_argument("--checkpoint-every", type=int, default=20)
     ap.add_argument("--include-audited-47", action="store_true")
     ap.add_argument("--fresh", action="store_true")
+    ap.add_argument(
+        "--age-power",
+        action="store_true",
+        help=(
+            "Also apply calibrated striking-power age term: "
+            "-0.66104720 FSR points per year relative to age 30"
+        ),
+    )
     args = ap.parse_args()
 
     if args.paths <= 0:
@@ -96,10 +146,11 @@ def main() -> None:
     if args.checkpoint_every <= 0:
         raise ValueError("--checkpoint-every must be positive")
 
+    out_dir, progress_path, final_path, summary_path = _paths(args.age_power)
     started = time.perf_counter()
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    if args.fresh and PROGRESS_PATH.exists():
-        PROGRESS_PATH.unlink()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    if args.fresh and progress_path.exists():
+        progress_path.unlink()
 
     cohort, pairs = cohort32.build_aligned_cohort()
     cohort = cohort.copy()
@@ -127,10 +178,10 @@ def main() -> None:
 
     completed = pd.DataFrame()
     completed_ids: set[str] = set()
-    if PROGRESS_PATH.exists():
-        completed = pd.read_csv(PROGRESS_PATH, dtype={"bout_id": str})
+    if progress_path.exists():
+        completed = pd.read_csv(progress_path, dtype={"bout_id": str})
         if "bout_id" not in completed.columns:
-            raise RuntimeError(f"{PROGRESS_PATH} missing bout_id")
+            raise RuntimeError(f"{progress_path} missing bout_id")
         completed_ids = set(completed["bout_id"].astype(str))
 
     remaining = eligible[~eligible["bout_id"].isin(completed_ids)].copy().reset_index(drop=True)
@@ -146,12 +197,20 @@ def main() -> None:
     )
     print(
         f"paths={args.paths} | checkpoint every {args.checkpoint_every} fights | "
-        "BASELINE stored prefight FSR | no trajectory | AGE ON | saves after every fight"
+        f"BASELINE stored prefight FSR | no trajectory | AGE ON | "
+        f"POWER AGE={'ON' if args.age_power else 'OFF'} | saves after every fight"
     )
     print(
         "age config: config/fsr_age_modifiers.yaml | enabled+calibrated: "
         + (", ".join(enabled_age_traits) if enabled_age_traits else "NONE")
     )
+    if args.age_power:
+        print(
+            f"power age override: modifier={POWER_AGE_INTERCEPT:+.8f} "
+            f"{POWER_AGE_LINEAR:+.8f}*(age-{POWER_AGE_CENTER:.0f}); "
+            f"clamp={FSR_MIN:.0f}-{FSR_MAX:.0f}"
+        )
+    print(f"output mode: {out_dir}")
 
     new_rows: list[dict[str, object]] = []
     completed_this_run = 0
@@ -164,15 +223,16 @@ def main() -> None:
         blue_name = base._display_name(blue)
         red_age = _age_value(bout, "r_age")
         blue_age = _age_value(bout, "b_age")
+        _, red_power_mod = _apply_optional_power_age(red, red_age, enabled=args.age_power)
+        _, blue_power_mod = _apply_optional_power_age(blue, blue_age, enabled=args.age_power)
 
-        # BASELINE + AGE: stored prefight profiles are untouched here. The
-        # simulator creates separate fight-night effective copies from YAML.
         probs = _run_exact_age(
             red,
             blue,
             allbut._per_bout_seeds(args.seed, bid, args.paths),
             red_age=red_age,
             blue_age=blue_age,
+            age_power=args.age_power,
         )
 
         master_row = master_by_id.get(bid)
@@ -210,6 +270,9 @@ def main() -> None:
             "blue": blue_name,
             "red_age": red_age,
             "blue_age": blue_age,
+            "red_power_age_modifier": red_power_mod,
+            "blue_power_age_modifier": blue_power_mod,
+            "power_age_enabled": int(args.age_power),
             "actual_winner": actual_winner,
             "actual_method_raw": actual_method_raw,
             "actual_method": actual_method,
@@ -245,13 +308,13 @@ def main() -> None:
             all_done.drop_duplicates(subset=["bout_id"], keep="last")
             .sort_values(["event_date", "bout_id"])
         )
-        allbut._atomic_csv(all_done, PROGRESS_PATH)
+        allbut._atomic_csv(all_done, progress_path)
 
         overall_done = len(
             set(all_done["bout_id"].astype(str)) & set(eligible["bout_id"].astype(str))
         )
         if completed_this_run % args.checkpoint_every == 0:
-            ck = OUT_DIR / f"checkpoint_{overall_done:04d}.csv"
+            ck = out_dir / f"checkpoint_{overall_done:04d}.csv"
             allbut._atomic_csv(all_done, ck)
             print(f"  checkpoint -> {ck}", flush=True)
 
@@ -269,18 +332,20 @@ def main() -> None:
             flush=True,
         )
 
-    final = pd.read_csv(PROGRESS_PATH, dtype={"bout_id": str})
+    final = pd.read_csv(progress_path, dtype={"bout_id": str})
     final = final[final["bout_id"].isin(set(eligible["bout_id"].astype(str)))].copy()
     final["event_date"] = pd.to_datetime(final["event_date"], errors="raise")
     final = final.sort_values(["event_date", "bout_id"]).reset_index(drop=True)
-    allbut._atomic_csv(final, FINAL_PATH)
+    allbut._atomic_csv(final, final_path)
 
     summary = allbut._build_summary(final)
     summary["age_enabled_traits"] = "|".join(enabled_age_traits)
+    summary["power_age_enabled"] = int(args.age_power)
+    summary["power_age_linear"] = POWER_AGE_LINEAR if args.age_power else 0.0
     summary["age_config"] = str(age_modifiers.DEFAULT_CONFIG_PATH)
     summary["missing_red_age"] = int(final["red_age"].isna().sum())
     summary["missing_blue_age"] = int(final["blue_age"].isna().sum())
-    allbut._atomic_csv(summary, SUMMARY_PATH)
+    allbut._atomic_csv(summary, summary_path)
 
     s = summary.iloc[0]
     print("\nSUMMARY")
@@ -300,10 +365,11 @@ def main() -> None:
         )
     print(
         f"age missing: red={int(s.missing_red_age)} blue={int(s.missing_blue_age)} | "
-        f"enabled traits={s.age_enabled_traits or 'NONE'}"
+        f"configured traits={s.age_enabled_traits or 'NONE'} | "
+        f"power age={'ON' if bool(s.power_age_enabled) else 'OFF'}"
     )
-    print(f"wrote: {FINAL_PATH}")
-    print(f"wrote: {SUMMARY_PATH}")
+    print(f"wrote: {final_path}")
+    print(f"wrote: {summary_path}")
     print(f"elapsed: {time.perf_counter() - started:.1f}s")
 
 
