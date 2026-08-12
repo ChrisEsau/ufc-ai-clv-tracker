@@ -8,7 +8,7 @@ Examples:
       --trait striking_power \
       --degree 2
 
-    # All FSR traits in one multi-panel figure
+    # All FSR traits in smaller paged figures
     PYTHONPATH=. python scripts/experimental/plot_fsr_polynomial_next_point.py \
       --fighter-id 745fa7b605f8e2da \
       --target-fight-id 52ddf20a10890b41 \
@@ -19,6 +19,9 @@ The target fight row IS INCLUDED in every fit. The script uses all prefight
 snapshots for the fighter up to and including the selected target fight,
 indexed by fight sequence, fits a polynomial, and predicts one additional
 sequence point beyond the target row.
+
+For --all-traits, plots are split into pages of 8 traits so Codespaces/VS Code
+can display them reliably.
 
 Shadow/research only.
 """
@@ -37,6 +40,7 @@ FSR_PATH = Path(
     "fsr_32_prefight_snapshots.parquet"
 )
 DEFAULT_OUTPUT_DIR = Path("data/experimental/fsr_polynomial_plots")
+TRAITS_PER_PAGE = 8
 
 META_COLUMNS = {
     "fight_id",
@@ -68,7 +72,6 @@ def fit_trait(
     trait: str,
     degree: int,
 ) -> dict[str, object] | None:
-    # Include every known prefight state through and including the selected target.
     hist = fighter.loc[fighter["date"] <= target_date, ["fight_id", "date", trait]].copy()
     hist[trait] = pd.to_numeric(hist[trait], errors="coerce")
     hist = hist.dropna(subset=[trait]).sort_values(["date", "fight_id"]).reset_index(drop=True)
@@ -134,14 +137,21 @@ def plot_single(result: dict[str, object], fighter_name: str, degree: int, out: 
     ax.grid(alpha=0.25)
     ax.legend()
     fig.tight_layout()
-    fig.savefig(out, dpi=180)
+    fig.savefig(out, dpi=160)
     plt.close(fig)
 
 
-def plot_all(results: list[dict[str, object]], fighter_name: str, degree: int, out: Path) -> None:
-    ncols = 4
+def plot_page(
+    results: list[dict[str, object]],
+    fighter_name: str,
+    degree: int,
+    out: Path,
+    page_number: int,
+    total_pages: int,
+) -> None:
+    ncols = 2
     nrows = math.ceil(len(results) / ncols)
-    fig, axes = plt.subplots(nrows, ncols, figsize=(20, 4.2 * nrows), squeeze=False)
+    fig, axes = plt.subplots(nrows, ncols, figsize=(14, 4.6 * nrows), squeeze=False)
     axes_flat = axes.ravel()
 
     for ax, result in zip(axes_flat, results):
@@ -151,15 +161,15 @@ def plot_all(results: list[dict[str, object]], fighter_name: str, degree: int, o
         predicted = result["predicted"]
         trait = str(result["trait"])
 
-        ax.scatter(x, y, s=28, zorder=3)
-        ax.plot(result["dense_x"], result["dense_y"], linewidth=1.8)
-        ax.scatter([next_x], [predicted], s=62, marker="X", zorder=4)
+        ax.scatter(x, y, s=34, zorder=3)
+        ax.plot(result["dense_x"], result["dense_y"], linewidth=2.0)
+        ax.scatter([next_x], [predicted], s=75, marker="X", zorder=4)
         ax.axvline(next_x, linestyle="--", linewidth=0.8, alpha=0.35)
 
-        ax.set_title(trait.replace("_", " "), fontsize=10)
-        ax.set_xlabel("fight index", fontsize=8)
-        ax.set_ylabel("FSR", fontsize=8)
-        ax.tick_params(labelsize=8)
+        ax.set_title(trait.replace("_", " "), fontsize=11)
+        ax.set_xlabel("fight index", fontsize=9)
+        ax.set_ylabel("FSR", fontsize=9)
+        ax.tick_params(labelsize=9)
         ax.grid(alpha=0.2)
 
         text = (
@@ -174,7 +184,7 @@ def plot_all(results: list[dict[str, object]], fighter_name: str, degree: int, o
             transform=ax.transAxes,
             va="top",
             ha="left",
-            fontsize=8,
+            fontsize=9,
             bbox={"boxstyle": "round,pad=0.25", "alpha": 0.15},
         )
 
@@ -182,13 +192,13 @@ def plot_all(results: list[dict[str, object]], fighter_name: str, degree: int, o
         ax.axis("off")
 
     fig.suptitle(
-        f"{fighter_name} — all FSR traits — degree-{degree} polynomial next-point forecasts\n"
-        "dots = all points through target used in fit | line = polynomial fit | X = predicted next point",
+        f"{fighter_name} — FSR polynomial forecasts — page {page_number}/{total_pages}\n"
+        f"degree {degree} | dots = points through target | line = fit | X = predicted next",
         fontsize=14,
-        y=0.998,
+        y=0.995,
     )
-    fig.tight_layout(rect=(0, 0, 1, 0.985))
-    fig.savefig(out, dpi=180)
+    fig.tight_layout(rect=(0, 0, 1, 0.97))
+    fig.savefig(out, dpi=150)
     plt.close(fig)
 
 
@@ -250,10 +260,26 @@ def main() -> None:
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
     if args.all_traits:
-        out = args.output_dir / (
-            f"{args.fighter_id}_{args.target_fight_id}_all_traits_poly{args.degree}_include_target.png"
-        )
-        plot_all(results, fighter_name, args.degree, out)
+        total_pages = math.ceil(len(results) / TRAITS_PER_PAGE)
+        output_files: list[Path] = []
+        for page_idx in range(total_pages):
+            start = page_idx * TRAITS_PER_PAGE
+            end = start + TRAITS_PER_PAGE
+            page_results = results[start:end]
+            out = args.output_dir / (
+                f"{args.fighter_id}_{args.target_fight_id}_all_traits_poly{args.degree}_"
+                f"include_target_page{page_idx + 1}.png"
+            )
+            plot_page(
+                page_results,
+                fighter_name,
+                args.degree,
+                out,
+                page_idx + 1,
+                total_pages,
+            )
+            output_files.append(out)
+            print(f"[poly-plot] saved page {page_idx + 1}/{total_pages}: {out}", flush=True)
 
         rows = []
         for result in results:
@@ -271,6 +297,10 @@ def main() -> None:
         print(summary.to_string(index=False, float_format=lambda v: f"{v:.3f}"))
         if skipped:
             print(f"\n[poly-plot] skipped for insufficient history: {', '.join(skipped)}", flush=True)
+
+        print("\n[poly-plot] view pages with:", flush=True)
+        for out in output_files:
+            print(f"code {out}", flush=True)
     else:
         result = results[0]
         hist = result["hist"].copy()
@@ -285,9 +315,8 @@ def main() -> None:
             f"{args.fighter_id}_{args.target_fight_id}_{args.trait}_poly{args.degree}_include_target.png"
         )
         plot_single(result, fighter_name, args.degree, out)
-
-    print(f"\n[poly-plot] saved: {out}", flush=True)
-    print(f"[poly-plot] view with: code {out}", flush=True)
+        print(f"\n[poly-plot] saved: {out}", flush=True)
+        print(f"[poly-plot] view with: code {out}", flush=True)
 
 
 if __name__ == "__main__":
