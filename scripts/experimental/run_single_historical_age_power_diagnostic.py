@@ -1,10 +1,12 @@
-"""Run one historical FSR-32 bout with corrected baseline age+power mechanics.
+"""Run one historical FSR-32 bout with the uniform physical age experiment.
 
-Configuration matches the intended baseline age+power experiment:
+Configuration:
 - stored prefight FSR; no trajectory
-- striking_power: 0 through age 30, then -2 FSR points/year after 30
-- YAML age modifiers still apply to other enabled traits
-- YAML striking_power adjustment is suppressed to prevent double application
+- no YAML age configuration
+- age <= 30: no adjustment
+- age > 30: -2 FSR points/year after 30
+- identical rule applied to striking_power, knockdown_resistance, and
+  damage_durability
 
 The diagnostic aggregates path-level offense and phase statistics so a simulated
 matchup can be compared with the historical fight structure.
@@ -99,26 +101,22 @@ def main() -> None:
     red_age = _age(bout, "r_age")
     blue_age = _age(bout, "b_age")
 
-    # Install the exact same one-power-age-rule contract used by the corrected
-    # cohort wrapper. This patches only the in-process age evaluator.
-    age_power._install_yaml_power_suppression()
-    red_power, red_power_mod = age_power._apply_same_physical_age_decay(red, red_age, enabled=True)
-    blue_power, blue_power_mod = age_power._apply_same_physical_age_decay(blue, blue_age, enabled=True)
-
-    red_effective, red_yaml_applied = age_power.runner.age_modifiers.apply_age_modifiers(red_power, red_age)
-    blue_effective, blue_yaml_applied = age_power.runner.age_modifiers.apply_age_modifiers(blue_power, blue_age)
+    age_power._install_uniform_physical_age_layer()
+    red_power, red_mod = age_power._apply_same_physical_age_decay(red, red_age, enabled=True)
+    blue_power, blue_mod = age_power._apply_same_physical_age_decay(blue, blue_age, enabled=True)
+    red_effective, red_other = age_power.runner.age_modifiers.apply_age_modifiers(red_power, red_age)
+    blue_effective, blue_other = age_power.runner.age_modifiers.apply_age_modifiers(blue_power, blue_age)
 
     print("=" * 142)
-    print("SINGLE HISTORICAL BASELINE + AGE + POWER DIAGNOSTIC")
+    print("SINGLE HISTORICAL UNIFORM PHYSICAL AGE DIAGNOSTIC")
     print("=" * 142)
     print(f"bout_id: {bid}")
     print(f"fight: {red_name} vs {blue_name}")
     print(f"date: {bout.get('_date', args.date)}")
     print(f"ages: {red_age} / {blue_age}")
     print(f"paths: {args.paths:,}")
-    print("contract: stored prefight FSR | no trajectory | power 0<=30 then -2/year | YAML power suppressed")
-    print(f"custom power modifiers: {red_name} {red_power_mod:+.2f} | {blue_name} {blue_power_mod:+.2f}")
-    print(f"other YAML age modifiers: {red_name} {red_yaml_applied} | {blue_name} {blue_yaml_applied}")
+    print("contract: stored prefight FSR | no trajectory | NO YAML | all 3 physical traits 0<=30 then -2/year")
+    print(f"uniform age modifiers: {red_name} {red_mod:+.2f} | {blue_name} {blue_mod:+.2f}")
 
     physical = ["striking_power", "knockdown_resistance", "damage_durability"]
     print("\nPHYSICAL FSR: STORED -> FIGHT-NIGHT EFFECTIVE")
@@ -164,8 +162,6 @@ def main() -> None:
             add(f"{side}_reversals", getattr(s, "reversals", 0))
             add(f"{side}_knockdowns", getattr(s, "knockdowns_scored", 0))
 
-        # phase_segments is fight-global in practice; both fighter stat objects
-        # receive the same phase-start segment count. Read red once per path.
         ps = getattr(sim.stats[0], "phase_segments", {})
         add("distance_segments", ps.get("DISTANCE", 0))
         add("clinch_segments", ps.get("CLINCH", 0))
@@ -214,8 +210,8 @@ def main() -> None:
         "p_ko": method_counts["KO/TKO"] / n,
         "p_sub": method_counts["SUB"] / n,
         "p_dec": method_counts["DEC"] / n,
-        "red_power_age_modifier": red_power_mod,
-        "blue_power_age_modifier": blue_power_mod,
+        "red_uniform_age_modifier": red_mod,
+        "blue_uniform_age_modifier": blue_mod,
     }
     for key, vals in values.items():
         row[f"mean_{key}"] = _mean(vals)
