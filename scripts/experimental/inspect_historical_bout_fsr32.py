@@ -33,6 +33,8 @@ HIGHLIGHT_TRAITS = [
     "control_imposition",
     "control_resistance",
     "submission_pressure",
+    "submission_conversion",
+    "submission_resistance",
     "reversal_ability",
 ]
 
