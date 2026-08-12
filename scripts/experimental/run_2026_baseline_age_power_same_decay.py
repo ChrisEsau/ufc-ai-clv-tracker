@@ -9,6 +9,11 @@ Rule:
 - age <= 30: 0 FSR adjustment
 - age > 30: -2 FSR points per year after 30
 - clamp effective striking_power to the standard 10-90 FSR range
+
+Important: the active YAML may also contain a calibrated striking_power age rule.
+For this experiment we suppress only that YAML power adjustment after the custom
+-2/year power rule is applied. All other enabled YAML age traits (for example
+knockdown_resistance and damage_durability) continue to apply normally.
 """
 from __future__ import annotations
 
@@ -48,11 +53,37 @@ def _apply_same_physical_age_decay(
     return effective, float(modifier)
 
 
+def _install_yaml_power_suppression() -> None:
+    """Keep YAML age modifiers except striking_power for this experiment."""
+    original_apply = runner.age_modifiers.apply_age_modifiers
+
+    def apply_without_power(
+        profile: pd.Series,
+        age: float | None,
+        *,
+        config_path=runner.age_modifiers.DEFAULT_CONFIG_PATH,
+    ) -> tuple[pd.Series, dict[str, float]]:
+        effective, applied = original_apply(profile, age, config_path=config_path)
+        # The input profile already contains the experiment's one intended
+        # striking_power age adjustment. Restore that value after the normal YAML
+        # layer so power is not age-adjusted a second time.
+        if "striking_power" in profile.index and not pd.isna(profile["striking_power"]):
+            effective["striking_power"] = float(profile["striking_power"])
+        applied = dict(applied)
+        applied.pop("striking_power", None)
+        return effective, applied
+
+    # fsr_static_mc_ko_tko_v2 imports the same fsr_age_modifiers module object,
+    # so patching the module function here also affects the simulator call path.
+    runner.age_modifiers.apply_age_modifiers = apply_without_power
+
+
 def main() -> None:
     runner._apply_optional_power_age = _apply_same_physical_age_decay
     runner.POWER_AGE_INTERCEPT = 0.0
     runner.POWER_AGE_LINEAR = POWER_AGE_POINTS_PER_YEAR
     runner.POWER_AGE_CENTER = POWER_AGE_CENTER
+    _install_yaml_power_suppression()
 
     # Force the parent runner into its isolated power_on output mode while
     # preserving all user-supplied arguments such as --paths/--fresh.
