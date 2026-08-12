@@ -3,20 +3,20 @@
 Contract
 --------
 The stored FSR-32 row is immutable and represents the fighter fresh.
-At the start of each 10-second segment, the simulator derives a temporary
-``effective FSR`` from current stamina. Every action in that segment uses the
-same effective profile. Only after the segment resolves are stamina costs
-applied, so an action is never weakened by the fatigue it creates itself.
+At initialization the configured fight-night age layer is applied by the lower
+KO/TKO V2 engine. The resulting age-adjusted profile becomes the persistent
+fight-night base state used by every segment. At the start of each 10-second
+segment, the simulator derives a temporary ``effective FSR`` from that base state
+and current stamina.
+
+Every action in that segment uses the same effective profile. Only after the
+segment resolves are stamina costs applied, so an action is never weakened by
+the fatigue it creates itself.
 
 For this calibration candidate fatigue changes *striking_power only*. Output,
 pressure, precision, accuracy, defense, wrestling, control, and submission
-ratings remain at their stored FSR values. Structural damage-resistance traits
-and the stamina/cardio traits are also unchanged.
-
-The locked age mechanic, KD curve, damage reservoir, KD-collapse logic, and
-damage-recovery architecture remain unchanged. Fresh striking_power has the
-stronger upper-tail translation introduced by the shadow experiment; fatigue
-then lowers only the effective striking_power used by subsequent segments.
+ratings are not reduced by fatigue. Age modifiers are separate and externally
+configured in ``config/fsr_age_modifiers.yaml``.
 """
 from __future__ import annotations
 
@@ -56,8 +56,21 @@ class StaticFSRMCKOTKOV31RollingFSR(v3.StaticFSRMCKOTKOV3Stamina):
 
     def __init__(self, red: pd.Series, blue: pd.Series, *args, **kwargs) -> None:
         super().__init__(red, blue, *args, **kwargs)
-        self.base_fighters = [red.copy(deep=True), blue.copy(deep=True)]
-        self.fighters = [red.copy(deep=True), blue.copy(deep=True)]
+
+        # KO/TKO V2 owns the external age layer. Reuse those fight-night base
+        # profiles here instead of rebuilding from the raw stored FSR arguments;
+        # otherwise segment refresh would silently erase age adjustments.
+        configured = getattr(self, "age_effective_fighters", None)
+        if configured is None:
+            configured = [red, blue]
+        self.base_fighters = [
+            configured[0].copy(deep=True),
+            configured[1].copy(deep=True),
+        ]
+        self.fighters = [
+            self.base_fighters[0].copy(deep=True),
+            self.base_fighters[1].copy(deep=True),
+        ]
         self.pending_stamina_costs: list[list[tuple[float, str]]] = [[], []]
         self.effective_fsr_events: list[dict[str, Any]] = []
 
