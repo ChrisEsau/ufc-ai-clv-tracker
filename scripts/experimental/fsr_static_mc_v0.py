@@ -294,7 +294,11 @@ class StaticFSRMCV0:
             if phase == "DISTANCE"
             else CLINCH_TD_ATTEMPT_BASE
         )
-        return _prob(base * _modifier(wrestling_pref), high=0.70)
+        # No artificial wrestling-preference clip and no arbitrary TD-attempt
+        # ceiling. Keep only the mathematical probability bound required by the
+        # competing-hazard sampler.
+        raw_probability = base * exp(float(wrestling_pref) / MODIFIER_SCALE)
+        return float(np.clip(raw_probability, 0.0, 1.0 - 1e-12))
 
     def _distance_clinch_hazard(self, attacker: int) -> float:
         distance_pref, clinch_pref, _ = _style_preferences(self.fighters[attacker])
