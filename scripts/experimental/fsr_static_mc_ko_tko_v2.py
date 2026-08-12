@@ -18,17 +18,12 @@ if a knockdown occurs:
 if reservoir_current reaches zero:
     -> deterministic KO/TKO stoppage
 
-Locked age mechanic
--------------------
-When a fighter age is supplied to the simulator, only these two effective traits
-are age-adjusted for simulation use:
-
-- ``knockdown_resistance``
-- ``damage_durability``
-
-The locked curve is linear after age 30 at -2.0 FSR points per year, clipped to
-the established 10-90 FSR bounds. Stored/pre-fight FSR profiles are never
-modified. No other FSR trait is age-adjusted.
+Age modifier contract
+---------------------
+Stored/pre-fight FSR profiles are immutable. Fight-night age modifiers are read
+from ``config/fsr_age_modifiers.yaml`` through the generic evaluator in
+``fsr_age_modifiers.py``. The simulator contains no trait-specific age
+coefficients. Only YAML entries that are both enabled and calibrated are applied.
 
 Important boundaries
 --------------------
@@ -49,6 +44,7 @@ from typing import Any
 
 import pandas as pd
 
+from scripts.experimental import fsr_age_modifiers as age_modifiers
 from scripts.experimental import fsr_static_mc_damage_v1 as damage
 from scripts.experimental import fsr_static_mc_damage_v1_ground017 as ground017
 from scripts.experimental import fsr_static_mc_v0 as base
@@ -60,52 +56,37 @@ FSR_PATH = damage.FSR_PATH
 POST_KD_FOLLOWUP_DAMAGE_MULTIPLIER = 2.0
 RESERVOIR_FINISH_EPSILON = 1e-9
 
-# Locked current-ability age translation selected from the mature 2020+
-# historical studies and strong-KD-collapse MC replays. This is deliberately
-# narrow: age changes only the two physiological resistance traits that were
-# empirically validated. Striking power and every other FSR trait are untouched.
-AGE_ADJUSTMENT_ONSET_YEARS = 30.0
-AGE_ADJUSTMENT_POINTS_PER_YEAR = 2.0
-AGE_ADJUSTED_TRAITS = ("knockdown_resistance", "damage_durability")
-FSR_TRAIT_MIN = 10.0
-FSR_TRAIT_MAX = 90.0
+# Compatibility alias for older diagnostics/tests. The authoritative list is
+# loaded from YAML; no trait-specific age constants live in simulator code.
+AGE_ADJUSTED_TRAITS = age_modifiers.enabled_calibrated_traits()
 
 
 def age_adjustment_penalty(age: float | None) -> float:
-    """Return the locked FSR-point penalty for a supplied fighter age."""
-    if age is None or pd.isna(age):
-        return 0.0
-    age_value = float(age)
-    if age_value < 0.0:
-        raise ValueError(f"fighter age must be non-negative, got {age_value}")
-    return AGE_ADJUSTMENT_POINTS_PER_YEAR * max(
-        age_value - AGE_ADJUSTMENT_ONSET_YEARS,
+    """Compatibility helper for the legacy KD-resistance rule.
+
+    Returns the magnitude of the configured knockdown-resistance modifier.
+    New code should call ``fsr_age_modifiers.trait_age_modifier`` directly.
+    """
+    return max(
         0.0,
+        -age_modifiers.trait_age_modifier("knockdown_resistance", age),
     )
 
 
 def age_adjusted_effective_trait(value: float, age: float | None) -> float:
-    """Translate one validated resistance trait into its effective MC value."""
-    adjusted = float(value) - age_adjustment_penalty(age)
-    return float(min(max(adjusted, FSR_TRAIT_MIN), FSR_TRAIT_MAX))
+    """Compatibility helper using the configured KD-resistance age equation."""
+    modifier = age_modifiers.trait_age_modifier("knockdown_resistance", age)
+    cfg = age_modifiers.load_age_modifier_config()
+    bounds = cfg["rating_bounds"]
+    return float(min(max(float(value) + modifier, float(bounds["min"])), float(bounds["max"])))
 
 
 def apply_locked_age_adjustment(
     profile: pd.Series,
     age: float | None,
 ) -> pd.Series:
-    """Return an MC working copy with only the locked age traits adjusted."""
-    effective = profile.copy()
-    if age is None or pd.isna(age):
-        return effective
-
-    for trait in AGE_ADJUSTED_TRAITS:
-        if trait not in effective.index:
-            raise ValueError(f"profile missing age-adjusted trait: {trait}")
-        effective[trait] = age_adjusted_effective_trait(
-            base._value(profile, trait),
-            float(age),
-        )
+    """Compatibility wrapper around the generic YAML-driven age layer."""
+    effective, _ = age_modifiers.apply_age_modifiers(profile, age)
     return effective
 
 
@@ -143,16 +124,26 @@ class StaticFSRMCKOTKOV2(ground017.StaticFSRMCDamageV1Ground017):
         red_age: float | None = None,
         blue_age: float | None = None,
     ) -> None:
-        # Preserve the leakage-safe historical FSR profiles exactly as supplied.
-        # The MC works from separate copies so the age mechanic cannot rewrite
-        # stored FSR evidence or leak into unrelated trait consumers.
-        self.raw_fighters = [red.copy(), blue.copy()]
+        # Preserve leakage-safe stored FSR exactly as supplied. Fight-night
+        # effective profiles are separate copies produced from the external YAML.
+        self.raw_fighters = [red.copy(deep=True), blue.copy(deep=True)]
         self.fighter_ages = [
             None if red_age is None or pd.isna(red_age) else float(red_age),
             None if blue_age is None or pd.isna(blue_age) else float(blue_age),
         ]
-        red_effective = apply_locked_age_adjustment(red, self.fighter_ages[0])
-        blue_effective = apply_locked_age_adjustment(blue, self.fighter_ages[1])
+        red_effective, red_applied = age_modifiers.apply_age_modifiers(
+            red,
+            self.fighter_ages[0],
+        )
+        blue_effective, blue_applied = age_modifiers.apply_age_modifiers(
+            blue,
+            self.fighter_ages[1],
+        )
+        self.age_effective_fighters = [
+            red_effective.copy(deep=True),
+            blue_effective.copy(deep=True),
+        ]
+        self.age_modifier_values = [red_applied, blue_applied]
 
         super().__init__(red_effective, blue_effective, rounds=rounds, seed=seed)
         self.finish: FinishResult | None = None
@@ -344,25 +335,29 @@ class StaticFSRMCKOTKOV2(ground017.StaticFSRMCDamageV1Ground017):
 
 def print_ko_summary(sim: StaticFSRMCKOTKOV2, path: KOPath) -> None:
     damage.print_damage_summary(sim)
-    print("\nLOCKED AGE ADJUSTMENT")
+    print("\nCONFIGURED AGE MODIFIERS")
     print("-" * 100)
     for i, name in enumerate(sim.names):
         age = sim.fighter_ages[i]
         if age is None:
             print(f"{name}: age not supplied; no age adjustment applied")
             continue
+        applied = sim.age_modifier_values[i]
+        if not applied:
+            print(f"{name}: age={age:.2f} | no enabled calibrated age modifiers")
+            continue
         raw = sim.raw_fighters[i]
-        effective = sim.fighters[i]
-        print(
-            f"{name}: age={age:.2f} | "
-            f"KD resistance {base._value(raw, 'knockdown_resistance'):.2f}"
-            f"->{base._value(effective, 'knockdown_resistance'):.2f} | "
-            f"durability {base._value(raw, 'damage_durability'):.2f}"
-            f"->{base._value(effective, 'damage_durability'):.2f}"
-        )
+        effective = sim.age_effective_fighters[i]
+        pieces = []
+        for trait, modifier in applied.items():
+            pieces.append(
+                f"{trait} {base._value(raw, trait):.2f}->{base._value(effective, trait):.2f} "
+                f"({modifier:+.2f})"
+            )
+        print(f"{name}: age={age:.2f} | " + " | ".join(pieces))
     print(
-        f"Curve: -{AGE_ADJUSTMENT_POINTS_PER_YEAR:.1f} points/year after age "
-        f"{AGE_ADJUSTMENT_ONSET_YEARS:.0f}; only {', '.join(AGE_ADJUSTED_TRAITS)}."
+        f"Config: {age_modifiers.DEFAULT_CONFIG_PATH} | enabled+calibrated: "
+        f"{', '.join(age_modifiers.enabled_calibrated_traits()) or 'none'}"
     )
 
     print("\nKO/TKO V2 FINISH SUMMARY")
