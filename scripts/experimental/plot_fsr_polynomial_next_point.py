@@ -15,10 +15,10 @@ Examples:
       --all-traits \
       --degree 2
 
-The target fight row is excluded from every fit. The script uses all strictly
-prior prefight snapshots for the fighter, indexed by fight sequence, fits a
-polynomial, and predicts the next sequence point. The target row is displayed
-only as a holdout reference marker, never used in the fit.
+The target fight row IS INCLUDED in every fit. The script uses all prefight
+snapshots for the fighter up to and including the selected target fight,
+indexed by fight sequence, fits a polynomial, and predicts one additional
+sequence point beyond the target row.
 
 Shadow/research only.
 """
@@ -64,12 +64,12 @@ def fsr_trait_columns(df: pd.DataFrame) -> list[str]:
 
 def fit_trait(
     fighter: pd.DataFrame,
-    target: pd.Series,
     target_date: pd.Timestamp,
     trait: str,
     degree: int,
 ) -> dict[str, object] | None:
-    hist = fighter.loc[fighter["date"] < target_date, ["fight_id", "date", trait]].copy()
+    # Include every known prefight state through and including the selected target.
+    hist = fighter.loc[fighter["date"] <= target_date, ["fight_id", "date", trait]].copy()
     hist[trait] = pd.to_numeric(hist[trait], errors="coerce")
     hist = hist.dropna(subset=[trait]).sort_values(["date", "fight_id"]).reset_index(drop=True)
 
@@ -81,9 +81,12 @@ def fit_trait(
     y = hist[trait].to_numpy(dtype=float)
     coeff = np.polyfit(x, y, deg=degree)
     poly = np.poly1d(coeff)
+
     next_x = float(len(hist) + 1)
     predicted = float(poly(next_x))
-    target_actual = float(pd.to_numeric(pd.Series([target[trait]]), errors="coerce").iloc[0])
+    latest_actual = float(y[-1])
+    predicted_change = predicted - latest_actual
+
     dense_x = np.linspace(1.0, next_x, 300)
     dense_y = poly(dense_x)
 
@@ -96,8 +99,8 @@ def fit_trait(
         "poly": poly,
         "next_x": next_x,
         "predicted": predicted,
-        "target_actual": target_actual,
-        "error": predicted - target_actual,
+        "latest_actual": latest_actual,
+        "predicted_change": predicted_change,
         "dense_x": dense_x,
         "dense_y": dense_y,
     }
@@ -108,19 +111,22 @@ def plot_single(result: dict[str, object], fighter_name: str, degree: int, out: 
     y = result["y"]
     next_x = result["next_x"]
     predicted = result["predicted"]
-    target_actual = result["target_actual"]
     trait = str(result["trait"])
 
     fig, ax = plt.subplots(figsize=(10, 6))
-    ax.scatter(x, y, s=70, label="Prior FSR points used in fit", zorder=3)
+    ax.scatter(x, y, s=70, label="FSR points used in fit", zorder=3)
     ax.plot(result["dense_x"], result["dense_y"], linewidth=2, label=f"Degree-{degree} polynomial fit")
     ax.scatter([next_x], [predicted], s=130, marker="X", label=f"Predicted next: {predicted:.2f}", zorder=4)
-    ax.scatter([next_x], [target_actual], s=90, marker="D", label=f"Actual holdout: {target_actual:.2f}", zorder=4)
 
     for xi, yi in zip(x, y):
         ax.annotate(f"{yi:.2f}", (xi, yi), xytext=(0, 8), textcoords="offset points", ha="center", fontsize=9)
-    ax.annotate(f"forecast {predicted:.2f}", (next_x, predicted), xytext=(8, 10), textcoords="offset points", fontsize=10)
-    ax.annotate(f"actual {target_actual:.2f}", (next_x, target_actual), xytext=(8, -18), textcoords="offset points", fontsize=10)
+    ax.annotate(
+        f"forecast {predicted:.2f}",
+        (next_x, predicted),
+        xytext=(8, 10),
+        textcoords="offset points",
+        fontsize=10,
+    )
 
     ax.set_title(f"{fighter_name} — {trait} — degree-{degree} next-point forecast")
     ax.set_xlabel("Prefight FSR sequence index")
@@ -143,13 +149,11 @@ def plot_all(results: list[dict[str, object]], fighter_name: str, degree: int, o
         y = result["y"]
         next_x = result["next_x"]
         predicted = result["predicted"]
-        target_actual = result["target_actual"]
         trait = str(result["trait"])
 
         ax.scatter(x, y, s=28, zorder=3)
         ax.plot(result["dense_x"], result["dense_y"], linewidth=1.8)
         ax.scatter([next_x], [predicted], s=62, marker="X", zorder=4)
-        ax.scatter([next_x], [target_actual], s=42, marker="D", zorder=4)
         ax.axvline(next_x, linestyle="--", linewidth=0.8, alpha=0.35)
 
         ax.set_title(trait.replace("_", " "), fontsize=10)
@@ -159,9 +163,9 @@ def plot_all(results: list[dict[str, object]], fighter_name: str, degree: int, o
         ax.grid(alpha=0.2)
 
         text = (
-            f"pred {predicted:.2f}\n"
-            f"actual {target_actual:.2f}\n"
-            f"err {result['error']:+.2f}"
+            f"latest {result['latest_actual']:.2f}\n"
+            f"next {predicted:.2f}\n"
+            f"change {result['predicted_change']:+.2f}"
         )
         ax.text(
             0.03,
@@ -179,7 +183,7 @@ def plot_all(results: list[dict[str, object]], fighter_name: str, degree: int, o
 
     fig.suptitle(
         f"{fighter_name} — all FSR traits — degree-{degree} polynomial next-point forecasts\n"
-        "dots = prior points used | line = polynomial fit | X = predicted next | diamond = actual holdout",
+        "dots = all points through target used in fit | line = polynomial fit | X = predicted next point",
         fontsize=14,
         y=0.998,
     )
@@ -224,7 +228,7 @@ def main() -> None:
         raise RuntimeError(f"traits not found in FSR-32: {missing}")
 
     print(f"[poly-plot] fighter: {fighter_name}", flush=True)
-    print(f"[poly-plot] target fight: {args.target_fight_id}", flush=True)
+    print(f"[poly-plot] target fight INCLUDED in fit: {args.target_fight_id}", flush=True)
     print(f"[poly-plot] degree: {args.degree}", flush=True)
     print(f"[poly-plot] traits requested: {len(traits)}", flush=True)
 
@@ -232,7 +236,7 @@ def main() -> None:
     skipped: list[str] = []
     for idx, trait in enumerate(traits, start=1):
         print(f"[poly-plot] {idx}/{len(traits)} fitting {trait}...", flush=True)
-        result = fit_trait(fighter, target, target_date, trait, args.degree)
+        result = fit_trait(fighter, target_date, trait, args.degree)
         if result is None:
             skipped.append(trait)
             continue
@@ -240,14 +244,14 @@ def main() -> None:
 
     if not results:
         raise RuntimeError(
-            f"no traits had enough prior points for degree {args.degree}; need at least {args.degree + 1}"
+            f"no traits had enough points through target for degree {args.degree}; need at least {args.degree + 1}"
         )
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
     if args.all_traits:
         out = args.output_dir / (
-            f"{args.fighter_id}_{args.target_fight_id}_all_traits_poly{args.degree}.png"
+            f"{args.fighter_id}_{args.target_fight_id}_all_traits_poly{args.degree}_include_target.png"
         )
         plot_all(results, fighter_name, args.degree, out)
 
@@ -256,10 +260,10 @@ def main() -> None:
             rows.append(
                 {
                     "trait": result["trait"],
-                    "prior_points": len(result["hist"]),
+                    "points_used": len(result["hist"]),
+                    "latest_fsr": result["latest_actual"],
                     "predicted_next": result["predicted"],
-                    "actual_target_holdout": result["target_actual"],
-                    "forecast_error": result["error"],
+                    "predicted_change": result["predicted_change"],
                 }
             )
         summary = pd.DataFrame(rows).sort_values("trait")
@@ -271,14 +275,14 @@ def main() -> None:
         result = results[0]
         hist = result["hist"].copy()
         hist.insert(0, "fight_index", np.arange(1, len(hist) + 1))
-        print("\nDATA USED IN FIT")
+        print("\nDATA USED IN FIT (TARGET INCLUDED)")
         print(hist.to_string(index=False, float_format=lambda v: f"{v:.3f}"))
-        print(f"\nPREDICTED NEXT POINT: {result['predicted']:.3f}")
-        print(f"ACTUAL TARGET PREFIGHT FSR (holdout, not fit): {result['target_actual']:.3f}")
-        print(f"ERROR vs holdout: {result['error']:+.3f}")
+        print(f"\nLATEST FSR POINT: {result['latest_actual']:.3f}")
+        print(f"PREDICTED NEXT POINT: {result['predicted']:.3f}")
+        print(f"PREDICTED CHANGE: {result['predicted_change']:+.3f}")
         print(f"POLYNOMIAL COEFFICIENTS: {result['coeff']}", flush=True)
         out = args.output_dir / (
-            f"{args.fighter_id}_{args.target_fight_id}_{args.trait}_poly{args.degree}.png"
+            f"{args.fighter_id}_{args.target_fight_id}_{args.trait}_poly{args.degree}_include_target.png"
         )
         plot_single(result, fighter_name, args.degree, out)
 
