@@ -1,19 +1,19 @@
-"""Run the 2026 baseline+age cohort with striking power using the exact same
-post-30 age reduction as knockdown resistance and damage durability.
+"""Run the 2026 baseline+age cohort with one uniform physical age rule.
 
-This is a thin research wrapper around run_2026_baseline_age_full_cohort.py.
-It leaves stored FSR immutable and changes only the temporary fight-night
-striking_power profile used when --age-power is active.
+Research-only age contract for this experiment:
+- stored prefight FSR remains immutable
+- no trajectory adjustment
+- age <= 30: no physical-trait adjustment
+- age > 30: -2 FSR points/year after 30
+- apply that exact rule to:
+    striking_power
+    knockdown_resistance
+    damage_durability
+- clamp effective ratings to the standard 10-90 FSR range
 
-Rule:
-- age <= 30: 0 FSR adjustment
-- age > 30: -2 FSR points per year after 30
-- clamp effective striking_power to the standard 10-90 FSR range
-
-Important: the active YAML may also contain a calibrated striking_power age rule.
-For this experiment we suppress only that YAML power adjustment after the custom
--2/year power rule is applied. All other enabled YAML age traits (for example
-knockdown_resistance and damage_durability) continue to apply normally.
+This experiment intentionally does NOT use config/fsr_age_modifiers.yaml. The
+three physical traits are controlled here so there is one transparent age rule
+and no possibility of mixed or double-applied age functions.
 """
 from __future__ import annotations
 
@@ -27,6 +27,18 @@ from scripts.experimental import run_2026_baseline_age_full_cohort as runner
 
 POWER_AGE_CENTER = 30.0
 POWER_AGE_POINTS_PER_YEAR = -2.0
+PHYSICAL_AGE_TRAITS = (
+    "striking_power",
+    "knockdown_resistance",
+    "damage_durability",
+)
+
+
+def _physical_age_modifier(age: float | None) -> float:
+    if age is None or pd.isna(age):
+        return 0.0
+    years_over_30 = max(0.0, float(age) - POWER_AGE_CENTER)
+    return float(POWER_AGE_POINTS_PER_YEAR * years_over_30)
 
 
 def _apply_same_physical_age_decay(
@@ -35,14 +47,14 @@ def _apply_same_physical_age_decay(
     *,
     enabled: bool,
 ) -> tuple[pd.Series, float]:
+    """Apply the experiment's one intended striking-power age adjustment."""
     effective = profile.copy(deep=True)
-    if not enabled or age is None or pd.isna(age):
+    if not enabled:
         return effective, 0.0
     if "striking_power" not in effective.index or pd.isna(effective["striking_power"]):
         raise ValueError("profile missing striking_power required by --age-power")
 
-    years_over_30 = max(0.0, float(age) - POWER_AGE_CENTER)
-    modifier = POWER_AGE_POINTS_PER_YEAR * years_over_30
+    modifier = _physical_age_modifier(age)
     effective["striking_power"] = float(
         np.clip(
             float(effective["striking_power"]) + modifier,
@@ -50,32 +62,51 @@ def _apply_same_physical_age_decay(
             runner.FSR_MAX,
         )
     )
-    return effective, float(modifier)
+    return effective, modifier
 
 
-def _install_yaml_power_suppression() -> None:
-    """Keep YAML age modifiers except striking_power for this experiment."""
-    original_apply = runner.age_modifiers.apply_age_modifiers
+def _install_uniform_physical_age_layer() -> None:
+    """Replace YAML evaluation with the same post-30 rule for KD/durability.
 
-    def apply_without_power(
+    striking_power is already adjusted by _apply_same_physical_age_decay before
+    the simulator is constructed. This evaluator therefore applies the same
+    modifier exactly once to knockdown_resistance and damage_durability.
+    """
+
+    def apply_uniform_physical_age(
         profile: pd.Series,
         age: float | None,
         *,
-        config_path=runner.age_modifiers.DEFAULT_CONFIG_PATH,
+        config_path=None,
     ) -> tuple[pd.Series, dict[str, float]]:
-        effective, applied = original_apply(profile, age, config_path=config_path)
-        # The input profile already contains the experiment's one intended
-        # striking_power age adjustment. Restore that value after the normal YAML
-        # layer so power is not age-adjusted a second time.
-        if "striking_power" in profile.index and not pd.isna(profile["striking_power"]):
-            effective["striking_power"] = float(profile["striking_power"])
-        applied = dict(applied)
-        applied.pop("striking_power", None)
+        effective = profile.copy(deep=True)
+        modifier = _physical_age_modifier(age)
+        applied: dict[str, float] = {}
+        for trait in ("knockdown_resistance", "damage_durability"):
+            if trait not in effective.index or pd.isna(effective[trait]):
+                raise ValueError(f"profile missing required physical age trait: {trait}")
+            effective[trait] = float(
+                np.clip(
+                    float(effective[trait]) + modifier,
+                    runner.FSR_MIN,
+                    runner.FSR_MAX,
+                )
+            )
+            applied[trait] = modifier
         return effective, applied
 
-    # fsr_static_mc_ko_tko_v2 imports the same fsr_age_modifiers module object,
-    # so patching the module function here also affects the simulator call path.
-    runner.age_modifiers.apply_age_modifiers = apply_without_power
+    def enabled_uniform_traits(*, config_path=None) -> tuple[str, ...]:
+        return PHYSICAL_AGE_TRAITS
+
+    # The simulator imports the same fsr_age_modifiers module object, so these
+    # in-process replacements affect the simulator call path as well.
+    runner.age_modifiers.apply_age_modifiers = apply_uniform_physical_age
+    runner.age_modifiers.enabled_calibrated_traits = enabled_uniform_traits
+
+
+# Backward-compatible alias for the single-fight diagnostic created earlier.
+def _install_yaml_power_suppression() -> None:
+    _install_uniform_physical_age_layer()
 
 
 def main() -> None:
@@ -83,10 +114,10 @@ def main() -> None:
     runner.POWER_AGE_INTERCEPT = 0.0
     runner.POWER_AGE_LINEAR = POWER_AGE_POINTS_PER_YEAR
     runner.POWER_AGE_CENTER = POWER_AGE_CENTER
-    _install_yaml_power_suppression()
+    _install_uniform_physical_age_layer()
 
     # Force the parent runner into its isolated power_on output mode while
-    # preserving all user-supplied arguments such as --paths/--fresh.
+    # preserving user-supplied arguments such as --paths/--fresh.
     if "--age-power" not in sys.argv:
         sys.argv.append("--age-power")
 
