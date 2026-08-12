@@ -10,8 +10,9 @@ Decision scoring hierarchy:
 2. aggression: strike attempts and takedown attempts;
 3. control as a secondary separator.
 
-Fight draws are disabled. Exact round ties are resolved with a seeded unbiased
-coin flip after all deterministic scoring separators are exhausted.
+Every completed round is scored 10-9. Fight draws are disabled. Exact round ties
+are resolved with a seeded unbiased coin flip after all deterministic scoring
+separators are exhausted.
 
 Research-only. Judge-specific disagreement is intentionally deferred until the
 real historical judge-scorecard dataset is wired in for calibration.
@@ -31,19 +32,13 @@ from scripts.experimental import fsr_static_mc_v0 as base
 CALIBRATED_SUBMISSION_NEUTRAL_RATE = 0.34
 
 SIG_LANDED_WEIGHT = 1.00
-GROUND_LANDED_BONUS_WEIGHT = 0.20  # V1 ground total was 1.20 vs 1.00 generic sig
+GROUND_LANDED_BONUS_WEIGHT = 0.20
 KNOCKDOWN_WEIGHT = 6.00
 TD_LANDED_WEIGHT = 1.50
 SUB_ATTEMPT_WEIGHT = 2.25
 SIG_ATTEMPT_WEIGHT = 0.025
 TD_ATTEMPT_WEIGHT = 0.10
 CONTROL_SECOND_WEIGHT = 0.015
-
-TEN_EIGHT_MARGIN = 8.00
-TEN_EIGHT_KD_ADVANTAGE = 1
-TEN_EIGHT_SUB_ADVANTAGE = 2
-TEN_EIGHT_EFFECTIVE_MARGIN = 15.00
-TEN_EIGHT_EFFECTIVE_RATIO = 2.50
 
 
 def configure_current_full_fight_candidate() -> None:
@@ -211,26 +206,6 @@ class StaticFSRMCFullFightV1(combined.StaticFSRMCKOSUBV1):
             total_score=float(total),
         )
 
-    @staticmethod
-    def _is_ten_eight(winner: FighterRoundMetrics, loser: FighterRoundMetrics, margin: float) -> bool:
-        if margin < TEN_EIGHT_MARGIN:
-            return False
-        kd_advantage = winner.knockdowns - loser.knockdowns
-        sub_advantage = winner.sub_att - loser.sub_att
-        effective_margin = winner.effective_score - loser.effective_score
-        if loser.effective_score > 0:
-            effective_ratio = winner.effective_score / loser.effective_score
-        else:
-            effective_ratio = float("inf") if winner.effective_score > 0 else 1.0
-        return bool(
-            kd_advantage >= TEN_EIGHT_KD_ADVANTAGE
-            or sub_advantage >= TEN_EIGHT_SUB_ADVANTAGE
-            or (
-                effective_margin >= TEN_EIGHT_EFFECTIVE_MARGIN
-                and effective_ratio >= TEN_EIGHT_EFFECTIVE_RATIO
-            )
-        )
-
     def _tie_break_round(self, red: FighterRoundMetrics, blue: FighterRoundMetrics) -> int:
         """Resolve an exact arithmetic tie without red/blue corner bias."""
         separators = (
@@ -263,17 +238,14 @@ class StaticFSRMCFullFightV1(combined.StaticFSRMCKOSUBV1):
             winner = self._tie_break_round(red, blue)
             tie_break_used = True
         loser = 1 - winner
-        winner_metrics = red if winner == 0 else blue
-        loser_metrics = blue if winner == 0 else red
-        is_ten_eight = self._is_ten_eight(
-            winner_metrics,
-            loser_metrics,
-            abs(float(margin)),
-        )
+
+        # Decision-layer lock: every completed round is 10-9. No 10-8 or 10-10
+        # scores are emitted in this shadow candidate.
         if winner == 0:
-            red_points, blue_points = 10, 8 if is_ten_eight else 9
+            red_points, blue_points = 10, 9
         else:
-            red_points, blue_points = 8 if is_ten_eight else 9, 10
+            red_points, blue_points = 9, 10
+
         return RoundScore(
             round_number=round_no,
             winner=winner,
@@ -290,8 +262,6 @@ class StaticFSRMCFullFightV1(combined.StaticFSRMCKOSUBV1):
         round_scores = tuple(self._score_round(r) for r in range(1, self.rounds + 1))
         red_rounds = sum(score.winner == 0 for score in round_scores)
         blue_rounds = sum(score.winner == 1 for score in round_scores)
-        # With odd scheduled rounds and no tied rounds this cannot tie, but keep
-        # an unbiased reproducible fallback for defensive robustness.
         if red_rounds > blue_rounds:
             winner = 0
         elif blue_rounds > red_rounds:
