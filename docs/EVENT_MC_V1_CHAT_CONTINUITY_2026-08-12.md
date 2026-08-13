@@ -37,7 +37,7 @@ Architecture revision: **v0.3**
 
 Architecture status: **Phase 0 architecture closed. EVENT MC V1 simulator implementation has not started.**
 
-Operational status: **Codex is currently materializing the frozen current-simulator Phase 0 baseline. Phase 1 is NOT yet authorized.**
+Operational status: **Codex execution plan for Phase 0 baseline materialization has been reviewed and approved. Codex is authorized to execute the frozen observational baseline task only. Phase 1 is NOT yet authorized.**
 
 Canonical architecture document:
 
@@ -302,5 +302,34 @@ Materialize a deterministic, checksummed baseline from the untouched current sim
 Next assistant action:
 
 Review Codex's report and repository changes against the Phase 0 baseline contract. If and only if the gate is clean, prepare a tightly scoped Phase 1 kernel prompt and append Checkpoint 002 to this file.
+
+Phase 1 authorized now: **NO**.
+
+## Checkpoint 002 — 2026-08-12 22:37 America/Chicago
+
+Current phase: Phase 0 operational baseline execution.
+
+Codex returned a read-only implementation plan and requested approval before making changes.
+
+Plan reviewed against canonical prompt and approved with one branch-resolution guardrail:
+
+- local absence of `feature/fsr-32-stamina-shadow` is acceptable only if Codex fetches/resolves the exact configured remote branch;
+- Codex must check out that exact branch and record the resulting commit SHA;
+- if the remote branch itself does not exist or resolves to an unexpected lineage, Codex must stop and report rather than creating a substitute branch from another base.
+
+Approved execution counts remain exactly:
+
+```text
+3 deterministic trace seeds per resolved fixture: 7, 17, 20260811
+5 resolved matchup summaries × 1000 paths, root seed 20260811
+first 200 eligible mature aligned bouts × 10 paths, root seed 20260810
+full 1565-fight method/submission baseline where supported observationally
+```
+
+Codex may add observational baseline orchestration only if needed. No EVENT MC V1 simulator implementation is authorized.
+
+Expected next return: full Phase 0 execution report ending in explicit PASS or FAIL.
+
+Next assistant action: independently review Codex's actual branch/commit, diff, manifest/checksums, fixtures, outputs, tests, and gate result before authorizing Phase 1.
 
 Phase 1 authorized now: **NO**.
