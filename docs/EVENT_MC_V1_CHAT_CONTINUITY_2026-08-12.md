@@ -35,9 +35,13 @@ Do not silently overwrite history. Append a new checkpoint entry and update the 
 
 Architecture revision: **v0.3**
 
-Architecture status: **Phase 0 architecture closed. EVENT MC V1 simulator implementation has not started.**
+Architecture status: **Phase 0 architecture is closed. The Phase 0 numerical/operational baseline did NOT pass because the frozen FSR-32 parquet is unavailable in Codex's isolated environment. The user explicitly chose to defer that artifact-dependent baseline and move forward with infrastructure implementation. This is a process exception, not a baseline PASS and not an architecture redesign.**
 
-Operational status: **Codex successfully repaired the Git checkout and verified the exact feature branch, but the Phase 0 operational baseline gate failed because the frozen generated FSR-32 parquet is absent from the isolated checkout. The current task is exact artifact recovery only. Rebuilding the FSR chain is NOT authorized. Phase 1 is NOT authorized.**
+Implementation status: **Phase 1 generic continuous-time kernel is now authorized. No real UFC mechanics are authorized in Phase 1.**
+
+Current Codex task prompt:
+
+`docs/EVENT_MC_V1_CODEX_PHASE1_GENERIC_KERNEL_PROMPT_2026-08-12.md`
 
 Canonical architecture document:
 
@@ -51,25 +55,15 @@ Locked implementation-interface decisions:
 
 `docs/EVENT_MC_V1_PHASE0_INTERFACE_DECISIONS_2026-08-12.md`
 
-Canonical numerical/reproducibility baseline contract:
+Canonical future numerical/reproducibility baseline contract:
 
 `docs/EVENT_MC_V1_PHASE0_BASELINE_FREEZE_2026-08-12.md`
 
-Current Codex task prompt:
-
-`docs/EVENT_MC_V1_CODEX_PHASE0_FSR32_ARTIFACT_RECOVERY_2026-08-12.md`
-
-If exact artifact recovery succeeds, Codex must resume:
-
-`docs/EVENT_MC_V1_CODEX_PHASE0_BASELINE_PROMPT_2026-08-12.md`
-
-Required frozen artifact:
+Deferred frozen artifact:
 
 `data/simulation/rfs_mc_v2_shared_state/fsr_32_shadow/fsr_32_prefight_snapshots.parquet`
 
-Verified branch from latest Codex report:
-
-`feature/fsr-32-stamina-shadow @ 937ce6e98e15143ddf8b676346a9f0362126b809`
+Important: the baseline freeze remains valid and should be materialized when the exact FSR-32 artifact is later made available. Do not replace it silently with a rebuilt artifact.
 
 ---
 
@@ -102,7 +96,7 @@ The design objective is to simulate actual fight flow with continuous event timi
 # Hard Locks
 
 - Do not modify the current simulator while EVENT MC V1 is built.
-- Keep FSR-32 connected initially.
+- Keep FSR-32 connected initially when UFC mechanics are later introduced.
 - Do not rebuild the entire FSR database unless explicitly approved.
 - Do not retune KO, SUB, TD, stamina, judging, age, damage, recovery, or other calibration constants during kernel/parity work.
 - Use composition, not a new inheritance chain.
@@ -156,107 +150,134 @@ Never hide this semantic correction inside the temporal migration.
 
 ---
 
-# Phase 0 Closure Summary
+# Phase 0 Baseline Status — Deferred, Not Passed
 
-Phase 0 architecture is closed at revision v0.3.
+Codex successfully repaired its Git checkout and verified the exact feature branch lineage.
 
-Resolved architecture decisions include:
+The numerical baseline could not run because the required ignored/generated artifact was absent from Codex's isolated filesystem:
 
-- 14 current simulator classes connected by 13 inheritance edges;
-- continuous-time event scheduler;
-- events/sec rate units;
-- exact interval-probability to per-second-rate conversion;
-- one authoritative `fight_time_seconds` clock;
-- engine-owned hard boundaries;
-- exact continuous state advancement over `dt`;
-- smaller physical `FightState` and separate `FightLedger` / stats accumulator;
-- explicit dynamic modifier pipeline;
-- explicit damage -> knockdown -> knockdown consequence -> finish ownership;
-- reproducible judging with explicit RNG tie-break stream;
-- one root path seed with centrally owned deterministic named RNG streams;
-- event sinks / NONE-SUMMARY-FULL equivalent trace behavior;
-- future cooldown / duration extension point;
-- locked round-start reset;
-- conditional ground-exit hazard partitioning;
-- Phase 2A / 2B split;
-- concrete baseline fixtures, seeds, metrics, output contract.
+`data/simulation/rfs_mc_v2_shared_state/fsr_32_shadow/fsr_32_prefight_snapshots.parquet`
+
+Codex then performed the approved artifact-recovery search and returned:
+
+`FSR-32 ARTIFACT RECOVERY: NOT FOUND`
+
+The search covered the accessible `/workspace`, `/mnt`, `/tmp` roots and attempted the requested Codespaces-style roots, but Codex is not actually running inside the user's development Codespace. No exact FSR-32 candidate was found, no FSR artifact was rebuilt, and no baseline outputs were fabricated.
+
+The user stated the FSR can be supplied later and explicitly chose to move on.
+
+Decision:
+
+- Phase 0 architecture remains closed at v0.3.
+- Phase 0 operational/numerical baseline remains **DEFERRED / NOT PASSED**.
+- Do not call it PASS in later reports.
+- Do not rebuild the FSR chain to manufacture a replacement baseline unless explicitly approved.
+- Phase 1 generic infrastructure may proceed because it requires no UFC/FSR mechanics.
+- Revisit the frozen baseline before Phase 2A parity work unless the user explicitly changes that plan again.
+
+Known unrelated test debt observed during Phase 0 checks:
+
+```text
+34 passed
+2 pre-existing age-contract failures
+```
+
+Those failures were not created by EVENT MC V1 work and are not part of Phase 1 unless they become a direct regression conflict.
 
 ---
 
-# Current Codex Task — FSR-32 Artifact Recovery
+# Current Codex Task — Phase 1 Generic Continuous-Time Kernel
 
 Codex must read and execute:
 
-`docs/EVENT_MC_V1_CODEX_PHASE0_FSR32_ARTIFACT_RECOVERY_2026-08-12.md`
+`docs/EVENT_MC_V1_CODEX_PHASE1_GENERIC_KERNEL_PROMPT_2026-08-12.md`
 
-Purpose:
+Phase 1 objective:
 
-Recover an exact pre-existing copy (or byte-identical backup) of the frozen FSR-32 parquet used by the current simulator research baseline.
+Implement the smallest coherent generic continuous-time event kernel under:
 
-Search local/mounted workspaces, sibling worktrees, persistent mounts, backups, caches, and any already-downloaded run artifacts visible to the environment.
+`pipeline/simulation/event_mc_v1/`
 
-For every candidate, record path, size, mtime, SHA-256, parquet shape/schema, and date coverage. If a credible candidate is found, copy it without transformation into the expected ignored path and verify source/destination byte identity.
+Phase 1 includes only infrastructure:
 
-Do **not** rebuild FSR-32 or any upstream FSR generation in this task.
+- typed generic events/contracts;
+- immutable timing configuration;
+- authoritative `FightState.fight_time_seconds` clock;
+- generic exponential competing-risk scheduler;
+- events-per-second rate contract;
+- exact probability-to-rate conversion helper;
+- stable named RNG streams from one root path seed;
+- engine-owned hard round/fight boundaries;
+- exact continuous `advance(dt)` hook before event resolution;
+- engine-owned typed state-delta application;
+- round lifecycle and locked round-start positional reset;
+- null/stats/full-trace event sinks with physics invariance;
+- inactive action-availability/cooldown extension point;
+- synthetic tests for mathematical, temporal, reproducibility, mutation-ownership, and sink invariants.
 
-If no exact artifact is found, stop and report `FSR-32 ARTIFACT RECOVERY: NOT FOUND`; the user/assistant will then decide whether to recover the artifact from another machine/Codespace or approve a controlled reconstruction with a new baseline identity.
+Absolute Phase 1 non-goals:
 
-The two age-contract test failures found by Codex are pre-existing branch test debt and are not part of this recovery task.
+- no striking formulas;
+- no takedown formulas;
+- no wrestling-entry implementation;
+- no clinch/ground mechanics;
+- no submissions;
+- no stamina;
+- no damage/KD/KO;
+- no recovery;
+- no age transforms;
+- no judging mechanics;
+- no FSR loading;
+- no historical calibration/tuning;
+- no changes to current simulator/FSR/calibration code.
 
----
-
-# What Codex Must Return From Current Task
-
-If found:
-
-- `FSR-32 ARTIFACT RECOVERY: FOUND`;
-- source absolute path;
-- destination path;
-- SHA-256;
-- row/column counts and date coverage;
-- byte-identical source/destination confirmation;
-- then the complete resumed Phase 0 baseline PASS/FAIL report.
-
-If not found:
-
-- `FSR-32 ARTIFACT RECOVERY: NOT FOUND`;
-- all roots searched;
-- all partial/older candidate artifacts found;
-- no rebuild performed.
+Stop after Phase 1 tests/report/commit/PR work. Do not begin Phase 2A.
 
 ---
 
 # Assistant Review Required When Codex Returns
 
-If recovery succeeds, independently review artifact identity metadata and the resumed Phase 0 baseline outputs before authorizing Phase 1.
+Do **not** automatically proceed because Codex says PASS.
 
-If recovery fails, do not authorize a blind rebuild. Determine whether the frozen parquet can be copied/uploaded from the original development Codespace/local environment. Only if exact recovery is impossible should a separate controlled-reconstruction decision be considered, with a newly identified baseline artifact and documented loss of byte-for-byte historical identity.
+Independently review:
 
-Phase 1 remains unauthorized.
+- files and diff;
+- whether current simulator or FSR code changed;
+- package dependency direction;
+- scheduler UFC-agnostic behavior;
+- rate units and exact probability-to-rate math;
+- stable named RNG stream derivation and independence;
+- one authoritative clock and exact boundary handling;
+- continuous advancement ordering;
+- engine-owned mutation/delta boundary;
+- round-start positional reset;
+- sink invariance and RNG invariance;
+- action-availability extension point remaining inactive/no arbitrary constants;
+- test quality and results;
+- any new failure vs pre-existing age-contract failures;
+- PR/commit state;
+- confirmation no Phase 2 UFC mechanics slipped in.
+
+If Phase 1 is clean, mark `PHASE 1 GENERIC KERNEL GATE: PASS` after independent review.
+
+Before authorizing Phase 2A, revisit the deferred FSR-32 numerical baseline unless the user explicitly approves another exception.
 
 ---
 
-# Planned Phase 1 Scope After Baseline PASS
+# Planned Phase 2A After Phase 1 + Baseline Revisit
 
-Phase 1 is generic kernel work only. No real UFC mechanics.
+Phase 2A is distance temporal/mechanical parity only:
 
-Expected Phase 1 implementation areas:
+- strike attempts;
+- strike hit/miss;
+- TD attempts using the **legacy blended consumer**;
+- TD success/failure;
+- clinch entry;
+- exact final interval probability -> per-second rate conversion.
 
-- package skeleton under `pipeline/simulation/event_mc_v1/`;
-- typed base contracts/events/state;
-- authoritative clock;
-- generic exponential scheduler;
-- events-per-second `EventRate` contract;
-- zero-rate -> `(infinity, None)` behavior;
-- hard-boundary handling in engine;
-- continuous-state advancement hook;
-- centrally owned root-seed RNG manager with named deterministic streams;
-- event sinks / trace modes;
-- state-delta application;
-- synthetic round lifecycle and round-start distance reset;
-- extension point for inactive `busy_until` / `cooldown_until` state.
+Do not perform ontology correction in Phase 2A.
 
-Stop after kernel tests pass. Do not port UFC action-rate formulas in the same Codex task.
+Phase 2B later changes only TD initiation semantics so `wrestling_entry` becomes intrinsic base TD attempt rate and context becomes a separate multiplier.
 
 ---
 
@@ -276,40 +297,45 @@ Codex stopped because no Git remote existed. Remote-unblock prompt issued. Phase
 
 ## Checkpoint 004 — 2026-08-12 22:49 America/Chicago
 
-Current phase: Phase 0 artifact recovery before operational baseline capture.
+Codex repaired the Git environment and verified the feature branch, but Phase 0 baseline failed because the required frozen FSR-32 parquet was absent. Artifact-recovery prompt issued. Rebuilding the FSR chain was deliberately not authorized.
 
-Codex successfully repaired the checkout and verified:
+## Checkpoint 005 — 2026-08-12 22:59 America/Chicago
 
-```text
-remote: https://github.com/ChrisEsau/ufc-ai-clv-tracker.git
-branch: feature/fsr-32-stamina-shadow
-SHA: 937ce6e98e15143ddf8b676346a9f0362126b809
-lineage ancestor 6a4c594690243b8c0ee4b3b6f066d54e78cc7ad6: PASS
-working tree: clean
-Python: 3.14.4
-```
+Codex artifact recovery returned:
 
-Phase 0 baseline execution then failed because the required ignored/generated artifact was absent:
+`FSR-32 ARTIFACT RECOVERY: NOT FOUND`
 
-`data/simulation/rfs_mc_v2_shared_state/fsr_32_shadow/fsr_32_prefight_snapshots.parquet`
+The user then explicitly directed: **move on; the FSR can be given to Codex later.**
 
-Its immediate FSR-28 upstream artifact and older generated snapshot chain were also absent. No baseline simulations or artifacts were fabricated. No current simulator/FSR/calibration changes were made.
+Process decision:
 
-Existing tests observed independently of any changes:
-
-```text
-34 passed
-2 pre-existing age-contract failures
-```
-
-Decision: **do not rebuild the FSR chain yet** because that would no longer verify the exact frozen input used by prior research and there is no historical checksum to prove equivalence.
+- baseline remains deferred and must never be described as passed;
+- architecture v0.3 is unchanged;
+- no controlled FSR reconstruction is authorized;
+- Phase 1 generic kernel is authorized despite the deferred numerical baseline because it contains no UFC/FSR mechanics;
+- the deferred numerical baseline should be revisited before Phase 2A unless the user changes that plan again.
 
 New Codex prompt issued:
 
-`docs/EVENT_MC_V1_CODEX_PHASE0_FSR32_ARTIFACT_RECOVERY_2026-08-12.md`
+`docs/EVENT_MC_V1_CODEX_PHASE1_GENERIC_KERNEL_PROMPT_2026-08-12.md`
 
-Purpose: search visible local/mounted storage for the exact existing FSR-32 parquet or byte-identical backup, validate candidates, and resume baseline materialization automatically if found.
+Expected Codex return:
 
-Expected next assistant action: review artifact-recovery report. If FOUND, verify identity and resumed baseline. If NOT FOUND, determine whether the original development Codespace/local environment can supply the frozen parquet before considering controlled reconstruction.
+- full Phase 1 implementation report;
+- exact branch/start/final SHAs;
+- files changed;
+- scheduler/RNG/clock/boundary/mutation/sink design summary;
+- new tests and exact results;
+- pre-existing failures separated from new regressions;
+- confirmation no existing simulator/FSR/calibration code changed;
+- confirmation no real UFC mechanics were implemented;
+- PR info if created;
+- final `PHASE 1 GENERIC KERNEL GATE: PASS` or `FAIL`.
 
-Phase 1 authorized now: **NO**.
+Next assistant action:
+
+Independently review the Phase 1 implementation and tests. Do not authorize Phase 2A automatically. Revisit the deferred FSR-32 baseline first unless explicitly directed otherwise.
+
+Phase 1 authorized now: **YES**.
+
+Phase 2A authorized now: **NO**.
