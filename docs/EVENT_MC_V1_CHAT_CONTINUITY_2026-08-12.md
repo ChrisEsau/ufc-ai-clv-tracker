@@ -76,3 +76,5 @@ No config or mechanics changes are authorized in Phase 7D.
 Expected return: `PHASE 7D POST-FINISH SUBMISSION DECOMPOSITION GATE: PASS` or FAIL.
 
 Next assistant action: independently review Phase 7D and determine whether the remaining SUB deficit is attempt-exposure limited, conversion limited, or both. Then authorize one narrow submission subsystem calibration at a time.
+
+Phase 7D result: the measurement-only 100-fight x 10-path cohort (start year 2020, seed 20260813) found historical versus simulated method shares of KO/TKO 25.0% versus 25.6%, SUB 17.0% versus 5.7%, and DEC 58.0% versus 68.7%. Simulated submission exposure was 0.38 attempts/path, 0.423 attempts/15 elapsed minutes, and 27.4% of paths with an attempt, compared with 0.61 attempts/fight, 0.430 attempts/15 observed minutes, and 37.0% of historical fights with an attempt. There were 380 simulated attempts and 57 SUB finishes (`P(SUB | attempt) = 15.0%`). Relative to the explicitly qualified historical population conversion proxy, the remaining SUB deficit is classified as both attempt-exposure and conversion limited. No config, mechanics, RNG, or frozen FSR artifact changed.
