@@ -322,3 +322,8 @@ Prompt commit:
 Phase 4B2: **AUTHORIZED / current**.
 KD calibration: **DEFERRED / unchanged**.
 Terminal submissions, judging, age, tactical urgency, later calibration: **NOT AUTHORIZED**.
+
+## 032 — 2026-08-13
+Codex implemented Phase 4B2 KO/TKO mechanics as a compositional finish model consuming the existing Phase 4B1 impact outcome and post-trauma state. Finish resistance is derived from equal-weight durability/KD-resistance baseline, cumulative-trauma erosion, and acute-vulnerability erosion; finish probability is a compact impact/resistance sigmoid with an explicit KD conditioning bonus. Power and stamina are not consumed again. Successful finishes set structured terminal winner/method state and the engine emits one lifecycle finish event with no later primary events.
+
+All finish coefficients live under the new YAML `finish` section and accept the same resolved weight-class calibration. Five-fixture mechanics diagnostics exposed 70-95% finish rates versus the descriptive 32.79% historical anchor; this is reported without tuning because KD and KO/TKO population calibration remain deferred. Await independent review before accepting the Phase 4B2 mechanics gate.

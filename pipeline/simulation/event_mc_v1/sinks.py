@@ -15,6 +15,8 @@ class StateSnapshot:
     clinch_controller: str | None
     finished: bool
     finish_reason: str | None
+    winner: str | None
+    finish_method: str | None
     red_stamina: float
     blue_stamina: float
     red_cumulative_trauma: float
@@ -31,6 +33,8 @@ class StateSnapshot:
             state.clinch_controller,
             state.finished,
             state.finish_reason,
+            state.winner,
+            state.finish_method,
             state.red_stamina,
             state.blue_stamina,
             state.red_cumulative_trauma,

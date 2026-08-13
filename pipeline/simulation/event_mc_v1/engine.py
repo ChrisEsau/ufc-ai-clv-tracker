@@ -29,6 +29,7 @@ class SimulationEngine:
         scheduler: ExponentialScheduler | None = None,
         round_recovery_model=None,
         physiology_model=None,
+        finish_model=None,
     ) -> None:
         self.config = config
         self.rate_provider = rate_provider
@@ -38,6 +39,7 @@ class SimulationEngine:
         self.scheduler = scheduler or ExponentialScheduler()
         self.round_recovery_model = round_recovery_model
         self.physiology_model = physiology_model
+        self.finish_model = finish_model
 
     def _context(self, state: FightState) -> FightContext:
         return FightContext(
@@ -58,6 +60,10 @@ class SimulationEngine:
             state.finished = delta.finished
         if delta.finish_reason is not None:
             state.finish_reason = delta.finish_reason
+        if delta.winner is not None:
+            state.winner = delta.winner
+        if delta.finish_method is not None:
+            state.finish_method = delta.finish_method
         if delta.red_stamina is not None:
             state.red_stamina = delta.red_stamina
         if delta.blue_stamina is not None:
@@ -160,7 +166,17 @@ class SimulationEngine:
                 self._apply_delta(state, physiology_delta)
                 for event in physiology_events:
                     self._notify_event(event, state, physiology_before)
+                    if self.finish_model is not None:
+                        finish_delta, finish_event = self.finish_model.resolve(
+                            state, event.payload, state.fight_time_seconds,
+                            self.rng_manager.stream(RNGStream.KNOCKDOWN_FINISH),
+                        )
+                        finish_before = StateSnapshot.from_state(state)
+                        self._apply_delta(state, finish_delta)
+                        self._notify_event(finish_event, state, finish_before)
             for consequence in resolution.consequence_events:
+                if state.finished:
+                    break
                 if consequence.timestamp_seconds != state.fight_time_seconds:
                     raise ValueError("consequence events must use the current timestamp")
                 snapshot = StateSnapshot.from_state(state)

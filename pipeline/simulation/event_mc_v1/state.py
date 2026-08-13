@@ -43,6 +43,8 @@ class FightState:
     clinch_controller: str | None = None
     finished: bool = False
     finish_reason: str | None = None
+    winner: str | None = None
+    finish_method: str | None = None
     red_stamina: float = 1.0
     blue_stamina: float = 1.0
     red_cumulative_trauma: float = 0.0
@@ -65,6 +67,8 @@ class StateDelta:
     set_clinch_controller: bool = False
     finished: bool | None = None
     finish_reason: str | None = None
+    winner: str | None = None
+    finish_method: str | None = None
     red_stamina: float | None = None
     blue_stamina: float | None = None
     red_cumulative_trauma: float | None = None
