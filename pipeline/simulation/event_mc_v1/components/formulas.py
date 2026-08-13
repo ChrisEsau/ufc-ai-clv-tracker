@@ -10,28 +10,30 @@ from math import exp, log
 import numpy as np
 
 from ..scheduler import probability_to_rate
+from ..calibration import DEFAULT_CALIBRATION, EventMCCalibration
 from .profiles import FighterProfile
 
-LEGACY_INTERVAL_SECONDS = 10.0
-CALIBRATION_INTERVAL_SECONDS = 30.0
-DISTANCE_CLINCH_BASE_30S = 0.04
-DISTANCE_TD_ATTEMPT_BASE_30S = 0.10
-DISTANCE_STRIKE_ATTEMPTS_PER_30S_BASE = 5.0
-DISTANCE_STRIKE_ACCURACY_BASE = 0.40
-RATING_SCALE = 12.0
-MODIFIER_SCALE = 6.0
-TD_SUCCESS_LOGIT_OFFSET = -0.40
-CLINCH_SEPARATE_BASE_30S = 0.25
-CLINCH_TD_ATTEMPT_BASE_30S = 0.24
-GROUND_EXIT_BASE_30S = 0.20
-CLINCH_STRIKE_ATTEMPTS_PER_30S_BASE = 1.2
-GROUND_STRIKE_ATTEMPTS_PER_30S_BASE = 1.6
-CLINCH_STRIKE_ACCURACY_BASE = 0.68
-GROUND_STRIKE_ACCURACY_BASE = 0.70
-SUB_ATTEMPT_BASE_30S = 0.045
-REVERSAL_SHARE_OF_GROUND_EXITS = 0.18
-BOTTOM_GROUND_STRIKE_RATE_MULTIPLIER = 0.20
-BOTTOM_SUBMISSION_RATE_MULTIPLIER = 0.55
+_S, _D, _C, _G, _SUB = (DEFAULT_CALIBRATION.section(name) for name in ("shared", "distance", "clinch", "ground", "submission_attempts"))
+LEGACY_INTERVAL_SECONDS = _S["legacy_interval_seconds"]
+CALIBRATION_INTERVAL_SECONDS = _S["calibration_interval_seconds"]
+DISTANCE_CLINCH_BASE_30S = _D["clinch_base_30s"]
+DISTANCE_TD_ATTEMPT_BASE_30S = _D["td_attempt_base_30s"]
+DISTANCE_STRIKE_ATTEMPTS_PER_30S_BASE = _D["strike_attempts_per_30s"]
+DISTANCE_STRIKE_ACCURACY_BASE = _D["strike_accuracy"]
+RATING_SCALE = _S["rating_scale"]
+MODIFIER_SCALE = _S["modifier_scale"]
+TD_SUCCESS_LOGIT_OFFSET = _D["td_success_logit_offset"]
+CLINCH_SEPARATE_BASE_30S = _C["separation_base_30s"]
+CLINCH_TD_ATTEMPT_BASE_30S = _C["td_attempt_base_30s"]
+GROUND_EXIT_BASE_30S = _G["exit_base_30s"]
+CLINCH_STRIKE_ATTEMPTS_PER_30S_BASE = _C["strike_attempts_per_30s"]
+GROUND_STRIKE_ATTEMPTS_PER_30S_BASE = _G["strike_attempts_per_30s"]
+CLINCH_STRIKE_ACCURACY_BASE = _C["strike_accuracy"]
+GROUND_STRIKE_ACCURACY_BASE = _G["strike_accuracy"]
+SUB_ATTEMPT_BASE_30S = _SUB["base_30s"]
+REVERSAL_SHARE_OF_GROUND_EXITS = _G["reversal_share"]
+BOTTOM_GROUND_STRIKE_RATE_MULTIPLIER = _G["bottom_strike_multiplier"]
+BOTTOM_SUBMISSION_RATE_MULTIPLIER = _SUB["bottom_multiplier"]
 
 
 def rescale_interval_probability(
@@ -40,12 +42,12 @@ def rescale_interval_probability(
     return 1.0 - (1.0 - probability) ** (to_seconds / from_seconds)
 
 
-DISTANCE_CLINCH_BASE_10S = rescale_interval_probability(0.04, 30.0, 10.0)
-DISTANCE_TD_ATTEMPT_BASE_10S = rescale_interval_probability(0.10, 30.0, 10.0)
-CLINCH_SEPARATE_BASE_10S = rescale_interval_probability(0.25, 30.0, 10.0)
-CLINCH_TD_ATTEMPT_BASE_10S = rescale_interval_probability(0.24, 30.0, 10.0)
-GROUND_EXIT_BASE_10S = rescale_interval_probability(0.20, 30.0, 10.0)
-SUB_ATTEMPT_BASE_10S = rescale_interval_probability(0.045, 30.0, 10.0)
+DISTANCE_CLINCH_BASE_10S = rescale_interval_probability(DISTANCE_CLINCH_BASE_30S, CALIBRATION_INTERVAL_SECONDS, LEGACY_INTERVAL_SECONDS)
+DISTANCE_TD_ATTEMPT_BASE_10S = rescale_interval_probability(DISTANCE_TD_ATTEMPT_BASE_30S, CALIBRATION_INTERVAL_SECONDS, LEGACY_INTERVAL_SECONDS)
+CLINCH_SEPARATE_BASE_10S = rescale_interval_probability(CLINCH_SEPARATE_BASE_30S, CALIBRATION_INTERVAL_SECONDS, LEGACY_INTERVAL_SECONDS)
+CLINCH_TD_ATTEMPT_BASE_10S = rescale_interval_probability(CLINCH_TD_ATTEMPT_BASE_30S, CALIBRATION_INTERVAL_SECONDS, LEGACY_INTERVAL_SECONDS)
+GROUND_EXIT_BASE_10S = rescale_interval_probability(GROUND_EXIT_BASE_30S, CALIBRATION_INTERVAL_SECONDS, LEGACY_INTERVAL_SECONDS)
+SUB_ATTEMPT_BASE_10S = rescale_interval_probability(SUB_ATTEMPT_BASE_30S, CALIBRATION_INTERVAL_SECONDS, LEGACY_INTERVAL_SECONDS)
 
 
 def _sigmoid(value: float) -> float:
@@ -77,25 +79,26 @@ def style_preferences(profile: FighterProfile) -> tuple[float, float, float]:
     )
 
 
-def strike_attempt_rate_per_second(profile: FighterProfile) -> float:
+def strike_attempt_rate_per_second(profile: FighterProfile, calibration: EventMCCalibration = DEFAULT_CALIBRATION) -> float:
     """Poisson intensity preserving V0's expected DISTANCE attempt count."""
 
-    expected_per_30s = DISTANCE_STRIKE_ATTEMPTS_PER_30S_BASE * _modifier(
-        profile.distance_striking_pressure - 50.0, scale=12.0
+    expected_per_30s = calibration.section("distance")["strike_attempts_per_30s"] * _modifier(
+        profile.distance_striking_pressure - 50.0, scale=calibration.section("shared")["rating_scale"]
     )
     return expected_per_30s / CALIBRATION_INTERVAL_SECONDS
 
 
 def strike_landing_probability(
-    attacker: FighterProfile, defender: FighterProfile
+    attacker: FighterProfile, defender: FighterProfile, calibration: EventMCCalibration = DEFAULT_CALIBRATION
 ) -> float:
+    shared, distance = calibration.section("shared"), calibration.section("distance")
     return _sigmoid(
-        _logit(DISTANCE_STRIKE_ACCURACY_BASE)
+        _logit(distance["strike_accuracy"])
         + (
             attacker.distance_striking_precision
             - defender.distance_striking_defense
         )
-        / RATING_SCALE
+        / shared["rating_scale"]
     )
 
 
@@ -131,10 +134,10 @@ def td_attempt_rate_per_second(
 
 
 def td_success_probability(
-    attacker: FighterProfile, defender: FighterProfile
+    attacker: FighterProfile, defender: FighterProfile, calibration: EventMCCalibration = DEFAULT_CALIBRATION
 ) -> float:
-    edge = (attacker.wrestling_conversion - defender.td_defense) / RATING_SCALE
-    return _sigmoid(edge + TD_SUCCESS_LOGIT_OFFSET)
+    edge = (attacker.wrestling_conversion - defender.td_defense) / calibration.section("shared")["rating_scale"]
+    return _sigmoid(edge + calibration.section("distance")["td_success_logit_offset"])
 
 
 def clinch_entry_interval_probability(profile: FighterProfile) -> float:
@@ -144,33 +147,33 @@ def clinch_entry_interval_probability(profile: FighterProfile) -> float:
         * _modifier(clinch_preference)
         * np.sqrt(_modifier(-distance_preference))
     )
-    return float(np.clip(probability, 0.0, 0.60))
+    return float(np.clip(probability, 0.0, _D["clinch_cap"]))
 
 
 def interval_hazard_per_second(probability: float) -> float:
     return probability_to_rate(probability, LEGACY_INTERVAL_SECONDS)
 
 
-def phase_strike_rate_per_second(profile: FighterProfile, phase: str, *, bottom=False) -> float:
+def phase_strike_rate_per_second(profile: FighterProfile, phase: str, *, bottom=False, calibration: EventMCCalibration = DEFAULT_CALIBRATION) -> float:
     """Port V0's CLINCH/GROUND Poisson strike-count intensity."""
     if phase == "clinch":
-        base, pressure = CLINCH_STRIKE_ATTEMPTS_PER_30S_BASE, profile.clinch_striking_pressure
+        base, pressure = calibration.section("clinch")["strike_attempts_per_30s"], profile.clinch_striking_pressure
     elif phase == "ground":
-        base, pressure = GROUND_STRIKE_ATTEMPTS_PER_30S_BASE, profile.ground_striking_pressure
+        base, pressure = calibration.section("ground")["strike_attempts_per_30s"], profile.ground_striking_pressure
     else:
         raise ValueError(f"unsupported phase: {phase}")
-    multiplier = BOTTOM_GROUND_STRIKE_RATE_MULTIPLIER if bottom else 1.0
-    return base * _modifier(pressure - 50.0, scale=12.0) * multiplier / 30.0
+    multiplier = calibration.section("ground")["bottom_strike_multiplier"] if bottom else 1.0
+    return base * _modifier(pressure - 50.0, scale=calibration.section("shared")["rating_scale"]) * multiplier / calibration.section("shared")["calibration_interval_seconds"]
 
 
-def phase_strike_landing_probability(attacker: FighterProfile, defender: FighterProfile, phase: str) -> float:
+def phase_strike_landing_probability(attacker: FighterProfile, defender: FighterProfile, phase: str, calibration: EventMCCalibration = DEFAULT_CALIBRATION) -> float:
     if phase == "clinch":
-        base, precision, defense = CLINCH_STRIKE_ACCURACY_BASE, attacker.clinch_striking_precision, defender.clinch_striking_defense
+        base, precision, defense = calibration.section("clinch")["strike_accuracy"], attacker.clinch_striking_precision, defender.clinch_striking_defense
     elif phase == "ground":
-        base, precision, defense = GROUND_STRIKE_ACCURACY_BASE, attacker.ground_striking_precision, defender.ground_striking_defense
+        base, precision, defense = calibration.section("ground")["strike_accuracy"], attacker.ground_striking_precision, defender.ground_striking_defense
     else:
         raise ValueError(f"unsupported phase: {phase}")
-    return _sigmoid(_logit(base) + (precision - defense) / RATING_SCALE)
+    return _sigmoid(_logit(base) + (precision - defense) / calibration.section("shared")["rating_scale"])
 
 
 def clinch_td_interval_probability(profile: FighterProfile) -> float:
@@ -181,15 +184,15 @@ def clinch_td_interval_probability(profile: FighterProfile) -> float:
 def clinch_separation_interval_probability(controller: FighterProfile, opponent: FighterProfile) -> float:
     _, clinch_preference, _ = style_preferences(controller)
     control_edge = (controller.control_imposition - opponent.control_resistance) / RATING_SCALE
-    raw = CLINCH_SEPARATE_BASE_10S * _modifier(-clinch_preference) * exp(float(np.clip(-control_edge, -1, 1)) * 0.15)
-    return float(np.clip(raw, 0, 0.90))
+    raw = CLINCH_SEPARATE_BASE_10S * _modifier(-clinch_preference) * exp(float(np.clip(-control_edge, -1, 1)) * _C["control_edge_multiplier"])
+    return float(np.clip(raw, 0, _C["separation_cap"]))
 
 
 def ground_exit_interval_probability(controller: FighterProfile, bottom: FighterProfile) -> float:
     escape_edge = (bottom.control_resistance - controller.control_imposition) / RATING_SCALE
     reversal_edge = (bottom.reversal_ability - controller.control_imposition) / RATING_SCALE
     modifier = exp(float(np.clip(0.60 * escape_edge + 0.40 * reversal_edge, -1.5, 1.5)))
-    return float(np.clip(GROUND_EXIT_BASE_10S * modifier, 0, 0.90))
+    return float(np.clip(GROUND_EXIT_BASE_10S * modifier, 0, _G["exit_cap"]))
 
 
 def reversal_probability_given_exit(bottom: FighterProfile, controller: FighterProfile) -> float:
@@ -205,8 +208,8 @@ def ground_exit_rates(controller: FighterProfile, bottom: FighterProfile) -> tup
 
 def submission_attempt_interval_probability(profile: FighterProfile, *, bottom=False) -> float:
     multiplier = BOTTOM_SUBMISSION_RATE_MULTIPLIER if bottom else 1.0
-    raw = SUB_ATTEMPT_BASE_10S * multiplier * _modifier(profile.submission_pressure - 50.0, scale=10.0)
-    return float(np.clip(raw, 0, 0.35))
+    raw = SUB_ATTEMPT_BASE_10S * multiplier * _modifier(profile.submission_pressure - 50.0, scale=_SUB["modifier_scale"])
+    return float(np.clip(raw, 0, _SUB["probability_cap"]))
 
 
 @dataclass(frozen=True)

@@ -24,7 +24,7 @@ Architecture revision: **v0.3**.
 - Phase 4A stamina + dynamic modifiers: **PASS after independent ChatGPT review**.
 - Phase 4B1 impact + trauma + knockdown implementation: **PASS after independent ChatGPT review**.
 - Phase 4B1 KD calibration: **OPEN / intentionally deferred by user**.
-- Phase 4B1 config externalization: **AUTHORIZED and current task; not yet passed**.
+- Phase 4B1 config externalization: **IMPLEMENTED by Codex; awaiting independent review**.
 - Phase 4B2 KO/TKO: **NOT AUTHORIZED**.
 
 Frozen FSR-32 path:
@@ -286,3 +286,8 @@ Prompt commit:
 Phase 4B1 config externalization: **AUTHORIZED**.
 KD calibration: **DEFERRED**.
 Phase 4B2 KO/TKO: **NOT AUTHORIZED**.
+
+## 028 — 2026-08-13
+Codex externalized the active EVENT MC calibration into `config/event_mc_v1.yaml`, added an immutable load-once resolver and stable fingerprint, and established behaviorally neutral partial string-key weight-class overrides. Python compatibility aliases now derive from YAML rather than duplicate literals; stamina, DynamicModifiers, and physiology accept resolved calibration injection. No committed weight-class overrides are active.
+
+Deterministic before/after validation compared the five frozen fixtures at identical seeds against commit `65a6f2d4...`: discrete path physics and outcomes matched, with only approximately 1e-15 arithmetic serialization differences from values passing through YAML/config mappings. KD calibration, mechanics, RNG order, and Phase 4B2 were not changed. Await independent review before accepting the config-externalization gate.

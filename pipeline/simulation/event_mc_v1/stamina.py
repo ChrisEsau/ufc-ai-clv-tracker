@@ -8,47 +8,42 @@ import numpy as np
 from .components.profiles import FighterProfile, MatchupProfiles, Side
 from .state import FightState, StateDelta
 from .state import Phase
+from .calibration import DEFAULT_CALIBRATION, EventMCCalibration
 
-ACTION_COSTS = {
-    "strike": 0.70,
-    "clinch_strike": 0.70,
-    "ground_strike": 0.70,
-    "takedown": 3.00,
-    "clinch_takedown": 3.00,
-    "clinch_entry": 1.00,
-    "submission_attempt": 2.50,
-    "ground_escape": 1.50,
-    "ground_reversal": 2.50,
-}
-GLOBAL_ROUND_RECOVERY_FRACTION = 0.40
+_STAMINA = DEFAULT_CALIBRATION.section("stamina")
+ACTION_COSTS = _STAMINA["action_costs"]
+GLOBAL_ROUND_RECOVERY_FRACTION = _STAMINA["round_recovery_fraction"]
 
 
 @dataclass(frozen=True)
 class StaminaModel:
     profiles: MatchupProfiles
     enabled: bool = True
+    calibration: EventMCCalibration = DEFAULT_CALIBRATION
 
     @staticmethod
     def fraction(state: FightState, side: Side) -> float:
         return state.red_stamina if side is Side.RED else state.blue_stamina
 
-    @staticmethod
-    def _cost_multiplier(profile: FighterProfile) -> float:
-        raw = exp(-(profile.stamina_depletion_resistance - 50.0) / 80.0)
-        return float(np.clip(raw, 0.65, 1.45))
+    def _cost_multiplier(self, profile: FighterProfile) -> float:
+        config = self.calibration.section("stamina")
+        raw = exp(-(profile.stamina_depletion_resistance - 50.0) / config["depletion_resistance_scale"])
+        return float(np.clip(raw, config["cost_multiplier_min"], config["cost_multiplier_max"]))
 
     def action_delta(self, state: FightState, side: Side, action_family: str) -> StateDelta:
-        if not self.enabled or action_family not in ACTION_COSTS:
+        costs = self.calibration.section("stamina")["action_costs"]
+        if not self.enabled or action_family not in costs:
             return StateDelta()
         profile = self.profiles.fighter(side)
-        normalized_cost = ACTION_COSTS[action_family] * self._cost_multiplier(profile) / profile.stamina_capacity
+        normalized_cost = costs[action_family] * self._cost_multiplier(profile) / profile.stamina_capacity
         updated = float(np.clip(self.fraction(state, side) - normalized_cost, 0.0, 1.0))
         return StateDelta(**({"red_stamina": updated} if side is Side.RED else {"blue_stamina": updated}))
 
     def recovery_delta(self, state: FightState) -> StateDelta:
         if not self.enabled:
             return StateDelta()
-        recover = lambda value: min(1.0, value + (1.0 - value) * GLOBAL_ROUND_RECOVERY_FRACTION)
+        fraction = self.calibration.section("stamina")["round_recovery_fraction"]
+        recover = lambda value: min(1.0, value + (1.0 - value) * fraction)
         return StateDelta(red_stamina=recover(state.red_stamina), blue_stamina=recover(state.blue_stamina))
 
     def positional_delta(self, state: FightState, dt_seconds: float) -> StateDelta:
@@ -60,8 +55,9 @@ class StaminaModel:
             return StateDelta()
         controller = Side(controller_value)
         bottom = controller.opponent
-        controller_rate = 0.025
-        resistance_rate = 0.030 if state.phase is Phase.CLINCH else 0.035
+        config = self.calibration.section("stamina")
+        controller_rate = config["controller_cost_per_second"]
+        resistance_rate = config["clinch_resistance_cost_per_second"] if state.phase is Phase.CLINCH else config["ground_resistance_cost_per_second"]
         return self._two_side_cost_delta(state, controller, controller_rate * dt_seconds, bottom, resistance_rate * dt_seconds)
 
     def _two_side_cost_delta(self, state, first, first_cost, second, second_cost):
