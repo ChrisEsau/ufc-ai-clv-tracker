@@ -1,7 +1,7 @@
 # EVENT MC V1 Chat Continuity / Working Memory
 
 Date created: 2026-08-12
-Last updated: 2026-08-13
+Last updated: 2026-08-13 08:01 America/Chicago
 Repository: `ChrisEsau/ufc-ai-clv-tracker`
 Branch: `feature/fsr-32-stamina-shadow`
 
@@ -19,9 +19,10 @@ Architecture revision: **v0.3**.
 - Phase 0 operational baseline: **PASS**.
 - Phase 1 generic continuous-time kernel: **PASS after independent ChatGPT review**.
 - Phase 2A distance temporal/mechanical parity: **PASS after independent ChatGPT review**.
-- Phase 2B wrestling-entry ontology correction: **PASS after independent review**.
-- Phase 3 clinch + ground flow: **IMPLEMENTED by Codex; awaiting independent review**.
-- Phase 4 and later mechanics: **NOT AUTHORIZED**.
+- Phase 2B wrestling-entry ontology correction: **PASS after independent ChatGPT review**.
+- Phase 3 clinch + ground flow: **PASS after independent ChatGPT review**.
+- Phase 4A stamina + dynamic modifiers: **AUTHORIZED and current task; not yet passed**.
+- Phase 4B damage/KD/KO and later mechanics: **NOT AUTHORIZED**.
 
 Frozen FSR-32 path:
 `data/simulation/rfs_mc_v2_shared_state/fsr_32_shadow/fsr_32_prefight_snapshots.parquet`
@@ -42,51 +43,47 @@ Frozen Phase 0 compact baseline:
 - full 1,565-fight method/submission anchor;
 - recorded artifact checksums revalidated.
 
-Phase 1 implementation commit:
-`1debecab69a141bf2f81179f3436af569733b750`
+Implementation commits:
+- Phase 1: `1debecab69a141bf2f81179f3436af569733b750`
+- Phase 2A: `5b7574c7689ffa2e55821a49fca47a2c1c937991`
+- Phase 2B: `004740e54618c134e08aa553164c381508811481`, `809389bdabe208e93536034bc795bbcf7e1ab038`
+- Phase 3: `5a6c15af9c2315f23c231d0f34cd3cefddba4578`
 
-Phase 2A implementation commit:
-`5b7574c7689ffa2e55821a49fca47a2c1c937991`
+Current Phase 4A governing prompt:
+`docs/EVENT_MC_V1_CODEX_PHASE4A_STAMINA_DYNAMIC_MODIFIERS_2026-08-13.md`
 
-Phase 2B implementation commits:
-`004740e54618c134e08aa553164c381508811481`
-`809389bdabe208e93536034bc795bbcf7e1ab038`
-
-Phase 2B reviewed continuity tip before Phase 3 prompt:
-`9cd74b1b73572a0db3efbd986966ecae89ee1652`
-
-Current Phase 3 governing prompt:
-`docs/EVENT_MC_V1_CODEX_PHASE3_CLINCH_GROUND_FLOW_2026-08-13.md`
-
-Phase 3 prompt commit:
-`0d67599db401af55cbe0f1c9fbd909468119e44e`
+Phase 4A prompt commit:
+`fc5dc0b32460e9200ea070db7f3656d1aac5f689`
 
 Development standard locked by user:
-**Working + predictive + modular + easy to iterate. Do not optimize for perfection or exhaustive defensive hardening. Ultimate success is moneyline/prop predictive accuracy and betting usefulness. Protect critical invariants and calculation seams, but favor flexibility and rapid historical validation over speculative abstraction.**
+**WORKING + PREDICTIVE + MODULAR + EASY TO ITERATE. Do not optimize for perfection or exhaustive defensive hardening. Ultimate success is moneyline/prop predictive accuracy and betting usefulness. Protect critical invariants and calculation seams, but favor flexibility and rapid historical validation over speculative abstraction.**
 
-Damage/KO external review may run in parallel. Do not hold EVENT MC progress for it. Preserve clean replaceable damage/KD/KO subsystem seams so a later design can be swapped in.
+Preferred loop:
+`build one mechanism -> historical replay -> identify systematic miss -> change one module -> replay -> measure`
 
-Known performance note: Phase 2A schedules individual strike attempts as events. Do not optimize/batch them preemptively; benchmark later and optimize only if runtime becomes a real problem.
-
-Known non-blocking Phase 1 seam: primary resolution currently returns one state delta plus consequence notifications. Later damage -> KD -> finish chains may need sequential consequence modules that each return/apply their own deltas. Do not retrofit this until required.
-
-Codex cloud may use a local branch named `work`; that is acceptable. Verify required commit ancestry and governing-file presence rather than requiring the local branch name to equal `feature/fsr-32-stamina-shadow`.
+Codex cloud may use a local branch named `work`; that is acceptable. Verify ancestry/content rather than requiring the local branch name to equal the feature branch.
 
 ---
 
-# Phase 1 Locks Preserved
+# Core Architecture Locks
 
 - one authoritative `FightState.fight_time_seconds` clock;
 - scheduler remains UFC-agnostic;
-- all rates are events/second;
-- exact interval probability -> per-second hazard conversion;
+- all competing event rates are events/second;
+- exact Bernoulli interval probability -> hazard conversion;
+- Poisson count processes preserve count intensity directly;
 - stable named RNG streams via `SeedSequence([root_seed, stable_stream_id])`;
 - engine-owned state mutation through typed deltas;
-- continuous advance over exact elapsed `dt` before event resolution;
+- continuous state advances exact elapsed `dt` before event resolution;
 - hard round/fight boundaries owned by engine;
 - round start resets phase to DISTANCE and clears positional ownership;
 - null/stats/full-trace sinks remain observer-only;
-- no hidden component RNGs.
+- no hidden component RNGs;
+- current inheritance-based simulator remains untouched;
+- FSR-32 remains the initial profile source and frozen artifact is never rebuilt during EVENT MC work;
+- no giant inheritance chain in EVENT MC; use composition;
+- no whole-simulator Codex prompt;
+- tune one subsystem at a time and validate historically before claiming improvement.
 
 Stable RNG stream IDs:
 - SCHEDULER 10
@@ -97,225 +94,210 @@ Stable RNG stream IDs:
 - KNOCKDOWN_FINISH 60
 - JUDGING 70
 
----
+Known non-blocking future seam: the current primary Resolution returns one state delta plus consequence notifications. Damage -> KD -> consequence -> finish may later require sequential consequence modules that each return/apply deltas. Do not retrofit until Phase 4B requires it.
 
-# Reviewed Phase 2A Result
-
-Phase 2A successfully ported the six authorized DISTANCE primary action families:
-1. red strike attempt;
-2. blue strike attempt;
-3. red TD attempt;
-4. blue TD attempt;
-5. red clinch entry;
-6. blue clinch entry.
-
-Phase 2A preserved current V0 formulas/semantics and changed timing only.
-
-Reviewed formula behavior:
-- DISTANCE strike attempt intensity preserves the legacy Poisson mean: base 5 attempts/30 sec multiplied by the existing pressure modifier, then expected count / 30 sec;
-- strike landing remains `sigmoid(logit(0.40) + (precision - opponent defense)/12)`;
-- legacy TD initiation uses 30-sec base 0.10 rescaled to 10 sec, then the legacy blended wrestling preference;
-- TD success remains `sigmoid((wrestling_conversion - opponent_td_defense)/12 - 0.40)`;
-- clinch entry preserves current V0 style preference logic and 0.60 cap;
-- final 10-sec transition probabilities convert exactly to per-second hazards.
-
-Legacy Phase 2A wrestling preference:
-```text
-legacy_wrestling_preference =
-    0.75 * wrestling_entry
-  + 0.25 * control_imposition
-  - 0.50 * distance_striking_pressure
-  - 0.50 * clinch_striking_pressure
-```
-
-Phase 2A tests compare new formulas directly against actual `StaticFSRMCV0` consumers, not only copied constants.
-
-Reviewed Phase 2A diagnostic highlights:
-
-Rob Font:
-- wrestling_entry 48.59305;
-- legacy blended preference -4.44615;
-- TD p/10 sec 1.64486%;
-- continuous hazard/sec 0.00165854;
-- legacy matched-distance TD attempts/15 min 1.3852;
-- EVENT MC matched-distance TD attempts/15 min 1.5030;
-- EVENT MC TD success 42.37%.
-
-Raul Rosas Jr.:
-- wrestling_entry 54.43824;
-- legacy blended preference 6.38876;
-- TD p/10 sec 10.00891%;
-- continuous hazard/sec 0.01054595;
-- legacy matched-distance TD attempts/15 min 8.8052;
-- EVENT MC matched-distance TD attempts/15 min 9.5456;
-- EVENT MC TD success 53.33%.
-
-Merab Dvalishvili vs Petr Yan showed the largest expected timing difference: Merab legacy matched-distance TD attempts/15 min 17.4524 vs continuous 19.8816. This was classified as expected continuous-event/segment-suppression behavior, not a formula bug. Do not tune it away during ontology work.
-
-Phase 2A validation:
-- no formula mismatch observed;
-- no unit/conversion mismatch observed;
-- continuous event competition differences observed as expected;
-- missing clinch/ground downstream flow intentionally out of scope;
-- no Phase 2B semantics introduced during Phase 2A;
-- 32 EVENT MC tests passed in Codex report;
-- 45 EVENT MC + relevant V0 tests passed;
-- 17 downstream simulator regressions passed;
-- frozen FSR SHA unchanged.
-
-Final reviewed gate:
-`PHASE 2A DISTANCE TEMPORAL PARITY GATE: PASS`.
+Known performance note: individual strike attempts are currently scheduled as events. Do not preemptively batch them; benchmark and optimize only if runtime becomes a demonstrated problem.
 
 ---
 
-# Phase 2B — Reviewed Result
-
-Phase 2B makes **one deliberate semantic correction**:
-
-`wrestling_entry` becomes the intrinsic DISTANCE TD initiation driver.
+# Phase 2B Wrestling Ontology Lock
 
 Correct ontology:
 ```text
 wrestling_entry      = intrinsic takedown initiation frequency
-wrestling_conversion = ability/probability to complete a shot
+wrestling_conversion = ability/probability to complete shot
 td_defense           = opponent prevention of completion
-control_imposition   = persistence/behavior after advantageous position
+control_imposition   = persistence after advantageous position
 ```
 
-Phase 2B active TD initiation contract:
+Active DISTANCE TD initiation:
 ```text
-entry_delta = wrestling_entry - 50.0
+entry_delta = wrestling_entry - 50
 entry_modifier = exp(clip(entry_delta, -8, 8) / existing_MODIFIER_SCALE)
-
 p_td_10s = existing_DISTANCE_TD_ATTEMPT_BASE_10S * entry_modifier
-p_td_10s = clip(p_td_10s, 0, 1 - epsilon)
-
 lambda_td = -ln(1 - p_td_10s) / 10
 ```
 
-Reuse the existing Phase 2A modifier scale and TD base. **No tuning.**
+Legacy Phase 2A blend remains diagnostic-only:
+```text
+0.75*wrestling_entry
++ 0.25*control_imposition
+- 0.50*distance_striking_pressure
+- 0.50*clinch_striking_pressure
+```
 
-Phase 2B separation requirements:
-- `wrestling_entry` changes TD initiation;
-- `control_imposition` no longer changes intrinsic TD initiation;
-- distance striking pressure no longer directly suppresses intrinsic TD initiation;
-- clinch striking pressure no longer directly suppresses intrinsic TD initiation;
-- wrestling_conversion does not change initiation;
-- opponent td_defense does not change initiation;
-- TD success formula stays conversion vs defense exactly as in Phase 2A;
-- context multiplier remains neutral 1.0 in Phase 2B; preserve a seam for future contextual opportunity without inventing coefficients.
-
-Keep the Phase 2A legacy formula available as an explicit A/B diagnostic comparator where practical.
-
-Required Phase 2B A/B diagnostics include Font/Rosas, Merab/Yan, Holloway/Kattar, and Lewis/Daukaus. Font/Rosas remains non-replaceable.
-
-Do not assume Phase 2B improves prediction. Measure what moves; historical validation/tuning comes later.
+TD success remains wrestling_conversion vs opponent td_defense.
 
 ---
 
-# Phase 2B Hard Locks / Non-Goals
+# Reviewed Phase 3 Result
 
-These were the locks while Phase 2B was active. Phase 3 authorization below supersedes only the former prohibition on clinch/ground mechanics and submission-attempt generation; all production/FSR/no-retune protections remain.
+Final reviewed gate:
+`PHASE 3 CLINCH + GROUND FLOW GATE: PASS`.
 
-Do not:
-- modify the current inheritance-based simulator;
-- rebuild/rewrite FSR-32;
-- alter FSR builders/ratings/ontology/maturity/leakage rules;
-- retune base TD probability or modifier scale;
-- add opponent td_defense to initiation;
-- hide control/striking pressure back into TD initiation;
-- change strike mechanics;
-- change clinch-entry mechanics;
-- change TD success mechanics;
-- add stamina;
-- add damage/KD/KO;
-- add recovery;
-- add age transforms;
-- add judging;
-- add tactical urgency;
-- add arbitrary cooldowns;
-- add MatReturn by default.
+Implementation commit:
+`5a6c15af9c2315f23c231d0f34cd3cefddba4578`
 
-Future damage/KD/KO systems must remain replaceable behind clean interfaces, but their redesign must not block current flow work.
+Phase 3 now supports continuous nonterminal fight flow through:
 
----
+```text
+DISTANCE <-> CLINCH <-> GROUND
+```
 
-# Completed Phase 2B Review
-
-The Phase 2B implementation and follow-up diagnostics were independently inspected against the following gate:
-- Phase 2A was starting point or later documentation-only fast-forward;
-- only TD initiation semantics changed materially;
-- new formula centers wrestling_entry at 50 and reuses existing base/scale without tuning;
-- control_imposition and striking pressures no longer affect Phase 2B intrinsic initiation;
-- conversion and td_defense remain resolution-only;
-- TD success formula unchanged;
-- strike/clinch mechanics unchanged;
-- Phase 1 clock/scheduler/RNG/state/sink invariants preserved;
-- Phase 2A legacy comparator retained cleanly where useful;
-- Font/Rosas and Merab/Yan A/B results are interpretable;
-- no full-fight conclusions are drawn before clinch/ground mechanics exist;
-- no downstream physiology/finish systems slipped in;
-- implementation remains small and easy to iterate.
-
-Independent review found the implementation small and confined to the authorized TD-initiation semantic correction. The required tests, four-matchup A/B diagnostic, frozen artifact checksum, and downstream compile checks passed. Final reviewed gate:
-`PHASE 2B WRESTLING ENTRY ONTOLOGY GATE: PASS`.
-
----
-
-# Phase 3 — Current Task
-
-Phase 3 is explicitly authorized and governed by:
-
-`docs/EVENT_MC_V1_CODEX_PHASE3_CLINCH_GROUND_FLOW_2026-08-13.md`
-
-Goal: make CLINCH and GROUND live continuous-time phases so a nonterminal path can traverse all major phases for the full scheduled horizon.
-
-Authorized Phase 3 mechanics:
+Authorized/implemented mechanics:
 - CLINCH strikes;
-- CLINCH TD attempts and resolution;
+- CLINCH takedown attempts and resolution;
 - CLINCH separation to DISTANCE;
 - GROUND top strikes;
-- bottom ground strikes if supported by current mechanics;
-- submission **attempt generation only**, not terminal submission finishes;
+- reduced-rate bottom ground strikes;
+- top and bottom submission-attempt generation, nonterminal only;
 - ground escape/standup;
 - ground reversal/controller swap;
-- exact clinch/ground residence and control-time observation;
-- full scheduled-time nonterminal flow diagnostics.
+- exact phase residence time;
+- exact controller-specific clinch/ground time;
+- deterministic full scheduled-horizon diagnostics.
 
-Ground exit hard invariant where one legacy exit opportunity is partitioned:
+Ground exit hard invariant is preserved:
 ```text
 lambda_reversal = lambda_ground_exit * P(reversal | exit)
 lambda_escape   = lambda_ground_exit * (1 - P(reversal | exit))
-```
-with:
-```text
 lambda_reversal + lambda_escape == lambda_ground_exit
 ```
-Do not double ground exit frequency by scheduling two full independent exit hazards from one opportunity.
 
-`control_imposition` is now allowed in its intended **post-position persistence/retention** role where supported by the traced mechanics. It must not return to intrinsic DISTANCE TD initiation.
+Phase 3 ported effective V0 bases without broad retuning:
+- clinch separation 0.25 / 30 sec;
+- clinch TD attempts 0.24 / 30 sec;
+- ground exit 0.20 / 30 sec;
+- clinch strikes 1.2 / 30 sec;
+- ground strikes 1.6 / 30 sec;
+- submission attempts 0.045 / 30 sec;
+- reversal share 0.18;
+- bottom ground strike multiplier 0.20;
+- bottom submission multiplier 0.55.
 
-Phase 3 non-goals:
-- no stamina;
-- no damage;
-- no KD/KO;
-- no terminal SUB finish;
-- no recovery;
-- no age;
-- no judging;
-- no tactical urgency;
-- no broad calibration retune;
-- no Phase 4 work;
-- no MatReturn unless source tracing proves it is essential, with default still to omit it.
+Independent review confirmed:
+- scheduler remains generic;
+- state transitions are correct;
+- submission attempts are nonterminal;
+- control-time ledger is observer-only and driven by exact engine dt;
+- Phase 2B DISTANCE TD initiation is not contaminated by control_imposition;
+- round boundary reset remains authoritative;
+- no stamina/damage/KD/KO/judging/age/terminal SUB mechanics slipped in.
 
-Required historical mechanics diagnostics: Font/Rosas, Merab/Yan, Holloway/Kattar, Lewis/Daukaus, and Oliveira/Poirier. Do not claim winner or method prediction yet.
+Phase 3 diagnostics reported all 500/500 paths reached 900-sec horizon. Runtime approximately 31.84 paths/sec for five frozen fixtures at 100 paths each.
 
-Expected Codex return ends with:
-`PHASE 3 CLINCH + GROUND FLOW GATE: PASS` or `FAIL`.
+Validation watchlist, not tuning authorization:
+- some grappling fixtures spend roughly 40% of scheduled time on ground;
+- some CLINCH TD hazards, especially Merab, are high while in phase;
+- historical cohort validation must determine whether those are correct before changing them.
 
-When Phase 3 returns, ChatGPT must independently inspect the actual implementation commit/diff, formula tracing, state transitions, ground-exit partition, boundary behavior, control-time accounting, tests, and fixture diagnostics before accepting PASS.
+Minor non-blocking doc debt: FighterProfile docstring still says DISTANCE parity adapter even though it now carries all-phase inputs.
 
-Do not authorize Phase 4 automatically.
+---
+
+# Phase 4A — Current Task
+
+Phase 4A is explicitly authorized and governed by:
+
+`docs/EVENT_MC_V1_CODEX_PHASE4A_STAMINA_DYNAMIC_MODIFIERS_2026-08-13.md`
+
+Goal: add **stamina reservoir + action costs + dynamic output/power modifiers only**.
+
+Required target behavior:
+
+```text
+actions consume stamina
+-> stamina persists path-locally
+-> round recovery restores some stamina
+-> low stamina reduces offensive action frequency
+-> low stamina reduces expressed striking power
+```
+
+Required architecture seam:
+
+```text
+FighterProfile + FightState
+        -> DynamicModifiers
+              output_multiplier
+              power_multiplier
+```
+
+Fight-flow and future damage modules consume derived modifiers; they do not call stamina internals.
+
+Phase 4A should trace final legacy behavior across the stamina/rolling-FSR/phase-stamina/global-recovery inheritance layers before deciding what to preserve.
+
+Important Phase 4A locks:
+- full stamina must recover reviewed Phase 3 rates exactly;
+- offensive output multiplier applies to offensive attempt rates, not blindly to passive phase-exit clocks;
+- full stamina output multiplier = 1;
+- full stamina power multiplier = 1;
+- lower stamina monotonically lowers both;
+- current action uses **pre-action stamina** for its modifiers, then action cost reduces stamina for subsequent actions;
+- do not reduce strike accuracy, TD success, TD defense, control resistance, durability, or KD resistance in Phase 4A;
+- do not implement damage/KD/KO/terminal SUB/judging/age;
+- no broad Phase 3 retuning.
+
+Historical fixtures required:
+- Lewis/Daukaus;
+- Holloway/Kattar;
+- Merab/Yan;
+- Font/Rosas;
+- Oliveira/Poirier.
+
+Expected Codex return:
+`PHASE 4A STAMINA + DYNAMIC MODIFIERS GATE: PASS` or `FAIL`.
+
+When Phase 4A returns, ChatGPT must independently inspect the actual implementation commit/diff, legacy stamina trace, action-cost ownership, round recovery, modifier formulas, pre-action ordering, Phase 3 neutral regression, tests, runtime, and fixture diagnostics before accepting PASS.
+
+Do not authorize Phase 4B automatically.
+
+---
+
+# Future Damage / KD / KO Target Architecture
+
+A separate damage-system review recommended a simpler EVENT MC physiology model. Treat this as target architecture for Phase 4B, not a claim that every legacy constant has been reconstructed.
+
+Future dynamic physiology state should initially be small:
+```text
+cumulative_trauma
+acute_vulnerability
+stamina  [owned by stamina system]
+```
+
+Future derived values rather than redundant mutable health bars:
+```text
+current_KD_resistance
+current_finish_resistance
+effective_power
+```
+
+Trait ownership target:
+```text
+striking_power        -> impact severity distribution
+damage_durability     -> persistent trauma deposited per impact
+knockdown_resistance  -> baseline acute KD resistance
+stamina               -> expressed-power modifier
+```
+
+Desired consequence chain:
+```text
+StrikeResolver
+-> DamageModel / impact + primary trauma
+-> KnockdownModel / impact vs current resistance
+-> KnockdownConsequenceModel / acute vulnerability + optional small collapse trauma
+-> FinishModel / probabilistic KO/TKO
+```
+
+Important future rules:
+- power should not separately multiply damage + KD + KO;
+- impact carries power downstream;
+- cumulative trauma lowers future resistance rather than acting primarily as a health-bar KO threshold;
+- acute vulnerability decays continuously;
+- cumulative trauma initially has no in-fight recovery;
+- stamina recovery remains separate;
+- ground and distance use the same physiology pipeline with context modifiers, not separate damage systems.
+
+Phase 4B is NOT authorized yet.
 
 ---
 
@@ -331,6 +313,8 @@ Do not authorize Phase 4 automatically.
 - `docs/EVENT_MC_V1_CODEX_PHASE2A_RETRY_2026-08-13.md`
 - `docs/EVENT_MC_V1_CODEX_PHASE2B_WRESTLING_ENTRY_ONTOLOGY_2026-08-13.md`
 - `docs/EVENT_MC_V1_CODEX_PHASE3_CLINCH_GROUND_FLOW_2026-08-13.md`
+- `docs/EVENT_MC_V1_CODEX_PHASE3_RETRY_2026-08-13.md`
+- `docs/EVENT_MC_V1_CODEX_PHASE4A_STAMINA_DYNAMIC_MODIFIERS_2026-08-13.md`
 
 ---
 
@@ -349,80 +333,74 @@ Codex stopped because isolated checkout had no Git remote. Remote-unblock prompt
 Codex repaired Git environment but baseline failed because frozen FSR-32 parquet was absent. Artifact recovery issued; no rebuild authorized.
 
 ## 005 — 2026-08-12 22:59
-User said to move on and supply FSR later. Phase 1 prompt prepared but not launched.
+User initially chose to move on and supply FSR later; Phase 1 was prepared but not launched.
 
 ## 006 — 2026-08-12 23:08
-User found exact frozen parquet and established frozen SHA-256.
+Exact frozen FSR-32 parquet located and SHA-256 locked.
 
 ## 007 — 2026-08-12 23:18
-Exact parquet published as temporary GitHub Release asset for transfer.
+Exact frozen parquet published temporarily as GitHub Release transfer asset.
 
 ## 008 — 2026-08-12 23:21
-Codex generic workspace lacked remote/auth; changed nothing. Bootstrap prompt issued.
+Codex generic workspace lacked remote/auth; bootstrap issued; no implementation changes.
 
 ## 009 — 2026-08-12 23:24
-User clarified Phase 1 had never launched. Continuity corrected.
+Continuity corrected: Phase 1 had not yet launched.
 
 ## 010 — 2026-08-13 near 00:00
-Phase 0 returned PASS after exact artifact recovery/revalidation.
+Phase 0 baseline returned PASS after exact artifact recovery/revalidation.
 
 ## 011 — 2026-08-13 00:03
-User explicitly authorized Phase 1.
+User authorized Phase 1.
 
 ## 012 — 2026-08-13 about 00:15
-Phase 1 commit `1debecab...` independently reviewed and accepted.
+Phase 1 commit `1debecab...` independently reviewed and accepted PASS.
 
 ## 013 — 2026-08-13 00:18
-User explicitly authorized Phase 2A.
+User authorized Phase 2A.
 
 ## 014 — 2026-08-13 00:27
-First Phase 2A attempt stopped safely due stale checkout missing the governing prompt; no implementation changes occurred. Retry/bootstrap prompt added.
+First Phase 2A Codex attempt stopped safely due stale checkout missing governing prompt. No code changes. Retry/bootstrap issued.
 
 ## 015 — 2026-08-13
-Phase 2A implementation returned at commit `5b7574c7689ffa2e55821a49fca47a2c1c937991`. ChatGPT independently reviewed the actual commit, formulas, direct V0 parity tests, and diagnostics and accepted:
-`PHASE 2A DISTANCE TEMPORAL PARITY GATE: PASS`.
+Phase 2A commit `5b7574c...` independently reviewed and accepted PASS.
 
 ## 016 — 2026-08-13 06:34 America/Chicago
-User said **proceed with the next step**, explicitly authorizing Phase 2B wrestling-entry ontology correction.
-
-New governing prompt:
-`docs/EVENT_MC_V1_CODEX_PHASE2B_WRESTLING_ENTRY_ONTOLOGY_2026-08-13.md`
-
-Prompt commit:
-`e4278f62359e500055eea8c4521d8be6eba6fa2b`
-
-Expected Codex return: implementation/tests/A-B diagnostics ending with `PHASE 2B WRESTLING ENTRY ONTOLOGY GATE: PASS` or `FAIL`.
+User authorized Phase 2B. Governing prompt commit `e4278f...`.
 
 ## 017 — 2026-08-13
-Phase 2B implementation commits `004740e` and `809389b` were independently reviewed. The active TD initiation path now uses `wrestling_entry` centered at 50 with the unchanged Phase 2A base probability and modifier scale; the legacy blend remains diagnostic-only, and TD success remains conversion versus defense. All 56 EVENT MC and relevant V0 tests passed, the required four-matchup diagnostic completed, and the frozen FSR-32 SHA-256 remained unchanged.
-
-Final gate:
-`PHASE 2B WRESTLING ENTRY ONTOLOGY GATE: PASS`.
+Phase 2B implementation commits `004740e...` and `809389b...` independently reviewed and accepted PASS. 56 EVENT MC + relevant V0 tests reported passing; frozen FSR SHA unchanged.
 
 ## 018 — 2026-08-13 07:29 America/Chicago
-User said **proceed**, explicitly authorizing Phase 3 clinch + ground flow.
+User authorized Phase 3. Governing prompt commit `0d67599...`.
+
+## 019 — 2026-08-13
+Codex implemented Phase 3 at `5a6c15af9c2315f23c231d0f34cd3cefddba4578`. 66 EVENT MC + relevant V0 tests reported passing; 500/500 fixture paths reached horizon; frozen FSR SHA unchanged.
+
+## 020 — 2026-08-13 before 08:01 America/Chicago
+ChatGPT independently reviewed the actual Phase 3 commit, active providers, action resolution, formulas, profile adapter, FlowStatsSink, engine boundary behavior, and tests. Final gate accepted:
+`PHASE 3 CLINCH + GROUND FLOW GATE: PASS`.
+
+## 021 — 2026-08-13 08:01 America/Chicago
+User said **proceed**, explicitly authorizing the next step. Phase 4 was deliberately split into smaller modules rather than one giant physiology/finish rewrite.
+
+Phase 4A authorized scope: stamina reservoir, action stamina costs, round recovery, derived offensive-output multiplier, and derived expressed-power multiplier. No damage/KD/KO/terminal SUB/judging/age.
 
 New governing prompt:
-`docs/EVENT_MC_V1_CODEX_PHASE3_CLINCH_GROUND_FLOW_2026-08-13.md`
+`docs/EVENT_MC_V1_CODEX_PHASE4A_STAMINA_DYNAMIC_MODIFIERS_2026-08-13.md`
 
 Prompt commit:
-`0d67599db401af55cbe0f1c9fbd909468119e44e`
+`fc5dc0b32460e9200ea070db7f3656d1aac5f689`
 
-Phase 3 scope: live CLINCH/GROUND continuous-time mechanics, ground exit partition, exact phase/control residence, submission attempts without terminal SUB finishes, and full scheduled-time nonterminal diagnostics. No stamina/damage/KD/KO/recovery/age/judging/Phase4.
+Expected Codex return: implementation/tests/fixture diagnostics ending with `PHASE 4A STAMINA + DYNAMIC MODIFIERS GATE: PASS` or `FAIL`.
 
-Expected Codex return: implementation/tests/fixture diagnostics ending with `PHASE 3 CLINCH + GROUND FLOW GATE: PASS` or `FAIL`.
-
-Next assistant action: independently review the actual Phase 3 implementation before any Phase 4 authorization.
+Next assistant action: independently review the actual Phase 4A implementation before any Phase 4B authorization.
 
 Phase 0: **PASS**.
 Phase 1: **PASS**.
 Phase 2A: **PASS**.
 Phase 2B: **PASS**.
-Phase 3 authorized: **YES**.
-Phase 3 reviewed/passed: **NO**.
-Phase 4 authorized: **NO**.
-
-## 019 — 2026-08-13
-Codex implemented the authorized Phase 3 live CLINCH/GROUND flow layer using composed phase rate providers. The implementation ports V0 clinch strikes, clinch takedowns, separation, top/bottom ground strikes, nonterminal submission attempts, and the single ground-exit opportunity partitioned into escape/reversal hazards. Exact phase and controller residence is observer-derived from engine time advances. Phase 2B DISTANCE TD initiation remains intact, and no Phase 4 physiology or outcome mechanics were added.
-
-Codex validation: 66 EVENT MC plus relevant V0 tests passed; 500 frozen-fixture paths all reached the 900-second horizon; frozen FSR-32 SHA-256 remained unchanged. Await independent review before changing the reviewed gate state or authorizing Phase 4.
+Phase 3: **PASS**.
+Phase 4A authorized: **YES**.
+Phase 4A reviewed/passed: **NO**.
+Phase 4B authorized: **NO**.
