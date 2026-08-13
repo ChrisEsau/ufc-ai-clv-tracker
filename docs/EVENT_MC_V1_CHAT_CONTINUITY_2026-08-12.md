@@ -1,104 +1,84 @@
 # EVENT MC V1 Chat Continuity / Working Memory
 
 Date created: 2026-08-12
-
 Repository: `ChrisEsau/ufc-ai-clv-tracker`
-
 Branch: `feature/fsr-32-stamina-shadow`
 
-Purpose: persistent handoff for future ChatGPT sessions so the assistant can recover what was decided, what Codex was asked to do, what remains locked, and what must be reviewed next.
-
-This file is **not** the architecture source of truth. Canonical architecture and Phase 0 contracts remain the documents referenced below.
+Purpose: persistent handoff for future ChatGPT sessions. This file is not the architecture source of truth; canonical architecture and Phase 0 contracts are referenced below.
 
 ## Update rule
-
-After every new Codex prompt is given to the user, update this file. Preserve checkpoint history and update `Current State`.
+After every new Codex prompt, update this file. Preserve checkpoint history, current gate state, prompt path, hard locks, expected Codex return, and next assistant review.
 
 ---
 
 # Current State
 
 Architecture revision: **v0.3**
-
 Architecture status: **Phase 0 architecture closed.**
 
-Implementation status: **Phase 1 generic continuous-time kernel is authorized. No Phase 2A/2B UFC mechanics are authorized yet.**
+Implementation status: **Phase 1 generic continuous-time kernel is authorized independently. Phase 2A/2B are not authorized.**
 
-Phase 0 operational baseline status: **DEFERRED / NOT YET PASSED, but the exact frozen FSR-32 artifact has now been published as a temporary GitHub Release asset and Codex is authorized to ingest it, verify its SHA-256, and resume the frozen baseline.**
+Phase 0 operational baseline: **NOT YET PASSED.** The exact frozen FSR-32 artifact exists and has been published as a temporary GitHub Release asset, but the latest Codex run started in a fresh generic workspace on local branch `work` with no remote/authenticated repo context and therefore could not read the governing prompt or download the private release asset.
+
+Latest Codex bootstrap prompt:
+`docs/EVENT_MC_V1_CODEX_BOOTSTRAP_RELEASE_BASELINE_2026-08-12.md`
+
+This new prompt is self-contained and must first restore the correct remote/branch, then read and execute:
+`docs/EVENT_MC_V1_CODEX_FSR32_RELEASE_INGEST_AND_BASELINE_RESUME_2026-08-12.md`
+
+Exact repository:
+`ChrisEsau/ufc-ai-clv-tracker`
+
+Important typo correction from failed Codex diagnostic:
+`ChrisEsau` is correct; `ChrisEsasu` is wrong.
 
 Exact frozen FSR-32 identity:
-
 ```text
-Original Codespace source path:
+Original Codespace path:
 /workspaces/ufc-ai-clv-tracker/data/simulation/rfs_mc_v2_shared_state/fsr_32_shadow/fsr_32_prefight_snapshots.parquet
 
-SHA-256:
+Expected SHA-256:
 621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a
 
-reported original size:
-~3.3M
-
-GitHub Release tag:
+Release tag:
 event-mc-v1-fsr32-handoff
 
 Release asset:
 fsr_32_prefight_snapshots.parquet
 
-GitHub release-reported asset size:
+GitHub release-reported size:
 3.20 MiB
 ```
 
-Canonical artifact identity note:
-
-`docs/EVENT_MC_V1_FSR32_FROZEN_ARTIFACT_IDENTITY_2026-08-12.md`
-
-Current artifact-ingest / baseline-resume Codex prompt:
-
-`docs/EVENT_MC_V1_CODEX_FSR32_RELEASE_INGEST_AND_BASELINE_RESUME_2026-08-12.md`
-
-Current Phase 1 Codex prompt:
-
-`docs/EVENT_MC_V1_CODEX_PHASE1_GENERIC_KERNEL_PROMPT_2026-08-12.md`
-
-Canonical architecture document:
-
-`docs/EVENT_MC_V1_ARCHITECTURE_AUDIT_2026-08-12.md`
-
-Phase 0 closure record:
-
-`docs/EVENT_MC_V1_PHASE0_CLOSURE_2026-08-12.md`
-
-Locked interface decisions:
-
-`docs/EVENT_MC_V1_PHASE0_INTERFACE_DECISIONS_2026-08-12.md`
-
-Frozen baseline contract:
-
-`docs/EVENT_MC_V1_PHASE0_BASELINE_FREEZE_2026-08-12.md`
-
-Baseline execution prompt:
-
-`docs/EVENT_MC_V1_CODEX_PHASE0_BASELINE_PROMPT_2026-08-12.md`
+Canonical docs:
+- `docs/EVENT_MC_V1_ARCHITECTURE_AUDIT_2026-08-12.md`
+- `docs/EVENT_MC_V1_PHASE0_CLOSURE_2026-08-12.md`
+- `docs/EVENT_MC_V1_PHASE0_INTERFACE_DECISIONS_2026-08-12.md`
+- `docs/EVENT_MC_V1_PHASE0_BASELINE_FREEZE_2026-08-12.md`
+- `docs/EVENT_MC_V1_CODEX_PHASE0_BASELINE_PROMPT_2026-08-12.md`
+- `docs/EVENT_MC_V1_FSR32_FROZEN_ARTIFACT_IDENTITY_2026-08-12.md`
+- `docs/EVENT_MC_V1_CODEX_PHASE1_GENERIC_KERNEL_PROMPT_2026-08-12.md`
 
 ---
 
 # Hard Locks
 
-- Do not modify the current inheritance-based simulator while EVENT MC V1 is built.
-- Keep FSR-32 connected initially when UFC mechanics are introduced.
-- Do not rebuild FSR-32 or the upstream FSR chain now that the exact frozen artifact is known.
-- Do not retune KO, SUB, TD, stamina, judging, age, damage, recovery, or other calibration constants during kernel/parity work.
+- Do not modify the current inheritance-based simulator.
+- Keep FSR-32 as initial profile source when UFC mechanics are introduced.
+- Do not rebuild FSR-32 or upstream FSR artifacts now that the exact frozen artifact is known.
+- Do not alter or commit the parquet.
+- Do not retune KO, SUB, TD, stamina, judging, age, damage, recovery, KD, or other calibration constants during baseline/kernel/parity work.
 - Use composition, not a new inheritance chain.
 - One authoritative fight clock: `FightState.fight_time_seconds`.
 - Scheduler rates are events/second.
-- Only engine advances time.
-- Continuous state advances exact elapsed `dt` before event resolution.
+- Only engine advances time; continuous state advances exact elapsed `dt` before event resolution.
 - Stats/ledger are observers, not hidden communication.
 - Components do not create hidden RNGs.
 - Engine owns authoritative state mutation through typed results/deltas.
 - Round start resets phase to `DISTANCE` and clears positional ownership.
 - `MatReturn` remains future/optional.
-- Do not combine temporal migration, wrestling ontology correction, and calibration changes in one step.
+- Do not combine timing migration, wrestling ontology correction, and calibration changes.
+- Phase 2A and Phase 2B remain unauthorized.
 
 ---
 
@@ -112,7 +92,6 @@ control_imposition   = persistence/behavior after control is established
 ```
 
 Current V0 blended consumer remains approximately:
-
 ```text
 wrestling_pref =
     0.75 * wrestling_entry
@@ -121,153 +100,105 @@ wrestling_pref =
   - 0.50 * clinch_striking_pressure
 ```
 
-Migration split remains locked:
-
-- Phase 2A: temporal/mechanical parity using current blended consumer.
+Migration split:
+- Phase 2A: temporal/mechanical parity using the legacy blended consumer.
 - Phase 2B: ontology correction so `wrestling_entry` directly drives intrinsic TD initiation.
 
 ---
 
 # Phase 1 Scope
 
-Phase 1 is generic kernel infrastructure only:
-
-- typed generic events/contracts;
-- immutable timing config;
-- authoritative clock;
-- exponential competing-risk scheduler;
-- event rates in events/second;
-- exact probability-to-rate conversion;
-- stable named RNG streams from one root path seed;
-- engine-owned hard round/fight boundaries;
-- exact continuous `advance(dt)` ordering;
-- typed state-delta application;
-- round lifecycle/reset shell;
-- null/stats/full-trace sinks;
-- inactive cooldown/action-availability extension point;
-- synthetic math/temporal/reproducibility tests.
+Phase 1 is generic kernel infrastructure only: typed generic events/contracts, immutable timing config, authoritative clock, exponential scheduler, rates/sec, probability-to-rate conversion, named RNG streams, hard boundaries, exact `advance(dt)` ordering, typed state deltas, round lifecycle/reset shell, sinks, inactive cooldown extension point, and synthetic tests.
 
 No real UFC mechanics in Phase 1.
 
 ---
 
-# Deferred Phase 0 Baseline — Release Handoff Ready
+# Phase 0 Frozen Baseline Recovery
 
-The original Phase 0 numerical gate failed because Codex's isolated `/workspace/...` environment did not contain the generated FSR-32 parquet and is not the user's actual GitHub Codespace.
+Original Phase 0 execution failed only because Codex lacked the generated FSR-32 parquet. The user located the exact file in the real Codespace and established SHA-256:
+`621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a`.
 
-Codex searched its accessible filesystem and correctly returned:
+Because direct Codex attachment was unavailable, the user installed `gh` in the real Codespace and published the exact parquet as GitHub Release asset `event-mc-v1-fsr32-handoff/fsr_32_prefight_snapshots.parquet`.
 
-`FSR-32 ARTIFACT RECOVERY: NOT FOUND`
+The first release-ingest Codex attempt failed before ingestion because it started in a fresh generic workspace:
+- branch `work`;
+- clean tree;
+- no `origin` remote;
+- governing EVENT_MC docs absent locally;
+- no GitHub token/`gh` session;
+- private-release API request returned 404;
+- one diagnostic request also misspelled owner as `ChrisEsasu`;
+- no files changed and no baseline run started.
 
-The user then located the actual frozen parquet in the real Codespace:
+This is an environment/bootstrap failure, not an FSR or baseline failure.
 
-`/workspaces/ufc-ai-clv-tracker/data/simulation/rfs_mc_v2_shared_state/fsr_32_shadow/fsr_32_prefight_snapshots.parquet`
+New bootstrap prompt:
+`docs/EVENT_MC_V1_CODEX_BOOTSTRAP_RELEASE_BASELINE_2026-08-12.md`
 
-Local identity check returned:
-
-`621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a`
-
-Direct attachment to Codex was unavailable, so the user installed GitHub CLI in the real Codespace and published the exact file as a temporary GitHub Release asset:
-
-```text
-release tag: event-mc-v1-fsr32-handoff
-asset: fsr_32_prefight_snapshots.parquet
-release-reported size: 3.20 MiB
-```
-
-New approved Codex prompt:
-
-`docs/EVENT_MC_V1_CODEX_FSR32_RELEASE_INGEST_AND_BASELINE_RESUME_2026-08-12.md`
-
-Codex must download the release asset, verify the downloaded SHA equals the known frozen SHA before use, copy it byte-for-byte into the expected ignored path, verify the destination SHA, inspect metadata without rewriting, and then resume the frozen Phase 0 baseline using `StaticFSRMCFullFightV1`.
-
-If the SHA differs, Codex must stop. The parquet must never be committed or rebuilt.
-
-Phase 1 work and Phase 0 baseline measurement must remain logically separate.
+It instructs Codex to:
+1. inspect the generic workspace without discarding changes;
+2. add exact remote `https://github.com/ChrisEsau/ufc-ai-clv-tracker.git` if `origin` is absent;
+3. fetch authenticated repo state using only provisioned credentials and never expose secrets;
+4. check out `feature/fsr-32-stamina-shadow` from `origin`;
+5. verify/read the governing docs;
+6. download the private release asset using an authenticated mechanism;
+7. verify SHA-256 before use;
+8. execute the existing release-ingest prompt and frozen Phase 0 baseline;
+9. stop with an explicit auth-blocked result if repository or release authentication truly cannot be restored.
 
 ---
 
 # Assistant Review Requirements
 
-When Codex returns Phase 1 work, independently review:
-
-- diff/files changed;
-- current simulator/FSR untouched;
-- scheduler is UFC-agnostic;
-- units and probability-to-rate math;
-- RNG stream derivation/independence;
-- one clock / exact hard boundaries;
-- continuous `advance(dt)` ordering;
-- engine-owned mutation;
-- round-start reset;
-- sink invariance and RNG invariance;
-- cooldown extension remains inactive;
-- tests and regressions;
-- no UFC mechanics slipped into Phase 1.
-
-When Codex returns the resumed Phase 0 baseline, independently review:
-
-- downloaded source SHA and destination SHA both equal `621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a`;
-- artifact was copied byte-for-byte and not committed;
+When Codex returns the bootstrap/baseline result, independently verify:
+- correct repo owner `ChrisEsau` and target branch;
+- exact remote/commit state;
+- downloaded and destination SHA both equal frozen SHA;
+- parquet unmodified/uncommitted;
 - exact fixtures/seeds/path counts/cohort ordering;
 - manifest/checksums;
-- Font/Rosas values and prior anchors;
-- 200×10 cohort summary;
+- Font/Rosas anchors;
+- compact 200x10 cohort;
 - full method/submission baseline;
 - no tuning/current-simulator/FSR changes.
 
-Do not authorize Phase 2A until both the Phase 1 kernel and the recovered numerical baseline have been reviewed, unless the user explicitly changes that requirement.
+When Codex returns Phase 1, independently review diff, scheduler/RNG/clock/boundary/mutation/sink contracts, tests, current simulator/FSR untouched, and no UFC mechanics slipped in.
+
+Do not authorize Phase 2A until Phase 1 and the recovered baseline have both been reviewed, unless the user explicitly changes that requirement.
 
 ---
 
 # Checkpoint History
 
-## Checkpoint 001 — 2026-08-12 22:33 America/Chicago
+## 001 — 2026-08-12 22:33 America/Chicago
 Phase 0 operational baseline prompt issued. Phase 1 unauthorized.
 
-## Checkpoint 002 — 2026-08-12 22:37 America/Chicago
+## 002 — 2026-08-12 22:37
 Codex baseline execution plan approved with exact-remote-branch guardrail.
 
-## Checkpoint 003 — 2026-08-12 22:40 America/Chicago
+## 003 — 2026-08-12 22:40
 Codex stopped because isolated checkout had no Git remote. Remote-unblock prompt issued.
 
-## Checkpoint 004 — 2026-08-12 22:49 America/Chicago
-Codex repaired Git environment and verified feature branch, but Phase 0 baseline failed because frozen FSR-32 parquet was absent. Artifact-recovery prompt issued. No rebuild authorized.
+## 004 — 2026-08-12 22:49
+Codex repaired Git environment and verified feature branch, but baseline failed because frozen FSR-32 parquet was absent. Artifact recovery issued; no rebuild authorized.
 
-## Checkpoint 005 — 2026-08-12 22:59 America/Chicago
-Codex artifact recovery returned NOT FOUND. User explicitly authorized moving forward with Phase 1 generic kernel while leaving Phase 0 numerical baseline deferred. Phase 2A remained unauthorized.
+## 005 — 2026-08-12 22:59
+Artifact recovery returned NOT FOUND. User authorized Phase 1 generic kernel while leaving Phase 0 numerical baseline deferred.
 
-## Checkpoint 006 — 2026-08-12 23:08 America/Chicago
-User located the exact frozen FSR-32 parquet in the real GitHub Codespace and established SHA-256 `621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a`. Initial attachment-ingest prompt was created, but direct upload to Codex was unavailable.
+## 006 — 2026-08-12 23:08
+User found exact frozen parquet in real Codespace and established SHA-256 `621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a`.
 
-## Checkpoint 007 — 2026-08-12 23:18 America/Chicago
+## 007 — 2026-08-12 23:18
+User published exact parquet as GitHub Release asset `event-mc-v1-fsr32-handoff/fsr_32_prefight_snapshots.parquet`. Release-ingest prompt issued.
 
-User successfully published the exact frozen parquet as a temporary GitHub Release asset:
+## 008 — 2026-08-12 23:21
+Latest Codex run reported it was in a new generic `work` checkout with no remote/auth and no governing docs. It did not modify anything. One API diagnostic used misspelled owner `ChrisEsasu`.
 
-```text
-repository: ChrisEsau/ufc-ai-clv-tracker
-release tag: event-mc-v1-fsr32-handoff
-asset: fsr_32_prefight_snapshots.parquet
-asset size shown by GitHub: 3.20 MiB
-expected SHA-256: 621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a
-```
+New prompt issued:
+`docs/EVENT_MC_V1_CODEX_BOOTSTRAP_RELEASE_BASELINE_2026-08-12.md`
 
-New Codex prompt issued:
+Expected Codex outcome: restore correct remote/branch and complete release ingestion + frozen Phase 0 baseline, or return a precise auth-blocked gate without changing simulator/FSR/calibration state.
 
-`docs/EVENT_MC_V1_CODEX_FSR32_RELEASE_INGEST_AND_BASELINE_RESUME_2026-08-12.md`
-
-Purpose:
-
-- download the exact release asset;
-- verify SHA-256 before use;
-- copy byte-for-byte into the expected ignored FSR-32 path;
-- verify destination SHA;
-- inspect frozen artifact metadata;
-- immediately resume the deferred Phase 0 baseline if artifact verification passes;
-- do not rebuild FSR, modify current simulator/calibration, or begin Phase 2.
-
-Expected next assistant action: independently review the returned artifact verification and full Phase 0 baseline report. Phase 1 remains authorized independently; Phase 2A remains unauthorized.
-
-Phase 1 authorized now: **YES**.
-
-Phase 2A authorized now: **NO**.
+Phase 1 authorized: **YES**.
+Phase 2A authorized: **NO**.
