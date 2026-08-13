@@ -1,6 +1,6 @@
 # EVENT MC V1 Chat Continuity / Working Memory
 
-Last updated: 2026-08-13 17:25 America/Chicago
+Last updated: 2026-08-13 18:06 America/Chicago
 Repository: `ChrisEsau/ufc-ai-clv-tracker`
 Branch: `feature/fsr-32-stamina-shadow`
 
@@ -21,12 +21,19 @@ After every new Codex prompt, update this file. This file is continuity only, no
 - Phase 7F submission conversion position neutralization: PASS
 - Phase 7G submission attempt-rate calibration: diagnostic complete; no promotion
 - Phase 7H submission conversion intercept calibration: PASS; intercept promoted to -0.60
-- Phase 7I strike exposure definition + baseline audit: current next phase; measurement only
+- Phase 7I strike exposure definition + baseline audit: PASS; UFCStats significant strikes are the primary comparator
+- Phase 7J global strike-attempt generation + phase-composition calibration: current next phase
 - Age, urgency, real weight-class tuning: not authorized
 
 Frozen FSR-32 SHA-256: `621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a`
 
 ## Current committed calibration
+- `defaults.distance.strike_attempts_per_30s = 5.0`
+- `defaults.clinch.strike_attempts_per_30s = 1.2`
+- `defaults.ground.strike_attempts_per_30s = 1.6`
+- `defaults.distance.strike_accuracy = 0.40`
+- `defaults.clinch.strike_accuracy = 0.68`
+- `defaults.ground.strike_accuracy = 0.70`
 - `defaults.knockdown.midpoint_impact_ratio = 36.0`
 - `defaults.finish.midpoint_impact_ratio = 36.0`
 - `defaults.submission_attempts.base_30s = 0.045`
@@ -51,68 +58,59 @@ On the same 100-fight cohort:
 Phase 7D1 implementation commit: `af1e56fdfcdb9823fcbd099dd441ec44b9e37485`.
 Authoritative `match_time_sec` is total elapsed fight time; legacy final-round clock is supported only with explicit semantics.
 
-## Post-correction state
-At committed 36/36 on the 100-fight x 10-path rerun before later submission changes:
-- simulated KO/TKO 25.6%, SUB 5.7%, DEC 68.7%
-- simulated KD/100 landed 0.438
-- simulated KD/15min 0.383
-- simulated submission attempts/path 0.380
-- simulated submission attempts/15min 0.423
-- simulated path share with >=1 attempt 27.4%
-- simulated P(SUB|attempt) 15.0%
-- simulated mean non-decision finish time 387.43s
-
-Finish midpoint 36 remained supported after correction. KD midpoint 36 was retained after Phase 7D2 because corrected KD/15 and KD/100 landed disagreement was driven primarily by lower/non-definition-identical simulated landed-strike exposure.
-
 ## Submission position lock
 Top and bottom submission attempt generation and conversion are position-neutral unless later UFC-specific evidence supports an intrinsic positional coefficient. Current locks: bottom attempt multiplier 1.0; top/bottom conversion bonuses 0.0/0.0.
 
 ## Phase 7D2 KD target reconciliation
-Prompt: `docs/EVENT_MC_V1_CODEX_PHASE7D2_KD_TARGET_RECONCILIATION_2026-08-13.md`
-Prompt commit: `720ab5ccbbda9001ad873959f2e44068bf9d639b`
-
-Measurement only. Keep KD midpoint 36 and finish midpoint 36 committed. Compare in-memory KD midpoint candidates 32, 36, 40, 44, 48 on the same 100-fight x 10-path cohort and report separately:
-- KD/fight or path
-- KD/100 landed
-- KD/15min
-- zero/multi-KD shares
-- landed/fight or path and landed/15min
-- KO/TKO share
-- mean fight duration
-
-Do not rank with one combined objective and do not promote YAML. Determine whether corrected evidence supports a KD midpoint change or whether the conflict is mainly upstream strike exposure/comparability.
-
-Expected return: `PHASE 7D2 KD TARGET RECONCILIATION GATE: PASS`.
-
-Phase 7D2 result: the exact common-seed 100-fight x 10-path comparison was completed for in-memory KD midpoints 32, 36, 40, 44, and 48 with finish midpoint fixed at 36. No combined score or ranking was used. Historical landed exposure was 132.12/fight and 157.045/15min, versus roughly 78-80/path and 87.4-87.5/15min simulated across candidates. Midpoint 48 closely matched KD/100 landed (0.269 vs 0.280 historical) but materially undershot KD/path (0.215 vs 0.370) and KD/15min (0.235 vs 0.440). Midpoint 36 was closer on KD/path (0.344) and KD/15min (0.383) but high on KD/100 landed (0.438). This conflict is primarily attributable to lower/non-definition-identical simulated landed-strike exposure; corrected evidence does not justify a midpoint promotion. Committed KD and finish midpoints remain 36.
+Phase 7D2 compared KD midpoints 32, 36, 40, 44, and 48 with finish midpoint fixed at 36. Midpoint 48 matched KD/100 landed but materially undershot KD/path and KD/15 because modeled landed-strike exposure was much lower than historical total-strike exposure. No KD promotion. KD and finish midpoints remain 36. Gate: PASS.
 
 ## Phase 7E bottom submission-attempt neutralization
-Phase 7E changed only `defaults.submission_attempts.bottom_multiplier` from 0.55 to 1.00. The 100-fight x 10-path rerun increased attempts from 380 to 474 (0.380 to 0.474/path; 0.423 to 0.529/15min) and paths with an attempt from 27.4% to 32.3%. Top/bottom attempts were 224/250, with exposure-normalized rates of 1.122/1.252 per 15 positional ground minutes. SUB moved from 5.7% to 6.6%; KO/TKO remained 25.5% and DEC was 67.9%. Conversion remained frozen in that phase. Gate: PASS.
+Changed only `defaults.submission_attempts.bottom_multiplier` from 0.55 to 1.00. Attempts rose from 0.380 to 0.474/path and 0.423 to 0.529/15min; paths with attempt rose from 27.4% to 32.3%. Gate: PASS.
 
 ## Phase 7F submission conversion position neutralization
-Phase 7F changed only `defaults.submission_finish.top_position_bonus` from 0.25 to 0.0; `bottom_position_bonus` remained 0.0, the conversion intercept remained -2.20, and `submission_attempts.bottom_multiplier` remained 1.0. The neutral 100-fight x 10-path baseline produced 477 attempts, 61 SUB finishes, and 12.79% conversion. Observed top/bottom conversion narrowed from 16.07%/12.00% to 13.27%/12.35% (gap 4.07pp -> 0.92pp). Attempts remained stable at 0.477/path and 0.531/15min; SUB moved from 6.6% to 6.1%, KO/TKO remained 25.5%, and DEC moved to 68.4%. Gate: PASS.
+Changed only `defaults.submission_finish.top_position_bonus` from 0.25 to 0.0. Observed top/bottom conversion gap narrowed from 4.07pp to 0.92pp. Gate: PASS.
 
 ## Phase 7G global submission-attempt rate calibration
-Phase 7G searched only `submission_attempts.base_30s` using common seeds. The six-point coarse grid used 3 paths/fight; finalists 0.045, 0.050, and 0.055 used 100 train fights (2020-01-18–2020-07-25), 50 holdout fights (2025-01-11–2025-03-22), and 10 paths/fight.
-
-Train supported approximately 0.050–0.055: at 0.055, simulated exposure was 0.617 attempts/path, 0.691/15min, and 38.2% paths with an attempt versus historical 0.610, 0.725, and 37.0%. Holdout supported the existing 0.045 or lower: at 0.045, simulated exposure was already 0.554/path and 0.613/15min versus historical 0.480 and 0.562, while its 33.8% path share remained below historical 38.0%. Increasing the base improved holdout path share but worsened both count/rate overexposure. Because train and holdout did not support the same region across all three primary metrics, no value was promoted and `base_30s` remains 0.045. Gate disposition: no promotion.
+Searched only `submission_attempts.base_30s`. Train favored approximately 0.050-0.055 while holdout favored current 0.045 or lower, so no value was promoted. `base_30s` remains 0.045.
 
 ## Phase 7H global submission-conversion intercept calibration
-The frozen FSR-32 release asset was restored only after its SHA-256 matched `621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a`; the parquet remains uncommitted. The common-seed coarse grid used 3 paths/fight and the refined `-0.7,-0.6,-0.5,-0.4,-0.3,-0.2` region used 10 paths/fight on 100 train and 50 holdout fights. Both splits supported intercept -0.6: train historical/simulated SUB was 17.0%/17.3%, holdout 18.0%/18.2%; KO/TKO remained 23.8% and 25.4%. Only `submission_finish.intercept` was promoted from -2.20 to -0.60. Attempt base remains 0.045, bottom multiplier 1.0, position bonuses 0.0, and KD/finish midpoints 36. Gate: PASS.
+Restored frozen FSR-32 from release only after exact SHA verification. Common-seed coarse and finalist searches on 100 train and 50 holdout fights both supported intercept -0.60. Train historical/simulated SUB was 17.0%/17.3%; holdout 18.0%/18.2%. Only `submission_finish.intercept` was promoted from -2.20 to -0.60. KD/finish midpoints remain 36. Gate: PASS.
 
 ## FSR-32 release recovery procedure
-If the ignored local FSR-32 parquet is missing in a future Codex sandbox, do not search indefinitely and do not rebuild it. Recover it from GitHub Release tag `event-mc-v1-fsr32-handoff`, asset `fsr_32_prefight_snapshots.parquet`. Preferred command is `gh release download event-mc-v1-fsr32-handoff --repo ChrisEsau/ufc-ai-clv-tracker --pattern 'fsr_32_prefight_snapshots.parquet' --dir /tmp/event_mc_v1_fsr32_handoff`. Verify the downloaded SHA-256 equals exactly `621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a` before use. Then copy byte-for-byte to `data/simulation/rfs_mc_v2_shared_state/fsr_32_shadow/fsr_32_prefight_snapshots.parquet` and verify the destination checksum again. Never rebuild, rewrite, recompress, or commit the parquet. The old release-ingest document's instruction to resume Phase 0 is historical; after recovery, resume whatever current phase is blocked.
+If the ignored local FSR-32 parquet is missing in a future Codex sandbox, do not rebuild it. Recover it from GitHub Release tag `event-mc-v1-fsr32-handoff`, asset `fsr_32_prefight_snapshots.parquet`. Preferred command: `gh release download event-mc-v1-fsr32-handoff --repo ChrisEsau/ufc-ai-clv-tracker --pattern 'fsr_32_prefight_snapshots.parquet' --dir /tmp/event_mc_v1_fsr32_handoff`. Verify SHA-256 equals exactly `621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a`, copy byte-for-byte to `data/simulation/rfs_mc_v2_shared_state/fsr_32_shadow/fsr_32_prefight_snapshots.parquet`, and verify destination SHA again. Never rebuild, rewrite, recompress, or commit the parquet. Resume the current blocked phase after recovery.
 
 ## Phase 7I strike exposure definition + baseline audit
-Phase 7I is measurement-only. No strike-rate or strike-accuracy calibration is authorized yet. Purpose: determine whether EVENT MC modeled `strike`, `clinch_strike`, and `ground_strike` actions are definitionally closest to UFCStats total strikes, significant strikes, or neither before setting historical calibration targets.
+Phase 7I completed measurement-only with no YAML or mechanics changes. One EVENT MC strike is a meaningful offensive strike opportunity; every landed modeled strike enters impact/trauma/KD and there is no separate low-impact/non-significant or target-location family. UFCStats significant strikes are therefore the closest primary comparator for both attempt generation and landing probability; UFCStats total strikes remain a secondary upper-bound diagnostic.
 
-Use the same chronological cohorts as Phase 7G/7H: train 100 fights from 2020-01-18 through 2020-07-25; holdout 50 fights from 2025-01-11 through 2025-03-22. Use corrected elapsed fight time and current committed simulator, 10 paths/fight, seed 20260813.
+Historical significant-strike attempts/15 versus modeled attempts/15:
+- Train: 238.170 historical vs 199.307 model (83.68% of target)
+- Holdout: 256.591 historical vs 198.629 model (77.41% of target)
 
-Required historical measurements: total-strike and significant-strike attempts/fight, landed/fight, attempts/15min, landed/15min, and landing percentage; plus distance/clinch/ground significant-strike composition where available. Required simulated measurements: all modeled and distance/clinch/ground attempts/path, landed/path, attempts/15min, landed/15min, landing percentage, and phase shares. Inspect strike code semantics end to end and cite exact files/functions. Compare EVENT MC against both historical total and significant strikes before recommending the primary historical comparator for attempt generation and landing probability.
+Historical significant-strike accuracy versus modeled accuracy:
+- Train: 48.20% historical vs 44.32% model
+- Holdout: 47.46% historical vs 47.03% model
 
-Required conclusion: whether modeled strikes correspond best to total strikes, significant strikes, or neither; whether the answer differs by phase; whether low strike exposure and low accuracy remain real after semantic reconciliation; and whether the mismatch is mainly attempt frequency, phase composition, landing probability, field-definition mismatch, or a combination. Report KO/SUB/DEC, KD, and timing guardrails only. Do not tune anything. No YAML changes, mechanics changes, FSR changes, RNG changes, or promotions are authorized.
+Historical significant-strike attempt shares versus modeled shares:
+- Train: distance 86.32% vs 91.97%; clinch 6.94% vs 2.75%; ground 6.74% vs 5.28%
+- Holdout: distance 89.83% vs 92.38%; clinch 4.91% vs 2.21%; ground 5.26% vs 5.41%
 
-Expected return: `PHASE 7I STRIKE EXPOSURE DEFINITION BASELINE AUDIT GATE: PASS` or FAIL.
+Conclusion: the main remaining strike discrepancy is low attempt exposure plus deficient clinch composition; ground share is already close; landing probability is secondary and should remain frozen during attempt calibration. Gate: PASS.
 
-### Phase 7I result
-Phase 7I completed as measurement-only; no YAML or mechanics changed. The modeled strike is a meaningful offensive strike opportunity: every scheduled event is one attempt, every landed attempt enters impact physiology, and there is no low-impact/non-significant or target-location family. UFCStats significant strikes are therefore the recommended primary comparator for both attempt generation and landing probability; total strikes remain a secondary upper-bound diagnostic. Train modeled versus significant attempts/15 were 199.31/238.17 and landed/15 were 88.34/114.79; holdout values were 198.63/256.59 and 93.41/121.77. Overall landing accuracy was much closer: train 44.32%/48.20%, holdout 47.03%/47.46%. The remaining discrepancy is primarily attempt exposure and phase composition (too little clinch, too much distance), with a secondary train landing gap and a major field-definition mismatch if total strikes are used. Phase 7H remains PASS; intercept -0.60, position-neutral submission locks, and KD/finish midpoints 36 remain fixed. Gate: PASS.
+## Phase 7J global strike-attempt generation + phase-composition calibration
+Phase 7J is authorized to calibrate only strike attempt generation. Primary historical target is UFCStats significant-strike attempts/15 over the same Phase 7G/7H/7I train and holdout cohorts. Round-specific calibration is deferred until global event rates are close; round-specific RFS parquet stats will later be used for R1/R2/R3 validation across strikes, TDs, submissions, KD, control, and related activity.
+
+Authorized candidate parameters only:
+- `defaults.distance.strike_attempts_per_30s` (current 5.0)
+- `defaults.clinch.strike_attempts_per_30s` (current 1.2)
+
+`defaults.ground.strike_attempts_per_30s = 1.6` is frozen for this phase because modeled ground significant-strike share is already close to historical. All strike landing accuracies are frozen: distance 0.40, clinch 0.68, ground 0.70.
+
+Primary promotion target: improve overall modeled strike attempts/15 toward historical significant-strike attempts/15 on both train (238.170) and holdout (256.591). Secondary composition guardrail: materially improve deficient clinch attempt share while avoiding a worse ground mismatch; distance share should fall toward historical as a consequence. Do not calibrate round-by-round shape yet.
+
+Suggested coarse common-seed grid: distance `5.0, 5.5, 6.0, 6.5` crossed with clinch `1.2, 2.0, 2.8, 3.6`, 3 paths/fight, seed 20260813, 100 train and 50 holdout fights. Use current committed baseline as an explicit candidate. Select a small Pareto/finalist region and rerun at 10 paths/fight. Do not use a hidden weighted scalar objective; report train and holdout global attempt errors and phase-share errors separately. Promotion requires both temporal splits to support the same practical region, overall attempt exposure to improve materially on both, clinch share to improve, and KO/SUB/KD/timing guardrails to remain interpretable. If no candidate satisfies this, promote nothing.
+
+Hard freeze during 7J: all strike accuracy, ground strike rate, phase transition/residence rates, damage/impact, KD/KO, submissions, stamina, TDs, judging, RNG, FSR, age, urgency, weight-class overrides. Extra strikes may naturally alter censoring and outcomes; those effects must be reported rather than compensated by tuning another subsystem.
+
+After any 7J promotion, rerun current train/holdout guardrails and mark KD36/finish36/submission -0.60 for revalidation after strike exposure is stabilized. No round-specific calibration yet.
+
+Expected return: `PHASE 7J GLOBAL STRIKE ATTEMPT GENERATION CALIBRATION GATE: PASS` or FAIL/no promotion.
