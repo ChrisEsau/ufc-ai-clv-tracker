@@ -36,5 +36,14 @@ def test_metrics_on_controlled_rows_and_exposure_denominator():
     assert metrics["historical_method_shares"] == {"KO_TKO":.5, "SUB":0.0, "DEC":.5}
 
 
-def test_observed_duration_uses_finish_round_exposure():
-    assert observed_duration_seconds({"finish_round": 2, "match_time_sec": 273}) == 573
+@pytest.mark.parametrize(("finish_round", "elapsed"), [(1, 120), (2, 420), (3, 750)])
+def test_observed_duration_uses_authoritative_elapsed_master_time(finish_round, elapsed):
+    assert observed_duration_seconds({"finish_round": finish_round, "match_time_sec": elapsed}) == elapsed
+
+
+def test_legacy_final_round_clock_requires_explicit_semantics():
+    row = {"finish_round": 2, "match_time_sec": 273}
+    assert observed_duration_seconds(row) == 273
+    assert observed_duration_seconds(row, match_time_semantics="legacy_final_round") == 573
+    with pytest.raises(ValueError, match="unsupported match_time_semantics"):
+        observed_duration_seconds(row, match_time_semantics="guess")

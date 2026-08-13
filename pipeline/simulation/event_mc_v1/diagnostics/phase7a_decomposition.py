@@ -17,7 +17,7 @@ from ..events import ConsequenceEvent, PrimaryEvent
 from ..finishes import FinishOutcome
 from ..physiology import PhysiologyOutcome
 from ..single_fight import build_engine
-from .population_validation import build_cohort, _fight
+from .population_validation import build_cohort, _fight, observed_duration_seconds
 
 
 STRIKE_FAMILIES = {"strike": "distance", "clinch_strike": "clinch", "ground_strike": "ground"}
@@ -84,7 +84,7 @@ def run(paths=10, start_year=2020, limit=100, seed=20260813, output_dir=Path("da
             prior_kds = sum(x["kd"] for x in impacts[:-1]) if result.state.finish_method == "KO_TKO" else kds
             path_rows.append({"fight_id":fight.fight_id,"winner":result.state.winner,"method":result.state.finish_method,"exposure_seconds":stats["exposure_seconds"],"attempts":sum(stats["attempts"].values()),"landed":len(impacts),"kds":kds,"prior_kds_at_ko":prior_kds,"finish_checks":len(impacts), **{f"{phase}_attempts":stats["attempts"].get(phase,0) for phase in STRIKE_FAMILIES.values()}, **{f"{phase}_landed":stats["landed"].get(phase,0) for phase in STRIKE_FAMILIES.values()}})
     paths_frame=pd.DataFrame(path_rows); impact_frame=pd.DataFrame(all_impacts); exposure=paths_frame.exposure_seconds.sum(); landed=paths_frame.landed.sum(); kds=paths_frame.kds.sum()
-    historical_exposure=cohort.apply(lambda r:(int(r.finish_round)-1)*300+float(r.match_time_sec),axis=1).sum()
+    historical_exposure=cohort.apply(observed_duration_seconds,axis=1).sum()
     historical_attempts=(cohort.r_total_str_atmpted+cohort.b_total_str_atmpted).sum(); historical_landed=(cohort.r_total_str_landed+cohort.b_total_str_landed).sum(); historical_kd=(cohort.r_kd+cohort.b_kd).sum()
     finish_kd=impact_frame[impact_frame.kd]; finish_non=impact_frame[~impact_frame.kd]; ko_paths=paths_frame[paths_frame.method=="KO_TKO"]
     methods = paths_frame.method.value_counts(normalize=True)

@@ -62,3 +62,7 @@ Prompt commit: `cb157a2b64b8937f04b6a57bf2b3d206ff693105`
 Required: correct historical duration semantics, add tests, search all EVENT MC diagnostics for duplicated elapsed-time arithmetic, recompute affected anchors, rerun Phase 7D at unchanged 36/36, and revalidate Phase 7B/7C conclusions without changing calibration values.
 
 Expected return: `PHASE 7D1 HISTORICAL EXPOSURE TIME FIX GATE: PASS` or FAIL.
+
+Phase 7D1 result: the authoritative elapsed-time contract is now used throughout EVENT MC diagnostics, with legacy final-round clock compatibility available only through an explicit argument. On the same 100-fight cohort, old versus corrected historical values were: observed seconds/fight 1276.16 -> 757.16; strike attempts/15min 169.498 -> 285.681; landed/15min 93.176 -> 157.045; KD/15min 0.261 -> 0.440; submission attempts/15min 0.430 -> 0.725; and mean non-decision finish time 652.762s -> 402.762s. Method shares, attempts/fight, KD/fight, KD/100 landed, finish-round shares, and identical-seed simulator outputs were unchanged.
+
+At fixed midpoint 36/36, finish midpoint 36 remains supported by exposure-independent KO/TKO shares and improved corrected timing guardrails. KD midpoint 36 is not independently reconfirmed: the corrected exposure target plus unchanged KD/100-landed evidence favored midpoint 40 over 36 among the narrow 32/36/40 revalidation grid. No calibration changed; KD and submission calibration remain blocked pending review.

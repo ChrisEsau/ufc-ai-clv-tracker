@@ -28,7 +28,7 @@ from .phase7a_decomposition import DecompositionSink
 from .population_validation import _fight, build_cohort, normalize_method
 
 TARGET_KD_PER_100_LANDED = 0.2800484408113836
-TARGET_KD_PER_15MIN = 0.2609390672016048
+TARGET_KD_PER_15MIN = 0.4398013629880078
 COARSE_GRID = (8, 12, 16, 24, 32, 48, 64, 96, 128)
 
 

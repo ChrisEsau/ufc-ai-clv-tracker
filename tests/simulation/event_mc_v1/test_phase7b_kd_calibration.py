@@ -1,5 +1,5 @@
 from pipeline.simulation.event_mc_v1.calibration import DEFAULT_CALIBRATION
-from pipeline.simulation.event_mc_v1.diagnostics.phase7b_kd_calibration import calibration_for_midpoint, evaluate, temporal_cohorts
+from pipeline.simulation.event_mc_v1.diagnostics.phase7b_kd_calibration import TARGET_KD_PER_15MIN, calibration_for_midpoint, evaluate, temporal_cohorts
 
 
 def test_in_memory_override_changes_only_knockdown_midpoint():
@@ -9,6 +9,10 @@ def test_in_memory_override_changes_only_knockdown_midpoint():
         for key, value in values.items():
             if (section, key) != ("knockdown", "midpoint_impact_ratio"):
                 assert candidate.section(section)[key] == value
+
+
+def test_kd_exposure_target_uses_elapsed_master_time():
+    assert TARGET_KD_PER_15MIN == 0.4398013629880078
 
 
 def test_candidate_evaluation_is_same_seed_deterministic():

@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 
 from pipeline.common.paths import MASTER_PATH
+from pipeline.common.fight_time import elapsed_fight_time_seconds
 
 from ..components.profiles import FighterProfile, MatchupProfiles
 from ..flow_stats import FlowStatsSink
@@ -33,8 +34,19 @@ def normalize_method(value: object) -> str | None:
     return None
 
 
-def observed_duration_seconds(row) -> float:
-    return (int(row["finish_round"]) - 1) * 300.0 + float(row["match_time_sec"])
+def observed_duration_seconds(row, *, match_time_semantics="elapsed") -> float:
+    """Return historical exposure under an explicit master-time contract.
+
+    Authoritative master ``match_time_sec`` is already total elapsed fight
+    time. Legacy final-round-clock values are supported only when callers
+    explicitly identify that older semantic; they are never guessed from the
+    numeric value.
+    """
+    if match_time_semantics == "elapsed":
+        return float(row["match_time_sec"])
+    if match_time_semantics == "legacy_final_round":
+        return elapsed_fight_time_seconds(row["finish_round"], row["match_time_sec"])
+    raise ValueError(f"unsupported match_time_semantics: {match_time_semantics}")
 
 
 def build_cohort(start_year=2020, limit=None, weight_class=None):
