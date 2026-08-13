@@ -1,6 +1,6 @@
 # EVENT MC V1 Chat Continuity / Working Memory
 
-Last updated: 2026-08-13 10:46 America/Chicago
+Last updated: 2026-08-13 11:16 America/Chicago
 Repository: `ChrisEsau/ufc-ai-clv-tracker`
 Branch: `feature/fsr-32-stamina-shadow`
 
@@ -19,7 +19,9 @@ After every new Codex prompt, update this file. Preserve gate state, prompt path
 - Phase 4B1 config externalization: PASS
 - Phase 4B2 KO/TKO finish mechanics: PASS after independent review
 - Phase 4B2 single-fight runner: PASS
-- Terminal submissions, judging, age, tactical urgency, population calibration, real weight-class tuning: NOT AUTHORIZED
+- Phase 4B2 terminal-action accounting correction: completed/physics-neutral; verify final implementation commit before Phase 4C coding if needed
+- Phase 4C submission finish mechanics: AUTHORIZED / current next phase
+- Judging, age, tactical urgency, population calibration, real weight-class tuning: NOT AUTHORIZED
 
 Frozen FSR-32:
 `data/simulation/rfs_mc_v2_shared_state/fsr_32_shadow/fsr_32_prefight_snapshots.parquet`
@@ -32,9 +34,10 @@ Key implementation commits:
 - Phase 3 `5a6c15af9c2315f23c231d0f34cd3cefddba4578`
 - Phase 4A `8155bc45de5fa26fa6077dd870716234d54690c9`
 - Phase 4B1 physiology `65a6f2d4e703af5c777f1943f134728b715d4c55`
-- Config externalization `1a9f59c583408dc00aee5097d59e028ee3d0a2c3`, completion `b8b2b870595c9cc62255b4d63b7c20de56e9550f`, `77661563c3a833a3e87b60e4b3ae6caecd648cb8`
+- Config externalization completion `b8b2b870595c9cc62255b4d63b7c20de56e9550f`, `77661563c3a833a3e87b60e4b3ae6caecd648cb8`
 - Phase 4B2 KO/TKO `3960bae022ac7d3129a593a102704d2b39a46b28`
 - Single-fight runner initial `05485f0bd0460ae726fb2f0283373a727464cb38`
+- Single-fight runner completion `da622892e33753e3f4aa10b00c88963150630f41`
 
 ## Hard architecture locks
 - one authoritative fight clock;
@@ -49,41 +52,91 @@ Key implementation commits:
 - cumulative trauma persists; acute vulnerability decays continuously;
 - no deterministic health-bar exhaustion finish;
 - one immutable effective calibration from `config/event_mc_v1.yaml` with optional future partial weight-class override;
-- committed weight-class overrides remain empty.
+- committed weight-class overrides remain empty;
+- terminal action accounting must preserve the already-resolved action/outcome before the single lifecycle finish while blocking all future primary events.
 
 ## Reviewed Phase 4B2 result
 `PHASE 4B2 KO/TKO FINISH MECHANICS GATE: PASS`.
 
 The finish model consumes existing impact/post-trauma physiology, derives current finish resistance from durability/KD resistance plus trauma/acute vulnerability, permits fresh one-shot finishes, and terminates with one `FightFinished` lifecycle event and no later primary events. Historical KO/TKO anchor is 32.79%; five-fixture mechanics rates were 70-95%, intentionally left uncalibrated.
 
-## Completed task — Codespaces single-fight runner
+## Completed Codespaces single-fight runner
 
-Initial implementation `05485f0bd0460ae726fb2f0283373a727464cb38` is functional and observer-only. It:
-- resolves `--fight-id`/`--bout-id` from `data/master/ufc_master.parquet`;
-- resolves exact frozen FSR-32 prefight profiles;
-- supports deterministic `--seed` with `base + path_index`;
-- prints one-path trace and multi-path summary;
-- changes no simulator mechanics or calibration.
+Runner completion commit: `da622892e33753e3f4aa10b00c88963150630f41`.
 
-Independent review found narrow omissions before runner PASS:
-1. trace physiology output should explicitly show post-event cumulative trauma and acute vulnerability;
-2. phase/controller transitions should print before -> after clearly;
-3. aggregate summary should explicitly show finish-round distribution, scheduled-horizon count+rate, red/blue KO/TKO win counts/rates, side-specific TD attempts/completions, and side-specific submission attempts;
-4. tests should explicitly prove nondecreasing trace timestamps, no events after terminal `FightFinished`, same-seed discrete reproducibility, and summary arithmetic;
-5. explicitly test Lewis/Daukaus ID `4b7ec02b39fc6f70`; if it does not resolve in master, report the blocker instead of inventing a mapping.
+It resolves canonical historical fight IDs to frozen FSR-32 prefight profiles, supports deterministic seeds, prints chronological action/phase/stamina/physiology/KD/finish traces, and prints multi-path KO/TKO/horizon/KD/TD/SUB/phase/control summaries. Lewis/Daukaus ID `4b7ec02b39fc6f70` resolves correctly.
 
-The completion fix addresses all five findings without changing simulator behavior. Trace output now exposes post-event trauma/vulnerability and phase/controller transitions; aggregate output explicitly reports finish rounds, scheduled horizons, corner KO/TKO wins, TD attempts/completions, and submission attempts. Focused lifecycle, reproducibility, lookup, and controlled-arithmetic tests cover the diagnostic contract. Lewis/Daukaus ID `4b7ec02b39fc6f70` resolves canonically to Derrick Lewis vs Chris Daukaus on 2021-12-18 with both frozen prefight profiles.
+A later manual trace exposed a lifecycle/accounting bug: the finishing strike generated physiology/finish events but its own `ActionOutcome` was skipped after terminal state. The required correction is bookkeeping-only: count the already-resolved finishing action exactly once, preserve the same winner/time/RNG physics, emit one `FightFinished`, and block all future primary events/time advance. Continuity currently records this as corrected; Phase 4C must verify the branch contains that fix and tests pass before adding another terminal system.
 
-A subsequent lifecycle/accounting review found that the engine stopped observing the already-resolved action consequence after a same-timestamp KO/TKO set terminal state. The accounting-only correction emits that action's single `ActionOutcome` before the single `FightFinished`, while terminal state continues to block all future primary actions and time advances. Lewis/Daukaus seed `20260813` retains winner `blue`, method `KO_TKO`, and time `26.623215196672668`, with the finishing strike now included as the fourth landed blue strike.
+## Current task — Phase 4C Submission Finish Mechanics
 
-Governing completion prompt:
-`docs/EVENT_MC_V1_CODEX_PHASE4B2_SINGLE_FIGHT_RUNNER_FIX_2026-08-13.md`
-Prompt commit: `6d036829fe989fa04e0a752bc43310ca67c2877b`
+User authorized Phase 4C on 2026-08-13 11:16 America/Chicago.
 
-No formula, config, RNG, state, FSR, submission, judging, age, or calibration change is authorized.
+Governing prompt:
+`docs/EVENT_MC_V1_CODEX_PHASE4C_SUBMISSION_FINISHES_2026-08-13.md`
+
+Prompt commit:
+`a0ed3d38bc0b4c5d0fd8933e021db89e14472c33`
+
+Phase 4C is mechanics/architecture only, not population calibration.
+
+Current Phase 3 behavior already generates nonterminal `submission_attempt` events from GROUND. Phase 4C must preserve the separation:
+
+```text
+attempt generation = how often a fighter attacks submissions
+conversion model = probability that a selected attempt finishes
+```
+
+Do not retune submission-attempt frequency.
+
+Before coding, Codex must audit:
+- frozen FSR-32 schema and current `FighterProfile` traits;
+- whether an existing leakage-safe submission-defense trait exists but is not adapted;
+- legacy/static submission conversion logic and overrides.
+
+Known current adapter traits include `submission_pressure`, `control_imposition`, `control_resistance`, `reversal_ability`, and stamina traits. Do not invent/rebuild FSR. If no dedicated defense trait exists, derive transparent defender resistance from approved existing traits and expose blend coefficients in YAML.
+
+Target chain:
+
+```text
+existing submission attempt event
+-> SubmissionFinishModel
+-> attacker threat
+-> defender resistance
+-> small position/context term
+-> at most one clean current-stamina effect if justified
+-> probabilistic P(SUB)
+-> terminal StateDelta(method=SUB, winner=attacker)
+-> already-resolved attempt/outcome still counted once
+-> exactly one FightFinished
+-> no future primary event
+```
+
+All new tunables must live under a dedicated `submission_finish` config section and inherit through the existing global-default + optional weight-class override resolver. Committed real weight-class overrides remain empty.
+
+Use the existing SUBMISSION RNG stream unless a documented architecture reason requires otherwise. No hidden RNGs.
+
+Single-fight trace should show submission threat, resistance, position/context/stamina term, P(SUB), and result. Multi-path summary must separate KO/TKO wins, SUB wins, and scheduled horizons and report submission attempts/conversions/P(SUB|attempt).
+
+Required historical diagnostics are descriptive only: SUB finish rate, attempt exposure if supported, and P(SUB|attempt) only where the authoritative data definitions support it. Do not tune to the anchor in Phase 4C.
+
+Non-goals remain:
+- SUB attempt-frequency tuning;
+- KD or KO/TKO calibration;
+- judging;
+- age;
+- tactical urgency;
+- named submission-technique trees;
+- body-part/injury systems;
+- trauma recovery;
+- FSR rebuild;
+- phase/stamina retuning;
+- real weight-class tuning.
 
 Expected return:
-`PHASE 4B2 SINGLE-FIGHT RUNNER GATE: PASS` or FAIL.
+`PHASE 4C SUBMISSION FINISH MECHANICS GATE: PASS` or FAIL.
+
+Next assistant action: independently review actual Phase 4C implementation, trait ownership, formula, terminal lifecycle, RNG ownership, config propagation, single-fight trace, historical diagnostic semantics, tests, scope protection, and frozen checksum before accepting PASS.
 
 ## Checkpoint history
 - 001-010: Phase 0 baseline established and exact FSR-32 frozen; PASS.
@@ -94,10 +147,7 @@ Expected return:
 - 021-023: Phase 4A stamina/dynamic modifiers implemented; PASS.
 - 024-026: Phase 4B1 impact/trauma/KD implemented; architecture PASS, KD overprediction exposed, calibration deferred.
 - 027-030: calibration externalization completed after one review fix; PASS; future weight-class seam established with no active overrides.
-- 031: user authorized Phase 4B2 KO/TKO mechanics.
-- 032: Phase 4B2 implemented at `3960bae...`; independently reviewed PASS; finish rates remain uncalibrated.
-- 033: user requested Codespaces single-fight sanity runner.
-- 034: runner implemented at `05485f0b...`; functional, observer-only, 91 tests reported passing, frozen checksum unchanged.
-- 035: independent runner review found missing trace/summary/test details; narrow completion prompt issued at `6d036829...`.
-- 036: runner completion fix implemented; all review omissions addressed, Lewis/Daukaus lookup verified, and runner gate PASS without mechanics or calibration changes.
-- 037: terminal-action accounting corrected so an already-resolved finishing action emits its one outcome before the one lifecycle finish; deterministic physics unchanged.
+- 031-032: Phase 4B2 KO/TKO authorized, implemented at `3960bae...`, independently PASS; finish rates intentionally left uncalibrated.
+- 033-036: Codespaces single-fight runner built and review-completed at `da622892...`; runner PASS.
+- 037: manual trace exposed terminal-action accounting bug; bookkeeping-only correction launched/completed without intended physics change.
+- 038: user authorized Phase 4C terminal submission mechanics; governing prompt committed at `a0ed3d38...`.
