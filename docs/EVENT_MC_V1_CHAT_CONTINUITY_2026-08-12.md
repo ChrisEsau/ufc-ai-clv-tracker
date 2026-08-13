@@ -1,6 +1,6 @@
 # EVENT MC V1 Chat Continuity / Working Memory
 
-Last updated: 2026-08-13 14:33 America/Chicago
+Last updated: 2026-08-13 14:48 America/Chicago
 Repository: `ChrisEsau/ufc-ai-clv-tracker`
 Branch: `feature/fsr-32-stamina-shadow`
 
@@ -9,13 +9,14 @@ After every new Codex prompt, update this file. This file is continuity only, no
 
 ## Current gate state
 - Phase 0 through Phase 5A: PASS
-- Phase 6: PASS; exposure-normalized historical metrics require recheck after duration semantic issue
-- Phase 7A: PASS; historical per-time anchors require recheck
-- Phase 7B KD midpoint 36: committed; revalidation requested, no value change authorized
+- Phase 6: PASS; exposure-normalized historical anchors corrected in Phase 7D1
+- Phase 7A: PASS; historical per-time anchors corrected in Phase 7D1
+- Phase 7B KD midpoint 36: committed but not independently reconfirmed after time correction
 - Phase 7B2: PASS
-- Phase 7C finish midpoint 36: committed; timing guardrail revalidation requested, no value change authorized
-- Phase 7D submission decomposition: measured; next calibration deferred pending historical-time correction
-- Phase 7D1 historical exposure-time correction: current phase
+- Phase 7C finish midpoint 36: PASS and revalidated after time correction
+- Phase 7D submission decomposition: PASS measurement only; calibration deferred
+- Phase 7D1 historical exposure-time correction: PASS at `af1e56fdfcdb9823fcbd099dd441ec44b9e37485`
+- Phase 7D2 KD target reconciliation: current next phase; measurement only
 - Age, urgency, real weight-class tuning: not authorized
 
 Frozen FSR-32 SHA-256: `621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a`
@@ -24,45 +25,51 @@ Frozen FSR-32 SHA-256: `621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac05
 - `defaults.knockdown.midpoint_impact_ratio = 36.0`
 - `defaults.finish.midpoint_impact_ratio = 36.0`
 
-## Phase 7D pre-correction result
-Implementation: `259662a2766bf469abfd13de08a19579757fb3c7`
-100 fights x 10 paths:
-- historical/sim KO_TKO 25.0% / 25.6%
-- historical/sim SUB 17.0% / 5.7%
-- historical/sim DEC 58.0% / 68.7%
-- historical attempts/fight 0.610; simulated attempts/path 0.380
-- historical fights with attempt 37.0%; simulated paths with attempt 27.4%
+## Corrected historical anchors from Phase 7D1
+On the same 100-fight cohort:
+- observed seconds/fight: 757.16
+- strike attempts/15min: 285.681
+- landed strikes/15min: 157.045
+- KD/15min: 0.439801
+- KD/100 landed: 0.280048 unchanged
+- KD/fight: 0.370 unchanged
+- submission attempts/15min: 0.7251
+- submission attempts/fight: 0.610 unchanged
+- mean non-decision finish time: 402.762s
+- method shares unchanged: KO/TKO 25.0%, SUB 17.0%, DEC 58.0%
+
+Phase 7D1 implementation commit: `af1e56fdfcdb9823fcbd099dd441ec44b9e37485`.
+Authoritative `match_time_sec` is total elapsed fight time; legacy final-round clock is supported only with explicit semantics.
+
+## Post-correction state
+At committed 36/36 on the 100-fight x 10-path rerun:
+- simulated KO/TKO 25.6%, SUB 5.7%, DEC 68.7%
+- simulated KD/100 landed 0.438
+- simulated KD/15min 0.383
+- simulated submission attempts/path 0.380
+- simulated submission attempts/15min 0.423
+- simulated path share with >=1 attempt 27.4%
 - simulated P(SUB|attempt) 15.0%
+- simulated mean non-decision finish time 387.43s
 
-## Historical duration semantic issue
-Repository review established that authoritative master `match_time_sec` is already TOTAL ELAPSED FIGHT TIME. `pipeline/common/fight_time.py` and the staged derived-stats transformer explicitly construct it that way.
+Finish midpoint 36 remains supported after correction. KD midpoint 36 is unresolved because corrected historical KD/15 and KD/100 landed now pull in different directions; a narrow 32/36/40 check favored 40 only under the prior combined objective.
 
-EVENT MC `observed_duration_seconds()` added prior-round seconds a second time. This can overstate historical exposure for rounds 2+.
+## Submission position lock
+For future submission conversion calibration, top and bottom submission attempts are to be treated 1:1 for now. Do not apply an intrinsic top-position conversion bonus unless UFC-specific evidence supports it. Current explicit top-position bonus must be neutralized before/within the first authorized submission-conversion calibration step, not silently retained.
 
-Metrics requiring correction/recheck:
-- historical strike attempts/15min
-- historical landed/15min
-- historical KD/15min
-- historical submission attempts/15min
-- historical mean non-decision finish time
-- any similar historical per-time metric using the same arithmetic
+## Phase 7D2 KD target reconciliation
+Prompt: `docs/EVENT_MC_V1_CODEX_PHASE7D2_KD_TARGET_RECONCILIATION_2026-08-13.md`
+Prompt commit: `720ab5ccbbda9001ad873959f2e44068bf9d639b`
 
-Metrics not affected by this specific issue:
-- method shares
-- attempts/fight
-- KD/fight
+Measurement only. Keep KD midpoint 36 and finish midpoint 36 committed. Compare in-memory KD midpoint candidates 32, 36, 40, 44, 48 on the same 100-fight x 10-path cohort and report separately:
+- KD/fight or path
 - KD/100 landed
-- finish-round labels
-- simulator outputs under unchanged seeds/config
+- KD/15min
+- zero/multi-KD shares
+- landed/fight or path and landed/15min
+- KO/TKO share
+- mean fight duration
 
-## Phase 7D1
-Prompt: `docs/EVENT_MC_V1_CODEX_PHASE7D1_HISTORICAL_EXPOSURE_TIME_FIX_2026-08-13.md`
-Prompt commit: `cb157a2b64b8937f04b6a57bf2b3d206ff693105`
+Do not rank with one combined objective and do not promote YAML. Determine whether corrected evidence supports a KD midpoint change or whether the conflict is mainly upstream strike exposure/comparability.
 
-Required: correct historical duration semantics, add tests, search all EVENT MC diagnostics for duplicated elapsed-time arithmetic, recompute affected anchors, rerun Phase 7D at unchanged 36/36, and revalidate Phase 7B/7C conclusions without changing calibration values.
-
-Expected return: `PHASE 7D1 HISTORICAL EXPOSURE TIME FIX GATE: PASS` or FAIL.
-
-Phase 7D1 result: the authoritative elapsed-time contract is now used throughout EVENT MC diagnostics, with legacy final-round clock compatibility available only through an explicit argument. On the same 100-fight cohort, old versus corrected historical values were: observed seconds/fight 1276.16 -> 757.16; strike attempts/15min 169.498 -> 285.681; landed/15min 93.176 -> 157.045; KD/15min 0.261 -> 0.440; submission attempts/15min 0.430 -> 0.725; and mean non-decision finish time 652.762s -> 402.762s. Method shares, attempts/fight, KD/fight, KD/100 landed, finish-round shares, and identical-seed simulator outputs were unchanged.
-
-At fixed midpoint 36/36, finish midpoint 36 remains supported by exposure-independent KO/TKO shares and improved corrected timing guardrails. KD midpoint 36 is not independently reconfirmed: the corrected exposure target plus unchanged KD/100-landed evidence favored midpoint 40 over 36 among the narrow 32/36/40 revalidation grid. No calibration changed; KD and submission calibration remain blocked pending review.
+Expected return: `PHASE 7D2 KD TARGET RECONCILIATION GATE: PASS`.
