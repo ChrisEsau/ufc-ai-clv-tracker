@@ -1,6 +1,6 @@
 # EVENT MC V1 Chat Continuity / Working Memory
 
-Last updated: 2026-08-13 14:48 America/Chicago
+Last updated: 2026-08-13 16:46 America/Chicago
 Repository: `ChrisEsau/ufc-ai-clv-tracker`
 Branch: `feature/fsr-32-stamina-shadow`
 
@@ -16,14 +16,73 @@ After every new Codex prompt, update this file. This file is continuity only, no
 - Phase 7C finish midpoint 36: PASS and revalidated after time correction
 - Phase 7D submission decomposition: PASS measurement only; calibration deferred
 - Phase 7D1 historical exposure-time correction: PASS at `af1e56fdfcdb9823fcbd099dd441ec44b9e37485`
-- Phase 7D2 KD target reconciliation: current next phase; measurement only
+- Phase 7D2 KD target reconciliation: PASS; no KD promotion
+- Phase 7E bottom submission-attempt neutralization: PASS
+- Phase 7F submission conversion position neutralization: PASS
+- Phase 7G submission-attempt calibration: diagnostic complete; promotion gate FAIL / no promotion
+- Phase 7H submission-conversion intercept calibration: harness implemented; execution blocked until frozen FSR-32 is restored from the GitHub Release asset
 - Age, urgency, real weight-class tuning: not authorized
 
 Frozen FSR-32 SHA-256: `621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a`
 
+## FSR-32 recovery / Codex sandbox access procedure
+
+If a fresh Codex sandbox or checkout does not contain the ignored frozen FSR-32 parquet, **do not search indefinitely for a local copy and do not rebuild FSR-32**. The exact frozen artifact is intentionally available as a GitHub Release asset for recovery.
+
+Repository: `ChrisEsau/ufc-ai-clv-tracker`
+
+Release tag: `event-mc-v1-fsr32-handoff`
+
+Release asset: `fsr_32_prefight_snapshots.parquet`
+
+Expected asset size: `3,364,786` bytes
+
+Required SHA-256: `621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a`
+
+Expected ignored destination:
+
+`data/simulation/rfs_mc_v2_shared_state/fsr_32_shadow/fsr_32_prefight_snapshots.parquet`
+
+Preferred recovery method when `gh` is available:
+
+```bash
+mkdir -p /tmp/event_mc_v1_fsr32_handoff
+
+gh release download event-mc-v1-fsr32-handoff \
+  --repo ChrisEsau/ufc-ai-clv-tracker \
+  --pattern 'fsr_32_prefight_snapshots.parquet' \
+  --dir /tmp/event_mc_v1_fsr32_handoff
+
+sha256sum /tmp/event_mc_v1_fsr32_handoff/fsr_32_prefight_snapshots.parquet
+```
+
+The downloaded SHA must match the frozen SHA exactly before use. If it differs, STOP and report the observed checksum.
+
+After checksum PASS:
+
+```bash
+mkdir -p data/simulation/rfs_mc_v2_shared_state/fsr_32_shadow
+cp /tmp/event_mc_v1_fsr32_handoff/fsr_32_prefight_snapshots.parquet \
+  data/simulation/rfs_mc_v2_shared_state/fsr_32_shadow/fsr_32_prefight_snapshots.parquet
+
+sha256sum data/simulation/rfs_mc_v2_shared_state/fsr_32_shadow/fsr_32_prefight_snapshots.parquet
+```
+
+Verify the destination SHA also matches exactly. The copy must be byte-for-byte only: do not rewrite, rebuild, reserialize, recompress, normalize, or otherwise transform the parquet. Do not commit the parquet.
+
+Historical governing release-ingest prompt:
+`docs/EVENT_MC_V1_CODEX_FSR32_RELEASE_INGEST_AND_BASELINE_RESUME_2026-08-12.md`
+
+Important current-state rule: that historical prompt says to resume Phase 0 because it was written during Phase 0. **Do not resume Phase 0 now.** Reuse only its artifact-ingest/checksum procedure, then resume whatever current deferred phase requires FSR-32. As of this update, that is **Phase 7H submission-conversion intercept calibration**.
+
 ## Current committed calibration
 - `defaults.knockdown.midpoint_impact_ratio = 36.0`
 - `defaults.finish.midpoint_impact_ratio = 36.0`
+- `defaults.submission_attempts.base_30s = 0.045`
+- `defaults.submission_attempts.bottom_multiplier = 1.0`
+- `defaults.submission_finish.top_position_bonus = 0.0`
+- `defaults.submission_finish.bottom_position_bonus = 0.0`
+- `defaults.submission_finish.intercept = -2.20` pending Phase 7H calibration
 
 ## Corrected historical anchors from Phase 7D1
 On the same 100-fight cohort:
@@ -94,4 +153,4 @@ Train supported approximately 0.050–0.055: at 0.055, simulated exposure was 0.
 
 Phase 7G diagnostic execution is complete and its promotion gate remains FAIL/no promotion. Attempt base remains 0.045, bottom multiplier remains 1.0, both position bonuses remain 0.0, and KD/finish midpoints remain 36. Phase 7H authorizes only `submission_finish.intercept` candidates evaluated end to end against split-specific historical SUB fight share.
 
-The Phase 7H harness and isolation tests were implemented, but this checkout does not contain the frozen FSR-32 parquet required to resolve either chronological cohort. Candidate execution therefore stopped before simulation; no intercept was promoted and the committed value remains -2.20. Phase 7H gate is FAIL until the frozen input is restored and the required coarse/finalist runs can be completed.
+The Phase 7H harness and isolation tests were implemented, but a fresh Codex checkout did not contain the ignored frozen FSR-32 parquet required to resolve either chronological cohort. Candidate execution therefore stopped before simulation; no intercept was promoted and the committed value remains -2.20. The exact frozen parquet is recoverable from the GitHub Release asset documented above. Phase 7H should be resumed only after release download, pre-use SHA verification, byte-for-byte copy to the ignored destination, and destination SHA verification.
