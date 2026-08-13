@@ -6,219 +6,184 @@ Repository: `ChrisEsau/ufc-ai-clv-tracker`
 
 Branch: `feature/fsr-32-stamina-shadow`
 
-Baseline source commit: `7b98ac629dacc094342ba7f6668ffc77aed3b246`
+Architecture source of truth: `docs/EVENT_MC_V1_ARCHITECTURE_AUDIT_2026-08-12.md` revision **v0.3**
 
-Architecture source: `docs/EVENT_MC_V1_ARCHITECTURE_AUDIT_2026-08-12.md` revision v0.2 at the baseline source commit.
+Phase 0 closure record: `docs/EVENT_MC_V1_PHASE0_CLOSURE_2026-08-12.md`
 
-Status: **Phase 0 reproducibility contract. No simulator implementation changes are authorized by this document.**
+Codex materialization prompt: `docs/EVENT_MC_V1_CODEX_PHASE0_BASELINE_PROMPT_2026-08-12.md`
+
+Architecture review code snapshot: `7b98ac629dacc094342ba7f6668ffc77aed3b246`
+
+Status: **Frozen reproducibility contract. No EVENT MC V1 implementation is authorized until this baseline is materialized and reviewed.**
 
 ## Purpose
 
-This document freezes the comparison contract that must be captured from the current simulator before `event_mc_v1` implementation changes begin.
+This document is the canonical numerical/reproducibility contract for the current-simulator baseline used to compare EVENT MC V1.
 
-The new event-driven simulator is **not** expected to reproduce every old path exactly. The purpose of this baseline is attribution: every later difference should be traceable to temporal architecture, the deliberate Phase 2B wrestling semantic correction, a component port, or a later approved calibration change.
+It reconciles the architecture v0.3 closure record with the pre-implementation Codex task so future chats do not invent different seed sets, cohort sizes, fixtures, or output locations.
+
+The baseline is a ruler, not a target. EVENT MC V1 is not expected to reproduce every old path exactly after the time architecture changes.
 
 ## Hard locks
 
-- Do not modify the current simulator while capturing this baseline.
+- Do not modify current simulator mechanics, inheritance, constants, or FSR construction while capturing the baseline.
 - Keep FSR-32 hooked up.
-- Use the current full-fight simulator inheritance stack as-is.
-- Preserve all currently configured KO, SUB, TD, stamina, recovery, age, and judging constants.
-- Do not alter the corrected FSR rating ontology.
-- Do not introduce the future ontology-correct TD consumer during baseline capture.
-- Record failures rather than changing code merely to make a fixture run.
+- Do not correct the legacy blended TD-attempt consumer during baseline capture.
+- Do not retune KO, SUB, TD, stamina, recovery, damage, KD, judging, age, or any other calibration.
+- Record unavailable data/fixtures honestly instead of changing rules to make them work.
+- No `pipeline/simulation/event_mc_v1/` implementation begins until the materialization gate passes.
 
-## Pinned input contract
+## Pinned current inputs
 
-FSR-32 builder contract:
+FSR-32 artifact contract:
 
 `data/simulation/rfs_mc_v2_shared_state/fsr_32_shadow/fsr_32_prefight_snapshots.parquet`
 
-The baseline capture must record for the actual file used:
+FSR-32 builder:
 
-- path;
-- existence;
-- row count;
-- column count;
-- file size;
-- SHA-256 checksum;
-- latest event/fight date present, when available.
+`scripts/experimental/build_fsr_32_database.py`
 
-The capture must also record the exact Git commit at execution time. It must begin from baseline source commit `7b98ac629dacc094342ba7f6668ffc77aed3b246` or a descendant containing documentation-only Phase 0 closure commits. If simulator code has changed, stop and report the mismatch.
+Historical cohort helper:
 
-## Current simulator entry points to preserve
+`scripts/experimental/fsr_32_historical_cohort.py`
 
-Primary single historical diagnostic:
+Single historical diagnostic:
 
 `scripts/experimental/run_single_historical_age_power_diagnostic.py`
 
-Current full-fight class:
+Current full-fight entry class:
 
 `scripts.experimental.fsr_static_mc_ko_sub_decision_v1.StaticFSRMCFullFightV1`
 
-Historical cohort alignment:
+The materialized manifest must record the actual commit SHA, FSR-32 SHA-256, file shape, Python version, and all output checksums.
 
-`scripts.experimental.fsr_32_historical_cohort.build_aligned_cohort()`
+## Deterministic single-path trace seeds
 
-The baseline capture may add a **new diagnostic/capture script only if necessary to serialize existing outputs**, but it may not modify simulator classes, formulas, constants, inheritance, FSR construction, or fight mechanics. If a new capture script is needed, it must be mechanically observational: import current simulator code, run it, and write results.
-
-## Deterministic seed contract
-
-Use explicit seeds everywhere.
-
-### Single-path trace seeds
-
-For every deterministic fixture, capture the following path seeds:
+For every fixed fixture, capture current-simulator traces with exactly:
 
 ```text
-2026081201
-2026081202
-2026081203
-2026081204
-2026081205
+7
+17
+20260811
 ```
 
-These five seeds are diagnostic fixtures, not probability estimates.
+These are causal diagnostic fixtures, not probability estimates.
 
-### Matchup Monte Carlo seed
+## Fixed matchup fixtures
 
-For matchup-level distribution summaries:
+### Required anchor
 
 ```text
-root seed: 20260811
-paths per matchup: 1000
+Rob Font vs Raul Rosas Jr.
+event date: 2026-03-07
+bout_id: bed89a91da9d04c1
+actual: Raul Rosas Jr. by decision
 ```
 
-### Historical cohort seed
+Purpose: high-entry wrestling / TD-volume stress case.
 
-For aggregate historical replay:
+Known recorded current-research comparison evidence:
 
 ```text
-root seed: 20260810
+Font win probability: 59.3%
+Rosas win probability: 40.7%
+Font TD attempts/path: 0.68
+Rosas TD attempts/path: 4.49
+Font TD landed/path: 0.29
+Rosas TD landed/path: 2.37
+Font control seconds/path: 32.04
+Rosas control seconds/path: 284.15
+Font significant attempts/path: 127.61
+Rosas significant attempts/path: 60.81
 ```
 
-Use a deterministic seed matrix derived from that root. Record the seed-generation method in the captured manifest.
+These values are sanity anchors only. A reproduced mismatch must be explained by commit/data/config/seed differences; do not tune to force a match.
 
-## Fixed matchup fixture set
-
-The capture must attempt these named historical fixtures using the current FSR-32 aligned cohort. Resolve and record the actual `bout_id`, event date, fighter IDs, corner orientation, ages, and scheduled rounds from repository data before simulation.
-
-1. **Rob Font vs Raul Rosas Jr.**
-   - Primary wrestling-volume / ontology diagnostic.
-   - Do not substitute another Rosas matchup.
-
-2. **Derrick Lewis vs Chris Daukaus**
-   - Event date: 2021-12-18.
-   - High KO / acute-power diagnostic.
-
-3. **Andre Lima vs Kevin Borjas**
-   - Striking-heavy diagnostic used in prior validation work.
-   - Resolve exact repository bout/date and record it.
-
-4. **Islam Makhachev vs Charles Oliveira**
-   - Event date: 2022-10-22.
-   - Grappling / submission / control diagnostic.
-
-5. **Merab Dvalishvili vs Petr Yan**
-   - Event date: 2023-03-11.
-   - High-volume wrestling / control diagnostic.
-
-6. **Max Holloway vs Calvin Kattar**
-   - Event date: 2021-01-16.
-   - High-volume striking diagnostic.
-
-If any fixture is not present in the mature aligned FSR-32 cohort, do not loosen maturity/leakage rules. Mark it unavailable and select a replacement only by the deterministic replacement rule below.
-
-### Replacement rule
-
-A replacement must be selected from the existing aligned mature cohort by transparent trait quantiles, not subjective name-picking:
-
-- striker replacement: top decile distance striking pressure and bottom half wrestling entry;
-- wrestler replacement: top decile wrestling entry;
-- control replacement: top decile control imposition;
-- grappler replacement: top decile submission pressure;
-- low-action replacement if needed: bottom decile combined distance pressure + wrestling entry.
-
-Record the selection query, quantile thresholds, bout ID, and fighter names.
-
-## Deterministic single-path capture fields
-
-For each fixture × each of the five trace seeds, store at minimum:
+### Additional style fixtures
 
 ```text
-fixture_name
-bout_id
-event_date
-red_fighter_id
-red_name
-blue_fighter_id
-blue_name
-red_age
-blue_age
-scheduled_rounds
-seed
-winner
-method
-finish_round
-finish_segment
-finish_clock_start
-red_sig_att
-blue_sig_att
-red_sig_landed
-blue_sig_landed
-red_td_att
-blue_td_att
-red_td_landed
-blue_td_landed
-red_control_seconds
-blue_control_seconds
-red_ground_control_seconds
-blue_ground_control_seconds
-red_clinch_control_seconds
-blue_clinch_control_seconds
-red_sub_att
-blue_sub_att
-red_reversals
-blue_reversals
-red_knockdowns
-blue_knockdowns
-distance_segments
-clinch_segments
-ground_segments
-red_final_stamina_fraction
-blue_final_stamina_fraction
-red_final_damage_fraction
-blue_final_damage_fraction
+Derrick Lewis vs Chris Daukaus — 2021-12-18
+Max Holloway vs Calvin Kattar — 2021-01-16
+Charles Oliveira vs Dustin Poirier — 2021-12-11
+Merab Dvalishvili vs Petr Yan — 2023-03-11
 ```
 
-Where the current class exposes full path events, retain the chronological trace for these five seeds.
-
-## Matchup-level 1000-path summaries
-
-For each fixed fixture, run 1000 paths with root seed `20260811` and store:
+Fixture intent:
 
 ```text
-p_red_win
-p_blue_win
-p_ko
-p_sub
-p_dec
-mean_finish_round among finishes
-mean_sig_att red/blue
-mean_sig_landed red/blue
-mean_td_att red/blue
-mean_td_landed red/blue
-TD success rate red/blue
-mean_control_seconds red/blue
-mean_ground_control_seconds red/blue
-mean_clinch_control_seconds red/blue
-mean_sub_att red/blue
-mean_reversals red/blue
-mean_knockdowns red/blue
-mean distance/clinch/ground occupancy
+Font/Rosas           high-entry wrestling
+Lewis/Daukaus        power / KO
+Holloway/Kattar      high-volume striking
+Oliveira/Poirier     submission / grappling
+Dvalishvili/Yan      sustained wrestling / control
 ```
 
-For Font vs Rosas, additionally retain the exact prefight FSR-32 values used for:
+If a non-anchor fixture cannot resolve in the current mature aligned FSR-32 cohort, replace it with a documented same-purpose matchup selected from the cohort. Do not relax maturity/leakage rules.
+
+## Single-path trace fields
+
+Retain as much currently exposed chronological detail as possible, including:
+
+```text
+round / segment / clock
+phase start/end
+clinch controller
+ground controller
+significant offense
+TD events
+submission events
+stamina state where exposed
+damage/KD state where exposed
+finish/outcome
+```
+
+Also store compact final stats per fighter:
+
+```text
+sig attempts / landed
+TD attempts / landed
+control seconds
+clinch control seconds
+ground control seconds
+submission attempts
+reversals
+knockdowns
+final outcome/method/finish round/time
+```
+
+Do not modify the simulator simply to expose a missing field; record omissions.
+
+## Matchup Monte Carlo baseline
+
+For every resolved fixture:
+
+```text
+paths = 1000
+root seed = 20260811
+```
+
+Generate a deterministic path-seed vector from the root seed and record the method.
+
+Capture:
+
+```text
+red/blue win probability
+KO/TKO probability
+SUB probability
+DEC probability
+finish round / duration where available
+significant attempts / landed
+TD attempts / landed / success rate
+clinch control seconds
+ground control seconds
+total control seconds
+DISTANCE / CLINCH / GROUND occupancy
+submission attempts
+reversals
+knockdowns
+```
+
+For Font/Rosas additionally record the exact FSR-32 values used for:
 
 ```text
 wrestling_entry
@@ -230,160 +195,156 @@ distance_striking_pressure
 clinch_striking_pressure
 ```
 
-and compute/report the **legacy blended `wrestling_pref`** consumed by V0. This makes Phase 2A vs Phase 2B attribution explicit.
-
-## Aggregate historical cohort freeze
-
-Use the existing leakage-safe aligned mature FSR-32 historical cohort.
-
-Primary comparison cohort:
-
-- event date >= 2020-01-01;
-- both fighters satisfy the current mature/aligned cohort rule already encoded by `fsr_32_historical_cohort`;
-- do not redefine maturity in the capture script;
-- deterministic ordering by event date then `bout_id`;
-- first 200 eligible bouts for the compact frozen audit cohort.
-
-Paths:
+and compute the legacy current-consumer value:
 
 ```text
-100 paths per bout
-root seed 20260810
+wrestling_pref =
+    0.75 * wrestling_entry
+  + 0.25 * control_imposition
+  - 0.50 * distance_striking_pressure
+  - 0.50 * clinch_striking_pressure
 ```
 
-This produces 20,000 simulated paths and is the primary compact V0-to-V1 comparison cohort.
+This is observation only; do not correct it during baseline materialization.
 
-Record cohort-level historical observed values and simulator values where available for:
+## Compact historical parity cohort
+
+Use the existing mature 2020+ aligned FSR-32 historical cohort and the same stable ordering used by the current calibration diagnostics.
+
+Freeze a deterministic first-200-bout slice.
+
+Simulation contract:
 
 ```text
-winner accuracy
-winner Brier score
-KO rate
+bouts = 200
+paths per bout = 10
+root seed = 20260810
+```
+
+This 2,000-path compact cohort is the routine V0-to-V1 migration audit. It intentionally matches the scale already used by current calibration diagnostics rather than introducing a new heavier baseline definition during Phase 0.
+
+Capture where available:
+
+```text
+winner accuracy / Brier
+KO/TKO rate
 SUB rate
 DEC rate
 finish-round distribution
-mean finish round
-fight-duration proxy / scheduled-distance share
-significant attempts
-significant landed
-TD attempts
-TD landed
-TD success rate
+significant attempts / landed
+TD attempts / landed / success rate
 control seconds
-clinch control seconds
-ground control seconds
 phase occupancy
 submission attempts
 reversals
 knockdowns
 ```
 
-Where an observed historical field is unavailable or not comparable, record `not_available` rather than fabricating a target.
+## Full submission/method anchor
 
-## Stratified cohort views
-
-Using the same frozen 200-bout cohort, report simulator and historical summaries where possible for:
+Preserve the existing mature 2020+ submission audit observations:
 
 ```text
-high wrestling_entry: top quartile
-low wrestling_entry: bottom quartile
-high control_imposition: top quartile
-high submission_pressure: top quartile
-3-round bouts
-5-round bouts if present
-fighter age <= 30 vs > 30
-experience strata if already available in the aligned cohort
+cohort: 1,565 fights
+paths: 10 per fight
+historical SUB rate: 16.23%
+current simulated SUB rate: 16.49%
+neutral P(SUB | attempt): 34%
+historical submission attempts/fight: 0.5655
+simulated submission attempts/path: 0.4994
+historical >=1 submission-attempt rate: 35.02%
+simulated >=1 submission-attempt rate: 35.08%
 ```
 
-Do not tune against these strata during capture.
+Materialize/reproduce these where the existing diagnostics support it without modifying simulator behavior. Treat discrepancies as investigation items, not invitations to retune.
 
-## Output location contract
+## Output location
 
-The baseline capture should be stored under a dedicated immutable-style directory, for example:
+Canonical baseline directory:
 
-```text
-data/experimental/event_mc_v1_phase0_baseline/
-```
+`data/experimental/event_mc_v1_baseline/`
 
-Recommended outputs:
+At minimum produce compact reproducibility artifacts:
 
 ```text
 manifest.json
-fixture_resolution.csv
-single_path_fixtures.parquet
-single_path_traces.jsonl.gz
-matchup_1000_path_summary.csv
-historical_200x100_path_results.parquet
-historical_200x100_summary.json
-historical_200x100_strata.csv
+single_path_traces.jsonl
+matchup_summary.csv
+cohort_200_summary.csv
 ```
 
-If repository policy does not permit committing large generated artifacts, commit at minimum:
+Also produce `full_method_baseline.csv` if the current mature method/submission audit can be serialized without changing physics.
 
-- `manifest.json`;
-- fixture-resolution metadata;
-- compact summary CSV/JSON files;
-- checksums and exact filesystem paths for larger local artifacts.
+If larger generated artifacts are intentionally uncommitted, record exact paths and SHA-256 checksums in `manifest.json`.
 
-Do not commit a giant trace artifact merely for convenience.
+## Manifest requirements
 
-## Baseline manifest requirements
-
-`manifest.json` must include:
+At minimum:
 
 ```text
-capture_timestamp
 repository
 branch
-commit_sha
+commit_sha actually run
+python version
 architecture_revision
-fsr32_path
-fsr32_sha256
-fsr32_rows
-fsr32_columns
-single_path_seeds
-matchup_root_seed
-historical_root_seed
-historical_cohort_definition
-historical_bout_count
-paths_per_historical_bout
-simulator_entrypoint
-full_fight_class
-age_rule description
-submission neutral candidate
-recovery candidate description
-notes on any unavailable fixtures
+FSR-32 path
+FSR-32 SHA-256
+FSR-32 row/column counts
+simulator entry module/class
+cohort construction module/function
+fixture names / bout IDs / dates / corner orientation / ages
+single-path seeds
+matchup root seed / path count
+cohort root seed / bout count / paths per bout
+age rule/config used
+major named finish/recovery candidate description
+metric definitions
+output paths
+output SHA-256 checksums
+fixture substitutions/omissions
 ```
 
-Do not duplicate every calibration constant manually in the manifest. Pinning the exact commit is the authoritative calibration freeze; record only the major named candidate configuration for human readability.
+Pinning the exact commit is the authoritative constant freeze; do not manually duplicate every calibration constant in the manifest.
 
-## Acceptance gate for closing Phase 0 operationally
+## Operational Phase 0 acceptance gate
 
-Phase 0 baseline capture is complete only when:
+The pre-implementation baseline materialization passes only when:
 
-1. The current simulator code is confirmed unchanged from the pinned baseline lineage.
+1. Current simulator files are confirmed unchanged.
 2. FSR-32 input is checksummed and recorded.
-3. Every fixed fixture is resolved or transparently replaced by the quantile rule.
-4. Five deterministic single-path seeds are captured for each fixture.
-5. 1000-path summaries are captured for each fixture.
-6. The frozen 200-bout × 100-path historical audit is captured.
-7. The compact summaries and manifest are stored reproducibly.
-8. No simulator constants or mechanics were changed to make the capture pass.
+3. Font/Rosas anchor resolves exactly to the specified bout.
+4. Each additional style category resolves or has a documented replacement.
+5. Three deterministic trace seeds are captured per fixture.
+6. 1000-path matchup summaries are captured.
+7. The first-200 mature 2020+ cohort × 10 paths is captured.
+8. Existing full submission/method anchors are reproduced/materialized where supported.
+9. Compact outputs and manifest are stored reproducibly.
+10. No simulator mechanic/constant was changed to improve or force results.
 
-Only after this gate may implementation of the generic `event_mc_v1` kernel begin.
-
-## Interpretation rule
-
-This baseline is a ruler, not a target.
-
-Exact path equality is not expected after moving to continuous time. During migration, every observed difference should instead be assigned to one of these categories:
+Codex must report either:
 
 ```text
-A. Temporal/mechanical change (Phase 2A)
-B. Deliberate wrestling semantic correction (Phase 2B)
-C. Component port difference (Phases 3-5)
-D. Later explicitly approved calibration/ablation change (Phase 7+)
+PHASE 0 OPERATIONAL BASELINE GATE: PASS
+```
+
+or:
+
+```text
+PHASE 0 OPERATIONAL BASELINE GATE: FAIL
+```
+
+with exact remaining blockers.
+
+## Attribution rule for all later comparisons
+
+Differences between current MC and EVENT MC V1 must first be assigned to:
+
+```text
+A. Phase 2A temporal/mechanical change
+B. Phase 2B deliberate wrestling semantic correction
+C. Phase 3-5 component port difference
+D. Later explicitly approved calibration/ablation change
 E. Bug / unintended regression
 ```
 
-Never tune away a difference until its category is understood.
+Do not tune away a difference until its source is understood.
