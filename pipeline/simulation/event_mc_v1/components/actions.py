@@ -19,6 +19,7 @@ class ActionAttempt:
     side: Side
     action_family: str
     dynamic_modifiers: DynamicModifiers | None = None
+    landed: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -87,7 +88,7 @@ class DistanceCandidate:
         return Resolution(
             delta=delta,
             consequence_events=(consequence,),
-            payload=ActionAttempt(self.side, self.action_family, modifiers),
+            payload=ActionAttempt(self.side, self.action_family, modifiers, landed if self.action_family == "strike" else None),
         )
 
 
@@ -123,7 +124,8 @@ class PhaseCandidate:
         family = self.action_family
         if family in {"clinch_strike", "ground_strike"}:
             phase = "clinch" if family == "clinch_strike" else "ground"
-            outcome = "landed" if rng.random() < phase_strike_landing_probability(attacker, defender, phase) else "missed"
+            landed = rng.random() < phase_strike_landing_probability(attacker, defender, phase)
+            outcome = "landed" if landed else "missed"
         elif family == "clinch_takedown":
             outcome = "landed" if rng.random() < td_success_probability(attacker, defender) else "failed"
             if outcome == "landed":
@@ -145,7 +147,7 @@ class PhaseCandidate:
         cost_delta = self.stamina_model.action_delta(state, self.side, family) if self.stamina_model else StateDelta()
         delta = _merge_delta(delta, cost_delta)
         consequence = ConsequenceEvent(state.fight_time_seconds, "ActionOutcome", ActionOutcome(self.side, family, outcome))
-        return Resolution(delta=delta, consequence_events=(consequence,), payload=ActionAttempt(self.side, family, modifiers))
+        return Resolution(delta=delta, consequence_events=(consequence,), payload=ActionAttempt(self.side, family, modifiers, landed if family in {"clinch_strike", "ground_strike"} else None))
 
 
 def _merge_delta(primary: StateDelta, physiology: StateDelta) -> StateDelta:

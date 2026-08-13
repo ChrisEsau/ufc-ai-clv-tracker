@@ -17,6 +17,10 @@ class StateSnapshot:
     finish_reason: str | None
     red_stamina: float
     blue_stamina: float
+    red_cumulative_trauma: float
+    blue_cumulative_trauma: float
+    red_acute_vulnerability: float
+    blue_acute_vulnerability: float
 
     @classmethod
     def from_state(cls, state: FightState) -> "StateSnapshot":
@@ -29,6 +33,10 @@ class StateSnapshot:
             state.finish_reason,
             state.red_stamina,
             state.blue_stamina,
+            state.red_cumulative_trauma,
+            state.blue_cumulative_trauma,
+            state.red_acute_vulnerability,
+            state.blue_acute_vulnerability,
         )
 
 

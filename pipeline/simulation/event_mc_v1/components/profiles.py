@@ -38,6 +38,8 @@ class FighterProfile:
     stamina_depletion_resistance: float = 50.0
     stamina_performance_resilience: float = 50.0
     striking_power: float = 50.0
+    damage_durability: float = 50.0
+    knockdown_resistance: float = 50.0
 
     @classmethod
     def from_mapping(cls, row: Mapping[str, object]) -> "FighterProfile":
@@ -69,6 +71,8 @@ class FighterProfile:
             stamina_depletion_resistance=number("stamina_depletion_resistance"),
             stamina_performance_resilience=number("stamina_performance_resilience"),
             striking_power=number("striking_power"),
+            damage_durability=number("damage_durability"),
+            knockdown_resistance=number("knockdown_resistance"),
         )
 
 

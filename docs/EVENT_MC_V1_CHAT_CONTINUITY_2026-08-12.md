@@ -22,7 +22,7 @@ Architecture revision: **v0.3**.
 - Phase 2B wrestling-entry ontology correction: **PASS after independent ChatGPT review**.
 - Phase 3 clinch + ground flow: **PASS after independent ChatGPT review**.
 - Phase 4A stamina + dynamic modifiers: **PASS after independent ChatGPT review**.
-- Phase 4B1 impact + trauma + knockdown: **AUTHORIZED and current task; not yet passed**.
+- Phase 4B1 impact + trauma + knockdown: **IMPLEMENTED by Codex; awaiting independent review**.
 - Phase 4B2 KO/TKO finishes and later mechanics: **NOT AUTHORIZED**.
 
 Frozen FSR-32 path:
@@ -404,3 +404,8 @@ Phase 4B2 KO/TKO remains unauthorized.
 Expected Codex return: implementation/tests/diagnostics ending with `PHASE 4B1 IMPACT + TRAUMA + KNOCKDOWN GATE: PASS` or `FAIL`.
 
 Next assistant action: independently review the actual Phase 4B1 implementation before any Phase 4B2 authorization.
+
+## 025 — 2026-08-13
+Codex implemented the authorized Phase 4B1 nonterminal physiology chain. Landed strikes carry the Phase 4A pre-action power modifier into one stochastic impact draw; primary trauma is durability-moderated and persistent; current KD resistance is derived from baseline resistance, cumulative trauma, and acute vulnerability; KD sampling uses the named knockdown stream; and KD-owned acute vulnerability decays under one exact-dt exponential owner. Power and stamina do not enter KD probability again.
+
+The mature health-bar reservoir, deterministic exhaustion finish, collapse trauma replay, damage recovery, age effects, KO/TKO, and Phase 4B2 were intentionally not ported. Five-fixture mechanics diagnostics and the descriptive master `r_kd`/`b_kd` historical anchor were added. Await independent review before accepting the gate or authorizing Phase 4B2.

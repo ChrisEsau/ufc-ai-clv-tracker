@@ -28,6 +28,7 @@ class SimulationEngine:
         sink: EventSink | None = None,
         scheduler: ExponentialScheduler | None = None,
         round_recovery_model=None,
+        physiology_model=None,
     ) -> None:
         self.config = config
         self.rate_provider = rate_provider
@@ -36,6 +37,7 @@ class SimulationEngine:
         self.sink = sink or NullEventSink()
         self.scheduler = scheduler or ExponentialScheduler()
         self.round_recovery_model = round_recovery_model
+        self.physiology_model = physiology_model
 
     def _context(self, state: FightState) -> FightContext:
         return FightContext(
@@ -60,6 +62,10 @@ class SimulationEngine:
             state.red_stamina = delta.red_stamina
         if delta.blue_stamina is not None:
             state.blue_stamina = delta.blue_stamina
+        for name in ("red_cumulative_trauma", "blue_cumulative_trauma", "red_acute_vulnerability", "blue_acute_vulnerability"):
+            value = getattr(delta, name)
+            if value is not None:
+                setattr(state, name, value)
         if delta.action_availability is not None:
             state.action_availability = delta.action_availability
 
@@ -143,6 +149,17 @@ class SimulationEngine:
                 state.fight_time_seconds, candidate.candidate_id, resolution.payload
             )
             self._notify_event(primary, state, before)
+            physiology_events = ()
+            if self.physiology_model is not None:
+                physiology_delta, physiology_events = self.physiology_model.resolve(
+                    state, resolution.payload, state.fight_time_seconds,
+                    self.rng_manager.stream(RNGStream.DAMAGE),
+                    self.rng_manager.stream(RNGStream.KNOCKDOWN_FINISH),
+                )
+                physiology_before = StateSnapshot.from_state(state)
+                self._apply_delta(state, physiology_delta)
+                for event in physiology_events:
+                    self._notify_event(event, state, physiology_before)
             for consequence in resolution.consequence_events:
                 if consequence.timestamp_seconds != state.fight_time_seconds:
                     raise ValueError("consequence events must use the current timestamp")
