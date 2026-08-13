@@ -1,6 +1,6 @@
 # EVENT MC V1 Chat Continuity / Working Memory
 
-Last updated: 2026-08-13 13:07 America/Chicago
+Last updated: 2026-08-13 13:16 America/Chicago
 Repository: `ChrisEsau/ufc-ai-clv-tracker`
 Branch: `feature/fsr-32-stamina-shadow`
 
@@ -9,29 +9,53 @@ After every new Codex prompt, update this file. This file is continuity only, no
 
 ## Current gate state
 - Phase 0 through Phase 5A: PASS
-- Phase 6 population historical validation: IMPLEMENTED at `c4e750a0dfe23c2dd87df8b69c768aacd119b61f`; final PASS withheld pending narrow metrics correction
-- Calibration, age, tactical urgency, real weight-class tuning: NOT AUTHORIZED
+- Phase 6 population historical validation: PASS after pooled-metrics correction `0cc3ee58dae53b860a305f8bd78c64a907875967`
+- Phase 7A strike/impact/KD/KO decomposition: AUTHORIZED / measurement only
+- Calibration changes themselves: NOT YET AUTHORIZED
+- Age, tactical urgency, real weight-class tuning: NOT AUTHORIZED
 
 Frozen FSR-32 SHA-256: `621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a`
 
-## Phase 6
+## Phase 6 final
 Governing prompt: `docs/EVENT_MC_V1_CODEX_PHASE6_POPULATION_VALIDATION_2026-08-13.md`
 Prompt commit: `4496d2f917628333ee148dccde55e51308c3561e`
-Implementation commit: `c4e750a0dfe23c2dd87df8b69c768aacd119b61f`
+Implementation: `c4e750a0dfe23c2dd87df8b69c768aacd119b61f`
+Metrics correction prompt: `docs/EVENT_MC_V1_CODEX_PHASE6_POPULATION_METRICS_FIX_2026-08-13.md`
+Metrics correction implementation: `0cc3ee58dae53b860a305f8bd78c64a907875967`
 
-Initial 100-fight x 10-path run reported KO/TKO 81.4% simulated vs 25.0% historical, SUB 2.7% vs 17.0%, DEC 15.9% vs 58.0%, KD/path 1.008 vs historical KD/fight 0.370, and submission attempts/path 0.178 vs 0.610 historical attempts/fight. Measurement only; no tuning.
+Corrected 100-fight x 10-path anchors:
+- historical KO/TKO 25.0%, simulated 81.4%
+- historical SUB 17.0%, simulated 2.7%
+- historical DEC 58.0%, simulated 15.9%
+- simulated non-decision R1 share 79.55%
+- historical mean non-decision finish time 652.76s, simulated 171.65s
+- historical KD/15 observed minutes 0.261
+- simulated KD/15 simulated minutes 3.098 (~11.87x historical)
+- historical submission attempts/fight 0.610; simulated 0.178/path
+- true simulated path share with >=1 submission attempt 12.6%
+- winner accuracy remained 59.0% on this low-path broad diagnostic
 
-Independent review found four aggregation issues to correct before Phase 7:
-- pool simulated finish-round counts across finishing paths rather than averaging fight-level shares;
-- pool simulated finish time across finishing paths rather than averaging per-fight means;
-- add simulated KD per 15 minutes using actual simulated path exposure seconds;
-- report true pooled share of simulated paths with >=1 submission attempt.
+Phase 6 final gate: `PHASE 6 POPULATION HISTORICAL VALIDATION GATE: PASS`.
 
-Correction prompt: `docs/EVENT_MC_V1_CODEX_PHASE6_POPULATION_METRICS_FIX_2026-08-13.md`
-Prompt commit: `feb0eb43105f70b4991d5151b62203df9a2cefa2`
+## Phase 7A
+Before calibration, decompose the excessive KD/KO behavior into upstream stages so one parameter family does not compensate for another.
 
-No mechanics/config/RNG/FSR/calibration changes are authorized. Same-seed winner and method probabilities must remain unchanged.
+Governing prompt:
+`docs/EVENT_MC_V1_CODEX_PHASE7A_DECOMPOSITION_2026-08-13.md`
+Prompt commit: `97ee0d388b90c584cce50ba219642b33048b3364`
 
-Expected return: `PHASE 6 POPULATION METRICS FIX GATE: PASS` or FAIL.
+Required measurement chain:
+1. strike-attempt exposure per time;
+2. landed-strike exposure per time;
+3. KD per landed strike;
+4. impact severity distribution;
+5. finish conversion on KD strikes;
+6. finish conversion on non-KD landed strikes;
+7. repeated finish-check exposure and trauma relationship;
+8. round/phase dependence.
 
-Correction completed: population finish rounds and finish time pool finishing paths; simulated KD/15min pools all actual simulated exposure; submission exposure pools paths with attempts. The corrected 100-fight x 10-path rerun preserved every fight's winner and method probabilities exactly and changed no mechanics, config, RNG, or FSR.
+Historical strike comparisons must use only genuinely comparable UFCStats fields and actual observed duration; simulated metrics use actual simulated elapsed path exposure. Same-seed win/method probabilities must remain exactly unchanged.
+
+No simulator mechanics or calibration values may change in Phase 7A.
+
+Expected return: `PHASE 7A DECOMPOSITION GATE: PASS` or FAIL.
