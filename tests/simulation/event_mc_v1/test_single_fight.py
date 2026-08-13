@@ -118,7 +118,7 @@ def test_lewis_daukaus_finishing_strike_accounting_preserves_physics():
 
     assert result.state.winner == "blue"
     assert result.state.finish_method == "KO_TKO"
-    assert result.state.fight_time_seconds == 124.99381837520075
+    assert result.state.fight_time_seconds == 105.02486356589631
     assert result.sink_result["outcomes"]["blue"]["strike_landed"] == 12
     assert len(result.sink_result["physiology"]) == 12
     assert len(result.sink_result["finishes"]) == 12

@@ -22,9 +22,9 @@ def profile():
     return FighterProfile("fighter", "fighter", 50, 50, 50, 50, 50, 50, 50, 50)
 
 
-def test_yaml_defaults_are_active_unchanged_values():
+def test_yaml_defaults_are_active_values():
     distance = DEFAULT_CALIBRATION.section("distance")
-    assert distance["strike_attempts_per_30s"] == DISTANCE_STRIKE_ATTEMPTS_PER_30S_BASE == 5.0
+    assert distance["strike_attempts_per_30s"] == DISTANCE_STRIKE_ATTEMPTS_PER_30S_BASE == 6.0
     assert distance["strike_accuracy"] == DISTANCE_STRIKE_ACCURACY_BASE == 0.40
     assert distance["td_attempt_base_30s"] == DISTANCE_TD_ATTEMPT_BASE_30S == 0.10
     submission = DEFAULT_CALIBRATION.section("submission_attempts")
@@ -70,8 +70,8 @@ def test_loading_config_does_not_consume_numpy_rng():
 def test_resolved_override_threads_through_distance_clinch_stamina_and_physiology(tmp_path: Path):
     document = yaml.safe_load(Path("config/event_mc_v1.yaml").read_text())
     document["weight_classes"] = {"synthetic": {
-        "distance": {"strike_attempts_per_30s": 10.0},
-        "clinch": {"strike_attempts_per_30s": 2.4},
+        "distance": {"strike_attempts_per_30s": 12.0},
+        "clinch": {"strike_attempts_per_30s": 7.2},
         "stamina": {"action_costs": {"strike": 1.4}},
         "damage": {"impact_scale": 1.0},
     }}

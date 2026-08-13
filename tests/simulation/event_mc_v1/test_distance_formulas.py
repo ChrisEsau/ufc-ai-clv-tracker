@@ -66,7 +66,9 @@ def test_formula_outputs_match_current_legacy_consumers() -> None:
     expected_attempts_per_10s = legacy._strike_attempts
     # The V0 Poisson mean is deterministic even though its draw is not exposed.
     legacy_mean = (5.0 / 3.0) * math.exp(min(8.0, max(-8.0, 57 - 50)) / 12.0)
-    assert strike_attempt_rate_per_second(red) * 10 == pytest.approx(legacy_mean)
+    calibrated_mean = (6.0 / 3.0) * math.exp(min(8.0, max(-8.0, 57 - 50)) / 12.0)
+    assert strike_attempt_rate_per_second(red) * 10 == pytest.approx(calibrated_mean)
+    assert calibrated_mean == pytest.approx(legacy_mean * 6.0 / 5.0)
     assert callable(expected_attempts_per_10s)
 
 
