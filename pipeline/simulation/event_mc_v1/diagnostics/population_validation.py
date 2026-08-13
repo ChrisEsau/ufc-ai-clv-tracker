@@ -71,6 +71,7 @@ def simulate_fight(row, fsr, paths, seed):
     sub_attempts = [sum(r.sink_result["attempts"][s].get("submission_attempt", 0) for s in ("red", "blue")) for r in results]
     finish_times = [r.state.fight_time_seconds for r in results if r.state.finish_method != "DEC"]
     finish_rounds = Counter(int(max(t - 1e-12, 0) // 300) + 1 for t in finish_times)
+    total_exposure = sum(r.state.fight_time_seconds for r in results)
     actual_red = int(str(row["winner"]) == str(row["r_name"]))
     output = {
         "fight_id": fight.fight_id, "event_date": fight.date, "year": row["event_date"].year,
@@ -80,6 +81,11 @@ def simulate_fight(row, fsr, paths, seed):
         "historical_kd": float(row["r_kd"] + row["b_kd"]), "historical_sub_attempts": float(row["r_sub_att"] + row["b_sub_att"]),
         "red_win_probability": winners["red"] / paths, "blue_win_probability": winners["blue"] / paths,
         "average_simulated_finish_time": float(np.mean(finish_times)) if finish_times else np.nan,
+        "simulated_nondecision_paths": len(finish_times), "simulated_finish_time_sum_seconds": float(sum(finish_times)),
+        "simulated_total_kd": int(sum(kds)), "simulated_total_exposure_seconds": float(total_exposure),
+        "simulated_total_submission_attempts": int(sum(sub_attempts)),
+        "simulated_paths_with_submission_attempt": int(sum(x >= 1 for x in sub_attempts)),
+        "simulated_total_path_count": paths,
         "kd_per_path": float(np.mean(kds)), "zero_kd_share": float(np.mean(np.array(kds) == 0)), "multi_kd_share": float(np.mean(np.array(kds) >= 2)),
         "submission_attempts_per_path": float(np.mean(sub_attempts)),
     }
@@ -89,6 +95,7 @@ def simulate_fight(row, fsr, paths, seed):
             output[f"{side}_{method.lower()}_probability"] = sum(r.state.finish_method == method and r.state.winner == side for r in results) / paths
     for round_no in range(1, 6):
         output[f"sim_finish_r{round_no}_share"] = finish_rounds[round_no] / max(len(finish_times), 1)
+        output[f"sim_finish_r{round_no}_count"] = finish_rounds[round_no]
     for side in ("red", "blue"):
         attempts = [r.sink_result["attempts"][side] for r in results]
         outcomes = [r.sink_result["outcomes"][side] for r in results]
@@ -108,10 +115,13 @@ def compute_metrics(rows: pd.DataFrame):
     calibration = rows.assign(_bin=bins).groupby("_bin", observed=False).agg(fights=("fight_id", "size"), mean_predicted_red=("red_win_probability", "mean"), actual_red_rate=("actual_red_win", "mean")).reset_index()
     historical_methods = rows["actual_method"].value_counts(normalize=True)
     historical_finishes = rows[rows["actual_method"] != "DEC"]
+    total_nondecision = rows["simulated_nondecision_paths"].sum() if "simulated_nondecision_paths" in rows else 0
     simulated_finish_rounds = {
-        str(round_no): float(rows[f"sim_finish_r{round_no}_share"].mean())
+        str(round_no): float(rows[f"sim_finish_r{round_no}_count"].sum() / max(total_nondecision, 1))
         for round_no in range(1, 6)
-    } if "sim_finish_r1_share" in rows else {}
+    } if "sim_finish_r1_count" in rows else {}
+    total_simulated_kd = rows["simulated_total_kd"].sum() if "simulated_total_kd" in rows else np.nan
+    total_simulated_exposure = rows["simulated_total_exposure_seconds"].sum() if "simulated_total_exposure_seconds" in rows else np.nan
     return {
         "fights": len(rows), "winner_accuracy": float(np.mean((p >= .5) == y)),
         "brier_score": float(np.mean((p - y) ** 2)), "log_loss": float(-np.mean(y * np.log(safe) + (1-y) * np.log(1-safe))),
@@ -120,17 +130,18 @@ def compute_metrics(rows: pd.DataFrame):
         "simulated_method_shares": {m: float(rows[f"{m.lower()}_probability"].mean()) for m in METHODS},
         "historical_kd_per_fight": float(rows["historical_kd"].mean()), "simulated_kd_per_path": float(rows["kd_per_path"].mean()),
         "historical_kd_per_15_minutes": float(rows["historical_kd"].sum() / rows["actual_duration_seconds"].sum() * 900),
+        "simulated_kd_per_15_minutes": float(total_simulated_kd / total_simulated_exposure * 900),
         "historical_zero_kd_share": float((rows["historical_kd"] == 0).mean()), "historical_multi_kd_share": float((rows["historical_kd"] >= 2).mean()),
         "simulated_zero_kd_share": float(rows["zero_kd_share"].mean()), "simulated_multi_kd_share": float(rows["multi_kd_share"].mean()),
         "historical_submission_attempts_per_fight": float(rows["historical_sub_attempts"].mean()),
         "historical_share_with_submission_attempt": float((rows["historical_sub_attempts"] > 0).mean()),
         "simulated_submission_attempts_per_path": float(rows["submission_attempts_per_path"].mean()),
-        "simulated_share_with_submission_attempt": float((rows["submission_attempts_per_path"] > 0).mean()),
+        "simulated_share_with_submission_attempt": float(rows["simulated_paths_with_submission_attempt"].sum() / rows["simulated_total_path_count"].sum()),
         "historical_finish_round_shares": {str(round_no): float((historical_finishes["actual_finish_round"] == round_no).mean()) for round_no in range(1, 6)},
         "simulated_finish_round_shares": simulated_finish_rounds,
         "historical_finish_time_mean": float(historical_finishes["actual_duration_seconds"].mean()),
         "historical_finish_time_median": float(historical_finishes["actual_duration_seconds"].median()),
-        "simulated_finish_time_mean": float(rows["average_simulated_finish_time"].mean()) if "average_simulated_finish_time" in rows else None,
+        "simulated_finish_time_mean": float(rows["simulated_finish_time_sum_seconds"].sum() / max(total_nondecision, 1)),
         "calibration_bins": calibration.assign(_bin=calibration["_bin"].astype(str)).rename(columns={"_bin":"bin"}).to_dict("records"),
     }
 

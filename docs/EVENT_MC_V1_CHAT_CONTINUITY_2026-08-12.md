@@ -33,3 +33,5 @@ Prompt commit: `feb0eb43105f70b4991d5151b62203df9a2cefa2`
 No mechanics/config/RNG/FSR/calibration changes are authorized. Same-seed winner and method probabilities must remain unchanged.
 
 Expected return: `PHASE 6 POPULATION METRICS FIX GATE: PASS` or FAIL.
+
+Correction completed: population finish rounds and finish time pool finishing paths; simulated KD/15min pools all actual simulated exposure; submission exposure pools paths with attempts. The corrected 100-fight x 10-path rerun preserved every fight's winner and method probabilities exactly and changed no mechanics, config, RNG, or FSR.
