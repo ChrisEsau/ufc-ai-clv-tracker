@@ -37,8 +37,8 @@ def historical_anchors(cohort):
     }
 
 
-def evaluate(cohort, fsr, base_30s, paths, seed=20260813):
-    calibration = calibration_for_base(base_30s); started = time.perf_counter(); rows = []
+def evaluate(cohort, fsr, base_30s, paths, seed=20260813, *, calibration=None):
+    calibration = calibration or calibration_for_base(base_30s); started = time.perf_counter(); rows = []
     rounds = {}; positions = {"top": 0, "bottom": 0}; position_finishes = {"top": 0, "bottom": 0}
     for fight_index, (_, historical) in enumerate(cohort.iterrows()):
         fight = _fight(historical, fsr)
