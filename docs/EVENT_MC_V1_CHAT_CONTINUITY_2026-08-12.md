@@ -68,7 +68,7 @@ It resolves canonical historical fight IDs to frozen FSR-32 prefight profiles, s
 
 A later manual trace exposed a lifecycle/accounting bug: the finishing strike generated physiology/finish events but its own `ActionOutcome` was skipped after terminal state. The required correction is bookkeeping-only: count the already-resolved finishing action exactly once, preserve the same winner/time/RNG physics, emit one `FightFinished`, and block all future primary events/time advance. Continuity currently records this as corrected; Phase 4C must verify the branch contains that fix and tests pass before adding another terminal system.
 
-## Current task — Phase 4C Submission Finish Mechanics
+## Implemented task — Phase 4C Submission Finish Mechanics
 
 User authorized Phase 4C on 2026-08-13 11:16 America/Chicago.
 
@@ -138,6 +138,18 @@ Expected return:
 
 Next assistant action: independently review actual Phase 4C implementation, trait ownership, formula, terminal lifecycle, RNG ownership, config propagation, single-fight trace, historical diagnostic semantics, tests, scope protection, and frozen checksum before accepting PASS.
 
+Implementation audit and decisions:
+- frozen FSR-32 already contains leakage-safe `submission_conversion` and `submission_resistance`; the adapter now exposes both without rebuilding the artifact;
+- attacker threat is `0.75 * submission_conversion + 0.25 * submission_pressure`;
+- defender resistance is `0.75 * submission_resistance + 0.25 * control_resistance`;
+- conversion logit is `-2.20 + (threat - resistance) / 12 + position_bonus + 0.50 * (attacker_stamina - defender_stamina)`, with top bonus `0.25`, bottom bonus `0.0`, and numerical clipping only;
+- the legacy mature reservoir's prior win/loss counts, accumulated submission danger, control-time blend, repeated-attempt bonus, defensive-stability deterioration, and multiple energy pathways were rejected as duplicated or unavailable causal state; its attempt eligibility, historical conversion/resistance ownership, positional context, and simple probabilistic conversion were preserved;
+- every coefficient is under `defaults.submission_finish`; `weight_classes` remains empty, and a synthetic override test proves inherited resolution;
+- the existing SUBMISSION RNG stream owns conversion sampling; attempt generation rates are unchanged;
+- terminal SUB uses the shared engine lifecycle and the terminal accounting correction, so its already-resolved attempt/outcome is observed exactly once before the one `FightFinished`.
+
+Descriptive completed-fight master anchor (not calibration): 8,654 fights, 19.77% SUB finish rate, 0.748 recorded attempts/fight, 42.21% with a recorded attempt, and 46.35% SUB finish rate conditional on at least one recorded attempt. The conditional statistic is descriptive of fight-level recorded attempts, not an attempt-level conversion target.
+
 ## Checkpoint history
 - 001-010: Phase 0 baseline established and exact FSR-32 frozen; PASS.
 - 011-012: Phase 1 implemented; PASS.
@@ -151,3 +163,4 @@ Next assistant action: independently review actual Phase 4C implementation, trai
 - 033-036: Codespaces single-fight runner built and review-completed at `da622892...`; runner PASS.
 - 037: manual trace exposed terminal-action accounting bug; bookkeeping-only correction launched/completed without intended physics change.
 - 038: user authorized Phase 4C terminal submission mechanics; governing prompt committed at `a0ed3d38...`.
+- 039: Phase 4C compositional submission conversion, diagnostics, runner output, and lifecycle tests implemented without attempt-frequency or population calibration.

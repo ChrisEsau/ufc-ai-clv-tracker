@@ -33,6 +33,8 @@ class FighterProfile:
     ground_striking_defense: float = 50.0
     control_resistance: float = 50.0
     submission_pressure: float = 50.0
+    submission_conversion: float = 50.0
+    submission_resistance: float = 50.0
     reversal_ability: float = 50.0
     stamina_capacity: float = 100.0
     stamina_depletion_resistance: float = 50.0
@@ -66,6 +68,8 @@ class FighterProfile:
             ground_striking_defense=number("ground_striking_defense"),
             control_resistance=number("control_resistance"),
             submission_pressure=number("submission_pressure"),
+            submission_conversion=number("submission_conversion"),
+            submission_resistance=number("submission_resistance"),
             reversal_ability=number("reversal_ability"),
             stamina_capacity=number("stamina_capacity"),
             stamina_depletion_resistance=number("stamina_depletion_resistance"),

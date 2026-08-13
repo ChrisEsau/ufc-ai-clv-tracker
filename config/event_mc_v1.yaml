@@ -17,4 +17,5 @@ defaults:
   damage: {base_shape: 1.0, base_scale: 2.0, tail_shape: 1.25, tail_scale: 4.8, tail_probability: 0.06, power_rating_scale: 55.0, impact_scale: 0.50, durability_scale: 40.0}
   knockdown: {trauma_erosion_scale: 80.0, resistance_scale: 32.0, acute_erosion_scale: 1.0, slope: 2.0, midpoint_impact_ratio: 8.0, acute_increment: 0.50, acute_half_life_seconds: 30.0}
   finish: {baseline_durability_weight: 0.50, baseline_knockdown_resistance_weight: 0.50, resistance_rating_scale: 32.0, trauma_erosion_scale: 120.0, acute_erosion_scale: 1.0, slope: 2.0, midpoint_impact_ratio: 10.0, knockdown_logit_bonus: 1.0}
+  submission_finish: {threat_conversion_weight: 0.75, threat_pressure_weight: 0.25, resistance_submission_weight: 0.75, resistance_control_weight: 0.25, rating_scale: 12.0, intercept: -2.20, top_position_bonus: 0.25, bottom_position_bonus: 0.0, stamina_edge_weight: 0.50, logit_clip: 20.0}
 weight_classes: {}

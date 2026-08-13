@@ -35,6 +35,7 @@ def test_trace_and_summary_modes_execute_and_are_reproducible(capsys):
     assert "Finish rounds:" in summary
     assert "TD attempts/completions=" in summary
     assert "SUB attempts=" in summary
+    assert "KO_TKO=" in summary and "SUB=" in summary and "Scheduled horizon=" in summary
 
 
 def test_trace_is_ordered_terminal_and_exactly_seed_reproducible():
@@ -101,6 +102,7 @@ def test_controlled_summary_arithmetic():
         "td_completions": 1,
         "submission_attempts": 1,
         "ko_wins": 1,
+        "submission_finishes": 0,
     }
     assert summary["sides"]["blue"]["td_attempts"] == 3
     assert summary["sides"]["blue"]["td_completions"] == 2
@@ -118,3 +120,20 @@ def test_lewis_daukaus_finishing_strike_accounting_preserves_physics():
     assert result.sink_result["outcomes"]["blue"]["strike_landed"] == 4
     assert len(result.sink_result["physiology"]) == 4
     assert len(result.sink_result["finishes"]) == 4
+
+
+def test_submission_trace_and_finishing_attempt_accounting(capsys):
+    fight = resolve_fight("b22eab3aa1522f40")
+    engine, _, _ = build_engine(fight, 22, FlowStatsSink())
+    result = engine.run()
+    assert result.state.finish_method == "SUB"
+    assert sum(result.sink_result["attempts"][side].get("submission_attempt", 0) for side in ("red", "blue")) == 1
+    assert sum(result.sink_result["outcomes"][side].get("submission_attempt_attempted", 0) for side in ("red", "blue")) == 1
+    assert len(result.sink_result["submission_checks"]) == 1
+    assert result.sink_result["submission_checks"][0].finished
+
+    run_trace(fight, 22)
+    trace = capsys.readouterr().out
+    assert "SUBMISSION CHECK red->blue" in trace
+    for field in ("threat=", "resistance=", "position=", "stamina/context=", "pSUB=", "finished=True"):
+        assert field in trace

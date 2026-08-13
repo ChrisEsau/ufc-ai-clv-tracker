@@ -30,6 +30,7 @@ class SimulationEngine:
         round_recovery_model=None,
         physiology_model=None,
         finish_model=None,
+        submission_finish_model=None,
     ) -> None:
         self.config = config
         self.rate_provider = rate_provider
@@ -40,6 +41,7 @@ class SimulationEngine:
         self.round_recovery_model = round_recovery_model
         self.physiology_model = physiology_model
         self.finish_model = finish_model
+        self.submission_finish_model = submission_finish_model
 
     def _context(self, state: FightState) -> FightContext:
         return FightContext(
@@ -155,6 +157,17 @@ class SimulationEngine:
                 state.fight_time_seconds, candidate.candidate_id, resolution.payload
             )
             self._notify_event(primary, state, before)
+            if self.submission_finish_model is not None:
+                submission_delta, submission_event = self.submission_finish_model.resolve(
+                    state,
+                    resolution.payload,
+                    state.fight_time_seconds,
+                    self.rng_manager.stream(RNGStream.SUBMISSION),
+                )
+                submission_before = StateSnapshot.from_state(state)
+                self._apply_delta(state, submission_delta)
+                if submission_event is not None:
+                    self._notify_event(submission_event, state, submission_before)
             physiology_events = ()
             if self.physiology_model is not None:
                 physiology_delta, physiology_events = self.physiology_model.resolve(

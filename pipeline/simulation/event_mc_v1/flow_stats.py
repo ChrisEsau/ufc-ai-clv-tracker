@@ -6,6 +6,7 @@ from .components.actions import ActionAttempt, ActionOutcome
 from .events import ConsequenceEvent, PrimaryEvent
 from .physiology import PhysiologyOutcome
 from .finishes import FinishOutcome
+from .submission_finishes import SubmissionFinishOutcome
 
 
 @dataclass
@@ -19,6 +20,7 @@ class FlowStatsSink:
     stamina_round_entries: list[dict[str, float]] = field(default_factory=list)
     physiology: list[PhysiologyOutcome] = field(default_factory=list)
     finishes: list[FinishOutcome] = field(default_factory=list)
+    submission_checks: list[SubmissionFinishOutcome] = field(default_factory=list)
 
     def on_time_advance(self, dt_seconds, before, after) -> None:
         self.phase_seconds[before.phase] += dt_seconds
@@ -43,6 +45,8 @@ class FlowStatsSink:
             self.physiology.append(event.payload)
         if isinstance(event, ConsequenceEvent) and isinstance(event.payload, FinishOutcome):
             self.finishes.append(event.payload)
+        if isinstance(event, ConsequenceEvent) and isinstance(event.payload, SubmissionFinishOutcome):
+            self.submission_checks.append(event.payload)
 
     def finalize(self) -> dict[str, object]:
         return {
@@ -55,4 +59,5 @@ class FlowStatsSink:
             "stamina_round_entries": tuple(self.stamina_round_entries),
             "physiology": tuple(self.physiology),
             "finishes": tuple(self.finishes),
+            "submission_checks": tuple(self.submission_checks),
         }
