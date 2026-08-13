@@ -24,19 +24,28 @@ Architecture status: **Phase 0 architecture closed.**
 
 Implementation status: **Phase 1 generic continuous-time kernel is authorized. No Phase 2A/2B UFC mechanics are authorized yet.**
 
-Phase 0 operational baseline status: **DEFERRED / NOT YET PASSED**, but the exact frozen FSR-32 artifact has now been identified in the user's real Codespace and is ready to be supplied to Codex.
+Phase 0 operational baseline status: **DEFERRED / NOT YET PASSED, but the exact frozen FSR-32 artifact has now been published as a temporary GitHub Release asset and Codex is authorized to ingest it, verify its SHA-256, and resume the frozen baseline.**
 
 Exact frozen FSR-32 identity:
 
 ```text
-Codespace source path:
+Original Codespace source path:
 /workspaces/ufc-ai-clv-tracker/data/simulation/rfs_mc_v2_shared_state/fsr_32_shadow/fsr_32_prefight_snapshots.parquet
 
 SHA-256:
 621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a
 
-reported size:
+reported original size:
 ~3.3M
+
+GitHub Release tag:
+event-mc-v1-fsr32-handoff
+
+Release asset:
+fsr_32_prefight_snapshots.parquet
+
+GitHub release-reported asset size:
+3.20 MiB
 ```
 
 Canonical artifact identity note:
@@ -45,7 +54,7 @@ Canonical artifact identity note:
 
 Current artifact-ingest / baseline-resume Codex prompt:
 
-`docs/EVENT_MC_V1_CODEX_FSR32_INGEST_AND_BASELINE_RESUME_2026-08-12.md`
+`docs/EVENT_MC_V1_CODEX_FSR32_RELEASE_INGEST_AND_BASELINE_RESUME_2026-08-12.md`
 
 Current Phase 1 Codex prompt:
 
@@ -142,7 +151,7 @@ No real UFC mechanics in Phase 1.
 
 ---
 
-# Deferred Phase 0 Baseline — Now Recoverable
+# Deferred Phase 0 Baseline — Release Handoff Ready
 
 The original Phase 0 numerical gate failed because Codex's isolated `/workspace/...` environment did not contain the generated FSR-32 parquet and is not the user's actual GitHub Codespace.
 
@@ -158,15 +167,23 @@ Local identity check returned:
 
 `621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a`
 
-The user now wants to give the artifact to Codex immediately.
+Direct attachment to Codex was unavailable, so the user installed GitHub CLI in the real Codespace and published the exact file as a temporary GitHub Release asset:
+
+```text
+release tag: event-mc-v1-fsr32-handoff
+asset: fsr_32_prefight_snapshots.parquet
+release-reported size: 3.20 MiB
+```
 
 New approved Codex prompt:
 
-`docs/EVENT_MC_V1_CODEX_FSR32_INGEST_AND_BASELINE_RESUME_2026-08-12.md`
+`docs/EVENT_MC_V1_CODEX_FSR32_RELEASE_INGEST_AND_BASELINE_RESUME_2026-08-12.md`
 
-Codex must verify the supplied attachment against the exact SHA before copying it into the ignored expected path. It must not rewrite/rebuild the parquet. If checksum matches, it may resume the frozen Phase 0 baseline using the untouched current simulator.
+Codex must download the release asset, verify the downloaded SHA equals the known frozen SHA before use, copy it byte-for-byte into the expected ignored path, verify the destination SHA, inspect metadata without rewriting, and then resume the frozen Phase 0 baseline using `StaticFSRMCFullFightV1`.
 
-Phase 1 work and Phase 0 baseline measurement must remain logically separate; the old baseline continues to use `StaticFSRMCFullFightV1` and the frozen FSR-32 artifact.
+If the SHA differs, Codex must stop. The parquet must never be committed or rebuilt.
+
+Phase 1 work and Phase 0 baseline measurement must remain logically separate.
 
 ---
 
@@ -190,7 +207,7 @@ When Codex returns Phase 1 work, independently review:
 
 When Codex returns the resumed Phase 0 baseline, independently review:
 
-- supplied source SHA and destination SHA both equal `621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a`;
+- downloaded source SHA and destination SHA both equal `621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a`;
 - artifact was copied byte-for-byte and not committed;
 - exact fixtures/seeds/path counts/cohort ordering;
 - manifest/checksums;
@@ -221,33 +238,35 @@ Codex repaired Git environment and verified feature branch, but Phase 0 baseline
 Codex artifact recovery returned NOT FOUND. User explicitly authorized moving forward with Phase 1 generic kernel while leaving Phase 0 numerical baseline deferred. Phase 2A remained unauthorized.
 
 ## Checkpoint 006 — 2026-08-12 23:08 America/Chicago
-User located the exact frozen FSR-32 parquet in the real GitHub Codespace.
+User located the exact frozen FSR-32 parquet in the real GitHub Codespace and established SHA-256 `621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a`. Initial attachment-ingest prompt was created, but direct upload to Codex was unavailable.
 
-Identity:
+## Checkpoint 007 — 2026-08-12 23:18 America/Chicago
+
+User successfully published the exact frozen parquet as a temporary GitHub Release asset:
 
 ```text
-source path: /workspaces/ufc-ai-clv-tracker/data/simulation/rfs_mc_v2_shared_state/fsr_32_shadow/fsr_32_prefight_snapshots.parquet
-SHA-256: 621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a
-reported size: 3.3M
+repository: ChrisEsau/ufc-ai-clv-tracker
+release tag: event-mc-v1-fsr32-handoff
+asset: fsr_32_prefight_snapshots.parquet
+asset size shown by GitHub: 3.20 MiB
+expected SHA-256: 621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a
 ```
-
-User requested that the artifact be given to Codex now.
 
 New Codex prompt issued:
 
-`docs/EVENT_MC_V1_CODEX_FSR32_INGEST_AND_BASELINE_RESUME_2026-08-12.md`
+`docs/EVENT_MC_V1_CODEX_FSR32_RELEASE_INGEST_AND_BASELINE_RESUME_2026-08-12.md`
 
 Purpose:
 
-- accept the user-supplied parquet attachment;
-- verify exact SHA-256 before use;
-- copy byte-for-byte to the expected ignored FSR-32 path;
-- inspect metadata without rewriting;
-- resume the deferred frozen Phase 0 operational baseline;
-- keep Phase 1 implementation logically separate;
-- do not rebuild FSR or begin Phase 2.
+- download the exact release asset;
+- verify SHA-256 before use;
+- copy byte-for-byte into the expected ignored FSR-32 path;
+- verify destination SHA;
+- inspect frozen artifact metadata;
+- immediately resume the deferred Phase 0 baseline if artifact verification passes;
+- do not rebuild FSR, modify current simulator/calibration, or begin Phase 2.
 
-Expected next assistant action: review whichever Codex result returns first (Phase 1 kernel and/or resumed Phase 0 baseline) independently. Phase 2A remains unauthorized.
+Expected next assistant action: independently review the returned artifact verification and full Phase 0 baseline report. Phase 1 remains authorized independently; Phase 2A remains unauthorized.
 
 Phase 1 authorized now: **YES**.
 
