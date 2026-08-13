@@ -1,9 +1,10 @@
-"""Rebuild only canonical wrestling_entry and merge it into the existing FSR parquet.
+"""Rebuild only wrestling_entry and merge it into the existing FSR-32 prefight parquet.
 
-This script intentionally avoids the full 25-family canonical replay.  It replays
+This script intentionally avoids the full 25-family canonical replay. It replays
 only the leakage-safe wrestling_entry rating chronologically from the existing
-RFS history, then replaces just that one column in the canonical pre-fight
-snapshot database.
+RFS history, then replaces just that one column in the existing FSR-32 pre-fight
+snapshot database. The other 24 learned ratings are preserved byte-for-value in
+the resulting dataframe.
 
 Current wrestling_entry contract
 --------------------------------
@@ -14,8 +15,8 @@ Current wrestling_entry contract
   versus the neutral 50 prior (no opponent td_defense adjustment).
 - Ratings remain on the canonical 10-90 scale with 50 neutral prior.
 
-The script writes a new parquet by default.  Use --in-place only after checking
-its diagnostics; in-place mode creates a timestamp-free .bak copy first.
+The script writes a shadow parquet by default. Use --in-place only after checking
+its diagnostics; in-place mode creates a .bak copy first.
 """
 
 from __future__ import annotations
@@ -31,12 +32,12 @@ import pandas as pd
 
 
 RFS_PATH = Path("data/features/round_fighter_state_history.parquet")
-CANONICAL_PATH = Path(
-    "data/simulation/rfs_mc_v2_shared_state/fsr_canonical_shadow/"
-    "fsr_canonical_prefight_snapshots.parquet"
+BASE_FSR_PATH = Path(
+    "data/simulation/rfs_mc_v2_shared_state/fsr_32_shadow/"
+    "fsr_32_prefight_snapshots.parquet"
 )
-DEFAULT_OUTPUT_PATH = CANONICAL_PATH.with_name(
-    "fsr_canonical_prefight_snapshots_wrestling_entry_v2.parquet"
+DEFAULT_OUTPUT_PATH = BASE_FSR_PATH.with_name(
+    "fsr_32_prefight_snapshots_wrestling_entry_v2.parquet"
 )
 
 BASE_RATING = 50.0
@@ -211,17 +212,19 @@ def replay_wrestling_entry(rfs: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
-def merge_into_canonical(
-    canonical: pd.DataFrame,
+def merge_into_base_fsr(
+    base_fsr: pd.DataFrame,
     wrestling: pd.DataFrame,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     keys = ["fight_id", "fighter_id"]
-    base = canonical.copy()
+    base = base_fsr.copy()
     base["fight_id"] = base["fight_id"].astype(str)
     base["fighter_id"] = base["fighter_id"].astype(str)
 
     if base.duplicated(keys).any():
-        raise RuntimeError("canonical prefight database violates fighter-fight grain")
+        raise RuntimeError("FSR-32 prefight database violates fighter-fight grain")
+    if "wrestling_entry" not in base.columns:
+        raise RuntimeError("FSR-32 prefight database has no wrestling_entry column")
 
     new_trait = wrestling[keys + ["wrestling_entry"]].rename(
         columns={"wrestling_entry": "wrestling_entry_new"}
@@ -232,12 +235,14 @@ def merge_into_canonical(
     if missing.any():
         sample = merged.loc[missing, keys].head(10).to_dict("records")
         raise RuntimeError(
-            f"{int(missing.sum())} canonical rows lack rebuilt wrestling_entry; sample={sample}"
+            f"{int(missing.sum())} FSR-32 rows lack rebuilt wrestling_entry; sample={sample}"
         )
 
-    audit = merged[
-        [*keys, "fighter_name", "wrestling_entry", "wrestling_entry_new"]
-    ].copy()
+    audit_cols = [*keys]
+    if "fighter_name" in merged.columns:
+        audit_cols.append("fighter_name")
+    audit_cols += ["wrestling_entry", "wrestling_entry_new"]
+    audit = merged[audit_cols].copy()
     audit["delta"] = audit["wrestling_entry_new"] - audit["wrestling_entry"]
 
     merged["wrestling_entry"] = merged.pop("wrestling_entry_new")
@@ -249,7 +254,7 @@ def main() -> None:
     parser.add_argument(
         "--in-place",
         action="store_true",
-        help="Replace canonical parquet after creating a .bak copy.",
+        help="Replace FSR-32 prefight parquet after creating a .bak copy.",
     )
     parser.add_argument(
         "--output",
@@ -263,24 +268,24 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    for path in (RFS_PATH, CANONICAL_PATH):
+    for path in (RFS_PATH, BASE_FSR_PATH):
         if not path.exists():
             raise RuntimeError(f"required input not found: {path}")
 
     print(f"[wrestling_entry] loading RFS: {RFS_PATH}", flush=True)
     rfs = pd.read_parquet(RFS_PATH)
-    print(f"[wrestling_entry] loading canonical: {CANONICAL_PATH}", flush=True)
-    canonical = pd.read_parquet(CANONICAL_PATH)
+    print(f"[wrestling_entry] loading FSR-32: {BASE_FSR_PATH}", flush=True)
+    base_fsr = pd.read_parquet(BASE_FSR_PATH)
 
     print(
         f"[wrestling_entry] replaying ONE trait across {len(rfs):,} fighter-fight rows...",
         flush=True,
     )
     rebuilt = replay_wrestling_entry(rfs)
-    updated, audit = merge_into_canonical(canonical, rebuilt)
+    updated, audit = merge_into_base_fsr(base_fsr, rebuilt)
 
     print("\nWRESTLING_ENTRY REBUILD SUMMARY")
-    print(f"canonical rows: {len(updated):,}")
+    print(f"FSR-32 rows:    {len(updated):,}")
     print(f"mean old:       {audit['wrestling_entry'].mean():.3f}")
     print(f"mean new:       {audit['wrestling_entry_new'].mean():.3f}")
     print(f"median old:     {audit['wrestling_entry'].median():.3f}")
@@ -293,25 +298,31 @@ def main() -> None:
         selected = audit.loc[audit["fight_id"].eq(str(args.fight_id))].copy()
         print(f"\nTARGET FIGHT: {args.fight_id}")
         if selected.empty:
-            print("No matching canonical rows.")
+            print("No matching FSR-32 rows.")
         else:
+            display_cols = [
+                col
+                for col in (
+                    "fighter_name",
+                    "wrestling_entry",
+                    "wrestling_entry_new",
+                    "delta",
+                )
+                if col in selected.columns
+            ]
             print(
-                selected[
-                    [
-                        "fighter_name",
-                        "wrestling_entry",
-                        "wrestling_entry_new",
-                        "delta",
-                    ]
-                ].to_string(index=False, float_format=lambda x: f"{x:.3f}")
+                selected[display_cols].to_string(
+                    index=False,
+                    float_format=lambda x: f"{x:.3f}",
+                )
             )
 
     if args.in_place:
-        backup_path = CANONICAL_PATH.with_suffix(CANONICAL_PATH.suffix + ".bak")
-        shutil.copy2(CANONICAL_PATH, backup_path)
-        updated.to_parquet(CANONICAL_PATH, index=False)
+        backup_path = BASE_FSR_PATH.with_suffix(BASE_FSR_PATH.suffix + ".bak")
+        shutil.copy2(BASE_FSR_PATH, backup_path)
+        updated.to_parquet(BASE_FSR_PATH, index=False)
         print(f"\n[wrestling_entry] backup: {backup_path}")
-        print(f"[wrestling_entry] updated canonical: {CANONICAL_PATH}")
+        print(f"[wrestling_entry] updated FSR-32: {BASE_FSR_PATH}")
     else:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         updated.to_parquet(args.output, index=False)
