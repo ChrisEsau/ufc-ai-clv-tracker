@@ -175,8 +175,6 @@ class SimulationEngine:
                         self._apply_delta(state, finish_delta)
                         self._notify_event(finish_event, state, finish_before)
             for consequence in resolution.consequence_events:
-                if state.finished:
-                    break
                 if consequence.timestamp_seconds != state.fight_time_seconds:
                     raise ValueError("consequence events must use the current timestamp")
                 snapshot = StateSnapshot.from_state(state)

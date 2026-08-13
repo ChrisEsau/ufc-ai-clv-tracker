@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 from pipeline.simulation.event_mc_v1.events import FightFinished
+from pipeline.simulation.event_mc_v1.flow_stats import FlowStatsSink
 from pipeline.simulation.event_mc_v1.sinks import FullTraceEventSink
 from pipeline.simulation.event_mc_v1.single_fight import (
     _aggregate_results,
@@ -104,3 +105,16 @@ def test_controlled_summary_arithmetic():
     assert summary["sides"]["blue"]["td_attempts"] == 3
     assert summary["sides"]["blue"]["td_completions"] == 2
     assert summary["sides"]["blue"]["submission_attempts"] == 2
+
+
+def test_lewis_daukaus_finishing_strike_accounting_preserves_physics():
+    fight = resolve_fight("4b7ec02b39fc6f70")
+    engine, _, _ = build_engine(fight, 20260813, FlowStatsSink())
+    result = engine.run()
+
+    assert result.state.winner == "blue"
+    assert result.state.finish_method == "KO_TKO"
+    assert result.state.fight_time_seconds == 26.623215196672668
+    assert result.sink_result["outcomes"]["blue"]["strike_landed"] == 4
+    assert len(result.sink_result["physiology"]) == 4
+    assert len(result.sink_result["finishes"]) == 4

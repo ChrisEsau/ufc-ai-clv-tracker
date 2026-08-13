@@ -74,6 +74,8 @@ Independent review found narrow omissions before runner PASS:
 
 The completion fix addresses all five findings without changing simulator behavior. Trace output now exposes post-event trauma/vulnerability and phase/controller transitions; aggregate output explicitly reports finish rounds, scheduled horizons, corner KO/TKO wins, TD attempts/completions, and submission attempts. Focused lifecycle, reproducibility, lookup, and controlled-arithmetic tests cover the diagnostic contract. Lewis/Daukaus ID `4b7ec02b39fc6f70` resolves canonically to Derrick Lewis vs Chris Daukaus on 2021-12-18 with both frozen prefight profiles.
 
+A subsequent lifecycle/accounting review found that the engine stopped observing the already-resolved action consequence after a same-timestamp KO/TKO set terminal state. The accounting-only correction emits that action's single `ActionOutcome` before the single `FightFinished`, while terminal state continues to block all future primary actions and time advances. Lewis/Daukaus seed `20260813` retains winner `blue`, method `KO_TKO`, and time `26.623215196672668`, with the finishing strike now included as the fourth landed blue strike.
+
 Governing completion prompt:
 `docs/EVENT_MC_V1_CODEX_PHASE4B2_SINGLE_FIGHT_RUNNER_FIX_2026-08-13.md`
 Prompt commit: `6d036829fe989fa04e0a752bc43310ca67c2877b`
@@ -98,3 +100,4 @@ Expected return:
 - 034: runner implemented at `05485f0b...`; functional, observer-only, 91 tests reported passing, frozen checksum unchanged.
 - 035: independent runner review found missing trace/summary/test details; narrow completion prompt issued at `6d036829...`.
 - 036: runner completion fix implemented; all review omissions addressed, Lewis/Daukaus lookup verified, and runner gate PASS without mechanics or calibration changes.
+- 037: terminal-action accounting corrected so an already-resolved finishing action emits its one outcome before the one lifecycle finish; deterministic physics unchanged.

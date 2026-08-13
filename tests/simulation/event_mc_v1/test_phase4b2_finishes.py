@@ -7,11 +7,11 @@ from pipeline.simulation.event_mc_v1.state import FightState, StateDelta
 from pipeline.simulation.event_mc_v1.config import FightConfig
 from pipeline.simulation.event_mc_v1.contracts import NoOpTimeAdvanceModel, Resolution
 from pipeline.simulation.event_mc_v1.engine import SimulationEngine
-from pipeline.simulation.event_mc_v1.events import FightFinished, PrimaryEvent
+from pipeline.simulation.event_mc_v1.events import ConsequenceEvent, FightFinished, PrimaryEvent
 from pipeline.simulation.event_mc_v1.rng import RNGManager, RNGStream
 from pipeline.simulation.event_mc_v1.scheduler import EventRate
 from pipeline.simulation.event_mc_v1.sinks import FullTraceEventSink
-from pipeline.simulation.event_mc_v1.components.actions import ActionAttempt
+from pipeline.simulation.event_mc_v1.components.actions import ActionAttempt, ActionOutcome
 from pipeline.simulation.event_mc_v1.modifiers import DynamicModifiers
 from pipeline.simulation.event_mc_v1.calibration import load_event_mc_config
 from pathlib import Path
@@ -77,7 +77,17 @@ def test_engine_emits_one_lifecycle_finish_and_no_later_primary_events():
         candidate_id = "red_strike"
         rng_stream = RNGStream.STRIKE_RESOLUTION
         def resolve(self, state, context, rng):
-            return Resolution(payload=ActionAttempt(Side.RED, "strike", DynamicModifiers(1, 1), True))
+            timestamp = state.fight_time_seconds
+            return Resolution(
+                payload=ActionAttempt(Side.RED, "strike", DynamicModifiers(1, 1), True),
+                consequence_events=(
+                    ConsequenceEvent(
+                        timestamp,
+                        "ActionOutcome",
+                        ActionOutcome(Side.RED, "strike", "landed"),
+                    ),
+                ),
+            )
     class Provider:
         def candidates(self, state, context): return (EventRate(Candidate(), 1000),)
     class Physiology:
@@ -88,9 +98,17 @@ def test_engine_emits_one_lifecycle_finish_and_no_later_primary_events():
     result = SimulationEngine(FightConfig(1, 10), Provider(), NoOpTimeAdvanceModel(), RNGManager(9), trace, physiology_model=Physiology(), finish_model=model()).run()
     events = [entry.payload for entry in result.sink_result if entry.kind == "event"]
     assert sum(isinstance(event, FightFinished) for event in events) == 1
+    action_outcomes = [
+        event.payload
+        for event in events
+        if isinstance(event, ConsequenceEvent)
+        and isinstance(event.payload, ActionOutcome)
+    ]
+    assert action_outcomes == [ActionOutcome(Side.RED, "strike", "landed")]
     primary_indexes = [i for i, event in enumerate(events) if isinstance(event, PrimaryEvent)]
     finish_index = next(i for i, event in enumerate(events) if isinstance(event, FightFinished))
     assert all(i < finish_index for i in primary_indexes)
+    assert finish_index == len(events) - 1
     assert result.state.finished and result.state.finish_method == "KO_TKO"
 
 
