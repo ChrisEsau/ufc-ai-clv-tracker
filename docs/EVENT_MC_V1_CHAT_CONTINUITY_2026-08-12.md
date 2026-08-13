@@ -18,7 +18,7 @@ After every new Codex prompt, update this file. Preserve gate state, prompt path
 - Phase 4B1 KD calibration: OPEN / intentionally deferred by user
 - Phase 4B1 config externalization: PASS
 - Phase 4B2 KO/TKO finish mechanics: PASS after independent review
-- Phase 4B2 single-fight runner: FUNCTIONAL, but completion fix required before runner PASS
+- Phase 4B2 single-fight runner: PASS
 - Terminal submissions, judging, age, tactical urgency, population calibration, real weight-class tuning: NOT AUTHORIZED
 
 Frozen FSR-32:
@@ -56,7 +56,7 @@ Key implementation commits:
 
 The finish model consumes existing impact/post-trauma physiology, derives current finish resistance from durability/KD resistance plus trauma/acute vulnerability, permits fresh one-shot finishes, and terminates with one `FightFinished` lifecycle event and no later primary events. Historical KO/TKO anchor is 32.79%; five-fixture mechanics rates were 70-95%, intentionally left uncalibrated.
 
-## Current task — finish the Codespaces single-fight runner
+## Completed task — Codespaces single-fight runner
 
 Initial implementation `05485f0bd0460ae726fb2f0283373a727464cb38` is functional and observer-only. It:
 - resolves `--fight-id`/`--bout-id` from `data/master/ufc_master.parquet`;
@@ -71,6 +71,8 @@ Independent review found narrow omissions before runner PASS:
 3. aggregate summary should explicitly show finish-round distribution, scheduled-horizon count+rate, red/blue KO/TKO win counts/rates, side-specific TD attempts/completions, and side-specific submission attempts;
 4. tests should explicitly prove nondecreasing trace timestamps, no events after terminal `FightFinished`, same-seed discrete reproducibility, and summary arithmetic;
 5. explicitly test Lewis/Daukaus ID `4b7ec02b39fc6f70`; if it does not resolve in master, report the blocker instead of inventing a mapping.
+
+The completion fix addresses all five findings without changing simulator behavior. Trace output now exposes post-event trauma/vulnerability and phase/controller transitions; aggregate output explicitly reports finish rounds, scheduled horizons, corner KO/TKO wins, TD attempts/completions, and submission attempts. Focused lifecycle, reproducibility, lookup, and controlled-arithmetic tests cover the diagnostic contract. Lewis/Daukaus ID `4b7ec02b39fc6f70` resolves canonically to Derrick Lewis vs Chris Daukaus on 2021-12-18 with both frozen prefight profiles.
 
 Governing completion prompt:
 `docs/EVENT_MC_V1_CODEX_PHASE4B2_SINGLE_FIGHT_RUNNER_FIX_2026-08-13.md`
@@ -95,3 +97,4 @@ Expected return:
 - 033: user requested Codespaces single-fight sanity runner.
 - 034: runner implemented at `05485f0b...`; functional, observer-only, 91 tests reported passing, frozen checksum unchanged.
 - 035: independent runner review found missing trace/summary/test details; narrow completion prompt issued at `6d036829...`.
+- 036: runner completion fix implemented; all review omissions addressed, Lewis/Daukaus lookup verified, and runner gate PASS without mechanics or calibration changes.

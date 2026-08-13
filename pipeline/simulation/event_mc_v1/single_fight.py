@@ -9,6 +9,8 @@ import time
 
 import pandas as pd
 
+from pipeline.common.paths import MASTER_PATH
+
 from .calibration import DEFAULT_RESOLVER
 from .components.action_rates import FightFlowRateProvider
 from .components.actions import ActionAttempt, ActionOutcome
@@ -25,7 +27,6 @@ from .rng import RNGManager
 from .sinks import FullTraceEventSink
 from .stamina import StaminaModel
 
-MASTER_PATH = "data/master/ufc_master.parquet"
 DEFAULT_SEED = 20260813
 
 
@@ -72,31 +73,81 @@ def build_engine(fight: HistoricalFight, seed: int, sink):
     ), calibration, key
 
 
+def _aggregate_results(rows):
+    """Return deterministic summary data separately from wall-clock reporting."""
+    paths = len(rows)
+    wins = Counter(result.state.winner or "scheduled_horizon" for result in rows)
+    finish_times = tuple(
+        result.state.fight_time_seconds
+        for result in rows
+        if result.state.finish_method == "KO_TKO"
+    )
+    finish_rounds = Counter(
+        int(max(seconds - 1e-12, 0.0) // 300) + 1 for seconds in finish_times
+    )
+    knockdowns = tuple(
+        sum(item.knockdown for item in result.sink_result["physiology"])
+        for result in rows
+    )
+    side_stats = {}
+    for side in ("red", "blue"):
+        attempts = Counter()
+        outcomes = Counter()
+        for result in rows:
+            attempts.update(result.sink_result["attempts"][side])
+            outcomes.update(result.sink_result["outcomes"][side])
+        td_attempts = attempts["takedown"] + attempts["clinch_takedown"]
+        td_completions = outcomes["takedown_landed"] + outcomes["clinch_takedown_landed"]
+        side_stats[side] = {
+            "attempts": dict(attempts),
+            "td_attempts": td_attempts,
+            "td_completions": td_completions,
+            "submission_attempts": attempts["submission_attempt"],
+            "ko_wins": wins[side],
+        }
+    return {
+        "paths": paths,
+        "outcomes": dict(wins),
+        "scheduled_horizon": wins["scheduled_horizon"],
+        "finish_times": finish_times,
+        "finish_rounds": dict(finish_rounds),
+        "knockdowns": knockdowns,
+        "sides": side_stats,
+    }
+
+
 def run_summary(fight: HistoricalFight, paths: int, seed: int):
     started = time.perf_counter(); rows = []
     for index in range(paths):
         engine, calibration, key = build_engine(fight, seed + index, FlowStatsSink())
         rows.append(engine.run())
     elapsed = time.perf_counter() - started
-    wins = Counter(result.state.winner or "scheduled_horizon" for result in rows)
-    finishes = [result.state.fight_time_seconds for result in rows if result.state.finish_method == "KO_TKO"]
-    kds = [sum(item.knockdown for item in result.sink_result["physiology"]) for result in rows]
+    summary = _aggregate_results(rows)
+    wins = summary["outcomes"]
+    finishes = summary["finish_times"]
+    kds = summary["knockdowns"]
     print_header(fight, calibration, key, seed, paths)
     print(f"Completed: {len(rows)}/{paths} | runtime={elapsed:.2f}s | {paths/elapsed:.2f} paths/s")
     print("Outcomes:", ", ".join(f"{name}={count} ({count/paths:.1%})" for name, count in sorted(wins.items())))
+    print(f"Scheduled horizon={summary['scheduled_horizon']} ({summary['scheduled_horizon']/paths:.1%})")
     print(f"KO_TKO={len(finishes)} ({len(finishes)/paths:.1%}) | avg finish={sum(finishes)/max(len(finishes),1):.1f}s")
+    rounds = ", ".join(f"R{round_no}={count} ({count/paths:.1%})" for round_no, count in sorted(summary["finish_rounds"].items())) or "none"
+    print(f"Finish rounds: {rounds}")
+    print("KO/TKO wins: " + " | ".join(f"{side}={summary['sides'][side]['ko_wins']} ({summary['sides'][side]['ko_wins']/paths:.1%})" for side in ("red", "blue")))
     print(f"KDs/path={sum(kds)/paths:.3f} | zero={sum(x==0 for x in kds)/paths:.1%} | >=1={sum(x>=1 for x in kds)/paths:.1%} | multi={sum(x>=2 for x in kds)/paths:.1%}")
     for side in ("red", "blue"):
         trauma = sum(getattr(result.state, f"{side}_cumulative_trauma") for result in rows)/paths
         stamina = sum(getattr(result.state, f"{side}_stamina") for result in rows)/paths
         control = sum(result.sink_result["clinch_control_seconds"][side] + result.sink_result["ground_control_seconds"][side] for result in rows)/paths
         print(f"{side.upper()}: final stamina={stamina:.3f} trauma={trauma:.2f} control={control:.1f}s")
+        side_summary = summary["sides"][side]
+        print(f"  TD attempts/completions={side_summary['td_attempts']/paths:.2f}/{side_summary['td_completions']/paths:.2f} per path | SUB attempts={side_summary['submission_attempts']/paths:.2f} per path")
         families = sorted(set().union(*(result.sink_result["attempts"][side] for result in rows)))
         print(f"  avg attempts: " + ", ".join(f"{family}={sum(result.sink_result['attempts'][side].get(family,0) for result in rows)/paths:.2f}" for family in families))
         landed = sum(sum(count for key, count in result.sink_result["outcomes"][side].items() if key.endswith("_landed")) for result in rows) / paths
         print(f"  avg landed strike/TD outcomes={landed:.2f}")
     print("Avg phase seconds:", " ".join(f"{phase}={sum(r.sink_result['phase_seconds'][phase] for r in rows)/paths:.1f}" for phase in ("distance","clinch","ground")))
-    return {"outcomes": dict(wins), "knockdowns": tuple(kds), "finish_times": tuple(finishes)}
+    return summary
 
 
 def run_trace(fight: HistoricalFight, seed: int):
@@ -113,13 +164,13 @@ def run_trace(fight: HistoricalFight, seed: int):
         if isinstance(event, (RoundStarted, RoundEnded, FightFinished)):
             print(f"{stamp} {type(event).__name__}: {event}"); continue
         if isinstance(event, PrimaryEvent) and isinstance(event.payload, ActionAttempt):
-            p=event.payload; print(f"{stamp} {entry.before.phase:8} {p.side.value:4} {p.action_family:20} stamina {entry.before.red_stamina:.3f}/{entry.before.blue_stamina:.3f}->{entry.after.red_stamina:.3f}/{entry.after.blue_stamina:.3f} mods={p.dynamic_modifiers}")
+            p=event.payload; print(f"{stamp} ACTION {p.side.value:4} {p.action_family:20} phase={entry.before.phase}->{entry.after.phase} controllers=clinch:{entry.before.clinch_controller}->{entry.after.clinch_controller},ground:{entry.before.ground_controller}->{entry.after.ground_controller} stamina={entry.before.red_stamina:.3f}/{entry.before.blue_stamina:.3f}->{entry.after.red_stamina:.3f}/{entry.after.blue_stamina:.3f} mods={p.dynamic_modifiers}")
         elif isinstance(event, ConsequenceEvent) and isinstance(event.payload, ActionOutcome):
             print(f"{stamp} outcome {event.payload.side.value} {event.payload.action_family}={event.payload.outcome} phase={entry.after.phase}")
         elif isinstance(event, ConsequenceEvent) and isinstance(event.payload, PhysiologyOutcome):
-            p=event.payload; print(f"{stamp} IMPACT {p.attacker.value}->{p.defender.value} impact={p.impact:.3f} trauma={p.primary_trauma:.3f} KDres={p.current_resistance:.3f} pKD={p.knockdown_probability:.3%} KD={p.knockdown}")
+            p=event.payload; defender=p.defender.value; print(f"{stamp} IMPACT {p.attacker.value}->{defender} impact={p.impact:.3f} primary_trauma={p.primary_trauma:.3f} cumulative_trauma={getattr(entry.after, defender + '_cumulative_trauma'):.3f} acute_vulnerability={getattr(entry.after, defender + '_acute_vulnerability'):.3f} current_KD_resistance={p.current_resistance:.3f} pKD={p.knockdown_probability:.3%} KD={p.knockdown}")
         elif isinstance(event, ConsequenceEvent) and isinstance(event.payload, FinishOutcome):
-            p=event.payload; print(f"{stamp} FINISH CHECK ratio={p.impact_ratio:.3f} resistance={p.current_finish_resistance:.3f} p={p.finish_probability:.3%} finished={p.finished}")
+            p=event.payload; print(f"{stamp} FINISH CHECK current_finish_resistance={p.current_finish_resistance:.3f} impact_ratio={p.impact_ratio:.3f} pKO_TKO={p.finish_probability:.3%} finished={p.finished}")
     attempts=Counter(); outcomes=Counter(); kds=Counter()
     for entry in result.sink_result:
         event=entry.payload
