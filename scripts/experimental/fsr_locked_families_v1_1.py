@@ -1,9 +1,9 @@
 """Shadow FSR V1.1 replay with leakage-safe skill-specific expectations.
 
-V1.1 preserves the locked V1 observation (O) and evidence-quality (Q)
-functions exactly.  It changes only expected performance (E): equal 50-rated
-fighters are expected to produce the leakage-safe Q-weighted population
-observation for that skill, rather than an unconditional 0.50 observation.
+V1.1 inherits the current V1 observation (O) and evidence-quality (Q)
+functions and changes expected performance (E): equal 50-rated fighters are
+expected to produce the leakage-safe Q-weighted population observation for that
+skill, rather than an unconditional 0.50 observation.
 
 For skill s:
 
@@ -16,6 +16,10 @@ Then:
 
 This keeps 50 as the unknown/population-prior rating while allowing hurdle and
 binary observations to have natural population baselines away from 0.50.
+
+For wrestling_entry specifically, D_s is the population-prior rating rather
+than opponent td_defense.  Entry measures takedown initiation frequency;
+opponent defense belongs to takedown conversion, not the decision to initiate.
 
 Shadow/research only.  No production contracts are changed.
 """
@@ -71,14 +75,14 @@ def defense_rating(
     opponent_id: str,
     skill: str,
 ) -> float:
-    """Return the paired opponent rating used by the locked V1 ontology."""
+    """Return the paired opponent rating used by the current ontology."""
 
     if skill == "distance_precision":
         return ratings[opponent_id]["distance_defense"]
     if skill == "distance_defense":
         return ratings[opponent_id]["distance_precision"]
     if skill == "wrestling_entry":
-        return ratings[opponent_id]["td_defense"]
+        return v1.BASE_RATING
     if skill == "wrestling_conversion":
         return ratings[opponent_id]["td_defense"]
     if skill == "td_defense":
@@ -303,7 +307,6 @@ def main() -> None:
                 _ = ratings[fighter_id]
                 _ = ratings[opponent_id]
 
-                # O and Q are inherited unchanged from locked V1.
                 bundle = v1.observation_bundle(
                     row,
                     opponent_row,
@@ -397,7 +400,7 @@ def main() -> None:
             )
             quality_sum[skill] += date_quality_sum[skill]
 
-        # Preserve V1's leakage-safe percentile pools unchanged.
+        # Preserve V1's leakage-safe percentile pools.
         v1.append_date_to_pools(
             date_rows,
             pools,
