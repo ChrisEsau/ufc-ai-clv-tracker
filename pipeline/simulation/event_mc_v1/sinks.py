@@ -15,6 +15,14 @@ class StateSnapshot:
     clinch_controller: str | None
     finished: bool
     finish_reason: str | None
+    winner: str | None
+    finish_method: str | None
+    red_stamina: float
+    blue_stamina: float
+    red_cumulative_trauma: float
+    blue_cumulative_trauma: float
+    red_acute_vulnerability: float
+    blue_acute_vulnerability: float
 
     @classmethod
     def from_state(cls, state: FightState) -> "StateSnapshot":
@@ -25,6 +33,14 @@ class StateSnapshot:
             state.clinch_controller,
             state.finished,
             state.finish_reason,
+            state.winner,
+            state.finish_method,
+            state.red_stamina,
+            state.blue_stamina,
+            state.red_cumulative_trauma,
+            state.blue_cumulative_trauma,
+            state.red_acute_vulnerability,
+            state.blue_acute_vulnerability,
         )
 
 

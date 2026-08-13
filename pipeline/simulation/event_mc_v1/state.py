@@ -43,6 +43,14 @@ class FightState:
     clinch_controller: str | None = None
     finished: bool = False
     finish_reason: str | None = None
+    winner: str | None = None
+    finish_method: str | None = None
+    red_stamina: float = 1.0
+    blue_stamina: float = 1.0
+    red_cumulative_trauma: float = 0.0
+    blue_cumulative_trauma: float = 0.0
+    red_acute_vulnerability: float = 0.0
+    blue_acute_vulnerability: float = 0.0
     action_availability: ActionAvailabilityState = field(
         default_factory=ActionAvailabilityState
     )
@@ -59,4 +67,12 @@ class StateDelta:
     set_clinch_controller: bool = False
     finished: bool | None = None
     finish_reason: str | None = None
+    winner: str | None = None
+    finish_method: str | None = None
+    red_stamina: float | None = None
+    blue_stamina: float | None = None
+    red_cumulative_trauma: float | None = None
+    blue_cumulative_trauma: float | None = None
+    red_acute_vulnerability: float | None = None
+    blue_acute_vulnerability: float | None = None
     action_availability: ActionAvailabilityState | None = None
