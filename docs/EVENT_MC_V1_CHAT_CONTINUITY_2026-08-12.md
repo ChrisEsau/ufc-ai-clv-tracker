@@ -1,6 +1,6 @@
 # EVENT MC V1 Chat Continuity / Working Memory
 
-Last updated: 2026-08-13 13:52 America/Chicago
+Last updated: 2026-08-13 14:00 America/Chicago
 Repository: `ChrisEsau/ufc-ai-clv-tracker`
 Branch: `feature/fsr-32-stamina-shadow`
 
@@ -12,8 +12,8 @@ After every new Codex prompt, update this file. This file is continuity only, no
 - Phase 6 population historical validation: PASS
 - Phase 7A strike/impact/KD/KO decomposition: PASS
 - Phase 7B KD calibration: PASS at `66b927f72c399304e466055902435ecf74e885d6`
-- Phase 7B2 post-KD decomposition: AUTHORIZED / current next phase
-- KO/TKO conversion calibration: NOT YET AUTHORIZED
+- Phase 7B2 post-KD decomposition: PASS at `eba174cdb9a6276a7a061f9b4c973bbc1a463ad8`
+- Phase 7C finish midpoint calibration: AUTHORIZED / current next phase
 - Submission calibration: NOT YET AUTHORIZED
 - Age, tactical urgency, real weight-class tuning: NOT AUTHORIZED
 
@@ -52,16 +52,55 @@ Holdout subset: KD/100 landed 0.227; KD/15min 0.201; KO/TKO 76.4%; SUB 2.0%; DEC
 
 Phase 7B conclusion: one global KD midpoint was enough to reduce KD exposure from roughly 12x historical to the historical order of magnitude on train and holdout, while KO/TKO remained grossly excessive. Phase 7B gate: PASS.
 
-## Phase 7B2 post-KD decomposition
+## Phase 7B2 post-KD decomposition final
 Governing prompt: `docs/EVENT_MC_V1_CODEX_PHASE7B2_POST_KD_DECOMPOSITION_2026-08-13.md`
 Prompt commit: `2663750f7bb51c311bbeaab3804d8f46037f2355`
+Implementation commit: `eba174cdb9a6276a7a061f9b4c973bbc1a463ad8`
 
-Purpose: rerun Phase 7A measurements under committed KD midpoint 36 before any KO/TKO calibration. Old conversion diagnostics are stale because corrected KD frequency changes censoring, acute vulnerability and finish-check exposure.
+100-fight x 10-path post-KD anchors at midpoint 36:
+- attempts/15min 195.48
+- landed/15min 84.05
+- KD/100 landed 0.328
+- KD/15min 0.276
+- zero-KD 88.6%; multi-KD 0.5%
+- finish checks/path 36.234; finish checks/15min 84.050
+- P(finish | KD) 58.82%
+- P(finish | non-KD landed) 1.830%
+- non-KD finishing-strike share 90.42%
+- KO/TKO paths with zero prior KDs 96.44%
+- KO/TKO 73.1%; SUB 3.4%; DEC 23.5%
+- mean non-decision finish time 215.81s
+- R1 share of non-decisions 74.12%
 
-Required measurements include current KD exposure, finish checks, P(finish|KD), P(finish|non-KD), non-KD finishing share, KO paths with zero prior KD, outcome/timing distributions, impact tails, and trauma bins. No config or mechanic changes are authorized.
+Interpretation lock:
+- corrected KD exposure did not solve excessive KO/TKO;
+- non-KD repeated finish checks are now the population-dominant KO/TKO channel;
+- KD-strike conversion is high but rare and not population dominant;
+- old midpoint-8 KO conversion measurements are obsolete due changed censoring.
 
-Expected return: `PHASE 7B2 POST-KD DECOMPOSITION GATE: PASS` or FAIL.
+Phase 7B2 gate: PASS.
 
-Next assistant action: review Phase 7B2 and decide the narrow Phase 7C KO/TKO calibration parameterization. Do not start submission calibration until KO/TKO environment is corrected.
+## Phase 7C finish midpoint calibration
+Governing prompt:
+`docs/EVENT_MC_V1_CODEX_PHASE7C_FINISH_MIDPOINT_CALIBRATION_2026-08-13.md`
+Prompt commit: `d8980863f641acac693261ce8c7e583beb78a8d5`
 
-Phase 7B2 completed on the same 100-fight x 10-path cohort at midpoint 36. KD exposure is now 0.328/100 landed and 0.276/15min, while KO/TKO remains 73.1%. Non-KD strikes account for 90.42% of KO/TKO finishing strikes, and 96.44% of KO/TKO paths had zero prior KDs. This was measurement-only; config and mechanics are unchanged.
+Hard scope:
+- ONLY `defaults.finish.midpoint_impact_ratio` may move from current 10.0;
+- finish slope, KD logit bonus, durability/resistance/trauma/acute terms remain fixed;
+- KD midpoint remains 36.0;
+- impact generation, action/phase rates, stamina, submissions, judging, RNG, FSR, weight-class overrides, age and urgency remain fixed.
+
+Calibration design:
+- chronological mature-fighter train 2020-2024 and holdout 2025+;
+- compute historical KO/TKO target separately per split;
+- common seeds;
+- coarse grid 10,16,24,32,48,64,96,128,192, then refine around best bracket;
+- primary target KO/TKO share; finish timing is secondary guardrail;
+- SUB/DEC and predictive metrics are downstream diagnostics only;
+- promote one finish midpoint only if train and holdout support the same region, KO incidence improves on both, timing is not pathological, and KD calibration remains approximately intact;
+- if one midpoint cannot work cleanly, do not force promotion; return evidence that the finish model needs another degree of freedom.
+
+Expected return: `PHASE 7C KO/TKO MIDPOINT CALIBRATION GATE: PASS` or FAIL.
+
+Next assistant action: independently review Phase 7C search, exact config diff if promoted, temporal holdout support, KD preservation, finish timing, and downstream SUB/DEC movement before authorizing submission calibration.
