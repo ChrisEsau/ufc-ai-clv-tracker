@@ -1,0 +1,113 @@
+{
+  "age_rule": "physical traits unchanged through age 30; -2 points/year after 30",
+  "architecture_revision": "v0.3",
+  "branch": "feature/fsr-32-stamina-shadow",
+  "cohort": {
+    "bouts": 200,
+    "ordering": "first 200 rows from build_aligned_cohort() stable order",
+    "paths_per_bout": 10,
+    "root_seed": 20260810
+  },
+  "cohort_builder": "scripts.experimental.fsr_32_historical_cohort.build_aligned_cohort",
+  "commit_sha": "23d5f28e7f8ef2a36a43aba112a306d8c72d1f7f",
+  "finish_recovery_candidate": "current KO locks + 34% neutral submission conversion + current global recovery",
+  "fixture_omissions": [],
+  "fixture_substitutions": [],
+  "fixtures": [
+    {
+      "blue_age": 21.409993155373034,
+      "blue_fighter_id": "fe2babf95de24fb1",
+      "blue_name": "Raul Rosas Jr.",
+      "bout_id": "bed89a91da9d04c1",
+      "event_date": "2026-03-07",
+      "red_age": 38.69952087611225,
+      "red_fighter_id": "05339613bf8e9808",
+      "red_name": "Rob Font",
+      "scheduled_rounds": 3
+    },
+    {
+      "blue_age": 32.2299794661191,
+      "blue_fighter_id": "d0aaedcf7ccd0b45",
+      "blue_name": "Chris Daukaus",
+      "bout_id": "4b7ec02b39fc6f70",
+      "event_date": "2021-12-18",
+      "red_age": 36.85968514715948,
+      "red_fighter_id": "d3df1add9d9a7efb",
+      "red_name": "Derrick Lewis",
+      "scheduled_rounds": 5
+    },
+    {
+      "blue_age": 32.8104038329911,
+      "blue_fighter_id": "751de04455cfaac0",
+      "blue_name": "Calvin Kattar",
+      "bout_id": "a4817b7e46028b4a",
+      "event_date": "2021-01-16",
+      "red_age": 29.11978097193703,
+      "red_fighter_id": "150ff4cc642270b9",
+      "red_name": "Max Holloway",
+      "scheduled_rounds": 5
+    },
+    {
+      "blue_age": 32.89253935660506,
+      "blue_fighter_id": "029eaff01e6bb8f0",
+      "blue_name": "Dustin Poirier",
+      "bout_id": "b22eab3aa1522f40",
+      "event_date": "2021-12-11",
+      "red_age": 32.15058179329227,
+      "red_fighter_id": "07225ba28ae309b6",
+      "red_name": "Charles Oliveira",
+      "scheduled_rounds": 5
+    },
+    {
+      "blue_age": 32.16427104722793,
+      "blue_fighter_id": "c03520b5c88ed6b4",
+      "blue_name": "Merab Dvalishvili",
+      "bout_id": "0ccd2593c88209e4",
+      "event_date": "2023-03-11",
+      "red_age": 30.075290896646134,
+      "red_fighter_id": "d661ce4da776fc20",
+      "red_name": "Petr Yan",
+      "scheduled_rounds": 5
+    }
+  ],
+  "fsr_32": {
+    "bytes": 3364786,
+    "columns": 54,
+    "latest_date": "2026-08-01",
+    "path": "data/simulation/rfs_mc_v2_shared_state/fsr_32_shadow/fsr_32_prefight_snapshots.parquet",
+    "rows": 13390,
+    "sha256": "621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a"
+  },
+  "matchup": {
+    "paths": 1000,
+    "root_seed": 20260811,
+    "seed_method": "numpy.random.default_rng(root).integers(1, int32_max, paths)"
+  },
+  "metric_definitions": "counts are current simulator FighterStats per path; phase occupancy is segment share; control is seconds",
+  "outputs": {
+    "data/experimental/event_mc_v1_baseline/cohort_200_summary.csv": {
+      "bytes": 87341,
+      "sha256": "e973d39ba90b6924369ffab6a3771a8e482bebce6d86668040fd0847a1b15df3"
+    },
+    "data/experimental/event_mc_v1_baseline/full_method_baseline.csv": {
+      "bytes": 399,
+      "sha256": "e92021839407e4e730e1361aa4016a2d629874ec4b5da8bafa22316609a38776"
+    },
+    "data/experimental/event_mc_v1_baseline/matchup_summary.csv": {
+      "bytes": 4125,
+      "sha256": "c9fa71ba99ef7ae58b54dbe20d9e30c7d1305fbb46120b2c235e45056d8d2df4"
+    },
+    "data/experimental/event_mc_v1_baseline/single_path_traces.jsonl": {
+      "bytes": 501612,
+      "sha256": "e743e70f44135b2f0fdc96b990f04fa3fa33fab8528fae9f6c6c099e1eb3d68a"
+    }
+  },
+  "python_version": "3.14.4",
+  "repository": "ChrisEsau/ufc-ai-clv-tracker",
+  "simulator": "scripts.experimental.fsr_static_mc_ko_sub_decision_v1.StaticFSRMCFullFightV1",
+  "single_path_seeds": [
+    7,
+    17,
+    20260811
+  ]
+}
