@@ -158,3 +158,4 @@ Next assistant action: independently review the actual Phase 5A implementation, 
 - 040: independent Phase 4C review found current submission attempt cost feeding its own conversion through post-action stamina; narrow pre-action sequencing fix issued at `11d5b270...`.
 - 041: submission pre-action stamina correction implemented at `dc33b61...`; independently reviewed; Phase 4C final PASS.
 - 042: user authorized Phase 5A deterministic judging with no draws and 10-9-only rounds; governing prompt committed at `2c3fbef6...`.
+- 043: Phase 5A deterministic round-local judging implemented with effectiveness/aggression/control hierarchy, 10-9-only cards, stable JUDGING-stream fallback, scheduled-horizon DEC resolution, runner cards, descriptive anchor, diagnostics, and no calibration.

@@ -1,7 +1,8 @@
 from types import SimpleNamespace
 
-from pipeline.simulation.event_mc_v1.events import FightFinished
+from pipeline.simulation.event_mc_v1.events import ConsequenceEvent, FightFinished
 from pipeline.simulation.event_mc_v1.flow_stats import FlowStatsSink
+from pipeline.simulation.event_mc_v1.judging import RoundScore
 from pipeline.simulation.event_mc_v1.sinks import FullTraceEventSink
 from pipeline.simulation.event_mc_v1.single_fight import (
     _aggregate_results,
@@ -103,6 +104,7 @@ def test_controlled_summary_arithmetic():
         "submission_attempts": 1,
         "ko_wins": 1,
         "submission_finishes": 0,
+        "decision_wins": 0,
     }
     assert summary["sides"]["blue"]["td_attempts"] == 3
     assert summary["sides"]["blue"]["td_completions"] == 2
@@ -137,3 +139,23 @@ def test_submission_trace_and_finishing_attempt_accounting(capsys):
     assert "SUBMISSION CHECK red->blue" in trace
     for field in ("threat=", "resistance=", "position=", "stamina/context=", "pSUB=", "finished=True"):
         assert field in trace
+
+
+def test_decision_trace_has_five_ten_nine_cards_and_one_terminal_event(capsys):
+    fight = resolve_fight("4b7ec02b39fc6f70")
+    engine, _, _ = build_engine(fight, 70, FullTraceEventSink())
+    result = engine.run()
+    events = [entry.payload for entry in result.sink_result if entry.kind == "event"]
+    cards = [event.payload for event in events if isinstance(event, ConsequenceEvent) and isinstance(event.payload, RoundScore)]
+    assert result.state.finish_method == "DEC" and result.state.winner in {"red", "blue"}
+    assert len(cards) == 5 and all({card.red_score, card.blue_score} == {9, 10} for card in cards)
+    assert sum(isinstance(event, FightFinished) for event in events) == 1
+    assert isinstance(events[-1], FightFinished)
+
+    run_trace(fight, 70)
+    trace = capsys.readouterr().out
+    assert trace.count(" JUDGING ") == 5
+    assert "FINAL DECISION" in trace and "method=DEC" in trace
+    run_summary(fight, 1, 70)
+    summary = capsys.readouterr().out
+    assert "DEC=1 (100.0%)" in summary

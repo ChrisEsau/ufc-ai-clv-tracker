@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from .config import FightConfig
 from .contracts import FightContext, RateProvider, TimeAdvanceModel
-from .events import FightFinished, PrimaryEvent, RoundEnded, RoundStarted
+from .events import ConsequenceEvent, FightFinished, PrimaryEvent, RoundEnded, RoundStarted
 from .rng import RNGManager, RNGStream
 from .scheduler import ExponentialScheduler
 from .sinks import EventSink, NullEventSink, StateSnapshot
@@ -31,6 +31,7 @@ class SimulationEngine:
         physiology_model=None,
         finish_model=None,
         submission_finish_model=None,
+        judging_model=None,
     ) -> None:
         self.config = config
         self.rate_provider = rate_provider
@@ -42,6 +43,7 @@ class SimulationEngine:
         self.physiology_model = physiology_model
         self.finish_model = finish_model
         self.submission_finish_model = submission_finish_model
+        self.judging_model = judging_model
 
     def _context(self, state: FightState) -> FightContext:
         return FightContext(
@@ -78,7 +80,10 @@ class SimulationEngine:
             state.action_availability = delta.action_availability
 
     def _notify_event(self, event, state: FightState, before: StateSnapshot) -> None:
-        self.sink.on_event(event, before, StateSnapshot.from_state(state))
+        after = StateSnapshot.from_state(state)
+        self.sink.on_event(event, before, after)
+        if self.judging_model is not None:
+            self.judging_model.on_event(event, before, after)
 
     def _advance(self, state: FightState, dt_seconds: float) -> None:
         if dt_seconds < 0 or not math.isfinite(dt_seconds):
@@ -88,6 +93,8 @@ class SimulationEngine:
         self._apply_delta(state, delta)
         state.fight_time_seconds += dt_seconds
         self.sink.on_time_advance(dt_seconds, before, StateSnapshot.from_state(state))
+        if self.judging_model is not None:
+            self.judging_model.on_time_advance(dt_seconds, before, StateSnapshot.from_state(state))
 
     def run(self, state: FightState | None = None) -> SimulationResult:
         state = state or FightState()
@@ -120,9 +127,19 @@ class SimulationEngine:
                 round_number = self.config.round_number_at(max(0.0, boundary - 1e-12))
                 snapshot = StateSnapshot.from_state(state)
                 self._notify_event(RoundEnded(boundary, round_number), state, snapshot)
+                if self.judging_model is not None:
+                    card = self.judging_model.score_round(
+                        round_number, self.rng_manager.stream(RNGStream.JUDGING)
+                    )
+                    self._notify_event(
+                        ConsequenceEvent(boundary, "RoundScore", card), state, snapshot
+                    )
                 if boundary >= self.config.fight_duration_seconds:
-                    state.finished = True
-                    state.finish_reason = "scheduled_horizon"
+                    if self.judging_model is not None:
+                        self._apply_delta(state, self.judging_model.decision_delta())
+                    else:
+                        state.finished = True
+                        state.finish_reason = "scheduled_horizon"
                     before = StateSnapshot.from_state(state)
                     self._notify_event(
                         FightFinished(boundary, state.finish_reason), state, before

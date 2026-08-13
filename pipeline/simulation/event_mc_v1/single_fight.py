@@ -27,6 +27,7 @@ from .rng import RNGManager
 from .sinks import FullTraceEventSink
 from .stamina import StaminaModel
 from .submission_finishes import SubmissionFinishModel, SubmissionFinishOutcome
+from .judging import DeterministicJudgingModel, RoundScore
 
 DEFAULT_SEED = 20260813
 
@@ -72,6 +73,7 @@ def build_engine(fight: HistoricalFight, seed: int, sink):
         physiology_model=ImpactTraumaKnockdownModel(fight.profiles, calibration),
         finish_model=KOTKOFinishModel(fight.profiles, calibration),
         submission_finish_model=SubmissionFinishModel(fight.profiles, calibration),
+        judging_model=DeterministicJudgingModel(calibration),
     ), calibration, key
 
 
@@ -108,6 +110,7 @@ def _aggregate_results(rows):
             "submission_attempts": attempts["submission_attempt"],
             "ko_wins": sum(result.state.winner == side and result.state.finish_method == "KO_TKO" for result in rows),
             "submission_finishes": sum(result.state.winner == side and result.state.finish_method == "SUB" for result in rows),
+            "decision_wins": sum(result.state.winner == side and result.state.finish_method == "DEC" for result in rows),
         }
     return {
         "paths": paths,
@@ -135,7 +138,7 @@ def run_summary(fight: HistoricalFight, paths: int, seed: int):
     print(f"Completed: {len(rows)}/{paths} | runtime={elapsed:.2f}s | {paths/elapsed:.2f} paths/s")
     print("Outcomes:", ", ".join(f"{name}={count} ({count/paths:.1%})" for name, count in sorted(wins.items())))
     print(f"Scheduled horizon={summary['scheduled_horizon']} ({summary['scheduled_horizon']/paths:.1%})")
-    print(f"KO_TKO={summary['methods'].get('KO_TKO', 0)} ({summary['methods'].get('KO_TKO', 0)/paths:.1%}) | SUB={summary['methods'].get('SUB', 0)} ({summary['methods'].get('SUB', 0)/paths:.1%})")
+    print(f"KO_TKO={summary['methods'].get('KO_TKO', 0)} ({summary['methods'].get('KO_TKO', 0)/paths:.1%}) | SUB={summary['methods'].get('SUB', 0)} ({summary['methods'].get('SUB', 0)/paths:.1%}) | DEC={summary['methods'].get('DEC', 0)} ({summary['methods'].get('DEC', 0)/paths:.1%})")
     total_sub_attempts = sum(summary["sides"][side]["submission_attempts"] for side in ("red", "blue"))
     total_sub_finishes = summary["methods"].get("SUB", 0)
     print(f"SUB attempts/path={total_sub_attempts/paths:.3f} | SUB finishes={total_sub_finishes} | P(SUB|attempt)={total_sub_finishes/total_sub_attempts:.1%}" if total_sub_attempts else "SUB attempts/path=0.000 | SUB finishes=0 | P(SUB|attempt)=n/a")
@@ -152,6 +155,7 @@ def run_summary(fight: HistoricalFight, paths: int, seed: int):
         side_summary = summary["sides"][side]
         print(f"  TD attempts/completions={side_summary['td_attempts']/paths:.2f}/{side_summary['td_completions']/paths:.2f} per path | SUB attempts={side_summary['submission_attempts']/paths:.2f} per path")
         print(f"  SUB finishes={side_summary['submission_finishes']} | P(SUB|attempt)={side_summary['submission_finishes']/side_summary['submission_attempts']:.1%}" if side_summary["submission_attempts"] else "  SUB finishes=0 | P(SUB|attempt)=n/a")
+        print(f"  DEC wins={side_summary['decision_wins']}")
         families = sorted(set().union(*(result.sink_result["attempts"][side] for result in rows)))
         print(f"  avg attempts: " + ", ".join(f"{family}={sum(result.sink_result['attempts'][side].get(family,0) for result in rows)/paths:.2f}" for family in families))
         landed = sum(sum(count for key, count in result.sink_result["outcomes"][side].items() if key.endswith("_landed")) for result in rows) / paths
@@ -183,6 +187,8 @@ def run_trace(fight: HistoricalFight, seed: int):
             p=event.payload; print(f"{stamp} FINISH CHECK current_finish_resistance={p.current_finish_resistance:.3f} impact_ratio={p.impact_ratio:.3f} pKO_TKO={p.finish_probability:.3%} finished={p.finished}")
         elif isinstance(event, ConsequenceEvent) and isinstance(event.payload, SubmissionFinishOutcome):
             p=event.payload; print(f"{stamp} SUBMISSION CHECK {p.attacker.value}->{p.defender.value} threat={p.threat:.3f} resistance={p.resistance:.3f} position={p.position} stamina/context={p.stamina_context_term:.3f} pSUB={p.finish_probability:.3%} finished={p.finished}")
+        elif isinstance(event, ConsequenceEvent) and isinstance(event.payload, RoundScore):
+            p=event.payload; print(f"{stamp} ROUND {p.round_number} JUDGING RED striking={p.red_effective_striking:.3f} grappling={p.red_effective_grappling:.3f} | BLUE striking={p.blue_effective_striking:.3f} grappling={p.blue_effective_grappling:.3f} | primary diff={p.primary_difference:.3f} criterion={p.criterion} winner={p.winner.value.upper()} score={p.red_score}-{p.blue_score}")
     attempts=Counter(); outcomes=Counter(); kds=Counter()
     for entry in result.sink_result:
         event=entry.payload
@@ -193,6 +199,11 @@ def run_trace(fight: HistoricalFight, seed: int):
     print("attempts:", ", ".join(f"{side}.{family}={count}" for (side,family),count in sorted(attempts.items())))
     print("landed/outcomes:", ", ".join(f"{side}.{family}.{outcome}={count}" for (side,family,outcome),count in sorted(outcomes.items()) if outcome in {"landed","attempted"}))
     print(f"knockdowns red={kds['red']} blue={kds['blue']} | final stamina={result.state.red_stamina:.3f}/{result.state.blue_stamina:.3f} trauma={result.state.red_cumulative_trauma:.2f}/{result.state.blue_cumulative_trauma:.2f} acute={result.state.red_acute_vulnerability:.3f}/{result.state.blue_acute_vulnerability:.3f}")
+    cards = [entry.payload.payload for entry in result.sink_result if entry.kind == "event" and isinstance(entry.payload, ConsequenceEvent) and isinstance(entry.payload.payload, RoundScore)]
+    if result.state.finish_method == "DEC":
+        print("FINAL DECISION")
+        for card in cards: print(f"R{card.round_number} {card.winner.value.upper()} 10-9")
+        totals=Counter(card.winner.value for card in cards); print(f"RED rounds={totals['red']} BLUE rounds={totals['blue']} winner={result.state.winner.upper()} method=DEC")
 
 
 def format_time(seconds):
