@@ -16,14 +16,14 @@ After every new Codex prompt, update this file. Preserve checkpoint history, cur
 Architecture revision: **v0.3**
 Architecture status: **Phase 0 architecture closed.**
 
-Implementation status: **Phase 1 generic continuous-time kernel is authorized independently. Phase 2A/2B are not authorized.**
+Implementation status: **Phase 1 generic continuous-time kernel has NOT started. A Phase 1 prompt document exists in the repo, but the user has not instructed Codex to execute it. Phase 2A/2B are not authorized.**
 
-Phase 0 operational baseline: **NOT YET PASSED.** The exact frozen FSR-32 artifact exists and has been published as a temporary GitHub Release asset, but the latest Codex run started in a fresh generic workspace on local branch `work` with no remote/authenticated repo context and therefore could not read the governing prompt or download the private release asset.
+Phase 0 operational baseline: **NOT YET PASSED.** The exact frozen FSR-32 artifact exists and has been published as a temporary GitHub Release asset. The current task is still to restore Codex repo access, ingest that exact artifact, and complete the frozen Phase 0 baseline before any Phase 1 implementation begins.
 
 Latest Codex bootstrap prompt:
 `docs/EVENT_MC_V1_CODEX_BOOTSTRAP_RELEASE_BASELINE_2026-08-12.md`
 
-This new prompt is self-contained and must first restore the correct remote/branch, then read and execute:
+This prompt must first restore the correct remote/branch, then read and execute:
 `docs/EVENT_MC_V1_CODEX_FSR32_RELEASE_INGEST_AND_BASELINE_RESUME_2026-08-12.md`
 
 Exact repository:
@@ -57,7 +57,7 @@ Canonical docs:
 - `docs/EVENT_MC_V1_PHASE0_BASELINE_FREEZE_2026-08-12.md`
 - `docs/EVENT_MC_V1_CODEX_PHASE0_BASELINE_PROMPT_2026-08-12.md`
 - `docs/EVENT_MC_V1_FSR32_FROZEN_ARTIFACT_IDENTITY_2026-08-12.md`
-- `docs/EVENT_MC_V1_CODEX_PHASE1_GENERIC_KERNEL_PROMPT_2026-08-12.md`
+- `docs/EVENT_MC_V1_CODEX_PHASE1_GENERIC_KERNEL_PROMPT_2026-08-12.md` (prepared only; NOT executed)
 
 ---
 
@@ -78,6 +78,7 @@ Canonical docs:
 - Round start resets phase to `DISTANCE` and clears positional ownership.
 - `MatReturn` remains future/optional.
 - Do not combine timing migration, wrestling ontology correction, and calibration changes.
+- Phase 1 implementation is not currently authorized for execution.
 - Phase 2A and Phase 2B remain unauthorized.
 
 ---
@@ -106,11 +107,19 @@ Migration split:
 
 ---
 
-# Phase 1 Scope
+# Phase 1 Status
 
-Phase 1 is generic kernel infrastructure only: typed generic events/contracts, immutable timing config, authoritative clock, exponential scheduler, rates/sec, probability-to-rate conversion, named RNG streams, hard boundaries, exact `advance(dt)` ordering, typed state deltas, round lifecycle/reset shell, sinks, inactive cooldown extension point, and synthetic tests.
+A detailed Phase 1 generic-kernel prompt has been prepared at:
+`docs/EVENT_MC_V1_CODEX_PHASE1_GENERIC_KERNEL_PROMPT_2026-08-12.md`
 
-No real UFC mechanics in Phase 1.
+However, the user has **not** told Codex to execute it. Therefore:
+
+- no Phase 1 implementation should be assumed to exist;
+- no Phase 1 tests should be assumed to have run;
+- no Phase 1 commit/PR should be assumed to exist;
+- the next Codex work remains Phase 0 artifact ingestion/baseline recovery only.
+
+When the user later explicitly authorizes Phase 1, its scope remains generic kernel infrastructure only: typed events/contracts, immutable timing config, authoritative clock, exponential scheduler, rates/sec, probability-to-rate conversion, named RNG streams, hard boundaries, exact `advance(dt)` ordering, typed state deltas, round lifecycle/reset shell, sinks, inactive cooldown extension point, and synthetic tests. No real UFC mechanics.
 
 ---
 
@@ -163,9 +172,7 @@ When Codex returns the bootstrap/baseline result, independently verify:
 - full method/submission baseline;
 - no tuning/current-simulator/FSR changes.
 
-When Codex returns Phase 1, independently review diff, scheduler/RNG/clock/boundary/mutation/sink contracts, tests, current simulator/FSR untouched, and no UFC mechanics slipped in.
-
-Do not authorize Phase 2A until Phase 1 and the recovered baseline have both been reviewed, unless the user explicitly changes that requirement.
+Only after the Phase 0 baseline is reviewed should the user decide whether to explicitly start Phase 1.
 
 ---
 
@@ -184,7 +191,7 @@ Codex stopped because isolated checkout had no Git remote. Remote-unblock prompt
 Codex repaired Git environment and verified feature branch, but baseline failed because frozen FSR-32 parquet was absent. Artifact recovery issued; no rebuild authorized.
 
 ## 005 — 2026-08-12 22:59
-Artifact recovery returned NOT FOUND. User authorized Phase 1 generic kernel while leaving Phase 0 numerical baseline deferred.
+User said to move on and supply FSR later. A Phase 1 generic-kernel prompt was prepared in the repo, but the user did NOT launch it. Earlier continuity incorrectly described Phase 1 as authorized/in progress; this is corrected below.
 
 ## 006 — 2026-08-12 23:08
 User found exact frozen parquet in real Codespace and established SHA-256 `621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a`.
@@ -198,7 +205,17 @@ Latest Codex run reported it was in a new generic `work` checkout with no remote
 New prompt issued:
 `docs/EVENT_MC_V1_CODEX_BOOTSTRAP_RELEASE_BASELINE_2026-08-12.md`
 
-Expected Codex outcome: restore correct remote/branch and complete release ingestion + frozen Phase 0 baseline, or return a precise auth-blocked gate without changing simulator/FSR/calibration state.
+## 009 — 2026-08-12 23:24 America/Chicago
+User clarified: **they never told Codex to start Phase 1.**
 
-Phase 1 authorized: **YES**.
+Correction:
+- Phase 1 implementation has NOT started.
+- The Phase 1 prompt file exists only as a prepared future task.
+- Current Codex work remains exclusively Phase 0 bootstrap + exact FSR-32 ingestion + frozen operational baseline.
+- Phase 1 must not start until the user explicitly authorizes it after Phase 0 review.
+
+Expected Codex outcome now: restore correct remote/branch and complete release ingestion + frozen Phase 0 baseline, or return a precise auth-blocked gate without changing simulator/FSR/calibration state.
+
+Phase 1 implementation started: **NO**.
+Phase 1 execution authorized now: **NO**.
 Phase 2A authorized: **NO**.
