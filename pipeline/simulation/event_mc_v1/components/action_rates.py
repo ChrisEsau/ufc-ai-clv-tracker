@@ -48,7 +48,7 @@ class DistanceActionRateProvider:
                 ),
             }
             output.extend(
-                EventRate(DistanceCandidate(side, family, self.profiles, self.stamina_model, self.modifier_provider), rate * self._output_multiplier(state, side))
+                EventRate(DistanceCandidate(side, family, self.profiles, self.stamina_model, self.modifier_provider, self.calibration), rate * self._output_multiplier(state, side))
                 for family, rate in rates.items()
             )
         return tuple(output)
