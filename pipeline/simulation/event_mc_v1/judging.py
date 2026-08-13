@@ -11,6 +11,18 @@ from .physiology import PhysiologyOutcome
 from .state import StateDelta
 from .submission_finishes import SubmissionFinishOutcome
 
+OFFENSIVE_INITIATIVE_FAMILIES = frozenset(
+    {
+        "strike",
+        "takedown",
+        "clinch_entry",
+        "clinch_strike",
+        "clinch_takedown",
+        "ground_strike",
+        "submission_attempt",
+    }
+)
+
 
 @dataclass(frozen=True)
 class RoundScore:
@@ -49,7 +61,11 @@ class DeterministicJudgingModel:
 
     def on_event(self, event, before, after):
         c = self.calibration.section("judging")
-        if isinstance(event, PrimaryEvent) and isinstance(event.payload, ActionAttempt):
+        if (
+            isinstance(event, PrimaryEvent)
+            and isinstance(event.payload, ActionAttempt)
+            and event.payload.action_family in OFFENSIVE_INITIATIVE_FAMILIES
+        ):
             self.evidence.aggression[event.payload.side.value] += c["aggression_attempt_weight"]
         if not isinstance(event, ConsequenceEvent):
             return

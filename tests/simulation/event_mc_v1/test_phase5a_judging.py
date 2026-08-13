@@ -1,6 +1,8 @@
 import numpy as np
 
+from pipeline.simulation.event_mc_v1.components.actions import ActionAttempt, ActionOutcome
 from pipeline.simulation.event_mc_v1.components.profiles import Side
+from pipeline.simulation.event_mc_v1.events import ConsequenceEvent, PrimaryEvent
 from pipeline.simulation.event_mc_v1.judging import DeterministicJudgingModel, RoundEvidence, RoundScore
 
 
@@ -48,3 +50,32 @@ def test_three_and_five_round_majorities_produce_decision_without_draw():
     five = DeterministicJudgingModel(); five.cards = [card(1, Side.BLUE), card(2, Side.RED), card(3, Side.BLUE), card(4, Side.RED), card(5, Side.BLUE)]
     assert three.decision_delta().winner == "red" and three.decision_delta().finish_method == "DEC"
     assert five.decision_delta().winner == "blue" and five.decision_delta().finish_method == "DEC"
+
+
+def test_aggression_counts_only_offensive_initiative_and_reversal_keeps_grappling():
+    subject = DeterministicJudgingModel()
+    snapshots = type("Snapshot", (), {})()
+    offensive = (
+        "strike", "takedown", "clinch_entry", "clinch_strike",
+        "clinch_takedown", "ground_strike", "submission_attempt",
+    )
+    excluded = ("ground_escape", "clinch_separation", "ground_reversal")
+    for family in offensive + excluded:
+        subject.on_event(
+            PrimaryEvent(1.0, f"red_{family}", ActionAttempt(Side.RED, family)),
+            snapshots,
+            snapshots,
+        )
+    assert subject.evidence.aggression == {"red": 7.0, "blue": 0.0}
+
+    subject.on_event(
+        ConsequenceEvent(
+            1.0,
+            "ActionOutcome",
+            ActionOutcome(Side.RED, "ground_reversal", "reversed"),
+        ),
+        snapshots,
+        snapshots,
+    )
+    assert subject.evidence.aggression["red"] == 7.0
+    assert subject.evidence.grappling["red"] == 0.35

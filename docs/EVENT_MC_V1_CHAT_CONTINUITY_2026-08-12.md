@@ -86,3 +86,4 @@ Next assistant action: independently review that exact correction. If clean, acc
 - 042: user authorized Phase 5A deterministic judging with no draws and 10-9-only rounds.
 - 043: Phase 5A implemented at `5df6f82b...`; core architecture/tests/diagnostics completed without calibration.
 - 044: independent review found defensive/non-offensive action families receiving aggression credit; narrow fix prompt issued at `1c62967e...`.
+- 045: aggression accounting restricted to the seven locked offensive-initiative families; exits, separations, and reversals receive no aggression, while successful reversal grappling credit remains unchanged.
