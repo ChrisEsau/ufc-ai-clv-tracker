@@ -19,7 +19,7 @@ Architecture revision: **v0.3**.
 - Phase 0 operational baseline: **PASS**.
 - Phase 1 generic continuous-time kernel: **PASS after independent ChatGPT review**.
 - Phase 2A distance temporal/mechanical parity: **PASS after independent ChatGPT review**.
-- Phase 2B wrestling-entry ontology correction: **AUTHORIZED and current task; not yet passed**.
+- Phase 2B wrestling-entry ontology correction: **PASS after independent review**.
 - Phase 3 and later mechanics: **NOT AUTHORIZED**.
 
 Frozen FSR-32 path:
@@ -158,7 +158,7 @@ Final reviewed gate:
 
 ---
 
-# Phase 2B — Current Task
+# Phase 2B — Reviewed Result
 
 Phase 2B makes **one deliberate semantic correction**:
 
@@ -232,9 +232,9 @@ Future damage/KD/KO systems must remain replaceable behind clean interfaces, but
 
 ---
 
-# Assistant Review Required When Phase 2B Returns
+# Completed Phase 2B Review
 
-Do not accept Codex PASS automatically. Independently inspect the actual commit/diff and verify:
+The Phase 2B implementation and follow-up diagnostics were independently inspected against the following gate:
 - Phase 2A was starting point or later documentation-only fast-forward;
 - only TD initiation semantics changed materially;
 - new formula centers wrestling_entry at 50 and reuses existing base/scale without tuning;
@@ -249,7 +249,7 @@ Do not accept Codex PASS automatically. Independently inspect the actual commit/
 - no downstream physiology/finish systems slipped in;
 - implementation remains small and easy to iterate.
 
-Only after independent review may ChatGPT mark:
+Independent review found the implementation small and confined to the authorized TD-initiation semantic correction. The required tests, four-matchup A/B diagnostic, frozen artifact checksum, and downstream compile checks passed. Final reviewed gate:
 `PHASE 2B WRESTLING ENTRY ONTOLOGY GATE: PASS`.
 
 Do not authorize Phase 3 automatically.
@@ -336,4 +336,17 @@ Phase 1: **PASS**.
 Phase 2A: **PASS**.
 Phase 2B authorized: **YES**.
 Phase 2B reviewed/passed: **NO**.
+Phase 3 authorized: **NO**.
+
+## 017 — 2026-08-13
+Phase 2B implementation commits `004740e` and `809389b` were independently reviewed. The active TD initiation path now uses `wrestling_entry` centered at 50 with the unchanged Phase 2A base probability and modifier scale; the legacy blend remains diagnostic-only, and TD success remains conversion versus defense. All 56 EVENT MC and relevant V0 tests passed, the required four-matchup diagnostic completed, and the frozen FSR-32 SHA-256 remained unchanged.
+
+Final gate:
+`PHASE 2B WRESTLING ENTRY ONTOLOGY GATE: PASS`.
+
+Phase 0: **PASS**.
+Phase 1: **PASS**.
+Phase 2A: **PASS**.
+Phase 2B authorized: **YES**.
+Phase 2B reviewed/passed: **YES**.
 Phase 3 authorized: **NO**.
