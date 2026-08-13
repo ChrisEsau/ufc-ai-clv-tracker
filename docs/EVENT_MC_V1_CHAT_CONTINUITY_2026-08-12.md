@@ -273,3 +273,6 @@ New diagnostic addendum:
 commit `14798a03b4ef59463fbe44ea481182a455d0f792`.
 
 No simulator tuning or new terminal systems authorized by this addendum.
+
+## 034 — 2026-08-13
+Codex implemented the Phase 4B2 single-fight sanity runner at `pipeline.simulation.event_mc_v1.single_fight`. It resolves canonical master `fight_id` values (and the `bout_id` CLI alias) to exact frozen FSR-32 prefight profiles, supports deterministic `--seed`, prints a readable one-path lifecycle/action/physiology/finish trace, and prints aggregate-only multi-path summaries through the existing engine stack. No formula, calibration value, simulator state, or clock was changed.
