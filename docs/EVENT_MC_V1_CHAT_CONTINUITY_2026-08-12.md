@@ -123,3 +123,4 @@ Next assistant action: independently review the correction and, if clean, accept
 - 038: user authorized Phase 4C submission mechanics; governing prompt committed.
 - 039: Phase 4C implemented at `6de03e75...`; traits/config/terminal mechanics/diagnostics added without calibration.
 - 040: independent Phase 4C review found current submission attempt cost feeding its own conversion through post-action stamina; narrow pre-action sequencing fix issued at `11d5b270...`.
+- 041: submission conversion now reads the immutable pre-action snapshot while the attempt cost remains applied once for later events. Oliveira/Poirier seed 22 remains a red SUB at `180.33041448667973`, with `pSUB` moving from 19.205% to 19.411% solely from corrected stamina timing; Lewis/Daukaus remains unchanged.

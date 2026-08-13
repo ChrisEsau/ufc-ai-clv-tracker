@@ -163,6 +163,7 @@ class SimulationEngine:
                     resolution.payload,
                     state.fight_time_seconds,
                     self.rng_manager.stream(RNGStream.SUBMISSION),
+                    pre_action_state=before,
                 )
                 submission_before = StateSnapshot.from_state(state)
                 self._apply_delta(state, submission_delta)

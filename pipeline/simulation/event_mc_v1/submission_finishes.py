@@ -45,10 +45,11 @@ class SubmissionFinishModel:
         probability = 1.0 / (1.0 + exp(-float(np.clip(logit, -c["logit_clip"], c["logit_clip"]))))
         return probability, threat, resistance, position, stamina_term + position_term
 
-    def resolve(self, state, attempt, timestamp: float, rng):
+    def resolve(self, state, attempt, timestamp: float, rng, *, pre_action_state=None):
         if not isinstance(attempt, ActionAttempt) or attempt.action_family != "submission_attempt":
             return StateDelta(), None
-        probability, threat, resistance, position, context_term = self.probability(state, attempt.side)
+        evaluation_state = pre_action_state if pre_action_state is not None else state
+        probability, threat, resistance, position, context_term = self.probability(evaluation_state, attempt.side)
         finished = bool(rng.random() < probability)
         outcome = SubmissionFinishOutcome(attempt.side, attempt.side.opponent, threat, resistance, position, context_term, probability, finished)
         delta = StateDelta(finished=True, finish_reason="SUB", winner=attempt.side.value, finish_method="SUB") if finished else StateDelta()

@@ -14,7 +14,7 @@ from pipeline.simulation.event_mc_v1.modifiers import DynamicModifiers
 from pipeline.simulation.event_mc_v1.rng import RNGManager, RNGStream
 from pipeline.simulation.event_mc_v1.scheduler import EventRate
 from pipeline.simulation.event_mc_v1.sinks import FullTraceEventSink
-from pipeline.simulation.event_mc_v1.state import FightState
+from pipeline.simulation.event_mc_v1.state import FightState, Phase
 from pipeline.simulation.event_mc_v1.submission_finishes import SubmissionFinishModel, SubmissionFinishOutcome
 
 
@@ -66,10 +66,10 @@ def test_engine_accounts_finishing_submission_once_and_stops():
     class Provider:
         def candidates(self, state, context): return (EventRate(Candidate(), 1000),)
     class AlwaysFinishModel(SubmissionFinishModel):
-        def resolve(self, state, attempt, timestamp, rng):
+        def resolve(self, state, attempt, timestamp, rng, *, pre_action_state=None):
             class Fixed:
                 def random(self): return 0.0
-            return super().resolve(state, attempt, timestamp, Fixed())
+            return super().resolve(state, attempt, timestamp, Fixed(), pre_action_state=pre_action_state)
     result = SimulationEngine(FightConfig(1, 10), Provider(), NoOpTimeAdvanceModel(), RNGManager(4), FullTraceEventSink(), submission_finish_model=AlwaysFinishModel(model().profiles)).run()
     events = [entry.payload for entry in result.sink_result if entry.kind == "event"]
     assert sum(isinstance(event, FightFinished) for event in events) == 1
@@ -89,3 +89,48 @@ def test_weight_class_override_reaches_submission_curve(tmp_path: Path):
     state = FightState(ground_controller="red")
     assert override.probability(state, Side.RED)[0] < default.probability(state, Side.RED)[0]
     assert override.calibration.section("submission_finish")["rating_scale"] == default.calibration.section("submission_finish")["rating_scale"]
+
+
+def test_current_attempt_uses_pre_action_stamina_and_cost_only_affects_later_attempts(tmp_path: Path):
+    document = yaml.safe_load(Path("config/event_mc_v1.yaml").read_text())
+    document["defaults"]["submission_finish"]["intercept"] = -20.0
+    path = tmp_path / "config.yaml"; path.write_text(yaml.safe_dump(document))
+    calibration = load_event_mc_config(path).for_weight_class()
+
+    def run(first_cost):
+        class Candidate:
+            candidate_id = "red_submission_attempt"
+            rng_stream = RNGStream.SUBMISSION
+            calls = 0
+            def resolve(self, state, context, rng):
+                self.calls += 1
+                cost = first_cost if self.calls == 1 else 0.0
+                attempt = ActionAttempt(Side.RED, "submission_attempt", DynamicModifiers(1, 1))
+                outcome = ConsequenceEvent(state.fight_time_seconds, "ActionOutcome", ActionOutcome(Side.RED, "submission_attempt", "attempted"))
+                from pipeline.simulation.event_mc_v1.state import StateDelta
+                return Resolution(payload=attempt, delta=StateDelta(red_stamina=state.red_stamina - cost), consequence_events=(outcome,))
+        candidate = Candidate()
+        class Provider:
+            def candidates(self, state, context):
+                return (EventRate(candidate, 1000),) if candidate.calls < 2 else ()
+        sink = FullTraceEventSink()
+        result = SimulationEngine(
+            FightConfig(1, 10), Provider(), NoOpTimeAdvanceModel(), RNGManager(17), sink,
+            submission_finish_model=model(calibration=calibration),
+        ).run(FightState(fight_time_seconds=0.1, phase=Phase.GROUND, ground_controller="red"))
+        checks = [
+            entry.payload.payload
+            for entry in result.sink_result
+            if entry.kind == "event"
+            and isinstance(entry.payload, ConsequenceEvent)
+            and isinstance(entry.payload.payload, SubmissionFinishOutcome)
+        ]
+        return result, checks
+
+    low_cost_result, low_cost_checks = run(0.1)
+    high_cost_result, high_cost_checks = run(0.5)
+    assert len(low_cost_checks) == len(high_cost_checks) == 2
+    assert low_cost_checks[0].finish_probability == high_cost_checks[0].finish_probability
+    assert low_cost_checks[1].finish_probability > high_cost_checks[1].finish_probability
+    assert low_cost_result.state.red_stamina == 0.9
+    assert high_cost_result.state.red_stamina == 0.5
