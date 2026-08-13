@@ -104,3 +104,5 @@ Calibration design:
 Expected return: `PHASE 7C KO/TKO MIDPOINT CALIBRATION GATE: PASS` or FAIL.
 
 Next assistant action: independently review Phase 7C search, exact config diff if promoted, temporal holdout support, KD preservation, finish timing, and downstream SUB/DEC movement before authorizing submission calibration.
+
+Phase 7C result: common-seed coarse grid 10-192 and refined grid 28-40 on chronological 2020-2024 train and 2025+ holdout subsets supported finish midpoint 36 on both splits. Only `defaults.finish.midpoint_impact_ratio` was promoted from 10 to 36; KD midpoint remains 36 and every other mechanic/config value remains frozen.

@@ -66,8 +66,8 @@ def test_fresh_one_shot_finish_possible_and_terminal_delta_is_structured():
 
 def test_finish_sampling_is_deterministic_and_stochastic_across_seeds():
     subject = model()
-    values = [subject.resolve(FightState(), outcome(8), 1, np.random.default_rng(seed))[1].payload.finished for seed in range(30)]
-    repeat = [subject.resolve(FightState(), outcome(8), 1, np.random.default_rng(seed))[1].payload.finished for seed in range(30)]
+    values = [subject.resolve(FightState(), outcome(30), 1, np.random.default_rng(seed))[1].payload.finished for seed in range(30)]
+    repeat = [subject.resolve(FightState(), outcome(30), 1, np.random.default_rng(seed))[1].payload.finished for seed in range(30)]
     assert values == repeat
     assert len(set(values)) == 2
 
@@ -114,7 +114,7 @@ def test_engine_emits_one_lifecycle_finish_and_no_later_primary_events():
 
 def test_synthetic_weight_class_override_reaches_finish_curve(tmp_path: Path):
     document = yaml.safe_load(Path("config/event_mc_v1.yaml").read_text())
-    document["weight_classes"] = {"synthetic": {"finish": {"midpoint_impact_ratio": 20.0}}}
+    document["weight_classes"] = {"synthetic": {"finish": {"midpoint_impact_ratio": 72.0}}}
     path = tmp_path / "config.yaml"; path.write_text(yaml.safe_dump(document))
     resolver = load_event_mc_config(path)
     default = KOTKOFinishModel(model().profiles, resolver.for_weight_class())
