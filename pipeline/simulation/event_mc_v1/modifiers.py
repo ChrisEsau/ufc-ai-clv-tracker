@@ -21,8 +21,8 @@ class DynamicModifierProvider:
 
     def modifiers(self, profile: FighterProfile, state: FightState, side: Side) -> DynamicModifiers:
         stamina = state.red_stamina if side is Side.RED else state.blue_stamina
-        resilience = float(np.clip((profile.stamina_performance_resilience - 10.0) / 80.0, 0.0, 1.0))
         c = self.calibration.section("dynamic_modifiers")
+        resilience = float(np.clip((profile.stamina_performance_resilience - c["resilience_rating_min"]) / c["resilience_rating_range"], 0.0, 1.0))
         output_floor = c["output_floor_low"] + resilience * (c["output_floor_high"] - c["output_floor_low"])
         output_exponent = c["output_exponent_low"] + resilience * (c["output_exponent_high"] - c["output_exponent_low"])
         power_floor = c["power_floor_low"] + resilience * (c["power_floor_high"] - c["power_floor_low"])

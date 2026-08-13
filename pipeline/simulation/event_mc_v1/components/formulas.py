@@ -60,22 +60,24 @@ def _logit(probability: float) -> float:
     return log(probability / (1.0 - probability))
 
 
-def _modifier(delta: float, scale: float = MODIFIER_SCALE) -> float:
-    return exp(float(np.clip(delta, -8.0, 8.0)) / scale)
+def _modifier(delta: float, scale: float = MODIFIER_SCALE, calibration: EventMCCalibration = DEFAULT_CALIBRATION) -> float:
+    clip = calibration.section("shared")["modifier_clip"]
+    return exp(float(np.clip(delta, -clip, clip)) / scale)
 
 
-def style_preferences(profile: FighterProfile) -> tuple[float, float, float]:
+def style_preferences(profile: FighterProfile, calibration: EventMCCalibration = DEFAULT_CALIBRATION) -> tuple[float, float, float]:
     distance = profile.distance_striking_pressure
     clinch = profile.clinch_striking_pressure
     wrestling = profile.wrestling_entry
     control = profile.control_imposition
+    c = calibration.section("distance")
     return (
-        distance - 0.5 * clinch - 0.5 * wrestling,
-        clinch - 0.5 * distance - 0.5 * wrestling,
-        0.75 * wrestling
-        + 0.25 * control
-        - 0.5 * distance
-        - 0.5 * clinch,
+        distance - c["style_distance_clinch_weight"] * clinch - c["style_distance_wrestling_weight"] * wrestling,
+        clinch - c["style_clinch_distance_weight"] * distance - c["style_clinch_wrestling_weight"] * wrestling,
+        c["style_wrestling_entry_weight"] * wrestling
+        + c["style_control_weight"] * control
+        - c["style_wrestling_distance_weight"] * distance
+        - c["style_wrestling_clinch_weight"] * clinch,
     )
 
 
@@ -102,33 +104,37 @@ def strike_landing_probability(
     )
 
 
-def legacy_td_attempt_interval_probability(profile: FighterProfile) -> float:
+def legacy_td_attempt_interval_probability(profile: FighterProfile, calibration: EventMCCalibration = DEFAULT_CALIBRATION) -> float:
     """Phase 2A blended initiation consumer retained only for A/B audits."""
 
-    wrestling_preference = style_preferences(profile)[2]
-    raw_probability = DISTANCE_TD_ATTEMPT_BASE_10S * exp(
-        wrestling_preference / MODIFIER_SCALE
+    shared, distance = calibration.section("shared"), calibration.section("distance")
+    wrestling_preference = style_preferences(profile, calibration)[2]
+    base = rescale_interval_probability(distance["td_attempt_base_30s"], shared["calibration_interval_seconds"], shared["legacy_interval_seconds"])
+    raw_probability = base * exp(
+        wrestling_preference / shared["modifier_scale"]
     )
     return float(np.clip(raw_probability, 0.0, 1.0 - 1e-12))
 
 
-def td_attempt_interval_probability(profile: FighterProfile) -> float:
+def td_attempt_interval_probability(profile: FighterProfile, calibration: EventMCCalibration = DEFAULT_CALIBRATION) -> float:
     """Phase 2B intrinsic initiation driven only by ``wrestling_entry``."""
 
     entry_delta = profile.wrestling_entry - 50.0
-    raw_probability = DISTANCE_TD_ATTEMPT_BASE_10S * _modifier(entry_delta)
+    shared, distance = calibration.section("shared"), calibration.section("distance")
+    base = rescale_interval_probability(distance["td_attempt_base_30s"], shared["calibration_interval_seconds"], shared["legacy_interval_seconds"])
+    raw_probability = base * _modifier(entry_delta, shared["modifier_scale"], calibration)
     return float(np.clip(raw_probability, 0.0, 1.0 - 1e-12))
 
 
 def td_attempt_rate_per_second(
-    profile: FighterProfile, *, context_multiplier: float = 1.0
+    profile: FighterProfile, *, context_multiplier: float = 1.0, calibration: EventMCCalibration = DEFAULT_CALIBRATION
 ) -> float:
     """Intrinsic Phase 2B rate with a neutral seam for future context effects."""
 
     if context_multiplier < 0.0:
         raise ValueError("context_multiplier must be non-negative")
     intrinsic_rate = interval_hazard_per_second(
-        td_attempt_interval_probability(profile)
+        td_attempt_interval_probability(profile, calibration)
     )
     return intrinsic_rate * context_multiplier
 
@@ -140,14 +146,15 @@ def td_success_probability(
     return _sigmoid(edge + calibration.section("distance")["td_success_logit_offset"])
 
 
-def clinch_entry_interval_probability(profile: FighterProfile) -> float:
-    distance_preference, clinch_preference, _ = style_preferences(profile)
+def clinch_entry_interval_probability(profile: FighterProfile, calibration: EventMCCalibration = DEFAULT_CALIBRATION) -> float:
+    shared, distance = calibration.section("shared"), calibration.section("distance")
+    distance_preference, clinch_preference, _ = style_preferences(profile, calibration)
+    base = rescale_interval_probability(distance["clinch_base_30s"], shared["calibration_interval_seconds"], shared["legacy_interval_seconds"])
     probability = (
-        DISTANCE_CLINCH_BASE_10S
-        * _modifier(clinch_preference)
-        * np.sqrt(_modifier(-distance_preference))
+        base * _modifier(clinch_preference, shared["modifier_scale"], calibration)
+        * np.sqrt(_modifier(-distance_preference, shared["modifier_scale"], calibration))
     )
-    return float(np.clip(probability, 0.0, _D["clinch_cap"]))
+    return float(np.clip(probability, 0.0, distance["clinch_cap"]))
 
 
 def interval_hazard_per_second(probability: float) -> float:
@@ -176,40 +183,51 @@ def phase_strike_landing_probability(attacker: FighterProfile, defender: Fighter
     return _sigmoid(_logit(base) + (precision - defense) / calibration.section("shared")["rating_scale"])
 
 
-def clinch_td_interval_probability(profile: FighterProfile) -> float:
+def clinch_td_interval_probability(profile: FighterProfile, calibration: EventMCCalibration = DEFAULT_CALIBRATION) -> float:
     """V0 clinch TD consumer; legacy blend is intentionally phase-local here."""
-    return float(np.clip(CLINCH_TD_ATTEMPT_BASE_10S * exp(style_preferences(profile)[2] / MODIFIER_SCALE), 0, 1 - 1e-12))
+    shared, clinch = calibration.section("shared"), calibration.section("clinch")
+    base = rescale_interval_probability(clinch["td_attempt_base_30s"], shared["calibration_interval_seconds"], shared["legacy_interval_seconds"])
+    return float(np.clip(base * exp(style_preferences(profile, calibration)[2] / shared["modifier_scale"]), 0, 1 - 1e-12))
 
 
-def clinch_separation_interval_probability(controller: FighterProfile, opponent: FighterProfile) -> float:
-    _, clinch_preference, _ = style_preferences(controller)
-    control_edge = (controller.control_imposition - opponent.control_resistance) / RATING_SCALE
-    raw = CLINCH_SEPARATE_BASE_10S * _modifier(-clinch_preference) * exp(float(np.clip(-control_edge, -1, 1)) * _C["control_edge_multiplier"])
-    return float(np.clip(raw, 0, _C["separation_cap"]))
+def clinch_separation_interval_probability(controller: FighterProfile, opponent: FighterProfile, calibration: EventMCCalibration = DEFAULT_CALIBRATION) -> float:
+    shared, clinch = calibration.section("shared"), calibration.section("clinch")
+    _, clinch_preference, _ = style_preferences(controller, calibration)
+    control_edge = (controller.control_imposition - opponent.control_resistance) / shared["rating_scale"]
+    base = rescale_interval_probability(clinch["separation_base_30s"], shared["calibration_interval_seconds"], shared["legacy_interval_seconds"])
+    raw = base * _modifier(-clinch_preference, shared["modifier_scale"], calibration) * exp(float(np.clip(-control_edge, -1, 1)) * clinch["control_edge_multiplier"])
+    return float(np.clip(raw, 0, clinch["separation_cap"]))
 
 
-def ground_exit_interval_probability(controller: FighterProfile, bottom: FighterProfile) -> float:
-    escape_edge = (bottom.control_resistance - controller.control_imposition) / RATING_SCALE
-    reversal_edge = (bottom.reversal_ability - controller.control_imposition) / RATING_SCALE
-    modifier = exp(float(np.clip(0.60 * escape_edge + 0.40 * reversal_edge, -1.5, 1.5)))
-    return float(np.clip(GROUND_EXIT_BASE_10S * modifier, 0, _G["exit_cap"]))
+def ground_exit_interval_probability(controller: FighterProfile, bottom: FighterProfile, calibration: EventMCCalibration = DEFAULT_CALIBRATION) -> float:
+    shared, ground = calibration.section("shared"), calibration.section("ground")
+    escape_edge = (bottom.control_resistance - controller.control_imposition) / shared["rating_scale"]
+    reversal_edge = (bottom.reversal_ability - controller.control_imposition) / shared["rating_scale"]
+    edge = ground["escape_edge_weight"] * escape_edge + ground["reversal_edge_weight"] * reversal_edge
+    modifier = exp(float(np.clip(edge, -ground["exit_edge_clip"], ground["exit_edge_clip"])))
+    base = rescale_interval_probability(ground["exit_base_30s"], shared["calibration_interval_seconds"], shared["legacy_interval_seconds"])
+    return float(np.clip(base * modifier, 0, ground["exit_cap"]))
 
 
-def reversal_probability_given_exit(bottom: FighterProfile, controller: FighterProfile) -> float:
-    edge = (bottom.reversal_ability - controller.control_imposition) / RATING_SCALE
-    return _sigmoid(_logit(REVERSAL_SHARE_OF_GROUND_EXITS) + 0.75 * edge)
+def reversal_probability_given_exit(bottom: FighterProfile, controller: FighterProfile, calibration: EventMCCalibration = DEFAULT_CALIBRATION) -> float:
+    shared, ground = calibration.section("shared"), calibration.section("ground")
+    edge = (bottom.reversal_ability - controller.control_imposition) / shared["rating_scale"]
+    return _sigmoid(_logit(ground["reversal_share"]) + ground["reversal_sensitivity"] * edge)
 
 
-def ground_exit_rates(controller: FighterProfile, bottom: FighterProfile) -> tuple[float, float, float]:
-    total = interval_hazard_per_second(ground_exit_interval_probability(controller, bottom))
-    reversal = total * reversal_probability_given_exit(bottom, controller)
-    return total * (1.0 - reversal_probability_given_exit(bottom, controller)), reversal, total
+def ground_exit_rates(controller: FighterProfile, bottom: FighterProfile, calibration: EventMCCalibration = DEFAULT_CALIBRATION) -> tuple[float, float, float]:
+    total = interval_hazard_per_second(ground_exit_interval_probability(controller, bottom, calibration))
+    reversal_probability = reversal_probability_given_exit(bottom, controller, calibration)
+    reversal = total * reversal_probability
+    return total * (1.0 - reversal_probability), reversal, total
 
 
-def submission_attempt_interval_probability(profile: FighterProfile, *, bottom=False) -> float:
-    multiplier = BOTTOM_SUBMISSION_RATE_MULTIPLIER if bottom else 1.0
-    raw = SUB_ATTEMPT_BASE_10S * multiplier * _modifier(profile.submission_pressure - 50.0, scale=_SUB["modifier_scale"])
-    return float(np.clip(raw, 0, _SUB["probability_cap"]))
+def submission_attempt_interval_probability(profile: FighterProfile, *, bottom=False, calibration: EventMCCalibration = DEFAULT_CALIBRATION) -> float:
+    shared, submission = calibration.section("shared"), calibration.section("submission_attempts")
+    multiplier = submission["bottom_multiplier"] if bottom else 1.0
+    base = rescale_interval_probability(submission["base_30s"], shared["calibration_interval_seconds"], shared["legacy_interval_seconds"])
+    raw = base * multiplier * _modifier(profile.submission_pressure - 50.0, scale=submission["modifier_scale"], calibration=calibration)
+    return float(np.clip(raw, 0, submission["probability_cap"]))
 
 
 @dataclass(frozen=True)

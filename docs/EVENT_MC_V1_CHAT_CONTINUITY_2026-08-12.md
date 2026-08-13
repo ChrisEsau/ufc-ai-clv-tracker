@@ -269,3 +269,8 @@ A narrow completion prompt was issued under the already-authorized config phase:
 commit `32b5a041f60a0584f58265e3c2c2cf79a57d4d65`.
 
 No tuning authorized. KD calibration remains deferred. Phase 4B2 remains unauthorized.
+
+## 030 — 2026-08-13
+Codex completed the config-externalization review fixes: remaining style-blend, modifier-clip, ground-exit/reversal, and resilience-normalization coefficients moved to YAML; one resolved immutable calibration now threads through DISTANCE, CLINCH, GROUND, stamina, modifiers, and physiology consumers. A synthetic partial override proves simultaneous DISTANCE, CLINCH, stamina, and damage configuration reach while inheriting unspecified defaults.
+
+Five-fixture exact-seed comparison against pre-externalization commit `65a6f2d4...` preserved discrete physics/RNG behavior with only floating serialization tolerance. No default value, KD calibration, real weight-class tuning, or Phase 4B2 mechanic changed. Await independent review of the completed externalization gate.

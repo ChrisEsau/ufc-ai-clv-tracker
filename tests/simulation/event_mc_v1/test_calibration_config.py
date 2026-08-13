@@ -11,6 +11,11 @@ from pipeline.simulation.event_mc_v1.components.formulas import (
 from pipeline.simulation.event_mc_v1.components.profiles import FighterProfile, MatchupProfiles, Side
 from pipeline.simulation.event_mc_v1.modifiers import DynamicModifierProvider
 from pipeline.simulation.event_mc_v1.state import FightState
+from pipeline.simulation.event_mc_v1.components.action_rates import FightFlowRateProvider
+from pipeline.simulation.event_mc_v1.config import FightConfig
+from pipeline.simulation.event_mc_v1.contracts import FightContext
+from pipeline.simulation.event_mc_v1.physiology import ImpactTraumaKnockdownModel
+from pipeline.simulation.event_mc_v1.stamina import StaminaModel
 
 
 def profile():
@@ -49,3 +54,28 @@ def test_loading_config_does_not_consume_numpy_rng():
     rng = np.random.default_rng(77)
     load_event_mc_config()
     assert rng.random() == expected
+
+
+def test_resolved_override_threads_through_distance_clinch_stamina_and_physiology(tmp_path: Path):
+    document = yaml.safe_load(Path("config/event_mc_v1.yaml").read_text())
+    document["weight_classes"] = {"synthetic": {
+        "distance": {"strike_attempts_per_30s": 10.0},
+        "clinch": {"strike_attempts_per_30s": 2.4},
+        "stamina": {"action_costs": {"strike": 1.4}},
+        "damage": {"impact_scale": 1.0},
+    }}
+    path = tmp_path / "config.yaml"
+    path.write_text(yaml.safe_dump(document))
+    resolver = load_event_mc_config(path)
+    default, override = resolver.for_weight_class(), resolver.for_weight_class("synthetic")
+    profiles = MatchupProfiles(profile(), profile())
+    context = FightContext(FightConfig(), 0, 1)
+    def rates(calibration, state):
+        stamina = StaminaModel(profiles, calibration=calibration)
+        provider = FightFlowRateProvider(profiles, stamina, DynamicModifierProvider(calibration), calibration)
+        return {item.candidate.candidate_id: item.rate_per_second for item in provider.candidates(state, context)}
+    assert rates(override, FightState())["red_strike"] == 2 * rates(default, FightState())["red_strike"]
+    clinch = FightState(phase=__import__("pipeline.simulation.event_mc_v1.state", fromlist=["Phase"]).Phase.CLINCH, clinch_controller="red")
+    assert rates(override, clinch)["red_clinch_strike"] == 2 * rates(default, clinch)["red_clinch_strike"]
+    assert StaminaModel(profiles, calibration=override).action_delta(FightState(), Side.RED, "strike").red_stamina < StaminaModel(profiles, calibration=default).action_delta(FightState(), Side.RED, "strike").red_stamina
+    assert ImpactTraumaKnockdownModel(profiles, override).calibration.section("damage")["impact_scale"] == 1.0
