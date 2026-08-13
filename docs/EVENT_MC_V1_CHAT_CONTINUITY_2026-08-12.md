@@ -37,7 +37,7 @@ Architecture revision: **v0.3**
 
 Architecture status: **Phase 0 architecture closed. EVENT MC V1 simulator implementation has not started.**
 
-Operational status: **Codex execution plan for Phase 0 baseline materialization has been reviewed and approved. Codex is authorized to execute the frozen observational baseline task only. Phase 1 is NOT yet authorized.**
+Operational status: **Codex hit an environmental blocker because its local checkout had no configured Git remote. A dedicated remote-unblock prompt has been issued. Codex is authorized to add the known `origin`, fetch and verify the exact `feature/fsr-32-stamina-shadow` branch, re-read current source-of-truth docs, and then resume the already-approved Phase 0 baseline materialization task. Phase 1 is NOT yet authorized.**
 
 Canonical architecture document:
 
@@ -57,7 +57,19 @@ Canonical numerical/reproducibility baseline contract:
 
 Current Codex task prompt:
 
+`docs/EVENT_MC_V1_CODEX_PHASE0_REMOTE_UNBLOCK_2026-08-12.md`
+
+After branch verification, Codex must resume:
+
 `docs/EVENT_MC_V1_CODEX_PHASE0_BASELINE_PROMPT_2026-08-12.md`
+
+Verified GitHub branch head at unblock-prompt issuance:
+
+`6a4c594690243b8c0ee4b3b6f066d54e78cc7ad6`
+
+Known repository remote URL:
+
+`https://github.com/ChrisEsau/ufc-ai-clv-tracker.git`
 
 ---
 
@@ -171,15 +183,45 @@ Resolved architecture decisions include:
 
 ---
 
-# Current Codex Task — Phase 0 Baseline Materialization
+# Current Codex Task — Phase 0 Remote Unblock + Baseline Materialization
 
-Codex must read and execute:
+Codex must first read and execute:
+
+`docs/EVENT_MC_V1_CODEX_PHASE0_REMOTE_UNBLOCK_2026-08-12.md`
+
+This task exists only to repair the Git environment enough to verify the exact requested feature branch.
+
+Known remote:
+
+`https://github.com/ChrisEsau/ufc-ai-clv-tracker.git`
+
+Verified feature branch at issuance:
+
+`feature/fsr-32-stamina-shadow`
+
+Verified head at issuance:
+
+`6a4c594690243b8c0ee4b3b6f066d54e78cc7ad6`
+
+Codex reported its local environment before the unblock prompt as:
+
+```text
+local branch: work
+local SHA: eebb8134fd2f7cb4eb68ffcb93464ab74883633f
+configured remotes: none
+working tree: clean
+Python: 3.14.4
+```
+
+Codex stopped correctly under the earlier branch guardrail.
+
+After successful remote configuration/fetch/lineage verification, Codex must re-read the current Phase 0 docs from the fetched branch and then resume:
 
 `docs/EVENT_MC_V1_CODEX_PHASE0_BASELINE_PROMPT_2026-08-12.md`
 
-This task is a **pre-implementation gate**.
+without asking for another plan approval unless a new scope/architecture conflict appears.
 
-Codex is allowed to add observational baseline/diagnostic orchestration if necessary, but must not implement EVENT MC V1 or alter current simulator mechanics/constants.
+This remains a **pre-implementation gate**. No EVENT MC V1 code is authorized.
 
 The canonical baseline contract is:
 
@@ -206,17 +248,20 @@ The baseline is a **ruler, not a calibration target**.
 
 The assistant should expect Codex to report at minimum:
 
-1. files created / changed;
-2. exact commit SHA actually run;
-3. exact commands run;
-4. tests and results;
-5. fixture resolution or deterministic replacements;
-6. matchup baseline summaries;
-7. cohort baseline summary;
-8. manifest / checksum locations;
-9. any mismatch against prior Font/Rosas or submission anchors and the identified reason;
-10. confirmation that no EVENT MC V1 implementation was started and no current simulator mechanics/constants were changed;
-11. explicit baseline gate PASS or FAIL.
+1. successful remote configuration and exact fetched branch SHA/lineage verification;
+2. files created / changed;
+3. exact commit SHA actually run;
+4. exact commands run;
+5. tests and results;
+6. fixture resolution or deterministic replacements;
+7. matchup baseline summaries;
+8. cohort baseline summary;
+9. manifest / checksum locations;
+10. any mismatch against prior Font/Rosas or submission anchors and the identified reason;
+11. confirmation that no EVENT MC V1 implementation was started and no current simulator mechanics/constants were changed;
+12. explicit baseline gate PASS or FAIL.
+
+If remote/authentication/lineage verification fails again, Codex should stop before materialization and report the blocker.
 
 ---
 
@@ -226,6 +271,7 @@ Do **not** automatically proceed to Phase 1 merely because Codex says PASS.
 
 The assistant must independently review:
 
+- exact fetched branch and lineage;
 - git diff / changed files;
 - whether any current simulator file was modified;
 - whether FSR-32 remained the input source;
@@ -331,5 +377,48 @@ Codex may add observational baseline orchestration only if needed. No EVENT MC V
 Expected next return: full Phase 0 execution report ending in explicit PASS or FAIL.
 
 Next assistant action: independently review Codex's actual branch/commit, diff, manifest/checksums, fixtures, outputs, tests, and gate result before authorizing Phase 1.
+
+Phase 1 authorized now: **NO**.
+
+## Checkpoint 003 — 2026-08-12 22:40 America/Chicago
+
+Current phase: Phase 0 environmental unblock before operational baseline capture.
+
+Codex returned:
+
+`PHASE 0 OPERATIONAL BASELINE GATE: FAIL`
+
+Reason: local checkout had **no configured Git remotes**, so the exact `feature/fsr-32-stamina-shadow` remote branch could not be fetched/verified. Codex made no repository changes and did not run baseline simulations.
+
+Independent GitHub verification by the assistant confirmed:
+
+```text
+repository: ChrisEsau/ufc-ai-clv-tracker
+remote URL: https://github.com/ChrisEsau/ufc-ai-clv-tracker.git
+branch: feature/fsr-32-stamina-shadow
+verified head: 6a4c594690243b8c0ee4b3b6f066d54e78cc7ad6
+local SHA reported by Codex: eebb8134fd2f7cb4eb68ffcb93464ab74883633f
+```
+
+The local SHA is the parent of the verified remote head.
+
+New Codex prompt issued:
+
+`docs/EVENT_MC_V1_CODEX_PHASE0_REMOTE_UNBLOCK_2026-08-12.md`
+
+Purpose:
+
+- add/verify the known `origin` remote;
+- fetch the exact feature branch;
+- verify head/lineage;
+- switch to the exact feature branch;
+- re-read current Phase 0 source-of-truth docs;
+- resume the already-approved baseline-materialization prompt without another plan-approval round if verification succeeds.
+
+Hard non-goal: still no EVENT MC V1 implementation and no simulator/FSR/calibration changes.
+
+Expected next assistant action:
+
+Review Codex's remote verification and full baseline result if it proceeds. If remote verification fails again, diagnose only that blocker. Phase 1 remains unauthorized.
 
 Phase 1 authorized now: **NO**.
