@@ -21,6 +21,17 @@ DISTANCE_STRIKE_ACCURACY_BASE = 0.40
 RATING_SCALE = 12.0
 MODIFIER_SCALE = 6.0
 TD_SUCCESS_LOGIT_OFFSET = -0.40
+CLINCH_SEPARATE_BASE_30S = 0.25
+CLINCH_TD_ATTEMPT_BASE_30S = 0.24
+GROUND_EXIT_BASE_30S = 0.20
+CLINCH_STRIKE_ATTEMPTS_PER_30S_BASE = 1.2
+GROUND_STRIKE_ATTEMPTS_PER_30S_BASE = 1.6
+CLINCH_STRIKE_ACCURACY_BASE = 0.68
+GROUND_STRIKE_ACCURACY_BASE = 0.70
+SUB_ATTEMPT_BASE_30S = 0.045
+REVERSAL_SHARE_OF_GROUND_EXITS = 0.18
+BOTTOM_GROUND_STRIKE_RATE_MULTIPLIER = 0.20
+BOTTOM_SUBMISSION_RATE_MULTIPLIER = 0.55
 
 
 def rescale_interval_probability(
@@ -31,6 +42,10 @@ def rescale_interval_probability(
 
 DISTANCE_CLINCH_BASE_10S = rescale_interval_probability(0.04, 30.0, 10.0)
 DISTANCE_TD_ATTEMPT_BASE_10S = rescale_interval_probability(0.10, 30.0, 10.0)
+CLINCH_SEPARATE_BASE_10S = rescale_interval_probability(0.25, 30.0, 10.0)
+CLINCH_TD_ATTEMPT_BASE_10S = rescale_interval_probability(0.24, 30.0, 10.0)
+GROUND_EXIT_BASE_10S = rescale_interval_probability(0.20, 30.0, 10.0)
+SUB_ATTEMPT_BASE_10S = rescale_interval_probability(0.045, 30.0, 10.0)
 
 
 def _sigmoid(value: float) -> float:
@@ -134,6 +149,64 @@ def clinch_entry_interval_probability(profile: FighterProfile) -> float:
 
 def interval_hazard_per_second(probability: float) -> float:
     return probability_to_rate(probability, LEGACY_INTERVAL_SECONDS)
+
+
+def phase_strike_rate_per_second(profile: FighterProfile, phase: str, *, bottom=False) -> float:
+    """Port V0's CLINCH/GROUND Poisson strike-count intensity."""
+    if phase == "clinch":
+        base, pressure = CLINCH_STRIKE_ATTEMPTS_PER_30S_BASE, profile.clinch_striking_pressure
+    elif phase == "ground":
+        base, pressure = GROUND_STRIKE_ATTEMPTS_PER_30S_BASE, profile.ground_striking_pressure
+    else:
+        raise ValueError(f"unsupported phase: {phase}")
+    multiplier = BOTTOM_GROUND_STRIKE_RATE_MULTIPLIER if bottom else 1.0
+    return base * _modifier(pressure - 50.0, scale=12.0) * multiplier / 30.0
+
+
+def phase_strike_landing_probability(attacker: FighterProfile, defender: FighterProfile, phase: str) -> float:
+    if phase == "clinch":
+        base, precision, defense = CLINCH_STRIKE_ACCURACY_BASE, attacker.clinch_striking_precision, defender.clinch_striking_defense
+    elif phase == "ground":
+        base, precision, defense = GROUND_STRIKE_ACCURACY_BASE, attacker.ground_striking_precision, defender.ground_striking_defense
+    else:
+        raise ValueError(f"unsupported phase: {phase}")
+    return _sigmoid(_logit(base) + (precision - defense) / RATING_SCALE)
+
+
+def clinch_td_interval_probability(profile: FighterProfile) -> float:
+    """V0 clinch TD consumer; legacy blend is intentionally phase-local here."""
+    return float(np.clip(CLINCH_TD_ATTEMPT_BASE_10S * exp(style_preferences(profile)[2] / MODIFIER_SCALE), 0, 1 - 1e-12))
+
+
+def clinch_separation_interval_probability(controller: FighterProfile, opponent: FighterProfile) -> float:
+    _, clinch_preference, _ = style_preferences(controller)
+    control_edge = (controller.control_imposition - opponent.control_resistance) / RATING_SCALE
+    raw = CLINCH_SEPARATE_BASE_10S * _modifier(-clinch_preference) * exp(float(np.clip(-control_edge, -1, 1)) * 0.15)
+    return float(np.clip(raw, 0, 0.90))
+
+
+def ground_exit_interval_probability(controller: FighterProfile, bottom: FighterProfile) -> float:
+    escape_edge = (bottom.control_resistance - controller.control_imposition) / RATING_SCALE
+    reversal_edge = (bottom.reversal_ability - controller.control_imposition) / RATING_SCALE
+    modifier = exp(float(np.clip(0.60 * escape_edge + 0.40 * reversal_edge, -1.5, 1.5)))
+    return float(np.clip(GROUND_EXIT_BASE_10S * modifier, 0, 0.90))
+
+
+def reversal_probability_given_exit(bottom: FighterProfile, controller: FighterProfile) -> float:
+    edge = (bottom.reversal_ability - controller.control_imposition) / RATING_SCALE
+    return _sigmoid(_logit(REVERSAL_SHARE_OF_GROUND_EXITS) + 0.75 * edge)
+
+
+def ground_exit_rates(controller: FighterProfile, bottom: FighterProfile) -> tuple[float, float, float]:
+    total = interval_hazard_per_second(ground_exit_interval_probability(controller, bottom))
+    reversal = total * reversal_probability_given_exit(bottom, controller)
+    return total * (1.0 - reversal_probability_given_exit(bottom, controller)), reversal, total
+
+
+def submission_attempt_interval_probability(profile: FighterProfile, *, bottom=False) -> float:
+    multiplier = BOTTOM_SUBMISSION_RATE_MULTIPLIER if bottom else 1.0
+    raw = SUB_ATTEMPT_BASE_10S * multiplier * _modifier(profile.submission_pressure - 50.0, scale=10.0)
+    return float(np.clip(raw, 0, 0.35))
 
 
 @dataclass(frozen=True)

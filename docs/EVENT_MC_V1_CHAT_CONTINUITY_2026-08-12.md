@@ -20,7 +20,7 @@ Architecture revision: **v0.3**.
 - Phase 1 generic continuous-time kernel: **PASS after independent ChatGPT review**.
 - Phase 2A distance temporal/mechanical parity: **PASS after independent ChatGPT review**.
 - Phase 2B wrestling-entry ontology correction: **PASS after independent review**.
-- Phase 3 clinch + ground flow: **AUTHORIZED and current task; not yet passed**.
+- Phase 3 clinch + ground flow: **IMPLEMENTED by Codex; awaiting independent review**.
 - Phase 4 and later mechanics: **NOT AUTHORIZED**.
 
 Frozen FSR-32 path:
@@ -421,3 +421,8 @@ Phase 2B: **PASS**.
 Phase 3 authorized: **YES**.
 Phase 3 reviewed/passed: **NO**.
 Phase 4 authorized: **NO**.
+
+## 019 — 2026-08-13
+Codex implemented the authorized Phase 3 live CLINCH/GROUND flow layer using composed phase rate providers. The implementation ports V0 clinch strikes, clinch takedowns, separation, top/bottom ground strikes, nonterminal submission attempts, and the single ground-exit opportunity partitioned into escape/reversal hazards. Exact phase and controller residence is observer-derived from engine time advances. Phase 2B DISTANCE TD initiation remains intact, and no Phase 4 physiology or outcome mechanics were added.
+
+Codex validation: 66 EVENT MC plus relevant V0 tests passed; 500 frozen-fixture paths all reached the 900-second horizon; frozen FSR-32 SHA-256 remained unchanged. Await independent review before changing the reviewed gate state or authorizing Phase 4.

@@ -26,6 +26,14 @@ class FighterProfile:
     wrestling_conversion: float
     td_defense: float
     control_imposition: float
+    clinch_striking_precision: float = 50.0
+    clinch_striking_defense: float = 50.0
+    ground_striking_pressure: float = 50.0
+    ground_striking_precision: float = 50.0
+    ground_striking_defense: float = 50.0
+    control_resistance: float = 50.0
+    submission_pressure: float = 50.0
+    reversal_ability: float = 50.0
 
     @classmethod
     def from_mapping(cls, row: Mapping[str, object]) -> "FighterProfile":
@@ -45,6 +53,14 @@ class FighterProfile:
             wrestling_conversion=number("wrestling_conversion"),
             td_defense=number("td_defense"),
             control_imposition=number("control_imposition"),
+            clinch_striking_precision=number("clinch_striking_precision"),
+            clinch_striking_defense=number("clinch_striking_defense"),
+            ground_striking_pressure=number("ground_striking_pressure"),
+            ground_striking_precision=number("ground_striking_precision"),
+            ground_striking_defense=number("ground_striking_defense"),
+            control_resistance=number("control_resistance"),
+            submission_pressure=number("submission_pressure"),
+            reversal_ability=number("reversal_ability"),
         )
 
 

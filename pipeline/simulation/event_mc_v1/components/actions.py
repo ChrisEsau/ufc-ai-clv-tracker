@@ -8,7 +8,7 @@ from ..contracts import FightContext, Resolution
 from ..events import ConsequenceEvent
 from ..rng import RNGStream
 from ..state import FightState, Phase, StateDelta
-from .formulas import strike_landing_probability, td_success_probability
+from .formulas import phase_strike_landing_probability, strike_landing_probability, td_success_probability
 from .profiles import MatchupProfiles, Side
 
 
@@ -81,3 +81,55 @@ class DistanceCandidate:
             consequence_events=(consequence,),
             payload=ActionAttempt(self.side, self.action_family),
         )
+
+
+@dataclass(frozen=True)
+class PhaseCandidate:
+    """A CLINCH/GROUND action whose availability is supplied by phase providers."""
+
+    side: Side
+    action_family: str
+    profiles: MatchupProfiles
+
+    @property
+    def candidate_id(self) -> str:
+        return f"{self.side.value}_{self.action_family}"
+
+    @property
+    def rng_stream(self) -> RNGStream:
+        if "strike" in self.action_family:
+            return RNGStream.STRIKE_RESOLUTION
+        if "takedown" in self.action_family:
+            return RNGStream.TAKEDOWN
+        if "submission" in self.action_family:
+            return RNGStream.SUBMISSION
+        return RNGStream.SCHEDULER
+
+    def resolve(self, state: FightState, context: FightContext, rng: np.random.Generator) -> Resolution:
+        attacker = self.profiles.fighter(self.side)
+        defender = self.profiles.fighter(self.side.opponent)
+        delta = StateDelta()
+        outcome = "occurred"
+        family = self.action_family
+        if family in {"clinch_strike", "ground_strike"}:
+            phase = "clinch" if family == "clinch_strike" else "ground"
+            outcome = "landed" if rng.random() < phase_strike_landing_probability(attacker, defender, phase) else "missed"
+        elif family == "clinch_takedown":
+            outcome = "landed" if rng.random() < td_success_probability(attacker, defender) else "failed"
+            if outcome == "landed":
+                delta = StateDelta(phase=Phase.GROUND, ground_controller=self.side.value, set_ground_controller=True, set_clinch_controller=True)
+        elif family == "clinch_separation":
+            outcome = "separated"
+            delta = StateDelta(phase=Phase.DISTANCE, set_ground_controller=True, set_clinch_controller=True)
+        elif family == "ground_escape":
+            outcome = "escaped"
+            delta = StateDelta(phase=Phase.DISTANCE, set_ground_controller=True, set_clinch_controller=True)
+        elif family == "ground_reversal":
+            outcome = "reversed"
+            delta = StateDelta(phase=Phase.GROUND, ground_controller=self.side.value, set_ground_controller=True)
+        elif family == "submission_attempt":
+            outcome = "attempted"  # Observation only: never terminal in Phase 3.
+        else:
+            raise ValueError(f"unsupported action family: {family}")
+        consequence = ConsequenceEvent(state.fight_time_seconds, "ActionOutcome", ActionOutcome(self.side, family, outcome))
+        return Resolution(delta=delta, consequence_events=(consequence,), payload=ActionAttempt(self.side, family))
