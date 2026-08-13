@@ -14,6 +14,8 @@ from ..components.formulas import (
     interval_hazard_per_second,
     legacy_td_attempt_interval_probability,
     style_preferences,
+    strike_attempt_rate_per_second,
+    strike_landing_probability,
     td_attempt_interval_probability,
     td_success_probability,
 )
@@ -82,6 +84,13 @@ def matched_ontology_summary(
         fighter = profiles.fighter(side)
         opponent = profiles.fighter(side.opponent)
         success = td_success_probability(fighter, opponent)
+        unchanged_striking = {
+            "strike_attempts_per_minute": strike_attempt_rate_per_second(fighter)
+            * 60.0,
+            "strike_landing_probability": strike_landing_probability(
+                fighter, opponent
+            ),
+        }
         arms = {}
         for arm_index, (name, probability) in enumerate(
             (
@@ -104,6 +113,7 @@ def matched_ontology_summary(
             - arms["phase_2a"]["td_attempts_per_15_minutes"]
         )
         result[side.value] = arms
+        arms["unchanged_phase_2a_2b_striking"] = unchanged_striking
     return result
 
 

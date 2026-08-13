@@ -14,6 +14,7 @@ from .formulas import (
     strike_attempt_rate_per_second,
     style_preferences,
     td_attempt_interval_probability,
+    td_attempt_rate_per_second,
 )
 from .profiles import MatchupProfiles, Side
 
@@ -30,9 +31,7 @@ class DistanceActionRateProvider:
             profile = self.profiles.fighter(side)
             rates = {
                 "strike": strike_attempt_rate_per_second(profile),
-                "takedown": interval_hazard_per_second(
-                    td_attempt_interval_probability(profile)
-                ),
+                "takedown": td_attempt_rate_per_second(profile),
                 "clinch_entry": interval_hazard_per_second(
                     clinch_entry_interval_probability(profile)
                 ),

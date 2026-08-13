@@ -10,6 +10,7 @@ from pipeline.simulation.event_mc_v1.components.formulas import (
     strike_attempt_rate_per_second,
     strike_landing_probability,
     td_attempt_interval_probability,
+    td_attempt_rate_per_second,
     td_success_probability,
 )
 from pipeline.simulation.event_mc_v1.components.profiles import FighterProfile
@@ -78,6 +79,10 @@ def test_neutral_entry_uses_existing_base_and_hazard_round_trip() -> None:
     assert probability == DISTANCE_TD_ATTEMPT_BASE_10S
     hazard = interval_hazard_per_second(probability)
     assert 1.0 - math.exp(-hazard * 10) == pytest.approx(probability)
+    assert td_attempt_rate_per_second(profile()) == pytest.approx(hazard)
+    assert td_attempt_rate_per_second(
+        profile(), context_multiplier=1.0
+    ) == pytest.approx(hazard)
 
 
 def test_legacy_comparator_remains_blended() -> None:

@@ -102,6 +102,19 @@ def td_attempt_interval_probability(profile: FighterProfile) -> float:
     return float(np.clip(raw_probability, 0.0, 1.0 - 1e-12))
 
 
+def td_attempt_rate_per_second(
+    profile: FighterProfile, *, context_multiplier: float = 1.0
+) -> float:
+    """Intrinsic Phase 2B rate with a neutral seam for future context effects."""
+
+    if context_multiplier < 0.0:
+        raise ValueError("context_multiplier must be non-negative")
+    intrinsic_rate = interval_hazard_per_second(
+        td_attempt_interval_probability(profile)
+    )
+    return intrinsic_rate * context_multiplier
+
+
 def td_success_probability(
     attacker: FighterProfile, defender: FighterProfile
 ) -> float:

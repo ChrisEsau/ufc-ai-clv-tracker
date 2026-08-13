@@ -27,3 +27,7 @@ def test_matched_exposure_preserves_success_and_moves_attempts() -> None:
         assert summary[side]["phase_2b"]["td_success_percentage"] == pytest.approx(
             summary[side]["phase_2a"]["td_success_percentage"], abs=0.01
         )
+        assert summary[side]["unchanged_phase_2a_2b_striking"] == {
+            "strike_attempts_per_minute": pytest.approx(10.0),
+            "strike_landing_probability": pytest.approx(0.4),
+        }
