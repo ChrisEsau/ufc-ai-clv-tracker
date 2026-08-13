@@ -37,7 +37,7 @@ def test_yaml_defaults_are_active_unchanged_values():
     submission_finish = DEFAULT_CALIBRATION.section("submission_finish")
     assert submission_finish["top_position_bonus"] == 0.0
     assert submission_finish["bottom_position_bonus"] == 0.0
-    assert submission_finish["intercept"] == -2.20
+    assert submission_finish["intercept"] == -0.60
 
 
 def test_empty_weight_class_mapping_is_neutral_and_fingerprint_stable():

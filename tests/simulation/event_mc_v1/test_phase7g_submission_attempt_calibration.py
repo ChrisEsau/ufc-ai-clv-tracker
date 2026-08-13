@@ -13,7 +13,7 @@ def test_candidate_changes_only_submission_attempt_base():
     assert candidate.section("submission_attempts")["bottom_multiplier"] == 1.0
     finish = candidate.section("submission_finish")
     assert finish["top_position_bonus"] == finish["bottom_position_bonus"] == 0.0
-    assert finish["intercept"] == -2.20
+    assert finish["intercept"] == -0.60
 
 
 def test_split_historical_anchors_use_elapsed_exposure():
