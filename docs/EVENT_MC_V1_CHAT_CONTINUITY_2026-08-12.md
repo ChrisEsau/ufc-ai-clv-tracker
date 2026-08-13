@@ -1,7 +1,7 @@
 # EVENT MC V1 Chat Continuity / Working Memory
 
 Date created: 2026-08-12
-Last updated: 2026-08-13 09:46 America/Chicago
+Last updated: 2026-08-13 10:15 America/Chicago
 Repository: `ChrisEsau/ufc-ai-clv-tracker`
 Branch: `feature/fsr-32-stamina-shadow`
 
@@ -24,8 +24,9 @@ Architecture revision: **v0.3**.
 - Phase 4A stamina + dynamic modifiers: **PASS after independent ChatGPT review**.
 - Phase 4B1 impact + trauma + knockdown implementation: **PASS after independent ChatGPT review**.
 - Phase 4B1 KD calibration: **OPEN / intentionally deferred by user**.
-- Phase 4B1 config externalization: **NOT YET PASS — completion fix authorized/current**.
-- Phase 4B2 KO/TKO: **NOT AUTHORIZED**.
+- Phase 4B1 config externalization: **PASS after independent ChatGPT review**.
+- Phase 4B2 KO/TKO finish mechanics: **AUTHORIZED and current task; not yet passed**.
+- Terminal submissions, judging, age, tactical urgency, later calibration: **NOT AUTHORIZED**.
 
 Frozen FSR-32 path:
 `data/simulation/rfs_mc_v2_shared_state/fsr_32_shadow/fsr_32_prefight_snapshots.parquet`
@@ -40,13 +41,14 @@ Implementation commits:
 - Phase 3: `5a6c15af9c2315f23c231d0f34cd3cefddba4578`
 - Phase 4A: `8155bc45de5fa26fa6077dd870716234d54690c9`
 - Phase 4B1 physiology: `65a6f2d4e703af5c777f1943f134728b715d4c55`
-- first config externalization attempt: `1a9f59c583408dc00aee5097d59e028ee3d0a2c3`
+- Config externalization initial: `1a9f59c583408dc00aee5097d59e028ee3d0a2c3`
+- Config externalization completion: `b8b2b870595c9cc62255b4d63b7c20de56e9550f`, `77661563c3a833a3e87b60e4b3ae6caecd648cb8`
 
 Current governing prompt:
-`docs/EVENT_MC_V1_CODEX_PHASE4B1_CONFIG_EXTERNALIZATION_FIX_2026-08-13.md`
+`docs/EVENT_MC_V1_CODEX_PHASE4B2_KO_TKO_FINISHES_2026-08-13.md`
 
-Completion prompt commit:
-`32b5a041f60a0584f58265e3c2c2cf79a57d4d65`
+Phase 4B2 prompt commit:
+`3bc8ec1c0aefc11c49c5f0ab94285dce420e9e63`
 
 Development standard locked by user:
 **WORKING + PREDICTIVE + MODULAR + EASY TO ITERATE. Ultimate success is moneyline/prop predictive accuracy and betting usefulness. Protect critical invariants and calculation seams, but favor flexibility and rapid historical validation over speculative abstraction.**
@@ -93,7 +95,7 @@ Stable RNG stream IDs:
 
 ## Phase 2B wrestling ontology
 
-`wrestling_entry` owns intrinsic DISTANCE TD initiation. `wrestling_conversion` vs opponent `td_defense` owns completion. `control_imposition` is post-position persistence only. The old Phase 2A blend remains diagnostic-only.
+`wrestling_entry` owns intrinsic DISTANCE TD initiation. `wrestling_conversion` vs opponent `td_defense` owns completion. `control_imposition` is post-position persistence only. The Phase 2A blend remains diagnostic-only.
 
 ## Phase 3 flow
 
@@ -123,7 +125,7 @@ Trait ownership lock:
 - knockdown_resistance -> baseline KD resistance;
 - stamina -> pre-action power modifier only.
 
-Power/stamina must not enter KD probability again. Cumulative trauma persists with no in-fight recovery; acute vulnerability decays continuously with exact dt; KD remains nonterminal; no health-bar exhaustion finish.
+Power/stamina must not enter KD probability again. Cumulative trauma persists with no in-fight recovery; acute vulnerability decays continuously with exact dt; KD is nonterminal in Phase 4B1; no health-bar exhaustion finish.
 
 Historical KD anchor from completed master rows:
 - 8,801 fights;
@@ -132,86 +134,134 @@ Historical KD anchor from completed master rows:
 - 35.46% >=1 KD;
 - 6.14% multi-KD.
 
-Current five-fixture mechanics runs produced about 2.2-3.3 KDs/path, materially above the historical population anchor. Independent review classified this as an exposed calibration miss, not an architecture failure. User explicitly chose **not to calibrate yet**.
+Current five-fixture mechanics runs produce roughly 2.2-3.3 KDs/path, materially above the historical population anchor. Independent review classified this as an exposed calibration miss, not an architecture failure. User explicitly chose **not to calibrate yet**.
 
 Therefore:
 - KD architecture PASS;
 - KD calibration OPEN;
-- do not compensate by artificially suppressing later KO/TKO;
-- Phase 4B2 remains blocked until explicitly authorized.
+- do not hide the upstream miss by artificially suppressing later KO/TKO conversion.
+
+## Phase 4B1 config externalization
+
+Final gate:
+`PHASE 4B1 CONFIG EXTERNALIZATION GATE: PASS`.
+
+Current calibration source:
+`config/event_mc_v1.yaml`
+
+Architecture:
+
+```text
+global defaults
++ optional partial string-key weight-class override
+= one immutable EventMCCalibration
+```
+
+The same resolved calibration is now threaded through:
+- DISTANCE rates + resolution;
+- CLINCH rates + resolution;
+- GROUND rates + resolution;
+- submission attempts;
+- stamina costs/recovery;
+- DynamicModifiers;
+- impact/trauma/KD;
+- acute-vulnerability decay.
+
+Remaining behavior-changing coefficients found during first review were moved to YAML, including modifier clip, style-preference weights, ground-exit/reversal blend coefficients, and stamina-resilience normalization. A synthetic override test proves simultaneous DISTANCE, CLINCH, stamina, and damage reach while unspecified values inherit defaults.
+
+Committed `weight_classes` mapping remains empty. No real weight-class tuning is active yet. Default five-fixture physics and RNG ordering matched pre-externalization behavior within floating serialization tolerance.
 
 ---
 
-# Current Task — Config Externalization Completion
+# Current Task — Phase 4B2 KO/TKO Finish Mechanics
 
-User requested that tunable simulator constants live in an easy-to-edit external config. User also wants future weight-class-specific calibration because divisions likely behave differently, while current calibration remains population-wide.
+User said **proceed** on 2026-08-13 10:15 America/Chicago, explicitly authorizing Phase 4B2.
 
-Initial config externalization implementation at `1a9f59c583408dc00aee5097d59e028ee3d0a2c3` added:
-- `config/event_mc_v1.yaml`;
-- immutable load-once `EventMCCalibration` / `EventMCConfigResolver`;
-- stable calibration fingerprints;
-- global defaults + optional string-key partial `weight_classes` overrides;
-- empty committed override mapping;
-- default deterministic physics parity vs pre-externalization baseline;
-- config injection into stamina, DynamicModifiers, and physiology.
-
-Independent review did **not** accept the gate because two requirements remained incomplete.
-
-## Review finding 1 — active calibration coefficients still hard-coded
-
-Examples independently observed in active Python paths:
-- DynamicModifiers resilience normalization `(stamina_performance_resilience - 10) / 80`;
-- `style_preferences()` coefficients `0.5`, `0.75`, `0.25`;
-- active `_modifier()` behavioral clip magnitude `8.0`;
-- ground-exit blend `0.60 escape + 0.40 reversal`;
-- ground-exit edge clip `1.5`;
-- reversal sensitivity `0.75`;
-- potentially other active numeric coefficients that materially change rates/physiology and are not merely numerical-safety epsilons or mathematical identities.
-
-These must be audited and externalized without changing values.
-
-## Review finding 2 — weight-class calibration not threaded through full fight flow
-
-`FightFlowRateProvider` / `DistanceActionRateProvider` still invoke many formulas without a resolved calibration object, and several formula functions still read module-level default aliases. Therefore a future weight-class override could modify stamina/damage while leaving DISTANCE/CLINCH/GROUND rates on global defaults.
-
-Required target architecture:
-
-```text
-calibration = resolver.for_weight_class(key)
--> same immutable calibration injected across complete fight stack
--> DISTANCE + CLINCH + GROUND + submissions + stamina + modifiers + physiology
-```
-
-No global mutable config.
-
-At minimum runtime overrides must reach:
-- DISTANCE strikes, TD initiation/success, clinch entry;
-- CLINCH strikes, TD initiation, separation;
-- GROUND strikes, submissions, exits/reversal;
-- stamina costs/recovery;
-- DynamicModifiers;
-- impact/trauma/KD and acute decay.
-
-A synthetic end-to-end weight-class override test must span multiple subsystems and specifically prove a CLINCH or GROUND override is consumed.
-
-This remains a **pure behavior-neutral refactor**:
-- no numerical tuning;
-- no KD calibration;
-- no active real weight-class differences;
-- no KO/TKO;
-- no Phase 4B2;
-- default deterministic path outcomes/RNG order must remain unchanged.
-
-Governing completion prompt:
-`docs/EVENT_MC_V1_CODEX_PHASE4B1_CONFIG_EXTERNALIZATION_FIX_2026-08-13.md`
+Governing prompt:
+`docs/EVENT_MC_V1_CODEX_PHASE4B2_KO_TKO_FINISHES_2026-08-13.md`
 
 Prompt commit:
-`32b5a041f60a0584f58265e3c2c2cf79a57d4d65`
+`3bc8ec1c0aefc11c49c5f0ab94285dce420e9e63`
 
-Expected final gate after correction:
-`PHASE 4B1 CONFIG EXTERNALIZATION GATE: PASS` or `FAIL`.
+Phase 4B2 is an **architecture/mechanics phase, not a calibration phase**.
 
-Next assistant action: independently review the completion commit, remaining literal inventory, full calibration propagation, synthetic weight-class override tests, deterministic default parity, tests, scope protection, and frozen checksum before accepting PASS.
+Known KD overprediction remains unchanged and must not be compensated for by artificially suppressing finish probability.
+
+Target same-timestamp chain:
+
+```text
+landed strike
+-> pre-action effective power
+-> stochastic impact
+-> primary trauma
+-> cumulative trauma
+-> current KD resistance
+-> probabilistic KD
+-> acute-vulnerability consequence
+-> current finish resistance
+-> probabilistic KO/TKO
+-> terminal engine delta
+```
+
+Hard locks:
+- power and stamina enter once through impact;
+- finish probability consumes impact/current finish resistance rather than recomputing power;
+- cumulative trauma lowers resistance but never forces a deterministic finish;
+- acute vulnerability may lower finish resistance;
+- KD may explicitly condition finish probability but must not duplicate power;
+- fresh one-shot KO/TKO must remain possible;
+- one shared physiology/finish pipeline across phases unless legacy tracing strongly proves a small context modifier;
+- engine remains sole state mutator;
+- successful finish stops future primary events immediately and produces exactly one `FightFinished` lifecycle event;
+- all new finish tuning constants live in `config/event_mc_v1.yaml` and support the existing future weight-class override seam;
+- committed weight-class overrides remain empty.
+
+Required legacy trace before coding:
+- `StaticFSRMCKOTKOV2`;
+- `StaticFSRMCKOTKOV2KDCollapse`;
+- `StaticFSRMCKOTKOV2RoundRecovery`;
+- V3/V3.1/V3.2/V3.3 stamina layers;
+- later full-fight/audit overrides if relevant.
+
+Explicitly reject unless independently justified:
+- deterministic damage-reservoir exhaustion finish;
+- collapse-trauma replay;
+- multiple direct power terms;
+- hidden defender-stamina finish penalties;
+- duplicated recent-KD effects;
+- damage recovery;
+- age effects.
+
+Required diagnostics:
+- five frozen fixtures;
+- KO/TKO finish rate;
+- average finish time and round distribution;
+- KD-strike vs direct non-KD finish share;
+- impact ratio / trauma / acute vulnerability at finish;
+- KDs before termination;
+- scheduled-horizon rate;
+- runtime;
+- descriptive historical KO/TKO anchor if supported by master data.
+
+Interpret diagnostics mechanically only. Do not tune to the anchor and do not claim predictive performance.
+
+Absolute non-goals:
+- KD calibration;
+- KO/TKO population calibration;
+- terminal submissions;
+- judging;
+- age;
+- tactical urgency;
+- body-part/injury/doctor stoppage systems;
+- FSR changes;
+- phase/stamina retuning.
+
+Expected Codex return:
+`PHASE 4B2 KO/TKO FINISH MECHANICS GATE: PASS` or `FAIL`.
+
+Next assistant action: independently review actual implementation commit/diff, legacy finish trace, formula ownership, same-timestamp ordering, terminal lifecycle behavior, RNG ownership, config propagation, tests, diagnostics, historical anchor, scope protection, and frozen checksum before accepting PASS.
+
+Do not authorize terminal submissions, judging, calibration, age, or later phases automatically.
 
 ---
 
@@ -229,6 +279,7 @@ Next assistant action: independently review the completion commit, remaining lit
 10. `docs/EVENT_MC_V1_CODEX_PHASE4B1_IMPACT_TRAUMA_KD_2026-08-13.md`
 11. `docs/EVENT_MC_V1_CODEX_PHASE4B1_CONFIG_EXTERNALIZATION_2026-08-13.md`
 12. `docs/EVENT_MC_V1_CODEX_PHASE4B1_CONFIG_EXTERNALIZATION_FIX_2026-08-13.md`
+13. `docs/EVENT_MC_V1_CODEX_PHASE4B2_KO_TKO_FINISHES_2026-08-13.md`
 
 ---
 
@@ -253,24 +304,21 @@ Phase 3 authorized; live CLINCH/GROUND flow implemented at `5a6c15af...`, indepe
 Phase 4A authorized; stamina/dynamic modifiers implemented at `8155bc45...`, independently accepted PASS.
 
 ## 024-026
-Phase 4B1 impact/trauma/KD authorized and implemented at `65a6f2d4...`; independent review accepted architecture/implementation PASS but exposed severe KD overprediction. User explicitly deferred KD calibration. Phase 4B2 remained unauthorized.
+Phase 4B1 impact/trauma/KD authorized and implemented at `65a6f2d4...`; independent review accepted architecture/implementation PASS but exposed severe KD overprediction. User explicitly deferred KD calibration.
 
-## 027 — 2026-08-13 09:20 America/Chicago
-User authorized config externalization with zero behavioral change and requested future weight-class-specific override support. Governing prompt commit `9cd3daf...`.
+## 027-030
+User authorized behavior-neutral calibration externalization plus future weight-class override support. First implementation at `1a9f59c5...` was not accepted because active coefficients remained in Python and runtime calibration was not threaded through the whole fight-flow stack. Completion prompt `32b5a041...` produced commits `b8b2b870...` and `77661563...`; independent review confirmed complete propagation, externalized remaining tunables, synthetic multi-subsystem override behavior, and default deterministic parity. Final gate accepted:
+`PHASE 4B1 CONFIG EXTERNALIZATION GATE: PASS`.
 
-## 028 — 2026-08-13
-Codex implemented first config externalization at `1a9f59c583408dc00aee5097d59e028ee3d0a2c3`. Default five-fixture deterministic physics matched pre-refactor behavior; empty weight-class map; 82 tests reported passing; frozen checksum unchanged.
+## 031 — 2026-08-13 10:15 America/Chicago
+User said **proceed**, explicitly authorizing Phase 4B2 KO/TKO finish mechanics while KD calibration remains intentionally deferred.
 
-## 029 — 2026-08-13 09:46 America/Chicago
-ChatGPT independently reviewed `1a9f59c5...` and **did not accept** the config externalization gate. Two incomplete requirements were found: (1) remaining active behavior-changing coefficients were still hard-coded, and (2) resolved calibration was not propagated through the full flow/rate/formula stack, so future weight-class overrides would affect only some subsystems.
+New governing prompt:
+`docs/EVENT_MC_V1_CODEX_PHASE4B2_KO_TKO_FINISHES_2026-08-13.md`
 
-A narrow completion prompt was issued under the already-authorized config phase:
-`docs/EVENT_MC_V1_CODEX_PHASE4B1_CONFIG_EXTERNALIZATION_FIX_2026-08-13.md`
-commit `32b5a041f60a0584f58265e3c2c2cf79a57d4d65`.
+Prompt commit:
+`3bc8ec1c0aefc11c49c5f0ab94285dce420e9e63`
 
-No tuning authorized. KD calibration remains deferred. Phase 4B2 remains unauthorized.
-
-## 030 — 2026-08-13
-Codex completed the config-externalization review fixes: remaining style-blend, modifier-clip, ground-exit/reversal, and resilience-normalization coefficients moved to YAML; one resolved immutable calibration now threads through DISTANCE, CLINCH, GROUND, stamina, modifiers, and physiology consumers. A synthetic partial override proves simultaneous DISTANCE, CLINCH, stamina, and damage configuration reach while inheriting unspecified defaults.
-
-Five-fixture exact-seed comparison against pre-externalization commit `65a6f2d4...` preserved discrete physics/RNG behavior with only floating serialization tolerance. No default value, KD calibration, real weight-class tuning, or Phase 4B2 mechanic changed. Await independent review of the completed externalization gate.
+Phase 4B2: **AUTHORIZED / current**.
+KD calibration: **DEFERRED / unchanged**.
+Terminal submissions, judging, age, tactical urgency, later calibration: **NOT AUTHORIZED**.
