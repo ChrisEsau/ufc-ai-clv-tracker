@@ -20,7 +20,8 @@ Architecture revision: **v0.3**.
 - Phase 1 generic continuous-time kernel: **PASS after independent ChatGPT review**.
 - Phase 2A distance temporal/mechanical parity: **PASS after independent ChatGPT review**.
 - Phase 2B wrestling-entry ontology correction: **PASS after independent review**.
-- Phase 3 and later mechanics: **NOT AUTHORIZED**.
+- Phase 3 clinch + ground flow: **AUTHORIZED and current task; not yet passed**.
+- Phase 4 and later mechanics: **NOT AUTHORIZED**.
 
 Frozen FSR-32 path:
 `data/simulation/rfs_mc_v2_shared_state/fsr_32_shadow/fsr_32_prefight_snapshots.parquet`
@@ -47,11 +48,18 @@ Phase 1 implementation commit:
 Phase 2A implementation commit:
 `5b7574c7689ffa2e55821a49fca47a2c1c937991`
 
-Current Phase 2B governing prompt:
-`docs/EVENT_MC_V1_CODEX_PHASE2B_WRESTLING_ENTRY_ONTOLOGY_2026-08-13.md`
+Phase 2B implementation commits:
+`004740e54618c134e08aa553164c381508811481`
+`809389bdabe208e93536034bc795bbcf7e1ab038`
 
-Phase 2B prompt commit:
-`e4278f62359e500055eea8c4521d8be6eba6fa2b`
+Phase 2B reviewed continuity tip before Phase 3 prompt:
+`9cd74b1b73572a0db3efbd986966ecae89ee1652`
+
+Current Phase 3 governing prompt:
+`docs/EVENT_MC_V1_CODEX_PHASE3_CLINCH_GROUND_FLOW_2026-08-13.md`
+
+Phase 3 prompt commit:
+`0d67599db401af55cbe0f1c9fbd909468119e44e`
 
 Development standard locked by user:
 **Working + predictive + modular + easy to iterate. Do not optimize for perfection or exhaustive defensive hardening. Ultimate success is moneyline/prop predictive accuracy and betting usefulness. Protect critical invariants and calculation seams, but favor flexibility and rapid historical validation over speculative abstraction.**
@@ -61,6 +69,8 @@ Damage/KO external review may run in parallel. Do not hold EVENT MC progress for
 Known performance note: Phase 2A schedules individual strike attempts as events. Do not optimize/batch them preemptively; benchmark later and optimize only if runtime becomes a real problem.
 
 Known non-blocking Phase 1 seam: primary resolution currently returns one state delta plus consequence notifications. Later damage -> KD -> finish chains may need sequential consequence modules that each return/apply their own deltas. Do not retrofit this until required.
+
+Codex cloud may use a local branch named `work`; that is acceptable. Verify required commit ancestry and governing-file presence rather than requiring the local branch name to equal `feature/fsr-32-stamina-shadow`.
 
 ---
 
@@ -203,7 +213,9 @@ Do not assume Phase 2B improves prediction. Measure what moves; historical valid
 
 ---
 
-# Hard Locks / Non-Goals
+# Phase 2B Hard Locks / Non-Goals
+
+These were the locks while Phase 2B was active. Phase 3 authorization below supersedes only the former prohibition on clinch/ground mechanics and submission-attempt generation; all production/FSR/no-retune protections remain.
 
 Do not:
 - modify the current inheritance-based simulator;
@@ -215,9 +227,6 @@ Do not:
 - change strike mechanics;
 - change clinch-entry mechanics;
 - change TD success mechanics;
-- add clinch internals;
-- add ground internals;
-- add submissions;
 - add stamina;
 - add damage/KD/KO;
 - add recovery;
@@ -225,10 +234,9 @@ Do not:
 - add judging;
 - add tactical urgency;
 - add arbitrary cooldowns;
-- add MatReturn;
-- implement Phase 3 or later work.
+- add MatReturn by default.
 
-Future damage/KD/KO systems must remain replaceable behind clean interfaces, but their redesign must not block Phase 2B.
+Future damage/KD/KO systems must remain replaceable behind clean interfaces, but their redesign must not block current flow work.
 
 ---
 
@@ -252,7 +260,62 @@ The Phase 2B implementation and follow-up diagnostics were independently inspect
 Independent review found the implementation small and confined to the authorized TD-initiation semantic correction. The required tests, four-matchup A/B diagnostic, frozen artifact checksum, and downstream compile checks passed. Final reviewed gate:
 `PHASE 2B WRESTLING ENTRY ONTOLOGY GATE: PASS`.
 
-Do not authorize Phase 3 automatically.
+---
+
+# Phase 3 — Current Task
+
+Phase 3 is explicitly authorized and governed by:
+
+`docs/EVENT_MC_V1_CODEX_PHASE3_CLINCH_GROUND_FLOW_2026-08-13.md`
+
+Goal: make CLINCH and GROUND live continuous-time phases so a nonterminal path can traverse all major phases for the full scheduled horizon.
+
+Authorized Phase 3 mechanics:
+- CLINCH strikes;
+- CLINCH TD attempts and resolution;
+- CLINCH separation to DISTANCE;
+- GROUND top strikes;
+- bottom ground strikes if supported by current mechanics;
+- submission **attempt generation only**, not terminal submission finishes;
+- ground escape/standup;
+- ground reversal/controller swap;
+- exact clinch/ground residence and control-time observation;
+- full scheduled-time nonterminal flow diagnostics.
+
+Ground exit hard invariant where one legacy exit opportunity is partitioned:
+```text
+lambda_reversal = lambda_ground_exit * P(reversal | exit)
+lambda_escape   = lambda_ground_exit * (1 - P(reversal | exit))
+```
+with:
+```text
+lambda_reversal + lambda_escape == lambda_ground_exit
+```
+Do not double ground exit frequency by scheduling two full independent exit hazards from one opportunity.
+
+`control_imposition` is now allowed in its intended **post-position persistence/retention** role where supported by the traced mechanics. It must not return to intrinsic DISTANCE TD initiation.
+
+Phase 3 non-goals:
+- no stamina;
+- no damage;
+- no KD/KO;
+- no terminal SUB finish;
+- no recovery;
+- no age;
+- no judging;
+- no tactical urgency;
+- no broad calibration retune;
+- no Phase 4 work;
+- no MatReturn unless source tracing proves it is essential, with default still to omit it.
+
+Required historical mechanics diagnostics: Font/Rosas, Merab/Yan, Holloway/Kattar, Lewis/Daukaus, and Oliveira/Poirier. Do not claim winner or method prediction yet.
+
+Expected Codex return ends with:
+`PHASE 3 CLINCH + GROUND FLOW GATE: PASS` or `FAIL`.
+
+When Phase 3 returns, ChatGPT must independently inspect the actual implementation commit/diff, formula tracing, state transitions, ground-exit partition, boundary behavior, control-time accounting, tests, and fixture diagnostics before accepting PASS.
+
+Do not authorize Phase 4 automatically.
 
 ---
 
@@ -267,6 +330,7 @@ Do not authorize Phase 3 automatically.
 - `docs/EVENT_MC_V1_CODEX_PHASE2A_DISTANCE_PARITY_2026-08-13.md`
 - `docs/EVENT_MC_V1_CODEX_PHASE2A_RETRY_2026-08-13.md`
 - `docs/EVENT_MC_V1_CODEX_PHASE2B_WRESTLING_ENTRY_ONTOLOGY_2026-08-13.md`
+- `docs/EVENT_MC_V1_CODEX_PHASE3_CLINCH_GROUND_FLOW_2026-08-13.md`
 
 ---
 
@@ -329,24 +393,31 @@ Prompt commit:
 
 Expected Codex return: implementation/tests/A-B diagnostics ending with `PHASE 2B WRESTLING ENTRY ONTOLOGY GATE: PASS` or `FAIL`.
 
-Next assistant action: independently review the actual Phase 2B commit before any Phase 3 authorization.
-
-Phase 0: **PASS**.
-Phase 1: **PASS**.
-Phase 2A: **PASS**.
-Phase 2B authorized: **YES**.
-Phase 2B reviewed/passed: **NO**.
-Phase 3 authorized: **NO**.
-
 ## 017 — 2026-08-13
 Phase 2B implementation commits `004740e` and `809389b` were independently reviewed. The active TD initiation path now uses `wrestling_entry` centered at 50 with the unchanged Phase 2A base probability and modifier scale; the legacy blend remains diagnostic-only, and TD success remains conversion versus defense. All 56 EVENT MC and relevant V0 tests passed, the required four-matchup diagnostic completed, and the frozen FSR-32 SHA-256 remained unchanged.
 
 Final gate:
 `PHASE 2B WRESTLING ENTRY ONTOLOGY GATE: PASS`.
 
+## 018 — 2026-08-13 07:29 America/Chicago
+User said **proceed**, explicitly authorizing Phase 3 clinch + ground flow.
+
+New governing prompt:
+`docs/EVENT_MC_V1_CODEX_PHASE3_CLINCH_GROUND_FLOW_2026-08-13.md`
+
+Prompt commit:
+`0d67599db401af55cbe0f1c9fbd909468119e44e`
+
+Phase 3 scope: live CLINCH/GROUND continuous-time mechanics, ground exit partition, exact phase/control residence, submission attempts without terminal SUB finishes, and full scheduled-time nonterminal diagnostics. No stamina/damage/KD/KO/recovery/age/judging/Phase4.
+
+Expected Codex return: implementation/tests/fixture diagnostics ending with `PHASE 3 CLINCH + GROUND FLOW GATE: PASS` or `FAIL`.
+
+Next assistant action: independently review the actual Phase 3 implementation before any Phase 4 authorization.
+
 Phase 0: **PASS**.
 Phase 1: **PASS**.
 Phase 2A: **PASS**.
-Phase 2B authorized: **YES**.
-Phase 2B reviewed/passed: **YES**.
-Phase 3 authorized: **NO**.
+Phase 2B: **PASS**.
+Phase 3 authorized: **YES**.
+Phase 3 reviewed/passed: **NO**.
+Phase 4 authorized: **NO**.
