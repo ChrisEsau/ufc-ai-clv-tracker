@@ -1,6 +1,6 @@
 # EVENT MC V1 Chat Continuity / Working Memory
 
-Last updated: 2026-08-13 14:00 America/Chicago
+Last updated: 2026-08-13 14:19 America/Chicago
 Repository: `ChrisEsau/ufc-ai-clv-tracker`
 Branch: `feature/fsr-32-stamina-shadow`
 
@@ -13,96 +13,66 @@ After every new Codex prompt, update this file. This file is continuity only, no
 - Phase 7A strike/impact/KD/KO decomposition: PASS
 - Phase 7B KD calibration: PASS at `66b927f72c399304e466055902435ecf74e885d6`
 - Phase 7B2 post-KD decomposition: PASS at `eba174cdb9a6276a7a061f9b4c973bbc1a463ad8`
-- Phase 7C finish midpoint calibration: AUTHORIZED / current next phase
-- Submission calibration: NOT YET AUTHORIZED
+- Phase 7C finish midpoint calibration: PASS at `659d7963954334f1fd330cd9f138550a42409ffa`
+- Phase 7D post-finish submission decomposition: AUTHORIZED / current next phase
+- Submission calibration changes: NOT YET AUTHORIZED
 - Age, tactical urgency, real weight-class tuning: NOT AUTHORIZED
 
 Frozen FSR-32 SHA-256: `621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a`
 
-## Phase 7A final anchors
-- historical attempts/15min 169.50 vs simulated 194.30
-- historical landed/15min 93.18 vs simulated 83.32
-- historical KD/100 landed 0.280 vs simulated 3.718
-- historical KD/15min 0.261 vs simulated 3.098
-- simulated P(finish | KD) 46.53%
-- simulated P(finish | non-KD landed) 1.322%
-- non-KD finishing-strike share 42.38%
-- KO/TKO paths with zero prior KDs 67.81%
-- finish checks/path 27.111
-
-Interpretation lock: strike volume is not the primary KD problem; KD probability conditional on landing was the strongest demonstrated error. Impact generation and KO conversion remained frozen for Phase 7B.
-
 ## Phase 7B KD calibration final
-Governing prompt: `docs/EVENT_MC_V1_CODEX_PHASE7B_KD_CALIBRATION_2026-08-13.md`
-Prompt commit: `f63fe8390f9b32abcb1690dfda31b1411d8e9e1f`
-Implementation commit: `66b927f72c399304e466055902435ecf74e885d6`
-
 Only promoted config change:
 `defaults.knockdown.midpoint_impact_ratio: 8.0 -> 36.0`
 
-All other knockdown parameters and all impact/KO/stamina/submission/judging/action/phase/RNG/FSR settings remain unchanged.
+Temporal result supported the same region on 2020-2024 train and 2025+ holdout. KD exposure moved from roughly 12x historical into the historical order of magnitude. Phase 7B gate: PASS.
 
-Temporal cohort:
-- train eligible fights 1,096, 2020-01-18 through 2024-12-14
-- holdout eligible fights 327, 2025-01-11 through 2026-08-01
-
-Refined midpoint 36 diagnostics:
-Train subset: KD/100 landed 0.283; KD/15min 0.242; KO/TKO 73.2%; SUB 3.6%; DEC 23.2%.
-Holdout subset: KD/100 landed 0.227; KD/15min 0.201; KO/TKO 76.4%; SUB 2.0%; DEC 21.6%.
-
-Phase 7B conclusion: one global KD midpoint was enough to reduce KD exposure from roughly 12x historical to the historical order of magnitude on train and holdout, while KO/TKO remained grossly excessive. Phase 7B gate: PASS.
-
-## Phase 7B2 post-KD decomposition final
-Governing prompt: `docs/EVENT_MC_V1_CODEX_PHASE7B2_POST_KD_DECOMPOSITION_2026-08-13.md`
-Prompt commit: `2663750f7bb51c311bbeaab3804d8f46037f2355`
-Implementation commit: `eba174cdb9a6276a7a061f9b4c973bbc1a463ad8`
-
-100-fight x 10-path post-KD anchors at midpoint 36:
-- attempts/15min 195.48
-- landed/15min 84.05
+## Phase 7B2 final
+At KD midpoint 36 on the 100-fight x 10-path diagnostic:
 - KD/100 landed 0.328
 - KD/15min 0.276
-- zero-KD 88.6%; multi-KD 0.5%
-- finish checks/path 36.234; finish checks/15min 84.050
-- P(finish | KD) 58.82%
-- P(finish | non-KD landed) 1.830%
+- KO/TKO 73.1%
+- P(finish|KD) 58.82%
+- P(finish|non-KD) 1.830%
 - non-KD finishing-strike share 90.42%
-- KO/TKO paths with zero prior KDs 96.44%
-- KO/TKO 73.1%; SUB 3.4%; DEC 23.5%
-- mean non-decision finish time 215.81s
-- R1 share of non-decisions 74.12%
+- KO paths with zero prior KDs 96.44%
+Interpretation: remaining KO/TKO excess was dominated by repeated non-KD finish checks.
 
-Interpretation lock:
-- corrected KD exposure did not solve excessive KO/TKO;
-- non-KD repeated finish checks are now the population-dominant KO/TKO channel;
-- KD-strike conversion is high but rare and not population dominant;
-- old midpoint-8 KO conversion measurements are obsolete due changed censoring.
-
-Phase 7B2 gate: PASS.
-
-## Phase 7C finish midpoint calibration
-Governing prompt:
-`docs/EVENT_MC_V1_CODEX_PHASE7C_FINISH_MIDPOINT_CALIBRATION_2026-08-13.md`
+## Phase 7C finish midpoint calibration final
+Governing prompt: `docs/EVENT_MC_V1_CODEX_PHASE7C_FINISH_MIDPOINT_CALIBRATION_2026-08-13.md`
 Prompt commit: `d8980863f641acac693261ce8c7e583beb78a8d5`
+Implementation commit: `659d7963954334f1fd330cd9f138550a42409ffa`
 
-Hard scope:
-- ONLY `defaults.finish.midpoint_impact_ratio` may move from current 10.0;
-- finish slope, KD logit bonus, durability/resistance/trauma/acute terms remain fixed;
-- KD midpoint remains 36.0;
-- impact generation, action/phase rates, stamina, submissions, judging, RNG, FSR, weight-class overrides, age and urgency remain fixed.
+Only promoted config change:
+`defaults.finish.midpoint_impact_ratio: 10.0 -> 36.0`
 
-Calibration design:
-- chronological mature-fighter train 2020-2024 and holdout 2025+;
-- compute historical KO/TKO target separately per split;
-- common seeds;
-- coarse grid 10,16,24,32,48,64,96,128,192, then refine around best bracket;
-- primary target KO/TKO share; finish timing is secondary guardrail;
-- SUB/DEC and predictive metrics are downstream diagnostics only;
-- promote one finish midpoint only if train and holdout support the same region, KO incidence improves on both, timing is not pathological, and KD calibration remains approximately intact;
-- if one midpoint cannot work cleanly, do not force promotion; return evidence that the finish model needs another degree of freedom.
+KD midpoint remains 36.0. Finish slope, knockdown bonus, resistance terms, impact generation, rates, stamina, submissions, judging, RNG, FSR and overrides remain fixed.
 
-Expected return: `PHASE 7C KO/TKO MIDPOINT CALIBRATION GATE: PASS` or FAIL.
+Chronological refined subset results at finish midpoint 36:
+- train historical KO/TKO 25.0%, simulated 23.0%
+- holdout historical KO/TKO 28.0%, simulated 30.7%
+- train SUB 6.0%, DEC 71.0%
+- holdout SUB 2.0%, DEC 67.3%
+- train mean non-decision finish 370.6s
+- holdout mean non-decision finish 348.1s
+- P(finish|KD): train 20.4%, holdout 24.3%
+- P(finish|non-KD): train 0.21%, holdout 0.31%
+- KD exposure remained in approximately calibrated range; longer exposure increased observed KD counts through reduced censoring.
 
-Next assistant action: independently review Phase 7C search, exact config diff if promoted, temporal holdout support, KD preservation, finish timing, and downstream SUB/DEC movement before authorizing submission calibration.
+Phase 7C conclusion: one global finish midpoint fixed aggregate KO/TKO incidence on both temporal splits without adding another finish degree of freedom. Finish timing remains early, but submission underproduction is now the larger unresolved method-distribution error, so do not add another KO parameter yet.
 
-Phase 7C result: common-seed coarse grid 10-192 and refined grid 28-40 on chronological 2020-2024 train and 2025+ holdout subsets supported finish midpoint 36 on both splits. Only `defaults.finish.midpoint_impact_ratio` was promoted from 10 to 36; KD midpoint remains 36 and every other mechanic/config value remains frozen.
+Phase 7C gate: `PHASE 7C KO/TKO MIDPOINT CALIBRATION GATE: PASS`.
+
+## Phase 7D post-finish submission decomposition
+Governing prompt:
+`docs/EVENT_MC_V1_CODEX_PHASE7D_POST_FINISH_SUBMISSION_DECOMPOSITION_2026-08-13.md`
+Prompt commit: `bb67232d77294079df0a52395c6ab2345121d0cf`
+
+Measurement only. Current committed environment is KD midpoint 36 and finish midpoint 36.
+
+Purpose: old submission-attempt exposure measurements are stale because Phase 7C reduced KO/TKO censoring and greatly lengthened simulated paths. Remeasure submission attempts/path, attempts/15min, true path share with >=1 attempt, conversion, round/position/ground exposure where available, method mix, finish timing and predictive diagnostics before authorizing any submission calibration.
+
+No config or mechanics changes are authorized in Phase 7D.
+
+Expected return: `PHASE 7D POST-FINISH SUBMISSION DECOMPOSITION GATE: PASS` or FAIL.
+
+Next assistant action: independently review Phase 7D and determine whether the remaining SUB deficit is attempt-exposure limited, conversion limited, or both. Then authorize one narrow submission subsystem calibration at a time.
