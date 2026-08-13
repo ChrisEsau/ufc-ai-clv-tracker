@@ -14,6 +14,7 @@ class FlowStatsSink:
     clinch_control_seconds: dict[str, float] = field(default_factory=lambda: {"red": 0.0, "blue": 0.0})
     ground_control_seconds: dict[str, float] = field(default_factory=lambda: {"red": 0.0, "blue": 0.0})
     transitions: list[dict[str, object]] = field(default_factory=list)
+    stamina_round_entries: list[dict[str, float]] = field(default_factory=list)
 
     def on_time_advance(self, dt_seconds, before, after) -> None:
         self.phase_seconds[before.phase] += dt_seconds
@@ -23,6 +24,8 @@ class FlowStatsSink:
             self.ground_control_seconds[before.ground_controller] += dt_seconds
 
     def on_event(self, event, before, after) -> None:
+        if type(event).__name__ == "RoundStarted":
+            self.stamina_round_entries.append({"round": event.round_number, "red": after.red_stamina, "blue": after.blue_stamina})
         if isinstance(event, PrimaryEvent) and isinstance(event.payload, ActionAttempt):
             side, family = event.payload.side.value, event.payload.action_family
             self.attempts[side][family] = self.attempts[side].get(family, 0) + 1
@@ -41,4 +44,5 @@ class FlowStatsSink:
             "clinch_control_seconds": dict(self.clinch_control_seconds),
             "ground_control_seconds": dict(self.ground_control_seconds),
             "transitions": tuple(self.transitions),
+            "stamina_round_entries": tuple(self.stamina_round_entries),
         }

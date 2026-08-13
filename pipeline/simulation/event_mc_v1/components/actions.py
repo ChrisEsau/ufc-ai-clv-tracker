@@ -8,6 +8,8 @@ from ..contracts import FightContext, Resolution
 from ..events import ConsequenceEvent
 from ..rng import RNGStream
 from ..state import FightState, Phase, StateDelta
+from ..modifiers import DynamicModifierProvider, DynamicModifiers
+from ..stamina import StaminaModel
 from .formulas import phase_strike_landing_probability, strike_landing_probability, td_success_probability
 from .profiles import MatchupProfiles, Side
 
@@ -16,6 +18,7 @@ from .profiles import MatchupProfiles, Side
 class ActionAttempt:
     side: Side
     action_family: str
+    dynamic_modifiers: DynamicModifiers | None = None
 
 
 @dataclass(frozen=True)
@@ -30,6 +33,8 @@ class DistanceCandidate:
     side: Side
     action_family: str
     profiles: MatchupProfiles
+    stamina_model: StaminaModel | None = None
+    modifier_provider: DynamicModifierProvider | None = None
 
     @property
     def candidate_id(self) -> str:
@@ -73,13 +78,16 @@ class DistanceCandidate:
             )
         else:
             raise ValueError(f"unsupported action family: {self.action_family}")
+        modifiers = self.modifier_provider.modifiers(attacker, state, self.side) if self.modifier_provider else None
+        cost_delta = self.stamina_model.action_delta(state, self.side, self.action_family) if self.stamina_model else StateDelta()
+        delta = _merge_delta(delta, cost_delta)
         consequence = ConsequenceEvent(
             timestamp, "ActionOutcome", ActionOutcome(self.side, self.action_family, outcome)
         )
         return Resolution(
             delta=delta,
             consequence_events=(consequence,),
-            payload=ActionAttempt(self.side, self.action_family),
+            payload=ActionAttempt(self.side, self.action_family, modifiers),
         )
 
 
@@ -90,6 +98,8 @@ class PhaseCandidate:
     side: Side
     action_family: str
     profiles: MatchupProfiles
+    stamina_model: StaminaModel | None = None
+    modifier_provider: DynamicModifierProvider | None = None
 
     @property
     def candidate_id(self) -> str:
@@ -131,5 +141,24 @@ class PhaseCandidate:
             outcome = "attempted"  # Observation only: never terminal in Phase 3.
         else:
             raise ValueError(f"unsupported action family: {family}")
+        modifiers = self.modifier_provider.modifiers(attacker, state, self.side) if self.modifier_provider else None
+        cost_delta = self.stamina_model.action_delta(state, self.side, family) if self.stamina_model else StateDelta()
+        delta = _merge_delta(delta, cost_delta)
         consequence = ConsequenceEvent(state.fight_time_seconds, "ActionOutcome", ActionOutcome(self.side, family, outcome))
-        return Resolution(delta=delta, consequence_events=(consequence,), payload=ActionAttempt(self.side, family))
+        return Resolution(delta=delta, consequence_events=(consequence,), payload=ActionAttempt(self.side, family, modifiers))
+
+
+def _merge_delta(primary: StateDelta, physiology: StateDelta) -> StateDelta:
+    """Combine transition and stamina requests before engine-owned application."""
+    return StateDelta(
+        phase=primary.phase,
+        ground_controller=primary.ground_controller,
+        set_ground_controller=primary.set_ground_controller,
+        clinch_controller=primary.clinch_controller,
+        set_clinch_controller=primary.set_clinch_controller,
+        finished=primary.finished,
+        finish_reason=primary.finish_reason,
+        action_availability=primary.action_availability,
+        red_stamina=physiology.red_stamina,
+        blue_stamina=physiology.blue_stamina,
+    )

@@ -27,6 +27,7 @@ class SimulationEngine:
         rng_manager: RNGManager,
         sink: EventSink | None = None,
         scheduler: ExponentialScheduler | None = None,
+        round_recovery_model=None,
     ) -> None:
         self.config = config
         self.rate_provider = rate_provider
@@ -34,6 +35,7 @@ class SimulationEngine:
         self.rng_manager = rng_manager
         self.sink = sink or NullEventSink()
         self.scheduler = scheduler or ExponentialScheduler()
+        self.round_recovery_model = round_recovery_model
 
     def _context(self, state: FightState) -> FightContext:
         return FightContext(
@@ -54,6 +56,10 @@ class SimulationEngine:
             state.finished = delta.finished
         if delta.finish_reason is not None:
             state.finish_reason = delta.finish_reason
+        if delta.red_stamina is not None:
+            state.red_stamina = delta.red_stamina
+        if delta.blue_stamina is not None:
+            state.blue_stamina = delta.blue_stamina
         if delta.action_availability is not None:
             state.action_availability = delta.action_availability
 
@@ -109,12 +115,19 @@ class SimulationEngine:
                     )
                     break
                 before = StateSnapshot.from_state(state)
+                recovery_delta = (
+                    self.round_recovery_model.recovery_delta(state)
+                    if self.round_recovery_model is not None
+                    else StateDelta()
+                )
                 self._apply_delta(
                     state,
                     StateDelta(
                         phase=Phase.DISTANCE,
                         set_ground_controller=True,
                         set_clinch_controller=True,
+                        red_stamina=recovery_delta.red_stamina,
+                        blue_stamina=recovery_delta.blue_stamina,
                     ),
                 )
                 self._notify_event(

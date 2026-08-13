@@ -21,7 +21,7 @@ Architecture revision: **v0.3**.
 - Phase 2A distance temporal/mechanical parity: **PASS after independent ChatGPT review**.
 - Phase 2B wrestling-entry ontology correction: **PASS after independent ChatGPT review**.
 - Phase 3 clinch + ground flow: **PASS after independent ChatGPT review**.
-- Phase 4A stamina + dynamic modifiers: **AUTHORIZED and current task; not yet passed**.
+- Phase 4A stamina + dynamic modifiers: **IMPLEMENTED by Codex; awaiting independent review**.
 - Phase 4B damage/KD/KO and later mechanics: **NOT AUTHORIZED**.
 
 Frozen FSR-32 path:
@@ -404,3 +404,10 @@ Phase 3: **PASS**.
 Phase 4A authorized: **YES**.
 Phase 4A reviewed/passed: **NO**.
 Phase 4B authorized: **NO**.
+
+## 022 — 2026-08-13
+Codex implemented Phase 4A as a normalized fighter-specific stamina reservoir, V3/V3.2 action and exact positional costs, one V3.3 global 40%-of-missing between-round recovery owner, and a clean `DynamicModifiers(output_multiplier, power_multiplier)` seam. Offensive attempt rates consume the output modifier; passive separation/ground-exit clocks remain unchanged. Each action records pre-action modifiers, then engine-applied typed state deltas charge stamina for later events.
+
+The final effective legacy trace intentionally avoids duplicated inheritance effects: V3 supplies reservoir/cost/curve constants, V3.1 establishes pre-action power-only ordering but bypasses the older direct output suppression, V3.2 adds phase resistance costs, and V3.3 replaces trait-based recovery with one global recovery rule. Phase 4A restores the explicitly requested output pathway once through `DynamicModifiers`, without changing accuracy, TD completion/defense, control resistance, damage, KD/KO, terminal submissions, or other Phase 4B systems.
+
+Codex validation: 72 EVENT MC plus relevant V0 tests passed; five-fixture neutral/active diagnostics completed; frozen FSR-32 SHA-256 remained unchanged. Await independent review before accepting the Phase 4A gate or authorizing Phase 4B.

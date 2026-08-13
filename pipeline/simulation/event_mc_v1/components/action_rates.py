@@ -22,11 +22,15 @@ from .formulas import (
     submission_attempt_interval_probability,
 )
 from .profiles import MatchupProfiles, Side
+from ..modifiers import DynamicModifierProvider
+from ..stamina import StaminaModel
 
 
 @dataclass(frozen=True)
 class DistanceActionRateProvider:
     profiles: MatchupProfiles
+    stamina_model: StaminaModel | None = None
+    modifier_provider: DynamicModifierProvider | None = None
 
     def candidates(self, state: FightState, context: FightContext):
         if state.phase is not Phase.DISTANCE:
@@ -42,10 +46,15 @@ class DistanceActionRateProvider:
                 ),
             }
             output.extend(
-                EventRate(DistanceCandidate(side, family, self.profiles), rate)
+                EventRate(DistanceCandidate(side, family, self.profiles, self.stamina_model, self.modifier_provider), rate * self._output_multiplier(state, side))
                 for family, rate in rates.items()
             )
         return tuple(output)
+
+    def _output_multiplier(self, state: FightState, side: Side) -> float:
+        if self.modifier_provider is None:
+            return 1.0
+        return self.modifier_provider.modifiers(self.profiles.fighter(side), state, side).output_multiplier
 
     def audit_rows(self) -> tuple[ActionRateAudit, ...]:
         rows = []
@@ -103,10 +112,12 @@ class FightFlowRateProvider:
     """Composed phase provider; keeps the generic scheduler UFC-agnostic."""
 
     profiles: MatchupProfiles
+    stamina_model: StaminaModel | None = None
+    modifier_provider: DynamicModifierProvider | None = None
 
     def candidates(self, state: FightState, context: FightContext):
         if state.phase is Phase.DISTANCE:
-            return DistanceActionRateProvider(self.profiles).candidates(state, context)
+            return DistanceActionRateProvider(self.profiles, self.stamina_model, self.modifier_provider).candidates(state, context)
         if state.phase is Phase.CLINCH:
             if state.clinch_controller is None:
                 return ()
@@ -117,10 +128,10 @@ class FightFlowRateProvider:
             for side in Side:
                 fighter = self.profiles.fighter(side)
                 output.extend((
-                    EventRate(PhaseCandidate(side, "clinch_strike", self.profiles), phase_strike_rate_per_second(fighter, "clinch")),
-                    EventRate(PhaseCandidate(side, "clinch_takedown", self.profiles), interval_hazard_per_second(clinch_td_interval_probability(fighter))),
+                    EventRate(self._candidate(side, "clinch_strike"), phase_strike_rate_per_second(fighter, "clinch") * self._output(state, side)),
+                    EventRate(self._candidate(side, "clinch_takedown"), interval_hazard_per_second(clinch_td_interval_probability(fighter)) * self._output(state, side)),
                 ))
-            output.append(EventRate(PhaseCandidate(controller.opponent, "clinch_separation", self.profiles), interval_hazard_per_second(clinch_separation_interval_probability(controller_profile, opponent))))
+            output.append(EventRate(self._candidate(controller.opponent, "clinch_separation"), interval_hazard_per_second(clinch_separation_interval_probability(controller_profile, opponent))))
             return tuple(output)
         if state.ground_controller is None:
             return ()
@@ -129,10 +140,16 @@ class FightFlowRateProvider:
         top_profile, bottom_profile = self.profiles.fighter(top), self.profiles.fighter(bottom)
         escape_rate, reversal_rate, _ = ground_exit_rates(top_profile, bottom_profile)
         return (
-            EventRate(PhaseCandidate(top, "ground_strike", self.profiles), phase_strike_rate_per_second(top_profile, "ground")),
-            EventRate(PhaseCandidate(bottom, "ground_strike", self.profiles), phase_strike_rate_per_second(bottom_profile, "ground", bottom=True)),
-            EventRate(PhaseCandidate(top, "submission_attempt", self.profiles), interval_hazard_per_second(submission_attempt_interval_probability(top_profile))),
-            EventRate(PhaseCandidate(bottom, "submission_attempt", self.profiles), interval_hazard_per_second(submission_attempt_interval_probability(bottom_profile, bottom=True))),
-            EventRate(PhaseCandidate(bottom, "ground_escape", self.profiles), escape_rate),
-            EventRate(PhaseCandidate(bottom, "ground_reversal", self.profiles), reversal_rate),
+            EventRate(self._candidate(top, "ground_strike"), phase_strike_rate_per_second(top_profile, "ground") * self._output(state, top)),
+            EventRate(self._candidate(bottom, "ground_strike"), phase_strike_rate_per_second(bottom_profile, "ground", bottom=True) * self._output(state, bottom)),
+            EventRate(self._candidate(top, "submission_attempt"), interval_hazard_per_second(submission_attempt_interval_probability(top_profile)) * self._output(state, top)),
+            EventRate(self._candidate(bottom, "submission_attempt"), interval_hazard_per_second(submission_attempt_interval_probability(bottom_profile, bottom=True)) * self._output(state, bottom)),
+            EventRate(self._candidate(bottom, "ground_escape"), escape_rate),
+            EventRate(self._candidate(bottom, "ground_reversal"), reversal_rate),
         )
+
+    def _candidate(self, side: Side, family: str) -> PhaseCandidate:
+        return PhaseCandidate(side, family, self.profiles, self.stamina_model, self.modifier_provider)
+
+    def _output(self, state: FightState, side: Side) -> float:
+        return 1.0 if self.modifier_provider is None else self.modifier_provider.modifiers(self.profiles.fighter(side), state, side).output_multiplier
