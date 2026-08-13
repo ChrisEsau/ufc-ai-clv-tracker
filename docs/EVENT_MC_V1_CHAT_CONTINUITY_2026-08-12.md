@@ -1,7 +1,7 @@
 # EVENT MC V1 Chat Continuity / Working Memory
 
 Date created: 2026-08-12
-Last updated: 2026-08-13 08:01 America/Chicago
+Last updated: 2026-08-13 08:42 America/Chicago
 Repository: `ChrisEsau/ufc-ai-clv-tracker`
 Branch: `feature/fsr-32-stamina-shadow`
 
@@ -21,8 +21,9 @@ Architecture revision: **v0.3**.
 - Phase 2A distance temporal/mechanical parity: **PASS after independent ChatGPT review**.
 - Phase 2B wrestling-entry ontology correction: **PASS after independent ChatGPT review**.
 - Phase 3 clinch + ground flow: **PASS after independent ChatGPT review**.
-- Phase 4A stamina + dynamic modifiers: **IMPLEMENTED by Codex; awaiting independent review**.
-- Phase 4B damage/KD/KO and later mechanics: **NOT AUTHORIZED**.
+- Phase 4A stamina + dynamic modifiers: **PASS after independent ChatGPT review**.
+- Phase 4B1 impact + trauma + knockdown: **AUTHORIZED and current task; not yet passed**.
+- Phase 4B2 KO/TKO finishes and later mechanics: **NOT AUTHORIZED**.
 
 Frozen FSR-32 path:
 `data/simulation/rfs_mc_v2_shared_state/fsr_32_shadow/fsr_32_prefight_snapshots.parquet`
@@ -48,12 +49,13 @@ Implementation commits:
 - Phase 2A: `5b7574c7689ffa2e55821a49fca47a2c1c937991`
 - Phase 2B: `004740e54618c134e08aa553164c381508811481`, `809389bdabe208e93536034bc795bbcf7e1ab038`
 - Phase 3: `5a6c15af9c2315f23c231d0f34cd3cefddba4578`
+- Phase 4A: `8155bc45de5fa26fa6077dd870716234d54690c9`
 
-Current Phase 4A governing prompt:
-`docs/EVENT_MC_V1_CODEX_PHASE4A_STAMINA_DYNAMIC_MODIFIERS_2026-08-13.md`
+Current Phase 4B1 governing prompt:
+`docs/EVENT_MC_V1_CODEX_PHASE4B1_IMPACT_TRAUMA_KD_2026-08-13.md`
 
-Phase 4A prompt commit:
-`fc5dc0b32460e9200ea070db7f3656d1aac5f689`
+Phase 4B1 prompt commit:
+`fd81b02a271fa3f367a1bdeaab7150e982d4240b`
 
 Development standard locked by user:
 **WORKING + PREDICTIVE + MODULAR + EASY TO ITERATE. Do not optimize for perfection or exhaustive defensive hardening. Ultimate success is moneyline/prop predictive accuracy and betting usefulness. Protect critical invariants and calculation seams, but favor flexibility and rapid historical validation over speculative abstraction.**
@@ -77,13 +79,13 @@ Codex cloud may use a local branch named `work`; that is acceptable. Verify ance
 - continuous state advances exact elapsed `dt` before event resolution;
 - hard round/fight boundaries owned by engine;
 - round start resets phase to DISTANCE and clears positional ownership;
-- null/stats/full-trace sinks remain observer-only;
+- sinks remain observer-only;
 - no hidden component RNGs;
-- current inheritance-based simulator remains untouched;
-- FSR-32 remains the initial profile source and frozen artifact is never rebuilt during EVENT MC work;
-- no giant inheritance chain in EVENT MC; use composition;
-- no whole-simulator Codex prompt;
-- tune one subsystem at a time and validate historically before claiming improvement.
+- inheritance-based simulator remains untouched;
+- frozen FSR-32 remains the profile source and is never rebuilt during EVENT MC work;
+- EVENT MC uses composition, not another inheritance chain;
+- tune one subsystem at a time and validate historically before claiming improvement;
+- individual strike attempts remain evented until runtime demonstrates a real need to optimize.
 
 Stable RNG stream IDs:
 - SCHEDULER 10
@@ -94,15 +96,12 @@ Stable RNG stream IDs:
 - KNOCKDOWN_FINISH 60
 - JUDGING 70
 
-Known non-blocking future seam: the current primary Resolution returns one state delta plus consequence notifications. Damage -> KD -> consequence -> finish may later require sequential consequence modules that each return/apply deltas. Do not retrofit until Phase 4B requires it.
-
-Known performance note: individual strike attempts are currently scheduled as events. Do not preemptively batch them; benchmark and optimize only if runtime becomes a demonstrated problem.
+Known physiology seam now active in Phase 4B1: same-timestamp landed-strike -> trauma -> KD consequences may require the smallest compositional extension to the current single-Resolution contract. Engine must remain sole state mutator.
 
 ---
 
 # Phase 2B Wrestling Ontology Lock
 
-Correct ontology:
 ```text
 wrestling_entry      = intrinsic takedown initiation frequency
 wrestling_conversion = ability/probability to complete shot
@@ -110,211 +109,202 @@ td_defense           = opponent prevention of completion
 control_imposition   = persistence after advantageous position
 ```
 
-Active DISTANCE TD initiation:
-```text
-entry_delta = wrestling_entry - 50
-entry_modifier = exp(clip(entry_delta, -8, 8) / existing_MODIFIER_SCALE)
-p_td_10s = existing_DISTANCE_TD_ATTEMPT_BASE_10S * entry_modifier
-lambda_td = -ln(1 - p_td_10s) / 10
-```
-
-Legacy Phase 2A blend remains diagnostic-only:
-```text
-0.75*wrestling_entry
-+ 0.25*control_imposition
-- 0.50*distance_striking_pressure
-- 0.50*clinch_striking_pressure
-```
-
-TD success remains wrestling_conversion vs opponent td_defense.
+Active DISTANCE TD initiation is driven by centered `wrestling_entry` only, using the existing Phase 2B base/scale. The old blended wrestling preference remains diagnostic-only. TD success remains `wrestling_conversion` vs opponent `td_defense`.
 
 ---
 
 # Reviewed Phase 3 Result
 
-Final reviewed gate:
+Final gate:
 `PHASE 3 CLINCH + GROUND FLOW GATE: PASS`.
 
 Implementation commit:
 `5a6c15af9c2315f23c231d0f34cd3cefddba4578`
 
-Phase 3 now supports continuous nonterminal fight flow through:
+Continuous nonterminal flow now supports:
+`DISTANCE <-> CLINCH <-> GROUND`.
 
-```text
-DISTANCE <-> CLINCH <-> GROUND
-```
+Implemented:
+- clinch strikes and TD attempts;
+- separation;
+- top/reduced bottom ground strikes;
+- nonterminal submission attempts;
+- escape/standup;
+- reversal/controller swaps;
+- exact phase/control residence.
 
-Authorized/implemented mechanics:
-- CLINCH strikes;
-- CLINCH takedown attempts and resolution;
-- CLINCH separation to DISTANCE;
-- GROUND top strikes;
-- reduced-rate bottom ground strikes;
-- top and bottom submission-attempt generation, nonterminal only;
-- ground escape/standup;
-- ground reversal/controller swap;
-- exact phase residence time;
-- exact controller-specific clinch/ground time;
-- deterministic full scheduled-horizon diagnostics.
-
-Ground exit hard invariant is preserved:
+Ground exit hard invariant:
 ```text
 lambda_reversal = lambda_ground_exit * P(reversal | exit)
 lambda_escape   = lambda_ground_exit * (1 - P(reversal | exit))
 lambda_reversal + lambda_escape == lambda_ground_exit
 ```
 
-Phase 3 ported effective V0 bases without broad retuning:
-- clinch separation 0.25 / 30 sec;
-- clinch TD attempts 0.24 / 30 sec;
-- ground exit 0.20 / 30 sec;
-- clinch strikes 1.2 / 30 sec;
-- ground strikes 1.6 / 30 sec;
-- submission attempts 0.045 / 30 sec;
-- reversal share 0.18;
-- bottom ground strike multiplier 0.20;
-- bottom submission multiplier 0.55.
-
-Independent review confirmed:
-- scheduler remains generic;
-- state transitions are correct;
-- submission attempts are nonterminal;
-- control-time ledger is observer-only and driven by exact engine dt;
-- Phase 2B DISTANCE TD initiation is not contaminated by control_imposition;
-- round boundary reset remains authoritative;
-- no stamina/damage/KD/KO/judging/age/terminal SUB mechanics slipped in.
-
-Phase 3 diagnostics reported all 500/500 paths reached 900-sec horizon. Runtime approximately 31.84 paths/sec for five frozen fixtures at 100 paths each.
-
 Validation watchlist, not tuning authorization:
 - some grappling fixtures spend roughly 40% of scheduled time on ground;
-- some CLINCH TD hazards, especially Merab, are high while in phase;
-- historical cohort validation must determine whether those are correct before changing them.
-
-Minor non-blocking doc debt: FighterProfile docstring still says DISTANCE parity adapter even though it now carries all-phase inputs.
+- some CLINCH TD hazards are high while in phase;
+- historical cohort validation must decide whether these need adjustment.
 
 ---
 
-# Phase 4A — Current Task
+# Reviewed Phase 4A Result
 
-Phase 4A is explicitly authorized and governed by:
+Final gate:
+`PHASE 4A STAMINA + DYNAMIC MODIFIERS GATE: PASS`.
 
-`docs/EVENT_MC_V1_CODEX_PHASE4A_STAMINA_DYNAMIC_MODIFIERS_2026-08-13.md`
+Implementation commit:
+`8155bc45de5fa26fa6077dd870716234d54690c9`
 
-Goal: add **stamina reservoir + action costs + dynamic output/power modifiers only**.
+Phase 4A added:
+- normalized path-local `red_stamina` / `blue_stamina` state;
+- immutable StateDelta-owned action stamina costs;
+- exact-dt positional stamina expenditure;
+- one V3.3-style 40%-of-missing between-round recovery owner;
+- `DynamicModifiers(output_multiplier, power_multiplier)`;
+- offensive rate suppression through output modifier;
+- pre-action power/output capture before the current action cost is applied.
 
-Required target behavior:
+Important locks:
+- passive separation / escape / reversal hazards are not stamina-suppressed;
+- strike accuracy, TD success/defense, control resistance, durability and KD resistance are not stamina-modified directly;
+- full stamina maps exactly to output=1 and power=1;
+- future damage consumes the pre-action power modifier once; stamina must not be multiplied into KD/KO again.
 
-```text
-actions consume stamina
--> stamina persists path-locally
--> round recovery restores some stamina
--> low stamina reduces offensive action frequency
--> low stamina reduces expressed striking power
-```
+Legacy stamina trace accepted:
+- V3 supplies reservoir/cost/curve calibration;
+- V3.1 establishes pre-action ordering and bypassed old direct output suppression;
+- V3.2 supplies sustained positional expenditure;
+- V3.3 supplies the single global round-recovery owner;
+- Phase 4A intentionally restores the user-requested output pathway once through DynamicModifiers without duplicating inheritance effects.
 
-Required architecture seam:
+Diagnostics watchlist, not tuning authorization:
+- Holloway/Kattar showed the strongest stamina draw and attempt suppression;
+- low late stamina and the severe power curve must be checked against historical round-by-round output and later KO timing before retuning.
 
-```text
-FighterProfile + FightState
-        -> DynamicModifiers
-              output_multiplier
-              power_multiplier
-```
-
-Fight-flow and future damage modules consume derived modifiers; they do not call stamina internals.
-
-Phase 4A should trace final legacy behavior across the stamina/rolling-FSR/phase-stamina/global-recovery inheritance layers before deciding what to preserve.
-
-Important Phase 4A locks:
-- full stamina must recover reviewed Phase 3 rates exactly;
-- offensive output multiplier applies to offensive attempt rates, not blindly to passive phase-exit clocks;
-- full stamina output multiplier = 1;
-- full stamina power multiplier = 1;
-- lower stamina monotonically lowers both;
-- current action uses **pre-action stamina** for its modifiers, then action cost reduces stamina for subsequent actions;
-- do not reduce strike accuracy, TD success, TD defense, control resistance, durability, or KD resistance in Phase 4A;
-- do not implement damage/KD/KO/terminal SUB/judging/age;
-- no broad Phase 3 retuning.
-
-Historical fixtures required:
-- Lewis/Daukaus;
-- Holloway/Kattar;
-- Merab/Yan;
-- Font/Rosas;
-- Oliveira/Poirier.
-
-Expected Codex return:
-`PHASE 4A STAMINA + DYNAMIC MODIFIERS GATE: PASS` or `FAIL`.
-
-When Phase 4A returns, ChatGPT must independently inspect the actual implementation commit/diff, legacy stamina trace, action-cost ownership, round recovery, modifier formulas, pre-action ordering, Phase 3 neutral regression, tests, runtime, and fixture diagnostics before accepting PASS.
-
-Do not authorize Phase 4B automatically.
+Codex reported 72 EVENT MC + relevant V0 tests passed, frozen checksum unchanged, and all five-fixture stamina diagnostics reached horizon. Independent code review accepted the gate.
 
 ---
 
-# Future Damage / KD / KO Target Architecture
+# Phase 4B1 — Current Task
 
-A separate damage-system review recommended a simpler EVENT MC physiology model. Treat this as target architecture for Phase 4B, not a claim that every legacy constant has been reconstructed.
+Phase 4B1 is explicitly authorized and governed by:
+`docs/EVENT_MC_V1_CODEX_PHASE4B1_IMPACT_TRAUMA_KD_2026-08-13.md`
 
-Future dynamic physiology state should initially be small:
+Goal: implement physiology through **knockdown only**, with no terminal finish.
+
+Target chain:
+```text
+landed strike
+-> pre-action effective power
+-> stochastic impact
+-> primary trauma
+-> engine applies cumulative trauma
+-> derive current KD resistance
+-> probabilistic KD
+-> same-timestamp acute-vulnerability consequence
+```
+
+Target dynamic physiology state:
 ```text
 cumulative_trauma
 acute_vulnerability
-stamina  [owned by stamina system]
+stamina [already owned by Phase 4A]
 ```
 
-Future derived values rather than redundant mutable health bars:
-```text
-current_KD_resistance
-current_finish_resistance
-effective_power
-```
-
-Trait ownership target:
+Trait ownership — HARD LOCK:
 ```text
 striking_power        -> impact severity distribution
 damage_durability     -> persistent trauma deposited per impact
-knockdown_resistance  -> baseline acute KD resistance
-stamina               -> expressed-power modifier
+knockdown_resistance  -> baseline KD resistance
+stamina               -> DynamicModifiers.power_multiplier only
 ```
 
-Desired consequence chain:
+Power is counted once through impact. Do not separately insert `striking_power` or stamina into KD probability.
+
+Cumulative trauma:
+- persistent;
+- non-negative;
+- only increases from primary trauma;
+- no in-fight/round recovery in 4B1;
+- lowers future derived resistance;
+- does not directly finish the fight.
+
+Acute vulnerability:
+- rises after KD;
+- decays continuously with exact elapsed dt;
+- no hard reset;
+- does not finish the fight.
+
+KD:
+- probabilistic from impact relative to current derived resistance;
+- fresh one-shot KDs must remain possible;
+- accumulated trauma and acute vulnerability must raise future KD risk through lower resistance;
+- use named `KNOCKDOWN_FINISH` RNG stream.
+
+No KO/TKO, terminal SUB, judging, age, body-part damage, trauma recovery, defender-fatigue resistance penalty, or Phase 4B2 work.
+
+Required five fixtures:
+- Lewis/Daukaus;
+- Holloway/Kattar;
+- Font/Rosas;
+- Merab/Yan;
+- Oliveira/Poirier.
+
+Also build a historical KD anchor audit if current historical fields support it. Do not globally optimize parameters in 4B1.
+
+Expected Codex return:
+`PHASE 4B1 IMPACT + TRAUMA + KNOCKDOWN GATE: PASS` or `FAIL`.
+
+Next assistant action: independently inspect actual implementation/diff, legacy source trace, same-timestamp ordering, parameter provenance, trauma/KD formulas, RNG ownership, exact recovery behavior, tests, five-fixture diagnostics, historical KD audit, runtime, scope protection, and frozen checksum before accepting the gate.
+
+Do not authorize Phase 4B2 automatically.
+
+---
+
+# Damage / KD / KO Target Architecture
+
+The external review concluded that the old damage reservoir identified a real missing concept — fight memory — but should not be ported literally.
+
+Recommended eventual architecture:
 ```text
 StrikeResolver
--> DamageModel / impact + primary trauma
--> KnockdownModel / impact vs current resistance
--> KnockdownConsequenceModel / acute vulnerability + optional small collapse trauma
--> FinishModel / probabilistic KO/TKO
+-> DamageModel
+-> engine trauma delta
+-> KnockdownModel
+-> engine KD delta
+-> KnockdownConsequenceModel
+-> engine consequence delta
+-> FinishModel
+-> engine finish delta
 ```
 
-Important future rules:
-- power should not separately multiply damage + KD + KO;
-- impact carries power downstream;
-- cumulative trauma lowers future resistance rather than acting primarily as a health-bar KO threshold;
-- acute vulnerability decays continuously;
-- cumulative trauma initially has no in-fight recovery;
-- stamina recovery remains separate;
-- ground and distance use the same physiology pipeline with context modifiers, not separate damage systems.
+Key principles:
+- cumulative trauma + short-lived acute vulnerability;
+- impact/current resistance is the central KD/finish quantity;
+- power route and accumulation route both exist;
+- stamina modifies expressed attacking power only;
+- cumulative trauma initially has no recovery;
+- acute vulnerability recovers continuously;
+- same physiology pipeline across phases;
+- no health-bar finish threshold;
+- no multiple overlapping damage reservoirs.
 
-Phase 4B is NOT authorized yet.
+Phase 4B1 implements this architecture only through knockdown. Phase 4B2 will later own KO/TKO if explicitly authorized.
 
 ---
 
 # Canonical / Governing Docs
 
-- `docs/EVENT_MC_V1_ARCHITECTURE_AUDIT_2026-08-12.md`
-- `docs/EVENT_MC_V1_PHASE0_CLOSURE_2026-08-12.md`
-- `docs/EVENT_MC_V1_PHASE0_INTERFACE_DECISIONS_2026-08-12.md`
-- `docs/EVENT_MC_V1_PHASE0_BASELINE_FREEZE_2026-08-12.md`
-- `docs/EVENT_MC_V1_CODEX_PHASE1_EXECUTION_2026-08-13.md`
-- `docs/EVENT_MC_V1_CODEX_PHASE1_GENERIC_KERNEL_PROMPT_2026-08-12.md`
-- `docs/EVENT_MC_V1_CODEX_PHASE2A_DISTANCE_PARITY_2026-08-13.md`
-- `docs/EVENT_MC_V1_CODEX_PHASE2A_RETRY_2026-08-13.md`
-- `docs/EVENT_MC_V1_CODEX_PHASE2B_WRESTLING_ENTRY_ONTOLOGY_2026-08-13.md`
-- `docs/EVENT_MC_V1_CODEX_PHASE3_CLINCH_GROUND_FLOW_2026-08-13.md`
-- `docs/EVENT_MC_V1_CODEX_PHASE3_RETRY_2026-08-13.md`
-- `docs/EVENT_MC_V1_CODEX_PHASE4A_STAMINA_DYNAMIC_MODIFIERS_2026-08-13.md`
+1. `docs/EVENT_MC_V1_ARCHITECTURE_AUDIT_2026-08-12.md`
+2. `docs/EVENT_MC_V1_PHASE0_CLOSURE_2026-08-12.md`
+3. `docs/EVENT_MC_V1_PHASE0_INTERFACE_DECISIONS_2026-08-12.md`
+4. `docs/EVENT_MC_V1_PHASE0_BASELINE_FREEZE_2026-08-12.md`
+5. `docs/EVENT_MC_V1_CODEX_PHASE1_EXECUTION_2026-08-13.md`
+6. `docs/EVENT_MC_V1_CODEX_PHASE2A_DISTANCE_PARITY_2026-08-13.md`
+7. `docs/EVENT_MC_V1_CODEX_PHASE2B_WRESTLING_ENTRY_ONTOLOGY_2026-08-13.md`
+8. `docs/EVENT_MC_V1_CODEX_PHASE3_CLINCH_GROUND_FLOW_2026-08-13.md`
+9. `docs/EVENT_MC_V1_CODEX_PHASE4A_STAMINA_DYNAMIC_MODIFIERS_2026-08-13.md`
+10. `docs/EVENT_MC_V1_CODEX_PHASE4B1_IMPACT_TRAUMA_KD_2026-08-13.md`
 
 ---
 
@@ -330,10 +320,10 @@ Codex baseline execution plan approved with exact-remote-branch guardrail.
 Codex stopped because isolated checkout had no Git remote. Remote-unblock prompt issued.
 
 ## 004 — 2026-08-12 22:49
-Codex repaired Git environment but baseline failed because frozen FSR-32 parquet was absent. Artifact recovery issued; no rebuild authorized.
+Codex repaired Git environment but frozen FSR-32 parquet was absent. Artifact recovery issued; no rebuild authorized.
 
 ## 005 — 2026-08-12 22:59
-User initially chose to move on and supply FSR later; Phase 1 was prepared but not launched.
+User initially chose to move on and supply FSR later; Phase 1 prepared but not launched.
 
 ## 006 — 2026-08-12 23:08
 Exact frozen FSR-32 parquet located and SHA-256 locked.
@@ -369,45 +359,48 @@ Phase 2A commit `5b7574c...` independently reviewed and accepted PASS.
 User authorized Phase 2B. Governing prompt commit `e4278f...`.
 
 ## 017 — 2026-08-13
-Phase 2B implementation commits `004740e...` and `809389b...` independently reviewed and accepted PASS. 56 EVENT MC + relevant V0 tests reported passing; frozen FSR SHA unchanged.
+Phase 2B implementation commits `004740e...` and `809389b...` independently reviewed and accepted PASS.
 
 ## 018 — 2026-08-13 07:29 America/Chicago
 User authorized Phase 3. Governing prompt commit `0d67599...`.
 
 ## 019 — 2026-08-13
-Codex implemented Phase 3 at `5a6c15af9c2315f23c231d0f34cd3cefddba4578`. 66 EVENT MC + relevant V0 tests reported passing; 500/500 fixture paths reached horizon; frozen FSR SHA unchanged.
+Codex implemented Phase 3 at `5a6c15af...`; tests/fixtures/checksum passed in Codex report.
 
 ## 020 — 2026-08-13 before 08:01 America/Chicago
-ChatGPT independently reviewed the actual Phase 3 commit, active providers, action resolution, formulas, profile adapter, FlowStatsSink, engine boundary behavior, and tests. Final gate accepted:
-`PHASE 3 CLINCH + GROUND FLOW GATE: PASS`.
+ChatGPT independently reviewed Phase 3 and accepted `PHASE 3 CLINCH + GROUND FLOW GATE: PASS`.
 
 ## 021 — 2026-08-13 08:01 America/Chicago
-User said **proceed**, explicitly authorizing the next step. Phase 4 was deliberately split into smaller modules rather than one giant physiology/finish rewrite.
-
-Phase 4A authorized scope: stamina reservoir, action stamina costs, round recovery, derived offensive-output multiplier, and derived expressed-power multiplier. No damage/KD/KO/terminal SUB/judging/age.
-
-New governing prompt:
-`docs/EVENT_MC_V1_CODEX_PHASE4A_STAMINA_DYNAMIC_MODIFIERS_2026-08-13.md`
-
-Prompt commit:
-`fc5dc0b32460e9200ea070db7f3656d1aac5f689`
-
-Expected Codex return: implementation/tests/fixture diagnostics ending with `PHASE 4A STAMINA + DYNAMIC MODIFIERS GATE: PASS` or `FAIL`.
-
-Next assistant action: independently review the actual Phase 4A implementation before any Phase 4B authorization.
-
-Phase 0: **PASS**.
-Phase 1: **PASS**.
-Phase 2A: **PASS**.
-Phase 2B: **PASS**.
-Phase 3: **PASS**.
-Phase 4A authorized: **YES**.
-Phase 4A reviewed/passed: **NO**.
-Phase 4B authorized: **NO**.
+User authorized Phase 4A. Governing prompt commit `fc5dc0b...`.
 
 ## 022 — 2026-08-13
-Codex implemented Phase 4A as a normalized fighter-specific stamina reservoir, V3/V3.2 action and exact positional costs, one V3.3 global 40%-of-missing between-round recovery owner, and a clean `DynamicModifiers(output_multiplier, power_multiplier)` seam. Offensive attempt rates consume the output modifier; passive separation/ground-exit clocks remain unchanged. Each action records pre-action modifiers, then engine-applied typed state deltas charge stamina for later events.
+Codex implemented Phase 4A at `8155bc45de5fa26fa6077dd870716234d54690c9`; 72 tests and five-fixture diagnostics reported passing; checksum unchanged.
 
-The final effective legacy trace intentionally avoids duplicated inheritance effects: V3 supplies reservoir/cost/curve constants, V3.1 establishes pre-action power-only ordering but bypasses the older direct output suppression, V3.2 adds phase resistance costs, and V3.3 replaces trait-based recovery with one global recovery rule. Phase 4A restores the explicitly requested output pathway once through `DynamicModifiers`, without changing accuracy, TD completion/defense, control resistance, damage, KD/KO, terminal submissions, or other Phase 4B systems.
+## 023 — 2026-08-13 before 08:42 America/Chicago
+ChatGPT independently reviewed Phase 4A stamina state ownership, action costs, exact-dt positional drain, exactly-once round recovery, DynamicModifiers, pre-action ordering, passive-exit neutrality and tests. Final gate accepted:
+`PHASE 4A STAMINA + DYNAMIC MODIFIERS GATE: PASS`.
 
-Codex validation: 72 EVENT MC plus relevant V0 tests passed; five-fixture neutral/active diagnostics completed; frozen FSR-32 SHA-256 remained unchanged. Await independent review before accepting the Phase 4A gate or authorizing Phase 4B.
+## 024 — 2026-08-13 08:42 America/Chicago
+User said **proceed**, explicitly authorizing the next physiology step. Phase 4B was split so knockdown mechanics can be validated before terminal KO/TKO logic is introduced.
+
+Phase 4B1 authorized scope:
+- stochastic impact from `striking_power * pre_action_power_modifier`;
+- primary persistent trauma moderated by `damage_durability`;
+- cumulative trauma state;
+- derived current KD resistance from `knockdown_resistance`, trauma, and acute vulnerability;
+- probabilistic knockdown;
+- KD acute-vulnerability increment;
+- continuous exact-time acute-vulnerability decay;
+- physiology/KD diagnostics and historical KD anchor if available.
+
+New governing prompt:
+`docs/EVENT_MC_V1_CODEX_PHASE4B1_IMPACT_TRAUMA_KD_2026-08-13.md`
+
+Prompt commit:
+`fd81b02a271fa3f367a1bdeaab7150e982d4240b`
+
+Phase 4B2 KO/TKO remains unauthorized.
+
+Expected Codex return: implementation/tests/diagnostics ending with `PHASE 4B1 IMPACT + TRAUMA + KNOCKDOWN GATE: PASS` or `FAIL`.
+
+Next assistant action: independently review the actual Phase 4B1 implementation before any Phase 4B2 authorization.
