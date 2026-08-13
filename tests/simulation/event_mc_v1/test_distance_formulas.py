@@ -6,6 +6,7 @@ import pytest
 from pipeline.simulation.event_mc_v1.components.formulas import (
     clinch_entry_interval_probability,
     interval_hazard_per_second,
+    legacy_td_attempt_interval_probability,
     strike_attempt_rate_per_second,
     strike_landing_probability,
     style_preferences,
@@ -52,7 +53,7 @@ def test_formula_outputs_match_current_legacy_consumers() -> None:
     assert style_preferences(red) == pytest.approx(
         __import__("scripts.experimental.fsr_static_mc_v0", fromlist=["_style_preferences"])._style_preferences(legacy_series(red))
     )
-    assert td_attempt_interval_probability(red) == pytest.approx(
+    assert legacy_td_attempt_interval_probability(red) == pytest.approx(
         legacy._td_attempt_hazard(0, "DISTANCE")
     )
     assert td_success_probability(red, blue) == pytest.approx(legacy._td_success_prob(0))
@@ -79,8 +80,8 @@ def test_legacy_blend_not_ontology_correct_initiation() -> None:
     base = profile(wrestling_entry=55)
     more_control = profile(wrestling_entry=55, control_imposition=65)
     more_distance = profile(wrestling_entry=55, distance_striking_pressure=60)
-    assert td_attempt_interval_probability(more_control) > td_attempt_interval_probability(base)
-    assert td_attempt_interval_probability(more_distance) < td_attempt_interval_probability(base)
+    assert legacy_td_attempt_interval_probability(more_control) > legacy_td_attempt_interval_probability(base)
+    assert legacy_td_attempt_interval_probability(more_distance) < legacy_td_attempt_interval_probability(base)
 
 
 def test_conversion_and_defense_change_success_not_attempt_hazard() -> None:

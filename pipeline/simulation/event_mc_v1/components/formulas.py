@@ -84,13 +84,21 @@ def strike_landing_probability(
     )
 
 
-def td_attempt_interval_probability(profile: FighterProfile) -> float:
-    """Legacy blended initiation consumer; deliberately not Phase 2B."""
+def legacy_td_attempt_interval_probability(profile: FighterProfile) -> float:
+    """Phase 2A blended initiation consumer retained only for A/B audits."""
 
     wrestling_preference = style_preferences(profile)[2]
     raw_probability = DISTANCE_TD_ATTEMPT_BASE_10S * exp(
         wrestling_preference / MODIFIER_SCALE
     )
+    return float(np.clip(raw_probability, 0.0, 1.0 - 1e-12))
+
+
+def td_attempt_interval_probability(profile: FighterProfile) -> float:
+    """Phase 2B intrinsic initiation driven only by ``wrestling_entry``."""
+
+    entry_delta = profile.wrestling_entry - 50.0
+    raw_probability = DISTANCE_TD_ATTEMPT_BASE_10S * _modifier(entry_delta)
     return float(np.clip(raw_probability, 0.0, 1.0 - 1e-12))
 
 
