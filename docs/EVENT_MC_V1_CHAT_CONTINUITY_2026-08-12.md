@@ -86,3 +86,5 @@ Calibration design:
 Expected return: `PHASE 7B KD CALIBRATION GATE: PASS` or FAIL.
 
 Next assistant action: independently review Phase 7B candidate search, temporal split, holdout support, exact config diff if promoted, and downstream method movement. If accepted, rerun/interpret decomposition in the corrected KD environment before authorizing KO/TKO conversion calibration.
+
+Phase 7B result: common-seed coarse grid 8-128 and refined grid 28-40 on chronological 2020-2024 training and 2025+ holdout subsets supported midpoint 36 on both splits. Only `defaults.knockdown.midpoint_impact_ratio` was promoted from 8 to 36; all other mechanics and coefficients remain locked.
