@@ -1,0 +1,148 @@
+"""Authoritative clock, boundary lifecycle, and state-delta application."""
+
+import math
+from dataclasses import dataclass
+
+from .config import FightConfig
+from .contracts import FightContext, RateProvider, TimeAdvanceModel
+from .events import FightFinished, PrimaryEvent, RoundEnded, RoundStarted
+from .rng import RNGManager, RNGStream
+from .scheduler import ExponentialScheduler
+from .sinks import EventSink, NullEventSink, StateSnapshot
+from .state import FightState, Phase, StateDelta
+
+
+@dataclass(frozen=True)
+class SimulationResult:
+    state: StateSnapshot
+    sink_result: object
+
+
+class SimulationEngine:
+    def __init__(
+        self,
+        config: FightConfig,
+        rate_provider: RateProvider,
+        time_advance_model: TimeAdvanceModel,
+        rng_manager: RNGManager,
+        sink: EventSink | None = None,
+        scheduler: ExponentialScheduler | None = None,
+    ) -> None:
+        self.config = config
+        self.rate_provider = rate_provider
+        self.time_advance_model = time_advance_model
+        self.rng_manager = rng_manager
+        self.sink = sink or NullEventSink()
+        self.scheduler = scheduler or ExponentialScheduler()
+
+    def _context(self, state: FightState) -> FightContext:
+        return FightContext(
+            self.config,
+            state.fight_time_seconds,
+            self.config.round_number_at(state.fight_time_seconds),
+        )
+
+    @staticmethod
+    def _apply_delta(state: FightState, delta: StateDelta) -> None:
+        if delta.phase is not None:
+            state.phase = delta.phase
+        if delta.set_ground_controller:
+            state.ground_controller = delta.ground_controller
+        if delta.set_clinch_controller:
+            state.clinch_controller = delta.clinch_controller
+        if delta.finished is not None:
+            state.finished = delta.finished
+        if delta.finish_reason is not None:
+            state.finish_reason = delta.finish_reason
+        if delta.action_availability is not None:
+            state.action_availability = delta.action_availability
+
+    def _notify_event(self, event, state: FightState, before: StateSnapshot) -> None:
+        self.sink.on_event(event, before, StateSnapshot.from_state(state))
+
+    def _advance(self, state: FightState, dt_seconds: float) -> None:
+        if dt_seconds < 0 or not math.isfinite(dt_seconds):
+            raise ValueError("actual elapsed time must be finite and non-negative")
+        before = StateSnapshot.from_state(state)
+        delta = self.time_advance_model.advance(state, self._context(state), dt_seconds)
+        self._apply_delta(state, delta)
+        state.fight_time_seconds += dt_seconds
+        self.sink.on_time_advance(dt_seconds, before, StateSnapshot.from_state(state))
+
+    def run(self, state: FightState | None = None) -> SimulationResult:
+        state = state or FightState()
+        if state.fight_time_seconds < 0 or state.fight_time_seconds > self.config.fight_duration_seconds:
+            raise ValueError("initial fight clock is outside the configured horizon")
+        if state.fight_time_seconds == 0 and not state.finished:
+            before = StateSnapshot.from_state(state)
+            self._apply_delta(
+                state,
+                StateDelta(
+                    phase=Phase.DISTANCE,
+                    set_ground_controller=True,
+                    set_clinch_controller=True,
+                ),
+            )
+            self._notify_event(RoundStarted(0.0, 1), state, before)
+
+        scheduler_rng = self.rng_manager.stream(RNGStream.SCHEDULER)
+        while not state.finished and state.fight_time_seconds < self.config.fight_duration_seconds:
+            context = self._context(state)
+            candidates = self.rate_provider.candidates(state, context)
+            sampled_dt, candidate = self.scheduler.sample(candidates, scheduler_rng)
+            boundary = self.config.next_boundary_after(state.fight_time_seconds)
+            to_boundary = max(0.0, boundary - state.fight_time_seconds)
+            boundary_first = candidate is None or sampled_dt >= to_boundary
+            actual_dt = to_boundary if boundary_first else sampled_dt
+            self._advance(state, actual_dt)
+
+            if boundary_first:
+                round_number = self.config.round_number_at(max(0.0, boundary - 1e-12))
+                snapshot = StateSnapshot.from_state(state)
+                self._notify_event(RoundEnded(boundary, round_number), state, snapshot)
+                if boundary >= self.config.fight_duration_seconds:
+                    state.finished = True
+                    state.finish_reason = "scheduled_horizon"
+                    before = StateSnapshot.from_state(state)
+                    self._notify_event(
+                        FightFinished(boundary, state.finish_reason), state, before
+                    )
+                    break
+                before = StateSnapshot.from_state(state)
+                self._apply_delta(
+                    state,
+                    StateDelta(
+                        phase=Phase.DISTANCE,
+                        set_ground_controller=True,
+                        set_clinch_controller=True,
+                    ),
+                )
+                self._notify_event(
+                    RoundStarted(boundary, round_number + 1), state, before
+                )
+                continue
+
+            before = StateSnapshot.from_state(state)
+            resolution_rng = self.rng_manager.stream(candidate.rng_stream)
+            resolution = candidate.resolve(state, self._context(state), resolution_rng)
+            self._apply_delta(state, resolution.delta)
+            primary = PrimaryEvent(
+                state.fight_time_seconds, candidate.candidate_id, resolution.payload
+            )
+            self._notify_event(primary, state, before)
+            for consequence in resolution.consequence_events:
+                if consequence.timestamp_seconds != state.fight_time_seconds:
+                    raise ValueError("consequence events must use the current timestamp")
+                snapshot = StateSnapshot.from_state(state)
+                self._notify_event(consequence, state, snapshot)
+            if state.finished:
+                snapshot = StateSnapshot.from_state(state)
+                self._notify_event(
+                    FightFinished(
+                        state.fight_time_seconds,
+                        state.finish_reason or "explicit_finish",
+                    ),
+                    state,
+                    snapshot,
+                )
+        return SimulationResult(StateSnapshot.from_state(state), self.sink.finalize())
