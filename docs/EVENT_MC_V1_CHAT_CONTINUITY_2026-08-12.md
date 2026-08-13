@@ -59,3 +59,5 @@ Historical strike comparisons must use only genuinely comparable UFCStats fields
 No simulator mechanics or calibration values may change in Phase 7A.
 
 Expected return: `PHASE 7A DECOMPOSITION GATE: PASS` or FAIL.
+
+Phase 7A measurement implemented: compact path sufficient statistics decompose attempts, landed strikes, impact tails, KD exposure, KD/non-KD finish conversion, repeated checks, trauma bins, and round/phase dependence. The 100-fight x 10-path rerun preserved every same-seed winner and method probability exactly; no mechanics, config, RNG, or FSR changed.
