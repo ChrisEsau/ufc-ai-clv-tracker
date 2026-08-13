@@ -1,339 +1,97 @@
 # EVENT MC V1 Chat Continuity / Working Memory
 
-Date created: 2026-08-12
-Last updated: 2026-08-13
+Last updated: 2026-08-13 14:48 America/Chicago
 Repository: `ChrisEsau/ufc-ai-clv-tracker`
 Branch: `feature/fsr-32-stamina-shadow`
 
-Purpose: persistent handoff for future ChatGPT sessions. This file is not the architecture source of truth; canonical architecture and phase contracts are referenced below.
-
 ## Update rule
-After every new Codex prompt, update this file. Preserve checkpoint history, current gate state, prompt path, hard locks, expected Codex return, and next assistant review.
-
----
-
-# Current State
-
-Architecture revision: **v0.3**.
-
-- Phase 0 operational baseline: **PASS**.
-- Phase 1 generic continuous-time kernel: **PASS after independent ChatGPT review**.
-- Phase 2A distance temporal/mechanical parity: **PASS after independent ChatGPT review**.
-- Phase 2B wrestling-entry ontology correction: **AUTHORIZED and current task; not yet passed**.
-- Phase 3 and later mechanics: **NOT AUTHORIZED**.
-
-Frozen FSR-32 path:
-`data/simulation/rfs_mc_v2_shared_state/fsr_32_shadow/fsr_32_prefight_snapshots.parquet`
-
-Frozen SHA-256:
-`621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a`
-
-Frozen Phase 0 compact baseline:
-- winner accuracy 59.0%;
-- winner Brier 0.27745;
-- KO/TKO 25.0%;
-- SUB 17.1%;
-- DEC 57.9%;
-- 5 frozen fixtures;
-- 15 deterministic traces;
-- five 1,000-path matchup summaries;
-- first 200 eligible bouts x 10 paths;
-- full 1,565-fight method/submission anchor;
-- recorded artifact checksums revalidated.
-
-Phase 1 implementation commit:
-`1debecab69a141bf2f81179f3436af569733b750`
-
-Phase 2A implementation commit:
-`5b7574c7689ffa2e55821a49fca47a2c1c937991`
-
-Current Phase 2B governing prompt:
-`docs/EVENT_MC_V1_CODEX_PHASE2B_WRESTLING_ENTRY_ONTOLOGY_2026-08-13.md`
-
-Phase 2B prompt commit:
-`e4278f62359e500055eea8c4521d8be6eba6fa2b`
-
-Development standard locked by user:
-**Working + predictive + modular + easy to iterate. Do not optimize for perfection or exhaustive defensive hardening. Ultimate success is moneyline/prop predictive accuracy and betting usefulness. Protect critical invariants and calculation seams, but favor flexibility and rapid historical validation over speculative abstraction.**
-
-Damage/KO external review may run in parallel. Do not hold EVENT MC progress for it. Preserve clean replaceable damage/KD/KO subsystem seams so a later design can be swapped in.
-
-Known performance note: Phase 2A schedules individual strike attempts as events. Do not optimize/batch them preemptively; benchmark later and optimize only if runtime becomes a real problem.
-
-Known non-blocking Phase 1 seam: primary resolution currently returns one state delta plus consequence notifications. Later damage -> KD -> finish chains may need sequential consequence modules that each return/apply their own deltas. Do not retrofit this until required.
-
----
-
-# Phase 1 Locks Preserved
-
-- one authoritative `FightState.fight_time_seconds` clock;
-- scheduler remains UFC-agnostic;
-- all rates are events/second;
-- exact interval probability -> per-second hazard conversion;
-- stable named RNG streams via `SeedSequence([root_seed, stable_stream_id])`;
-- engine-owned state mutation through typed deltas;
-- continuous advance over exact elapsed `dt` before event resolution;
-- hard round/fight boundaries owned by engine;
-- round start resets phase to DISTANCE and clears positional ownership;
-- null/stats/full-trace sinks remain observer-only;
-- no hidden component RNGs.
-
-Stable RNG stream IDs:
-- SCHEDULER 10
-- STRIKE_RESOLUTION 20
-- TAKEDOWN 30
-- SUBMISSION 40
-- DAMAGE 50
-- KNOCKDOWN_FINISH 60
-- JUDGING 70
-
----
-
-# Reviewed Phase 2A Result
-
-Phase 2A successfully ported the six authorized DISTANCE primary action families:
-1. red strike attempt;
-2. blue strike attempt;
-3. red TD attempt;
-4. blue TD attempt;
-5. red clinch entry;
-6. blue clinch entry.
-
-Phase 2A preserved current V0 formulas/semantics and changed timing only.
-
-Reviewed formula behavior:
-- DISTANCE strike attempt intensity preserves the legacy Poisson mean: base 5 attempts/30 sec multiplied by the existing pressure modifier, then expected count / 30 sec;
-- strike landing remains `sigmoid(logit(0.40) + (precision - opponent defense)/12)`;
-- legacy TD initiation uses 30-sec base 0.10 rescaled to 10 sec, then the legacy blended wrestling preference;
-- TD success remains `sigmoid((wrestling_conversion - opponent_td_defense)/12 - 0.40)`;
-- clinch entry preserves current V0 style preference logic and 0.60 cap;
-- final 10-sec transition probabilities convert exactly to per-second hazards.
-
-Legacy Phase 2A wrestling preference:
-```text
-legacy_wrestling_preference =
-    0.75 * wrestling_entry
-  + 0.25 * control_imposition
-  - 0.50 * distance_striking_pressure
-  - 0.50 * clinch_striking_pressure
-```
-
-Phase 2A tests compare new formulas directly against actual `StaticFSRMCV0` consumers, not only copied constants.
-
-Reviewed Phase 2A diagnostic highlights:
-
-Rob Font:
-- wrestling_entry 48.59305;
-- legacy blended preference -4.44615;
-- TD p/10 sec 1.64486%;
-- continuous hazard/sec 0.00165854;
-- legacy matched-distance TD attempts/15 min 1.3852;
-- EVENT MC matched-distance TD attempts/15 min 1.5030;
-- EVENT MC TD success 42.37%.
-
-Raul Rosas Jr.:
-- wrestling_entry 54.43824;
-- legacy blended preference 6.38876;
-- TD p/10 sec 10.00891%;
-- continuous hazard/sec 0.01054595;
-- legacy matched-distance TD attempts/15 min 8.8052;
-- EVENT MC matched-distance TD attempts/15 min 9.5456;
-- EVENT MC TD success 53.33%.
-
-Merab Dvalishvili vs Petr Yan showed the largest expected timing difference: Merab legacy matched-distance TD attempts/15 min 17.4524 vs continuous 19.8816. This was classified as expected continuous-event/segment-suppression behavior, not a formula bug. Do not tune it away during ontology work.
-
-Phase 2A validation:
-- no formula mismatch observed;
-- no unit/conversion mismatch observed;
-- continuous event competition differences observed as expected;
-- missing clinch/ground downstream flow intentionally out of scope;
-- no Phase 2B semantics introduced during Phase 2A;
-- 32 EVENT MC tests passed in Codex report;
-- 45 EVENT MC + relevant V0 tests passed;
-- 17 downstream simulator regressions passed;
-- frozen FSR SHA unchanged.
-
-Final reviewed gate:
-`PHASE 2A DISTANCE TEMPORAL PARITY GATE: PASS`.
-
----
-
-# Phase 2B — Current Task
-
-Phase 2B makes **one deliberate semantic correction**:
-
-`wrestling_entry` becomes the intrinsic DISTANCE TD initiation driver.
-
-Correct ontology:
-```text
-wrestling_entry      = intrinsic takedown initiation frequency
-wrestling_conversion = ability/probability to complete a shot
-td_defense           = opponent prevention of completion
-control_imposition   = persistence/behavior after advantageous position
-```
-
-Phase 2B active TD initiation contract:
-```text
-entry_delta = wrestling_entry - 50.0
-entry_modifier = exp(clip(entry_delta, -8, 8) / existing_MODIFIER_SCALE)
-
-p_td_10s = existing_DISTANCE_TD_ATTEMPT_BASE_10S * entry_modifier
-p_td_10s = clip(p_td_10s, 0, 1 - epsilon)
-
-lambda_td = -ln(1 - p_td_10s) / 10
-```
-
-Reuse the existing Phase 2A modifier scale and TD base. **No tuning.**
-
-Phase 2B separation requirements:
-- `wrestling_entry` changes TD initiation;
-- `control_imposition` no longer changes intrinsic TD initiation;
-- distance striking pressure no longer directly suppresses intrinsic TD initiation;
-- clinch striking pressure no longer directly suppresses intrinsic TD initiation;
-- wrestling_conversion does not change initiation;
-- opponent td_defense does not change initiation;
-- TD success formula stays conversion vs defense exactly as in Phase 2A;
-- context multiplier remains neutral 1.0 in Phase 2B; preserve a seam for future contextual opportunity without inventing coefficients.
-
-Keep the Phase 2A legacy formula available as an explicit A/B diagnostic comparator where practical.
-
-Required Phase 2B A/B diagnostics include Font/Rosas, Merab/Yan, Holloway/Kattar, and Lewis/Daukaus. Font/Rosas remains non-replaceable.
-
-Do not assume Phase 2B improves prediction. Measure what moves; historical validation/tuning comes later.
-
----
-
-# Hard Locks / Non-Goals
-
-Do not:
-- modify the current inheritance-based simulator;
-- rebuild/rewrite FSR-32;
-- alter FSR builders/ratings/ontology/maturity/leakage rules;
-- retune base TD probability or modifier scale;
-- add opponent td_defense to initiation;
-- hide control/striking pressure back into TD initiation;
-- change strike mechanics;
-- change clinch-entry mechanics;
-- change TD success mechanics;
-- add clinch internals;
-- add ground internals;
-- add submissions;
-- add stamina;
-- add damage/KD/KO;
-- add recovery;
-- add age transforms;
-- add judging;
-- add tactical urgency;
-- add arbitrary cooldowns;
-- add MatReturn;
-- implement Phase 3 or later work.
-
-Future damage/KD/KO systems must remain replaceable behind clean interfaces, but their redesign must not block Phase 2B.
-
----
+After every new Codex prompt, update this file. This file is continuity only, not architecture source of truth.
 
-# Assistant Review Required When Phase 2B Returns
-
-Do not accept Codex PASS automatically. Independently inspect the actual commit/diff and verify:
-- Phase 2A was starting point or later documentation-only fast-forward;
-- only TD initiation semantics changed materially;
-- new formula centers wrestling_entry at 50 and reuses existing base/scale without tuning;
-- control_imposition and striking pressures no longer affect Phase 2B intrinsic initiation;
-- conversion and td_defense remain resolution-only;
-- TD success formula unchanged;
-- strike/clinch mechanics unchanged;
-- Phase 1 clock/scheduler/RNG/state/sink invariants preserved;
-- Phase 2A legacy comparator retained cleanly where useful;
-- Font/Rosas and Merab/Yan A/B results are interpretable;
-- no full-fight conclusions are drawn before clinch/ground mechanics exist;
-- no downstream physiology/finish systems slipped in;
-- implementation remains small and easy to iterate.
-
-Only after independent review may ChatGPT mark:
-`PHASE 2B WRESTLING ENTRY ONTOLOGY GATE: PASS`.
-
-Do not authorize Phase 3 automatically.
-
----
-
-# Canonical / Governing Docs
-
-- `docs/EVENT_MC_V1_ARCHITECTURE_AUDIT_2026-08-12.md`
-- `docs/EVENT_MC_V1_PHASE0_CLOSURE_2026-08-12.md`
-- `docs/EVENT_MC_V1_PHASE0_INTERFACE_DECISIONS_2026-08-12.md`
-- `docs/EVENT_MC_V1_PHASE0_BASELINE_FREEZE_2026-08-12.md`
-- `docs/EVENT_MC_V1_CODEX_PHASE1_EXECUTION_2026-08-13.md`
-- `docs/EVENT_MC_V1_CODEX_PHASE1_GENERIC_KERNEL_PROMPT_2026-08-12.md`
-- `docs/EVENT_MC_V1_CODEX_PHASE2A_DISTANCE_PARITY_2026-08-13.md`
-- `docs/EVENT_MC_V1_CODEX_PHASE2A_RETRY_2026-08-13.md`
-- `docs/EVENT_MC_V1_CODEX_PHASE2B_WRESTLING_ENTRY_ONTOLOGY_2026-08-13.md`
-
----
-
-# Checkpoint History
-
-## 001 — 2026-08-12 22:33 America/Chicago
-Phase 0 operational baseline prompt issued.
-
-## 002 — 2026-08-12 22:37
-Codex baseline execution plan approved with exact-remote-branch guardrail.
-
-## 003 — 2026-08-12 22:40
-Codex stopped because isolated checkout had no Git remote. Remote-unblock prompt issued.
-
-## 004 — 2026-08-12 22:49
-Codex repaired Git environment but baseline failed because frozen FSR-32 parquet was absent. Artifact recovery issued; no rebuild authorized.
-
-## 005 — 2026-08-12 22:59
-User said to move on and supply FSR later. Phase 1 prompt prepared but not launched.
-
-## 006 — 2026-08-12 23:08
-User found exact frozen parquet and established frozen SHA-256.
-
-## 007 — 2026-08-12 23:18
-Exact parquet published as temporary GitHub Release asset for transfer.
-
-## 008 — 2026-08-12 23:21
-Codex generic workspace lacked remote/auth; changed nothing. Bootstrap prompt issued.
-
-## 009 — 2026-08-12 23:24
-User clarified Phase 1 had never launched. Continuity corrected.
-
-## 010 — 2026-08-13 near 00:00
-Phase 0 returned PASS after exact artifact recovery/revalidation.
-
-## 011 — 2026-08-13 00:03
-User explicitly authorized Phase 1.
-
-## 012 — 2026-08-13 about 00:15
-Phase 1 commit `1debecab...` independently reviewed and accepted.
-
-## 013 — 2026-08-13 00:18
-User explicitly authorized Phase 2A.
-
-## 014 — 2026-08-13 00:27
-First Phase 2A attempt stopped safely due stale checkout missing the governing prompt; no implementation changes occurred. Retry/bootstrap prompt added.
-
-## 015 — 2026-08-13
-Phase 2A implementation returned at commit `5b7574c7689ffa2e55821a49fca47a2c1c937991`. ChatGPT independently reviewed the actual commit, formulas, direct V0 parity tests, and diagnostics and accepted:
-`PHASE 2A DISTANCE TEMPORAL PARITY GATE: PASS`.
-
-## 016 — 2026-08-13 06:34 America/Chicago
-User said **proceed with the next step**, explicitly authorizing Phase 2B wrestling-entry ontology correction.
-
-New governing prompt:
-`docs/EVENT_MC_V1_CODEX_PHASE2B_WRESTLING_ENTRY_ONTOLOGY_2026-08-13.md`
-
-Prompt commit:
-`e4278f62359e500055eea8c4521d8be6eba6fa2b`
-
-Expected Codex return: implementation/tests/A-B diagnostics ending with `PHASE 2B WRESTLING ENTRY ONTOLOGY GATE: PASS` or `FAIL`.
-
-Next assistant action: independently review the actual Phase 2B commit before any Phase 3 authorization.
-
-Phase 0: **PASS**.
-Phase 1: **PASS**.
-Phase 2A: **PASS**.
-Phase 2B authorized: **YES**.
-Phase 2B reviewed/passed: **NO**.
-Phase 3 authorized: **NO**.
+## Current gate state
+- Phase 0 through Phase 5A: PASS
+- Phase 6: PASS; exposure-normalized historical anchors corrected in Phase 7D1
+- Phase 7A: PASS; historical per-time anchors corrected in Phase 7D1
+- Phase 7B KD midpoint 36: committed but not independently reconfirmed after time correction
+- Phase 7B2: PASS
+- Phase 7C finish midpoint 36: PASS and revalidated after time correction
+- Phase 7D submission decomposition: PASS measurement only; calibration deferred
+- Phase 7D1 historical exposure-time correction: PASS at `af1e56fdfcdb9823fcbd099dd441ec44b9e37485`
+- Phase 7D2 KD target reconciliation: current next phase; measurement only
+- Age, urgency, real weight-class tuning: not authorized
+
+Frozen FSR-32 SHA-256: `621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a`
+
+## Current committed calibration
+- `defaults.knockdown.midpoint_impact_ratio = 36.0`
+- `defaults.finish.midpoint_impact_ratio = 36.0`
+
+## Corrected historical anchors from Phase 7D1
+On the same 100-fight cohort:
+- observed seconds/fight: 757.16
+- strike attempts/15min: 285.681
+- landed strikes/15min: 157.045
+- KD/15min: 0.439801
+- KD/100 landed: 0.280048 unchanged
+- KD/fight: 0.370 unchanged
+- submission attempts/15min: 0.7251
+- submission attempts/fight: 0.610 unchanged
+- mean non-decision finish time: 402.762s
+- method shares unchanged: KO/TKO 25.0%, SUB 17.0%, DEC 58.0%
+
+Phase 7D1 implementation commit: `af1e56fdfcdb9823fcbd099dd441ec44b9e37485`.
+Authoritative `match_time_sec` is total elapsed fight time; legacy final-round clock is supported only with explicit semantics.
+
+## Post-correction state
+At committed 36/36 on the 100-fight x 10-path rerun:
+- simulated KO/TKO 25.6%, SUB 5.7%, DEC 68.7%
+- simulated KD/100 landed 0.438
+- simulated KD/15min 0.383
+- simulated submission attempts/path 0.380
+- simulated submission attempts/15min 0.423
+- simulated path share with >=1 attempt 27.4%
+- simulated P(SUB|attempt) 15.0%
+- simulated mean non-decision finish time 387.43s
+
+Finish midpoint 36 remains supported after correction. KD midpoint 36 is unresolved because corrected historical KD/15 and KD/100 landed now pull in different directions; a narrow 32/36/40 check favored 40 only under the prior combined objective.
+
+## Submission position lock
+For future submission conversion calibration, top and bottom submission attempts are to be treated 1:1 for now. Do not apply an intrinsic top-position conversion bonus unless UFC-specific evidence supports it. Current explicit top-position bonus must be neutralized before/within the first authorized submission-conversion calibration step, not silently retained.
+
+## Phase 7D2 KD target reconciliation
+Prompt: `docs/EVENT_MC_V1_CODEX_PHASE7D2_KD_TARGET_RECONCILIATION_2026-08-13.md`
+Prompt commit: `720ab5ccbbda9001ad873959f2e44068bf9d639b`
+
+Measurement only. Keep KD midpoint 36 and finish midpoint 36 committed. Compare in-memory KD midpoint candidates 32, 36, 40, 44, 48 on the same 100-fight x 10-path cohort and report separately:
+- KD/fight or path
+- KD/100 landed
+- KD/15min
+- zero/multi-KD shares
+- landed/fight or path and landed/15min
+- KO/TKO share
+- mean fight duration
+
+Do not rank with one combined objective and do not promote YAML. Determine whether corrected evidence supports a KD midpoint change or whether the conflict is mainly upstream strike exposure/comparability.
+
+Expected return: `PHASE 7D2 KD TARGET RECONCILIATION GATE: PASS`.
+
+Phase 7D2 result: the exact common-seed 100-fight x 10-path comparison was completed for in-memory KD midpoints 32, 36, 40, 44, and 48 with finish midpoint fixed at 36. No combined score or ranking was used. Historical landed exposure was 132.12/fight and 157.045/15min, versus roughly 78-80/path and 87.4-87.5/15min simulated across candidates. Midpoint 48 closely matched KD/100 landed (0.269 vs 0.280 historical) but materially undershot KD/path (0.215 vs 0.370) and KD/15min (0.235 vs 0.440). Midpoint 36 was closer on KD/path (0.344) and KD/15min (0.383) but high on KD/100 landed (0.438). This conflict is primarily attributable to lower/non-definition-identical simulated landed-strike exposure; corrected evidence does not justify a midpoint promotion. Committed KD and finish midpoints remain 36. Submission conversion was untouched, and the future 1:1 top/bottom lock remains in force.
+
+## Phase 7E bottom submission-attempt neutralization
+
+Phase 7D2 passed; KD midpoint and finish midpoint remain 36. Phase 7E changes only `defaults.submission_attempts.bottom_multiplier` from 0.55 to 1.00. The 100-fight x 10-path rerun increased attempts from 380 to 474 (0.380 to 0.474/path; 0.423 to 0.529/15min) and paths with an attempt from 27.4% to 32.3%. Top/bottom attempts were 224/250, with exposure-normalized rates of 1.122/1.252 per 15 positional ground minutes. SUB moved from 5.7% to 6.6%; KO/TKO remained 25.5% and DEC was 67.9%. Conversion remains frozen: 66 finishes from 474 attempts (13.9%), with the existing `submission_finish.top_position_bonus = 0.25` temporarily unchanged until a dedicated conversion phase. The remaining deficit is now conversion-dominant, although global attempt exposure remains below historical 0.610/fight and 0.725/15min.
+
+## Phase 7F submission conversion position neutralization
+
+Phase 7D2 and Phase 7E remain PASS. Phase 7F changes only `defaults.submission_finish.top_position_bonus` from 0.25 to 0.0; `bottom_position_bonus` remains 0.0, the conversion intercept remains -2.20, and `submission_attempts.bottom_multiplier` remains 1.0. The neutral 100-fight x 10-path baseline produced 477 attempts, 61 SUB finishes, and 12.79% conversion. Observed top/bottom conversion narrowed from 16.07%/12.00% to 13.27%/12.35% (gap 4.07pp -> 0.92pp). Attempts remained stable at 0.477/path and 0.531/15min; SUB moved from 6.6% to 6.1%, KO/TKO remained 25.5%, and DEC moved to 68.4%. No global submission calibration is authorized yet. A simple uncensored exposure ratio implies roughly 35.6% conversion would be needed for 17% SUB at current attempt exposure, about 2.79x the neutral observed conversion; this is only a planning diagnostic, not a fitted intercept. KD midpoint and finish midpoint remain 36.
+
+## Phase 7G global submission-attempt rate calibration
+
+Phase 7F passed: attempt generation and conversion are position-neutral (`bottom_multiplier = 1.0`; top/bottom conversion bonuses = 0.0), while the conversion intercept remains -2.20 and KD/finish midpoints remain 36. Phase 7G searched only `submission_attempts.base_30s` using common seeds. The six-point coarse grid used 3 paths/fight; finalists 0.045, 0.050, and 0.055 used 100 train fights (2020-01-18–2020-07-25), 50 holdout fights (2025-01-11–2025-03-22), and 10 paths/fight.
+
+Train supported approximately 0.050–0.055: at 0.055, simulated exposure was 0.617 attempts/path, 0.691/15min, and 38.2% paths with an attempt versus historical 0.610, 0.725, and 37.0%. Holdout supported the existing 0.045 or lower: at 0.045, simulated exposure was already 0.554/path and 0.613/15min versus historical 0.480 and 0.562, while its 33.8% path share remained below historical 38.0%. Increasing the base improved holdout path share but worsened both count/rate overexposure. Because train and holdout do not support the same region across all three primary metrics, no value was promoted and `base_30s` remains 0.045. Conversion calibration remains deferred pending acceptance of this temporal disagreement.
+
+## Phase 7H global submission-conversion intercept calibration
+
+Phase 7G diagnostic execution is complete and its promotion gate remains FAIL/no promotion. Attempt base remains 0.045, bottom multiplier remains 1.0, both position bonuses remain 0.0, and KD/finish midpoints remain 36. Phase 7H authorizes only `submission_finish.intercept` candidates evaluated end to end against split-specific historical SUB fight share.
+
+The Phase 7H harness and isolation tests were implemented, but this checkout does not contain the frozen FSR-32 parquet required to resolve either chronological cohort. Candidate execution therefore stopped before simulation; no intercept was promoted and the committed value remains -2.20. Phase 7H gate is FAIL until the frozen input is restored and the required coarse/finalist runs can be completed.

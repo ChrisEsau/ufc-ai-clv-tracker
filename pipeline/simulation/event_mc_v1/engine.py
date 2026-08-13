@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from .config import FightConfig
 from .contracts import FightContext, RateProvider, TimeAdvanceModel
-from .events import FightFinished, PrimaryEvent, RoundEnded, RoundStarted
+from .events import ConsequenceEvent, FightFinished, PrimaryEvent, RoundEnded, RoundStarted
 from .rng import RNGManager, RNGStream
 from .scheduler import ExponentialScheduler
 from .sinks import EventSink, NullEventSink, StateSnapshot
@@ -27,6 +27,11 @@ class SimulationEngine:
         rng_manager: RNGManager,
         sink: EventSink | None = None,
         scheduler: ExponentialScheduler | None = None,
+        round_recovery_model=None,
+        physiology_model=None,
+        finish_model=None,
+        submission_finish_model=None,
+        judging_model=None,
     ) -> None:
         self.config = config
         self.rate_provider = rate_provider
@@ -34,6 +39,11 @@ class SimulationEngine:
         self.rng_manager = rng_manager
         self.sink = sink or NullEventSink()
         self.scheduler = scheduler or ExponentialScheduler()
+        self.round_recovery_model = round_recovery_model
+        self.physiology_model = physiology_model
+        self.finish_model = finish_model
+        self.submission_finish_model = submission_finish_model
+        self.judging_model = judging_model
 
     def _context(self, state: FightState) -> FightContext:
         return FightContext(
@@ -54,11 +64,26 @@ class SimulationEngine:
             state.finished = delta.finished
         if delta.finish_reason is not None:
             state.finish_reason = delta.finish_reason
+        if delta.winner is not None:
+            state.winner = delta.winner
+        if delta.finish_method is not None:
+            state.finish_method = delta.finish_method
+        if delta.red_stamina is not None:
+            state.red_stamina = delta.red_stamina
+        if delta.blue_stamina is not None:
+            state.blue_stamina = delta.blue_stamina
+        for name in ("red_cumulative_trauma", "blue_cumulative_trauma", "red_acute_vulnerability", "blue_acute_vulnerability"):
+            value = getattr(delta, name)
+            if value is not None:
+                setattr(state, name, value)
         if delta.action_availability is not None:
             state.action_availability = delta.action_availability
 
     def _notify_event(self, event, state: FightState, before: StateSnapshot) -> None:
-        self.sink.on_event(event, before, StateSnapshot.from_state(state))
+        after = StateSnapshot.from_state(state)
+        self.sink.on_event(event, before, after)
+        if self.judging_model is not None:
+            self.judging_model.on_event(event, before, after)
 
     def _advance(self, state: FightState, dt_seconds: float) -> None:
         if dt_seconds < 0 or not math.isfinite(dt_seconds):
@@ -68,6 +93,8 @@ class SimulationEngine:
         self._apply_delta(state, delta)
         state.fight_time_seconds += dt_seconds
         self.sink.on_time_advance(dt_seconds, before, StateSnapshot.from_state(state))
+        if self.judging_model is not None:
+            self.judging_model.on_time_advance(dt_seconds, before, StateSnapshot.from_state(state))
 
     def run(self, state: FightState | None = None) -> SimulationResult:
         state = state or FightState()
@@ -100,21 +127,38 @@ class SimulationEngine:
                 round_number = self.config.round_number_at(max(0.0, boundary - 1e-12))
                 snapshot = StateSnapshot.from_state(state)
                 self._notify_event(RoundEnded(boundary, round_number), state, snapshot)
+                if self.judging_model is not None:
+                    card = self.judging_model.score_round(
+                        round_number, self.rng_manager.stream(RNGStream.JUDGING)
+                    )
+                    self._notify_event(
+                        ConsequenceEvent(boundary, "RoundScore", card), state, snapshot
+                    )
                 if boundary >= self.config.fight_duration_seconds:
-                    state.finished = True
-                    state.finish_reason = "scheduled_horizon"
+                    if self.judging_model is not None:
+                        self._apply_delta(state, self.judging_model.decision_delta())
+                    else:
+                        state.finished = True
+                        state.finish_reason = "scheduled_horizon"
                     before = StateSnapshot.from_state(state)
                     self._notify_event(
                         FightFinished(boundary, state.finish_reason), state, before
                     )
                     break
                 before = StateSnapshot.from_state(state)
+                recovery_delta = (
+                    self.round_recovery_model.recovery_delta(state)
+                    if self.round_recovery_model is not None
+                    else StateDelta()
+                )
                 self._apply_delta(
                     state,
                     StateDelta(
                         phase=Phase.DISTANCE,
                         set_ground_controller=True,
                         set_clinch_controller=True,
+                        red_stamina=recovery_delta.red_stamina,
+                        blue_stamina=recovery_delta.blue_stamina,
                     ),
                 )
                 self._notify_event(
@@ -130,6 +174,37 @@ class SimulationEngine:
                 state.fight_time_seconds, candidate.candidate_id, resolution.payload
             )
             self._notify_event(primary, state, before)
+            if self.submission_finish_model is not None:
+                submission_delta, submission_event = self.submission_finish_model.resolve(
+                    state,
+                    resolution.payload,
+                    state.fight_time_seconds,
+                    self.rng_manager.stream(RNGStream.SUBMISSION),
+                    pre_action_state=before,
+                )
+                submission_before = StateSnapshot.from_state(state)
+                self._apply_delta(state, submission_delta)
+                if submission_event is not None:
+                    self._notify_event(submission_event, state, submission_before)
+            physiology_events = ()
+            if self.physiology_model is not None:
+                physiology_delta, physiology_events = self.physiology_model.resolve(
+                    state, resolution.payload, state.fight_time_seconds,
+                    self.rng_manager.stream(RNGStream.DAMAGE),
+                    self.rng_manager.stream(RNGStream.KNOCKDOWN_FINISH),
+                )
+                physiology_before = StateSnapshot.from_state(state)
+                self._apply_delta(state, physiology_delta)
+                for event in physiology_events:
+                    self._notify_event(event, state, physiology_before)
+                    if self.finish_model is not None:
+                        finish_delta, finish_event = self.finish_model.resolve(
+                            state, event.payload, state.fight_time_seconds,
+                            self.rng_manager.stream(RNGStream.KNOCKDOWN_FINISH),
+                        )
+                        finish_before = StateSnapshot.from_state(state)
+                        self._apply_delta(state, finish_delta)
+                        self._notify_event(finish_event, state, finish_before)
             for consequence in resolution.consequence_events:
                 if consequence.timestamp_seconds != state.fight_time_seconds:
                     raise ValueError("consequence events must use the current timestamp")
