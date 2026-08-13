@@ -175,7 +175,7 @@ def expected_probability(
     elif skill == "distance_defense":
         defense = ratings[opponent_id]["distance_precision"]
     elif skill == "wrestling_entry":
-        defense = ratings[opponent_id]["td_defense"]
+        defense = BASE_RATING
     elif skill == "wrestling_conversion":
         defense = ratings[opponent_id]["td_defense"]
     elif skill == "td_defense":
@@ -223,17 +223,37 @@ def observation_bundle(
     ) if opp_distance_attempts > 0 else (None, 0.0)
 
     td_attempts = row_value(row, "td_attempts") or 0.0
-    entry_obs = weighted_available(
-        (
-            (0.40, percentile(pools["td_pressure_share"], row_value(row, "td_pressure_share"))),
-            (0.25, percentile(pools["td_attempts_per_round"], row_value(row, "td_attempts_per_round"))),
-            (0.20, percentile(pools["td_completion_rate"], row_value(row, "td_completion_rate"))),
-            (0.15, percentile(pools["control_seconds_per_td"], row_value(row, "control_seconds_per_td"))),
-        )
+
+    # LEGACY WRESTLING-ENTRY DEFINITION — retained for audit/recovery only.
+    # This mixed initiation, conversion and downstream control into one trait:
+    # entry_obs = weighted_available(
+    #     (
+    #         (0.40, percentile(pools["td_pressure_share"], row_value(row, "td_pressure_share"))),
+    #         (0.25, percentile(pools["td_attempts_per_round"], row_value(row, "td_attempts_per_round"))),
+    #         (0.20, percentile(pools["td_completion_rate"], row_value(row, "td_completion_rate"))),
+    #         (0.15, percentile(pools["control_seconds_per_td"], row_value(row, "control_seconds_per_td"))),
+    #     )
+    # )
+    # result["wrestling_entry"] = (
+    #     entry_obs if td_attempts > 0 else None,
+    #     q_exp(0.5 * td_attempts) if td_attempts > 0 else 0.0,
+    # )
+
+    # Canonical wrestling_entry is now a single-purpose initiation trait:
+    # how frequently the fighter attempts takedowns.  Zero-attempt fights are
+    # real low-entry observations, and confidence comes from fight exposure
+    # rather than from the number of attempts themselves.
+    td_attempts_per_round = row_value(row, "td_attempts_per_round")
+    entry_rounds = row_value(row, "rounds") or 0.0
+    entry_obs = percentile(
+        pools["td_attempts_per_round"],
+        td_attempts_per_round,
     )
     result["wrestling_entry"] = (
-        entry_obs if td_attempts > 0 else None,
-        q_exp(0.5 * td_attempts) if td_attempts > 0 else 0.0,
+        entry_obs,
+        q_exp(entry_rounds / 2.0)
+        if entry_obs is not None and entry_rounds > 0.0
+        else 0.0,
     )
 
     conversion_obs = weighted_available(
