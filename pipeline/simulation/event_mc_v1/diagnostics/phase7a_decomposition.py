@@ -87,6 +87,9 @@ def run(paths=10, start_year=2020, limit=100, seed=20260813, output_dir=Path("da
     historical_exposure=cohort.apply(lambda r:(int(r.finish_round)-1)*300+float(r.match_time_sec),axis=1).sum()
     historical_attempts=(cohort.r_total_str_atmpted+cohort.b_total_str_atmpted).sum(); historical_landed=(cohort.r_total_str_landed+cohort.b_total_str_landed).sum(); historical_kd=(cohort.r_kd+cohort.b_kd).sum()
     finish_kd=impact_frame[impact_frame.kd]; finish_non=impact_frame[~impact_frame.kd]; ko_paths=paths_frame[paths_frame.method=="KO_TKO"]
+    methods = paths_frame.method.value_counts(normalize=True)
+    nondecision = paths_frame[paths_frame.method != "DEC"]
+    finish_rounds = (np.maximum(nondecision.exposure_seconds.to_numpy() - 1e-12, 0) // 300 + 1).astype(int)
     summary={
         "fights":len(cohort),"paths":len(paths_frame),"runtime_seconds":time.perf_counter()-started,
         "comparability_note":"Historical UFCStats total strikes are the closest available comparator, but EVENT MC modeled offensive attempts are not guaranteed definition-identical; historical phase columns are significant-strike position fields and are not directly compared to EVENT MC total strikes.",
@@ -95,6 +98,7 @@ def run(paths=10, start_year=2020, limit=100, seed=20260813, output_dir=Path("da
         "phase":{phase:{"attempts":int(paths_frame[f"{phase}_attempts"].sum()),"landed":int(paths_frame[f"{phase}_landed"].sum()),"attempts_per_15min":float(paths_frame[f"{phase}_attempts"].sum()/exposure*900),"landed_per_15min":float(paths_frame[f"{phase}_landed"].sum()/exposure*900)} for phase in STRIKE_FAMILIES.values()},
         "impact":{"all":_distribution(impact_frame.impact),"non_kd":_distribution(impact_frame.loc[~impact_frame.kd,"impact"]),"kd":_distribution(impact_frame.loc[impact_frame.kd,"impact"]),"fight_ending":_distribution(impact_frame.loc[impact_frame.finished,"impact"])},
         "conversion":{"landed_finish_checks":len(impact_frame),"p_finish_given_kd":float(finish_kd.finished.mean()),"p_finish_given_non_kd":float(finish_non.finished.mean()),"non_kd_finishing_strike_share":float((impact_frame[impact_frame.finished].kd==False).mean()),"ko_paths_zero_prior_kd_share":float((ko_paths.prior_kds_at_ko==0).mean())},
+        "outcomes":{"method_shares":{method:float(methods.get(method,0)) for method in ("KO_TKO","SUB","DEC")},"nondecision_finish_round_shares":{str(round_no):float(np.mean(finish_rounds==round_no)) for round_no in range(1,6)},"mean_nondecision_finish_time":float(nondecision.exposure_seconds.mean())},
         "kd_by_round":impact_frame[impact_frame.kd].groupby("round").size().astype(int).to_dict(),"kd_by_phase":impact_frame[impact_frame.kd].groupby("phase").size().astype(int).to_dict(),"trauma_bins":_trauma_bins(all_impacts),
     }
     summary["ratios"]={"attempt_exposure":summary["simulated"]["attempts_per_15min"]/summary["historical"]["attempts_per_15min"],"landed_exposure":summary["simulated"]["landed_per_15min"]/summary["historical"]["landed_per_15min"],"kd_per_landed":summary["simulated"]["kd_per_100_landed"]/summary["historical"]["kd_per_100_landed"],"kd_exposure":summary["simulated"]["kd_per_15min"]/summary["historical"]["kd_per_15min"]}

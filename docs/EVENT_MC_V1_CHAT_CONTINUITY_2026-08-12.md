@@ -63,3 +63,5 @@ Required measurements include current KD exposure, finish checks, P(finish|KD), 
 Expected return: `PHASE 7B2 POST-KD DECOMPOSITION GATE: PASS` or FAIL.
 
 Next assistant action: review Phase 7B2 and decide the narrow Phase 7C KO/TKO calibration parameterization. Do not start submission calibration until KO/TKO environment is corrected.
+
+Phase 7B2 completed on the same 100-fight x 10-path cohort at midpoint 36. KD exposure is now 0.328/100 landed and 0.276/15min, while KO/TKO remains 73.1%. Non-KD strikes account for 90.42% of KO/TKO finishing strikes, and 96.44% of KO/TKO paths had zero prior KDs. This was measurement-only; config and mechanics are unchanged.
