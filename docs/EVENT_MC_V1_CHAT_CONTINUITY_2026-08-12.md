@@ -1,6 +1,6 @@
 # EVENT MC V1 Chat Continuity / Working Memory
 
-Last updated: 2026-08-13 21:00 America/Chicago
+Last updated: 2026-08-13 22:22 America/Chicago
 Repository: `ChrisEsau/ufc-ai-clv-tracker`
 Branch: `feature/fsr-32-stamina-shadow`
 
@@ -27,7 +27,8 @@ After every new Codex prompt, update this file. This file is continuity only, no
 - Phase 7L distance takedown-attempt calibration: PASS; DISTANCE TD base promoted 0.10 -> 0.16
 - Phase 7M shared TD-success calibration: PASS; shared TD success offset promoted -0.40 -> -0.85
 - Phase 7N global coupled re-audit: PASS; readiness NO; next global subsystem remains significant-strike attempt generation and phase composition
-- Fresh 100-fight predictive replay: authorized as a sidecar validation; no calibration changes
+- Fresh 100-fight predictive replay: PASS measurement-only sidecar; winner discrimination materially failed
+- Winner-discrimination / FSR-wiring audit: AUTHORIZED, measurement only
 - Age, urgency, real weight-class tuning: not authorized
 
 Frozen FSR-32 SHA-256: `621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a`
@@ -110,3 +111,15 @@ Method accuracy was 61/100 (61.0%), multiclass Brier score 0.5485, and method lo
 Historical mean duration was 758.97 seconds versus 724.30 simulated; per-fight expected-duration MAE was 295.35 seconds. Historical nondecision finish time was 382.43 seconds versus 352.55 simulated. On the fresh cohort, historical versus MC global values were: significant-strike attempts/15 244.87 versus 230.34, landed/15 114.48 versus 109.14, and accuracy 46.75% versus 47.38%; TD attempts/15 7.862 versus 7.762, completions/15 2.704 versus 2.308, and success 34.39% versus 29.74%; KD/15 0.534 versus 0.409; submission attempts/15 0.593 versus 0.575. MC-only DISTANCE/CLINCH/GROUND residence was 488.24/60.47/175.59 seconds per path.
 
 No calibration, YAML, mechanics, FSR, RNG, or market-odds change was made. The result is a predictive validation finding only and does not authorize tuning. Gate: PASS.
+
+## Winner discrimination / FSR wiring audit authorization
+Prompt: `docs/EVENT_MC_V1_CODEX_WINNER_DISCRIMINATION_AUDIT_2026-08-13.md`
+Prompt commit: `a208af3a770f619c4127775586f1d3b0a9fd10f0`
+
+The fresh 100-fight replay materially failed winner discrimination despite comparatively healthy population method composition. The next authorized task is therefore a measurement-only root-cause audit, and it temporarily takes priority over further global strike calibration. No simulator, YAML, FSR, age, stamina, or RNG change is authorized.
+
+The audit must prove target-fight prefight FSR snapshot identity/chronology, trace fight-night age adjustment end to end, establish whether enabled durability/KD-resistance age rules are actually applied at EVENT MC runtime or prebaked in FSR-32, map every consumed FSR trait to its runtime destination and mathematical direction, compare RFS MC V2 fatigue architecture against EVENT MC stamina, inspect stamina trait mapping and defaults, quantify nonlinear matchup-transform sensitivity, and decompose all wrong high-confidence (>=75%) fresh-cohort predictions against comparable correct high-confidence controls.
+
+Required root-cause classifications are CONFIRMED DEFECT / STRONG EVIDENCE / POSSIBLE CONTRIBUTOR / NOT SUPPORTED for stale/wrong FSR selection, leakage, missing age wiring, inverted trait direction, missing/unused traits, wrong stamina mapping, insufficient stamina effects, over-amplified transforms, dominant wrong-way FSR families, judging/finish direction defects, and any newly discovered cause. The audit must recommend exactly one next action and make no promotion or tuning.
+
+Expected final line: `EVENT MC V1 WINNER DISCRIMINATION AUDIT: PASS` or FAIL.
