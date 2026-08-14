@@ -23,7 +23,7 @@ def test_candidate_changes_only_distance_td_attempt_base():
 def test_phase7l_calibration_locks_remain_fixed():
     candidate = calibration_for_distance_td(0.16)
     assert candidate.section("clinch")["td_attempt_base_30s"] == 0.24
-    assert candidate.section("distance")["td_success_logit_offset"] == -0.40
+    assert candidate.section("distance")["td_success_logit_offset"] == -0.85
     assert candidate.section("distance")["strike_attempts_per_30s"] == 6.0
     assert candidate.section("clinch")["strike_attempts_per_30s"] == 3.6
     assert candidate.section("submission_finish")["intercept"] == -0.60

@@ -53,7 +53,7 @@ def test_phase7k_keeps_all_calibration_locks():
     assert DEFAULT_CALIBRATION.section("ground")["strike_attempts_per_30s"] == 1.6
     assert DEFAULT_CALIBRATION.section("distance")["td_attempt_base_30s"] == 0.16
     assert DEFAULT_CALIBRATION.section("clinch")["td_attempt_base_30s"] == 0.24
-    assert DEFAULT_CALIBRATION.section("distance")["td_success_logit_offset"] == -0.40
+    assert DEFAULT_CALIBRATION.section("distance")["td_success_logit_offset"] == -0.85
     assert DEFAULT_CALIBRATION.section("submission_attempts")["base_30s"] == 0.045
     assert DEFAULT_CALIBRATION.section("submission_finish")["intercept"] == -0.60
     assert DEFAULT_CALIBRATION.section("knockdown")["midpoint_impact_ratio"] == 36.0

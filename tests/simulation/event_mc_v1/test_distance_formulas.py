@@ -15,6 +15,7 @@ from pipeline.simulation.event_mc_v1.components.formulas import (
 )
 from pipeline.simulation.event_mc_v1.components.profiles import FighterProfile
 from pipeline.simulation.event_mc_v1.diagnostics.phase7l_distance_td_calibration import calibration_for_distance_td
+from pipeline.simulation.event_mc_v1.diagnostics.phase7m_td_success_calibration import calibration_for_td_success
 from scripts.experimental.fsr_static_mc_v0 import StaticFSRMCV0
 
 
@@ -59,7 +60,9 @@ def test_formula_outputs_match_current_legacy_consumers() -> None:
         legacy._td_attempt_hazard(0, "DISTANCE")
     )
     assert legacy_td_attempt_interval_probability(red) > legacy_td_attempt_interval_probability(red, legacy_calibration)
-    assert td_success_probability(red, blue) == pytest.approx(legacy._td_success_prob(0))
+    legacy_success_calibration = calibration_for_td_success(-0.40)
+    assert td_success_probability(red, blue, legacy_success_calibration) == pytest.approx(legacy._td_success_prob(0))
+    assert td_success_probability(red, blue) < td_success_probability(red, blue, legacy_success_calibration)
     assert clinch_entry_interval_probability(red) == pytest.approx(
         legacy._distance_clinch_hazard(0)
     )

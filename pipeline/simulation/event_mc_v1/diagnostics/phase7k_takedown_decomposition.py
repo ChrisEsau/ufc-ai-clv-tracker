@@ -99,6 +99,10 @@ def modeled_takedowns(
                 stats["outcomes"][side].get(f"{family}_landed", 0)
                 for side in ("red", "blue") for family in STRIKE_FAMILIES
             )
+            strike_landed_by_phase = {
+                phase: sum(stats["outcomes"][side].get(f"{family}_landed", 0) for side in ("red", "blue"))
+                for phase, family in zip(("distance", "clinch", "ground"), STRIKE_FAMILIES)
+            }
             sub_attempts = sum(stats["attempts"][side].get("submission_attempt", 0) for side in ("red", "blue"))
             rows.append({
                 "seconds": result.state.fight_time_seconds,
@@ -107,6 +111,7 @@ def modeled_takedowns(
                 "distance_landed": landed["distance"], "clinch_landed": landed["clinch"],
                 "strike_attempts": sum(strike_attempts.values()), "strike_landed": strike_landed,
                 **{f"strike_{phase}_attempts": value for phase, value in strike_attempts.items()},
+                **{f"strike_{phase}_landed": value for phase, value in strike_landed_by_phase.items()},
                 "kds": sum(int(item.knockdown) for item in stats["physiology"]),
                 "ground_seconds": stats["phase_seconds"]["ground"],
                 "clinch_seconds": stats["phase_seconds"]["clinch"],
@@ -147,17 +152,34 @@ def modeled_takedowns(
                   "multi_attempt_share": float((total_attempts >= 2).mean()),
                   "attempt_quantiles": {
                       str(q): float(total_attempts.quantile(q)) for q in (.25, .5, .75)
+                  },
+                  "landed_quantiles": {
+                      str(q): float(total_landed.quantile(q)) for q in (.25, .5, .75)
                   }},
         "entry_source": {
             "distance": metrics(frame.distance_attempts, frame.distance_landed),
             "clinch": metrics(frame.clinch_attempts, frame.clinch_landed),
         },
         "guardrails": {
+            "strike_attempts_per_path": strike_attempts / len(frame),
             "strike_attempts_per_15min": _ratio(strike_attempts * 900, exposure),
+            "strike_landed_per_path": strike_landed / len(frame),
             "strike_landed_per_15min": _ratio(strike_landed * 900, exposure),
             "strike_landing_percentage": _ratio(strike_landed, strike_attempts),
             "strike_attempt_shares": {
                 phase: _ratio(float(frame[f"strike_{phase}_attempts"].sum()), strike_attempts)
+                for phase in ("distance", "clinch", "ground")
+            },
+            "strike_phase": {
+                phase: {
+                    "attempts_per_path": float(frame[f"strike_{phase}_attempts"].mean()),
+                    "attempts_per_15min": _ratio(float(frame[f"strike_{phase}_attempts"].sum()) * 900, exposure),
+                    "landed_per_path": float(frame[f"strike_{phase}_landed"].mean()),
+                    "landed_per_15min": _ratio(float(frame[f"strike_{phase}_landed"].sum()) * 900, exposure),
+                    "accuracy": _ratio(float(frame[f"strike_{phase}_landed"].sum()), float(frame[f"strike_{phase}_attempts"].sum())),
+                    "attempt_share": _ratio(float(frame[f"strike_{phase}_attempts"].sum()), strike_attempts),
+                    "landed_share": _ratio(float(frame[f"strike_{phase}_landed"].sum()), strike_landed),
+                }
                 for phase in ("distance", "clinch", "ground")
             },
             "ground_seconds_per_path": float(frame.ground_seconds.mean()),
@@ -167,10 +189,14 @@ def modeled_takedowns(
             "distance_seconds_per_path": float(frame.distance_seconds.mean()),
             "submission_attempts_per_path": float(frame.sub_attempts.mean()),
             "submission_attempts_per_15min": _ratio(submissions * 900, exposure),
+            "paths_with_submission_attempt_share": float((frame.sub_attempts > 0).mean()),
             "p_sub_given_attempt": _ratio(float(frame.sub_finishes.sum()), submissions),
             "method_shares": {method: float(methods.get(method, 0)) for method in METHODS},
             "kd_per_path": float(frame.kds.mean()),
             "kd_per_15min": _ratio(float(frame.kds.sum()) * 900, exposure),
+            "kd_per_100_landed": _ratio(float(frame.kds.sum()) * 100, strike_landed),
+            "zero_kd_share": float((frame.kds == 0).mean()),
+            "multi_kd_share": float((frame.kds >= 2).mean()),
             "mean_fight_duration": float(frame.seconds.mean()),
             "mean_nondecision_finish_time": float(nondecision.seconds.mean()),
         },
