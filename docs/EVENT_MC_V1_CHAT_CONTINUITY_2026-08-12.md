@@ -1,6 +1,6 @@
 # EVENT MC V1 Chat Continuity / Working Memory
 
-Last updated: 2026-08-13 17:25 America/Chicago
+Last updated: 2026-08-13 19:45 America/Chicago
 Repository: `ChrisEsau/ufc-ai-clv-tracker`
 Branch: `feature/fsr-32-stamina-shadow`
 
@@ -21,12 +21,23 @@ After every new Codex prompt, update this file. This file is continuity only, no
 - Phase 7F submission conversion position neutralization: PASS
 - Phase 7G submission attempt-rate calibration: diagnostic complete; no promotion
 - Phase 7H submission conversion intercept calibration: PASS; intercept promoted to -0.60
-- Phase 7I strike exposure definition + baseline audit: current next phase; measurement only
+- Phase 7I strike exposure definition + baseline audit: PASS
+- Phase 7J global strike-attempt calibration: PASS; distance/clinch clocks promoted to 6.0/3.6
+- Phase 7K global takedown decomposition audit: PASS; measurement only
+- Phase 7L distance takedown-attempt calibration: PASS; DISTANCE TD base promoted 0.10 -> 0.16
+- Phase 7M shared TD-success calibration: authorized/current next phase
 - Age, urgency, real weight-class tuning: not authorized
 
 Frozen FSR-32 SHA-256: `621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a`
 
 ## Current committed calibration
+- `defaults.distance.strike_attempts_per_30s = 6.0`
+- `defaults.clinch.strike_attempts_per_30s = 3.6`
+- `defaults.ground.strike_attempts_per_30s = 1.6`
+- strike accuracies distance/clinch/ground = 0.40/0.68/0.70
+- `defaults.distance.td_attempt_base_30s = 0.16`
+- `defaults.clinch.td_attempt_base_30s = 0.24`
+- `defaults.distance.td_success_logit_offset = -0.40`
 - `defaults.knockdown.midpoint_impact_ratio = 36.0`
 - `defaults.finish.midpoint_impact_ratio = 36.0`
 - `defaults.submission_attempts.base_30s = 0.045`
@@ -104,17 +115,6 @@ The frozen FSR-32 release asset was restored only after its SHA-256 matched `621
 If the ignored local FSR-32 parquet is missing in a future Codex sandbox, do not search indefinitely and do not rebuild it. Recover it from GitHub Release tag `event-mc-v1-fsr32-handoff`, asset `fsr_32_prefight_snapshots.parquet`. Preferred command is `gh release download event-mc-v1-fsr32-handoff --repo ChrisEsau/ufc-ai-clv-tracker --pattern 'fsr_32_prefight_snapshots.parquet' --dir /tmp/event_mc_v1_fsr32_handoff`. Verify the downloaded SHA-256 equals exactly `621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a` before use. Then copy byte-for-byte to `data/simulation/rfs_mc_v2_shared_state/fsr_32_shadow/fsr_32_prefight_snapshots.parquet` and verify the destination checksum again. Never rebuild, rewrite, recompress, or commit the parquet. The old release-ingest document's instruction to resume Phase 0 is historical; after recovery, resume whatever current phase is blocked.
 
 ## Phase 7I strike exposure definition + baseline audit
-Phase 7I is measurement-only. No strike-rate or strike-accuracy calibration is authorized yet. Purpose: determine whether EVENT MC modeled `strike`, `clinch_strike`, and `ground_strike` actions are definitionally closest to UFCStats total strikes, significant strikes, or neither before setting historical calibration targets.
-
-Use the same chronological cohorts as Phase 7G/7H: train 100 fights from 2020-01-18 through 2020-07-25; holdout 50 fights from 2025-01-11 through 2025-03-22. Use corrected elapsed fight time and current committed simulator, 10 paths/fight, seed 20260813.
-
-Required historical measurements: total-strike and significant-strike attempts/fight, landed/fight, attempts/15min, landed/15min, and landing percentage; plus distance/clinch/ground significant-strike composition where available. Required simulated measurements: all modeled and distance/clinch/ground attempts/path, landed/path, attempts/15min, landed/15min, landing percentage, and phase shares. Inspect strike code semantics end to end and cite exact files/functions. Compare EVENT MC against both historical total and significant strikes before recommending the primary historical comparator for attempt generation and landing probability.
-
-Required conclusion: whether modeled strikes correspond best to total strikes, significant strikes, or neither; whether the answer differs by phase; whether low strike exposure and low accuracy remain real after semantic reconciliation; and whether the mismatch is mainly attempt frequency, phase composition, landing probability, field-definition mismatch, or a combination. Report KO/SUB/DEC, KD, and timing guardrails only. Do not tune anything. No YAML changes, mechanics changes, FSR changes, RNG changes, or promotions are authorized.
-
-Expected return: `PHASE 7I STRIKE EXPOSURE DEFINITION BASELINE AUDIT GATE: PASS` or FAIL.
-
-### Phase 7I result
 Phase 7I completed as measurement-only; no YAML or mechanics changed. The modeled strike is a meaningful offensive strike opportunity: every scheduled event is one attempt, every landed attempt enters impact physiology, and there is no low-impact/non-significant or target-location family. UFCStats significant strikes are therefore the recommended primary comparator for both attempt generation and landing probability; total strikes remain a secondary upper-bound diagnostic. Train modeled versus significant attempts/15 were 199.31/238.17 and landed/15 were 88.34/114.79; holdout values were 198.63/256.59 and 93.41/121.77. Overall landing accuracy was much closer: train 44.32%/48.20%, holdout 47.03%/47.46%. The remaining discrepancy is primarily attempt exposure and phase composition (too little clinch, too much distance), with a secondary train landing gap and a major field-definition mismatch if total strikes are used. Phase 7H remains PASS; intercept -0.60, position-neutral submission locks, and KD/finish midpoints 36 remain fixed. Gate: PASS.
 
 ## Phase 7J global strike-attempt calibration
@@ -139,3 +139,20 @@ Phase 7L reproduced the Phase 7K historical anchors exactly before candidate eva
 The promoted compromise is 0.16. It produced train 5.426 attempts/path and 6.634/15min versus historical 5.190 and 6.169, and holdout 5.150/path and 6.558/15min versus historical 6.220 and 7.282. Candidate 0.14 fit train closely but left holdout materially low; 0.18 fit holdout per-time exposure but overran train. At 0.16, DISTANCE/CLINCH attempts were 4.420/1.006 per train path and 4.294/0.856 per holdout path. Attempt shares were 81.46%/18.54% train and 83.38%/16.62% holdout.
 
 As anticipated, frozen elevated success conversion caused completions to overshoot: train 2.165/path, 2.647/15min, 39.90% success versus historical 1.810, 2.151, 34.87%; holdout 2.110/path, 2.687/15min, 40.97% versus historical 1.880, 2.201, 30.23%. No compensation was made. Only the DISTANCE attempt base changed 0.10 to 0.16. CLINCH base remains 0.24, TD success offset remains -0.40, and wrestling ontology, FSR, strikes, submissions, phases, stamina, damage, KD/finish, judging, RNG, and overrides remain frozen. The next TD phase should revalidate and calibrate shared success conversion, not retune attempts simultaneously. Gate: PASS.
+
+At the promoted 0.16 state, downstream strike exposure was approximately 221.25 significant-comparator attempts/15 train and 219.20 holdout versus historical 238.17 and 256.59. This interaction is not grounds to retune strike clocks yet because the currently excessive TD success rate sends too much residence to GROUND; lowering conversion may restore standing time and strike exposure.
+
+## Phase 7M shared takedown-success calibration authorization
+Phase 7M is authorized to search and, only if supported on both temporal splits, promote **one parameter only**: `defaults.distance.td_success_logit_offset`, current `-0.40`. DISTANCE TD attempt base 0.16 and CLINCH TD attempt base 0.24 are frozen.
+
+Use train 100 fights (2020-01-18 through 2020-07-25), holdout 50 fights (2025-01-11 through 2025-03-22), seed 20260813, common deterministic seeds, and the authoritative round-level `td_attempted` / `td_landed` historical source with corrected elapsed exposure. Before calibration reproduce and fail-closed validate the exact Phase 7K historical TD anchors.
+
+Coarse TD-success offset grid: `-0.40, -0.55, -0.70, -0.85, -1.00` at 3 paths/fight. Choose a small adjacent finalist set, allowing intermediate values around the supported region, then rerun finalists at 10 paths/fight. Primary targets are TD success %, completed TD/15, and completed TD/path/fight. TD attempts/15 and attempts/path are hard guardrails and must remain materially improved relative to the pre-7L state. Do not jointly retune TD attempts.
+
+For every finalist decompose DISTANCE and CLINCH attempts, completions, success rates, shares, residence, submissions, strikes, outcomes, KD, and timing. Explicitly measure whether reduced TD conversion returns residence to standing phases and improves significant-strike exposure without changing strike clocks.
+
+**User-required Phase 7M deliverable:** after the final promoted candidate (or final no-promotion state), print a complete historical-vs-EVENT-MC global metrics comparison for TRAIN and HOLDOUT separately. Use readable tables with historical, MC, absolute difference, relative difference %, and percentage-point difference for shares/rates where appropriate. Include every historically comparable global metric currently available from the Phase 7 measurement stack, at minimum: fight duration/timing; KO/SUB/DEC; significant strike attempts and landed per fight/path and /15; overall significant-strike accuracy; distance/clinch/ground significant-strike attempts/15, landed/15, accuracy, attempt shares and landed shares where available; TD attempts/completions per fight/path and /15, success %, activity shares, zero/multi-attempt shares, quartiles; KD/path or fight, KD/15 and KD/100 comparable landed; submission attempts/path/fight and /15, path/fight attempt share where available and P(SUB|attempt); phase residence/control where historically supported. Simulator-only residence diagnostics must still be printed and clearly labeled MC-only. Missing historical comparators must be labeled unavailable rather than fabricated. Also print the complete current calibration values. Save the same comparison into the diagnostic JSON/report, not only terminal output.
+
+Promotion allowed only if the same practical TD-success-offset region materially improves success and completions on both temporal splits without destroying TD attempt exposure or causing major downstream instability. If promoted, YAML may change only `defaults.distance.td_success_logit_offset`; otherwise YAML remains unchanged. All strikes, TD attempt clocks, wrestling ontology, FSR, submission parameters, stamina, damage, KD/finish, phases, judging, RNG, age, urgency, WC overrides, and round-specific calibration are frozen.
+
+Expected final line: `PHASE 7M SHARED TAKEDOWN SUCCESS CALIBRATION GATE: PASS` or FAIL.
