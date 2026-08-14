@@ -1,6 +1,6 @@
 # EVENT MC V1 Chat Continuity / Working Memory
 
-Last updated: 2026-08-13 22:22 America/Chicago
+Last updated: 2026-08-14 00:04 America/Chicago
 Repository: `ChrisEsau/ufc-ai-clv-tracker`
 Branch: `feature/fsr-32-stamina-shadow`
 
@@ -123,3 +123,181 @@ The audit must prove target-fight prefight FSR snapshot identity/chronology, tra
 Required root-cause classifications are CONFIRMED DEFECT / STRONG EVIDENCE / POSSIBLE CONTRIBUTOR / NOT SUPPORTED for stale/wrong FSR selection, leakage, missing age wiring, inverted trait direction, missing/unused traits, wrong stamina mapping, insufficient stamina effects, over-amplified transforms, dominant wrong-way FSR families, judging/finish direction defects, and any newly discovered cause. The audit must recommend exactly one next action and make no promotion or tuning.
 
 Expected final line: `EVENT MC V1 WINNER DISCRIMINATION AUDIT: PASS` or FAIL.
+
+## 2026-08-14 night handoff — striking volume vs phase preference split
+
+### Why this became the next priority
+Fresh-100 winner discrimination materially failed while aggregate method/environment calibration remained much healthier. A focused 10-fight audit of wrong decision predictions then compared historical UFCStats components against EVENT MC decision-path averages. The strongest directional failure was significant-strike generation, while wrestling/control direction was much healthier:
+
+- significant-strike attempt leader correct in only about 3/10 fights;
+- significant-strike landed leader correct in only about 4/10;
+- takedown-attempt and takedown-landed direction about 8/10;
+- control-time direction about 9/10;
+- grappling magnitude/persistence was still too weak even when direction was correct.
+
+This separated the current diagnosis into at least three distinct systems: striking matchup direction, grappling magnitude/persistence, and uncalibrated judging. Do not collapse them into one tuning problem.
+
+### Same 10 diagnostic fights
+1. Raul Rosas Jr. vs Vince Morales
+2. Christian Rodriguez vs Melquizael Costa
+3. Rafa Garcia vs Vinc Pichel
+4. Pat Sabatini vs Joanderson Brito
+5. Loma Lookboonmee vs Istela Nunes
+6. Yan Xiaonan vs Virna Jandiroba
+7. Jim Miller vs Chase Hooper
+8. Giga Chikadze vs David Onama
+9. Ian Machado Garry vs Carlos Prates
+10. Michel Pereira vs Abus Magomedov
+
+### Key actual-vs-MC striking examples
+- Rosas/Morales actual sig attempts/landed favored Rosas modestly, but EVENT MC generated a very large Morales volume edge.
+- Miller/Hooper actual favored Hooper in attempts and landings, while EVENT MC flipped the striking edge toward Miller.
+- Giga/Onama actual Onama landed more, while EVENT MC gave Giga a large striking edge.
+- Garry/Prates actual Garry dominated volume and landings, while EVENT MC reversed both attempt and landed direction.
+- Pereira/Abus actual Pereira attempted more while Abus landed slightly more; EVENT MC reversed the important volume relationship.
+
+### FSR prefight values for the same 10
+The frozen prefight rows showed that `distance_striking_pressure` often favored the fighter that EVENT MC then over-generated. Important examples:
+
+- Rosas 46.7237 vs Morales 55.6049
+- Rodriguez 46.9386 vs Costa 50.0992
+- Garcia 50.4945 vs Pichel 47.5205
+- Sabatini 42.9876 vs Brito 45.6007
+- Loma 44.7043 vs Nunes 51.4956
+- Yan 54.5340 vs Virna 49.0565
+- Miller 48.3523 vs Hooper 47.3430
+- Giga 54.3194 vs Onama 53.1367
+- Garry 49.5819 vs Prates 52.4409
+- Pereira 49.6113 vs Abus 52.1915
+
+These values by themselves should not yet be called defective. They are persistent historical ratings, not direct matchup predictions. The critical question became whether EVENT MC is using them for the wrong semantic job.
+
+### Canonical `distance_striking_pressure` definition — confirmed
+Canonical builder:
+`scripts/experimental/build_fsr_canonical_database.py`
+
+The canonical builder imports:
+`scripts/experimental/fsr_distance_striking_pressure_v1.py`
+
+That module defines pressure as:
+
+- 60% percentile of `distance_attempts_per_round`
+- 40% percentile of `distance_attempt_share`
+
+Source columns:
+
+- `rfs_phase_base_fight_distance_attempts_per_round`
+- `rfs_phase_base_fight_distance_attempt_share`
+- `rfs_phase_interact_fight_distance_attempts` only for observation quality/update exposure
+
+The persistent Elo-style update starts at 50, rating scale 12, initial K 7, decaying K with update count, and quality approximately `1 - exp(-distance_attempts / 10)`. Same-date updates are simultaneous and population pools are prior-date only.
+
+Semantic conclusion: the trait is not pure combat-pressure/forward-pressure. It mixes two concepts:
+
+1. distance striking volume/activity;
+2. distance phase/style share.
+
+The 40% distance-attempt-share component is explicitly phase/style composition, not absolute output.
+
+### EVENT MC consumer — confirmed coupling defect/ontology problem
+Relevant file:
+`pipeline/simulation/event_mc_v1/components/formulas.py`
+
+EVENT MC currently maps `distance_striking_pressure` directly into intrinsic DISTANCE strike-attempt intensity:
+
+`expected_per_30s = 6.0 * exp((distance_striking_pressure - 50.0) / 12.0)`
+
+Then:
+
+`rate_per_second = expected_per_30s / 30.0`
+
+The opponent is not involved in this intrinsic distance-strike rate. Stamina/output modifiers are applied afterward.
+
+This mapping is very aggressive. Approximate intrinsic attempts/30s are:
+
+- rating 40 -> 2.61
+- rating 45 -> 3.96
+- rating 50 -> 6.00
+- rating 55 -> 9.10
+- rating 60 -> 13.81
+
+Therefore a 45-vs-55 rating difference creates roughly a 2.3x rate difference; 40-vs-60 creates more than a 5x difference.
+
+For Rosas/Morales specifically, 46.72 vs 55.60 implies roughly 4.57 vs 9.57 intrinsic distance attempts per 30s, about a 2.1x Morales rate before fight dynamics. This closely explains the large simulated Morales strike-volume edge.
+
+The same `distance_striking_pressure` is also consumed inside `style_preferences()`, together with clinch pressure, wrestling entry, and control. It therefore affects transition/phase behavior as well as strike attempt rate. This means one FSR trait currently does two fundamentally different jobs.
+
+### Agreed ontology change — do not implement blindly yet
+Chris and ChatGPT agreed that EVENT MC needs **separate phase preference and action volume** concepts.
+
+Target conceptual structure:
+
+**Phase preference / phase-seeking behavior**
+- answers: where does this fighter try to make the fight happen?
+- should influence transitions and phase residence;
+- examples: distance preference, clinch preference, wrestling/ground-seeking preference;
+- should not directly determine how quickly strikes occur once the fighter is in that phase.
+
+**Action volume / activity intensity**
+- answers: once in a phase, how frequently does this fighter act?
+- examples: distance striking volume, clinch striking volume, ground striking volume, takedown-attempt volume, submission-attempt volume;
+- should drive event rates conditional on being in the relevant phase.
+
+**Efficiency / success traits** remain separate:
+- striking precision vs opponent defense;
+- wrestling conversion vs TD defense;
+- submission conversion vs submission resistance;
+- etc.
+
+A fighter must be able to have high distance preference but low distance strike volume, or moderate distance preference and high volume. The current ontology cannot represent those separately.
+
+### Important data limitation
+UFCStats does not provide trustworthy phase-time denominators for distance/clinch/ground. Therefore `distance_attempts_per_round` is not a pure conditional attempts-per-minute-while-at-distance measure; it still confounds phase occupancy and action rate. Do not pretend otherwise or fabricate phase-time denominators.
+
+### Exact next step for the next chat/session
+Do **not** immediately tune `rating_scale`, change YAML, or rewrite the FSR. First perform an ontology/source audit across all three phases.
+
+Inspect and document the underlying RFS definitions for:
+
+- `distance_attempt_share`
+- `distance_attempts_per_round`
+- the equivalent clinch pressure/activity inputs
+- the equivalent ground pressure/activity inputs
+- any existing phase-control / phase-imposition / phase-mix / opponent-suppression features that may be better suited to pure phase preference
+
+Specifically inspect:
+
+- `pipeline/round_stats/build_round_fighter_phase_baseline.py`
+- `pipeline/round_stats/build_round_fighter_phase_interaction.py`
+- related RFS feature contracts/ontology files
+- `scripts/experimental/fsr_clinch_striking_v1.py`
+- `scripts/experimental/fsr_ground_striking_v1.py`
+- `scripts/experimental/fsr_distance_striking_pressure_v1.py`
+- Event MC `style_preferences()` and all phase transition consumers
+- Event MC phase-specific strike-rate consumers
+
+Then propose a consistent three-phase ontology that separates:
+
+1. **phase preference / phase imposition**;
+2. **conditional action intensity / volume**;
+3. **accuracy/conversion/defense**.
+
+The proposal must explicitly state what can be measured directly from existing UFCStats/RFS data, what is only a proxy, and where lack of phase-time exposure prevents a pure estimate.
+
+After defining that ontology, run a measurement-only historical predictive calibration for the proposed volume signal(s): bucket or regress leakage-safe prefight signal against **future out-of-sample next-fight strike attempts**, so we learn the actual mapping from fighter rating/signal to future attempt volume instead of assuming the current exponential `exp((rating-50)/12)` transformation.
+
+Only after those two steps should we authorize an Event MC implementation/A-B change.
+
+### Current working hypothesis
+The main striking failure may not be that the stored FSR rating is numerically bad. The stronger hypothesis is that a mixed historical activity/style rating is being interpreted by Event MC as both:
+
+- a direct exponential physical strike-rate multiplier; and
+- a phase-preference/transition input.
+
+That coupling can amplify modest rating differences into large simulated volume gaps and can make the same historical evidence count twice. Treat this as the leading striking-generation root-cause hypothesis until the next ontology/source audit either confirms or rejects it.
+
+### Do not lose these parallel unresolved items
+- Judge weights are hand-picked and remain uncalibrated; judge calibration is still required, but it will not fix upstream generated-performance reversals by itself.
+- Grappling direction looked comparatively strong in the 10-fight audit, but TD completions, control persistence, and submission attempts were often too weak in magnitude.
+- Do not modify frozen FSR-32, rebuild the canonical artifact, or globally retune current calibration before completing the phase-preference/volume separation audit.
+- Keep the simulator modular: phase selection and action intensity should remain independently replaceable/tunable.
