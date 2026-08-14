@@ -170,3 +170,18 @@ Classify historically comparable metric errors as CLOSE <=5%, MODERATE >5-10%, M
 Rank remaining global mismatches by magnitude, temporal consistency, upstream leverage, comparator quality, and risk of undoing good global outcomes. Phase 7N must end with exactly one readiness decision: `GLOBAL ENVIRONMENT READY FOR ROUND-SPECIFIC VALIDATION: YES` or `NO`. If YES, recommend the first R1/R2/R3 validation family. If NO, name exactly one next global subsystem/mechanism to investigate, but do not calibrate it in Phase 7N. No YAML, mechanics, FSR, RNG, or calibration changes are authorized.
 
 Expected final gate: `PHASE 7N GLOBAL COUPLED RE-AUDIT GATE: PASS` or FAIL.
+
+## Phase 7N global coupled re-audit result
+Phase 7N completed as a measurement-only audit of the fully coupled post-7M simulator. The diagnostic reproduced the fail-closed historical TD and significant-strike anchors, ran 10 paths per fight with seed 20260813, printed and saved the complete historical-versus-EVENT-MC comparison, classified every comparable metric, and made no YAML, mechanics, FSR, or RNG change.
+
+Train remained close on aggregate timing and outcomes: mean duration was 747.46 seconds versus 757.16 historical; KO/TKO, SUB, and DEC were 24.2%, 16.4%, and 59.4% versus 25.0%, 17.0%, and 58.0%. Significant-strike attempts/15 were 230.71 versus 238.17, landed/15 were 105.14 versus 114.79, and accuracy was 45.57% versus 48.20%. TD attempts/15 were 7.186 versus 6.169, completions/15 were 2.179 versus 2.151, and success was 30.33% versus 34.87%. KD/15 was 0.399 versus 0.440, while submission attempts/15 were 0.513 versus 0.725.
+
+Holdout outcomes remained broadly aligned, but exposure and timing residuals were larger: mean duration was 706.71 seconds versus 768.78 historical and mean nondecision finish time was 355.74 versus 484.30. KO/TKO, SUB, and DEC were 26.8%, 20.4%, and 52.8% versus 28.0%, 18.0%, and 54.0%. Significant-strike attempts/15 were 228.83 versus 256.59, landed/15 were 109.64 versus 121.77, and accuracy was 47.91% versus 47.46%. TD attempts/15 were 7.093 versus 7.282, completions/15 were 2.272 versus 2.201, and success was 32.03% versus 30.23%. KD/15 was 0.326 versus 0.468, while submission attempts/15 were 0.606 versus 0.562.
+
+The coupled evidence does not support another immediate TD-success adjustment: TD completion exposure is close on both splits and remaining success residuals point in opposite directions. Outcome shares are also broadly close. The most consistent upstream residual is significant-strike attempt generation and phase composition: aggregate train exposure is close, holdout exposure remains material, and modeled ground strike exposure is low on both splits. Historical phase-residence comparators remain unavailable and were labeled rather than fabricated.
+
+`GLOBAL ENVIRONMENT READY FOR ROUND-SPECIFIC VALIDATION: NO`
+
+Exactly one next global subsystem is recommended: **significant-strike attempt generation and phase composition**. The first follow-up should measure and sensitize DISTANCE-versus-CLINCH strike opportunity allocation without changing calibration until separately authorized.
+
+Current locks remain strike clocks 6.0/3.6/1.6, accuracies 0.40/0.68/0.70, TD attempt bases 0.16/0.24, shared TD success offset -0.85, submission attempt base 0.045, bottom multiplier 1.0, conversion intercept -0.60, position bonuses 0/0, and KD/finish midpoints 36/36. Gate: PASS.
