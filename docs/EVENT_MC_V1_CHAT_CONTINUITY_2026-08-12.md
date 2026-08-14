@@ -1,6 +1,6 @@
 # EVENT MC V1 Chat Continuity / Working Memory
 
-Last updated: 2026-08-13 17:25 America/Chicago
+Last updated: 2026-08-13 18:57 America/Chicago
 Repository: `ChrisEsau/ufc-ai-clv-tracker`
 Branch: `feature/fsr-32-stamina-shadow`
 
@@ -21,12 +21,20 @@ After every new Codex prompt, update this file. This file is continuity only, no
 - Phase 7F submission conversion position neutralization: PASS
 - Phase 7G submission attempt-rate calibration: diagnostic complete; no promotion
 - Phase 7H submission conversion intercept calibration: PASS; intercept promoted to -0.60
-- Phase 7I strike exposure definition + baseline audit: current next phase; measurement only
+- Phase 7I strike exposure definition + baseline audit: PASS
+- Phase 7J global strike-attempt calibration: PASS; distance 6.0, clinch 3.6 promoted
+- Phase 7K global takedown decomposition audit: current next phase; measurement only
 - Age, urgency, real weight-class tuning: not authorized
 
 Frozen FSR-32 SHA-256: `621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a`
 
 ## Current committed calibration
+- `defaults.distance.strike_attempts_per_30s = 6.0`
+- `defaults.clinch.strike_attempts_per_30s = 3.6`
+- `defaults.ground.strike_attempts_per_30s = 1.6`
+- `defaults.distance.strike_accuracy = 0.40`
+- `defaults.clinch.strike_accuracy = 0.68`
+- `defaults.ground.strike_accuracy = 0.70`
 - `defaults.knockdown.midpoint_impact_ratio = 36.0`
 - `defaults.finish.midpoint_impact_ratio = 36.0`
 - `defaults.submission_attempts.base_30s = 0.045`
@@ -123,3 +131,14 @@ Phase 7J used UFCStats significant-strike attempts as the primary comparator and
 The 10-path finalist comparison promoted distance `6.0` and clinch `3.6`. Versus historical significant attempts/15 of 238.17 train and 256.59 holdout, the promoted candidate produced 237.82 and 232.99; the committed baseline produced 199.31 and 198.63. Train distance/clinch/ground attempt shares moved from 91.97/2.75/5.28% to 89.57/6.24/4.19% versus historical 86.32/6.94/6.74%. Holdout moved from 92.38/2.21/5.41% to 90.18/5.33/4.49% versus historical 89.83/4.91/5.26%. The intermediate distance `6.25` candidate improved holdout global exposure but overran train and further reduced ground share, so `6.0/3.6` was preferred as the stable temporal compromise.
 
 Only `defaults.distance.strike_attempts_per_30s` changed from 5.0 to 6.0 and `defaults.clinch.strike_attempts_per_30s` changed from 1.2 to 3.6. Ground strike rate remains 1.6; distance/clinch/ground accuracies remain 0.40/0.68/0.70. Submission attempt base remains 0.045, bottom multiplier 1.0, submission intercept -0.60, position bonuses 0.0/0.0, and KD/finish midpoints remain 36. Round-specific RFS validation and all downstream recalibration are deferred. Gate: PASS.
+
+## Phase 7K global takedown decomposition audit
+Phase 7K is measurement-only. Use the canonical RFS/UFCStats round-level historical data to measure aggregate takedown attempts and completions on the same chronological train/holdout cohorts before changing any takedown parameter. Do not assume historical column names; inspect the round-level source and reuse existing historical aggregation helpers where trustworthy.
+
+Historical metrics required on both splits: combined-fighter TD attempts/fight, TD landed/fight, attempts/15 observed minutes, landed/15 observed minutes, success percentage, fight share with at least one TD attempt, and fight share with at least one completed TD. Use corrected total elapsed fight exposure. Simulator metrics must report the same totals plus distance-entry and clinch-entry TD attempts, completions, and success rates separately as model diagnostics. Historical UFCStats TDs need not be artificially split by entry source if the source does not contain that distinction.
+
+Also report global guardrails with the current committed simulator at 10 paths/fight and seed 20260813: significant-strike attempts/15 and phase shares, landed/15 and accuracy, ground and clinch residence, submission attempts/path and SUB share, KO/SUB/DEC, KD/15, mean fight duration, and mean nondecision finish time. Explicitly conclude whether the takedown mismatch is mainly attempt generation, success conversion, both, or neither; whether train and holdout agree; whether the model-side discrepancy appears concentrated in distance-entry or clinch-entry TDs; and which one subsystem should be calibrated first if calibration is warranted.
+
+No YAML or mechanics changes are authorized. Freeze distance/clinch/ground strike clocks at 6.0/3.6/1.6, strike accuracies at 0.40/0.68/0.70, submission attempt base 0.045, bottom multiplier 1.0, submission intercept -0.60, position bonuses 0.0/0.0, KD midpoint 36, finish midpoint 36, stamina, damage, phase residence, judging, RNG, FSR, age, urgency, and weight-class overrides. Round-specific R1/R2/R3 calibration remains deferred until global rates are reasonably aligned.
+
+Expected return: `PHASE 7K GLOBAL TAKEDOWN DECOMPOSITION AUDIT GATE: PASS` or FAIL.
