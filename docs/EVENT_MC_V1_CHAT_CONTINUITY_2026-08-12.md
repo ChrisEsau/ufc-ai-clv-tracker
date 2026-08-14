@@ -1,6 +1,6 @@
 # EVENT MC V1 Chat Continuity / Working Memory
 
-Last updated: 2026-08-13 19:45 America/Chicago
+Last updated: 2026-08-13 20:30 America/Chicago
 Repository: `ChrisEsau/ufc-ai-clv-tracker`
 Branch: `feature/fsr-32-stamina-shadow`
 
@@ -25,7 +25,8 @@ After every new Codex prompt, update this file. This file is continuity only, no
 - Phase 7J global strike-attempt calibration: PASS; distance/clinch clocks promoted to 6.0/3.6
 - Phase 7K global takedown decomposition audit: PASS; measurement only
 - Phase 7L distance takedown-attempt calibration: PASS; DISTANCE TD base promoted 0.10 -> 0.16
-- Phase 7M shared TD-success calibration: authorized/current next phase
+- Phase 7M shared TD-success calibration: PASS; shared TD success offset promoted -0.40 -> -0.85
+- Phase 7N global coupled re-audit: authorized/current next phase; measurement only
 - Age, urgency, real weight-class tuning: not authorized
 
 Frozen FSR-32 SHA-256: `621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac0543230f3a`
@@ -37,7 +38,7 @@ Frozen FSR-32 SHA-256: `621cf4f389a150f8164678b4952b50d725b2be233c329448bb5dac05
 - strike accuracies distance/clinch/ground = 0.40/0.68/0.70
 - `defaults.distance.td_attempt_base_30s = 0.16`
 - `defaults.clinch.td_attempt_base_30s = 0.24`
-- `defaults.distance.td_success_logit_offset = -0.40`
+- `defaults.distance.td_success_logit_offset = -0.85`
 - `defaults.knockdown.midpoint_impact_ratio = 36.0`
 - `defaults.finish.midpoint_impact_ratio = 36.0`
 - `defaults.submission_attempts.base_30s = 0.045`
@@ -143,19 +144,9 @@ As anticipated, frozen elevated success conversion caused completions to oversho
 At the promoted 0.16 state, downstream strike exposure was approximately 221.25 significant-comparator attempts/15 train and 219.20 holdout versus historical 238.17 and 256.59. This interaction is not grounds to retune strike clocks yet because the currently excessive TD success rate sends too much residence to GROUND; lowering conversion may restore standing time and strike exposure.
 
 ## Phase 7M shared takedown-success calibration authorization
-Phase 7M is authorized to search and, only if supported on both temporal splits, promote **one parameter only**: `defaults.distance.td_success_logit_offset`, current `-0.40`. DISTANCE TD attempt base 0.16 and CLINCH TD attempt base 0.24 are frozen.
+Phase 7M was authorized to search and promote one parameter only: `defaults.distance.td_success_logit_offset`, starting from `-0.40`, with DISTANCE TD attempt base 0.16 and CLINCH TD attempt base 0.24 frozen.
 
-Use train 100 fights (2020-01-18 through 2020-07-25), holdout 50 fights (2025-01-11 through 2025-03-22), seed 20260813, common deterministic seeds, and the authoritative round-level `td_attempted` / `td_landed` historical source with corrected elapsed exposure. Before calibration reproduce and fail-closed validate the exact Phase 7K historical TD anchors.
-
-Coarse TD-success offset grid: `-0.40, -0.55, -0.70, -0.85, -1.00` at 3 paths/fight. Choose a small adjacent finalist set, allowing intermediate values around the supported region, then rerun finalists at 10 paths/fight. Primary targets are TD success %, completed TD/15, and completed TD/path/fight. TD attempts/15 and attempts/path are hard guardrails and must remain materially improved relative to the pre-7L state. Do not jointly retune TD attempts.
-
-For every finalist decompose DISTANCE and CLINCH attempts, completions, success rates, shares, residence, submissions, strikes, outcomes, KD, and timing. Explicitly measure whether reduced TD conversion returns residence to standing phases and improves significant-strike exposure without changing strike clocks.
-
-**User-required Phase 7M deliverable:** after the final promoted candidate (or final no-promotion state), print a complete historical-vs-EVENT-MC global metrics comparison for TRAIN and HOLDOUT separately. Use readable tables with historical, MC, absolute difference, relative difference %, and percentage-point difference for shares/rates where appropriate. Include every historically comparable global metric currently available from the Phase 7 measurement stack, at minimum: fight duration/timing; KO/SUB/DEC; significant strike attempts and landed per fight/path and /15; overall significant-strike accuracy; distance/clinch/ground significant-strike attempts/15, landed/15, accuracy, attempt shares and landed shares where available; TD attempts/completions per fight/path and /15, success %, activity shares, zero/multi-attempt shares, quartiles; KD/path or fight, KD/15 and KD/100 comparable landed; submission attempts/path/fight and /15, path/fight attempt share where available and P(SUB|attempt); phase residence/control where historically supported. Simulator-only residence diagnostics must still be printed and clearly labeled MC-only. Missing historical comparators must be labeled unavailable rather than fabricated. Also print the complete current calibration values. Save the same comparison into the diagnostic JSON/report, not only terminal output.
-
-Promotion allowed only if the same practical TD-success-offset region materially improves success and completions on both temporal splits without destroying TD attempt exposure or causing major downstream instability. If promoted, YAML may change only `defaults.distance.td_success_logit_offset`; otherwise YAML remains unchanged. All strikes, TD attempt clocks, wrestling ontology, FSR, submission parameters, stamina, damage, KD/finish, phases, judging, RNG, age, urgency, WC overrides, and round-specific calibration are frozen.
-
-Expected final line: `PHASE 7M SHARED TAKEDOWN SUCCESS CALIBRATION GATE: PASS` or FAIL.
+Coarse TD-success offset grid was `-0.40, -0.55, -0.70, -0.85, -1.00` at 3 paths/fight. Finalists were rerun at 10 paths/fight. Primary targets were TD success %, completed TD/15, and completed TD/path/fight, with TD attempts as hard guardrails. Full strike/residence/submission/outcome/KD/timing interactions and a complete historical-vs-MC global report were required.
 
 ### Phase 7M result
 Phase 7M reproduced the fail-closed historical TD anchors exactly and searched only the shared `defaults.distance.td_success_logit_offset`. The 3-path coarse grid was `-0.40,-0.55,-0.70,-0.85,-1.00`; both temporal splits supported the `-0.70` to `-0.85` region. Ten-path finalists were `-0.70,-0.775,-0.85`. Offset `-0.85` was promoted because completed TD exposure was closest on both splits while attempt bases remained frozen: train completion was 2.179/15min versus 2.151 historical, and holdout was 2.272 versus 2.201. Success became 30.33% train versus 34.87% historical and 32.03% holdout versus 30.23%; `-0.775` was a more symmetric success compromise but left greater completion overexposure on both splits.
@@ -164,4 +155,18 @@ TD attempt exposure remained acceptable but rose through changed residence/censo
 
 Submission attempts/path fell from 0.493 to 0.426 train and 0.574 to 0.476 holdout as less GROUND residence reduced opportunities; SUB shares moved 18.5% to 16.4% and 20.8% to 20.4%. KO/TKO/DEC ended at 24.2%/59.4% train and 26.8%/52.8% holdout. KD/path and KD/15 were 0.331/0.399 train and 0.256/0.326 holdout. Mean fight/nondecision time was 747.5/382.4 seconds train and 706.7/355.7 holdout.
 
-The required final global comparison was printed and saved in the Phase 7M JSON for both splits. It contains timing, methods, significant strikes and phase composition, TDs, KDs, submissions, explicit unavailable historical phase-residence labels, semantic caveats, and the complete calibration state. Final locks: strike clocks 6.0/3.6/1.6; accuracies .40/.68/.70; TD attempt bases .16/.24; TD success offset -.85; submission attempt .045, multiplier 1.0, intercept -.60, bonuses 0/0; KD/finish midpoints 36/36. Recommended next phase: re-audit global exposure after the coupled strike/TD changes before any round-specific calibration. Gate: PASS.
+The required final global comparison was printed and saved in the Phase 7M JSON for both splits. It contains timing, methods, significant strikes and phase composition, TDs, KDs, submissions, explicit unavailable historical phase-residence labels, semantic caveats, and the complete calibration state. Final locks: strike clocks 6.0/3.6/1.6; accuracies .40/.68/.70; TD attempt bases .16/.24; TD success offset -.85; submission attempt .045, multiplier 1.0, intercept -.60, bonuses 0/0; KD/finish midpoints 36/36. Gate: PASS.
+
+## Phase 7N global coupled re-audit authorization
+Prompt: `docs/EVENT_MC_V1_CODEX_PHASE7N_GLOBAL_COUPLED_REAUDIT_2026-08-13.md`
+Prompt commit: `6788387ddcf01b7bd0c6ebd6f07a37bc513b98f8`
+
+Phase 7N is measurement-only. Begin immediately on receipt; no confirmation is required. Run the current fully coupled post-7M simulator unchanged at 10 paths/fight on the same 100-fight train and 50-fight holdout cohorts using seed 20260813 and the existing deterministic common-seed scheme. Reproduce/fail-closed validate the established historical TD and significant-strike anchors before simulation.
+
+Print and save a complete historical-vs-current-EVENT-MC global comparison for both temporal splits covering timing, KO/SUB/DEC, significant strikes overall and by phase, TD attempts/completions/success/distributions, KD rate and KD/100 landed with semantic caveat, submissions, MC-only phase residence, and the complete calibration state. Missing historical comparators must be explicitly labeled unavailable and never fabricated.
+
+Classify historically comparable metric errors as CLOSE <=5%, MODERATE >5-10%, MATERIAL >10-20%, LARGE >20%, with percentage-point context for shares/rates. Print a compact MATERIAL/LARGE mismatch list. Diagnose independently: strike attempts, strike accuracy, strike phase mix, TD attempts, TD completion/success, KD, submission attempts, submission conversion/outcomes, KO, decisions, timing, and phase residence/control where supported.
+
+Rank remaining global mismatches by magnitude, temporal consistency, upstream leverage, comparator quality, and risk of undoing good global outcomes. Phase 7N must end with exactly one readiness decision: `GLOBAL ENVIRONMENT READY FOR ROUND-SPECIFIC VALIDATION: YES` or `NO`. If YES, recommend the first R1/R2/R3 validation family. If NO, name exactly one next global subsystem/mechanism to investigate, but do not calibrate it in Phase 7N. No YAML, mechanics, FSR, RNG, or calibration changes are authorized.
+
+Expected final gate: `PHASE 7N GLOBAL COUPLED RE-AUDIT GATE: PASS` or FAIL.
