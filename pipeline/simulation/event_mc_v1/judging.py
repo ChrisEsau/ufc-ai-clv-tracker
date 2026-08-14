@@ -14,6 +14,7 @@ from .submission_finishes import SubmissionFinishOutcome
 OFFENSIVE_INITIATIVE_FAMILIES = frozenset(
     {
         "strike",
+        "standing_strike",
         "takedown",
         "clinch_entry",
         "clinch_strike",

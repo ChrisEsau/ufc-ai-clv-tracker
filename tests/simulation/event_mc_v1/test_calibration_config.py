@@ -67,7 +67,7 @@ def test_loading_config_does_not_consume_numpy_rng():
     assert rng.random() == expected
 
 
-def test_resolved_override_threads_through_distance_clinch_stamina_and_physiology(tmp_path: Path):
+def test_resolved_override_threads_through_standing_stamina_and_physiology(tmp_path: Path):
     document = yaml.safe_load(Path("config/event_mc_v1.yaml").read_text())
     document["weight_classes"] = {"synthetic": {
         "distance": {"strike_attempts_per_30s": 12.0},
@@ -86,7 +86,5 @@ def test_resolved_override_threads_through_distance_clinch_stamina_and_physiolog
         provider = FightFlowRateProvider(profiles, stamina, DynamicModifierProvider(calibration), calibration)
         return {item.candidate.candidate_id: item.rate_per_second for item in provider.candidates(state, context)}
     assert rates(override, FightState())["red_strike"] == 2 * rates(default, FightState())["red_strike"]
-    clinch = FightState(phase=__import__("pipeline.simulation.event_mc_v1.state", fromlist=["Phase"]).Phase.CLINCH, clinch_controller="red")
-    assert rates(override, clinch)["red_clinch_strike"] == 2 * rates(default, clinch)["red_clinch_strike"]
     assert StaminaModel(profiles, calibration=override).action_delta(FightState(), Side.RED, "strike").red_stamina < StaminaModel(profiles, calibration=default).action_delta(FightState(), Side.RED, "strike").red_stamina
     assert ImpactTraumaKnockdownModel(profiles, override).calibration.section("damage")["impact_scale"] == 1.0

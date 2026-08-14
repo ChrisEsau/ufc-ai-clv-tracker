@@ -82,7 +82,7 @@ def test_full_stamina_provider_exactly_recovers_phase3_rates_and_exits_stay_pass
     context = FightContext(FightConfig(), 0, 1)
     legacy = FightFlowRateProvider(profiles)
     active = FightFlowRateProvider(profiles, StaminaModel(profiles), DynamicModifierProvider())
-    for state in (FightState(), FightState(phase=Phase.CLINCH, clinch_controller="red"), FightState(phase=Phase.GROUND, ground_controller="red")):
+    for state in (FightState(), FightState(phase=Phase.GROUND, ground_controller="red")):
         old = {x.candidate.candidate_id: x.rate_per_second for x in legacy.candidates(state, context)}
         new = {x.candidate.candidate_id: x.rate_per_second for x in active.candidates(state, context)}
         assert new == old

@@ -48,16 +48,16 @@ class StaminaModel:
 
     def positional_delta(self, state: FightState, dt_seconds: float) -> StateDelta:
         """Apply V3.2 sustained controller/resistance costs over exact engine dt."""
-        if not self.enabled or state.phase is Phase.DISTANCE:
+        if not self.enabled or state.phase is Phase.STANDING:
             return StateDelta()
-        controller_value = state.clinch_controller if state.phase is Phase.CLINCH else state.ground_controller
+        controller_value = state.ground_controller
         if controller_value is None:
             return StateDelta()
         controller = Side(controller_value)
         bottom = controller.opponent
         config = self.calibration.section("stamina")
         controller_rate = config["controller_cost_per_second"]
-        resistance_rate = config["clinch_resistance_cost_per_second"] if state.phase is Phase.CLINCH else config["ground_resistance_cost_per_second"]
+        resistance_rate = config["ground_resistance_cost_per_second"]
         return self._two_side_cost_delta(state, controller, controller_rate * dt_seconds, bottom, resistance_rate * dt_seconds)
 
     def _two_side_cost_delta(self, state, first, first_cost, second, second_cost):

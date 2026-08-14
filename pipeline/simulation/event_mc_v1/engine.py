@@ -105,7 +105,7 @@ class SimulationEngine:
             self._apply_delta(
                 state,
                 StateDelta(
-                    phase=Phase.DISTANCE,
+                    phase=Phase.STANDING,
                     set_ground_controller=True,
                     set_clinch_controller=True,
                 ),
@@ -154,7 +154,7 @@ class SimulationEngine:
                 self._apply_delta(
                     state,
                     StateDelta(
-                        phase=Phase.DISTANCE,
+                        phase=Phase.STANDING,
                         set_ground_controller=True,
                         set_clinch_controller=True,
                         red_stamina=recovery_delta.red_stamina,

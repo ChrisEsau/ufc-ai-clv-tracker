@@ -35,7 +35,7 @@ def test_provider_exposes_exactly_six_distance_candidates_and_audits() -> None:
         "red_clinch_entry", "blue_clinch_entry",
     }
     assert len(provider.audit_rows()) == 6
-    state.phase = Phase.CLINCH
+    state.phase = Phase.GROUND
     assert provider.candidates(state, context) == ()
 
 

@@ -21,6 +21,7 @@ class ActionAttempt:
     action_family: str
     dynamic_modifiers: DynamicModifiers | None = None
     landed: bool | None = None
+    target: str | None = None
 
 
 @dataclass(frozen=True)

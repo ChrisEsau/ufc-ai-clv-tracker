@@ -3,14 +3,16 @@
 from pathlib import Path
 import pandas as pd
 from pipeline.common.paths import FSR_V2_HISTORY_DIR
+from pipeline.fsr_v2.traits.registry import resolve_groups
 
 KEYS = ["event_date", "fight_id", "fighter_id", "fighter_name", "opponent_id", "opponent_name"]
 
 
 def load_histories(history_dir: Path = FSR_V2_HISTORY_DIR) -> pd.DataFrame:
-    paths = sorted(history_dir.glob("*.parquet"))
-    if not paths:
-        raise FileNotFoundError(f"No FSR V2 histories found in {history_dir}")
+    paths = [history_dir / f"{group.name}.parquet" for group in resolve_groups(None)]
+    missing = [str(path) for path in paths if not path.is_file()]
+    if missing:
+        raise FileNotFoundError("Missing required core FSR V2 histories: " + ", ".join(missing))
     return pd.concat([pd.read_parquet(path) for path in paths], ignore_index=True)
 
 

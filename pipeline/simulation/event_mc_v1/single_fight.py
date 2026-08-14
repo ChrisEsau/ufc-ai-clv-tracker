@@ -12,7 +12,8 @@ import pandas as pd
 from pipeline.common.paths import MASTER_PATH
 
 from .calibration import DEFAULT_RESOLVER
-from .components.action_rates import FightFlowRateProvider
+from .components.action_rates import FightFlowRateProvider, FSRV2ActionRateProvider
+from .components.fsr_v2 import FSRV2FighterInput, FSRV2Matchup
 from .components.actions import ActionAttempt, ActionOutcome
 from .components.profiles import FighterProfile, MatchupProfiles
 from .config import FightConfig
@@ -41,6 +42,18 @@ class HistoricalFight:
     division: str
     rounds: int
     profiles: MatchupProfiles
+    fsr_v2_matchup: FSRV2Matchup | None = None
+
+
+def fight_from_fsr_v2_rows(red_row, blue_row, *, fight_id="fsr-v2-fight",
+                           date="", division="unknown", rounds=3) -> HistoricalFight:
+    """Create an executable fight from two complete canonical FSR V2 rows."""
+    matchup = FSRV2Matchup(FSRV2FighterInput.from_mapping(red_row),
+                           FSRV2FighterInput.from_mapping(blue_row))
+    profiles = matchup.physical_profiles()
+    return HistoricalFight(str(fight_id), str(date), matchup.red.fighter_name,
+                           matchup.blue.fighter_name, str(division), int(rounds),
+                           profiles, matchup)
 
 
 def resolve_fight(fight_id: str) -> HistoricalFight:
@@ -65,14 +78,18 @@ def build_engine(fight: HistoricalFight, seed: int, sink):
     key = fight.division if fight.division in DEFAULT_RESOLVER.weight_classes else None
     calibration = DEFAULT_RESOLVER.for_weight_class(key)
     stamina = StaminaModel(fight.profiles, calibration=calibration)
+    rate_provider = (FSRV2ActionRateProvider(fight.fsr_v2_matchup, fight.profiles, stamina,
+                                             DynamicModifierProvider(calibration))
+                     if fight.fsr_v2_matchup is not None else
+                     FightFlowRateProvider(fight.profiles, stamina, DynamicModifierProvider(calibration), calibration))
     return SimulationEngine(
         FightConfig(fight.rounds),
-        FightFlowRateProvider(fight.profiles, stamina, DynamicModifierProvider(calibration), calibration),
+        rate_provider,
         PhysiologyTimeAdvanceModel(stamina, calibration), RNGManager(seed), sink,
         round_recovery_model=stamina,
         physiology_model=ImpactTraumaKnockdownModel(fight.profiles, calibration),
         finish_model=KOTKOFinishModel(fight.profiles, calibration),
-        submission_finish_model=SubmissionFinishModel(fight.profiles, calibration),
+        submission_finish_model=SubmissionFinishModel(fight.profiles, calibration, fight.fsr_v2_matchup),
         judging_model=DeterministicJudgingModel(calibration),
     ), calibration, key
 

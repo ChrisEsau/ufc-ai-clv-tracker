@@ -8,6 +8,7 @@ import numpy as np
 from .calibration import DEFAULT_CALIBRATION, EventMCCalibration
 from .components.actions import ActionAttempt
 from .components.profiles import MatchupProfiles, Side
+from .components.fsr_v2 import FSRV2Matchup
 from .events import ConsequenceEvent
 from .state import StateDelta
 
@@ -29,13 +30,18 @@ class SubmissionFinishOutcome:
 class SubmissionFinishModel:
     profiles: MatchupProfiles
     calibration: EventMCCalibration = DEFAULT_CALIBRATION
+    fsr_v2_matchup: FSRV2Matchup | None = None
 
     def probability(self, state, attacker_side: Side) -> tuple[float, float, float, str, float]:
         c = self.calibration.section("submission_finish")
         attacker = self.profiles.fighter(attacker_side)
         defender = self.profiles.fighter(attacker_side.opponent)
-        threat = c["threat_conversion_weight"] * attacker.submission_conversion + c["threat_pressure_weight"] * attacker.submission_pressure
-        resistance = c["resistance_submission_weight"] * defender.submission_resistance + c["resistance_control_weight"] * defender.control_resistance
+        if self.fsr_v2_matchup is not None:
+            threat = self.fsr_v2_matchup.fighter(attacker_side).submission_offense * c["rating_scale"]
+            resistance = self.fsr_v2_matchup.fighter(attacker_side.opponent).submission_defense * c["rating_scale"]
+        else:
+            threat = c["threat_conversion_weight"] * attacker.submission_conversion + c["threat_pressure_weight"] * attacker.submission_pressure
+            resistance = c["resistance_submission_weight"] * defender.submission_resistance + c["resistance_control_weight"] * defender.control_resistance
         position = "top" if state.ground_controller == attacker_side.value else "bottom"
         position_term = c[f"{position}_position_bonus"]
         attacker_stamina = getattr(state, f"{attacker_side.value}_stamina")

@@ -13,7 +13,7 @@ from .submission_finishes import SubmissionFinishOutcome
 class FlowStatsSink:
     attempts: dict[str, dict[str, int]] = field(default_factory=lambda: {"red": {}, "blue": {}})
     outcomes: dict[str, dict[str, int]] = field(default_factory=lambda: {"red": {}, "blue": {}})
-    phase_seconds: dict[str, float] = field(default_factory=lambda: {"distance": 0.0, "clinch": 0.0, "ground": 0.0})
+    phase_seconds: dict[str, float] = field(default_factory=lambda: {"standing": 0.0, "ground": 0.0})
     clinch_control_seconds: dict[str, float] = field(default_factory=lambda: {"red": 0.0, "blue": 0.0})
     ground_control_seconds: dict[str, float] = field(default_factory=lambda: {"red": 0.0, "blue": 0.0})
     transitions: list[dict[str, object]] = field(default_factory=list)
