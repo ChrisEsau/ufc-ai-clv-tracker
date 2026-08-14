@@ -51,7 +51,7 @@ def test_phase7k_keeps_all_calibration_locks():
     assert DEFAULT_CALIBRATION.section("distance")["strike_attempts_per_30s"] == 6.0
     assert DEFAULT_CALIBRATION.section("clinch")["strike_attempts_per_30s"] == 3.6
     assert DEFAULT_CALIBRATION.section("ground")["strike_attempts_per_30s"] == 1.6
-    assert DEFAULT_CALIBRATION.section("distance")["td_attempt_base_30s"] == 0.10
+    assert DEFAULT_CALIBRATION.section("distance")["td_attempt_base_30s"] == 0.16
     assert DEFAULT_CALIBRATION.section("clinch")["td_attempt_base_30s"] == 0.24
     assert DEFAULT_CALIBRATION.section("distance")["td_success_logit_offset"] == -0.40
     assert DEFAULT_CALIBRATION.section("submission_attempts")["base_30s"] == 0.045

@@ -11,7 +11,8 @@ import pandas as pd
 from pipeline.common.paths import ROUND_STATS_PATH
 
 from ..flow_stats import FlowStatsSink
-from ..single_fight import build_engine
+from ..calibration import DEFAULT_CALIBRATION, EventMCCalibration
+from .phase7b_kd_calibration import engine_for
 from .phase7b_kd_calibration import temporal_cohorts
 from .population_validation import METHODS, _fight, observed_duration_seconds
 
@@ -66,14 +67,21 @@ def historical_takedowns(cohort: pd.DataFrame, rounds: pd.DataFrame) -> dict:
     }
 
 
-def modeled_takedowns(cohort: pd.DataFrame, fsr: pd.DataFrame, paths: int, seed: int) -> dict:
+def modeled_takedowns(
+    cohort: pd.DataFrame,
+    fsr: pd.DataFrame,
+    paths: int,
+    seed: int,
+    calibration: EventMCCalibration = DEFAULT_CALIBRATION,
+) -> dict:
     rows = []
     for fight_index, (_, historical) in enumerate(cohort.iterrows()):
         fight = _fight(historical, fsr)
         for path_index in range(paths):
-            result = build_engine(
-                fight, seed + fight_index * 100000 + path_index, FlowStatsSink()
-            )[0].run()
+            result = engine_for(
+                fight, seed + fight_index * 100000 + path_index,
+                FlowStatsSink(), calibration,
+            ).run()
             stats = result.sink_result
             attempts = {
                 source: sum(stats["attempts"][side].get(family, 0) for side in ("red", "blue"))
@@ -102,6 +110,7 @@ def modeled_takedowns(cohort: pd.DataFrame, fsr: pd.DataFrame, paths: int, seed:
                 "kds": sum(int(item.knockdown) for item in stats["physiology"]),
                 "ground_seconds": stats["phase_seconds"]["ground"],
                 "clinch_seconds": stats["phase_seconds"]["clinch"],
+                "distance_seconds": stats["phase_seconds"]["distance"],
                 "sub_attempts": sub_attempts,
                 "sub_finishes": sum(int(item.finished) for item in stats["submission_checks"]),
             })
@@ -133,7 +142,12 @@ def modeled_takedowns(cohort: pd.DataFrame, fsr: pd.DataFrame, paths: int, seed:
         "paths": int(len(frame)), "paths_per_fight": paths, "exposure_seconds": exposure,
         "total": {**metrics(total_attempts, total_landed),
                   "paths_with_attempt_share": float((total_attempts >= 1).mean()),
-                  "paths_with_landed_share": float((total_landed >= 1).mean())},
+                  "paths_with_landed_share": float((total_landed >= 1).mean()),
+                  "zero_attempt_share": float((total_attempts == 0).mean()),
+                  "multi_attempt_share": float((total_attempts >= 2).mean()),
+                  "attempt_quantiles": {
+                      str(q): float(total_attempts.quantile(q)) for q in (.25, .5, .75)
+                  }},
         "entry_source": {
             "distance": metrics(frame.distance_attempts, frame.distance_landed),
             "clinch": metrics(frame.clinch_attempts, frame.clinch_landed),
@@ -150,6 +164,7 @@ def modeled_takedowns(cohort: pd.DataFrame, fsr: pd.DataFrame, paths: int, seed:
             "ground_seconds_per_15min": _ratio(float(frame.ground_seconds.sum()) * 900, exposure),
             "clinch_seconds_per_path": float(frame.clinch_seconds.mean()),
             "clinch_seconds_per_15min": _ratio(float(frame.clinch_seconds.sum()) * 900, exposure),
+            "distance_seconds_per_path": float(frame.distance_seconds.mean()),
             "submission_attempts_per_path": float(frame.sub_attempts.mean()),
             "submission_attempts_per_15min": _ratio(submissions * 900, exposure),
             "p_sub_given_attempt": _ratio(float(frame.sub_finishes.sum()), submissions),

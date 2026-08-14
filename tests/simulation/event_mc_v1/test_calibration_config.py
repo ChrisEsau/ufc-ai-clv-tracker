@@ -26,7 +26,7 @@ def test_yaml_defaults_are_active_values():
     distance = DEFAULT_CALIBRATION.section("distance")
     assert distance["strike_attempts_per_30s"] == DISTANCE_STRIKE_ATTEMPTS_PER_30S_BASE == 6.0
     assert distance["strike_accuracy"] == DISTANCE_STRIKE_ACCURACY_BASE == 0.40
-    assert distance["td_attempt_base_30s"] == DISTANCE_TD_ATTEMPT_BASE_30S == 0.10
+    assert distance["td_attempt_base_30s"] == DISTANCE_TD_ATTEMPT_BASE_30S == 0.16
     submission = DEFAULT_CALIBRATION.section("submission_attempts")
     assert submission == {
         "base_30s": 0.045,
