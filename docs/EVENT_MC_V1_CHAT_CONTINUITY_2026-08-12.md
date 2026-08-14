@@ -1,11 +1,13 @@
 # EVENT MC V1 Chat Continuity / Working Memory
 
-Last updated: 2026-08-14 00:04 America/Chicago
+Last updated: 2026-08-14 04:12 America/Chicago
 Repository: `ChrisEsau/ufc-ai-clv-tracker`
 Branch: `feature/fsr-32-stamina-shadow`
 
 ## Update rule
 After every new Codex prompt, update this file. This file is continuity only, not architecture source of truth.
+
+Terminology note: Chris will refer to this file as the **chat md** going forward.
 
 ## Current gate state
 - Phase 0 through Phase 5A: PASS
@@ -205,7 +207,7 @@ Relevant file:
 
 EVENT MC currently maps `distance_striking_pressure` directly into intrinsic DISTANCE strike-attempt intensity:
 
-`expected_per_30s = 6.0 * exp((distance_striking_pressure - 50.0) / 12.0)`
+`expected_per_30s = 6.0 * exp(clip(distance_striking_pressure - 50.0, -8.0, 8.0) / 12.0)`
 
 Then:
 
@@ -213,17 +215,7 @@ Then:
 
 The opponent is not involved in this intrinsic distance-strike rate. Stamina/output modifiers are applied afterward.
 
-This mapping is very aggressive. Approximate intrinsic attempts/30s are:
-
-- rating 40 -> 2.61
-- rating 45 -> 3.96
-- rating 50 -> 6.00
-- rating 55 -> 9.10
-- rating 60 -> 13.81
-
-Therefore a 45-vs-55 rating difference creates roughly a 2.3x rate difference; 40-vs-60 creates more than a 5x difference.
-
-For Rosas/Morales specifically, 46.72 vs 55.60 implies roughly 4.57 vs 9.57 intrinsic distance attempts per 30s, about a 2.1x Morales rate before fight dynamics. This closely explains the large simulated Morales strike-volume edge.
+Current shared config uses `modifier_clip = 8.0`, so the exponential modifier saturates outside ratings 42 to 58. Within that band, a 45-vs-55 difference still creates roughly a 2.3x rate ratio. For Rosas/Morales specifically, 46.72 vs 55.60 implies roughly 4.57 vs 9.57 intrinsic distance attempts per 30s, about a 2.1x Morales rate before fight dynamics. This closely explains the large simulated Morales strike-volume edge.
 
 The same `distance_striking_pressure` is also consumed inside `style_preferences()`, together with clinch pressure, wrestling entry, and control. It therefore affects transition/phase behavior as well as strike attempt rate. This means one FSR trait currently does two fundamentally different jobs.
 
@@ -301,3 +293,119 @@ That coupling can amplify modest rating differences into large simulated volume 
 - Grappling direction looked comparatively strong in the 10-fight audit, but TD completions, control persistence, and submission attempts were often too weak in magnitude.
 - Do not modify frozen FSR-32, rebuild the canonical artifact, or globally retune current calibration before completing the phase-preference/volume separation audit.
 - Keep the simulator modular: phase selection and action intensity should remain independently replaceable/tunable.
+
+## 2026-08-14 follow-up — global striking volume + phase preference diagnostic
+
+### Artifact path clarification
+The old `data/features/round_fighter_state_history.parquet` currently has only 93 columns and does not contain the enriched Phase Baseline / Phase Interaction observation columns required for this audit. The enriched historical artifact used for the measurement diagnostic is:
+
+`data/simulation/rfs_mc_v2_shared_state/historical_fighter_state.parquet`
+
+It contains the Phase Baseline and Phase Interaction evidence, including distance/clinch/ground attempts-per-round and attempt-share fields. A KD-resistance study parquet also contains them, but that study artifact was not used for the decomposition diagnostic.
+
+### Three-phase ontology audit result
+Distance, clinch, and ground `*_striking_pressure` are all built with the same structure:
+
+- 60% percentile of phase significant-strike attempts per observed round;
+- 40% percentile of that phase's share of all significant-strike attempts.
+
+Therefore all three current pressure traits mix overall striking activity with phase/style allocation. The observed quantities are also algebraically related:
+
+`phase_attempts_per_round = sig_attempts_per_round * phase_attempt_share`
+
+This means the two pressure inputs are not independent pieces of evidence.
+
+### Historical decomposition diagnostic
+Using 13,354 to 13,390 fighter-fight observations from `historical_fighter_state.parquet`:
+
+Phase share vs attempts per observed round Spearman correlations:
+- DISTANCE: 0.4191
+- CLINCH: 0.9113
+- GROUND: 0.9719
+
+OLS R2 of attempts-per-round explained by phase share alone:
+- DISTANCE: 0.2211
+- CLINCH: 0.5331
+- GROUND: 0.6394
+
+Adding simple access/context proxies barely changed these values:
+- DISTANCE + TD attempts/round: 0.2212
+- CLINCH + control/round: 0.5337
+- GROUND + TD attempts/round + control/round: 0.6411
+
+Residual activity persistence using prior EWM to next fight:
+- DISTANCE: 0.2459
+- CLINCH: 0.1927
+- GROUND: 0.1446
+
+The residual activity signals were strongly correlated across phases:
+- distance vs clinch residual: 0.699
+- distance vs ground residual: 0.508
+- clinch vs ground residual: 0.612
+
+Interpretation: the residual appears to contain a substantial common fighter-level striking-activity component rather than three cleanly independent phase-specific activity traits.
+
+### Direct test of proposed decomposition
+Proposed structure tested:
+
+`predicted phase volume = prior global significant-strike attempts/round * prior phase attempt share`
+
+Global significant-strike volume itself was persistent:
+- prior EWM global sig attempts/round -> next-fight global sig attempts/round Spearman = 0.2982, n=11,204.
+
+Phase-preference persistence:
+- DISTANCE share: 0.2303
+- CLINCH share: 0.2215
+- GROUND share: 0.1444
+
+Next-fight phase-volume prediction:
+
+DISTANCE:
+- prior raw phase volume: 0.3328
+- global volume x phase share: 0.3326
+- current FSR pressure: 0.2654
+
+CLINCH:
+- prior raw phase volume: 0.2110
+- global volume x phase share: 0.2036
+- current FSR pressure: 0.1583
+
+GROUND:
+- prior raw phase volume: 0.1235
+- global volume x phase share: 0.1188
+- current FSR pressure: 0.0962
+
+Scaled MAE also modestly favored the proposed decomposition over current FSR pressure in all three phases.
+
+### Interpretation / leading design
+This is strong evidence that a cleaner ontology can separate activity from style without materially losing next-fight predictive information.
+
+Leading design is now:
+
+1. **Global striking volume / activity** — how busy the fighter generally is; drives strike-event clocks.
+2. **Phase preference / phase allocation** — where the fighter tends to operate or where his offense is allocated; should influence phase transitions/residence or phase-specific allocation, not directly set strike cadence.
+3. **Efficiency / defense** — precision, defense, wrestling conversion/TD defense, submission conversion/resistance remain separate.
+4. **Dynamic state** — stamina, damage, recovery, etc. remain path-state modifiers.
+
+Do not create three new independent `distance_striking_volume`, `clinch_striking_volume`, and `ground_striking_volume` ratings by simply residualizing the old data. The cross-phase residual correlations suggest starting with one global striking-volume trait, with phase-specific population baselines and separate phase preference. Phase-specific fighter pace modifiers can be added later only if replay proves independent predictive value.
+
+### Same-10-fight implications
+The proposed decomposition fixes some, but not all, wrong striking directions:
+
+- Giga/Onama: current pressure slightly favors Giga (54.32 vs 53.14), while proposed prior distance volume favors Onama (46.25 vs 40.44), which is directionally more sensible relative to the actual fight.
+- Garry/Prates: proposed prior distance volume still slightly favors Prates (31.04 vs 26.64); Garry's actual output surge was outside both fighters' historical expectations, so this miss is not solved by the ontology change alone.
+- Rosas/Morales: proposed prior distance volume still strongly favors Morales (38.05 vs 9.20); Rosas' route must therefore come from phase change/wrestling/grappling suppression rather than pretending he is the historically busier distance striker.
+- Loma/Nunes: proposed prior distance volume still favors Nunes (29.00 vs 15.66); Loma's winning route similarly depends more on phase change/wrestling than on baseline distance volume.
+
+This reinforces that not every wrong prediction has the same root cause. Striking-volume ontology, phase-transition/wrestling suppression, grappling magnitude/persistence, and judge calibration remain distinct workstreams.
+
+### Exact next step
+Do not implement the new striking-volume trait in EVENT MC yet. Next define the **phase-preference side** carefully, especially because `ground_attempt_share` cannot be treated as pure ground-seeking preference. Determine what combination of strike phase shares, takedown-entry tendencies, control/imposition evidence, and opponent-adjusted phase interaction should represent:
+
+- distance preference;
+- clinch preference;
+- wrestling / ground-seeking preference.
+
+The phase-preference representation must have a clear simulator job: affect phase selection / transition hazards / residence, while global striking volume affects strike-event cadence. Preserve efficiency traits separately.
+
+After phase-preference ontology is defined and measured, authorize a controlled Event MC A/B implementation rather than globally retuning the existing pressure transform.
