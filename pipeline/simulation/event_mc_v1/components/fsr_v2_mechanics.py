@@ -7,9 +7,14 @@ def effective_rate(tendency: float, suppression: float) -> float:
     return max(0.0, tendency - suppression)
 
 
-def matchup_probability(baseline: float, offense: float, defense: float) -> float:
+def matchup_probability(
+    baseline: float,
+    offense: float,
+    defense: float,
+    logit_offset: float = 0.0,
+) -> float:
     baseline = min(max(baseline, 1e-6), 1.0 - 1e-6)
-    value = log(baseline / (1.0 - baseline)) + offense - defense
+    value = log(baseline / (1.0 - baseline)) + offense - defense + logit_offset
     return 1.0 / (1.0 + exp(-max(-40.0, min(40.0, value))))
 
 

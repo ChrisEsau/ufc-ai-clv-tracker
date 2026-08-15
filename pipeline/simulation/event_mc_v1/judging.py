@@ -67,15 +67,25 @@ class DeterministicJudgingModel:
             and isinstance(event.payload, ActionAttempt)
             and event.payload.action_family in OFFENSIVE_INITIATIVE_FAMILIES
         ):
-            self.evidence.aggression[event.payload.side.value] += c["aggression_attempt_weight"]
+            side = event.payload.side.value
+            self.evidence.aggression[side] += c["aggression_attempt_weight"]
+
+            # Historical decision calibration:
+            # a submission attempt is itself observable scoring evidence.
+            if event.payload.action_family == "submission_attempt":
+                self.evidence.grappling[side] += c["submission_attempt_weight"]
         if not isinstance(event, ConsequenceEvent):
             return
         payload = event.payload
         if isinstance(payload, PhysiologyOutcome):
+            # Do NOT score hidden physical impact directly.
+            # Historical decision calibration supports observable knockdowns.
             side = payload.attacker.value
-            self.evidence.striking[side] += c["impact_weight"] * payload.impact + c["knockdown_weight"] * payload.knockdown
+            self.evidence.striking[side] += c["knockdown_weight"] * payload.knockdown
         elif isinstance(payload, SubmissionFinishOutcome):
-            self.evidence.grappling[payload.attacker.value] += c["submission_threat_weight"] * payload.finish_probability
+            # Submission attempts are scored when attempted above.
+            # Do not additionally score hidden finish probability.
+            pass
         elif isinstance(payload, ActionOutcome):
             side = payload.side.value
             if payload.outcome in {"landed", "reversed"}:
@@ -89,8 +99,29 @@ class DeterministicJudgingModel:
 
     def score_round(self, round_number, judging_rng) -> RoundScore:
         c = self.calibration.section("judging")
-        red_primary = self.evidence.striking["red"] + self.evidence.grappling["red"]
-        blue_primary = self.evidence.striking["blue"] + self.evidence.grappling["blue"]
+        # Judging V2 historical calibration.
+        #
+        # Approximate historical decision value, normalized to one landed
+        # significant strike:
+        #   landed strike      = 1.000000
+        #   knockdown          = 10.080282
+        #   takedown landed    = 2.021731
+        #   control second     = 0.048904
+        #   submission attempt = 2.854417
+        #
+        # Striking/grappling buckets already contain the weighted observable
+        # events. Control is now continuous primary scoring evidence rather
+        # than a late tiebreaker.
+        red_primary = (
+            self.evidence.striking["red"]
+            + self.evidence.grappling["red"]
+            + c["control_weight_per_second"] * self.evidence.control["red"]
+        )
+        blue_primary = (
+            self.evidence.striking["blue"]
+            + self.evidence.grappling["blue"]
+            + c["control_weight_per_second"] * self.evidence.control["blue"]
+        )
         diff = red_primary - blue_primary
         if abs(diff) > c["primary_close_band"]:
             winner, criterion = (Side.RED if diff > 0 else Side.BLUE), "PRIMARY"

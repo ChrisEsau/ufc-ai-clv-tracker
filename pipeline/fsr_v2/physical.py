@@ -104,7 +104,7 @@ def build_physical_observations(rounds: pd.DataFrame, master: pd.DataFrame) -> p
     """Reconstruct the exact old fight-level inputs without persisting RFS."""
     required = {"event_date", "fight_id", "fighter_id", "fighter_name", "opponent_id", "round",
         "kd", "sig_str_landed", "sig_str_attempted", "total_str_landed", "total_str_attempted",
-        "td_attempted", "ctrl_sec", "head_landed", "ground_landed"}
+        "td_landed", "td_attempted", "ctrl_sec", "head_landed", "ground_landed"}
     missing = sorted(required - set(rounds.columns))
     if missing: raise ValueError(f"round stats missing physical source columns: {missing}")
     master_required = {"fight_id", "date", "method", "finish_round", "match_time_sec", "winner_id"}

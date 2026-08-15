@@ -88,7 +88,7 @@ def build_engine(fight: HistoricalFight, seed: int, sink):
     calibration = DEFAULT_RESOLVER.for_weight_class(key)
     stamina = StaminaModel(fight.profiles, calibration=calibration)
     rate_provider = (FSRV2ActionRateProvider(fight.fsr_v2_matchup, fight.profiles, stamina,
-                                             DynamicModifierProvider(calibration))
+                                             DynamicModifierProvider(calibration), calibration)
                      if fight.fsr_v2_matchup is not None else
                      FightFlowRateProvider(fight.profiles, stamina, DynamicModifierProvider(calibration), calibration))
     return SimulationEngine(

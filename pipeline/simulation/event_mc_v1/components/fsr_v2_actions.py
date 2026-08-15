@@ -9,6 +9,7 @@ from ..rng import RNGStream
 from ..state import FightState, Phase, StateDelta
 from ..stamina import StaminaModel
 from ..modifiers import DynamicModifierProvider
+from ..calibration import DEFAULT_CALIBRATION, EventMCCalibration
 from .actions import ActionAttempt, ActionOutcome, _merge_delta
 from .fsr_v2 import FSRV2Matchup
 from .fsr_v2_mechanics import matchup_probability
@@ -23,6 +24,7 @@ class FSRV2Candidate:
     profiles: MatchupProfiles
     stamina_model: StaminaModel | None = None
     modifier_provider: DynamicModifierProvider | None = None
+    calibration: EventMCCalibration = DEFAULT_CALIBRATION
 
     @property
     def candidate_id(self):
@@ -37,12 +39,16 @@ class FSRV2Candidate:
 
     def resolve(self, state: FightState, context: FightContext, rng: np.random.Generator) -> Resolution:
         attacker, defender = self.matchup.fighter(self.side), self.matchup.fighter(self.side.opponent)
+        c = self.calibration.section("fsr_v2_calibration")
         family, landed, target = self.action_family, None, None
         delta, outcome = StateDelta(), "occurred"
         if family == "standing_strike":
             landed = bool(rng.random() < matchup_probability(
                 attacker.standing_accuracy_baseline,
-                attacker.standing_striking_offense, defender.standing_striking_defense))
+                attacker.standing_striking_offense,
+                defender.standing_striking_defense,
+                c["standing_accuracy_logit_offset"],
+            ))
             target = rng.choice(("head", "body", "leg"), p=attacker.standing_target_probabilities()).item()
             outcome = "landed" if landed else "missed"
         elif family == "takedown":
@@ -56,7 +62,10 @@ class FSRV2Candidate:
         elif family == "ground_strike":
             landed = bool(rng.random() < matchup_probability(
                 attacker.ground_accuracy_baseline,
-                attacker.ground_striking_offense, defender.ground_striking_defense))
+                attacker.ground_striking_offense,
+                defender.ground_striking_defense,
+                c["ground_accuracy_logit_offset"],
+            ))
             # Ground damage is intentionally restricted to head/body.
             target = rng.choice(("head", "body")).item()
             outcome = "landed" if landed else "missed"
