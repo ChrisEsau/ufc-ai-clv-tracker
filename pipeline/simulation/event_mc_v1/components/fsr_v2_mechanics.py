@@ -13,7 +13,7 @@ def matchup_probability(baseline: float, offense: float, defense: float) -> floa
     return 1.0 / (1.0 + exp(-max(-40.0, min(40.0, value))))
 
 
-def escape_rate(escape_offense: float, escape_defense: float, baseline_mean: float = 30.0) -> float:
+def escape_rate(escape_offense: float, escape_defense: float, baseline_mean: float) -> float:
     # Ratings are matchup effects; offense shortens and defense lengthens wait.
     mean = baseline_mean * exp(-escape_offense + escape_defense)
     return 1.0 / max(mean, 1e-9)

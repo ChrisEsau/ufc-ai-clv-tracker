@@ -410,6 +410,17 @@ def build_physical_snapshots(
 
     rfs, rounds, master = _normalize_inputs(rfs, rounds, master)
 
+    required = {"fight_id", "fighter_id", "fighter_name", *dynamic.C.values()}
+    required |= set(reservoir.REQUIRED_COLUMNS)
+    missing = sorted(required.difference(rfs.columns))
+    if missing:
+        raise FileNotFoundError(
+            "exact FSR-32 physical replay prerequisites are unavailable: "
+            f"{rfs_path} is missing {len(missing)} frozen dynamic/finish columns. "
+            "Supply the original FSR-32 enriched RFS history; physical values "
+            "must not be approximated. Missing columns: " + ", ".join(missing)
+        )
+
     prefight = _physical_from_prefight_builders(rfs, rounds, master)
     latest = _physical_latest_from_sentinels(rfs, rounds, master)
 

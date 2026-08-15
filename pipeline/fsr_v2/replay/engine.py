@@ -21,10 +21,13 @@ def aggregate_fights(rounds: pd.DataFrame) -> pd.DataFrame:
     sum_columns = [
         "distance_landed", "distance_attempted", "head_attempted", "body_attempted",
         "leg_attempted", "td_landed", "td_attempted", "ctrl_sec", "ground_entries",
-        "ground_side_landed", "ground_side_attempted", "sub_att", "rev",
-        "opponent_distance_attempted", "opponent_td_attempted", "opponent_ctrl_sec",
-        "opponent_ground_entries", "opponent_ground_side_attempted", "opponent_sub_att",
-        "standing_exposure_seconds", "modeled_ground_exposure_seconds",
+        "ground_landed", "ground_attempted", "effective_submission_attempts", "sub_att", "rev",
+        "opponent_distance_attempted", "opponent_td_landed", "opponent_td_attempted", "opponent_ctrl_sec",
+        "opponent_ground_entries", "opponent_ground_attempted",
+        "opponent_effective_submission_attempts", "opponent_sub_att",
+        "standing_exposure_seconds", "td_tendency_exposure_seconds",
+        "td_suppression_exposure_seconds", "modeled_ground_exposure_seconds",
+        "qualified_control_inflicted_seconds", "qualified_control_suffered_seconds",
     ]
     aggregations = {column: "sum" for column in sum_columns}
     aggregations.update({
@@ -34,6 +37,9 @@ def aggregate_fights(rounds: pd.DataFrame) -> pd.DataFrame:
     })
     fights = rounds.groupby(FIGHT_KEYS, as_index=False).agg(aggregations)
     fights["head_body_attempted"] = fights["head_attempted"] + fights["body_attempted"]
+    fights["target_attempted"] = (
+        fights["head_attempted"] + fights["body_attempted"] + fights["leg_attempted"]
+    )
     return fights.sort_values(["event_date", "fight_id", "fighter_id"]).reset_index(drop=True)
 
 
@@ -64,6 +70,8 @@ class ReplayEngine:
             return self._suppression(group, fights)
         if group.kind == "paired":
             return self._paired(group, fights)
+        if group.kind == "takedown":
+            return self._takedown(group, fights)
         if group.kind == "escape":
             return self._escape(group, fights)
         raise ValueError(f"Unsupported replay kind: {group.kind}")
@@ -72,8 +80,9 @@ class ReplayEngine:
         states: dict[str, list[float]] = defaultdict(lambda: [0.0, 0.0])
         population = [0.0, 0.0]
         rows: list[dict] = []
-        prior_weight = (self.config.behavior_prior_seconds if "seconds" in group.denominator
-                        else self.config.behavior_prior_opportunities)
+        prior_weight = (self.config.target_composition_prior_attempts
+                        if group.kind == "composition"
+                        else self.config.behavior_prior_seconds)
         for date, batch in fights.groupby("event_date", sort=True):
             pending: list[tuple[str, float, float]] = []
             global_rate = population[0] / population[1] if population[1] else 0.0
@@ -100,11 +109,23 @@ class ReplayEngine:
                 population[0] += numerator
                 population[1] += denominator
         history = pd.DataFrame(rows)
+        final_rate = population[0] / population[1] if population[1] else 0.0
+        history["latest_rating"] = np.nan
+        for fighter, (numerator, denominator) in states.items():
+            mask = history["fighter_id"].eq(fighter)
+            if mask.any():
+                index = history.index[mask][-1]
+                history.loc[index, "latest_rating"] = (
+                    numerator + final_rate * prior_weight
+                ) / (denominator + prior_weight)
+        history["latest_population_baseline"] = final_rate
         if len(group.traits) == 2:  # complementary head/body histories
             complement = history.copy()
             complement["trait"] = group.traits[1]
             for column in ["pre_rating", "post_rating", "observed"]:
                 complement[column] = 1.0 - complement[column]
+            complement["latest_rating"] = 1.0 - complement["latest_rating"]
+            complement["latest_population_baseline"] = 1.0 - complement["latest_population_baseline"]
             history = pd.concat([history, complement], ignore_index=True)
         return ReplayResult(history, dict(states), {"numerator": population[0], "denominator": population[1]})
 
@@ -164,6 +185,7 @@ class ReplayEngine:
                 update = self.config.elo_k * evidence * (observed - expected) if denominator > 0 else 0.0
                 common = self._row(record, group.traits[0], off_pre, off_pre + update, observed, numerator, denominator)
                 common.update({"opponent_pre_rating": def_pre, "expected": expected, "evidence_strength": evidence, "update": update})
+                common["population_baseline"] = baseline
                 rows.append(common)
                 defense_row = common.copy()
                 defense_row.update({"fighter_id": record["opponent_id"], "fighter_name": record["opponent_name"], "opponent_id": record["fighter_id"], "opponent_name": record["fighter_name"], "trait": group.traits[1], "pre_rating": def_pre, "opponent_pre_rating": off_pre, "post_rating": def_pre - update, "update": -update})
@@ -174,20 +196,127 @@ class ReplayEngine:
                 offense[attacker][0] += update; offense[attacker][1] += denominator
                 defense[defender][0] -= update; defense[defender][1] += denominator
                 population[0] += numerator; population[1] += denominator
-        return ReplayResult(pd.DataFrame(rows), {"offense": dict(offense), "defense": dict(defense)}, {"numerator": population[0], "denominator": population[1]})
+        history = pd.DataFrame(rows)
+        final_baseline = population[0] / population[1] if population[1] else 0.5
+        history["latest_population_baseline"] = final_baseline
+        return ReplayResult(history, {"offense": dict(offense), "defense": dict(defense)}, {"numerator": population[0], "denominator": population[1]})
+
+    def _takedown(self, group: TraitGroup, fights: pd.DataFrame) -> ReplayResult:
+        """Final cumulative, population-centered TD offense/defense model."""
+        offense: dict[str, list[float]] = defaultdict(lambda: [0.0, 0.0])
+        defense: dict[str, list[float]] = defaultdict(lambda: [0.0, 0.0])
+        population = [0.0, 0.0]
+        rows: list[dict] = []
+        prior = self.config.takedown_effectiveness_prior_attempts
+        for _, batch in fights.groupby("event_date", sort=True):
+            baseline = population[0] / population[1] if population[1] else 0.5
+            stop_baseline = 1.0 - baseline
+            pending = []
+            for record in batch.to_dict("records"):
+                landed = float(record["td_landed"])
+                attempted = float(record["td_attempted"])
+                opp_attempted = float(record["opponent_td_attempted"])
+                opp_landed = float(record.get("opponent_td_landed", 0.0))
+                off_landed, off_attempted = offense[record["fighter_id"]]
+                stopped, faced = defense[record["fighter_id"]]
+                off_rate = (off_landed + baseline * prior) / (off_attempted + prior)
+                stop_rate = (stopped + stop_baseline * prior) / (faced + prior)
+                off_pre = _logit(off_rate) - _logit(baseline)
+                def_pre = _logit(stop_rate) - _logit(stop_baseline)
+                off_post = _logit((off_landed + landed + baseline * prior) /
+                                  (off_attempted + attempted + prior)) - _logit(baseline)
+                def_post = _logit((stopped + opp_attempted - opp_landed + stop_baseline * prior) /
+                                  (faced + opp_attempted + prior)) - _logit(stop_baseline)
+                off_row = self._row(record, group.traits[0], off_pre, off_post,
+                                    landed / attempted if attempted else np.nan,
+                                    landed, attempted)
+                off_row["population_baseline"] = baseline
+                rows.append(off_row)
+                def_row = self._row(record, group.traits[1], def_pre, def_post,
+                                    (opp_attempted - opp_landed) / opp_attempted if opp_attempted else np.nan,
+                                    opp_attempted - opp_landed, opp_attempted)
+                def_row["population_baseline"] = stop_baseline
+                rows.append(def_row)
+                pending.append((record["fighter_id"], landed, attempted,
+                                opp_attempted - opp_landed, opp_attempted))
+            for fighter, landed, attempted, stopped, faced in pending:
+                offense[fighter][0] += landed; offense[fighter][1] += attempted
+                defense[fighter][0] += stopped; defense[fighter][1] += faced
+                population[0] += landed; population[1] += attempted
+        final_baseline = population[0] / population[1] if population[1] else 0.5
+        history = pd.DataFrame(rows)
+        history["latest_rating"] = np.nan
+        history["latest_population_baseline"] = np.where(
+            history["trait"].eq(group.traits[0]), final_baseline, 1.0 - final_baseline
+        )
+        for fighter in set(offense) | set(defense):
+            values = {
+                group.traits[0]: _logit((offense[fighter][0] + final_baseline * prior) /
+                                        (offense[fighter][1] + prior)) - _logit(final_baseline),
+                group.traits[1]: _logit((defense[fighter][0] + (1-final_baseline) * prior) /
+                                        (defense[fighter][1] + prior)) - _logit(1-final_baseline),
+            }
+            for trait, value in values.items():
+                mask = history["fighter_id"].eq(fighter) & history["trait"].eq(trait)
+                if mask.any(): history.loc[history.index[mask][-1], "latest_rating"] = value
+        return ReplayResult(history, {"offense": dict(offense), "defense": dict(defense)},
+                            {"numerator": population[0], "denominator": population[1]})
 
     def _escape(self, group: TraitGroup, fights: pd.DataFrame) -> ReplayResult:
-        transformed = fights.copy()
-        entries = transformed[group.denominator].astype(float)
-        duration = transformed[group.numerator].astype(float) / entries.replace(0, np.nan)
-        baseline = float(duration.median()) if duration.notna().any() else 60.0
-        transformed["_escape_score"] = (baseline / (baseline + duration)) * entries
-        transformed["_escape_evidence"] = entries
-        proxy = TraitGroup(group.name, "paired", group.traits, "_escape_score", "_escape_evidence")
-        result = self._paired(proxy, transformed)
-        result.history["control_per_entry_seconds"] = duration.repeat(2).to_numpy()
-        result.history["population_duration_baseline_seconds"] = baseline
-        return result
+        suffered: dict[str, list[float]] = defaultdict(lambda: [0.0, 0.0])
+        inflicted: dict[str, list[float]] = defaultdict(lambda: [0.0, 0.0])
+        population = [0.0, 0.0]
+        rows: list[dict] = []
+        prior = self.config.escape_prior_entries
+        for _, batch in fights.groupby("event_date", sort=True):
+            mu_pop = population[0] / population[1] if population[1] else 60.0
+            pending = []
+            for record in batch.to_dict("records"):
+                suffered_duration = float(record["qualified_control_suffered_seconds"])
+                suffered_entries = float(record["opponent_ground_entries"])
+                inflicted_duration = float(record["qualified_control_inflicted_seconds"])
+                inflicted_entries = float(record["ground_entries"])
+                s_duration, s_entries = suffered[record["fighter_id"]]
+                i_duration, i_entries = inflicted[record["fighter_id"]]
+                mu_suffered = (s_duration + mu_pop * prior) / (s_entries + prior)
+                mu_inflicted = (i_duration + mu_pop * prior) / (i_entries + prior)
+                off = log(mu_pop / mu_suffered)
+                defense = log(mu_inflicted / mu_pop)
+                off_post = log(mu_pop / ((s_duration + suffered_duration + mu_pop * prior) /
+                                         (s_entries + suffered_entries + prior)))
+                def_post = log(((i_duration + inflicted_duration + mu_pop * prior) /
+                                (i_entries + inflicted_entries + prior)) / mu_pop)
+                off_row = self._row(record, group.traits[0], off, off_post,
+                                    suffered_duration / suffered_entries if suffered_entries else np.nan,
+                                    suffered_duration, suffered_entries)
+                def_row = self._row(record, group.traits[1], defense, def_post,
+                                    inflicted_duration / inflicted_entries if inflicted_entries else np.nan,
+                                    inflicted_duration, inflicted_entries)
+                for row in (off_row, def_row):
+                    row["population_duration_baseline_seconds"] = mu_pop
+                    rows.append(row)
+                pending.append((record["fighter_id"], suffered_duration, suffered_entries,
+                                inflicted_duration, inflicted_entries))
+            for fighter, sd, se, iduration, ie in pending:
+                suffered[fighter][0] += sd; suffered[fighter][1] += se
+                inflicted[fighter][0] += iduration; inflicted[fighter][1] += ie
+                population[0] += iduration; population[1] += ie
+        final_mean = population[0] / population[1] if population[1] else 60.0
+        history = pd.DataFrame(rows)
+        history["latest_rating"] = np.nan
+        history["latest_population_duration_baseline_seconds"] = final_mean
+        for fighter in set(suffered) | set(inflicted):
+            latest = {
+                group.traits[0]: log(final_mean / ((suffered[fighter][0] + final_mean * prior) /
+                                                    (suffered[fighter][1] + prior))),
+                group.traits[1]: log(((inflicted[fighter][0] + final_mean * prior) /
+                                      (inflicted[fighter][1] + prior)) / final_mean),
+            }
+            for trait, value in latest.items():
+                mask = history["fighter_id"].eq(fighter) & history["trait"].eq(trait)
+                if mask.any(): history.loc[history.index[mask][-1], "latest_rating"] = value
+        return ReplayResult(history, {"suffered": dict(suffered), "inflicted": dict(inflicted)},
+                            {"duration": population[0], "entries": population[1]})
 
     @staticmethod
     def _row(record: dict, trait: str, pre: float, post: float, observed: float, numerator: float, denominator: float) -> dict:

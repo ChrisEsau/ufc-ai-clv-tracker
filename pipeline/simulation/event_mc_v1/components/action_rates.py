@@ -210,5 +210,6 @@ class FSRV2ActionRateProvider:
                     effective_rate(tendency, suppression) * self._output(state, side)))
         bottom_fighter, top_fighter = self.matchup.fighter(bottom), self.matchup.fighter(top)
         output.append(EventRate(self._candidate(bottom, "ground_escape"),
-            escape_rate(bottom_fighter.escape_offense, top_fighter.escape_defense)))
+            escape_rate(bottom_fighter.escape_offense, top_fighter.escape_defense,
+                        bottom_fighter.escape_population_mean_seconds)))
         return tuple(output)

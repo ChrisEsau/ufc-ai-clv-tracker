@@ -93,33 +93,66 @@ def build_paired_rounds(
     paired["standing_exposure_seconds"] = (
         paired["round_elapsed_seconds"] - paired["ground_exposure_seconds"]
     )
-    paired["ground_side_attempted"] = paired["ground_attempted"] + paired["clinch_attempted"]
-    paired["ground_side_landed"] = paired["ground_landed"] + paired["clinch_landed"]
+    paired["td_tendency_exposure_seconds"] = (
+        paired["round_elapsed_seconds"] - paired["opponent_ctrl_sec"]
+    ).clip(lower=0)
+    paired["td_suppression_exposure_seconds"] = (
+        paired["round_elapsed_seconds"] - paired["ctrl_sec"]
+    ).clip(lower=0)
+    paired["submission_finish"] = (
+        paired["method"].str.contains("Submission", case=False, na=False)
+        & paired["fighter_id"].eq(paired["winner_id"])
+    )
+    paired["opponent_submission_finish"] = (
+        paired["method"].str.contains("Submission", case=False, na=False)
+        & paired["opponent_id"].eq(paired["winner_id"])
+    )
+    paired["effective_submission_attempts"] = np.maximum(
+        paired["sub_att"], paired["submission_finish"].astype(int)
+    )
+    paired["opponent_effective_submission_attempts"] = np.maximum(
+        paired["opponent_sub_att"], paired["opponent_submission_finish"].astype(int)
+    )
+    # Qualification is shared by both reciprocal rows.  Control alone is not
+    # evidence of ground position because UFCStats control includes clinch.
+    paired["explicit_true_ground_evidence"] = (
+        (paired["td_landed"] > 0) | (paired["opponent_td_landed"] > 0)
+        | (paired["ground_attempted"] > 0) | (paired["opponent_ground_attempted"] > 0)
+        | (paired["sub_att"] > 0) | (paired["opponent_sub_att"] > 0)
+        | (paired["rev"] > 0) | (paired["opponent_rev"] > 0)
+    )
+    paired["explicit_true_ground_activity"] = (
+        (paired["ground_attempted"] > 0) | (paired["opponent_ground_attempted"] > 0)
+        | (paired["sub_att"] > 0) | (paired["opponent_sub_att"] > 0)
+        | (paired["rev"] > 0) | (paired["opponent_rev"] > 0)
+    )
+    paired["qualified_control_inflicted_seconds"] = np.where(
+        paired["explicit_true_ground_evidence"], paired["ctrl_sec"], 0.0
+    )
+    paired["qualified_control_suffered_seconds"] = np.where(
+        paired["explicit_true_ground_evidence"], paired["opponent_ctrl_sec"], 0.0
+    )
     paired["ground_exposure_fallback_used"] = (
         (paired["ground_exposure_seconds"] == 0) &
-        ((paired["ground_side_attempted"] > 0) | (paired["sub_att"] > 0) | (paired["rev"] > 0))
+        paired["explicit_true_ground_activity"]
     )
     paired["modeled_ground_exposure_seconds"] = np.where(
         paired["ground_exposure_fallback_used"],
         config.zero_control_ground_fallback_seconds,
-        paired["ground_exposure_seconds"],
+        np.where(paired["explicit_true_ground_evidence"], paired["ground_exposure_seconds"], 0.0),
     )
     paired["inferred_ground_entry"] = (
-        (paired["ctrl_sec"] >= config.zero_td_control_threshold_seconds) & (paired["td_landed"] == 0)
+        (paired["ctrl_sec"] >= config.zero_td_control_threshold_seconds)
+        & (paired["td_landed"] == 0)
+        & paired["explicit_true_ground_evidence"]
     )
     paired["ground_entries"] = paired["td_landed"] + paired["inferred_ground_entry"].astype(int)
-    paired["opponent_ground_side_attempted"] = (
-        paired["opponent_ground_attempted"] + paired["opponent_clinch_attempted"]
-    )
     paired["opponent_inferred_ground_entry"] = (
         (paired["opponent_ctrl_sec"] >= config.zero_td_control_threshold_seconds)
         & (paired["opponent_td_landed"] == 0)
+        & paired["explicit_true_ground_evidence"]
     )
     paired["opponent_ground_entries"] = (
         paired["opponent_td_landed"] + paired["opponent_inferred_ground_entry"].astype(int)
-    )
-    paired["submission_finish"] = (
-        paired["method"].str.contains("Submission", case=False, na=False)
-        & paired["fighter_id"].eq(paired["winner_id"])
     )
     return paired.sort_values(["event_date", "fight_id", "round", "fighter_id"]).reset_index(drop=True)

@@ -40,17 +40,23 @@ class FSRV2Candidate:
         family, landed, target = self.action_family, None, None
         delta, outcome = StateDelta(), "occurred"
         if family == "standing_strike":
-            landed = bool(rng.random() < matchup_probability(.5, attacker.standing_striking_offense, defender.standing_striking_defense))
+            landed = bool(rng.random() < matchup_probability(
+                attacker.standing_accuracy_baseline,
+                attacker.standing_striking_offense, defender.standing_striking_defense))
             target = rng.choice(("head", "body", "leg"), p=attacker.standing_target_probabilities()).item()
             outcome = "landed" if landed else "missed"
         elif family == "takedown":
-            landed = bool(rng.random() < matchup_probability(.5, attacker.takedown_offense, defender.takedown_defense))
+            landed = bool(rng.random() < matchup_probability(
+                attacker.takedown_completion_baseline,
+                attacker.takedown_offense, defender.takedown_defense))
             outcome = "landed" if landed else "failed"
             if landed:
                 delta = StateDelta(phase=Phase.GROUND, ground_controller=self.side.value,
                                    set_ground_controller=True, set_clinch_controller=True)
         elif family == "ground_strike":
-            landed = bool(rng.random() < matchup_probability(.5, attacker.ground_striking_offense, defender.ground_striking_defense))
+            landed = bool(rng.random() < matchup_probability(
+                attacker.ground_accuracy_baseline,
+                attacker.ground_striking_offense, defender.ground_striking_defense))
             # Ground damage is intentionally restricted to head/body.
             target = rng.choice(("head", "body")).item()
             outcome = "landed" if landed else "missed"

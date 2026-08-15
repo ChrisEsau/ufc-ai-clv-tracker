@@ -18,6 +18,11 @@ FSR_V2_TRAIT_FIELDS = (
     "submission_tendency", "submission_suppression", "submission_offense", "submission_defense",
 )
 FSR_V2_SIMULATOR_FIELDS = (*FSR_V2_TRAIT_FIELDS, *PHYSICAL_COLUMNS)
+FSR_V2_POPULATION_FIELDS = (
+    "standing_accuracy_baseline", "takedown_completion_baseline",
+    "ground_accuracy_baseline", "submission_conversion_baseline",
+    "escape_population_mean_seconds",
+)
 
 
 @dataclass(frozen=True)
@@ -51,16 +56,22 @@ class FSRV2FighterInput:
     striking_power: float
     damage_durability: float
     knockdown_resistance: float
+    standing_accuracy_baseline: float
+    takedown_completion_baseline: float
+    ground_accuracy_baseline: float
+    submission_conversion_baseline: float
+    escape_population_mean_seconds: float
 
     @classmethod
     def from_mapping(cls, row: Mapping[str, object]) -> "FSRV2FighterInput":
-        missing = [name for name in FSR_V2_SIMULATOR_FIELDS if name not in row or row[name] is None]
+        required = (*FSR_V2_SIMULATOR_FIELDS, *FSR_V2_POPULATION_FIELDS)
+        missing = [name for name in required if name not in row or row[name] is None]
         if missing:
             raise ValueError(f"canonical FSR V2 row missing required fields: {missing}")
         fighter_id = str(row.get("fighter_id", "")).strip()
         if not fighter_id:
             raise ValueError("canonical FSR V2 row requires fighter_id")
-        values = {name: float(row[name]) for name in FSR_V2_SIMULATOR_FIELDS}
+        values = {name: float(row[name]) for name in required}
         bad = [name for name, value in values.items() if not isfinite(value)]
         if bad:
             raise ValueError(f"canonical FSR V2 row has non-finite fields: {bad}")
@@ -71,6 +82,11 @@ class FSRV2FighterInput:
                 raise ValueError(f"{name} must be in [0, 1]")
         if abs(values["head_strike_tendency"] + values["body_strike_tendency"] - 1.0) > 1e-9:
             raise ValueError("conditional head/body target probabilities must sum to one")
+        for name in FSR_V2_POPULATION_FIELDS[:-1]:
+            if not 0.0 < values[name] < 1.0:
+                raise ValueError(f"{name} must be in (0, 1)")
+        if values["escape_population_mean_seconds"] <= 0.0:
+            raise ValueError("escape_population_mean_seconds must be positive")
         return cls(fighter_id, str(row.get("fighter_name", fighter_id)), **values)
 
     def standing_target_probabilities(self) -> tuple[float, float, float]:

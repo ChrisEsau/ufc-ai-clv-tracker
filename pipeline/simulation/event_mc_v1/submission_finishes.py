@@ -1,7 +1,7 @@
 """Phase 4C probabilistic submission conversion over existing attempts."""
 
 from dataclasses import dataclass
-from math import exp
+from math import exp, log
 
 import numpy as np
 
@@ -37,8 +37,10 @@ class SubmissionFinishModel:
         attacker = self.profiles.fighter(attacker_side)
         defender = self.profiles.fighter(attacker_side.opponent)
         if self.fsr_v2_matchup is not None:
-            threat = self.fsr_v2_matchup.fighter(attacker_side).submission_offense * c["rating_scale"]
-            resistance = self.fsr_v2_matchup.fighter(attacker_side.opponent).submission_defense * c["rating_scale"]
+            # FSR V2 ratings are already unit-scale logit effects.  Multiplying
+            # and then dividing by the legacy scale obscured that invariant.
+            threat = self.fsr_v2_matchup.fighter(attacker_side).submission_offense
+            resistance = self.fsr_v2_matchup.fighter(attacker_side.opponent).submission_defense
         else:
             threat = c["threat_conversion_weight"] * attacker.submission_conversion + c["threat_pressure_weight"] * attacker.submission_pressure
             resistance = c["resistance_submission_weight"] * defender.submission_resistance + c["resistance_control_weight"] * defender.control_resistance
@@ -47,7 +49,14 @@ class SubmissionFinishModel:
         attacker_stamina = getattr(state, f"{attacker_side.value}_stamina")
         defender_stamina = getattr(state, f"{attacker_side.opponent.value}_stamina")
         stamina_term = c["stamina_edge_weight"] * (attacker_stamina - defender_stamina)
-        logit = c["intercept"] + (threat - resistance) / c["rating_scale"] + position_term + stamina_term
+        if self.fsr_v2_matchup is not None:
+            baseline = self.fsr_v2_matchup.fighter(attacker_side).submission_conversion_baseline
+            baseline_logit = log(baseline / (1.0 - baseline))
+            skill_term = threat - resistance
+        else:
+            baseline_logit = 0.0
+            skill_term = (threat - resistance) / c["rating_scale"]
+        logit = c["intercept"] + baseline_logit + skill_term + position_term + stamina_term
         probability = 1.0 / (1.0 + exp(-float(np.clip(logit, -c["logit_clip"], c["logit_clip"]))))
         return probability, threat, resistance, position, stamina_term + position_term
 
