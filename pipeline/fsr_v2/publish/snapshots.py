@@ -41,8 +41,11 @@ def assemble_prefight(histories: pd.DataFrame) -> pd.DataFrame:
 
 
 def assemble_latest(histories: pd.DataFrame) -> pd.DataFrame:
+    # Fighter names can change across UFC history. Stable fighter_id is the
+    # canonical profile key; grouping by the display name produced duplicate
+    # latest rows for renamed fighters.
     latest = histories.sort_values(["event_date", "fight_id"]).groupby(
-        ["fighter_id", "fighter_name", "trait"], as_index=False
+        ["fighter_id", "trait"], as_index=False
     ).tail(1)
     latest = latest.copy()
     if "latest_rating" in latest:
@@ -57,6 +60,6 @@ def assemble_latest(histories: pd.DataFrame) -> pd.DataFrame:
         if source not in latest or not latest["trait"].eq(trait).any():
             continue
         selected = latest.loc[latest["trait"].eq(trait),
-                              ["fighter_id", "fighter_name", source]].rename(columns={source: target})
-        wide = wide.merge(selected, on=["fighter_id", "fighter_name"], how="left", validate="one_to_one")
+                              ["fighter_id", source]].rename(columns={source: target})
+        wide = wide.merge(selected, on=["fighter_id"], how="left", validate="one_to_one")
     return wide.sort_values("fighter_id").reset_index(drop=True)
