@@ -11,13 +11,11 @@ import time
 import numpy as np
 import pandas as pd
 
-from pipeline.common.paths import MASTER_PATH
+from pipeline.common.paths import FSR_V2_PREFIGHT_SNAPSHOTS_PATH, MASTER_PATH
 from pipeline.common.fight_time import elapsed_fight_time_seconds
 
-from ..components.profiles import FighterProfile, MatchupProfiles
 from ..flow_stats import FlowStatsSink
-from ..single_fight import HistoricalFight, build_engine
-from .distance_parity import FSR_32_PATH
+from ..single_fight import build_engine, fight_from_fsr_v2_rows
 
 
 METHODS = ("KO_TKO", "SUB", "DEC")
@@ -49,27 +47,89 @@ def observed_duration_seconds(row, *, match_time_semantics="elapsed") -> float:
     raise ValueError(f"unsupported match_time_semantics: {match_time_semantics}")
 
 
+def _add_prior_ufc_fight_counts(master: pd.DataFrame) -> pd.DataFrame:
+    """Add strictly-prior-date UFC fight counts for both corners.
+
+    Counts are computed before the evaluation-year filter.  All bouts on one
+    event date see the same entering count, so another same-date bout can never
+    become prefight evidence.
+    """
+    completed = master[master["winner"].notna()].copy()
+    completed["event_date"] = pd.to_datetime(completed["date"], errors="raise").dt.normalize()
+    appearances = pd.concat(
+        [completed[["event_date", "r_id"]].rename(columns={"r_id": "fighter_id"}),
+         completed[["event_date", "b_id"]].rename(columns={"b_id": "fighter_id"})],
+        ignore_index=True,
+    ).dropna(subset=["fighter_id"])
+    appearances["fighter_id"] = appearances["fighter_id"].astype(str)
+    by_date = appearances.groupby(["fighter_id", "event_date"], as_index=False).size()
+    by_date = by_date.sort_values(["fighter_id", "event_date"])
+    by_date["prior_ufc_fights"] = (
+        by_date.groupby("fighter_id")["size"].cumsum() - by_date["size"]
+    )
+    counts = by_date[["fighter_id", "event_date", "prior_ufc_fights"]]
+    for corner in ("r", "b"):
+        corner_counts = counts.rename(columns={
+            "fighter_id": f"{corner}_id",
+            "prior_ufc_fights": f"{corner}_prior_ufc_fights",
+        })
+        completed = completed.merge(
+            corner_counts, on=[f"{corner}_id", "event_date"], how="left", validate="many_to_one"
+        )
+    return completed
+
+
 def build_cohort(start_year=2020, limit=None, weight_class=None):
-    master = pd.read_parquet(MASTER_PATH).drop_duplicates("fight_id").copy()
+    master = pd.read_parquet(MASTER_PATH).copy()
+    duplicate_ids = master.loc[master["fight_id"].duplicated(keep=False), "fight_id"]
+    if not duplicate_ids.empty:
+        raise ValueError(f"master fight_id must resolve exactly once: {duplicate_ids.iloc[0]!r}")
+    master = _add_prior_ufc_fight_counts(master)
     master["event_date"] = pd.to_datetime(master["date"])
-    master = master[(master["winner"].notna()) & (master["event_date"].dt.year >= start_year)]
+    master = master[
+        (master["event_date"].dt.year >= start_year)
+        & (master["r_prior_ufc_fights"] >= 3)
+        & (master["b_prior_ufc_fights"] >= 3)
+    ]
     if weight_class:
         master = master[master["division"] == weight_class]
-    fsr = pd.read_parquet(FSR_32_PATH).copy()
-    fsr["event_date"] = pd.to_datetime(fsr["date"])
-    eligible_ids = set(fsr.loc[fsr["prior_ufc_fights"] >= 3].groupby("fight_id").filter(lambda x: len(x) >= 2)["fight_id"].astype(str))
-    master = master[master["fight_id"].astype(str).isin(eligible_ids)].sort_values(["event_date", "fight_id"])
+    fsr = pd.read_parquet(FSR_V2_PREFIGHT_SNAPSHOTS_PATH).copy()
+    fsr["event_date"] = pd.to_datetime(fsr["event_date"], errors="raise").dt.normalize()
+    # The evaluation universe is the canonical prefight publication. Master
+    # fights without an FSR V2 snapshot (for example bouts lacking source round
+    # statistics) are not simulatable cohort candidates. Once selected, corner
+    # resolution remains strict and fails on date/ID omissions or duplicates.
+    canonical_fight_ids = set(fsr["fight_id"].astype(str))
+    master = master[master["fight_id"].astype(str).isin(canonical_fight_ids)]
+    master = master.sort_values(["event_date", "fight_id"])
     if limit:
         master = master.head(limit)
     return master.reset_index(drop=True), fsr
 
 
 def _fight(row, fsr):
-    snapshots = fsr[fsr["fight_id"].astype(str) == str(row["fight_id"])].set_index("fighter_name")
-    def profile(name):
-        values = snapshots.loc[name].to_dict(); values["fighter_name"] = name
-        return FighterProfile.from_mapping(values)
-    return HistoricalFight(str(row["fight_id"]), row["event_date"].date().isoformat(), str(row["r_name"]), str(row["b_name"]), str(row["division"]), int(row["total_rounds"]), MatchupProfiles(profile(row["r_name"]), profile(row["b_name"])))
+    fight_id = str(row["fight_id"])
+    event_date = pd.Timestamp(row["event_date"]).normalize()
+    snapshots = fsr[
+        (fsr["fight_id"].astype(str) == fight_id)
+        & (fsr["event_date"] == event_date)
+    ]
+
+    def exact_fighter(fighter_id, corner):
+        matched = snapshots[snapshots["fighter_id"].astype(str) == str(fighter_id)]
+        if len(matched) != 1:
+            raise ValueError(
+                f"canonical FSR V2 must resolve exactly one {corner} row for "
+                f"fight={fight_id!r}, date={event_date.date()}, fighter_id={fighter_id!r}; "
+                f"found {len(matched)}"
+            )
+        return matched.iloc[0].to_dict()
+
+    return fight_from_fsr_v2_rows(
+        exact_fighter(row["r_id"], "red"), exact_fighter(row["b_id"], "blue"),
+        fight_id=fight_id, date=event_date.date().isoformat(), division=row["division"],
+        rounds=row["total_rounds"],
+    )
 
 
 def simulate_fight(row, fsr, paths, seed):
@@ -84,6 +144,8 @@ def simulate_fight(row, fsr, paths, seed):
     finish_times = [r.state.fight_time_seconds for r in results if r.state.finish_method != "DEC"]
     finish_rounds = Counter(int(max(t - 1e-12, 0) // 300) + 1 for t in finish_times)
     total_exposure = sum(r.state.fight_time_seconds for r in results)
+    standing_seconds = sum(r.sink_result["phase_seconds"]["standing"] for r in results)
+    ground_seconds = sum(r.sink_result["phase_seconds"]["ground"] for r in results)
     actual_red = int(str(row["winner"]) == str(row["r_name"]))
     output = {
         "fight_id": fight.fight_id, "event_date": fight.date, "year": row["event_date"].year,
@@ -98,6 +160,7 @@ def simulate_fight(row, fsr, paths, seed):
         "simulated_total_submission_attempts": int(sum(sub_attempts)),
         "simulated_paths_with_submission_attempt": int(sum(x >= 1 for x in sub_attempts)),
         "simulated_total_path_count": paths,
+        "simulated_standing_seconds": float(standing_seconds), "simulated_ground_seconds": float(ground_seconds),
         "kd_per_path": float(np.mean(kds)), "zero_kd_share": float(np.mean(np.array(kds) == 0)), "multi_kd_share": float(np.mean(np.array(kds) >= 2)),
         "submission_attempts_per_path": float(np.mean(sub_attempts)),
     }
@@ -115,6 +178,10 @@ def simulate_fight(row, fsr, paths, seed):
         output[f"{side}_td_completions"] = float(np.mean([x.get("takedown_landed", 0) + x.get("clinch_takedown_landed", 0) for x in outcomes]))
         output[f"{side}_strike_attempts"] = float(np.mean([sum(v for k, v in x.items() if "strike" in k) for x in attempts]))
         output[f"{side}_strikes_landed"] = float(np.mean([sum(v for k, v in x.items() if "strike_landed" in k) for x in outcomes]))
+    output["simulated_strike_attempts_per_path"] = output["red_strike_attempts"] + output["blue_strike_attempts"]
+    output["simulated_strikes_landed_per_path"] = output["red_strikes_landed"] + output["blue_strikes_landed"]
+    output["simulated_takedown_attempts_per_path"] = output["red_td_attempts"] + output["blue_td_attempts"]
+    output["simulated_takedowns_landed_per_path"] = output["red_td_completions"] + output["blue_td_completions"]
     return output
 
 
@@ -134,6 +201,8 @@ def compute_metrics(rows: pd.DataFrame):
     } if "sim_finish_r1_count" in rows else {}
     total_simulated_kd = rows["simulated_total_kd"].sum() if "simulated_total_kd" in rows else np.nan
     total_simulated_exposure = rows["simulated_total_exposure_seconds"].sum() if "simulated_total_exposure_seconds" in rows else np.nan
+    standing_seconds = rows.get("simulated_standing_seconds", pd.Series(dtype=float)).sum()
+    ground_seconds = rows.get("simulated_ground_seconds", pd.Series(dtype=float)).sum()
     return {
         "fights": len(rows), "winner_accuracy": float(np.mean((p >= .5) == y)),
         "brier_score": float(np.mean((p - y) ** 2)), "log_loss": float(-np.mean(y * np.log(safe) + (1-y) * np.log(1-safe))),
@@ -154,6 +223,17 @@ def compute_metrics(rows: pd.DataFrame):
         "historical_finish_time_mean": float(historical_finishes["actual_duration_seconds"].mean()),
         "historical_finish_time_median": float(historical_finishes["actual_duration_seconds"].median()),
         "simulated_finish_time_mean": float(rows["simulated_finish_time_sum_seconds"].sum() / max(total_nondecision, 1)),
+        "simulated_only_flow_diagnostics": {
+            "standing_residence_seconds_per_path": float(standing_seconds / rows["simulated_total_path_count"].sum()),
+            "standing_residence_share": float(standing_seconds / total_simulated_exposure),
+            "ground_residence_seconds_per_path": float(ground_seconds / rows["simulated_total_path_count"].sum()),
+            "ground_residence_share": float(ground_seconds / total_simulated_exposure),
+            "strike_attempts_per_path": float(rows["simulated_strike_attempts_per_path"].mean()),
+            "strikes_landed_per_path": float(rows["simulated_strikes_landed_per_path"].mean()),
+            "takedown_attempts_per_path": float(rows["simulated_takedown_attempts_per_path"].mean()),
+            "takedowns_landed_per_path": float(rows["simulated_takedowns_landed_per_path"].mean()),
+            "submission_attempts_per_path": float(rows["submission_attempts_per_path"].mean()),
+        } if "simulated_standing_seconds" in rows else {},
         "calibration_bins": calibration.assign(_bin=calibration["_bin"].astype(str)).rename(columns={"_bin":"bin"}).to_dict("records"),
     }
 
