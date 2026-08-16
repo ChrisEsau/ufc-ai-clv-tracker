@@ -15,6 +15,14 @@ from pipeline.fsr_v2.traits.registry import TraitGroup
 
 FIGHT_KEYS = ["event_date", "fight_id", "fighter_id", "fighter_name", "opponent_id", "opponent_name"]
 
+# Submission tendency is sparse enough that a fighter with little UFC history
+# should retain meaningful population-level submission threat.  The population
+# prior fades by UFC fight count while fighter-specific evidence comes from
+# effective submission attempts.
+SUBMISSION_TENDENCY_INITIAL_RATE = 0.0005947774095442215
+SUBMISSION_TENDENCY_PRIOR_SECONDS = 2700.0
+SUBMISSION_SUPPRESSION_PRIOR_EXPECTED_ATTEMPTS = 3.0
+
 
 def aggregate_fights(rounds: pd.DataFrame) -> pd.DataFrame:
     """Create an in-memory replay frame; this frame is never persisted."""
@@ -28,6 +36,7 @@ def aggregate_fights(rounds: pd.DataFrame) -> pd.DataFrame:
         "standing_exposure_seconds", "td_tendency_exposure_seconds",
         "td_suppression_exposure_seconds", "modeled_ground_exposure_seconds",
         "qualified_control_inflicted_seconds", "qualified_control_suffered_seconds",
+        "round_elapsed_seconds",
     ]
     aggregations = {column: "sum" for column in sum_columns}
     aggregations.update({
@@ -36,6 +45,7 @@ def aggregate_fights(rounds: pd.DataFrame) -> pd.DataFrame:
         "match_time_interpretation": "first",
     })
     fights = rounds.groupby(FIGHT_KEYS, as_index=False).agg(aggregations)
+    fights["fight_elapsed_seconds"] = fights["round_elapsed_seconds"]
     fights["head_body_attempted"] = fights["head_attempted"] + fights["body_attempted"]
     fights["target_attempted"] = (
         fights["head_attempted"] + fights["body_attempted"] + fights["leg_attempted"]
@@ -64,6 +74,10 @@ class ReplayEngine:
         self.config = config or FSRV2Config()
 
     def replay(self, group: TraitGroup, fights: pd.DataFrame) -> ReplayResult:
+        if group.name == "submission_tendency":
+            return self._submission_tendency(group, fights)
+        if group.name == "submission_suppression":
+            return self._submission_suppression(group, fights)
         if group.kind in {"behavior", "composition"}:
             return self._behavior(group, fights)
         if group.kind == "suppression":
@@ -75,6 +89,234 @@ class ReplayEngine:
         if group.kind == "escape":
             return self._escape(group, fights)
         raise ValueError(f"Unsupported replay kind: {group.kind}")
+
+    def _submission_tendency(self, group: TraitGroup, fights: pd.DataFrame) -> ReplayResult:
+        """Replay submission attempts per fight-second with a population exposure prior."""
+        states: dict[str, list[float]] = defaultdict(lambda: [0.0, 0.0])
+        population = [0.0, 0.0]
+        rows: list[dict] = []
+        prior_seconds = SUBMISSION_TENDENCY_PRIOR_SECONDS
+
+        for _, batch in fights.groupby("event_date", sort=True):
+            pending: list[tuple[str, float, float]] = []
+
+            global_rate = (
+                population[0] / population[1]
+                if population[1] > 0
+                else SUBMISSION_TENDENCY_INITIAL_RATE
+            )
+
+            for record in batch.to_dict("records"):
+                fighter = record["fighter_id"]
+                numerator = float(record[group.numerator])
+                denominator = float(record[group.denominator])
+
+                prior_n, prior_d = states[fighter]
+
+                pre = (
+                    prior_n + global_rate * prior_seconds
+                ) / (
+                    prior_d + prior_seconds
+                )
+
+                observation = (
+                    numerator / denominator
+                    if denominator > 0
+                    else np.nan
+                )
+
+                post_n = prior_n + numerator
+                post_d = prior_d + denominator
+
+                post = (
+                    post_n + global_rate * prior_seconds
+                ) / (
+                    post_d + prior_seconds
+                )
+
+                row = self._row(
+                    record,
+                    group.traits[0],
+                    pre,
+                    post,
+                    observation,
+                    numerator,
+                    denominator,
+                )
+                row.update({
+                    "population_prior_rate": global_rate,
+                    "population_prior_seconds": prior_seconds,
+                    "fighter_prior_attempts": prior_n,
+                    "fighter_prior_exposure_seconds": prior_d,
+                })
+                rows.append(row)
+
+                pending.append((fighter, numerator, denominator))
+
+            # Same-event delayed updates prevent leakage.
+            for fighter, numerator, denominator in pending:
+                if denominator > 0:
+                    states[fighter][0] += numerator
+                    states[fighter][1] += denominator
+                    population[0] += numerator
+                    population[1] += denominator
+
+        history = pd.DataFrame(rows)
+
+        final_rate = (
+            population[0] / population[1]
+            if population[1] > 0
+            else SUBMISSION_TENDENCY_INITIAL_RATE
+        )
+
+        history["latest_rating"] = np.nan
+        history["latest_population_baseline"] = final_rate
+
+        for fighter, (numerator, denominator) in states.items():
+            latest = (
+                numerator + final_rate * prior_seconds
+            ) / (
+                denominator + prior_seconds
+            )
+
+            mask = history["fighter_id"].eq(fighter)
+            if mask.any():
+                history.loc[
+                    history.index[mask][-1],
+                    "latest_rating",
+                ] = latest
+
+        return ReplayResult(
+            history,
+            dict(states),
+            {
+                "numerator": population[0],
+                "denominator": population[1],
+            },
+        )
+
+    def _submission_suppression(self, group: TraitGroup, fights: pd.DataFrame) -> ReplayResult:
+        """Replay multiplicative submission-attempt suppression.
+
+        Rating semantics:
+            1.0 = neutral
+            <1.0 = suppresses opponent submission attempts
+            >1.0 = permits more opponent submission attempts than expected
+        """
+        prior_expected = SUBMISSION_SUPPRESSION_PRIOR_EXPECTED_ATTEMPTS
+
+        # Build leakage-safe prefight opponent submission tendencies using
+        # the exact submission-tendency replay semantics.
+        tendency_group = TraitGroup(
+            name="submission_tendency",
+            kind="behavior",
+            traits=("submission_tendency",),
+            numerator="effective_submission_attempts",
+            denominator="fight_elapsed_seconds",
+        )
+        tendency_history = self._submission_tendency(
+            tendency_group, fights
+        ).history
+
+        tendency_lookup = {
+            (row.fight_id, row.fighter_id): float(row.pre_rating)
+            for row in tendency_history.itertuples()
+            if row.trait == "submission_tendency"
+        }
+
+        # defender -> [actual opponent attempts allowed,
+        #              expected opponent attempts]
+        states: dict[str, list[float]] = defaultdict(
+            lambda: [0.0, 0.0]
+        )
+        rows: list[dict] = []
+
+        for _, batch in fights.groupby("event_date", sort=True):
+            pending: list[tuple[str, float, float]] = []
+
+            for record in batch.to_dict("records"):
+                defender = record["fighter_id"]
+                opponent = record["opponent_id"]
+
+                actual_hist, expected_hist = states[defender]
+
+                pre = (
+                    actual_hist + prior_expected
+                ) / (
+                    expected_hist + prior_expected
+                )
+
+                seconds = float(record["fight_elapsed_seconds"])
+                opponent_rate = tendency_lookup[
+                    (record["fight_id"], opponent)
+                ]
+
+                expected_attempts = opponent_rate * seconds
+                actual_attempts = float(record[group.numerator])
+
+                post = (
+                    actual_hist + actual_attempts + prior_expected
+                ) / (
+                    expected_hist + expected_attempts + prior_expected
+                )
+
+                observed = (
+                    actual_attempts / expected_attempts
+                    if expected_attempts > 0
+                    else np.nan
+                )
+
+                row = self._row(
+                    record,
+                    group.traits[0],
+                    pre,
+                    post,
+                    observed,
+                    actual_attempts,
+                    expected_attempts,
+                )
+                row.update({
+                    "opponent_expected_rate": opponent_rate,
+                    "opponent_expected_attempts": expected_attempts,
+                    "opponent_actual_attempts": actual_attempts,
+                    "suppression_prior_expected_attempts": prior_expected,
+                })
+                rows.append(row)
+
+                pending.append(
+                    (defender, actual_attempts, expected_attempts)
+                )
+
+            # Same-event delayed updates prevent leakage.
+            for defender, actual_attempts, expected_attempts in pending:
+                states[defender][0] += actual_attempts
+                states[defender][1] += expected_attempts
+
+        history = pd.DataFrame(rows)
+        history["latest_rating"] = np.nan
+
+        for fighter, (actual_hist, expected_hist) in states.items():
+            latest = (
+                actual_hist + prior_expected
+            ) / (
+                expected_hist + prior_expected
+            )
+
+            mask = history["fighter_id"].eq(fighter)
+            if mask.any():
+                history.loc[
+                    history.index[mask][-1],
+                    "latest_rating",
+                ] = latest
+
+        return ReplayResult(
+            history,
+            dict(states),
+            {
+                "actual_attempts": sum(v[0] for v in states.values()),
+                "expected_attempts": sum(v[1] for v in states.values()),
+            },
+        )
 
     def _behavior(self, group: TraitGroup, fights: pd.DataFrame) -> ReplayResult:
         states: dict[str, list[float]] = defaultdict(lambda: [0.0, 0.0])
@@ -181,7 +423,16 @@ class ReplayEngine:
                 def_pre = defense[record["opponent_id"]][0]
                 expected = _logistic(_logit(baseline) + (off_pre - def_pre) / self.config.rating_scale)
                 observed = numerator / denominator if denominator > 0 else np.nan
-                evidence = 1.0 - exp(-denominator / self.config.evidence_saturation_attempts) if denominator > 0 else 0.0
+                saturation_attempts = (
+                    self.config.submission_effectiveness_saturation_attempts
+                    if group.name == "submission_effectiveness"
+                    else self.config.evidence_saturation_attempts
+                )
+                evidence = (
+                    1.0 - exp(-denominator / saturation_attempts)
+                    if denominator > 0
+                    else 0.0
+                )
                 update = self.config.elo_k * evidence * (observed - expected) if denominator > 0 else 0.0
                 common = self._row(record, group.traits[0], off_pre, off_pre + update, observed, numerator, denominator)
                 common.update({"opponent_pre_rating": def_pre, "expected": expected, "evidence_strength": evidence, "update": update})

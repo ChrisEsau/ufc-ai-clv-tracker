@@ -7,7 +7,7 @@ defaults:
   fsr_v2_calibration:
     standing_strike_rate_multiplier: 0.80
     ground_strike_rate_multiplier: 2.35
-    takedown_rate_multiplier: 0.85
+    takedown_rate_multiplier: 1.00
     escape_rate_multiplier: 0.85
     standing_accuracy_logit_offset: 0.22
     ground_accuracy_logit_offset: 0.45
@@ -24,6 +24,6 @@ defaults:
   damage: {base_shape: 1.0, base_scale: 2.0, tail_shape: 1.25, tail_scale: 4.8, tail_probability: 0.06, power_rating_scale: 55.0, impact_scale: 0.50, durability_scale: 40.0}
   knockdown: {trauma_erosion_scale: 80.0, resistance_scale: 32.0, acute_erosion_scale: 1.0, slope: 2.0, midpoint_impact_ratio: 36.0, acute_increment: 0.50, acute_half_life_seconds: 30.0}
   finish: {baseline_durability_weight: 0.50, baseline_knockdown_resistance_weight: 0.50, resistance_rating_scale: 32.0, trauma_erosion_scale: 120.0, acute_erosion_scale: 1.0, slope: 2.0, midpoint_impact_ratio: 36.0, knockdown_logit_bonus: 1.0}
-  submission_finish: {threat_conversion_weight: 0.75, threat_pressure_weight: 0.25, resistance_submission_weight: 0.75, resistance_control_weight: 0.25, rating_scale: 12.0, intercept: -0.60, top_position_bonus: 0.0, bottom_position_bonus: 0.0, stamina_edge_weight: 0.50, logit_clip: 20.0}
+  submission_finish: {threat_conversion_weight: 0.75, threat_pressure_weight: 0.25, resistance_submission_weight: 0.75, resistance_control_weight: 0.25, rating_scale: 12.0, intercept: -0.60, fsr_v2_conversion_logit_offset: -0.25, top_position_bonus: 0.0, bottom_position_bonus: 0.0, stamina_edge_weight: 0.50, logit_clip: 20.0}
   judging: {impact_weight: 0.0, landed_strike_weight: 1.0, knockdown_weight: 10.080282, submission_attempt_weight: 2.854417, submission_threat_weight: 0.0, takedown_weight: 2.021731, reversal_weight: 0.0, control_weight_per_second: 0.048904, primary_close_band: 0.0, aggression_close_band: 0.0, aggression_attempt_weight: 1.0, control_close_band_seconds: 0.0}
 weight_classes: {}

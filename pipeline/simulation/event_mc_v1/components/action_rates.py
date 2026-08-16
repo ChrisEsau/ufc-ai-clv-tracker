@@ -210,12 +210,28 @@ class FSRV2ActionRateProvider:
                         defender.takedown_suppression,
                         c["takedown_rate_multiplier"],
                     ),
+                    (
+                        "submission_attempt",
+                        attacker.submission_tendency,
+                        defender.submission_suppression,
+                        1.0,
+                    ),
                 ):
+                    output_multiplier = (
+                        1.0
+                        if family == "submission_attempt"
+                        else self._output(state, side)
+                    )
+
                     output.append(EventRate(
                         self._candidate(side, family),
-                        effective_rate(tendency, suppression)
+                        (
+                            tendency * suppression
+                            if family == "submission_attempt"
+                            else effective_rate(tendency, suppression)
+                        )
                         * calibration_multiplier
-                        * self._output(state, side),
+                        * output_multiplier,
                     ))
             return tuple(output)
         if state.ground_controller is None:
@@ -235,11 +251,21 @@ class FSRV2ActionRateProvider:
                     if family == "ground_strike"
                     else 1.0
                 )
+                output_multiplier = (
+                    1.0
+                    if family == "submission_attempt"
+                    else self._output(state, side)
+                )
+
                 output.append(EventRate(
                     self._candidate(side, family),
-                    effective_rate(tendency, suppression)
+                    (
+                        tendency * suppression
+                        if family == "submission_attempt"
+                        else effective_rate(tendency, suppression)
+                    )
                     * calibration_multiplier
-                    * self._output(state, side),
+                    * output_multiplier,
                 ))
         bottom_fighter, top_fighter = self.matchup.fighter(bottom), self.matchup.fighter(top)
         output.append(EventRate(

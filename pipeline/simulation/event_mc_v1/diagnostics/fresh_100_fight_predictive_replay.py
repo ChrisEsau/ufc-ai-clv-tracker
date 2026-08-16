@@ -59,6 +59,7 @@ STRIKE_FAMILIES = {
 
 def select_fresh_cohort(
     limit: int = 100,
+    offset: int = 0,
 ) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
     """Select chronologically without using outcomes except eligibility."""
 
@@ -88,6 +89,7 @@ def select_fresh_cohort(
     )
 
     selected = []
+    eligible_seen = 0
     missing_fsr = 0
     unsupported = 0
 
@@ -113,7 +115,12 @@ def select_fresh_cohort(
             missing_fsr += 1
             continue
 
+        if eligible_seen < offset:
+            eligible_seen += 1
+            continue
+
         selected.append(row)
+        eligible_seen += 1
 
         if len(selected) == limit:
             break
@@ -163,6 +170,7 @@ def _simulate_one(args):
     td_landed = []
     kds = []
     subs = []
+    ground_entries = []
     exposures = []
     nondecision = []
 
@@ -231,6 +239,15 @@ def _simulate_one(args):
             )
         )
 
+        ground_entries.append(
+            sum(
+                1
+                for transition in stats["transitions"]
+                if transition["to_phase"] == "ground"
+                and transition["from_phase"] != "ground"
+            )
+        )
+
     return {
         "fight_index": fight_index,
         "joint_counts": dict(joint),
@@ -245,6 +262,7 @@ def _simulate_one(args):
         "td_landed": td_landed,
         "kds": kds,
         "sub_attempts": subs,
+        "ground_entries": ground_entries,
         "phase_seconds": dict(phase_seconds),
     }
 
@@ -938,6 +956,7 @@ def run(
     seed=20260813,
     workers=2,
     heartbeat_every=10,
+    offset=0,
     output=Path(
         "/tmp/event_mc_fresh_100_replay.json"
     ),
@@ -946,7 +965,7 @@ def run(
     ),
 ):
     cohort, fsr, selection = (
-        select_fresh_cohort(100)
+        select_fresh_cohort(100, offset)
     )
 
     fights = build_simulation_inputs(
@@ -1145,6 +1164,21 @@ def run(
             ),
             "simulated_mean_elapsed_seconds": (
                 raw[index]["mean_elapsed"]
+            ),
+            "simulated_mean_submission_attempts": (
+                float(np.mean(raw[index]["sub_attempts"]))
+            ),
+            "simulated_mean_ground_seconds": (
+                float(raw[index]["phase_seconds"].get("ground", 0)) / paths
+            ),
+            "simulated_mean_td_attempts": (
+                float(np.mean(raw[index]["td_attempts"]))
+            ),
+            "simulated_mean_td_landed": (
+                float(np.mean(raw[index]["td_landed"]))
+            ),
+            "simulated_mean_ground_entries": (
+                float(np.mean(raw[index]["ground_entries"]))
             ),
             "simulated_nondecision_mean_seconds": (
                 float(
@@ -1392,6 +1426,11 @@ if __name__ == "__main__":
         "--heartbeat-every",
         type=int,
         default=10,
+    )
+    parser.add_argument(
+        "--offset",
+        type=int,
+        default=0,
     )
     parser.add_argument(
         "--output",

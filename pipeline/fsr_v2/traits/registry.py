@@ -19,6 +19,8 @@ class TraitGroup:
 
     def fingerprint(self, config: FSRV2Config, source_fingerprint: str) -> str:
         payload = {**self.__dict__, "config": config.fingerprint_payload(), "source": source_fingerprint}
+        if self.name == "submission_tendency":
+            payload["implementation_version"] = "fight_count_population_prior_v1"
         return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()[:16]
 
 
@@ -35,8 +37,8 @@ GROUPS = {
     "ground_striking_tendency": TraitGroup("ground_striking_tendency", "behavior", ("ground_striking_tendency",), "ground_attempted", "modeled_ground_exposure_seconds"),
     "ground_striking_suppression": TraitGroup("ground_striking_suppression", "suppression", ("ground_striking_suppression",), "opponent_ground_attempted", "modeled_ground_exposure_seconds", ("ground_striking_tendency",)),
     "ground_striking_effectiveness": TraitGroup("ground_striking_effectiveness", "paired", ("ground_striking_offense", "ground_striking_defense"), "ground_landed", "ground_attempted"),
-    "submission_tendency": TraitGroup("submission_tendency", "behavior", ("submission_tendency",), "effective_submission_attempts", "modeled_ground_exposure_seconds"),
-    "submission_suppression": TraitGroup("submission_suppression", "suppression", ("submission_suppression",), "opponent_effective_submission_attempts", "modeled_ground_exposure_seconds", ("submission_tendency",)),
+    "submission_tendency": TraitGroup("submission_tendency", "behavior", ("submission_tendency",), "effective_submission_attempts", "fight_elapsed_seconds"),
+    "submission_suppression": TraitGroup("submission_suppression", "suppression", ("submission_suppression",), "opponent_effective_submission_attempts", "fight_elapsed_seconds", ("submission_tendency",)),
     "submission_effectiveness": TraitGroup("submission_effectiveness", "paired", ("submission_offense", "submission_defense"), "submission_finish", "effective_submission_attempts"),
     "reversal_tendency": TraitGroup("reversal_tendency", "behavior", ("reversal_tendency",), "rev", "modeled_ground_exposure_seconds", experimental=True),
 }

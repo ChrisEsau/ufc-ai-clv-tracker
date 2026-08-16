@@ -1,6 +1,7 @@
 """Phase 4C probabilistic submission conversion over existing attempts."""
 
 from dataclasses import dataclass
+import os
 from math import exp, log
 
 import numpy as np
@@ -50,13 +51,24 @@ class SubmissionFinishModel:
         defender_stamina = getattr(state, f"{attacker_side.opponent.value}_stamina")
         stamina_term = c["stamina_edge_weight"] * (attacker_stamina - defender_stamina)
         if self.fsr_v2_matchup is not None:
+            flat = os.getenv("EVENT_MC_FLAT_SUB_CONVERSION")
+            if flat is not None:
+                probability = float(flat)
+                if not 0.0 <= probability <= 1.0:
+                    raise ValueError(
+                        "EVENT_MC_FLAT_SUB_CONVERSION must be between 0 and 1"
+                    )
+                return probability, threat, resistance, position, 0.0
+
             baseline = self.fsr_v2_matchup.fighter(attacker_side).submission_conversion_baseline
             baseline_logit = log(baseline / (1.0 - baseline))
             skill_term = threat - resistance
+            conversion_intercept = c["fsr_v2_conversion_logit_offset"]
         else:
             baseline_logit = 0.0
             skill_term = (threat - resistance) / c["rating_scale"]
-        logit = c["intercept"] + baseline_logit + skill_term + position_term + stamina_term
+            conversion_intercept = c["intercept"]
+        logit = conversion_intercept + baseline_logit + skill_term + position_term + stamina_term
         probability = 1.0 / (1.0 + exp(-float(np.clip(logit, -c["logit_clip"], c["logit_clip"]))))
         return probability, threat, resistance, position, stamina_term + position_term
 

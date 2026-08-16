@@ -9,6 +9,7 @@ class FSRV2Config:
     rating_scale: float = 1.0
     elo_k: float = 0.35
     evidence_saturation_attempts: float = 12.0
+    submission_effectiveness_saturation_attempts: float = 5.0
     behavior_prior_seconds: float = 900.0
     suppression_prior_seconds: float = 900.0
     target_composition_prior_attempts: float = 200.0
