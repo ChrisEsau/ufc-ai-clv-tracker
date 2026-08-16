@@ -96,8 +96,28 @@ class SimulationEngine:
         if self.judging_model is not None:
             self.judging_model.on_time_advance(dt_seconds, before, StateSnapshot.from_state(state))
 
-    def run(self, state: FightState | None = None) -> SimulationResult:
+    def run(
+        self,
+        state: FightState | None = None,
+        stop_at_seconds: float | None = None,
+    ) -> SimulationResult:
         state = state or FightState()
+
+        run_horizon = self.config.fight_duration_seconds
+
+        if stop_at_seconds is not None:
+            stop_at_seconds = float(stop_at_seconds)
+            if not math.isfinite(stop_at_seconds):
+                raise ValueError("stop_at_seconds must be finite")
+            if stop_at_seconds < state.fight_time_seconds:
+                raise ValueError(
+                    "stop_at_seconds cannot precede the initial fight clock"
+                )
+            run_horizon = min(
+                stop_at_seconds,
+                self.config.fight_duration_seconds,
+            )
+
         if state.fight_time_seconds < 0 or state.fight_time_seconds > self.config.fight_duration_seconds:
             raise ValueError("initial fight clock is outside the configured horizon")
         if state.fight_time_seconds == 0 and not state.finished:
@@ -113,17 +133,40 @@ class SimulationEngine:
             self._notify_event(RoundStarted(0.0, 1), state, before)
 
         scheduler_rng = self.rng_manager.stream(RNGStream.SCHEDULER)
-        while not state.finished and state.fight_time_seconds < self.config.fight_duration_seconds:
+        while not state.finished and state.fight_time_seconds < run_horizon:
             context = self._context(state)
             candidates = self.rate_provider.candidates(state, context)
             sampled_dt, candidate = self.scheduler.sample(candidates, scheduler_rng)
-            boundary = self.config.next_boundary_after(state.fight_time_seconds)
+
+            scheduled_boundary = self.config.next_boundary_after(
+                state.fight_time_seconds
+            )
+            boundary = min(
+                scheduled_boundary,
+                run_horizon,
+            )
             to_boundary = max(0.0, boundary - state.fight_time_seconds)
             boundary_first = candidate is None or sampled_dt >= to_boundary
             actual_dt = to_boundary if boundary_first else sampled_dt
             self._advance(state, actual_dt)
 
             if boundary_first:
+                # A diagnostic horizon may fall inside a scheduled round.
+                # Stop there without pretending a round ended.
+                if boundary < scheduled_boundary:
+                    state.finished = True
+                    state.finish_reason = "diagnostic_horizon"
+                    before = StateSnapshot.from_state(state)
+                    self._notify_event(
+                        FightFinished(
+                            boundary,
+                            state.finish_reason,
+                        ),
+                        state,
+                        before,
+                    )
+                    break
+
                 round_number = self.config.round_number_at(max(0.0, boundary - 1e-12))
                 snapshot = StateSnapshot.from_state(state)
                 self._notify_event(RoundEnded(boundary, round_number), state, snapshot)
@@ -134,6 +177,23 @@ class SimulationEngine:
                     self._notify_event(
                         ConsequenceEvent(boundary, "RoundScore", card), state, snapshot
                     )
+                if (
+                    boundary >= run_horizon
+                    and run_horizon < self.config.fight_duration_seconds
+                ):
+                    state.finished = True
+                    state.finish_reason = "diagnostic_horizon"
+                    before = StateSnapshot.from_state(state)
+                    self._notify_event(
+                        FightFinished(
+                            boundary,
+                            state.finish_reason,
+                        ),
+                        state,
+                        before,
+                    )
+                    break
+
                 if boundary >= self.config.fight_duration_seconds:
                     if self.judging_model is not None:
                         self._apply_delta(state, self.judging_model.decision_delta())
