@@ -159,3 +159,93 @@ def test_latest_behavior_recenter_uses_final_population_baseline():
     expected = (state_n + final_population * 900) / (state_d + 900)
     actual = latest.loc[latest.fighter_id.eq("a"), "standing_striking_tendency"].iloc[0]
     assert actual == pytest.approx(expected)
+
+
+def test_takedown_tendency_endpoint2_prior_rule():
+    fights = aggregate_fights(
+        build_paired_rounds(*_sources())
+    )
+
+    # --------------------------------------------------------
+    # ONE prior UFC fight:
+    # retain the standard 900-second population prior.
+    # --------------------------------------------------------
+
+    one_prior = fights[
+        ~fights["fight_id"].eq("f2")
+    ].copy()
+
+    history = ReplayEngine().replay(
+        GROUPS["takedown_tendency"],
+        one_prior,
+    ).history
+
+    later = history[
+        history["fight_id"].eq("f3")
+        & history["fighter_id"].eq("a")
+    ].iloc[0]
+
+    first_fight = one_prior[
+        one_prior["fight_id"].eq("f1")
+    ]
+
+    global_rate = (
+        first_fight["td_attempted"].sum()
+        / first_fight[
+            "td_tendency_exposure_seconds"
+        ].sum()
+    )
+
+    a_first = first_fight[
+        first_fight["fighter_id"].eq("a")
+    ].iloc[0]
+
+    expected_shrunk = (
+        a_first["td_attempted"]
+        + global_rate * 900.0
+    ) / (
+        a_first[
+            "td_tendency_exposure_seconds"
+        ]
+        + 900.0
+    )
+
+    assert later["prior_ufc_fights"] == 1
+    assert later["population_prior_seconds"] == 900.0
+    assert later["pre_rating"] == pytest.approx(
+        expected_shrunk
+    )
+
+    # --------------------------------------------------------
+    # TWO prior UFC fights:
+    # remove the population prior and use raw observed rate.
+    # --------------------------------------------------------
+
+    full_history = ReplayEngine().replay(
+        GROUPS["takedown_tendency"],
+        fights,
+    ).history
+
+    later = full_history[
+        full_history["fight_id"].eq("f3")
+        & full_history["fighter_id"].eq("a")
+    ].iloc[0]
+
+    a_prior = fights[
+        fights["fight_id"].isin(["f1", "f2"])
+        & fights["fighter_id"].eq("a")
+    ]
+
+    expected_raw = (
+        a_prior["td_attempted"].sum()
+        / a_prior[
+            "td_tendency_exposure_seconds"
+        ].sum()
+    )
+
+    assert later["prior_ufc_fights"] == 2
+    assert later["population_prior_seconds"] == 0.0
+    assert later["pre_rating"] == pytest.approx(
+        expected_raw
+    )
+

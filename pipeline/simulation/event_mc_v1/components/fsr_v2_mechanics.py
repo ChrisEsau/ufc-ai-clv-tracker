@@ -3,6 +3,12 @@
 from math import exp, log
 
 
+# Leakage-safe TD-completion validation:
+# exact-scale attacker-age adjustment, centered at age 30.
+TAKEDOWN_ATTACKER_AGE_CENTER_YEARS = 30.0
+TAKEDOWN_ATTACKER_AGE_LOGIT_PER_YEAR = -0.018388
+
+
 def effective_rate(tendency: float, suppression: float) -> float:
     return max(0.0, tendency - suppression)
 

@@ -32,6 +32,24 @@ from .judging import DeterministicJudgingModel, RoundScore
 DEFAULT_SEED = 20260813
 
 
+def fighter_age_years(dob, event_date) -> float:
+    """Return age on fight date; unknown DOB uses neutral age 30."""
+    if dob is None or pd.isna(dob):
+        return 30.0
+
+    dob = pd.Timestamp(dob)
+    event_date = pd.Timestamp(event_date)
+
+    age = (event_date - dob).days / 365.2425
+
+    if age <= 0.0:
+        raise ValueError(
+            f"invalid DOB/event date: dob={dob}, event_date={event_date}"
+        )
+
+    return float(age)
+
+
 @dataclass(frozen=True)
 class HistoricalFight:
     fight_id: str
@@ -44,11 +62,28 @@ class HistoricalFight:
     fsr_v2_matchup: FSRV2Matchup | None = None
 
 
-def fight_from_fsr_v2_rows(red_row, blue_row, *, fight_id="fsr-v2-fight",
-                           date="", division="unknown", rounds=3) -> HistoricalFight:
+def fight_from_fsr_v2_rows(
+    red_row,
+    blue_row,
+    *,
+    fight_id="fsr-v2-fight",
+    date="",
+    division="unknown",
+    rounds=3,
+    red_age_years=30.0,
+    blue_age_years=30.0,
+) -> HistoricalFight:
     """Create an executable fight from two complete canonical FSR V2 rows."""
-    matchup = FSRV2Matchup(FSRV2FighterInput.from_mapping(red_row),
-                           FSRV2FighterInput.from_mapping(blue_row))
+    red_input = dict(red_row)
+    blue_input = dict(blue_row)
+
+    red_input["age_years"] = float(red_age_years)
+    blue_input["age_years"] = float(blue_age_years)
+
+    matchup = FSRV2Matchup(
+        FSRV2FighterInput.from_mapping(red_input),
+        FSRV2FighterInput.from_mapping(blue_input),
+    )
     profiles = matchup.physical_profiles()
     return HistoricalFight(str(fight_id), str(date), matchup.red.fighter_name,
                            matchup.blue.fighter_name, str(division), int(rounds),
@@ -80,6 +115,8 @@ def resolve_fight(fight_id: str) -> HistoricalFight:
         exact_fighter(row["r_id"], "red"), exact_fighter(row["b_id"], "blue"),
         fight_id=row["fight_id"], date=date.date().isoformat(),
         division=row.get("division", "unknown"), rounds=row.get("total_rounds", 3),
+        red_age_years=fighter_age_years(row.get("r_dob"), date),
+        blue_age_years=fighter_age_years(row.get("b_dob"), date),
     )
 
 

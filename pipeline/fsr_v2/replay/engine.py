@@ -23,6 +23,11 @@ SUBMISSION_TENDENCY_INITIAL_RATE = 0.0005947774095442215
 SUBMISSION_TENDENCY_PRIOR_SECONDS = 2700.0
 SUBMISSION_SUPPRESSION_PRIOR_EXPECTED_ATTEMPTS = 3.0
 
+# Validated Stage-1 Endpoint-2 rule: retain the standard 900-second
+# population prior through one prior UFC fight, then use the fighter's
+# raw observed takedown tendency from two prior UFC fights onward.
+TAKEDOWN_TENDENCY_RAW_AFTER_PRIOR_FIGHTS = 2
+
 
 def aggregate_fights(rounds: pd.DataFrame) -> pd.DataFrame:
     """Create an in-memory replay frame; this frame is never persisted."""
@@ -319,57 +324,263 @@ class ReplayEngine:
         )
 
     def _behavior(self, group: TraitGroup, fights: pd.DataFrame) -> ReplayResult:
-        states: dict[str, list[float]] = defaultdict(lambda: [0.0, 0.0])
+        states: dict[str, list[float]] = defaultdict(
+            lambda: [0.0, 0.0]
+        )
+        fight_counts: dict[str, int] = defaultdict(int)
         population = [0.0, 0.0]
         rows: list[dict] = []
-        prior_weight = (self.config.target_composition_prior_attempts
-                        if group.kind == "composition"
-                        else self.config.behavior_prior_seconds)
-        for date, batch in fights.groupby("event_date", sort=True):
-            pending: list[tuple[str, float, float]] = []
-            global_rate = population[0] / population[1] if population[1] else 0.0
+
+        base_prior_weight = (
+            self.config.target_composition_prior_attempts
+            if group.kind == "composition"
+            else self.config.behavior_prior_seconds
+        )
+
+        def effective_prior_weight(
+            prior_ufc_fights: int,
+        ) -> float:
+            if (
+                group.name == "takedown_tendency"
+                and prior_ufc_fights
+                >= TAKEDOWN_TENDENCY_RAW_AFTER_PRIOR_FIGHTS
+            ):
+                return 0.0
+
+            return float(base_prior_weight)
+
+        def blended_rate(
+            numerator: float,
+            denominator: float,
+            population_rate: float,
+            prior_weight: float,
+        ) -> float:
+            total_denominator = (
+                denominator + prior_weight
+            )
+
+            if total_denominator <= 0:
+                return population_rate
+
+            return (
+                numerator
+                + population_rate * prior_weight
+            ) / total_denominator
+
+        for _, batch in fights.groupby(
+            "event_date",
+            sort=True,
+        ):
+            pending_updates: list[
+                tuple[str, float, float]
+            ] = []
+
+            pending_fight_counts: list[str] = []
+
+            global_rate = (
+                population[0] / population[1]
+                if population[1] > 0
+                else 0.0
+            )
+
             for record in batch.to_dict("records"):
-                numerator = float(record[group.numerator])
-                denominator = float(record[group.denominator])
-                prior_n, prior_d = states[record["fighter_id"]]
-                pre = (prior_n + global_rate * prior_weight) / (
-                    prior_d + prior_weight
+                fighter = record["fighter_id"]
+
+                numerator = float(
+                    record[group.numerator]
                 )
-                observation = numerator / denominator if denominator > 0 else np.nan
-                if denominator > 0:
-                    post = (prior_n + numerator + global_rate * prior_weight) / (
-                        prior_d + denominator + prior_weight
+
+                denominator = float(
+                    record[group.denominator]
+                )
+
+                prior_n, prior_d = states[fighter]
+                prior_fights = fight_counts[fighter]
+
+                pre_prior_weight = (
+                    effective_prior_weight(
+                        prior_fights
                     )
-                else:
-                    post = pre
-                rows.append(self._row(record, group.traits[0], pre, post, observation, numerator, denominator))
+                )
+
+                pre = blended_rate(
+                    prior_n,
+                    prior_d,
+                    global_rate,
+                    pre_prior_weight,
+                )
+
+                observation = (
+                    numerator / denominator
+                    if denominator > 0
+                    else np.nan
+                )
+
                 if denominator > 0:
-                    pending.append((record["fighter_id"], numerator, denominator))
-            for fighter, numerator, denominator in pending:
+                    post_n = prior_n + numerator
+                    post_d = prior_d + denominator
+                else:
+                    post_n = prior_n
+                    post_d = prior_d
+
+                post_prior_weight = (
+                    effective_prior_weight(
+                        prior_fights + 1
+                    )
+                )
+
+                post = blended_rate(
+                    post_n,
+                    post_d,
+                    global_rate,
+                    post_prior_weight,
+                )
+
+                row = self._row(
+                    record,
+                    group.traits[0],
+                    pre,
+                    post,
+                    observation,
+                    numerator,
+                    denominator,
+                )
+
+                if group.name == "takedown_tendency":
+                    row.update(
+                        {
+                            "prior_ufc_fights":
+                                prior_fights,
+                            "population_prior_seconds":
+                                pre_prior_weight,
+                        }
+                    )
+
+                rows.append(row)
+
+                if denominator > 0:
+                    pending_updates.append(
+                        (
+                            fighter,
+                            numerator,
+                            denominator,
+                        )
+                    )
+
+                pending_fight_counts.append(
+                    fighter
+                )
+
+            # Same-event delayed updates preserve
+            # leakage-safe pre-fight state.
+            for (
+                fighter,
+                numerator,
+                denominator,
+            ) in pending_updates:
                 states[fighter][0] += numerator
                 states[fighter][1] += denominator
+
                 population[0] += numerator
                 population[1] += denominator
+
+            for fighter in pending_fight_counts:
+                fight_counts[fighter] += 1
+
         history = pd.DataFrame(rows)
-        final_rate = population[0] / population[1] if population[1] else 0.0
+
+        final_rate = (
+            population[0] / population[1]
+            if population[1] > 0
+            else 0.0
+        )
+
         history["latest_rating"] = np.nan
-        for fighter, (numerator, denominator) in states.items():
-            mask = history["fighter_id"].eq(fighter)
-            if mask.any():
-                index = history.index[mask][-1]
-                history.loc[index, "latest_rating"] = (
-                    numerator + final_rate * prior_weight
-                ) / (denominator + prior_weight)
-        history["latest_population_baseline"] = final_rate
-        if len(group.traits) == 2:  # complementary head/body histories
+
+        for fighter, (
+            numerator,
+            denominator,
+        ) in states.items():
+            mask = history[
+                "fighter_id"
+            ].eq(fighter)
+
+            if not mask.any():
+                continue
+
+            final_prior_weight = (
+                effective_prior_weight(
+                    fight_counts[fighter]
+                )
+            )
+
+            latest = blended_rate(
+                numerator,
+                denominator,
+                final_rate,
+                final_prior_weight,
+            )
+
+            history.loc[
+                history.index[mask][-1],
+                "latest_rating",
+            ] = latest
+
+        history[
+            "latest_population_baseline"
+        ] = final_rate
+
+        if len(group.traits) == 2:
             complement = history.copy()
-            complement["trait"] = group.traits[1]
-            for column in ["pre_rating", "post_rating", "observed"]:
-                complement[column] = 1.0 - complement[column]
-            complement["latest_rating"] = 1.0 - complement["latest_rating"]
-            complement["latest_population_baseline"] = 1.0 - complement["latest_population_baseline"]
-            history = pd.concat([history, complement], ignore_index=True)
-        return ReplayResult(history, dict(states), {"numerator": population[0], "denominator": population[1]})
+
+            complement["trait"] = (
+                group.traits[1]
+            )
+
+            for column in [
+                "pre_rating",
+                "post_rating",
+                "observed",
+            ]:
+                complement[column] = (
+                    1.0
+                    - complement[column]
+                )
+
+            complement[
+                "latest_rating"
+            ] = (
+                1.0
+                - complement[
+                    "latest_rating"
+                ]
+            )
+
+            complement[
+                "latest_population_baseline"
+            ] = (
+                1.0
+                - complement[
+                    "latest_population_baseline"
+                ]
+            )
+
+            history = pd.concat(
+                [
+                    history,
+                    complement,
+                ],
+                ignore_index=True,
+            )
+
+        return ReplayResult(
+            history,
+            dict(states),
+            {
+                "numerator": population[0],
+                "denominator": population[1],
+            },
+        )
 
     def _suppression(self, group: TraitGroup, fights: pd.DataFrame) -> ReplayResult:
         states: dict[str, list[float]] = defaultdict(lambda: [0.0, 0.0])

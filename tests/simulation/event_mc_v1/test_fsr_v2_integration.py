@@ -50,7 +50,11 @@ def test_two_state_clock_sets():
     provider = FSRV2ActionRateProvider(matchup, matchup.physical_profiles())
     context = FightContext(FightConfig(3), 0, 1)
     standing = provider.candidates(FightState(), context)
-    assert {x.candidate.action_family for x in standing} == {"standing_strike", "takedown"}
+    assert {x.candidate.action_family for x in standing} == {
+        "standing_strike",
+        "takedown",
+        "submission_attempt",
+    }
     ground = provider.candidates(FightState(phase=Phase.GROUND, ground_controller="red"), context)
     assert {x.candidate.action_family for x in ground} == {"ground_strike", "submission_attempt", "ground_escape"}
     assert len(tuple(Phase)) == 2 and not hasattr(Phase, "CLINCH")

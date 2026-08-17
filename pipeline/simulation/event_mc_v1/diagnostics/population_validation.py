@@ -15,7 +15,11 @@ from pipeline.common.paths import FSR_V2_PREFIGHT_SNAPSHOTS_PATH, MASTER_PATH
 from pipeline.common.fight_time import elapsed_fight_time_seconds
 
 from ..flow_stats import FlowStatsSink
-from ..single_fight import build_engine, fight_from_fsr_v2_rows
+from ..single_fight import (
+    build_engine,
+    fight_from_fsr_v2_rows,
+    fighter_age_years,
+)
 
 
 METHODS = ("KO_TKO", "SUB", "DEC")
@@ -129,6 +133,8 @@ def _fight(row, fsr):
         exact_fighter(row["r_id"], "red"), exact_fighter(row["b_id"], "blue"),
         fight_id=fight_id, date=event_date.date().isoformat(), division=row["division"],
         rounds=row["total_rounds"],
+        red_age_years=fighter_age_years(row.get("r_dob"), event_date),
+        blue_age_years=fighter_age_years(row.get("b_dob"), event_date),
     )
 
 

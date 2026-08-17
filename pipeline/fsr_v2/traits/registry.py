@@ -21,6 +21,8 @@ class TraitGroup:
         payload = {**self.__dict__, "config": config.fingerprint_payload(), "source": source_fingerprint}
         if self.name == "submission_tendency":
             payload["implementation_version"] = "fight_count_population_prior_v1"
+        if self.name == "takedown_tendency":
+            payload["implementation_version"] = "endpoint2_raw_after_two_prior_ufc_fights_v1"
         return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()[:16]
 
 

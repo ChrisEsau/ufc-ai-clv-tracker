@@ -6,9 +6,9 @@ defaults:
   submission_attempts: {base_30s: 0.045, bottom_multiplier: 1.00, modifier_scale: 10.0, probability_cap: 0.35}
   fsr_v2_calibration:
     standing_strike_rate_multiplier: 0.80
-    ground_strike_rate_multiplier: 2.35
-    takedown_rate_multiplier: 1.00
-    escape_rate_multiplier: 0.85
+    ground_strike_rate_multiplier: 1.00
+    takedown_rate_multiplier: 1.30
+    escape_rate_multiplier: 0.425
     standing_accuracy_logit_offset: 0.22
     ground_accuracy_logit_offset: 0.45
   stamina:

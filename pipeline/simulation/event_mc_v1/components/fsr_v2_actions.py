@@ -12,7 +12,11 @@ from ..modifiers import DynamicModifierProvider
 from ..calibration import DEFAULT_CALIBRATION, EventMCCalibration
 from .actions import ActionAttempt, ActionOutcome, _merge_delta
 from .fsr_v2 import FSRV2Matchup
-from .fsr_v2_mechanics import matchup_probability
+from .fsr_v2_mechanics import (
+    TAKEDOWN_ATTACKER_AGE_CENTER_YEARS,
+    TAKEDOWN_ATTACKER_AGE_LOGIT_PER_YEAR,
+    matchup_probability,
+)
 from .profiles import MatchupProfiles, Side
 
 
@@ -52,9 +56,19 @@ class FSRV2Candidate:
             target = rng.choice(("head", "body", "leg"), p=attacker.standing_target_probabilities()).item()
             outcome = "landed" if landed else "missed"
         elif family == "takedown":
+            age_logit_offset = (
+                TAKEDOWN_ATTACKER_AGE_LOGIT_PER_YEAR
+                * (
+                    attacker.age_years
+                    - TAKEDOWN_ATTACKER_AGE_CENTER_YEARS
+                )
+            )
             landed = bool(rng.random() < matchup_probability(
                 attacker.takedown_completion_baseline,
-                attacker.takedown_offense, defender.takedown_defense))
+                attacker.takedown_offense,
+                defender.takedown_defense,
+                age_logit_offset,
+            ))
             outcome = "landed" if landed else "failed"
             if landed:
                 delta = StateDelta(phase=Phase.GROUND, ground_controller=self.side.value,

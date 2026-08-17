@@ -61,6 +61,9 @@ class FSRV2FighterInput:
     ground_accuracy_baseline: float
     submission_conversion_baseline: float
     escape_population_mean_seconds: float
+    # Fight-context metadata, not an FSR V2 trait.
+    # Age 30 is neutral for the TD-completion age adjustment.
+    age_years: float = 30.0
 
     @classmethod
     def from_mapping(cls, row: Mapping[str, object]) -> "FSRV2FighterInput":
@@ -75,6 +78,11 @@ class FSRV2FighterInput:
         bad = [name for name, value in values.items() if not isfinite(value)]
         if bad:
             raise ValueError(f"canonical FSR V2 row has non-finite fields: {bad}")
+
+        age_years = float(row.get("age_years", 30.0))
+        if not isfinite(age_years) or age_years <= 0.0:
+            raise ValueError("age_years must be finite and positive")
+
         if values["stamina_capacity"] != STAMINA_CAPACITY:
             raise ValueError(f"stamina_capacity must be explicitly {STAMINA_CAPACITY}")
         for name in ("head_strike_tendency", "body_strike_tendency", "leg_strike_tendency"):
@@ -87,7 +95,12 @@ class FSRV2FighterInput:
                 raise ValueError(f"{name} must be in (0, 1)")
         if values["escape_population_mean_seconds"] <= 0.0:
             raise ValueError("escape_population_mean_seconds must be positive")
-        return cls(fighter_id, str(row.get("fighter_name", fighter_id)), **values)
+        return cls(
+            fighter_id,
+            str(row.get("fighter_name", fighter_id)),
+            **values,
+            age_years=age_years,
+        )
 
     def standing_target_probabilities(self) -> tuple[float, float, float]:
         non_leg = 1.0 - self.leg_strike_tendency
