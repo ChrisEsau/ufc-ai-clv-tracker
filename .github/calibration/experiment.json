@@ -1,0 +1,6 @@
+{
+  "name": "workflow-smoke-dataset-status",
+  "script": "pipeline/data_maintenance/run_dataset_status.py",
+  "args": [],
+  "artifacts": []
+}
