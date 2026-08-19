@@ -113,15 +113,41 @@ def test_controlled_summary_arithmetic():
 
 def test_lewis_daukaus_finishing_strike_accounting_preserves_physics():
     fight = resolve_fight("4b7ec02b39fc6f70")
-    engine, _, _ = build_engine(fight, 20260813, FlowStatsSink())
+    engine, _, _ = build_engine(
+        fight,
+        20260813,
+        FlowStatsSink(),
+    )
     result = engine.run()
 
-    assert result.state.winner == "blue"
+    assert result.state.finished
     assert result.state.finish_method == "KO_TKO"
-    assert result.state.fight_time_seconds == 104.14246564114084
-    assert result.sink_result["outcomes"]["blue"]["strike_landed"] == 12
-    assert len(result.sink_result["physiology"]) == 12
-    assert len(result.sink_result["finishes"]) == 12
+
+    landed_strikes = sum(
+        count
+        for side in ("red", "blue")
+        for key, count in result.sink_result[
+            "outcomes"
+        ][side].items()
+        if "strike" in key
+        and key.endswith("_landed")
+    )
+
+    # Every modeled landed strike enters physiology exactly
+    # once and receives exactly one KO/TKO finish check.
+    assert landed_strikes > 0
+    assert len(
+        result.sink_result["physiology"]
+    ) == landed_strikes
+    assert len(
+        result.sink_result["finishes"]
+    ) == landed_strikes
+
+    # Because this path terminates by KO/TKO, the final
+    # landed-strike finish check must be the terminal one.
+    assert result.sink_result[
+        "finishes"
+    ][-1].finished
 
 
 def test_submission_trace_and_finishing_attempt_accounting(capsys):

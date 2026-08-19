@@ -40,7 +40,21 @@ DURABILITY_HIGH_EXPOSURE_QUANTILE = 0.70
 
 POWER_MIN = 35.0
 POWER_MAX = 90.0
-ROUND_WEIGHTS = {1: 1.0, 2: .60, 3: .40, 4: .30}
+
+# Frozen paired-power architecture.
+#
+# Historical power is learned as damaging-event production relative to the
+# opponent's internally learned resistance. Age is deliberately NOT embedded
+# here; current-age translation belongs at matchup/simulator time.
+POWER_KO_WEIGHT = 0.50
+POWER_UPDATE_K = 1.0
+POWER_EVIDENCE_SATURATION = 20.0
+POWER_BASE_PRIOR_RATE = 0.008
+POWER_BASE_PRIOR_SIG = 1000.0
+
+# Direct monotonic translation from validated paired raw state to the existing
+# public 35-90 FSR striking-power contract.
+POWER_RATING_SCALE = 200.0
 
 STAMINA_POOL_MAP = {
     "far_late_early_workload": "late_early_workload_ratio",
@@ -107,12 +121,12 @@ def build_physical_observations(rounds: pd.DataFrame, master: pd.DataFrame) -> p
         "td_landed", "td_attempted", "ctrl_sec", "head_landed", "ground_landed"}
     missing = sorted(required - set(rounds.columns))
     if missing: raise ValueError(f"round stats missing physical source columns: {missing}")
-    master_required = {"fight_id", "date", "method", "finish_round", "match_time_sec", "winner_id"}
+    master_required = {"fight_id", "date", "method", "winner_id"}
     missing = sorted(master_required - set(master.columns))
     if missing: raise ValueError(f"master missing physical metadata columns: {missing}")
 
     r = rounds.copy()
-    r["fight_id"] = r["fight_id"].astype(str); r["fighter_id"] = r["fighter_id"].astype(str)
+    r["fight_id"] = r["fight_id"].astype(str); r["fighter_id"] = r["fighter_id"].astype(str); r["opponent_id"] = r["opponent_id"].astype(str)
     numeric = required - {"event_date", "fight_id", "fighter_id", "fighter_name", "opponent_id"}
     for column in numeric: r[column] = pd.to_numeric(r[column], errors="coerce")
     opponent = r[["fight_id", "round", "fighter_id", "kd", "sig_str_landed", "head_landed", "ground_landed", "ctrl_sec"]].rename(
@@ -131,8 +145,10 @@ def build_physical_observations(rounds: pd.DataFrame, master: pd.DataFrame) -> p
         group = group.sort_values("round")
         first = group.iloc[0]; rounds_observed = float(group["round"].nunique())
         row = {"fight_id": str(first.fight_id), "fighter_id": str(first.fighter_id),
-               "fighter_name": str(first.fighter_name), "date": pd.Timestamp(first.date),
-               "rounds_observed": rounds_observed,
+               "fighter_name": str(first.fighter_name), "opponent_id": str(first.opponent_id),
+               "date": pd.Timestamp(first.date), "rounds_observed": rounds_observed,
+               "kd_scored": float(group.kd.sum()),
+               "sig_landed": float(group.sig_str_landed.sum()),
                "sig_attempts": float(group.sig_str_attempted.sum()),
                "td_attempts": float(group.td_attempted.sum()), "control_seconds": float(group.ctrl_sec.sum()),
                "kd_absorbed": float(group.opponent_kd.sum()), "sig_absorbed": float(group.opponent_sig_landed.sum()),
@@ -158,22 +174,9 @@ def build_physical_observations(rounds: pd.DataFrame, master: pd.DataFrame) -> p
             row["sig_accuracy_change"] = _accuracy_change(group, "sig_str_landed", "sig_str_attempted")
             row["total_accuracy_change"] = _accuracy_change(group, "total_str_landed", "total_str_attempted")
         method = str(first.method).upper(); winner = str(first.winner_id)
-        row["ko_loss"] = float(("KO" in method or "TKO" in method) and str(first.fighter_id) != winner)
-        row["r1_sig_landed"] = float(group.loc[group["round"].eq(1), "sig_str_landed"].sum())
-        row["r1_kd"] = float(group.loc[group["round"].eq(1), "kd"].sum())
-        finish_round = int(float(first.finish_round)); finish = group.loc[group["round"].eq(finish_round)]
-        is_ko_win = ("KO" in method or "TKO" in method) and str(first.fighter_id) == winner and not finish.empty
-        if is_ko_win:
-            t = max(0.0, float(first.match_time_sec))
-            if finish_round > 1 and t > 300: t -= 300 * (finish_round - 1)
-            t = float(np.clip(t, 0, 300)); weight = .20 if finish_round >= 5 else ROUND_WEIGHTS.get(finish_round, 0)
-            sig = max(0.0, float(finish.sig_str_landed.sum())); ground = max(0.0, float(finish.ground_landed.sum()))
-            ko_evidence = 2.5 * weight * exp(-t/240) * exp(-max(sig-1, 0)/35) * exp(-ground/20)
-        else: ko_evidence = 0.0
-        kd_evidence = .20 * row["r1_kd"] * (1 + exp(-row["r1_sig_landed"]/20))
-        row["power_evidence"] = ko_evidence + kd_evidence
-        row["power_event"] = row["power_evidence"] > 0
-        row["power_opportunity"] = 1 - exp(-row["r1_sig_landed"]/20)
+        is_ko = "KO" in method or "TKO" in method
+        row["ko_loss"] = float(is_ko and str(first.fighter_id) != winner)
+        row["ko_win"] = float(is_ko and str(first.fighter_id) == winner)
         output.append(row)
     return pd.DataFrame(output).sort_values(["date", "fight_id", "fighter_id"]).reset_index(drop=True)
 
@@ -240,14 +243,13 @@ def _dur_score(s,threshold):
     return .5 if not parts else sum(w*v for w,v in parts)/sum(w for w,_ in parts)
 def _threshold(values,q): return float(np.quantile(values,q)) if len(values)>=100 else None
 
-def _power_rating(state):
-    if state["events"]==0:
-        return float(np.clip(50-15*(1-exp(-state["opportunity"]/6)),35,50))
-    fights=max(state["fights"],1);events=state["events"]
-    score=5*(1-exp(-events/3))+4*(sqrt(events/fights)*(1-exp(-fights/5)))+2*(1-exp(-state["peak"]/2))
-    candidate=float(np.clip(50+40*(1-exp(-score/6)),50,90))
-    state["running_positive"]=max(state["running_positive"],candidate)
-    return state["running_positive"]
+def _power_rating(raw_state):
+    """Translate paired raw power monotonically onto the public 35-90 scale."""
+    return float(np.clip(
+        BASE_RATING + POWER_RATING_SCALE * float(raw_state),
+        POWER_MIN,
+        POWER_MAX,
+    ))
 
 
 def build_physical_snapshots(*, rounds=None, master=None, round_path:Path=ROUND_STATS_PATH, master_path:Path=MASTER_PATH) -> PhysicalSnapshots:
@@ -257,9 +259,24 @@ def build_physical_snapshots(*, rounds=None, master=None, round_path:Path=ROUND_
     stamina_ratings=defaultdict(lambda:{"far":50.0,"fpr":50.0});updates=defaultdict(lambda:{"far":0,"fpr":0})
     pools={key:[] for key in STAMINA_POOL_MAP}; weighted=defaultdict(float);quality_sum=defaultdict(float)
     resistance=defaultdict(_new_resistance_state);sig_exposures=[];damage_exposures=[]
-    power=defaultdict(lambda:{"fights":0,"events":0,"peak":0.0,"opportunity":0.0,"running_positive":50.0})
+
+    # Internal paired states. Defender state is used only to opponent-adjust
+    # the evidence that learns striking power; it is not a published trait.
+    power_attack=defaultdict(float)
+    power_defense=defaultdict(float)
+    power_population_events=0.0
+    power_population_sig=0.0
+
     snapshots=[]
     for date,date_rows in obs.groupby("date",sort=True):
+        # Expanding population baseline using only dates already processed.
+        power_base_rate=(
+            power_population_events + POWER_BASE_PRIOR_RATE * POWER_BASE_PRIOR_SIG
+        ) / (
+            power_population_sig + POWER_BASE_PRIOR_SIG
+        )
+        power_base_logit=_logit(power_base_rate)
+
         kd_threshold=_threshold(sig_exposures,.67);dur_threshold=_threshold(damage_exposures,.70)
         peer=[[],[],[]]
         for s in resistance.values():
@@ -271,11 +288,17 @@ def build_physical_snapshots(*, rounds=None, master=None, round_path:Path=ROUND_
             snapshots.append({"fight_id":row.fight_id,"fighter_id":row.fighter_id,"fighter_name":row.fighter_name,"date":date,
                 "stamina_capacity":100.0,"stamina_depletion_resistance":stamina_ratings[row.fighter_id]["far"],
                 "stamina_performance_resilience":stamina_ratings[row.fighter_id]["fpr"],
-                "striking_power":_power_rating(power[row.fighter_id]),
+                "striking_power":_power_rating(power_attack[row.fighter_id]),
                 "damage_durability":_rating(_dur_score(s,dur_threshold),fights),
                 "knockdown_resistance":_rating(_kd_score(s,peer) if fights else .5,fights)})
         deltas=defaultdict(lambda:{"far":0.0,"fpr":0.0});date_updates=defaultdict(lambda:{"far":0,"fpr":0})
         date_weighted=defaultdict(float);date_quality=defaultdict(float)
+
+        power_attack_deltas=defaultdict(float)
+        power_defense_deltas=defaultdict(float)
+        date_power_events=0.0
+        date_power_sig=0.0
+
         for _,row in date_rows.iterrows():
             fighter=str(row.fighter_id);far,fpr=_stamina_observations(row,pools);q=stamina_quality(row)
             for key,value in (("far",far),("fpr",fpr)):
@@ -293,8 +316,41 @@ def build_physical_snapshots(*, rounds=None, master=None, round_path:Path=ROUND_
             if ko:s["ko_losses"]+=1
             else:s["survived_fights"]+=1;s["survived_exposure_sum"]+=damage
             sig_exposures.append(sig);damage_exposures.append(damage)
-            p=power[fighter];p["fights"]+=1;p["opportunity"]+=float(row.power_opportunity)
-            if row.power_event:p["events"]+=1;p["peak"]=max(p["peak"],float(row.power_evidence))
+
+            # Paired power update:
+            #   observed damaging-event rate = (KD + 0.5 * KO win) / sig landed
+            #   expected rate adjusts for attacker power and opponent resistance.
+            power_sig=max(0.0,float(row.sig_landed))
+            power_kd=max(0.0,float(row.kd_scored))
+            power_ko=float(row.ko_win)
+            power_events=power_kd + POWER_KO_WEIGHT * power_ko
+
+            date_power_events += power_events
+            date_power_sig += power_sig
+
+            if power_sig > 0:
+                observed=_clamp(power_events/power_sig,0.0,1.0)
+                opponent=str(row.opponent_id)
+                expected=_sigmoid(
+                    power_base_logit
+                    + power_attack[fighter]
+                    - power_defense[opponent]
+                )
+                evidence=1-exp(-power_sig/POWER_EVIDENCE_SATURATION)
+                delta=POWER_UPDATE_K * evidence * (observed-expected)
+                power_attack_deltas[fighter] += delta
+                power_defense_deltas[opponent] -= delta
+
+        # Same-date isolation: apply paired updates only after every fighter on
+        # the date has already received the pre-fight snapshot.
+        for fighter,delta in power_attack_deltas.items():
+            power_attack[fighter] += delta
+        for fighter,delta in power_defense_deltas.items():
+            power_defense[fighter] += delta
+
+        power_population_events += date_power_events
+        power_population_sig += date_power_sig
+
         for fighter in deltas:
             for key in ("far","fpr"):
                 stamina_ratings[fighter][key]=_clamp(stamina_ratings[fighter][key]+deltas[fighter][key],10,90);updates[fighter][key]+=date_updates[fighter][key]
@@ -316,7 +372,7 @@ def build_physical_snapshots(*, rounds=None, master=None, round_path:Path=ROUND_
         s=resistance[fighter];fights=int(s["fights"])
         latest.append({"fighter_id":fighter,"fighter_name":names[fighter],"stamina_capacity":100.0,
             "stamina_depletion_resistance":stamina_ratings[fighter]["far"],"stamina_performance_resilience":stamina_ratings[fighter]["fpr"],
-            "striking_power":_power_rating(power[fighter]),"damage_durability":_rating(_dur_score(s,dur_threshold),fights),
+            "striking_power":_power_rating(power_attack[fighter]),"damage_durability":_rating(_dur_score(s,dur_threshold),fights),
             "knockdown_resistance":_rating(_kd_score(s,final_peer),fights)})
     return PhysicalSnapshots(prefight,pd.DataFrame(latest))
 

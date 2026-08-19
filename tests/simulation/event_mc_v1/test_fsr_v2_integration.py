@@ -109,3 +109,17 @@ def test_historical_resolver_uses_exact_fsr_v2_ids_and_date(monkeypatch):
     assert fight.fsr_v2_matchup.red.fighter_id == "red-id"
     assert fight.fsr_v2_matchup.blue.fighter_id == "blue-id"
     assert seen == [MASTER_PATH, FSR_V2_PREFIGHT_SNAPSHOTS_PATH]
+
+
+def test_fsr_v2_fight_context_age_reaches_physical_profiles():
+    fight = fight_from_fsr_v2_rows(
+        row("r"),
+        row("b"),
+        red_age_years=37.25,
+        blue_age_years=24.50,
+    )
+
+    assert fight.fsr_v2_matchup.red.age_years == pytest.approx(37.25)
+    assert fight.fsr_v2_matchup.blue.age_years == pytest.approx(24.50)
+    assert fight.profiles.red.age_years == pytest.approx(37.25)
+    assert fight.profiles.blue.age_years == pytest.approx(24.50)

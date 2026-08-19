@@ -26,6 +26,11 @@ KD_MIDPOINT = log(_KD["midpoint_impact_ratio"])
 KD_ACUTE_INCREMENT = _KD["acute_increment"]
 ACUTE_HALF_LIFE_SECONDS = _KD["acute_half_life_seconds"]
 
+# Leakage-safe historical validation of the new paired FSR V2 power trait.
+# Age is matchup context, not persisted into the FSR rating.
+POWER_AGE_CENTER_YEARS = 30.0
+POWER_AGE_RATING_POINTS_PER_YEAR = -1.15
+
 
 @dataclass(frozen=True)
 class PhysiologyOutcome:
@@ -59,7 +64,14 @@ class ImpactTraumaKnockdownModel:
         profile, target = self.profiles.fighter(attacker), self.profiles.fighter(defender)
         damage, kd_config = self.calibration.section("damage"), self.calibration.section("knockdown")
         power_modifier = payload.dynamic_modifiers.power_multiplier if payload.dynamic_modifiers else 1.0
-        effective_power = exp((profile.striking_power - 50.0) / damage["power_rating_scale"]) * power_modifier
+        effective_power_rating = (
+            profile.striking_power
+            + POWER_AGE_RATING_POINTS_PER_YEAR
+            * (profile.age_years - POWER_AGE_CENTER_YEARS)
+        )
+        effective_power = exp(
+            (effective_power_rating - 50.0) / damage["power_rating_scale"]
+        ) * power_modifier
         severity = damage_rng.gamma(damage["base_shape"], damage["base_scale"])
         if damage_rng.random() < damage["tail_probability"]:
             severity += damage_rng.gamma(damage["tail_shape"], damage["tail_scale"])

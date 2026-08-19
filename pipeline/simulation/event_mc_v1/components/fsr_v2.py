@@ -120,7 +120,8 @@ class FSRV2FighterInput:
             stamina_depletion_resistance=self.stamina_depletion_resistance,
             stamina_performance_resilience=self.stamina_performance_resilience,
             striking_power=self.striking_power, damage_durability=self.damage_durability,
-            knockdown_resistance=self.knockdown_resistance)
+            knockdown_resistance=self.knockdown_resistance,
+            age_years=self.age_years)
 
     def audit_traits(self) -> dict[str, float]:
         return {field.name: getattr(self, field.name) for field in fields(self)

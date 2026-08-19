@@ -86,20 +86,26 @@ def test_stamina_constants_expected_update_and_same_date_isolation():
     a_same=same_date.query("fighter_id == 'a' and fight_id in ['f1','f1b']")
     assert a_same.stamina_depletion_resistance.nunique()==1
     assert a_same.stamina_performance_resilience.nunique()==1
+    assert a_same.striking_power.nunique()==1
 
 
-def test_power_evidence_timing_kd_low_end_and_non_degrading():
+def test_paired_power_observations_and_direct_rating_mapping():
     rounds,master=_sources();obs=physical.build_physical_observations(rounds,master)
     ko=obs.query("fight_id == 'f2' and fighter_id == 'a'").iloc[0]
-    # Round 2, total elapsed 500 -> within-round 200; finishing-round 10 sig landed.
-    expected_ko=2.5*.60*exp(-200/240)*exp(-(10-1)/35)*exp(0)
-    expected_kd=.20*1*(1+exp(-5/20))
-    assert ko.power_evidence==pytest.approx(expected_ko+expected_kd)
-    low={"fights":3,"events":0,"peak":0.,"opportunity":2.,"running_positive":50.}
-    assert physical._power_rating(low)==pytest.approx(50-15*(1-exp(-2/6)))
-    positive={"fights":3,"events":1,"peak":2.,"opportunity":2.,"running_positive":70.}
-    first=physical._power_rating(positive);positive.update(fights=4)
-    assert physical._power_rating(positive)>=first
+
+    # Paired power consumes full-fight damaging events and full-fight
+    # significant-strike landing opportunity.
+    assert ko.opponent_id=="b"
+    assert ko.kd_scored==pytest.approx(1.0)
+    assert ko.sig_landed==pytest.approx(30.0)
+    assert ko.ko_win==pytest.approx(1.0)
+
+    # Public 35-90 power is a direct monotonic translation of raw paired state.
+    assert physical._power_rating(0.0)==pytest.approx(50.0)
+    assert physical._power_rating(0.10)==pytest.approx(70.0)
+    assert physical._power_rating(-0.05)==pytest.approx(40.0)
+    assert physical._power_rating(0.30)==pytest.approx(90.0)
+    assert physical._power_rating(-0.20)==pytest.approx(35.0)
 
 
 def test_resistance_component_and_rating_equations():
