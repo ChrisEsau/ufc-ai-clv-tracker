@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+import io
+import subprocess
 from pathlib import Path
 
 import numpy as np
@@ -8,10 +10,13 @@ import pandas as pd
 
 from pipeline.common.paths import MASTER_PATH
 from pipeline.simulation.event_clock_mc_v1.compare_event_clock_to_market import (
+    GIT_MARKET_PATH,
+    _match_git_fight_rows,
+    _read_git_market_outcomes,
+    dedupe_snapshot,
     fighter_side,
     implied_probability,
     no_vig_probability,
-    select_git_fallback_snapshot,
 )
 
 OUT_DIR = Path("data/diagnostics/event_clock_mc_v1/market_comparisons")
@@ -56,26 +61,83 @@ def _prepare_master() -> pd.DataFrame:
     return master
 
 
-def _closing_moneyline(fight: pd.Series, bookmaker: str) -> pd.DataFrame:
-    snapshot = select_git_fallback_snapshot(fight, bookmaker)
-    if snapshot.empty:
-        return snapshot
-    ml = snapshot[snapshot["market_key"].astype(str).str.lower().isin(["moneyline", "h2h"])].copy()
-    return ml.reset_index(drop=True)
+def _git_commits_for_event_day(event_date: pd.Timestamp, max_commits: int = 160) -> list[str]:
+    """Return market-outcomes commits through the end of the target event day.
+
+    We intentionally inspect the whole available pre-fight sequence rather than
+    reusing compare_event_clock_to_market's single latest snapshot. The market
+    rows themselves are later filtered by their embedded commence_time.
+    """
+    cutoff = pd.Timestamp(event_date)
+    if cutoff.tzinfo is None:
+        cutoff = cutoff.tz_localize("UTC")
+    else:
+        cutoff = cutoff.tz_convert("UTC")
+    cutoff = cutoff.normalize() + pd.Timedelta(days=1)
+    cutoff_text = cutoff.strftime("%Y-%m-%dT%H:%M:%SZ")
+    proc = subprocess.run(
+        [
+            "git", "log", "--all", f"--before={cutoff_text}",
+            "--format=%H", "--", GIT_MARKET_PATH,
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return [line.strip() for line in proc.stdout.splitlines() if line.strip()][:max_commits]
 
 
-def _find_closing_side_row(snapshot: pd.DataFrame, fight: pd.Series, side: str) -> pd.Series | None:
+def _history_moneyline_snapshots(
+    fight: pd.Series,
+    bookmaker: str,
+    max_commits: int = 160,
+) -> list[tuple[pd.Timestamp, str, pd.DataFrame]]:
+    """Collect every distinct valid pre-fight DraftKings moneyline snapshot in Git."""
+    snapshots: dict[pd.Timestamp, tuple[str, pd.DataFrame]] = {}
+    for commit in _git_commits_for_event_day(pd.Timestamp(fight["event_date"]), max_commits=max_commits):
+        frame = _read_git_market_outcomes(commit)
+        rows = _match_git_fight_rows(frame, fight, bookmaker)
+        if rows.empty:
+            continue
+        ml = rows[rows["market_key"].astype(str).str.lower().isin(["moneyline", "h2h"])].copy()
+        if ml.empty:
+            continue
+        ml["snapshot_timestamp"] = pd.to_datetime(ml["snapshot_timestamp"], utc=True, errors="coerce")
+        for ts, group in ml.dropna(subset=["snapshot_timestamp"]).groupby("snapshot_timestamp", sort=True):
+            group = dedupe_snapshot(group.copy())
+            # Need both fighter sides to calculate a valid no-vig probability.
+            sides = {fighter_side(row, fight) for _, row in group.iterrows()}
+            if not {"red", "blue"}.issubset(sides):
+                continue
+            snapshots[pd.Timestamp(ts)] = (commit, group.reset_index(drop=True))
+    return [(ts, snapshots[ts][0], snapshots[ts][1]) for ts in sorted(snapshots)]
+
+
+def _find_side_row(snapshot: pd.DataFrame, fight: pd.Series, side: str) -> pd.Series | None:
     if snapshot.empty:
         return None
-    matches = []
-    for idx, row in snapshot.iterrows():
-        if fighter_side(row, fight) == side:
-            matches.append(idx)
+    matches = [idx for idx, row in snapshot.iterrows() if fighter_side(row, fight) == side]
     if not matches:
         return None
-    # There should normally be one row per side in a single DraftKings moneyline market.
-    # If duplicates survive, use the last deterministic row after dedupe.
     return snapshot.loc[matches[-1]]
+
+
+def _snapshot_side_values(
+    snapshot: pd.DataFrame,
+    fight: pd.Series,
+    side: str,
+) -> tuple[float, float, float] | None:
+    row = _find_side_row(snapshot, fight, side)
+    if row is None:
+        return None
+    odds = pd.to_numeric(pd.Series([row.get("american_odds")]), errors="coerce").iloc[0]
+    if pd.isna(odds):
+        return None
+    raw = implied_probability(float(odds))
+    novig = no_vig_probability(snapshot, row)
+    if novig is None or not np.isfinite(novig):
+        return None
+    return float(odds), float(raw), float(novig)
 
 
 def audit_file(path: Path, master: pd.DataFrame, bookmaker: str) -> pd.DataFrame:
@@ -90,83 +152,86 @@ def audit_file(path: Path, master: pd.DataFrame, bookmaker: str) -> pd.DataFrame
 
     ml = comp[comp["bet_key"].astype(str).str.endswith("_ML")].copy()
     rows = []
-
     master_lookup = master.set_index("fight_id", drop=False)
-    for _, entry in ml.iterrows():
-        fight_id = str(entry["fight_id"])
+
+    # The comparison CSV was built from the latest pre-fight snapshot, so it is
+    # a closing-line comparison, not a true entry snapshot. For CLV we rebuild
+    # the observed market sequence and define entry=first observed, close=last
+    # observed. The Event Clock model probability stays fixed throughout.
+    for fight_id, group in ml.groupby(ml["fight_id"].astype(str), sort=False):
         if fight_id not in master_lookup.index:
             continue
         m = master_lookup.loc[fight_id]
+        first = group.iloc[0]
         fight = pd.Series({
             "fight_id": fight_id,
-            "red": str(entry["red"]),
-            "blue": str(entry["blue"]),
+            "red": str(first["red"]),
+            "blue": str(first["blue"]),
             "event_date": m["event_date"],
         })
-
-        side = str(entry["bet_key"]).split("_")[0].lower()
-        if side not in {"red", "blue"}:
+        sequence = _history_moneyline_snapshots(fight, bookmaker)
+        if len(sequence) < 2:
+            continue
+        entry_ts, entry_commit, entry_snapshot = sequence[0]
+        close_ts, close_commit, close_snapshot = sequence[-1]
+        if close_ts <= entry_ts:
             continue
 
-        closing = _closing_moneyline(fight, bookmaker)
-        close_row = _find_closing_side_row(closing, fight, side)
-        if close_row is None:
-            continue
+        for _, model_row in group.iterrows():
+            side = str(model_row["bet_key"]).split("_")[0].lower()
+            if side not in {"red", "blue"}:
+                continue
+            entry_vals = _snapshot_side_values(entry_snapshot, fight, side)
+            close_vals = _snapshot_side_values(close_snapshot, fight, side)
+            if entry_vals is None or close_vals is None:
+                continue
+            entry_odds, entry_raw, entry_novig = entry_vals
+            close_odds, close_raw, close_novig = close_vals
+            model_p = float(model_row["model_probability"])
+            model_edge_raw = model_p - entry_raw
+            model_edge_novig = model_p - entry_novig
+            expected_roi = model_p * (entry_odds / 100.0 if entry_odds > 0 else 100.0 / abs(entry_odds)) - (1.0 - model_p)
+            clv = close_novig - entry_novig
+            qualifies_strict = bool(model_edge_raw >= 0.05 - EPS or expected_roi >= 0.10 - EPS)
 
-        close_odds = pd.to_numeric(pd.Series([close_row.get("american_odds")]), errors="coerce").iloc[0]
-        if pd.isna(close_odds):
-            continue
-        close_raw = implied_probability(float(close_odds))
-        close_novig = no_vig_probability(closing, close_row)
-        if close_novig is None or not np.isfinite(close_novig):
-            continue
-
-        entry_raw = float(entry["raw_implied_probability"])
-        entry_novig = pd.to_numeric(pd.Series([entry.get("no_vig_probability")]), errors="coerce").iloc[0]
-        if pd.isna(entry_novig):
-            continue
-        model_p = float(entry["model_probability"])
-        entry_odds = float(entry["american_odds"])
-        model_edge_novig = model_p - float(entry_novig)
-        model_edge_raw = model_p - entry_raw
-        clv = float(close_novig) - float(entry_novig)
-
-        rows.append({
-            "source_file": str(path),
-            "fight_id": fight_id,
-            "red": entry["red"],
-            "blue": entry["blue"],
-            "bet_key": entry["bet_key"],
-            "side": side,
-            "american_odds_entry": entry_odds,
-            "american_odds_close": float(close_odds),
-            "model_probability": model_p,
-            "entry_raw_implied_probability": entry_raw,
-            "entry_no_vig_probability": float(entry_novig),
-            "closing_raw_implied_probability": float(close_raw),
-            "closing_no_vig_probability": float(close_novig),
-            "model_edge_vs_entry_raw": model_edge_raw,
-            "model_edge_vs_entry_novig": model_edge_novig,
-            "clv_probability_points": clv,
-            "residual_model_edge_at_close": model_p - float(close_novig),
-            "market_closed_toward_model": bool(clv > EPS) if model_edge_novig > EPS else bool(clv < -EPS),
-            "price_class": _price_class(entry_odds),
-            "edge_band": _edge_band(model_edge_raw),
-            "positive_ev": bool(float(entry.get("expected_roi", np.nan)) > EPS) if pd.notna(entry.get("expected_roi")) else bool(model_edge_raw > EPS),
-            "qualifies_strict": bool(entry.get("qualifies_strict", False)),
-            "won": bool(entry.get("won", False)),
-            "entry_refresh_timestamp": entry.get("refresh_timestamp"),
-            "entry_refresh_id": entry.get("refresh_id"),
-            "closing_refresh_timestamp": close_row.get("refresh_timestamp"),
-            "closing_refresh_id": close_row.get("refresh_id"),
-        })
+            rows.append({
+                "source_file": str(path),
+                "fight_id": fight_id,
+                "red": model_row["red"],
+                "blue": model_row["blue"],
+                "bet_key": model_row["bet_key"],
+                "side": side,
+                "american_odds_entry": entry_odds,
+                "american_odds_close": close_odds,
+                "model_probability": model_p,
+                "entry_raw_implied_probability": entry_raw,
+                "entry_no_vig_probability": entry_novig,
+                "closing_raw_implied_probability": close_raw,
+                "closing_no_vig_probability": close_novig,
+                "model_edge_vs_entry_raw": model_edge_raw,
+                "model_edge_vs_entry_novig": model_edge_novig,
+                "clv_probability_points": clv,
+                "residual_model_edge_at_close": model_p - close_novig,
+                "market_closed_toward_model": bool(clv > EPS) if model_edge_novig > EPS else bool(clv < -EPS),
+                "price_class": _price_class(entry_odds),
+                "edge_band": _edge_band(model_edge_raw),
+                "expected_roi_entry": expected_roi,
+                "positive_ev": bool(expected_roi > EPS),
+                "qualifies_strict": qualifies_strict,
+                "won": bool(model_row.get("won", False)),
+                "entry_refresh_timestamp": entry_ts,
+                "entry_refresh_id": f"git_{entry_commit[:12]}",
+                "closing_refresh_timestamp": close_ts,
+                "closing_refresh_id": f"git_{close_commit[:12]}",
+                "observed_snapshot_count": len(sequence),
+            })
 
     return pd.DataFrame(rows)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Compare Event Clock moneyline model edge at historical snapshot with DraftKings closing-line movement."
+        description="Compare Event Clock model edge at first observed DraftKings moneyline with movement to latest valid pre-fight line."
     )
     parser.add_argument("--comparison", nargs="+", required=True, type=Path)
     parser.add_argument("--bookmaker", default="DraftKings")
@@ -177,7 +242,7 @@ def main() -> None:
     frames = [audit_file(path, master, args.bookmaker) for path in args.comparison]
     out = pd.concat([f for f in frames if not f.empty], ignore_index=True) if any(not f.empty for f in frames) else pd.DataFrame()
     if out.empty:
-        raise RuntimeError("No moneyline rows could be matched to a valid pre-fight closing snapshot.")
+        raise RuntimeError("No moneyline rows had at least two valid historical pre-fight DraftKings snapshots.")
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     out.to_csv(args.output, index=False)
@@ -187,6 +252,8 @@ def main() -> None:
     print("=" * 130)
     print(f"input cards: {len(args.comparison)}")
     print(f"matched moneyline sides: {len(out)}")
+    print("ENTRY: first observed valid pre-fight DraftKings moneyline snapshot")
+    print("CLOSE: latest observed valid pre-fight DraftKings moneyline snapshot")
     print("CLV definition: closing no-vig probability - entry no-vig probability for the same fighter")
     print("positive CLV = market moved toward that fighter")
     print("prediction probabilities changed: NO")
@@ -221,7 +288,7 @@ def main() -> None:
         "red", "blue", "bet_key", "american_odds_entry", "american_odds_close",
         "model_probability", "entry_no_vig_probability", "closing_no_vig_probability",
         "model_edge_vs_entry_novig", "clv_probability_points", "residual_model_edge_at_close",
-        "price_class", "edge_band", "won",
+        "price_class", "edge_band", "won", "observed_snapshot_count",
     ]
     print("STRICT BETS — EDGE VS CLV")
     if strict.empty:
