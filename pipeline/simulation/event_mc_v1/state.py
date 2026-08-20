@@ -7,8 +7,9 @@ from typing import Mapping
 
 
 class Phase(str, Enum):
-    DISTANCE = "distance"
-    CLINCH = "clinch"
+    STANDING = "standing"
+    # Transitional source alias; it is not a distinct persistent state.
+    DISTANCE = "standing"
     GROUND = "ground"
 
 
@@ -38,7 +39,7 @@ class ActionAvailabilityState:
 @dataclass
 class FightState:
     fight_time_seconds: float = 0.0
-    phase: Phase = Phase.DISTANCE
+    phase: Phase = Phase.STANDING
     ground_controller: str | None = None
     clinch_controller: str | None = None
     finished: bool = False

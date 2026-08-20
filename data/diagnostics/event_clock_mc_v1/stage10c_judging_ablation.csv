@@ -1,0 +1,1495 @@
+fight_id,red_name,blue_name,winner_name,method,variant,actual_red_win,predicted_red_win,red_rounds,blue_rounds,tied_rounds,correct
+0f20c1d7c44fa5fe,Raul Rosas Jr.,Vince Morales,Raul Rosas Jr.,Decision - Unanimous,SIG_ONLY,1,0.0,1,2,0,False
+0f20c1d7c44fa5fe,Raul Rosas Jr.,Vince Morales,Raul Rosas Jr.,Decision - Unanimous,SIG_KD,1,0.0,1,2,0,False
+0f20c1d7c44fa5fe,Raul Rosas Jr.,Vince Morales,Raul Rosas Jr.,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+0f20c1d7c44fa5fe,Raul Rosas Jr.,Vince Morales,Raul Rosas Jr.,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+0f20c1d7c44fa5fe,Raul Rosas Jr.,Vince Morales,Raul Rosas Jr.,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+0f20c1d7c44fa5fe,Raul Rosas Jr.,Vince Morales,Raul Rosas Jr.,Decision - Unanimous,DAMAGE_FIRST,1,0.0,1,2,0,False
+33e301872e2b5680,Brandon Moreno,Steve Erceg,Brandon Moreno,Decision - Unanimous,SIG_ONLY,1,0.0,0,5,0,False
+33e301872e2b5680,Brandon Moreno,Steve Erceg,Brandon Moreno,Decision - Unanimous,SIG_KD,1,0.0,0,5,0,False
+33e301872e2b5680,Brandon Moreno,Steve Erceg,Brandon Moreno,Decision - Unanimous,SIG_KD_TD,1,0.0,1,4,0,False
+33e301872e2b5680,Brandon Moreno,Steve Erceg,Brandon Moreno,Decision - Unanimous,SIG_KD_TD_CTRL,1,0.0,1,4,0,False
+33e301872e2b5680,Brandon Moreno,Steve Erceg,Brandon Moreno,Decision - Unanimous,OLD_FULL,1,0.0,1,4,0,False
+33e301872e2b5680,Brandon Moreno,Steve Erceg,Brandon Moreno,Decision - Unanimous,DAMAGE_FIRST,1,0.0,0,5,0,False
+41cdbcc0f3635b8f,Christian Rodriguez,Melquizael Costa,Melquizael Costa,Decision - Unanimous,SIG_ONLY,0,0.0,1,2,0,True
+41cdbcc0f3635b8f,Christian Rodriguez,Melquizael Costa,Melquizael Costa,Decision - Unanimous,SIG_KD,0,0.0,1,2,0,True
+41cdbcc0f3635b8f,Christian Rodriguez,Melquizael Costa,Melquizael Costa,Decision - Unanimous,SIG_KD_TD,0,0.0,1,2,0,True
+41cdbcc0f3635b8f,Christian Rodriguez,Melquizael Costa,Melquizael Costa,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+41cdbcc0f3635b8f,Christian Rodriguez,Melquizael Costa,Melquizael Costa,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+41cdbcc0f3635b8f,Christian Rodriguez,Melquizael Costa,Melquizael Costa,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+5ba7dd466e30169f,Ronaldo Rodriguez,Kevin Borjas,Kevin Borjas,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+5ba7dd466e30169f,Ronaldo Rodriguez,Kevin Borjas,Kevin Borjas,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+5ba7dd466e30169f,Ronaldo Rodriguez,Kevin Borjas,Kevin Borjas,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+5ba7dd466e30169f,Ronaldo Rodriguez,Kevin Borjas,Kevin Borjas,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+5ba7dd466e30169f,Ronaldo Rodriguez,Kevin Borjas,Kevin Borjas,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+5ba7dd466e30169f,Ronaldo Rodriguez,Kevin Borjas,Kevin Borjas,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+7e3fc760b26b6ae4,Rafa Garcia,Vinc Pichel,Rafa Garcia,Decision - Unanimous,SIG_ONLY,1,0.0,0,3,0,False
+7e3fc760b26b6ae4,Rafa Garcia,Vinc Pichel,Rafa Garcia,Decision - Unanimous,SIG_KD,1,0.0,0,3,0,False
+7e3fc760b26b6ae4,Rafa Garcia,Vinc Pichel,Rafa Garcia,Decision - Unanimous,SIG_KD_TD,1,0.0,1,2,0,False
+7e3fc760b26b6ae4,Rafa Garcia,Vinc Pichel,Rafa Garcia,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+7e3fc760b26b6ae4,Rafa Garcia,Vinc Pichel,Rafa Garcia,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+7e3fc760b26b6ae4,Rafa Garcia,Vinc Pichel,Rafa Garcia,Decision - Unanimous,DAMAGE_FIRST,1,0.0,0,3,0,False
+7efca050bc7be8ac,Loopy Godinez,Julia Polastri,Loopy Godinez,Decision - Unanimous,SIG_ONLY,1,0.0,0,1,2,False
+7efca050bc7be8ac,Loopy Godinez,Julia Polastri,Loopy Godinez,Decision - Unanimous,SIG_KD,1,0.0,0,1,2,False
+7efca050bc7be8ac,Loopy Godinez,Julia Polastri,Loopy Godinez,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+7efca050bc7be8ac,Loopy Godinez,Julia Polastri,Loopy Godinez,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+7efca050bc7be8ac,Loopy Godinez,Julia Polastri,Loopy Godinez,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+7efca050bc7be8ac,Loopy Godinez,Julia Polastri,Loopy Godinez,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True
+9f66d450af690df5,MarQuel Mederos,Austin Hubbard,MarQuel Mederos,Decision - Split,SIG_ONLY,1,1.0,3,0,0,True
+9f66d450af690df5,MarQuel Mederos,Austin Hubbard,MarQuel Mederos,Decision - Split,SIG_KD,1,1.0,3,0,0,True
+9f66d450af690df5,MarQuel Mederos,Austin Hubbard,MarQuel Mederos,Decision - Split,SIG_KD_TD,1,1.0,3,0,0,True
+9f66d450af690df5,MarQuel Mederos,Austin Hubbard,MarQuel Mederos,Decision - Split,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+9f66d450af690df5,MarQuel Mederos,Austin Hubbard,MarQuel Mederos,Decision - Split,OLD_FULL,1,1.0,2,1,0,True
+9f66d450af690df5,MarQuel Mederos,Austin Hubbard,MarQuel Mederos,Decision - Split,DAMAGE_FIRST,1,1.0,3,0,0,True
+0c80eef2f4570543,Brad Tavares,Gerald Meerschaert,Brad Tavares,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+0c80eef2f4570543,Brad Tavares,Gerald Meerschaert,Brad Tavares,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+0c80eef2f4570543,Brad Tavares,Gerald Meerschaert,Brad Tavares,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+0c80eef2f4570543,Brad Tavares,Gerald Meerschaert,Brad Tavares,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+0c80eef2f4570543,Brad Tavares,Gerald Meerschaert,Brad Tavares,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+0c80eef2f4570543,Brad Tavares,Gerald Meerschaert,Brad Tavares,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+4b1aec2395ebca14,Victor Henry,Pedro Falcao,Victor Henry,Decision - Unanimous,SIG_ONLY,1,1.0,2,1,0,True
+4b1aec2395ebca14,Victor Henry,Pedro Falcao,Victor Henry,Decision - Unanimous,SIG_KD,1,1.0,2,1,0,True
+4b1aec2395ebca14,Victor Henry,Pedro Falcao,Victor Henry,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+4b1aec2395ebca14,Victor Henry,Pedro Falcao,Victor Henry,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+4b1aec2395ebca14,Victor Henry,Pedro Falcao,Victor Henry,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+4b1aec2395ebca14,Victor Henry,Pedro Falcao,Victor Henry,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True
+86a1be10255eea4e,Josh Emmett,Lerone Murphy,Lerone Murphy,Decision - Unanimous,SIG_ONLY,0,0.0,0,4,1,True
+86a1be10255eea4e,Josh Emmett,Lerone Murphy,Lerone Murphy,Decision - Unanimous,SIG_KD,0,0.0,0,4,1,True
+86a1be10255eea4e,Josh Emmett,Lerone Murphy,Lerone Murphy,Decision - Unanimous,SIG_KD_TD,0,0.0,1,4,0,True
+86a1be10255eea4e,Josh Emmett,Lerone Murphy,Lerone Murphy,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,4,0,True
+86a1be10255eea4e,Josh Emmett,Lerone Murphy,Lerone Murphy,Decision - Unanimous,OLD_FULL,0,0.0,1,4,0,True
+86a1be10255eea4e,Josh Emmett,Lerone Murphy,Lerone Murphy,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,4,0,True
+96cc199d78732d11,Martin Buday,Uran Satybaldiev,Martin Buday,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+96cc199d78732d11,Martin Buday,Uran Satybaldiev,Martin Buday,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+96cc199d78732d11,Martin Buday,Uran Satybaldiev,Martin Buday,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+96cc199d78732d11,Martin Buday,Uran Satybaldiev,Martin Buday,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+96cc199d78732d11,Martin Buday,Uran Satybaldiev,Martin Buday,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+96cc199d78732d11,Martin Buday,Uran Satybaldiev,Martin Buday,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+a160e94fdb66de17,Pat Sabatini,Joanderson Brito,Pat Sabatini,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+a160e94fdb66de17,Pat Sabatini,Joanderson Brito,Pat Sabatini,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+a160e94fdb66de17,Pat Sabatini,Joanderson Brito,Pat Sabatini,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+a160e94fdb66de17,Pat Sabatini,Joanderson Brito,Pat Sabatini,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+a160e94fdb66de17,Pat Sabatini,Joanderson Brito,Pat Sabatini,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+a160e94fdb66de17,Pat Sabatini,Joanderson Brito,Pat Sabatini,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+cca4d763b1c6de0a,Vanessa Demopoulos,Talita Alencar,Talita Alencar,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+cca4d763b1c6de0a,Vanessa Demopoulos,Talita Alencar,Talita Alencar,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+cca4d763b1c6de0a,Vanessa Demopoulos,Talita Alencar,Talita Alencar,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+cca4d763b1c6de0a,Vanessa Demopoulos,Talita Alencar,Talita Alencar,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+cca4d763b1c6de0a,Vanessa Demopoulos,Talita Alencar,Talita Alencar,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+cca4d763b1c6de0a,Vanessa Demopoulos,Talita Alencar,Talita Alencar,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+d1368ca941c1fefc,Torrez Finney,Robert Valentin,Torrez Finney,Decision - Split,SIG_ONLY,1,0.0,1,2,0,False
+d1368ca941c1fefc,Torrez Finney,Robert Valentin,Torrez Finney,Decision - Split,SIG_KD,1,0.0,1,2,0,False
+d1368ca941c1fefc,Torrez Finney,Robert Valentin,Torrez Finney,Decision - Split,SIG_KD_TD,1,1.0,2,1,0,True
+d1368ca941c1fefc,Torrez Finney,Robert Valentin,Torrez Finney,Decision - Split,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+d1368ca941c1fefc,Torrez Finney,Robert Valentin,Torrez Finney,Decision - Split,OLD_FULL,1,1.0,3,0,0,True
+d1368ca941c1fefc,Torrez Finney,Robert Valentin,Torrez Finney,Decision - Split,DAMAGE_FIRST,1,0.0,1,2,0,False
+fd088ce1481315a5,Loma Lookboonmee,Istela Nunes,Loma Lookboonmee,Decision - Unanimous,SIG_ONLY,1,,1,1,1,
+fd088ce1481315a5,Loma Lookboonmee,Istela Nunes,Loma Lookboonmee,Decision - Unanimous,SIG_KD,1,,1,1,1,
+fd088ce1481315a5,Loma Lookboonmee,Istela Nunes,Loma Lookboonmee,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+fd088ce1481315a5,Loma Lookboonmee,Istela Nunes,Loma Lookboonmee,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+fd088ce1481315a5,Loma Lookboonmee,Istela Nunes,Loma Lookboonmee,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+fd088ce1481315a5,Loma Lookboonmee,Istela Nunes,Loma Lookboonmee,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True
+0eccebee160137b1,Yan Xiaonan,Virna Jandiroba,Virna Jandiroba,Decision - Unanimous,SIG_ONLY,0,1.0,2,0,1,False
+0eccebee160137b1,Yan Xiaonan,Virna Jandiroba,Virna Jandiroba,Decision - Unanimous,SIG_KD,0,1.0,2,0,1,False
+0eccebee160137b1,Yan Xiaonan,Virna Jandiroba,Virna Jandiroba,Decision - Unanimous,SIG_KD_TD,0,0.0,1,2,0,True
+0eccebee160137b1,Yan Xiaonan,Virna Jandiroba,Virna Jandiroba,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+0eccebee160137b1,Yan Xiaonan,Virna Jandiroba,Virna Jandiroba,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+0eccebee160137b1,Yan Xiaonan,Virna Jandiroba,Virna Jandiroba,Decision - Unanimous,DAMAGE_FIRST,0,1.0,2,1,0,False
+11eb27a1ac74d225,Jim Miller,Chase Hooper,Chase Hooper,Decision - Unanimous,SIG_ONLY,0,0.0,0,2,1,True
+11eb27a1ac74d225,Jim Miller,Chase Hooper,Chase Hooper,Decision - Unanimous,SIG_KD,0,0.0,0,2,1,True
+11eb27a1ac74d225,Jim Miller,Chase Hooper,Chase Hooper,Decision - Unanimous,SIG_KD_TD,0,0.0,0,2,1,True
+11eb27a1ac74d225,Jim Miller,Chase Hooper,Chase Hooper,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+11eb27a1ac74d225,Jim Miller,Chase Hooper,Chase Hooper,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+11eb27a1ac74d225,Jim Miller,Chase Hooper,Chase Hooper,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+d3be5a4e0ec273e2,Yair Rodriguez,Patricio Freire,Yair Rodriguez,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+d3be5a4e0ec273e2,Yair Rodriguez,Patricio Freire,Yair Rodriguez,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+d3be5a4e0ec273e2,Yair Rodriguez,Patricio Freire,Yair Rodriguez,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+d3be5a4e0ec273e2,Yair Rodriguez,Patricio Freire,Yair Rodriguez,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+d3be5a4e0ec273e2,Yair Rodriguez,Patricio Freire,Yair Rodriguez,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+d3be5a4e0ec273e2,Yair Rodriguez,Patricio Freire,Yair Rodriguez,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+e733f148060bef2a,Alexander Volkanovski,Diego Lopes,Alexander Volkanovski,Decision - Unanimous,SIG_ONLY,1,1.0,5,0,0,True
+e733f148060bef2a,Alexander Volkanovski,Diego Lopes,Alexander Volkanovski,Decision - Unanimous,SIG_KD,1,1.0,4,1,0,True
+e733f148060bef2a,Alexander Volkanovski,Diego Lopes,Alexander Volkanovski,Decision - Unanimous,SIG_KD_TD,1,1.0,4,1,0,True
+e733f148060bef2a,Alexander Volkanovski,Diego Lopes,Alexander Volkanovski,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,4,1,0,True
+e733f148060bef2a,Alexander Volkanovski,Diego Lopes,Alexander Volkanovski,Decision - Unanimous,OLD_FULL,1,1.0,4,1,0,True
+e733f148060bef2a,Alexander Volkanovski,Diego Lopes,Alexander Volkanovski,Decision - Unanimous,DAMAGE_FIRST,1,1.0,4,1,0,True
+fd98843926965cbd,Sumudaerji,Mitch Raposo,Sumudaerji,Decision - Split,SIG_ONLY,1,1.0,3,0,0,True
+fd98843926965cbd,Sumudaerji,Mitch Raposo,Sumudaerji,Decision - Split,SIG_KD,1,1.0,3,0,0,True
+fd98843926965cbd,Sumudaerji,Mitch Raposo,Sumudaerji,Decision - Split,SIG_KD_TD,1,1.0,3,0,0,True
+fd98843926965cbd,Sumudaerji,Mitch Raposo,Sumudaerji,Decision - Split,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+fd98843926965cbd,Sumudaerji,Mitch Raposo,Sumudaerji,Decision - Split,OLD_FULL,1,1.0,2,1,0,True
+fd98843926965cbd,Sumudaerji,Mitch Raposo,Sumudaerji,Decision - Split,DAMAGE_FIRST,1,1.0,3,0,0,True
+4072abf0b0c179f2,Giga Chikadze,David Onama,David Onama,Decision - Unanimous,SIG_ONLY,0,0.0,1,2,0,True
+4072abf0b0c179f2,Giga Chikadze,David Onama,David Onama,Decision - Unanimous,SIG_KD,0,0.0,1,2,0,True
+4072abf0b0c179f2,Giga Chikadze,David Onama,David Onama,Decision - Unanimous,SIG_KD_TD,0,0.0,1,2,0,True
+4072abf0b0c179f2,Giga Chikadze,David Onama,David Onama,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+4072abf0b0c179f2,Giga Chikadze,David Onama,David Onama,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+4072abf0b0c179f2,Giga Chikadze,David Onama,David Onama,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+633f4b5ec767769d,Ian Machado Garry,Carlos Prates,Ian Machado Garry,Decision - Unanimous,SIG_ONLY,1,1.0,5,0,0,True
+633f4b5ec767769d,Ian Machado Garry,Carlos Prates,Ian Machado Garry,Decision - Unanimous,SIG_KD,1,1.0,5,0,0,True
+633f4b5ec767769d,Ian Machado Garry,Carlos Prates,Ian Machado Garry,Decision - Unanimous,SIG_KD_TD,1,1.0,5,0,0,True
+633f4b5ec767769d,Ian Machado Garry,Carlos Prates,Ian Machado Garry,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,5,0,0,True
+633f4b5ec767769d,Ian Machado Garry,Carlos Prates,Ian Machado Garry,Decision - Unanimous,OLD_FULL,1,1.0,5,0,0,True
+633f4b5ec767769d,Ian Machado Garry,Carlos Prates,Ian Machado Garry,Decision - Unanimous,DAMAGE_FIRST,1,1.0,5,0,0,True
+6f3cb7ce84185dd3,Chris Gutierrez,John Castaneda,Chris Gutierrez,Decision - Split,SIG_ONLY,1,1.0,2,1,0,True
+6f3cb7ce84185dd3,Chris Gutierrez,John Castaneda,Chris Gutierrez,Decision - Split,SIG_KD,1,1.0,2,1,0,True
+6f3cb7ce84185dd3,Chris Gutierrez,John Castaneda,Chris Gutierrez,Decision - Split,SIG_KD_TD,1,1.0,2,1,0,True
+6f3cb7ce84185dd3,Chris Gutierrez,John Castaneda,Chris Gutierrez,Decision - Split,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+6f3cb7ce84185dd3,Chris Gutierrez,John Castaneda,Chris Gutierrez,Decision - Split,OLD_FULL,1,1.0,2,1,0,True
+6f3cb7ce84185dd3,Chris Gutierrez,John Castaneda,Chris Gutierrez,Decision - Split,DAMAGE_FIRST,1,1.0,2,1,0,True
+7d51649373d42571,Da'Mon Blackshear,Alatengheili,Da'Mon Blackshear,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+7d51649373d42571,Da'Mon Blackshear,Alatengheili,Da'Mon Blackshear,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+7d51649373d42571,Da'Mon Blackshear,Alatengheili,Da'Mon Blackshear,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+7d51649373d42571,Da'Mon Blackshear,Alatengheili,Da'Mon Blackshear,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+7d51649373d42571,Da'Mon Blackshear,Alatengheili,Da'Mon Blackshear,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+7d51649373d42571,Da'Mon Blackshear,Alatengheili,Da'Mon Blackshear,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+97770b38df67b276,Evan Elder,Gauge Young,Evan Elder,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+97770b38df67b276,Evan Elder,Gauge Young,Evan Elder,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+97770b38df67b276,Evan Elder,Gauge Young,Evan Elder,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+97770b38df67b276,Evan Elder,Gauge Young,Evan Elder,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+97770b38df67b276,Evan Elder,Gauge Young,Evan Elder,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+97770b38df67b276,Evan Elder,Gauge Young,Evan Elder,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+9bbd45774fb4a6eb,Michel Pereira,Abus Magomedov,Abus Magomedov,Decision - Unanimous,SIG_ONLY,0,1.0,2,1,0,False
+9bbd45774fb4a6eb,Michel Pereira,Abus Magomedov,Abus Magomedov,Decision - Unanimous,SIG_KD,0,1.0,2,1,0,False
+9bbd45774fb4a6eb,Michel Pereira,Abus Magomedov,Abus Magomedov,Decision - Unanimous,SIG_KD_TD,0,1.0,2,1,0,False
+9bbd45774fb4a6eb,Michel Pereira,Abus Magomedov,Abus Magomedov,Decision - Unanimous,SIG_KD_TD_CTRL,0,1.0,2,1,0,False
+9bbd45774fb4a6eb,Michel Pereira,Abus Magomedov,Abus Magomedov,Decision - Unanimous,OLD_FULL,0,1.0,2,1,0,False
+9bbd45774fb4a6eb,Michel Pereira,Abus Magomedov,Abus Magomedov,Decision - Unanimous,DAMAGE_FIRST,0,1.0,2,1,0,False
+d8d22dcc1f6912e7,Matt Schnell,Jimmy Flick,Matt Schnell,Decision - Unanimous,SIG_ONLY,1,1.0,2,1,0,True
+d8d22dcc1f6912e7,Matt Schnell,Jimmy Flick,Matt Schnell,Decision - Unanimous,SIG_KD,1,1.0,2,1,0,True
+d8d22dcc1f6912e7,Matt Schnell,Jimmy Flick,Matt Schnell,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+d8d22dcc1f6912e7,Matt Schnell,Jimmy Flick,Matt Schnell,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+d8d22dcc1f6912e7,Matt Schnell,Jimmy Flick,Matt Schnell,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+d8d22dcc1f6912e7,Matt Schnell,Jimmy Flick,Matt Schnell,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True
+2707dc2245335cc1,Yana Santos,Miesha Tate,Yana Santos,Decision - Unanimous,SIG_ONLY,1,1.0,2,1,0,True
+2707dc2245335cc1,Yana Santos,Miesha Tate,Yana Santos,Decision - Unanimous,SIG_KD,1,1.0,2,1,0,True
+2707dc2245335cc1,Yana Santos,Miesha Tate,Yana Santos,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+2707dc2245335cc1,Yana Santos,Miesha Tate,Yana Santos,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+2707dc2245335cc1,Yana Santos,Miesha Tate,Yana Santos,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+2707dc2245335cc1,Yana Santos,Miesha Tate,Yana Santos,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True
+469f887278324e63,Juliana Miller,Ivana Petrovic,Juliana Miller,Decision - Unanimous,SIG_ONLY,1,0.0,1,2,0,False
+469f887278324e63,Juliana Miller,Ivana Petrovic,Juliana Miller,Decision - Unanimous,SIG_KD,1,0.0,1,2,0,False
+469f887278324e63,Juliana Miller,Ivana Petrovic,Juliana Miller,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+469f887278324e63,Juliana Miller,Ivana Petrovic,Juliana Miller,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+469f887278324e63,Juliana Miller,Ivana Petrovic,Juliana Miller,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+469f887278324e63,Juliana Miller,Ivana Petrovic,Juliana Miller,Decision - Unanimous,DAMAGE_FIRST,1,0.0,1,2,0,False
+5ce29056e0cd2df9,Montel Jackson,Daniel Marcos,Montel Jackson,Decision - Unanimous,SIG_ONLY,1,1.0,2,0,1,True
+5ce29056e0cd2df9,Montel Jackson,Daniel Marcos,Montel Jackson,Decision - Unanimous,SIG_KD,1,1.0,2,0,1,True
+5ce29056e0cd2df9,Montel Jackson,Daniel Marcos,Montel Jackson,Decision - Unanimous,SIG_KD_TD,1,1.0,2,0,1,True
+5ce29056e0cd2df9,Montel Jackson,Daniel Marcos,Montel Jackson,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+5ce29056e0cd2df9,Montel Jackson,Daniel Marcos,Montel Jackson,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+5ce29056e0cd2df9,Montel Jackson,Daniel Marcos,Montel Jackson,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+6ccd10adc968e1f0,Cameron Smotherman,Serhiy Sidey,Serhiy Sidey,Decision - Unanimous,SIG_ONLY,0,1.0,2,1,0,False
+6ccd10adc968e1f0,Cameron Smotherman,Serhiy Sidey,Serhiy Sidey,Decision - Unanimous,SIG_KD,0,1.0,2,1,0,False
+6ccd10adc968e1f0,Cameron Smotherman,Serhiy Sidey,Serhiy Sidey,Decision - Unanimous,SIG_KD_TD,0,0.0,1,2,0,True
+6ccd10adc968e1f0,Cameron Smotherman,Serhiy Sidey,Serhiy Sidey,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+6ccd10adc968e1f0,Cameron Smotherman,Serhiy Sidey,Serhiy Sidey,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+6ccd10adc968e1f0,Cameron Smotherman,Serhiy Sidey,Serhiy Sidey,Decision - Unanimous,DAMAGE_FIRST,0,1.0,2,1,0,False
+9039959b41901412,Jeremy Stephens,Mason Jones,Mason Jones,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+9039959b41901412,Jeremy Stephens,Mason Jones,Mason Jones,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+9039959b41901412,Jeremy Stephens,Mason Jones,Mason Jones,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+9039959b41901412,Jeremy Stephens,Mason Jones,Mason Jones,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+9039959b41901412,Jeremy Stephens,Mason Jones,Mason Jones,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+9039959b41901412,Jeremy Stephens,Mason Jones,Mason Jones,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+c445401709421fa4,Thomas Petersen,Don'Tale Mayes,Thomas Petersen,Decision - Unanimous,SIG_ONLY,1,1.0,2,0,1,True
+c445401709421fa4,Thomas Petersen,Don'Tale Mayes,Thomas Petersen,Decision - Unanimous,SIG_KD,1,1.0,2,0,1,True
+c445401709421fa4,Thomas Petersen,Don'Tale Mayes,Thomas Petersen,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+c445401709421fa4,Thomas Petersen,Don'Tale Mayes,Thomas Petersen,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+c445401709421fa4,Thomas Petersen,Don'Tale Mayes,Thomas Petersen,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+c445401709421fa4,Thomas Petersen,Don'Tale Mayes,Thomas Petersen,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+0e0a4282cd6c86d7,Daniel Santos,JeongYeong Lee,Daniel Santos,Decision - Unanimous,SIG_ONLY,1,1.0,2,1,0,True
+0e0a4282cd6c86d7,Daniel Santos,JeongYeong Lee,Daniel Santos,Decision - Unanimous,SIG_KD,1,1.0,2,1,0,True
+0e0a4282cd6c86d7,Daniel Santos,JeongYeong Lee,Daniel Santos,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+0e0a4282cd6c86d7,Daniel Santos,JeongYeong Lee,Daniel Santos,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+0e0a4282cd6c86d7,Daniel Santos,JeongYeong Lee,Daniel Santos,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+0e0a4282cd6c86d7,Daniel Santos,JeongYeong Lee,Daniel Santos,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True
+0f53eb509d0ffeb9,Alexa Grasso,Natalia Silva,Natalia Silva,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+0f53eb509d0ffeb9,Alexa Grasso,Natalia Silva,Natalia Silva,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+0f53eb509d0ffeb9,Alexa Grasso,Natalia Silva,Natalia Silva,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+0f53eb509d0ffeb9,Alexa Grasso,Natalia Silva,Natalia Silva,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+0f53eb509d0ffeb9,Alexa Grasso,Natalia Silva,Natalia Silva,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+0f53eb509d0ffeb9,Alexa Grasso,Natalia Silva,Natalia Silva,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+891b2faf1bff38ee,Jose Aldo,Aiemann Zahabi,Aiemann Zahabi,Decision - Unanimous,SIG_ONLY,0,0.0,1,2,0,True
+891b2faf1bff38ee,Jose Aldo,Aiemann Zahabi,Aiemann Zahabi,Decision - Unanimous,SIG_KD,0,0.0,1,2,0,True
+891b2faf1bff38ee,Jose Aldo,Aiemann Zahabi,Aiemann Zahabi,Decision - Unanimous,SIG_KD_TD,0,0.0,1,2,0,True
+891b2faf1bff38ee,Jose Aldo,Aiemann Zahabi,Aiemann Zahabi,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+891b2faf1bff38ee,Jose Aldo,Aiemann Zahabi,Aiemann Zahabi,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+891b2faf1bff38ee,Jose Aldo,Aiemann Zahabi,Aiemann Zahabi,Decision - Unanimous,DAMAGE_FIRST,0,1.0,2,1,0,False
+99aa1f28e22bb6dd,Navajo Stirling,Ivan Erslan,Navajo Stirling,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+99aa1f28e22bb6dd,Navajo Stirling,Ivan Erslan,Navajo Stirling,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+99aa1f28e22bb6dd,Navajo Stirling,Ivan Erslan,Navajo Stirling,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+99aa1f28e22bb6dd,Navajo Stirling,Ivan Erslan,Navajo Stirling,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+99aa1f28e22bb6dd,Navajo Stirling,Ivan Erslan,Navajo Stirling,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+99aa1f28e22bb6dd,Navajo Stirling,Ivan Erslan,Navajo Stirling,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+9e9d1764a015f313,Valentina Shevchenko,Manon Fiorot,Valentina Shevchenko,Decision - Unanimous,SIG_ONLY,1,,2,2,1,
+9e9d1764a015f313,Valentina Shevchenko,Manon Fiorot,Valentina Shevchenko,Decision - Unanimous,SIG_KD,1,,2,2,1,
+9e9d1764a015f313,Valentina Shevchenko,Manon Fiorot,Valentina Shevchenko,Decision - Unanimous,SIG_KD_TD,1,,2,2,1,
+9e9d1764a015f313,Valentina Shevchenko,Manon Fiorot,Valentina Shevchenko,Decision - Unanimous,SIG_KD_TD_CTRL,1,0.0,2,3,0,False
+9e9d1764a015f313,Valentina Shevchenko,Manon Fiorot,Valentina Shevchenko,Decision - Unanimous,OLD_FULL,1,0.0,2,3,0,False
+9e9d1764a015f313,Valentina Shevchenko,Manon Fiorot,Valentina Shevchenko,Decision - Unanimous,DAMAGE_FIRST,1,0.0,2,3,0,False
+b873c116e39c9920,Belal Muhammad,Jack Della Maddalena,Jack Della Maddalena,Decision - Unanimous,SIG_ONLY,0,0.0,0,5,0,True
+b873c116e39c9920,Belal Muhammad,Jack Della Maddalena,Jack Della Maddalena,Decision - Unanimous,SIG_KD,0,0.0,0,5,0,True
+b873c116e39c9920,Belal Muhammad,Jack Della Maddalena,Jack Della Maddalena,Decision - Unanimous,SIG_KD_TD,0,0.0,1,4,0,True
+b873c116e39c9920,Belal Muhammad,Jack Della Maddalena,Jack Della Maddalena,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,4,0,True
+b873c116e39c9920,Belal Muhammad,Jack Della Maddalena,Jack Della Maddalena,Decision - Unanimous,OLD_FULL,0,0.0,1,4,0,True
+b873c116e39c9920,Belal Muhammad,Jack Della Maddalena,Jack Della Maddalena,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,5,0,True
+c812457a810dde39,Modestas Bukauskas,Ion Cutelaba,Modestas Bukauskas,Decision - Split,SIG_ONLY,1,0.0,0,2,1,False
+c812457a810dde39,Modestas Bukauskas,Ion Cutelaba,Modestas Bukauskas,Decision - Split,SIG_KD,1,0.0,0,2,1,False
+c812457a810dde39,Modestas Bukauskas,Ion Cutelaba,Modestas Bukauskas,Decision - Split,SIG_KD_TD,1,0.0,0,2,1,False
+c812457a810dde39,Modestas Bukauskas,Ion Cutelaba,Modestas Bukauskas,Decision - Split,SIG_KD_TD_CTRL,1,0.0,0,3,0,False
+c812457a810dde39,Modestas Bukauskas,Ion Cutelaba,Modestas Bukauskas,Decision - Split,OLD_FULL,1,0.0,0,3,0,False
+c812457a810dde39,Modestas Bukauskas,Ion Cutelaba,Modestas Bukauskas,Decision - Split,DAMAGE_FIRST,1,0.0,0,3,0,False
+afdd95ae7b7cdb0c,Tecia Pennington,Luana Pinheiro,Tecia Pennington,Decision - Unanimous,SIG_ONLY,1,1.0,2,1,0,True
+afdd95ae7b7cdb0c,Tecia Pennington,Luana Pinheiro,Tecia Pennington,Decision - Unanimous,SIG_KD,1,1.0,2,1,0,True
+afdd95ae7b7cdb0c,Tecia Pennington,Luana Pinheiro,Tecia Pennington,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+afdd95ae7b7cdb0c,Tecia Pennington,Luana Pinheiro,Tecia Pennington,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+afdd95ae7b7cdb0c,Tecia Pennington,Luana Pinheiro,Tecia Pennington,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+afdd95ae7b7cdb0c,Tecia Pennington,Luana Pinheiro,Tecia Pennington,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True
+b3044bf646306e7f,Dustin Stoltzfus,Nursulton Ruziboev,Nursulton Ruziboev,Decision - Unanimous,SIG_ONLY,0,0.0,1,2,0,True
+b3044bf646306e7f,Dustin Stoltzfus,Nursulton Ruziboev,Nursulton Ruziboev,Decision - Unanimous,SIG_KD,0,0.0,1,2,0,True
+b3044bf646306e7f,Dustin Stoltzfus,Nursulton Ruziboev,Nursulton Ruziboev,Decision - Unanimous,SIG_KD_TD,0,0.0,1,2,0,True
+b3044bf646306e7f,Dustin Stoltzfus,Nursulton Ruziboev,Nursulton Ruziboev,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+b3044bf646306e7f,Dustin Stoltzfus,Nursulton Ruziboev,Nursulton Ruziboev,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+b3044bf646306e7f,Dustin Stoltzfus,Nursulton Ruziboev,Nursulton Ruziboev,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+dcb27eef6441268c,Sodiq Yusuff,Mairon Santos,Mairon Santos,Decision - Unanimous,SIG_ONLY,0,0.0,1,2,0,True
+dcb27eef6441268c,Sodiq Yusuff,Mairon Santos,Mairon Santos,Decision - Unanimous,SIG_KD,0,0.0,1,2,0,True
+dcb27eef6441268c,Sodiq Yusuff,Mairon Santos,Mairon Santos,Decision - Unanimous,SIG_KD_TD,0,0.0,1,2,0,True
+dcb27eef6441268c,Sodiq Yusuff,Mairon Santos,Mairon Santos,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+dcb27eef6441268c,Sodiq Yusuff,Mairon Santos,Mairon Santos,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+dcb27eef6441268c,Sodiq Yusuff,Mairon Santos,Mairon Santos,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+fe2acfdaaaec3dba,Julian Erosa,Melquizael Costa,Melquizael Costa,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+fe2acfdaaaec3dba,Julian Erosa,Melquizael Costa,Melquizael Costa,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+fe2acfdaaaec3dba,Julian Erosa,Melquizael Costa,Melquizael Costa,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+fe2acfdaaaec3dba,Julian Erosa,Melquizael Costa,Melquizael Costa,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+fe2acfdaaaec3dba,Julian Erosa,Melquizael Costa,Melquizael Costa,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+fe2acfdaaaec3dba,Julian Erosa,Melquizael Costa,Melquizael Costa,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+106918bfbe24335d,Ketlen Vieira,Macy Chiasson,Ketlen Vieira,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+106918bfbe24335d,Ketlen Vieira,Macy Chiasson,Ketlen Vieira,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+106918bfbe24335d,Ketlen Vieira,Macy Chiasson,Ketlen Vieira,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+106918bfbe24335d,Ketlen Vieira,Macy Chiasson,Ketlen Vieira,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+106918bfbe24335d,Ketlen Vieira,Macy Chiasson,Ketlen Vieira,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+106918bfbe24335d,Ketlen Vieira,Macy Chiasson,Ketlen Vieira,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+212527d462690304,Mateusz Gamrot,Ludovit Klein,Mateusz Gamrot,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+212527d462690304,Mateusz Gamrot,Ludovit Klein,Mateusz Gamrot,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+212527d462690304,Mateusz Gamrot,Ludovit Klein,Mateusz Gamrot,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+212527d462690304,Mateusz Gamrot,Ludovit Klein,Mateusz Gamrot,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+212527d462690304,Mateusz Gamrot,Ludovit Klein,Mateusz Gamrot,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+212527d462690304,Mateusz Gamrot,Ludovit Klein,Mateusz Gamrot,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+73240bea13ed5e71,Rayanne dos Santos,Alice Ardelean,Alice Ardelean,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+73240bea13ed5e71,Rayanne dos Santos,Alice Ardelean,Alice Ardelean,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+73240bea13ed5e71,Rayanne dos Santos,Alice Ardelean,Alice Ardelean,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+73240bea13ed5e71,Rayanne dos Santos,Alice Ardelean,Alice Ardelean,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+73240bea13ed5e71,Rayanne dos Santos,Alice Ardelean,Alice Ardelean,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+73240bea13ed5e71,Rayanne dos Santos,Alice Ardelean,Alice Ardelean,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+baa2ee0bf7f97079,Jafel Filho,Allan Nascimento,Allan Nascimento,Decision - Unanimous,SIG_ONLY,0,,1,1,1,
+baa2ee0bf7f97079,Jafel Filho,Allan Nascimento,Allan Nascimento,Decision - Unanimous,SIG_KD,0,,1,1,1,
+baa2ee0bf7f97079,Jafel Filho,Allan Nascimento,Allan Nascimento,Decision - Unanimous,SIG_KD_TD,0,0.0,1,2,0,True
+baa2ee0bf7f97079,Jafel Filho,Allan Nascimento,Allan Nascimento,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+baa2ee0bf7f97079,Jafel Filho,Allan Nascimento,Allan Nascimento,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+baa2ee0bf7f97079,Jafel Filho,Allan Nascimento,Allan Nascimento,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+0e8599eca8ccfa32,MarQuel Mederos,Mark Choinski,MarQuel Mederos,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+0e8599eca8ccfa32,MarQuel Mederos,Mark Choinski,MarQuel Mederos,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+0e8599eca8ccfa32,MarQuel Mederos,Mark Choinski,MarQuel Mederos,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+0e8599eca8ccfa32,MarQuel Mederos,Mark Choinski,MarQuel Mederos,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+0e8599eca8ccfa32,MarQuel Mederos,Mark Choinski,MarQuel Mederos,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+0e8599eca8ccfa32,MarQuel Mederos,Mark Choinski,MarQuel Mederos,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+2e4064e0e6d4d92e,Quillan Salkilld,Yanal Ashmouz,Quillan Salkilld,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+2e4064e0e6d4d92e,Quillan Salkilld,Yanal Ashmouz,Quillan Salkilld,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+2e4064e0e6d4d92e,Quillan Salkilld,Yanal Ashmouz,Quillan Salkilld,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+2e4064e0e6d4d92e,Quillan Salkilld,Yanal Ashmouz,Quillan Salkilld,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+2e4064e0e6d4d92e,Quillan Salkilld,Yanal Ashmouz,Quillan Salkilld,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+2e4064e0e6d4d92e,Quillan Salkilld,Yanal Ashmouz,Quillan Salkilld,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+ac977a0389682124,Serghei Spivac,Waldo Cortes-Acosta,Waldo Cortes-Acosta,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+ac977a0389682124,Serghei Spivac,Waldo Cortes-Acosta,Waldo Cortes-Acosta,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+ac977a0389682124,Serghei Spivac,Waldo Cortes-Acosta,Waldo Cortes-Acosta,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+ac977a0389682124,Serghei Spivac,Waldo Cortes-Acosta,Waldo Cortes-Acosta,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+ac977a0389682124,Serghei Spivac,Waldo Cortes-Acosta,Waldo Cortes-Acosta,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+ac977a0389682124,Serghei Spivac,Waldo Cortes-Acosta,Waldo Cortes-Acosta,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+d078e9046aa86307,Ariane da Silva,Wang Cong,Wang Cong,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+d078e9046aa86307,Ariane da Silva,Wang Cong,Wang Cong,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+d078e9046aa86307,Ariane da Silva,Wang Cong,Wang Cong,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+d078e9046aa86307,Ariane da Silva,Wang Cong,Wang Cong,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+d078e9046aa86307,Ariane da Silva,Wang Cong,Wang Cong,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+d078e9046aa86307,Ariane da Silva,Wang Cong,Wang Cong,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+df5dac45fc585fb0,Mario Bautista,Patchy Mix,Mario Bautista,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+df5dac45fc585fb0,Mario Bautista,Patchy Mix,Mario Bautista,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+df5dac45fc585fb0,Mario Bautista,Patchy Mix,Mario Bautista,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+df5dac45fc585fb0,Mario Bautista,Patchy Mix,Mario Bautista,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+df5dac45fc585fb0,Mario Bautista,Patchy Mix,Mario Bautista,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+df5dac45fc585fb0,Mario Bautista,Patchy Mix,Mario Bautista,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+e28e829800466aca,Kelvin Gastelum,Joe Pyfer,Joe Pyfer,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+e28e829800466aca,Kelvin Gastelum,Joe Pyfer,Joe Pyfer,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+e28e829800466aca,Kelvin Gastelum,Joe Pyfer,Joe Pyfer,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+e28e829800466aca,Kelvin Gastelum,Joe Pyfer,Joe Pyfer,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+e28e829800466aca,Kelvin Gastelum,Joe Pyfer,Joe Pyfer,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+e28e829800466aca,Kelvin Gastelum,Joe Pyfer,Joe Pyfer,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+f0488a4486a64af0,Khaos Williams,Andreas Gustafsson,Andreas Gustafsson,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+f0488a4486a64af0,Khaos Williams,Andreas Gustafsson,Andreas Gustafsson,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+f0488a4486a64af0,Khaos Williams,Andreas Gustafsson,Andreas Gustafsson,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+f0488a4486a64af0,Khaos Williams,Andreas Gustafsson,Andreas Gustafsson,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+f0488a4486a64af0,Khaos Williams,Andreas Gustafsson,Andreas Gustafsson,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+f0488a4486a64af0,Khaos Williams,Andreas Gustafsson,Andreas Gustafsson,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+1714950933f88ab9,Cody Garbrandt,Raoni Barcelos,Raoni Barcelos,Decision - Unanimous,SIG_ONLY,0,0.0,1,2,0,True
+1714950933f88ab9,Cody Garbrandt,Raoni Barcelos,Raoni Barcelos,Decision - Unanimous,SIG_KD,0,0.0,1,2,0,True
+1714950933f88ab9,Cody Garbrandt,Raoni Barcelos,Raoni Barcelos,Decision - Unanimous,SIG_KD_TD,0,0.0,1,2,0,True
+1714950933f88ab9,Cody Garbrandt,Raoni Barcelos,Raoni Barcelos,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+1714950933f88ab9,Cody Garbrandt,Raoni Barcelos,Raoni Barcelos,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+1714950933f88ab9,Cody Garbrandt,Raoni Barcelos,Raoni Barcelos,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+59c4fdb3c0673066,Ricky Simon,Cameron Smotherman,Ricky Simon,Decision - Unanimous,SIG_ONLY,1,1.0,2,1,0,True
+59c4fdb3c0673066,Ricky Simon,Cameron Smotherman,Ricky Simon,Decision - Unanimous,SIG_KD,1,1.0,2,1,0,True
+59c4fdb3c0673066,Ricky Simon,Cameron Smotherman,Ricky Simon,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+59c4fdb3c0673066,Ricky Simon,Cameron Smotherman,Ricky Simon,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+59c4fdb3c0673066,Ricky Simon,Cameron Smotherman,Ricky Simon,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+59c4fdb3c0673066,Ricky Simon,Cameron Smotherman,Ricky Simon,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True
+79dfbbdd14fbbd11,Rose Namajunas,Miranda Maverick,Rose Namajunas,Decision - Unanimous,SIG_ONLY,1,,1,1,1,
+79dfbbdd14fbbd11,Rose Namajunas,Miranda Maverick,Rose Namajunas,Decision - Unanimous,SIG_KD,1,,1,1,1,
+79dfbbdd14fbbd11,Rose Namajunas,Miranda Maverick,Rose Namajunas,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+79dfbbdd14fbbd11,Rose Namajunas,Miranda Maverick,Rose Namajunas,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+79dfbbdd14fbbd11,Rose Namajunas,Miranda Maverick,Rose Namajunas,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+79dfbbdd14fbbd11,Rose Namajunas,Miranda Maverick,Rose Namajunas,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True
+ab325ea526824723,Jamey-Lyn Horth,Vanessa Demopoulos,Jamey-Lyn Horth,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+ab325ea526824723,Jamey-Lyn Horth,Vanessa Demopoulos,Jamey-Lyn Horth,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+ab325ea526824723,Jamey-Lyn Horth,Vanessa Demopoulos,Jamey-Lyn Horth,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+ab325ea526824723,Jamey-Lyn Horth,Vanessa Demopoulos,Jamey-Lyn Horth,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+ab325ea526824723,Jamey-Lyn Horth,Vanessa Demopoulos,Jamey-Lyn Horth,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+ab325ea526824723,Jamey-Lyn Horth,Vanessa Demopoulos,Jamey-Lyn Horth,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+d75b3d3c2b209b75,Kamaru Usman,Joaquin Buckley,Kamaru Usman,Decision - Unanimous,SIG_ONLY,1,0.0,2,3,0,False
+d75b3d3c2b209b75,Kamaru Usman,Joaquin Buckley,Kamaru Usman,Decision - Unanimous,SIG_KD,1,0.0,2,3,0,False
+d75b3d3c2b209b75,Kamaru Usman,Joaquin Buckley,Kamaru Usman,Decision - Unanimous,SIG_KD_TD,1,1.0,3,2,0,True
+d75b3d3c2b209b75,Kamaru Usman,Joaquin Buckley,Kamaru Usman,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,4,1,0,True
+d75b3d3c2b209b75,Kamaru Usman,Joaquin Buckley,Kamaru Usman,Decision - Unanimous,OLD_FULL,1,1.0,4,1,0,True
+d75b3d3c2b209b75,Kamaru Usman,Joaquin Buckley,Kamaru Usman,Decision - Unanimous,DAMAGE_FIRST,1,0.0,2,3,0,False
+e5bd7e6e2a50a843,Edmen Shahbazyan,Andre Petroski,Edmen Shahbazyan,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+e5bd7e6e2a50a843,Edmen Shahbazyan,Andre Petroski,Edmen Shahbazyan,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+e5bd7e6e2a50a843,Edmen Shahbazyan,Andre Petroski,Edmen Shahbazyan,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+e5bd7e6e2a50a843,Edmen Shahbazyan,Andre Petroski,Edmen Shahbazyan,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+e5bd7e6e2a50a843,Edmen Shahbazyan,Andre Petroski,Edmen Shahbazyan,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+e5bd7e6e2a50a843,Edmen Shahbazyan,Andre Petroski,Edmen Shahbazyan,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+e861e9cc0118c670,Michael Chiesa,Court McGee,Michael Chiesa,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+e861e9cc0118c670,Michael Chiesa,Court McGee,Michael Chiesa,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+e861e9cc0118c670,Michael Chiesa,Court McGee,Michael Chiesa,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+e861e9cc0118c670,Michael Chiesa,Court McGee,Michael Chiesa,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+e861e9cc0118c670,Michael Chiesa,Court McGee,Michael Chiesa,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+e861e9cc0118c670,Michael Chiesa,Court McGee,Michael Chiesa,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+ec2034b134ae71cd,Alonzo Menifield,Oumar Sy,Alonzo Menifield,Decision - Unanimous,SIG_ONLY,1,0.0,1,2,0,False
+ec2034b134ae71cd,Alonzo Menifield,Oumar Sy,Alonzo Menifield,Decision - Unanimous,SIG_KD,1,0.0,1,2,0,False
+ec2034b134ae71cd,Alonzo Menifield,Oumar Sy,Alonzo Menifield,Decision - Unanimous,SIG_KD_TD,1,0.0,1,2,0,False
+ec2034b134ae71cd,Alonzo Menifield,Oumar Sy,Alonzo Menifield,Decision - Unanimous,SIG_KD_TD_CTRL,1,0.0,1,2,0,False
+ec2034b134ae71cd,Alonzo Menifield,Oumar Sy,Alonzo Menifield,Decision - Unanimous,OLD_FULL,1,0.0,1,2,0,False
+ec2034b134ae71cd,Alonzo Menifield,Oumar Sy,Alonzo Menifield,Decision - Unanimous,DAMAGE_FIRST,1,0.0,1,2,0,False
+03bc32bdb5a33496,Jamahal Hill,Khalil Rountree Jr.,Khalil Rountree Jr.,Decision - Unanimous,SIG_ONLY,0,0.0,0,4,1,True
+03bc32bdb5a33496,Jamahal Hill,Khalil Rountree Jr.,Khalil Rountree Jr.,Decision - Unanimous,SIG_KD,0,0.0,0,4,1,True
+03bc32bdb5a33496,Jamahal Hill,Khalil Rountree Jr.,Khalil Rountree Jr.,Decision - Unanimous,SIG_KD_TD,0,0.0,0,4,1,True
+03bc32bdb5a33496,Jamahal Hill,Khalil Rountree Jr.,Khalil Rountree Jr.,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,4,1,True
+03bc32bdb5a33496,Jamahal Hill,Khalil Rountree Jr.,Khalil Rountree Jr.,Decision - Unanimous,OLD_FULL,0,0.0,0,4,1,True
+03bc32bdb5a33496,Jamahal Hill,Khalil Rountree Jr.,Khalil Rountree Jr.,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,4,1,True
+19764211af05674c,Muhammad Naimov,Bogdan Grad,Muhammad Naimov,Decision - Unanimous,SIG_ONLY,1,0.0,0,3,0,False
+19764211af05674c,Muhammad Naimov,Bogdan Grad,Muhammad Naimov,Decision - Unanimous,SIG_KD,1,0.0,0,3,0,False
+19764211af05674c,Muhammad Naimov,Bogdan Grad,Muhammad Naimov,Decision - Unanimous,SIG_KD_TD,1,0.0,0,3,0,False
+19764211af05674c,Muhammad Naimov,Bogdan Grad,Muhammad Naimov,Decision - Unanimous,SIG_KD_TD_CTRL,1,0.0,1,2,0,False
+19764211af05674c,Muhammad Naimov,Bogdan Grad,Muhammad Naimov,Decision - Unanimous,OLD_FULL,1,0.0,1,2,0,False
+19764211af05674c,Muhammad Naimov,Bogdan Grad,Muhammad Naimov,Decision - Unanimous,DAMAGE_FIRST,1,0.0,0,3,0,False
+2bfc0212f2cae65b,Irina Alekseeva,Klaudia Sygula,Klaudia Sygula,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+2bfc0212f2cae65b,Irina Alekseeva,Klaudia Sygula,Klaudia Sygula,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+2bfc0212f2cae65b,Irina Alekseeva,Klaudia Sygula,Klaudia Sygula,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+2bfc0212f2cae65b,Irina Alekseeva,Klaudia Sygula,Klaudia Sygula,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+2bfc0212f2cae65b,Irina Alekseeva,Klaudia Sygula,Klaudia Sygula,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+2bfc0212f2cae65b,Irina Alekseeva,Klaudia Sygula,Klaudia Sygula,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+5fcf18bcd2a020f1,Ismail Naurdiev,JunYong Park,JunYong Park,Decision - Unanimous,SIG_ONLY,0,1.0,2,1,0,False
+5fcf18bcd2a020f1,Ismail Naurdiev,JunYong Park,JunYong Park,Decision - Unanimous,SIG_KD,0,1.0,2,1,0,False
+5fcf18bcd2a020f1,Ismail Naurdiev,JunYong Park,JunYong Park,Decision - Unanimous,SIG_KD_TD,0,1.0,2,1,0,False
+5fcf18bcd2a020f1,Ismail Naurdiev,JunYong Park,JunYong Park,Decision - Unanimous,SIG_KD_TD_CTRL,0,1.0,2,1,0,False
+5fcf18bcd2a020f1,Ismail Naurdiev,JunYong Park,JunYong Park,Decision - Unanimous,OLD_FULL,0,1.0,2,1,0,False
+5fcf18bcd2a020f1,Ismail Naurdiev,JunYong Park,JunYong Park,Decision - Unanimous,DAMAGE_FIRST,0,1.0,2,1,0,False
+8c140756bf43dcc2,Tagir Ulanbekov,Azat Maksum,Tagir Ulanbekov,Decision - Unanimous,SIG_ONLY,1,1.0,2,1,0,True
+8c140756bf43dcc2,Tagir Ulanbekov,Azat Maksum,Tagir Ulanbekov,Decision - Unanimous,SIG_KD,1,1.0,2,1,0,True
+8c140756bf43dcc2,Tagir Ulanbekov,Azat Maksum,Tagir Ulanbekov,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+8c140756bf43dcc2,Tagir Ulanbekov,Azat Maksum,Tagir Ulanbekov,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+8c140756bf43dcc2,Tagir Ulanbekov,Azat Maksum,Tagir Ulanbekov,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+8c140756bf43dcc2,Tagir Ulanbekov,Azat Maksum,Tagir Ulanbekov,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True
+8e5744c664fec3e9,Curtis Blaydes,Rizvan Kuniev,Curtis Blaydes,Decision - Split,SIG_ONLY,1,1.0,2,1,0,True
+8e5744c664fec3e9,Curtis Blaydes,Rizvan Kuniev,Curtis Blaydes,Decision - Split,SIG_KD,1,1.0,2,1,0,True
+8e5744c664fec3e9,Curtis Blaydes,Rizvan Kuniev,Curtis Blaydes,Decision - Split,SIG_KD_TD,1,1.0,2,1,0,True
+8e5744c664fec3e9,Curtis Blaydes,Rizvan Kuniev,Curtis Blaydes,Decision - Split,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+8e5744c664fec3e9,Curtis Blaydes,Rizvan Kuniev,Curtis Blaydes,Decision - Split,OLD_FULL,1,1.0,2,1,0,True
+8e5744c664fec3e9,Curtis Blaydes,Rizvan Kuniev,Curtis Blaydes,Decision - Split,DAMAGE_FIRST,1,1.0,2,1,0,True
+a12d3a6c8aaf87ca,Hamdy Abdelwahab,Mohammed Usman,Mohammed Usman,Decision - Unanimous,SIG_ONLY,0,0.0,1,2,0,True
+a12d3a6c8aaf87ca,Hamdy Abdelwahab,Mohammed Usman,Mohammed Usman,Decision - Unanimous,SIG_KD,0,0.0,1,2,0,True
+a12d3a6c8aaf87ca,Hamdy Abdelwahab,Mohammed Usman,Mohammed Usman,Decision - Unanimous,SIG_KD_TD,0,0.0,1,2,0,True
+a12d3a6c8aaf87ca,Hamdy Abdelwahab,Mohammed Usman,Mohammed Usman,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+a12d3a6c8aaf87ca,Hamdy Abdelwahab,Mohammed Usman,Mohammed Usman,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+a12d3a6c8aaf87ca,Hamdy Abdelwahab,Mohammed Usman,Mohammed Usman,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+a1afc16e21d1a807,Rafael Fiziev,Ignacio Bahamondes,Rafael Fiziev,Decision - Unanimous,SIG_ONLY,1,1.0,2,1,0,True
+a1afc16e21d1a807,Rafael Fiziev,Ignacio Bahamondes,Rafael Fiziev,Decision - Unanimous,SIG_KD,1,1.0,2,1,0,True
+a1afc16e21d1a807,Rafael Fiziev,Ignacio Bahamondes,Rafael Fiziev,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+a1afc16e21d1a807,Rafael Fiziev,Ignacio Bahamondes,Rafael Fiziev,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+a1afc16e21d1a807,Rafael Fiziev,Ignacio Bahamondes,Rafael Fiziev,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+a1afc16e21d1a807,Rafael Fiziev,Ignacio Bahamondes,Rafael Fiziev,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True
+e512b80bbaea36c2,Seokhyeon Ko,Oban Elliott,Seokhyeon Ko,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+e512b80bbaea36c2,Seokhyeon Ko,Oban Elliott,Seokhyeon Ko,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+e512b80bbaea36c2,Seokhyeon Ko,Oban Elliott,Seokhyeon Ko,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+e512b80bbaea36c2,Seokhyeon Ko,Oban Elliott,Seokhyeon Ko,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+e512b80bbaea36c2,Seokhyeon Ko,Oban Elliott,Seokhyeon Ko,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+e512b80bbaea36c2,Seokhyeon Ko,Oban Elliott,Seokhyeon Ko,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+fff3218758c513b8,Daria Zhelezniakova,Melissa Mullins,Daria Zhelezniakova,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+fff3218758c513b8,Daria Zhelezniakova,Melissa Mullins,Daria Zhelezniakova,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+fff3218758c513b8,Daria Zhelezniakova,Melissa Mullins,Daria Zhelezniakova,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+fff3218758c513b8,Daria Zhelezniakova,Melissa Mullins,Daria Zhelezniakova,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+fff3218758c513b8,Daria Zhelezniakova,Melissa Mullins,Daria Zhelezniakova,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+fff3218758c513b8,Daria Zhelezniakova,Melissa Mullins,Daria Zhelezniakova,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+043172689e415438,Jhonata Diniz,Alvin Hines,Jhonata Diniz,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+043172689e415438,Jhonata Diniz,Alvin Hines,Jhonata Diniz,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+043172689e415438,Jhonata Diniz,Alvin Hines,Jhonata Diniz,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+043172689e415438,Jhonata Diniz,Alvin Hines,Jhonata Diniz,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+043172689e415438,Jhonata Diniz,Alvin Hines,Jhonata Diniz,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+043172689e415438,Jhonata Diniz,Alvin Hines,Jhonata Diniz,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+1ea9ad3b6e1cba79,Beneil Dariush,Renato Moicano,Beneil Dariush,Decision - Unanimous,SIG_ONLY,1,1.0,2,0,1,True
+1ea9ad3b6e1cba79,Beneil Dariush,Renato Moicano,Beneil Dariush,Decision - Unanimous,SIG_KD,1,1.0,2,1,0,True
+1ea9ad3b6e1cba79,Beneil Dariush,Renato Moicano,Beneil Dariush,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+1ea9ad3b6e1cba79,Beneil Dariush,Renato Moicano,Beneil Dariush,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+1ea9ad3b6e1cba79,Beneil Dariush,Renato Moicano,Beneil Dariush,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+1ea9ad3b6e1cba79,Beneil Dariush,Renato Moicano,Beneil Dariush,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True
+815ff62ca8e217be,Viviane Araujo,Tracy Cortez,Tracy Cortez,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+815ff62ca8e217be,Viviane Araujo,Tracy Cortez,Tracy Cortez,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+815ff62ca8e217be,Viviane Araujo,Tracy Cortez,Tracy Cortez,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+815ff62ca8e217be,Viviane Araujo,Tracy Cortez,Tracy Cortez,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+815ff62ca8e217be,Viviane Araujo,Tracy Cortez,Tracy Cortez,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+815ff62ca8e217be,Viviane Araujo,Tracy Cortez,Tracy Cortez,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+f6a3c78f15ff26c7,Payton Talbott,Felipe Lima,Payton Talbott,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+f6a3c78f15ff26c7,Payton Talbott,Felipe Lima,Payton Talbott,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+f6a3c78f15ff26c7,Payton Talbott,Felipe Lima,Payton Talbott,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+f6a3c78f15ff26c7,Payton Talbott,Felipe Lima,Payton Talbott,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+f6a3c78f15ff26c7,Payton Talbott,Felipe Lima,Payton Talbott,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+f6a3c78f15ff26c7,Payton Talbott,Felipe Lima,Payton Talbott,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+f722b96ae6862843,Brandon Royval,Joshua Van,Joshua Van,Decision - Unanimous,SIG_ONLY,0,1.0,2,1,0,False
+f722b96ae6862843,Brandon Royval,Joshua Van,Joshua Van,Decision - Unanimous,SIG_KD,0,0.0,1,2,0,True
+f722b96ae6862843,Brandon Royval,Joshua Van,Joshua Van,Decision - Unanimous,SIG_KD_TD,0,0.0,1,2,0,True
+f722b96ae6862843,Brandon Royval,Joshua Van,Joshua Van,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+f722b96ae6862843,Brandon Royval,Joshua Van,Joshua Van,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+f722b96ae6862843,Brandon Royval,Joshua Van,Joshua Van,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+236f811290163dca,Max Griffin,Chris Curtis,Chris Curtis,Decision - Split,SIG_ONLY,0,0.0,1,2,0,True
+236f811290163dca,Max Griffin,Chris Curtis,Chris Curtis,Decision - Split,SIG_KD,0,0.0,1,2,0,True
+236f811290163dca,Max Griffin,Chris Curtis,Chris Curtis,Decision - Split,SIG_KD_TD,0,0.0,1,2,0,True
+236f811290163dca,Max Griffin,Chris Curtis,Chris Curtis,Decision - Split,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+236f811290163dca,Max Griffin,Chris Curtis,Chris Curtis,Decision - Split,OLD_FULL,0,0.0,1,2,0,True
+236f811290163dca,Max Griffin,Chris Curtis,Chris Curtis,Decision - Split,DAMAGE_FIRST,0,0.0,1,2,0,True
+2a03bc4c491b4c9a,Stephen Thompson,Gabriel Bonfim,Gabriel Bonfim,Decision - Split,SIG_ONLY,0,0.0,1,2,0,True
+2a03bc4c491b4c9a,Stephen Thompson,Gabriel Bonfim,Gabriel Bonfim,Decision - Split,SIG_KD,0,0.0,1,2,0,True
+2a03bc4c491b4c9a,Stephen Thompson,Gabriel Bonfim,Gabriel Bonfim,Decision - Split,SIG_KD_TD,0,0.0,1,2,0,True
+2a03bc4c491b4c9a,Stephen Thompson,Gabriel Bonfim,Gabriel Bonfim,Decision - Split,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+2a03bc4c491b4c9a,Stephen Thompson,Gabriel Bonfim,Gabriel Bonfim,Decision - Split,OLD_FULL,0,0.0,1,2,0,True
+2a03bc4c491b4c9a,Stephen Thompson,Gabriel Bonfim,Gabriel Bonfim,Decision - Split,DAMAGE_FIRST,0,0.0,1,2,0,True
+46bc1338a50cbeac,Lauren Murphy,Eduarda Moura,Eduarda Moura,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+46bc1338a50cbeac,Lauren Murphy,Eduarda Moura,Eduarda Moura,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+46bc1338a50cbeac,Lauren Murphy,Eduarda Moura,Eduarda Moura,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+46bc1338a50cbeac,Lauren Murphy,Eduarda Moura,Eduarda Moura,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+46bc1338a50cbeac,Lauren Murphy,Eduarda Moura,Eduarda Moura,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+46bc1338a50cbeac,Lauren Murphy,Eduarda Moura,Eduarda Moura,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+f368475c366c6d85,Calvin Kattar,Steve Garcia,Steve Garcia,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+f368475c366c6d85,Calvin Kattar,Steve Garcia,Steve Garcia,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+f368475c366c6d85,Calvin Kattar,Steve Garcia,Steve Garcia,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+f368475c366c6d85,Calvin Kattar,Steve Garcia,Steve Garcia,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+f368475c366c6d85,Calvin Kattar,Steve Garcia,Steve Garcia,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+f368475c366c6d85,Calvin Kattar,Steve Garcia,Steve Garcia,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+8e1feda9141602f1,Marvin Vettori,Brendan Allen,Brendan Allen,Decision - Unanimous,SIG_ONLY,0,0.0,1,2,0,True
+8e1feda9141602f1,Marvin Vettori,Brendan Allen,Brendan Allen,Decision - Unanimous,SIG_KD,0,0.0,1,2,0,True
+8e1feda9141602f1,Marvin Vettori,Brendan Allen,Brendan Allen,Decision - Unanimous,SIG_KD_TD,0,0.0,1,2,0,True
+8e1feda9141602f1,Marvin Vettori,Brendan Allen,Brendan Allen,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+8e1feda9141602f1,Marvin Vettori,Brendan Allen,Brendan Allen,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+8e1feda9141602f1,Marvin Vettori,Brendan Allen,Brendan Allen,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+d7507e2741fd4d05,Max Holloway,Dustin Poirier,Max Holloway,Decision - Unanimous,SIG_ONLY,1,1.0,5,0,0,True
+d7507e2741fd4d05,Max Holloway,Dustin Poirier,Max Holloway,Decision - Unanimous,SIG_KD,1,1.0,5,0,0,True
+d7507e2741fd4d05,Max Holloway,Dustin Poirier,Max Holloway,Decision - Unanimous,SIG_KD_TD,1,1.0,5,0,0,True
+d7507e2741fd4d05,Max Holloway,Dustin Poirier,Max Holloway,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,5,0,0,True
+d7507e2741fd4d05,Max Holloway,Dustin Poirier,Max Holloway,Decision - Unanimous,OLD_FULL,1,1.0,5,0,0,True
+d7507e2741fd4d05,Max Holloway,Dustin Poirier,Max Holloway,Decision - Unanimous,DAMAGE_FIRST,1,1.0,4,1,0,True
+017a825c7820d12e,Davey Grant,Da'Mon Blackshear,Davey Grant,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+017a825c7820d12e,Davey Grant,Da'Mon Blackshear,Davey Grant,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+017a825c7820d12e,Davey Grant,Da'Mon Blackshear,Davey Grant,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+017a825c7820d12e,Davey Grant,Da'Mon Blackshear,Davey Grant,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+017a825c7820d12e,Davey Grant,Da'Mon Blackshear,Davey Grant,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+017a825c7820d12e,Davey Grant,Da'Mon Blackshear,Davey Grant,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+0a598768f5c8d540,Martin Buday,Marcus Buchecha,Martin Buday,Decision - Unanimous,SIG_ONLY,1,1.0,2,0,1,True
+0a598768f5c8d540,Martin Buday,Marcus Buchecha,Martin Buday,Decision - Unanimous,SIG_KD,1,1.0,2,0,1,True
+0a598768f5c8d540,Martin Buday,Marcus Buchecha,Martin Buday,Decision - Unanimous,SIG_KD_TD,1,1.0,2,0,1,True
+0a598768f5c8d540,Martin Buday,Marcus Buchecha,Martin Buday,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+0a598768f5c8d540,Martin Buday,Marcus Buchecha,Martin Buday,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+0a598768f5c8d540,Martin Buday,Marcus Buchecha,Martin Buday,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+582d66ce97309e29,Shara Magomedov,Marc-Andre Barriault,Shara Magomedov,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+582d66ce97309e29,Shara Magomedov,Marc-Andre Barriault,Shara Magomedov,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+582d66ce97309e29,Shara Magomedov,Marc-Andre Barriault,Shara Magomedov,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+582d66ce97309e29,Shara Magomedov,Marc-Andre Barriault,Shara Magomedov,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+582d66ce97309e29,Shara Magomedov,Marc-Andre Barriault,Shara Magomedov,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+582d66ce97309e29,Shara Magomedov,Marc-Andre Barriault,Shara Magomedov,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+6b8be0ee3e569ad2,Robert Whittaker,Reinier de Ridder,Reinier de Ridder,Decision - Split,SIG_ONLY,0,1.0,3,2,0,False
+6b8be0ee3e569ad2,Robert Whittaker,Reinier de Ridder,Reinier de Ridder,Decision - Split,SIG_KD,0,1.0,3,2,0,False
+6b8be0ee3e569ad2,Robert Whittaker,Reinier de Ridder,Reinier de Ridder,Decision - Split,SIG_KD_TD,0,1.0,3,2,0,False
+6b8be0ee3e569ad2,Robert Whittaker,Reinier de Ridder,Reinier de Ridder,Decision - Split,SIG_KD_TD_CTRL,0,0.0,2,3,0,True
+6b8be0ee3e569ad2,Robert Whittaker,Reinier de Ridder,Reinier de Ridder,Decision - Split,OLD_FULL,0,0.0,2,3,0,True
+6b8be0ee3e569ad2,Robert Whittaker,Reinier de Ridder,Reinier de Ridder,Decision - Split,DAMAGE_FIRST,0,1.0,3,2,0,False
+887c61da1a78a5e1,Asu Almabayev,Jose Ochoa,Asu Almabayev,Decision - Unanimous,SIG_ONLY,1,0.0,1,2,0,False
+887c61da1a78a5e1,Asu Almabayev,Jose Ochoa,Asu Almabayev,Decision - Unanimous,SIG_KD,1,0.0,1,2,0,False
+887c61da1a78a5e1,Asu Almabayev,Jose Ochoa,Asu Almabayev,Decision - Unanimous,SIG_KD_TD,1,0.0,1,2,0,False
+887c61da1a78a5e1,Asu Almabayev,Jose Ochoa,Asu Almabayev,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+887c61da1a78a5e1,Asu Almabayev,Jose Ochoa,Asu Almabayev,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+887c61da1a78a5e1,Asu Almabayev,Jose Ochoa,Asu Almabayev,Decision - Unanimous,DAMAGE_FIRST,1,0.0,1,2,0,False
+d4d4ee045b0ca695,Petr Yan,Marcus McGhee,Petr Yan,Decision - Unanimous,SIG_ONLY,1,,1,1,1,
+d4d4ee045b0ca695,Petr Yan,Marcus McGhee,Petr Yan,Decision - Unanimous,SIG_KD,1,,1,1,1,
+d4d4ee045b0ca695,Petr Yan,Marcus McGhee,Petr Yan,Decision - Unanimous,SIG_KD_TD,1,,1,1,1,
+d4d4ee045b0ca695,Petr Yan,Marcus McGhee,Petr Yan,Decision - Unanimous,SIG_KD_TD_CTRL,1,,1,1,1,
+d4d4ee045b0ca695,Petr Yan,Marcus McGhee,Petr Yan,Decision - Unanimous,OLD_FULL,1,,1,1,1,
+d4d4ee045b0ca695,Petr Yan,Marcus McGhee,Petr Yan,Decision - Unanimous,DAMAGE_FIRST,1,,1,1,1,
+e72c691b7c68b03a,Bryce Mitchell,Said Nurmagomedov,Bryce Mitchell,Decision - Unanimous,SIG_ONLY,1,0.0,1,2,0,False
+e72c691b7c68b03a,Bryce Mitchell,Said Nurmagomedov,Bryce Mitchell,Decision - Unanimous,SIG_KD,1,0.0,1,2,0,False
+e72c691b7c68b03a,Bryce Mitchell,Said Nurmagomedov,Bryce Mitchell,Decision - Unanimous,SIG_KD_TD,1,0.0,1,2,0,False
+e72c691b7c68b03a,Bryce Mitchell,Said Nurmagomedov,Bryce Mitchell,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+e72c691b7c68b03a,Bryce Mitchell,Said Nurmagomedov,Bryce Mitchell,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+e72c691b7c68b03a,Bryce Mitchell,Said Nurmagomedov,Bryce Mitchell,Decision - Unanimous,DAMAGE_FIRST,1,0.0,1,2,0,False
+f9dac7702609669f,Ibo Aslan,Billy Elekana,Billy Elekana,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+f9dac7702609669f,Ibo Aslan,Billy Elekana,Billy Elekana,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+f9dac7702609669f,Ibo Aslan,Billy Elekana,Billy Elekana,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+f9dac7702609669f,Ibo Aslan,Billy Elekana,Billy Elekana,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+f9dac7702609669f,Ibo Aslan,Billy Elekana,Billy Elekana,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+f9dac7702609669f,Ibo Aslan,Billy Elekana,Billy Elekana,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+111e66eb922449e4,Danny Silva,Kevin Vallejos,Kevin Vallejos,Decision - Unanimous,SIG_ONLY,0,0.0,1,2,0,True
+111e66eb922449e4,Danny Silva,Kevin Vallejos,Kevin Vallejos,Decision - Unanimous,SIG_KD,0,0.0,1,2,0,True
+111e66eb922449e4,Danny Silva,Kevin Vallejos,Kevin Vallejos,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+111e66eb922449e4,Danny Silva,Kevin Vallejos,Kevin Vallejos,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+111e66eb922449e4,Danny Silva,Kevin Vallejos,Kevin Vallejos,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+111e66eb922449e4,Danny Silva,Kevin Vallejos,Kevin Vallejos,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+426a69e343822ab3,Mateusz Rebecki,Chris Duncan,Chris Duncan,Decision - Unanimous,SIG_ONLY,0,1.0,2,1,0,False
+426a69e343822ab3,Mateusz Rebecki,Chris Duncan,Chris Duncan,Decision - Unanimous,SIG_KD,0,1.0,2,1,0,False
+426a69e343822ab3,Mateusz Rebecki,Chris Duncan,Chris Duncan,Decision - Unanimous,SIG_KD_TD,0,1.0,2,1,0,False
+426a69e343822ab3,Mateusz Rebecki,Chris Duncan,Chris Duncan,Decision - Unanimous,SIG_KD_TD_CTRL,0,1.0,2,1,0,False
+426a69e343822ab3,Mateusz Rebecki,Chris Duncan,Chris Duncan,Decision - Unanimous,OLD_FULL,0,1.0,2,1,0,False
+426a69e343822ab3,Mateusz Rebecki,Chris Duncan,Chris Duncan,Decision - Unanimous,DAMAGE_FIRST,0,1.0,2,1,0,False
+45781930d64da456,Rodolfo Vieira,Tresean Gore,Rodolfo Vieira,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+45781930d64da456,Rodolfo Vieira,Tresean Gore,Rodolfo Vieira,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+45781930d64da456,Rodolfo Vieira,Tresean Gore,Rodolfo Vieira,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+45781930d64da456,Rodolfo Vieira,Tresean Gore,Rodolfo Vieira,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+45781930d64da456,Rodolfo Vieira,Tresean Gore,Rodolfo Vieira,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+45781930d64da456,Rodolfo Vieira,Tresean Gore,Rodolfo Vieira,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+878941394f9e3538,Elves Brener,Esteban Ribovics,Esteban Ribovics,Decision - Unanimous,SIG_ONLY,0,0.0,1,2,0,True
+878941394f9e3538,Elves Brener,Esteban Ribovics,Esteban Ribovics,Decision - Unanimous,SIG_KD,0,0.0,1,2,0,True
+878941394f9e3538,Elves Brener,Esteban Ribovics,Esteban Ribovics,Decision - Unanimous,SIG_KD_TD,0,0.0,1,2,0,True
+878941394f9e3538,Elves Brener,Esteban Ribovics,Esteban Ribovics,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+878941394f9e3538,Elves Brener,Esteban Ribovics,Esteban Ribovics,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+878941394f9e3538,Elves Brener,Esteban Ribovics,Esteban Ribovics,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+b47db03affb279c3,Rafael Estevam,Felipe Bunes,Rafael Estevam,Decision - Unanimous,SIG_ONLY,1,1.0,2,1,0,True
+b47db03affb279c3,Rafael Estevam,Felipe Bunes,Rafael Estevam,Decision - Unanimous,SIG_KD,1,1.0,2,1,0,True
+b47db03affb279c3,Rafael Estevam,Felipe Bunes,Rafael Estevam,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+b47db03affb279c3,Rafael Estevam,Felipe Bunes,Rafael Estevam,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+b47db03affb279c3,Rafael Estevam,Felipe Bunes,Rafael Estevam,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+b47db03affb279c3,Rafael Estevam,Felipe Bunes,Rafael Estevam,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True
+c62ed8a6002b5360,Karol Rosa,Nora Cornolle,Karol Rosa,Decision - Unanimous,SIG_ONLY,1,1.0,2,1,0,True
+c62ed8a6002b5360,Karol Rosa,Nora Cornolle,Karol Rosa,Decision - Unanimous,SIG_KD,1,1.0,2,1,0,True
+c62ed8a6002b5360,Karol Rosa,Nora Cornolle,Karol Rosa,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+c62ed8a6002b5360,Karol Rosa,Nora Cornolle,Karol Rosa,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+c62ed8a6002b5360,Karol Rosa,Nora Cornolle,Karol Rosa,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+c62ed8a6002b5360,Karol Rosa,Nora Cornolle,Karol Rosa,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True
+d98d6b2c13557a87,Piera Rodriguez,Ketlen Souza,Piera Rodriguez,Decision - Split,SIG_ONLY,1,1.0,2,0,1,True
+d98d6b2c13557a87,Piera Rodriguez,Ketlen Souza,Piera Rodriguez,Decision - Split,SIG_KD,1,1.0,2,0,1,True
+d98d6b2c13557a87,Piera Rodriguez,Ketlen Souza,Piera Rodriguez,Decision - Split,SIG_KD_TD,1,1.0,3,0,0,True
+d98d6b2c13557a87,Piera Rodriguez,Ketlen Souza,Piera Rodriguez,Decision - Split,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+d98d6b2c13557a87,Piera Rodriguez,Ketlen Souza,Piera Rodriguez,Decision - Split,OLD_FULL,1,1.0,3,0,0,True
+d98d6b2c13557a87,Piera Rodriguez,Ketlen Souza,Piera Rodriguez,Decision - Split,DAMAGE_FIRST,1,1.0,3,0,0,True
+37d58369782cb86b,Steve Erceg,Ode Osbourne,Steve Erceg,Decision - Unanimous,SIG_ONLY,1,0.0,0,2,1,False
+37d58369782cb86b,Steve Erceg,Ode Osbourne,Steve Erceg,Decision - Unanimous,SIG_KD,1,0.0,0,2,1,False
+37d58369782cb86b,Steve Erceg,Ode Osbourne,Steve Erceg,Decision - Unanimous,SIG_KD_TD,1,0.0,1,2,0,False
+37d58369782cb86b,Steve Erceg,Ode Osbourne,Steve Erceg,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+37d58369782cb86b,Steve Erceg,Ode Osbourne,Steve Erceg,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+37d58369782cb86b,Steve Erceg,Ode Osbourne,Steve Erceg,Decision - Unanimous,DAMAGE_FIRST,1,0.0,1,2,0,False
+3d6571790c21527c,Julius Walker,Rafael Cerqueira,Julius Walker,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+3d6571790c21527c,Julius Walker,Rafael Cerqueira,Julius Walker,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+3d6571790c21527c,Julius Walker,Rafael Cerqueira,Julius Walker,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+3d6571790c21527c,Julius Walker,Rafael Cerqueira,Julius Walker,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+3d6571790c21527c,Julius Walker,Rafael Cerqueira,Julius Walker,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+3d6571790c21527c,Julius Walker,Rafael Cerqueira,Julius Walker,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+646c79a7ecd12e5f,Iasmin Lucindo,Angela Hill,Iasmin Lucindo,Decision - Unanimous,SIG_ONLY,1,1.0,2,1,0,True
+646c79a7ecd12e5f,Iasmin Lucindo,Angela Hill,Iasmin Lucindo,Decision - Unanimous,SIG_KD,1,1.0,2,1,0,True
+646c79a7ecd12e5f,Iasmin Lucindo,Angela Hill,Iasmin Lucindo,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+646c79a7ecd12e5f,Iasmin Lucindo,Angela Hill,Iasmin Lucindo,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+646c79a7ecd12e5f,Iasmin Lucindo,Angela Hill,Iasmin Lucindo,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+646c79a7ecd12e5f,Iasmin Lucindo,Angela Hill,Iasmin Lucindo,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True
+6ef50ed03b116b60,Gabriella Fernandes,Julija Stoliarenko,Gabriella Fernandes,Decision - Unanimous,SIG_ONLY,1,,1,1,1,
+6ef50ed03b116b60,Gabriella Fernandes,Julija Stoliarenko,Gabriella Fernandes,Decision - Unanimous,SIG_KD,1,,1,1,1,
+6ef50ed03b116b60,Gabriella Fernandes,Julija Stoliarenko,Gabriella Fernandes,Decision - Unanimous,SIG_KD_TD,1,,1,1,1,
+6ef50ed03b116b60,Gabriella Fernandes,Julija Stoliarenko,Gabriella Fernandes,Decision - Unanimous,SIG_KD_TD_CTRL,1,0.0,1,2,0,False
+6ef50ed03b116b60,Gabriella Fernandes,Julija Stoliarenko,Gabriella Fernandes,Decision - Unanimous,OLD_FULL,1,0.0,1,2,0,False
+6ef50ed03b116b60,Gabriella Fernandes,Julija Stoliarenko,Gabriella Fernandes,Decision - Unanimous,DAMAGE_FIRST,1,0.0,1,2,0,False
+857e8facd8ff7c36,Cody Brundage,Eric McConico,Eric McConico,Decision - Split,SIG_ONLY,0,1.0,2,1,0,False
+857e8facd8ff7c36,Cody Brundage,Eric McConico,Eric McConico,Decision - Split,SIG_KD,0,1.0,2,1,0,False
+857e8facd8ff7c36,Cody Brundage,Eric McConico,Eric McConico,Decision - Split,SIG_KD_TD,0,1.0,2,1,0,False
+857e8facd8ff7c36,Cody Brundage,Eric McConico,Eric McConico,Decision - Split,SIG_KD_TD_CTRL,0,1.0,2,1,0,False
+857e8facd8ff7c36,Cody Brundage,Eric McConico,Eric McConico,Decision - Split,OLD_FULL,0,1.0,2,1,0,False
+857e8facd8ff7c36,Cody Brundage,Eric McConico,Eric McConico,Decision - Split,DAMAGE_FIRST,0,1.0,2,1,0,False
+98d6771af9b0ebe5,Andre Fili,Christian Rodriguez,Andre Fili,Decision - Split,SIG_ONLY,1,0.0,0,3,0,False
+98d6771af9b0ebe5,Andre Fili,Christian Rodriguez,Andre Fili,Decision - Split,SIG_KD,1,0.0,0,3,0,False
+98d6771af9b0ebe5,Andre Fili,Christian Rodriguez,Andre Fili,Decision - Split,SIG_KD_TD,1,0.0,1,2,0,False
+98d6771af9b0ebe5,Andre Fili,Christian Rodriguez,Andre Fili,Decision - Split,SIG_KD_TD_CTRL,1,0.0,1,2,0,False
+98d6771af9b0ebe5,Andre Fili,Christian Rodriguez,Andre Fili,Decision - Split,OLD_FULL,1,0.0,1,2,0,False
+98d6771af9b0ebe5,Andre Fili,Christian Rodriguez,Andre Fili,Decision - Split,DAMAGE_FIRST,1,0.0,0,3,0,False
+ed5383b50ffcdded,Miles Johns,Jean Matsumoto,Jean Matsumoto,Decision - Split,SIG_ONLY,0,0.0,1,2,0,True
+ed5383b50ffcdded,Miles Johns,Jean Matsumoto,Jean Matsumoto,Decision - Split,SIG_KD,0,0.0,1,2,0,True
+ed5383b50ffcdded,Miles Johns,Jean Matsumoto,Jean Matsumoto,Decision - Split,SIG_KD_TD,0,1.0,2,1,0,False
+ed5383b50ffcdded,Miles Johns,Jean Matsumoto,Jean Matsumoto,Decision - Split,SIG_KD_TD_CTRL,0,1.0,2,1,0,False
+ed5383b50ffcdded,Miles Johns,Jean Matsumoto,Jean Matsumoto,Decision - Split,OLD_FULL,0,0.0,1,2,0,True
+ed5383b50ffcdded,Miles Johns,Jean Matsumoto,Jean Matsumoto,Decision - Split,DAMAGE_FIRST,0,0.0,1,2,0,True
+12cedec11b37ddc0,Dricus Du Plessis,Khamzat Chimaev,Khamzat Chimaev,Decision - Unanimous,SIG_ONLY,0,0.0,1,4,0,True
+12cedec11b37ddc0,Dricus Du Plessis,Khamzat Chimaev,Khamzat Chimaev,Decision - Unanimous,SIG_KD,0,0.0,1,4,0,True
+12cedec11b37ddc0,Dricus Du Plessis,Khamzat Chimaev,Khamzat Chimaev,Decision - Unanimous,SIG_KD_TD,0,0.0,0,5,0,True
+12cedec11b37ddc0,Dricus Du Plessis,Khamzat Chimaev,Khamzat Chimaev,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,5,0,True
+12cedec11b37ddc0,Dricus Du Plessis,Khamzat Chimaev,Khamzat Chimaev,Decision - Unanimous,OLD_FULL,0,0.0,0,5,0,True
+12cedec11b37ddc0,Dricus Du Plessis,Khamzat Chimaev,Khamzat Chimaev,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,4,0,True
+88020d22cf905792,Karine Silva,Dione Barbosa,Karine Silva,Decision - Unanimous,SIG_ONLY,1,0.0,1,2,0,False
+88020d22cf905792,Karine Silva,Dione Barbosa,Karine Silva,Decision - Unanimous,SIG_KD,1,0.0,1,2,0,False
+88020d22cf905792,Karine Silva,Dione Barbosa,Karine Silva,Decision - Unanimous,SIG_KD_TD,1,0.0,1,2,0,False
+88020d22cf905792,Karine Silva,Dione Barbosa,Karine Silva,Decision - Unanimous,SIG_KD_TD_CTRL,1,0.0,0,3,0,False
+88020d22cf905792,Karine Silva,Dione Barbosa,Karine Silva,Decision - Unanimous,OLD_FULL,1,0.0,0,3,0,False
+88020d22cf905792,Karine Silva,Dione Barbosa,Karine Silva,Decision - Unanimous,DAMAGE_FIRST,1,0.0,1,2,0,False
+9939d7073462e07e,Jared Cannonier,Michael Page,Michael Page,Decision - Unanimous,SIG_ONLY,0,0.0,1,2,0,True
+9939d7073462e07e,Jared Cannonier,Michael Page,Michael Page,Decision - Unanimous,SIG_KD,0,0.0,1,2,0,True
+9939d7073462e07e,Jared Cannonier,Michael Page,Michael Page,Decision - Unanimous,SIG_KD_TD,0,1.0,2,1,0,False
+9939d7073462e07e,Jared Cannonier,Michael Page,Michael Page,Decision - Unanimous,SIG_KD_TD_CTRL,0,1.0,2,1,0,False
+9939d7073462e07e,Jared Cannonier,Michael Page,Michael Page,Decision - Unanimous,OLD_FULL,0,1.0,2,1,0,False
+9939d7073462e07e,Jared Cannonier,Michael Page,Michael Page,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+a2eafd9e1d5031b1,Jessica Andrade,Loopy Godinez,Loopy Godinez,Decision - Unanimous,SIG_ONLY,0,0.0,1,2,0,True
+a2eafd9e1d5031b1,Jessica Andrade,Loopy Godinez,Loopy Godinez,Decision - Unanimous,SIG_KD,0,0.0,1,2,0,True
+a2eafd9e1d5031b1,Jessica Andrade,Loopy Godinez,Loopy Godinez,Decision - Unanimous,SIG_KD_TD,0,0.0,1,2,0,True
+a2eafd9e1d5031b1,Jessica Andrade,Loopy Godinez,Loopy Godinez,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+a2eafd9e1d5031b1,Jessica Andrade,Loopy Godinez,Loopy Godinez,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+a2eafd9e1d5031b1,Jessica Andrade,Loopy Godinez,Loopy Godinez,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+bc63f1b2e52f603e,Edson Barboza,Drakkar Klose,Drakkar Klose,Decision - Unanimous,SIG_ONLY,0,1.0,2,1,0,False
+bc63f1b2e52f603e,Edson Barboza,Drakkar Klose,Drakkar Klose,Decision - Unanimous,SIG_KD,0,1.0,2,1,0,False
+bc63f1b2e52f603e,Edson Barboza,Drakkar Klose,Drakkar Klose,Decision - Unanimous,SIG_KD_TD,0,1.0,2,1,0,False
+bc63f1b2e52f603e,Edson Barboza,Drakkar Klose,Drakkar Klose,Decision - Unanimous,SIG_KD_TD_CTRL,0,1.0,2,1,0,False
+bc63f1b2e52f603e,Edson Barboza,Drakkar Klose,Drakkar Klose,Decision - Unanimous,OLD_FULL,0,1.0,2,1,0,False
+bc63f1b2e52f603e,Edson Barboza,Drakkar Klose,Drakkar Klose,Decision - Unanimous,DAMAGE_FIRST,0,1.0,2,1,0,False
+0b1460c666e66d39,Maheshate,Gauge Young,Gauge Young,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+0b1460c666e66d39,Maheshate,Gauge Young,Gauge Young,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+0b1460c666e66d39,Maheshate,Gauge Young,Gauge Young,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+0b1460c666e66d39,Maheshate,Gauge Young,Gauge Young,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+0b1460c666e66d39,Maheshate,Gauge Young,Gauge Young,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+0b1460c666e66d39,Maheshate,Gauge Young,Gauge Young,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+2f6065fe0804d1d8,Xiao Long,SuYoung You,SuYoung You,Decision - Unanimous,SIG_ONLY,0,1.0,2,1,0,False
+2f6065fe0804d1d8,Xiao Long,SuYoung You,SuYoung You,Decision - Unanimous,SIG_KD,0,1.0,2,1,0,False
+2f6065fe0804d1d8,Xiao Long,SuYoung You,SuYoung You,Decision - Unanimous,SIG_KD_TD,0,1.0,2,1,0,False
+2f6065fe0804d1d8,Xiao Long,SuYoung You,SuYoung You,Decision - Unanimous,SIG_KD_TD_CTRL,0,1.0,2,1,0,False
+2f6065fe0804d1d8,Xiao Long,SuYoung You,SuYoung You,Decision - Unanimous,OLD_FULL,0,1.0,2,1,0,False
+2f6065fe0804d1d8,Xiao Long,SuYoung You,SuYoung You,Decision - Unanimous,DAMAGE_FIRST,0,1.0,2,1,0,False
+5538d15c4eeac3b3,Sergei Pavlovich,Waldo Cortes-Acosta,Sergei Pavlovich,Decision - Unanimous,SIG_ONLY,1,1.0,2,1,0,True
+5538d15c4eeac3b3,Sergei Pavlovich,Waldo Cortes-Acosta,Sergei Pavlovich,Decision - Unanimous,SIG_KD,1,1.0,2,1,0,True
+5538d15c4eeac3b3,Sergei Pavlovich,Waldo Cortes-Acosta,Sergei Pavlovich,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+5538d15c4eeac3b3,Sergei Pavlovich,Waldo Cortes-Acosta,Sergei Pavlovich,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+5538d15c4eeac3b3,Sergei Pavlovich,Waldo Cortes-Acosta,Sergei Pavlovich,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+5538d15c4eeac3b3,Sergei Pavlovich,Waldo Cortes-Acosta,Sergei Pavlovich,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True
+58080e8989927500,Brian Ortega,Aljamain Sterling,Aljamain Sterling,Decision - Unanimous,SIG_ONLY,0,0.0,0,5,0,True
+58080e8989927500,Brian Ortega,Aljamain Sterling,Aljamain Sterling,Decision - Unanimous,SIG_KD,0,0.0,0,5,0,True
+58080e8989927500,Brian Ortega,Aljamain Sterling,Aljamain Sterling,Decision - Unanimous,SIG_KD_TD,0,0.0,0,5,0,True
+58080e8989927500,Brian Ortega,Aljamain Sterling,Aljamain Sterling,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,5,0,True
+58080e8989927500,Brian Ortega,Aljamain Sterling,Aljamain Sterling,Decision - Unanimous,OLD_FULL,0,0.0,0,5,0,True
+58080e8989927500,Brian Ortega,Aljamain Sterling,Aljamain Sterling,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,5,0,True
+ce6bd165bef82bd7,Sumudaerji,Kevin Borjas,Sumudaerji,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+ce6bd165bef82bd7,Sumudaerji,Kevin Borjas,Sumudaerji,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+ce6bd165bef82bd7,Sumudaerji,Kevin Borjas,Sumudaerji,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+ce6bd165bef82bd7,Sumudaerji,Kevin Borjas,Sumudaerji,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+ce6bd165bef82bd7,Sumudaerji,Kevin Borjas,Sumudaerji,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+ce6bd165bef82bd7,Sumudaerji,Kevin Borjas,Sumudaerji,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+f55749e32ce5c6f3,Rongzhu,Austin Hubbard,Rongzhu,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+f55749e32ce5c6f3,Rongzhu,Austin Hubbard,Rongzhu,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+f55749e32ce5c6f3,Rongzhu,Austin Hubbard,Rongzhu,Decision - Unanimous,SIG_KD_TD,1,0.0,1,2,0,False
+f55749e32ce5c6f3,Rongzhu,Austin Hubbard,Rongzhu,Decision - Unanimous,SIG_KD_TD_CTRL,1,0.0,1,2,0,False
+f55749e32ce5c6f3,Rongzhu,Austin Hubbard,Rongzhu,Decision - Unanimous,OLD_FULL,1,0.0,1,2,0,False
+f55749e32ce5c6f3,Rongzhu,Austin Hubbard,Rongzhu,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+5bcd8abf6da01dae,Nassourdine Imavov,Caio Borralho,Nassourdine Imavov,Decision - Unanimous,SIG_ONLY,1,1.0,3,2,0,True
+5bcd8abf6da01dae,Nassourdine Imavov,Caio Borralho,Nassourdine Imavov,Decision - Unanimous,SIG_KD,1,1.0,3,2,0,True
+5bcd8abf6da01dae,Nassourdine Imavov,Caio Borralho,Nassourdine Imavov,Decision - Unanimous,SIG_KD_TD,1,1.0,3,2,0,True
+5bcd8abf6da01dae,Nassourdine Imavov,Caio Borralho,Nassourdine Imavov,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,2,0,True
+5bcd8abf6da01dae,Nassourdine Imavov,Caio Borralho,Nassourdine Imavov,Decision - Unanimous,OLD_FULL,1,1.0,3,2,0,True
+5bcd8abf6da01dae,Nassourdine Imavov,Caio Borralho,Nassourdine Imavov,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,2,0,True
+b53031bf4bd0a330,William Gomis,Robert Ruchala,William Gomis,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+b53031bf4bd0a330,William Gomis,Robert Ruchala,William Gomis,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+b53031bf4bd0a330,William Gomis,Robert Ruchala,William Gomis,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+b53031bf4bd0a330,William Gomis,Robert Ruchala,William Gomis,Decision - Unanimous,SIG_KD_TD_CTRL,1,0.0,1,2,0,False
+b53031bf4bd0a330,William Gomis,Robert Ruchala,William Gomis,Decision - Unanimous,OLD_FULL,1,0.0,1,2,0,False
+b53031bf4bd0a330,William Gomis,Robert Ruchala,William Gomis,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+80eae31bc0a94a65,Mayra Bueno Silva,Jacqueline Cavalcanti,Jacqueline Cavalcanti,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+80eae31bc0a94a65,Mayra Bueno Silva,Jacqueline Cavalcanti,Jacqueline Cavalcanti,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+80eae31bc0a94a65,Mayra Bueno Silva,Jacqueline Cavalcanti,Jacqueline Cavalcanti,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+80eae31bc0a94a65,Mayra Bueno Silva,Jacqueline Cavalcanti,Jacqueline Cavalcanti,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+80eae31bc0a94a65,Mayra Bueno Silva,Jacqueline Cavalcanti,Jacqueline Cavalcanti,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+80eae31bc0a94a65,Mayra Bueno Silva,Jacqueline Cavalcanti,Jacqueline Cavalcanti,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+9126633d921afb57,Tecia Pennington,Denise Gomes,Denise Gomes,Decision - Unanimous,SIG_ONLY,0,,1,1,1,
+9126633d921afb57,Tecia Pennington,Denise Gomes,Denise Gomes,Decision - Unanimous,SIG_KD,0,,1,1,1,
+9126633d921afb57,Tecia Pennington,Denise Gomes,Denise Gomes,Decision - Unanimous,SIG_KD_TD,0,0.0,1,2,0,True
+9126633d921afb57,Tecia Pennington,Denise Gomes,Denise Gomes,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+9126633d921afb57,Tecia Pennington,Denise Gomes,Denise Gomes,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+9126633d921afb57,Tecia Pennington,Denise Gomes,Denise Gomes,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+c6d56aad93f98249,Ricky Simon,Raoni Barcelos,Raoni Barcelos,Decision - Unanimous,SIG_ONLY,0,0.0,1,2,0,True
+c6d56aad93f98249,Ricky Simon,Raoni Barcelos,Raoni Barcelos,Decision - Unanimous,SIG_KD,0,0.0,1,2,0,True
+c6d56aad93f98249,Ricky Simon,Raoni Barcelos,Raoni Barcelos,Decision - Unanimous,SIG_KD_TD,0,0.0,1,2,0,True
+c6d56aad93f98249,Ricky Simon,Raoni Barcelos,Raoni Barcelos,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+c6d56aad93f98249,Ricky Simon,Raoni Barcelos,Raoni Barcelos,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+c6d56aad93f98249,Ricky Simon,Raoni Barcelos,Raoni Barcelos,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+e3d657dd88864ba7,Hyder Amil,Jamall Emmers,Jamall Emmers,Decision - Unanimous,SIG_ONLY,0,0.0,1,2,0,True
+e3d657dd88864ba7,Hyder Amil,Jamall Emmers,Jamall Emmers,Decision - Unanimous,SIG_KD,0,0.0,1,2,0,True
+e3d657dd88864ba7,Hyder Amil,Jamall Emmers,Jamall Emmers,Decision - Unanimous,SIG_KD_TD,0,0.0,1,2,0,True
+e3d657dd88864ba7,Hyder Amil,Jamall Emmers,Jamall Emmers,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+e3d657dd88864ba7,Hyder Amil,Jamall Emmers,Jamall Emmers,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+e3d657dd88864ba7,Hyder Amil,Jamall Emmers,Jamall Emmers,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+46f81d5ecd974c1c,Nurullo Aliev,Shem Rock,Nurullo Aliev,Decision - Unanimous,SIG_ONLY,1,0.0,1,2,0,False
+46f81d5ecd974c1c,Nurullo Aliev,Shem Rock,Nurullo Aliev,Decision - Unanimous,SIG_KD,1,0.0,1,2,0,False
+46f81d5ecd974c1c,Nurullo Aliev,Shem Rock,Nurullo Aliev,Decision - Unanimous,SIG_KD_TD,1,0.0,1,2,0,False
+46f81d5ecd974c1c,Nurullo Aliev,Shem Rock,Nurullo Aliev,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+46f81d5ecd974c1c,Nurullo Aliev,Shem Rock,Nurullo Aliev,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+46f81d5ecd974c1c,Nurullo Aliev,Shem Rock,Nurullo Aliev,Decision - Unanimous,DAMAGE_FIRST,1,0.0,1,2,0,False
+6f0231915cc28507,Bekzat Almakhan,Aleksandre Topuria,Aleksandre Topuria,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+6f0231915cc28507,Bekzat Almakhan,Aleksandre Topuria,Aleksandre Topuria,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+6f0231915cc28507,Bekzat Almakhan,Aleksandre Topuria,Aleksandre Topuria,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+6f0231915cc28507,Bekzat Almakhan,Aleksandre Topuria,Aleksandre Topuria,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+6f0231915cc28507,Bekzat Almakhan,Aleksandre Topuria,Aleksandre Topuria,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+6f0231915cc28507,Bekzat Almakhan,Aleksandre Topuria,Aleksandre Topuria,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+9027e156c6f1988a,Marek Bujlo,Denzel Freeman,Denzel Freeman,Decision - Unanimous,SIG_ONLY,0,0.0,1,2,0,True
+9027e156c6f1988a,Marek Bujlo,Denzel Freeman,Denzel Freeman,Decision - Unanimous,SIG_KD,0,0.0,1,2,0,True
+9027e156c6f1988a,Marek Bujlo,Denzel Freeman,Denzel Freeman,Decision - Unanimous,SIG_KD_TD,0,0.0,1,2,0,True
+9027e156c6f1988a,Marek Bujlo,Denzel Freeman,Denzel Freeman,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+9027e156c6f1988a,Marek Bujlo,Denzel Freeman,Denzel Freeman,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+9027e156c6f1988a,Marek Bujlo,Denzel Freeman,Denzel Freeman,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+b2218930b982d9b6,Belal Muhammad,Ian Machado Garry,Ian Machado Garry,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+b2218930b982d9b6,Belal Muhammad,Ian Machado Garry,Ian Machado Garry,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+b2218930b982d9b6,Belal Muhammad,Ian Machado Garry,Ian Machado Garry,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+b2218930b982d9b6,Belal Muhammad,Ian Machado Garry,Ian Machado Garry,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+b2218930b982d9b6,Belal Muhammad,Ian Machado Garry,Ian Machado Garry,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+b2218930b982d9b6,Belal Muhammad,Ian Machado Garry,Ian Machado Garry,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+c49485cedb878cf0,Nicolas Dalby,Saygid Izagakhmaev,Nicolas Dalby,Decision - Split,SIG_ONLY,1,1.0,2,1,0,True
+c49485cedb878cf0,Nicolas Dalby,Saygid Izagakhmaev,Nicolas Dalby,Decision - Split,SIG_KD,1,1.0,2,1,0,True
+c49485cedb878cf0,Nicolas Dalby,Saygid Izagakhmaev,Nicolas Dalby,Decision - Split,SIG_KD_TD,1,0.0,1,2,0,False
+c49485cedb878cf0,Nicolas Dalby,Saygid Izagakhmaev,Nicolas Dalby,Decision - Split,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+c49485cedb878cf0,Nicolas Dalby,Saygid Izagakhmaev,Nicolas Dalby,Decision - Split,OLD_FULL,1,1.0,2,1,0,True
+c49485cedb878cf0,Nicolas Dalby,Saygid Izagakhmaev,Nicolas Dalby,Decision - Split,DAMAGE_FIRST,1,1.0,2,1,0,True
+225e93ebed9b71b8,Joanderson Brito,Isaac Thomson,Joanderson Brito,Decision - Unanimous,SIG_ONLY,1,1.0,2,1,0,True
+225e93ebed9b71b8,Joanderson Brito,Isaac Thomson,Joanderson Brito,Decision - Unanimous,SIG_KD,1,1.0,2,1,0,True
+225e93ebed9b71b8,Joanderson Brito,Isaac Thomson,Joanderson Brito,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+225e93ebed9b71b8,Joanderson Brito,Isaac Thomson,Joanderson Brito,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+225e93ebed9b71b8,Joanderson Brito,Isaac Thomson,Joanderson Brito,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+225e93ebed9b71b8,Joanderson Brito,Isaac Thomson,Joanderson Brito,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True
+ac56a1052c4c8f63,Allen Frye Jr.,Guilherme Pat,Guilherme Pat,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+ac56a1052c4c8f63,Allen Frye Jr.,Guilherme Pat,Guilherme Pat,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+ac56a1052c4c8f63,Allen Frye Jr.,Guilherme Pat,Guilherme Pat,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+ac56a1052c4c8f63,Allen Frye Jr.,Guilherme Pat,Guilherme Pat,Decision - Unanimous,SIG_KD_TD_CTRL,0,1.0,2,1,0,False
+ac56a1052c4c8f63,Allen Frye Jr.,Guilherme Pat,Guilherme Pat,Decision - Unanimous,OLD_FULL,0,1.0,2,1,0,False
+ac56a1052c4c8f63,Allen Frye Jr.,Guilherme Pat,Guilherme Pat,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+ceb5b0f1f6daddf6,Melissa Croden,Luana Santos,Luana Santos,Decision - Unanimous,SIG_ONLY,0,1.0,2,1,0,False
+ceb5b0f1f6daddf6,Melissa Croden,Luana Santos,Luana Santos,Decision - Unanimous,SIG_KD,0,1.0,2,1,0,False
+ceb5b0f1f6daddf6,Melissa Croden,Luana Santos,Luana Santos,Decision - Unanimous,SIG_KD_TD,0,1.0,2,1,0,False
+ceb5b0f1f6daddf6,Melissa Croden,Luana Santos,Luana Santos,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+ceb5b0f1f6daddf6,Melissa Croden,Luana Santos,Luana Santos,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+ceb5b0f1f6daddf6,Melissa Croden,Luana Santos,Luana Santos,Decision - Unanimous,DAMAGE_FIRST,0,1.0,2,1,0,False
+d000cb692343cdcd,Cesar Almeida,Cezary Oleksiejczuk,Cezary Oleksiejczuk,Decision - Unanimous,SIG_ONLY,0,0.0,0,2,1,True
+d000cb692343cdcd,Cesar Almeida,Cezary Oleksiejczuk,Cezary Oleksiejczuk,Decision - Unanimous,SIG_KD,0,0.0,0,2,1,True
+d000cb692343cdcd,Cesar Almeida,Cezary Oleksiejczuk,Cezary Oleksiejczuk,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+d000cb692343cdcd,Cesar Almeida,Cezary Oleksiejczuk,Cezary Oleksiejczuk,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+d000cb692343cdcd,Cesar Almeida,Cezary Oleksiejczuk,Cezary Oleksiejczuk,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+d000cb692343cdcd,Cesar Almeida,Cezary Oleksiejczuk,Cezary Oleksiejczuk,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+fc4ab243d21b795d,King Green,Lance Gibson Jr.,King Green,Decision - Split,SIG_ONLY,1,1.0,3,0,0,True
+fc4ab243d21b795d,King Green,Lance Gibson Jr.,King Green,Decision - Split,SIG_KD,1,1.0,3,0,0,True
+fc4ab243d21b795d,King Green,Lance Gibson Jr.,King Green,Decision - Split,SIG_KD_TD,1,1.0,2,1,0,True
+fc4ab243d21b795d,King Green,Lance Gibson Jr.,King Green,Decision - Split,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+fc4ab243d21b795d,King Green,Lance Gibson Jr.,King Green,Decision - Split,OLD_FULL,1,1.0,2,1,0,True
+fc4ab243d21b795d,King Green,Lance Gibson Jr.,King Green,Decision - Split,DAMAGE_FIRST,1,1.0,3,0,0,True
+007e8e0d4a39d82c,Sean O'Malley,Song Yadong,Sean O'Malley,Decision - Unanimous,SIG_ONLY,1,1.0,2,1,0,True
+007e8e0d4a39d82c,Sean O'Malley,Song Yadong,Sean O'Malley,Decision - Unanimous,SIG_KD,1,1.0,2,1,0,True
+007e8e0d4a39d82c,Sean O'Malley,Song Yadong,Sean O'Malley,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+007e8e0d4a39d82c,Sean O'Malley,Song Yadong,Sean O'Malley,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+007e8e0d4a39d82c,Sean O'Malley,Song Yadong,Sean O'Malley,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+007e8e0d4a39d82c,Sean O'Malley,Song Yadong,Sean O'Malley,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True
+33be2456161c14c3,Ateba Gautier,Andrey Pulyaev,Ateba Gautier,Decision - Unanimous,SIG_ONLY,1,0.0,0,3,0,False
+33be2456161c14c3,Ateba Gautier,Andrey Pulyaev,Ateba Gautier,Decision - Unanimous,SIG_KD,1,0.0,1,2,0,False
+33be2456161c14c3,Ateba Gautier,Andrey Pulyaev,Ateba Gautier,Decision - Unanimous,SIG_KD_TD,1,0.0,1,2,0,False
+33be2456161c14c3,Ateba Gautier,Andrey Pulyaev,Ateba Gautier,Decision - Unanimous,SIG_KD_TD_CTRL,1,0.0,1,2,0,False
+33be2456161c14c3,Ateba Gautier,Andrey Pulyaev,Ateba Gautier,Decision - Unanimous,OLD_FULL,1,0.0,1,2,0,False
+33be2456161c14c3,Ateba Gautier,Andrey Pulyaev,Ateba Gautier,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True
+6c9f4799990c3c33,Umar Nurmagomedov,Deiveson Figueiredo,Umar Nurmagomedov,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+6c9f4799990c3c33,Umar Nurmagomedov,Deiveson Figueiredo,Umar Nurmagomedov,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+6c9f4799990c3c33,Umar Nurmagomedov,Deiveson Figueiredo,Umar Nurmagomedov,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+6c9f4799990c3c33,Umar Nurmagomedov,Deiveson Figueiredo,Umar Nurmagomedov,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+6c9f4799990c3c33,Umar Nurmagomedov,Deiveson Figueiredo,Umar Nurmagomedov,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+6c9f4799990c3c33,Umar Nurmagomedov,Deiveson Figueiredo,Umar Nurmagomedov,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+836a188a90e479a5,Arnold Allen,Jean Silva,Jean Silva,Decision - Unanimous,SIG_ONLY,0,0.0,1,2,0,True
+836a188a90e479a5,Arnold Allen,Jean Silva,Jean Silva,Decision - Unanimous,SIG_KD,0,0.0,1,2,0,True
+836a188a90e479a5,Arnold Allen,Jean Silva,Jean Silva,Decision - Unanimous,SIG_KD_TD,0,0.0,1,2,0,True
+836a188a90e479a5,Arnold Allen,Jean Silva,Jean Silva,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+836a188a90e479a5,Arnold Allen,Jean Silva,Jean Silva,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+836a188a90e479a5,Arnold Allen,Jean Silva,Jean Silva,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+d63c9aa4f4873001,Natalia Silva,Rose Namajunas,Natalia Silva,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+d63c9aa4f4873001,Natalia Silva,Rose Namajunas,Natalia Silva,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+d63c9aa4f4873001,Natalia Silva,Rose Namajunas,Natalia Silva,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+d63c9aa4f4873001,Natalia Silva,Rose Namajunas,Natalia Silva,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+d63c9aa4f4873001,Natalia Silva,Rose Namajunas,Natalia Silva,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+d63c9aa4f4873001,Natalia Silva,Rose Namajunas,Natalia Silva,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+fa4b3f5ce8055921,Justin Gaethje,Paddy Pimblett,Justin Gaethje,Decision - Unanimous,SIG_ONLY,1,0.0,2,3,0,False
+fa4b3f5ce8055921,Justin Gaethje,Paddy Pimblett,Justin Gaethje,Decision - Unanimous,SIG_KD,1,1.0,3,2,0,True
+fa4b3f5ce8055921,Justin Gaethje,Paddy Pimblett,Justin Gaethje,Decision - Unanimous,SIG_KD_TD,1,1.0,3,2,0,True
+fa4b3f5ce8055921,Justin Gaethje,Paddy Pimblett,Justin Gaethje,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,4,1,0,True
+fa4b3f5ce8055921,Justin Gaethje,Paddy Pimblett,Justin Gaethje,Decision - Unanimous,OLD_FULL,1,1.0,4,1,0,True
+fa4b3f5ce8055921,Justin Gaethje,Paddy Pimblett,Justin Gaethje,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,2,0,True
+0047f8aadca1936f,Jacob Malkoun,Torrez Finney,Jacob Malkoun,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+0047f8aadca1936f,Jacob Malkoun,Torrez Finney,Jacob Malkoun,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+0047f8aadca1936f,Jacob Malkoun,Torrez Finney,Jacob Malkoun,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+0047f8aadca1936f,Jacob Malkoun,Torrez Finney,Jacob Malkoun,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+0047f8aadca1936f,Jacob Malkoun,Torrez Finney,Jacob Malkoun,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+0047f8aadca1936f,Jacob Malkoun,Torrez Finney,Jacob Malkoun,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+4c1e7e1765a5438a,Kaan Ofli,Yizha,Kaan Ofli,Decision - Majority,SIG_ONLY,1,0.0,1,2,0,False
+4c1e7e1765a5438a,Kaan Ofli,Yizha,Kaan Ofli,Decision - Majority,SIG_KD,1,0.0,1,2,0,False
+4c1e7e1765a5438a,Kaan Ofli,Yizha,Kaan Ofli,Decision - Majority,SIG_KD_TD,1,0.0,1,2,0,False
+4c1e7e1765a5438a,Kaan Ofli,Yizha,Kaan Ofli,Decision - Majority,SIG_KD_TD_CTRL,1,0.0,1,2,0,False
+4c1e7e1765a5438a,Kaan Ofli,Yizha,Kaan Ofli,Decision - Majority,OLD_FULL,1,0.0,1,2,0,False
+4c1e7e1765a5438a,Kaan Ofli,Yizha,Kaan Ofli,Decision - Majority,DAMAGE_FIRST,1,0.0,1,2,0,False
+5c73e0013b859664,Sulangrangbo,Lawrence Lui,Lawrence Lui,Decision - Split,SIG_ONLY,0,0.0,1,2,0,True
+5c73e0013b859664,Sulangrangbo,Lawrence Lui,Lawrence Lui,Decision - Split,SIG_KD,0,0.0,1,2,0,True
+5c73e0013b859664,Sulangrangbo,Lawrence Lui,Lawrence Lui,Decision - Split,SIG_KD_TD,0,0.0,1,2,0,True
+5c73e0013b859664,Sulangrangbo,Lawrence Lui,Lawrence Lui,Decision - Split,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+5c73e0013b859664,Sulangrangbo,Lawrence Lui,Lawrence Lui,Decision - Split,OLD_FULL,0,0.0,1,2,0,True
+5c73e0013b859664,Sulangrangbo,Lawrence Lui,Lawrence Lui,Decision - Split,DAMAGE_FIRST,0,0.0,1,2,0,True
+67765535bd0b6bdf,Tai Tuivasa,Tallison Teixeira,Tallison Teixeira,Decision - Unanimous,SIG_ONLY,0,0.0,1,2,0,True
+67765535bd0b6bdf,Tai Tuivasa,Tallison Teixeira,Tallison Teixeira,Decision - Unanimous,SIG_KD,0,0.0,1,2,0,True
+67765535bd0b6bdf,Tai Tuivasa,Tallison Teixeira,Tallison Teixeira,Decision - Unanimous,SIG_KD_TD,0,0.0,1,2,0,True
+67765535bd0b6bdf,Tai Tuivasa,Tallison Teixeira,Tallison Teixeira,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+67765535bd0b6bdf,Tai Tuivasa,Tallison Teixeira,Tallison Teixeira,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+67765535bd0b6bdf,Tai Tuivasa,Tallison Teixeira,Tallison Teixeira,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+ad14c502c9c5a7e9,Sangwook Kim,Dom Mar Fan,Dom Mar Fan,Decision - Unanimous,SIG_ONLY,0,0.0,0,2,1,True
+ad14c502c9c5a7e9,Sangwook Kim,Dom Mar Fan,Dom Mar Fan,Decision - Unanimous,SIG_KD,0,0.0,0,2,1,True
+ad14c502c9c5a7e9,Sangwook Kim,Dom Mar Fan,Dom Mar Fan,Decision - Unanimous,SIG_KD_TD,0,0.0,0,2,1,True
+ad14c502c9c5a7e9,Sangwook Kim,Dom Mar Fan,Dom Mar Fan,Decision - Unanimous,SIG_KD_TD_CTRL,0,1.0,2,1,0,False
+ad14c502c9c5a7e9,Sangwook Kim,Dom Mar Fan,Dom Mar Fan,Decision - Unanimous,OLD_FULL,0,1.0,2,1,0,False
+ad14c502c9c5a7e9,Sangwook Kim,Dom Mar Fan,Dom Mar Fan,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+b06b43670238c2d8,Alexander Volkanovski,Diego Lopes,Alexander Volkanovski,Decision - Unanimous,SIG_ONLY,1,1.0,4,0,1,True
+b06b43670238c2d8,Alexander Volkanovski,Diego Lopes,Alexander Volkanovski,Decision - Unanimous,SIG_KD,1,1.0,4,0,1,True
+b06b43670238c2d8,Alexander Volkanovski,Diego Lopes,Alexander Volkanovski,Decision - Unanimous,SIG_KD_TD,1,1.0,4,0,1,True
+b06b43670238c2d8,Alexander Volkanovski,Diego Lopes,Alexander Volkanovski,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,4,1,0,True
+b06b43670238c2d8,Alexander Volkanovski,Diego Lopes,Alexander Volkanovski,Decision - Unanimous,OLD_FULL,1,1.0,5,0,0,True
+b06b43670238c2d8,Alexander Volkanovski,Diego Lopes,Alexander Volkanovski,Decision - Unanimous,DAMAGE_FIRST,1,1.0,5,0,0,True
+2a26c0cfa06265b7,Jean Matsumoto,Farid Basharat,Farid Basharat,Decision - Split,SIG_ONLY,0,0.0,1,2,0,True
+2a26c0cfa06265b7,Jean Matsumoto,Farid Basharat,Farid Basharat,Decision - Split,SIG_KD,0,0.0,1,2,0,True
+2a26c0cfa06265b7,Jean Matsumoto,Farid Basharat,Farid Basharat,Decision - Split,SIG_KD_TD,0,1.0,2,1,0,False
+2a26c0cfa06265b7,Jean Matsumoto,Farid Basharat,Farid Basharat,Decision - Split,SIG_KD_TD_CTRL,0,1.0,3,0,0,False
+2a26c0cfa06265b7,Jean Matsumoto,Farid Basharat,Farid Basharat,Decision - Split,OLD_FULL,0,1.0,3,0,0,False
+2a26c0cfa06265b7,Jean Matsumoto,Farid Basharat,Farid Basharat,Decision - Split,DAMAGE_FIRST,0,0.0,1,2,0,True
+2bbfbb234c255249,Klaudia Sygula,Priscila Cachoeira,Klaudia Sygula,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+2bbfbb234c255249,Klaudia Sygula,Priscila Cachoeira,Klaudia Sygula,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+2bbfbb234c255249,Klaudia Sygula,Priscila Cachoeira,Klaudia Sygula,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+2bbfbb234c255249,Klaudia Sygula,Priscila Cachoeira,Klaudia Sygula,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+2bbfbb234c255249,Klaudia Sygula,Priscila Cachoeira,Klaudia Sygula,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+2bbfbb234c255249,Klaudia Sygula,Priscila Cachoeira,Klaudia Sygula,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+84e8ccc3c97c2b4c,Wang Cong,Eduarda Moura,Wang Cong,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+84e8ccc3c97c2b4c,Wang Cong,Eduarda Moura,Wang Cong,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+84e8ccc3c97c2b4c,Wang Cong,Eduarda Moura,Wang Cong,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+84e8ccc3c97c2b4c,Wang Cong,Eduarda Moura,Wang Cong,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+84e8ccc3c97c2b4c,Wang Cong,Eduarda Moura,Wang Cong,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+84e8ccc3c97c2b4c,Wang Cong,Eduarda Moura,Wang Cong,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+86df0e75f41784d8,Javid Basharat,Gianni Vazquez,Javid Basharat,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+86df0e75f41784d8,Javid Basharat,Gianni Vazquez,Javid Basharat,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+86df0e75f41784d8,Javid Basharat,Gianni Vazquez,Javid Basharat,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+86df0e75f41784d8,Javid Basharat,Gianni Vazquez,Javid Basharat,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+86df0e75f41784d8,Javid Basharat,Gianni Vazquez,Javid Basharat,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+86df0e75f41784d8,Javid Basharat,Gianni Vazquez,Javid Basharat,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+8fea32ab0445859c,Michal Oleksiejczuk,Marc-Andre Barriault,Michal Oleksiejczuk,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+8fea32ab0445859c,Michal Oleksiejczuk,Marc-Andre Barriault,Michal Oleksiejczuk,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+8fea32ab0445859c,Michal Oleksiejczuk,Marc-Andre Barriault,Michal Oleksiejczuk,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+8fea32ab0445859c,Michal Oleksiejczuk,Marc-Andre Barriault,Michal Oleksiejczuk,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+8fea32ab0445859c,Michal Oleksiejczuk,Marc-Andre Barriault,Michal Oleksiejczuk,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+8fea32ab0445859c,Michal Oleksiejczuk,Marc-Andre Barriault,Michal Oleksiejczuk,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+a5c5f76cf0a7c784,Jailton Almeida,Rizvan Kuniev,Rizvan Kuniev,Decision - Unanimous,SIG_ONLY,0,0.0,1,2,0,True
+a5c5f76cf0a7c784,Jailton Almeida,Rizvan Kuniev,Rizvan Kuniev,Decision - Unanimous,SIG_KD,0,0.0,1,2,0,True
+a5c5f76cf0a7c784,Jailton Almeida,Rizvan Kuniev,Rizvan Kuniev,Decision - Unanimous,SIG_KD_TD,0,0.0,1,2,0,True
+a5c5f76cf0a7c784,Jailton Almeida,Rizvan Kuniev,Rizvan Kuniev,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+a5c5f76cf0a7c784,Jailton Almeida,Rizvan Kuniev,Rizvan Kuniev,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+a5c5f76cf0a7c784,Jailton Almeida,Rizvan Kuniev,Rizvan Kuniev,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+cc5c5a8cff4c1ae9,Bruna Brasil,Ketlen Souza,Ketlen Souza,Decision - Unanimous,SIG_ONLY,0,0.0,1,2,0,True
+cc5c5a8cff4c1ae9,Bruna Brasil,Ketlen Souza,Ketlen Souza,Decision - Unanimous,SIG_KD,0,0.0,1,2,0,True
+cc5c5a8cff4c1ae9,Bruna Brasil,Ketlen Souza,Ketlen Souza,Decision - Unanimous,SIG_KD_TD,0,0.0,1,2,0,True
+cc5c5a8cff4c1ae9,Bruna Brasil,Ketlen Souza,Ketlen Souza,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+cc5c5a8cff4c1ae9,Bruna Brasil,Ketlen Souza,Ketlen Souza,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+cc5c5a8cff4c1ae9,Bruna Brasil,Ketlen Souza,Ketlen Souza,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+dbbf8334a2600895,Amir Albazi,Kyoji Horiguchi,Kyoji Horiguchi,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+dbbf8334a2600895,Amir Albazi,Kyoji Horiguchi,Kyoji Horiguchi,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+dbbf8334a2600895,Amir Albazi,Kyoji Horiguchi,Kyoji Horiguchi,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+dbbf8334a2600895,Amir Albazi,Kyoji Horiguchi,Kyoji Horiguchi,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+dbbf8334a2600895,Amir Albazi,Kyoji Horiguchi,Kyoji Horiguchi,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+dbbf8334a2600895,Amir Albazi,Kyoji Horiguchi,Kyoji Horiguchi,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+f964d2dda87f25f0,Alex Morono,Daniil Donchenko,Daniil Donchenko,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+f964d2dda87f25f0,Alex Morono,Daniil Donchenko,Daniil Donchenko,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+f964d2dda87f25f0,Alex Morono,Daniil Donchenko,Daniil Donchenko,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+f964d2dda87f25f0,Alex Morono,Daniil Donchenko,Daniil Donchenko,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+f964d2dda87f25f0,Alex Morono,Daniil Donchenko,Daniil Donchenko,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+f964d2dda87f25f0,Alex Morono,Daniil Donchenko,Daniil Donchenko,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+04b7bcc0e8488604,Serghei Spivac,Ante Delija,Serghei Spivac,Decision - Unanimous,SIG_ONLY,1,1.0,2,1,0,True
+04b7bcc0e8488604,Serghei Spivac,Ante Delija,Serghei Spivac,Decision - Unanimous,SIG_KD,1,1.0,2,1,0,True
+04b7bcc0e8488604,Serghei Spivac,Ante Delija,Serghei Spivac,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+04b7bcc0e8488604,Serghei Spivac,Ante Delija,Serghei Spivac,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+04b7bcc0e8488604,Serghei Spivac,Ante Delija,Serghei Spivac,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+04b7bcc0e8488604,Serghei Spivac,Ante Delija,Serghei Spivac,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True
+202d3277e569ad03,Chidi Njokuani,Carlos Leal,Carlos Leal,Decision - Unanimous,SIG_ONLY,0,1.0,2,1,0,False
+202d3277e569ad03,Chidi Njokuani,Carlos Leal,Carlos Leal,Decision - Unanimous,SIG_KD,0,1.0,2,1,0,False
+202d3277e569ad03,Chidi Njokuani,Carlos Leal,Carlos Leal,Decision - Unanimous,SIG_KD_TD,0,1.0,2,1,0,False
+202d3277e569ad03,Chidi Njokuani,Carlos Leal,Carlos Leal,Decision - Unanimous,SIG_KD_TD_CTRL,0,1.0,2,1,0,False
+202d3277e569ad03,Chidi Njokuani,Carlos Leal,Carlos Leal,Decision - Unanimous,OLD_FULL,0,1.0,2,1,0,False
+202d3277e569ad03,Chidi Njokuani,Carlos Leal,Carlos Leal,Decision - Unanimous,DAMAGE_FIRST,0,1.0,2,1,0,False
+372d1dee0db8dbee,Zach Reese,Michel Pereira,Michel Pereira,Decision - Split,SIG_ONLY,0,1.0,3,0,0,False
+372d1dee0db8dbee,Zach Reese,Michel Pereira,Michel Pereira,Decision - Split,SIG_KD,0,1.0,3,0,0,False
+372d1dee0db8dbee,Zach Reese,Michel Pereira,Michel Pereira,Decision - Split,SIG_KD_TD,0,1.0,3,0,0,False
+372d1dee0db8dbee,Zach Reese,Michel Pereira,Michel Pereira,Decision - Split,SIG_KD_TD_CTRL,0,1.0,3,0,0,False
+372d1dee0db8dbee,Zach Reese,Michel Pereira,Michel Pereira,Decision - Split,OLD_FULL,0,1.0,3,0,0,False
+372d1dee0db8dbee,Zach Reese,Michel Pereira,Michel Pereira,Decision - Split,DAMAGE_FIRST,0,1.0,3,0,0,False
+508e622130b0a84d,Phil Rowe,Jean-Paul Lebosnoyani,Jean-Paul Lebosnoyani,Decision - Split,SIG_ONLY,0,0.0,1,2,0,True
+508e622130b0a84d,Phil Rowe,Jean-Paul Lebosnoyani,Jean-Paul Lebosnoyani,Decision - Split,SIG_KD,0,0.0,1,2,0,True
+508e622130b0a84d,Phil Rowe,Jean-Paul Lebosnoyani,Jean-Paul Lebosnoyani,Decision - Split,SIG_KD_TD,0,0.0,1,2,0,True
+508e622130b0a84d,Phil Rowe,Jean-Paul Lebosnoyani,Jean-Paul Lebosnoyani,Decision - Split,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+508e622130b0a84d,Phil Rowe,Jean-Paul Lebosnoyani,Jean-Paul Lebosnoyani,Decision - Split,OLD_FULL,0,0.0,0,3,0,True
+508e622130b0a84d,Phil Rowe,Jean-Paul Lebosnoyani,Jean-Paul Lebosnoyani,Decision - Split,DAMAGE_FIRST,0,0.0,1,2,0,True
+5b97f47cdd355cbe,Jordan Leavitt,Yadier del Valle,Jordan Leavitt,Decision - Unanimous,SIG_ONLY,1,1.0,2,1,0,True
+5b97f47cdd355cbe,Jordan Leavitt,Yadier del Valle,Jordan Leavitt,Decision - Unanimous,SIG_KD,1,1.0,2,1,0,True
+5b97f47cdd355cbe,Jordan Leavitt,Yadier del Valle,Jordan Leavitt,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+5b97f47cdd355cbe,Jordan Leavitt,Yadier del Valle,Jordan Leavitt,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+5b97f47cdd355cbe,Jordan Leavitt,Yadier del Valle,Jordan Leavitt,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+5b97f47cdd355cbe,Jordan Leavitt,Yadier del Valle,Jordan Leavitt,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True
+6e78d874097a3d22,Juliana Miller,Carli Judice,Carli Judice,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+6e78d874097a3d22,Juliana Miller,Carli Judice,Carli Judice,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+6e78d874097a3d22,Juliana Miller,Carli Judice,Carli Judice,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+6e78d874097a3d22,Juliana Miller,Carli Judice,Carli Judice,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+6e78d874097a3d22,Juliana Miller,Carli Judice,Carli Judice,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+6e78d874097a3d22,Juliana Miller,Carli Judice,Carli Judice,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+8f9896e60047007f,Ramiz Brahimaj,Punahele Soriano,Punahele Soriano,Decision - Unanimous,SIG_ONLY,0,0.0,1,2,0,True
+8f9896e60047007f,Ramiz Brahimaj,Punahele Soriano,Punahele Soriano,Decision - Unanimous,SIG_KD,0,0.0,1,2,0,True
+8f9896e60047007f,Ramiz Brahimaj,Punahele Soriano,Punahele Soriano,Decision - Unanimous,SIG_KD_TD,0,1.0,2,1,0,False
+8f9896e60047007f,Ramiz Brahimaj,Punahele Soriano,Punahele Soriano,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+8f9896e60047007f,Ramiz Brahimaj,Punahele Soriano,Punahele Soriano,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+8f9896e60047007f,Ramiz Brahimaj,Punahele Soriano,Punahele Soriano,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+ac39c1f00ae31e58,Alden Coria,Luis Gurule,Alden Coria,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+ac39c1f00ae31e58,Alden Coria,Luis Gurule,Alden Coria,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+ac39c1f00ae31e58,Alden Coria,Luis Gurule,Alden Coria,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+ac39c1f00ae31e58,Alden Coria,Luis Gurule,Alden Coria,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+ac39c1f00ae31e58,Alden Coria,Luis Gurule,Alden Coria,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+ac39c1f00ae31e58,Alden Coria,Luis Gurule,Alden Coria,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+1330b5c21269fe92,Brandon Moreno,Lone'er Kavanagh,Lone'er Kavanagh,Decision - Unanimous,SIG_ONLY,0,0.0,2,3,0,True
+1330b5c21269fe92,Brandon Moreno,Lone'er Kavanagh,Lone'er Kavanagh,Decision - Unanimous,SIG_KD,0,0.0,2,3,0,True
+1330b5c21269fe92,Brandon Moreno,Lone'er Kavanagh,Lone'er Kavanagh,Decision - Unanimous,SIG_KD_TD,0,0.0,2,3,0,True
+1330b5c21269fe92,Brandon Moreno,Lone'er Kavanagh,Lone'er Kavanagh,Decision - Unanimous,SIG_KD_TD_CTRL,0,1.0,4,1,0,False
+1330b5c21269fe92,Brandon Moreno,Lone'er Kavanagh,Lone'er Kavanagh,Decision - Unanimous,OLD_FULL,0,1.0,4,1,0,False
+1330b5c21269fe92,Brandon Moreno,Lone'er Kavanagh,Lone'er Kavanagh,Decision - Unanimous,DAMAGE_FIRST,0,0.0,2,3,0,True
+25ab195cefbce1d0,Cristian Quinonez,Kris Moutinho,Cristian Quinonez,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+25ab195cefbce1d0,Cristian Quinonez,Kris Moutinho,Cristian Quinonez,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+25ab195cefbce1d0,Cristian Quinonez,Kris Moutinho,Cristian Quinonez,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+25ab195cefbce1d0,Cristian Quinonez,Kris Moutinho,Cristian Quinonez,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+25ab195cefbce1d0,Cristian Quinonez,Kris Moutinho,Cristian Quinonez,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+25ab195cefbce1d0,Cristian Quinonez,Kris Moutinho,Cristian Quinonez,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+36d12b31957e94db,Marlon Vera,David Martinez,David Martinez,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+36d12b31957e94db,Marlon Vera,David Martinez,David Martinez,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+36d12b31957e94db,Marlon Vera,David Martinez,David Martinez,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+36d12b31957e94db,Marlon Vera,David Martinez,David Martinez,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+36d12b31957e94db,Marlon Vera,David Martinez,David Martinez,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+36d12b31957e94db,Marlon Vera,David Martinez,David Martinez,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+3b76a00f5d0400eb,Santiago Luna,Angel Pacheco,Santiago Luna,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+3b76a00f5d0400eb,Santiago Luna,Angel Pacheco,Santiago Luna,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+3b76a00f5d0400eb,Santiago Luna,Angel Pacheco,Santiago Luna,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+3b76a00f5d0400eb,Santiago Luna,Angel Pacheco,Santiago Luna,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+3b76a00f5d0400eb,Santiago Luna,Angel Pacheco,Santiago Luna,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+3b76a00f5d0400eb,Santiago Luna,Angel Pacheco,Santiago Luna,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+44d58943ac8e47e1,Regina Tarin,Ernesta Kareckaite,Regina Tarin,Decision - Unanimous,SIG_ONLY,1,1.0,2,1,0,True
+44d58943ac8e47e1,Regina Tarin,Ernesta Kareckaite,Regina Tarin,Decision - Unanimous,SIG_KD,1,1.0,2,1,0,True
+44d58943ac8e47e1,Regina Tarin,Ernesta Kareckaite,Regina Tarin,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+44d58943ac8e47e1,Regina Tarin,Ernesta Kareckaite,Regina Tarin,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+44d58943ac8e47e1,Regina Tarin,Ernesta Kareckaite,Regina Tarin,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+44d58943ac8e47e1,Regina Tarin,Ernesta Kareckaite,Regina Tarin,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True
+7df505d8260ba680,Edgar Chairez,Felipe Bunes,Edgar Chairez,Decision - Split,SIG_ONLY,1,1.0,2,1,0,True
+7df505d8260ba680,Edgar Chairez,Felipe Bunes,Edgar Chairez,Decision - Split,SIG_KD,1,1.0,2,1,0,True
+7df505d8260ba680,Edgar Chairez,Felipe Bunes,Edgar Chairez,Decision - Split,SIG_KD_TD,1,1.0,2,1,0,True
+7df505d8260ba680,Edgar Chairez,Felipe Bunes,Edgar Chairez,Decision - Split,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+7df505d8260ba680,Edgar Chairez,Felipe Bunes,Edgar Chairez,Decision - Split,OLD_FULL,1,1.0,2,1,0,True
+7df505d8260ba680,Edgar Chairez,Felipe Bunes,Edgar Chairez,Decision - Split,DAMAGE_FIRST,1,1.0,2,1,0,True
+c40b934d2666e351,Ailin Perez,Macy Chiasson,Ailin Perez,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+c40b934d2666e351,Ailin Perez,Macy Chiasson,Ailin Perez,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+c40b934d2666e351,Ailin Perez,Macy Chiasson,Ailin Perez,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+c40b934d2666e351,Ailin Perez,Macy Chiasson,Ailin Perez,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+c40b934d2666e351,Ailin Perez,Macy Chiasson,Ailin Perez,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+c40b934d2666e351,Ailin Perez,Macy Chiasson,Ailin Perez,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+9c8d5dbd8905a715,Donte Johnson,Cody Brundage,Donte Johnson,Decision - Split,SIG_ONLY,1,1.0,3,0,0,True
+9c8d5dbd8905a715,Donte Johnson,Cody Brundage,Donte Johnson,Decision - Split,SIG_KD,1,1.0,3,0,0,True
+9c8d5dbd8905a715,Donte Johnson,Cody Brundage,Donte Johnson,Decision - Split,SIG_KD_TD,1,1.0,3,0,0,True
+9c8d5dbd8905a715,Donte Johnson,Cody Brundage,Donte Johnson,Decision - Split,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+9c8d5dbd8905a715,Donte Johnson,Cody Brundage,Donte Johnson,Decision - Split,OLD_FULL,1,1.0,2,1,0,True
+9c8d5dbd8905a715,Donte Johnson,Cody Brundage,Donte Johnson,Decision - Split,DAMAGE_FIRST,1,1.0,3,0,0,True
+a22fd3735819d858,Sumudaerji,Jesus Aguilar,Sumudaerji,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+a22fd3735819d858,Sumudaerji,Jesus Aguilar,Sumudaerji,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+a22fd3735819d858,Sumudaerji,Jesus Aguilar,Sumudaerji,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+a22fd3735819d858,Sumudaerji,Jesus Aguilar,Sumudaerji,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+a22fd3735819d858,Sumudaerji,Jesus Aguilar,Sumudaerji,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+a22fd3735819d858,Sumudaerji,Jesus Aguilar,Sumudaerji,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+bed89a91da9d04c1,Rob Font,Raul Rosas Jr.,Raul Rosas Jr.,Decision - Unanimous,SIG_ONLY,0,1.0,2,1,0,False
+bed89a91da9d04c1,Rob Font,Raul Rosas Jr.,Raul Rosas Jr.,Decision - Unanimous,SIG_KD,0,1.0,2,1,0,False
+bed89a91da9d04c1,Rob Font,Raul Rosas Jr.,Raul Rosas Jr.,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+bed89a91da9d04c1,Rob Font,Raul Rosas Jr.,Raul Rosas Jr.,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+bed89a91da9d04c1,Rob Font,Raul Rosas Jr.,Raul Rosas Jr.,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+bed89a91da9d04c1,Rob Font,Raul Rosas Jr.,Raul Rosas Jr.,Decision - Unanimous,DAMAGE_FIRST,0,1.0,2,1,0,False
+cc03e698c4b7da52,Rafael Tobias,Diyar Nurgozhay,Diyar Nurgozhay,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+cc03e698c4b7da52,Rafael Tobias,Diyar Nurgozhay,Diyar Nurgozhay,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+cc03e698c4b7da52,Rafael Tobias,Diyar Nurgozhay,Diyar Nurgozhay,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+cc03e698c4b7da52,Rafael Tobias,Diyar Nurgozhay,Diyar Nurgozhay,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+cc03e698c4b7da52,Rafael Tobias,Diyar Nurgozhay,Diyar Nurgozhay,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+cc03e698c4b7da52,Rafael Tobias,Diyar Nurgozhay,Diyar Nurgozhay,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+d564db29997e1371,Caio Borralho,Reinier de Ridder,Caio Borralho,Decision - Unanimous,SIG_ONLY,1,,1,1,1,
+d564db29997e1371,Caio Borralho,Reinier de Ridder,Caio Borralho,Decision - Unanimous,SIG_KD,1,,1,1,1,
+d564db29997e1371,Caio Borralho,Reinier de Ridder,Caio Borralho,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+d564db29997e1371,Caio Borralho,Reinier de Ridder,Caio Borralho,Decision - Unanimous,SIG_KD_TD_CTRL,1,0.0,1,2,0,False
+d564db29997e1371,Caio Borralho,Reinier de Ridder,Caio Borralho,Decision - Unanimous,OLD_FULL,1,0.0,1,2,0,False
+d564db29997e1371,Caio Borralho,Reinier de Ridder,Caio Borralho,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True
+ecd16d14a138d7fb,Cody Garbrandt,Xiao Long,Cody Garbrandt,Decision - Unanimous,SIG_ONLY,1,0.0,0,3,0,False
+ecd16d14a138d7fb,Cody Garbrandt,Xiao Long,Cody Garbrandt,Decision - Unanimous,SIG_KD,1,0.0,0,3,0,False
+ecd16d14a138d7fb,Cody Garbrandt,Xiao Long,Cody Garbrandt,Decision - Unanimous,SIG_KD_TD,1,0.0,0,3,0,False
+ecd16d14a138d7fb,Cody Garbrandt,Xiao Long,Cody Garbrandt,Decision - Unanimous,SIG_KD_TD_CTRL,1,0.0,0,3,0,False
+ecd16d14a138d7fb,Cody Garbrandt,Xiao Long,Cody Garbrandt,Decision - Unanimous,OLD_FULL,1,0.0,0,3,0,False
+ecd16d14a138d7fb,Cody Garbrandt,Xiao Long,Cody Garbrandt,Decision - Unanimous,DAMAGE_FIRST,1,0.0,0,3,0,False
+f030febede41c661,Max Holloway,Charles Oliveira,Charles Oliveira,Decision - Unanimous,SIG_ONLY,0,0.0,0,5,0,True
+f030febede41c661,Max Holloway,Charles Oliveira,Charles Oliveira,Decision - Unanimous,SIG_KD,0,0.0,0,5,0,True
+f030febede41c661,Max Holloway,Charles Oliveira,Charles Oliveira,Decision - Unanimous,SIG_KD_TD,0,0.0,0,5,0,True
+f030febede41c661,Max Holloway,Charles Oliveira,Charles Oliveira,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,5,0,True
+f030febede41c661,Max Holloway,Charles Oliveira,Charles Oliveira,Decision - Unanimous,OLD_FULL,0,0.0,0,5,0,True
+f030febede41c661,Max Holloway,Charles Oliveira,Charles Oliveira,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,5,0,True
+f661ef429055f8c1,Cody Durden,Nyamjargal Tumendemberel,Nyamjargal Tumendemberel,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+f661ef429055f8c1,Cody Durden,Nyamjargal Tumendemberel,Nyamjargal Tumendemberel,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+f661ef429055f8c1,Cody Durden,Nyamjargal Tumendemberel,Nyamjargal Tumendemberel,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+f661ef429055f8c1,Cody Durden,Nyamjargal Tumendemberel,Nyamjargal Tumendemberel,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+f661ef429055f8c1,Cody Durden,Nyamjargal Tumendemberel,Nyamjargal Tumendemberel,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+f661ef429055f8c1,Cody Durden,Nyamjargal Tumendemberel,Nyamjargal Tumendemberel,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+244285b7fd0ddece,Piera Rodriguez,Sam Hughes,Piera Rodriguez,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+244285b7fd0ddece,Piera Rodriguez,Sam Hughes,Piera Rodriguez,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+244285b7fd0ddece,Piera Rodriguez,Sam Hughes,Piera Rodriguez,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+244285b7fd0ddece,Piera Rodriguez,Sam Hughes,Piera Rodriguez,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+244285b7fd0ddece,Piera Rodriguez,Sam Hughes,Piera Rodriguez,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+244285b7fd0ddece,Piera Rodriguez,Sam Hughes,Piera Rodriguez,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+2c330a6f7f1e55f0,Vitor Petrino,Steven Asplund,Vitor Petrino,Decision - Unanimous,SIG_ONLY,1,1.0,2,1,0,True
+2c330a6f7f1e55f0,Vitor Petrino,Steven Asplund,Vitor Petrino,Decision - Unanimous,SIG_KD,1,1.0,2,1,0,True
+2c330a6f7f1e55f0,Vitor Petrino,Steven Asplund,Vitor Petrino,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+2c330a6f7f1e55f0,Vitor Petrino,Steven Asplund,Vitor Petrino,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+2c330a6f7f1e55f0,Vitor Petrino,Steven Asplund,Vitor Petrino,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+2c330a6f7f1e55f0,Vitor Petrino,Steven Asplund,Vitor Petrino,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True
+32d371462c539bee,Luan Lacerda,Hecher Sosa,Hecher Sosa,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+32d371462c539bee,Luan Lacerda,Hecher Sosa,Hecher Sosa,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+32d371462c539bee,Luan Lacerda,Hecher Sosa,Hecher Sosa,Decision - Unanimous,SIG_KD_TD,0,0.0,1,2,0,True
+32d371462c539bee,Luan Lacerda,Hecher Sosa,Hecher Sosa,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+32d371462c539bee,Luan Lacerda,Hecher Sosa,Hecher Sosa,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+32d371462c539bee,Luan Lacerda,Hecher Sosa,Hecher Sosa,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+3b7b771b9578383d,Amanda Lemos,Gillian Robertson,Gillian Robertson,Decision - Unanimous,SIG_ONLY,0,1.0,3,0,0,False
+3b7b771b9578383d,Amanda Lemos,Gillian Robertson,Gillian Robertson,Decision - Unanimous,SIG_KD,0,1.0,3,0,0,False
+3b7b771b9578383d,Amanda Lemos,Gillian Robertson,Gillian Robertson,Decision - Unanimous,SIG_KD_TD,0,1.0,2,1,0,False
+3b7b771b9578383d,Amanda Lemos,Gillian Robertson,Gillian Robertson,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+3b7b771b9578383d,Amanda Lemos,Gillian Robertson,Gillian Robertson,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+3b7b771b9578383d,Amanda Lemos,Gillian Robertson,Gillian Robertson,Decision - Unanimous,DAMAGE_FIRST,0,1.0,3,0,0,False
+8bee5192baec71d8,Andre Fili,Jose Delgado,Jose Delgado,Decision - Split,SIG_ONLY,0,0.0,0,3,0,True
+8bee5192baec71d8,Andre Fili,Jose Delgado,Jose Delgado,Decision - Split,SIG_KD,0,0.0,0,3,0,True
+8bee5192baec71d8,Andre Fili,Jose Delgado,Jose Delgado,Decision - Split,SIG_KD_TD,0,0.0,0,3,0,True
+8bee5192baec71d8,Andre Fili,Jose Delgado,Jose Delgado,Decision - Split,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+8bee5192baec71d8,Andre Fili,Jose Delgado,Jose Delgado,Decision - Split,OLD_FULL,0,0.0,0,3,0,True
+8bee5192baec71d8,Andre Fili,Jose Delgado,Jose Delgado,Decision - Split,DAMAGE_FIRST,0,0.0,0,3,0,True
+cff81d681a01ae18,Brad Tavares,Eryk Anders,Eryk Anders,Decision - Unanimous,SIG_ONLY,0,1.0,2,1,0,False
+cff81d681a01ae18,Brad Tavares,Eryk Anders,Eryk Anders,Decision - Unanimous,SIG_KD,0,1.0,2,1,0,False
+cff81d681a01ae18,Brad Tavares,Eryk Anders,Eryk Anders,Decision - Unanimous,SIG_KD_TD,0,1.0,2,1,0,False
+cff81d681a01ae18,Brad Tavares,Eryk Anders,Eryk Anders,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+cff81d681a01ae18,Brad Tavares,Eryk Anders,Eryk Anders,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+cff81d681a01ae18,Brad Tavares,Eryk Anders,Eryk Anders,Decision - Unanimous,DAMAGE_FIRST,0,1.0,2,1,0,False
+f26c0bdf7689aea2,Chris Curtis,Myktybek Orolbai,Myktybek Orolbai,Decision - Unanimous,SIG_ONLY,0,1.0,2,1,0,False
+f26c0bdf7689aea2,Chris Curtis,Myktybek Orolbai,Myktybek Orolbai,Decision - Unanimous,SIG_KD,0,1.0,2,1,0,False
+f26c0bdf7689aea2,Chris Curtis,Myktybek Orolbai,Myktybek Orolbai,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+f26c0bdf7689aea2,Chris Curtis,Myktybek Orolbai,Myktybek Orolbai,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+f26c0bdf7689aea2,Chris Curtis,Myktybek Orolbai,Myktybek Orolbai,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+f26c0bdf7689aea2,Chris Curtis,Myktybek Orolbai,Myktybek Orolbai,Decision - Unanimous,DAMAGE_FIRST,0,1.0,2,1,0,False
+fc9168fd102e2e66,Charles Johnson,Bruno Silva,Charles Johnson,Decision - Split,SIG_ONLY,1,1.0,2,0,1,True
+fc9168fd102e2e66,Charles Johnson,Bruno Silva,Charles Johnson,Decision - Split,SIG_KD,1,1.0,2,0,1,True
+fc9168fd102e2e66,Charles Johnson,Bruno Silva,Charles Johnson,Decision - Split,SIG_KD_TD,1,1.0,2,0,1,True
+fc9168fd102e2e66,Charles Johnson,Bruno Silva,Charles Johnson,Decision - Split,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+fc9168fd102e2e66,Charles Johnson,Bruno Silva,Charles Johnson,Decision - Split,OLD_FULL,1,1.0,2,1,0,True
+fc9168fd102e2e66,Charles Johnson,Bruno Silva,Charles Johnson,Decision - Split,DAMAGE_FIRST,1,1.0,2,1,0,True
+346e3897c2ead99a,Movsar Evloev,Lerone Murphy,Movsar Evloev,Decision - Majority,SIG_ONLY,1,,2,2,1,
+346e3897c2ead99a,Movsar Evloev,Lerone Murphy,Movsar Evloev,Decision - Majority,SIG_KD,1,,2,2,1,
+346e3897c2ead99a,Movsar Evloev,Lerone Murphy,Movsar Evloev,Decision - Majority,SIG_KD_TD,1,1.0,3,2,0,True
+346e3897c2ead99a,Movsar Evloev,Lerone Murphy,Movsar Evloev,Decision - Majority,SIG_KD_TD_CTRL,1,1.0,3,2,0,True
+346e3897c2ead99a,Movsar Evloev,Lerone Murphy,Movsar Evloev,Decision - Majority,OLD_FULL,1,1.0,3,2,0,True
+346e3897c2ead99a,Movsar Evloev,Lerone Murphy,Movsar Evloev,Decision - Majority,DAMAGE_FIRST,1,1.0,3,2,0,True
+3b9f50f07d9a1601,Nathaniel Wood,Losene Keita,Nathaniel Wood,Decision - Split,SIG_ONLY,1,1.0,2,1,0,True
+3b9f50f07d9a1601,Nathaniel Wood,Losene Keita,Nathaniel Wood,Decision - Split,SIG_KD,1,1.0,2,1,0,True
+3b9f50f07d9a1601,Nathaniel Wood,Losene Keita,Nathaniel Wood,Decision - Split,SIG_KD_TD,1,1.0,2,1,0,True
+3b9f50f07d9a1601,Nathaniel Wood,Losene Keita,Nathaniel Wood,Decision - Split,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+3b9f50f07d9a1601,Nathaniel Wood,Losene Keita,Nathaniel Wood,Decision - Split,OLD_FULL,1,1.0,2,1,0,True
+3b9f50f07d9a1601,Nathaniel Wood,Losene Keita,Nathaniel Wood,Decision - Split,DAMAGE_FIRST,1,1.0,2,1,0,True
+3ee578ddd071ad4c,Mason Jones,Axel Sola,Mason Jones,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+3ee578ddd071ad4c,Mason Jones,Axel Sola,Mason Jones,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+3ee578ddd071ad4c,Mason Jones,Axel Sola,Mason Jones,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+3ee578ddd071ad4c,Mason Jones,Axel Sola,Mason Jones,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+3ee578ddd071ad4c,Mason Jones,Axel Sola,Mason Jones,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+3ee578ddd071ad4c,Mason Jones,Axel Sola,Mason Jones,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+562d916f55918901,Roman Dolidze,Christian Leroy Duncan,Christian Leroy Duncan,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+562d916f55918901,Roman Dolidze,Christian Leroy Duncan,Christian Leroy Duncan,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+562d916f55918901,Roman Dolidze,Christian Leroy Duncan,Christian Leroy Duncan,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+562d916f55918901,Roman Dolidze,Christian Leroy Duncan,Christian Leroy Duncan,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+562d916f55918901,Roman Dolidze,Christian Leroy Duncan,Christian Leroy Duncan,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+562d916f55918901,Roman Dolidze,Christian Leroy Duncan,Christian Leroy Duncan,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+5ee11b727e89e8ad,Michael Page,Sam Patterson,Michael Page,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+5ee11b727e89e8ad,Michael Page,Sam Patterson,Michael Page,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+5ee11b727e89e8ad,Michael Page,Sam Patterson,Michael Page,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+5ee11b727e89e8ad,Michael Page,Sam Patterson,Michael Page,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+5ee11b727e89e8ad,Michael Page,Sam Patterson,Michael Page,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+5ee11b727e89e8ad,Michael Page,Sam Patterson,Michael Page,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+8817bd21b6d0a989,Mantas Kondratavicius,Antonio Trocoli,Mantas Kondratavicius,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+8817bd21b6d0a989,Mantas Kondratavicius,Antonio Trocoli,Mantas Kondratavicius,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+8817bd21b6d0a989,Mantas Kondratavicius,Antonio Trocoli,Mantas Kondratavicius,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+8817bd21b6d0a989,Mantas Kondratavicius,Antonio Trocoli,Mantas Kondratavicius,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+8817bd21b6d0a989,Mantas Kondratavicius,Antonio Trocoli,Mantas Kondratavicius,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+8817bd21b6d0a989,Mantas Kondratavicius,Antonio Trocoli,Mantas Kondratavicius,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+90187edeeda7e6d6,Mario Pinto,Felipe Franco,Mario Pinto,Decision - Unanimous,SIG_ONLY,1,1.0,2,0,1,True
+90187edeeda7e6d6,Mario Pinto,Felipe Franco,Mario Pinto,Decision - Unanimous,SIG_KD,1,1.0,2,0,1,True
+90187edeeda7e6d6,Mario Pinto,Felipe Franco,Mario Pinto,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+90187edeeda7e6d6,Mario Pinto,Felipe Franco,Mario Pinto,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+90187edeeda7e6d6,Mario Pinto,Felipe Franco,Mario Pinto,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+90187edeeda7e6d6,Mario Pinto,Felipe Franco,Mario Pinto,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+bbe0f3653de9f6a8,Shem Rock,Abdul-Kareem Al-Selwady,Abdul-Kareem Al-Selwady,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+bbe0f3653de9f6a8,Shem Rock,Abdul-Kareem Al-Selwady,Abdul-Kareem Al-Selwady,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+bbe0f3653de9f6a8,Shem Rock,Abdul-Kareem Al-Selwady,Abdul-Kareem Al-Selwady,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+bbe0f3653de9f6a8,Shem Rock,Abdul-Kareem Al-Selwady,Abdul-Kareem Al-Selwady,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+bbe0f3653de9f6a8,Shem Rock,Abdul-Kareem Al-Selwady,Abdul-Kareem Al-Selwady,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+bbe0f3653de9f6a8,Shem Rock,Abdul-Kareem Al-Selwady,Abdul-Kareem Al-Selwady,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+fa534aaa5b997a69,Luke Riley,Michael Aswell Jr.,Luke Riley,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+fa534aaa5b997a69,Luke Riley,Michael Aswell Jr.,Luke Riley,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+fa534aaa5b997a69,Luke Riley,Michael Aswell Jr.,Luke Riley,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+fa534aaa5b997a69,Luke Riley,Michael Aswell Jr.,Luke Riley,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+fa534aaa5b997a69,Luke Riley,Michael Aswell Jr.,Luke Riley,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+fa534aaa5b997a69,Luke Riley,Michael Aswell Jr.,Luke Riley,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+08d4e3864c44f8a5,Marcin Tybura,Tyrell Fortune,Tyrell Fortune,Decision - Unanimous,SIG_ONLY,0,1.0,2,1,0,False
+08d4e3864c44f8a5,Marcin Tybura,Tyrell Fortune,Tyrell Fortune,Decision - Unanimous,SIG_KD,0,1.0,2,1,0,False
+08d4e3864c44f8a5,Marcin Tybura,Tyrell Fortune,Tyrell Fortune,Decision - Unanimous,SIG_KD_TD,0,1.0,2,1,0,False
+08d4e3864c44f8a5,Marcin Tybura,Tyrell Fortune,Tyrell Fortune,Decision - Unanimous,SIG_KD_TD_CTRL,0,1.0,2,1,0,False
+08d4e3864c44f8a5,Marcin Tybura,Tyrell Fortune,Tyrell Fortune,Decision - Unanimous,OLD_FULL,0,1.0,2,1,0,False
+08d4e3864c44f8a5,Marcin Tybura,Tyrell Fortune,Tyrell Fortune,Decision - Unanimous,DAMAGE_FIRST,0,1.0,2,1,0,False
+796e1151896195aa,Alexia Thainara,Bruna Brasil,Alexia Thainara,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+796e1151896195aa,Alexia Thainara,Bruna Brasil,Alexia Thainara,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+796e1151896195aa,Alexia Thainara,Bruna Brasil,Alexia Thainara,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+796e1151896195aa,Alexia Thainara,Bruna Brasil,Alexia Thainara,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+796e1151896195aa,Alexia Thainara,Bruna Brasil,Alexia Thainara,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+796e1151896195aa,Alexia Thainara,Bruna Brasil,Alexia Thainara,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+fa96d6252579b51e,Ignacio Bahamondes,Tofiq Musayev,Tofiq Musayev,Decision - Unanimous,SIG_ONLY,0,0.0,1,2,0,True
+fa96d6252579b51e,Ignacio Bahamondes,Tofiq Musayev,Tofiq Musayev,Decision - Unanimous,SIG_KD,0,1.0,2,1,0,False
+fa96d6252579b51e,Ignacio Bahamondes,Tofiq Musayev,Tofiq Musayev,Decision - Unanimous,SIG_KD_TD,0,1.0,2,1,0,False
+fa96d6252579b51e,Ignacio Bahamondes,Tofiq Musayev,Tofiq Musayev,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+fa96d6252579b51e,Ignacio Bahamondes,Tofiq Musayev,Tofiq Musayev,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+fa96d6252579b51e,Ignacio Bahamondes,Tofiq Musayev,Tofiq Musayev,Decision - Unanimous,DAMAGE_FIRST,0,1.0,2,1,0,False
+0760bc02280574dd,Guilherme Pat,Thomas Petersen,Thomas Petersen,Decision - Majority,SIG_ONLY,0,0.0,1,2,0,True
+0760bc02280574dd,Guilherme Pat,Thomas Petersen,Thomas Petersen,Decision - Majority,SIG_KD,0,0.0,1,2,0,True
+0760bc02280574dd,Guilherme Pat,Thomas Petersen,Thomas Petersen,Decision - Majority,SIG_KD_TD,0,0.0,1,2,0,True
+0760bc02280574dd,Guilherme Pat,Thomas Petersen,Thomas Petersen,Decision - Majority,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+0760bc02280574dd,Guilherme Pat,Thomas Petersen,Thomas Petersen,Decision - Majority,OLD_FULL,0,0.0,0,3,0,True
+0760bc02280574dd,Guilherme Pat,Thomas Petersen,Thomas Petersen,Decision - Majority,DAMAGE_FIRST,0,0.0,1,2,0,True
+721642e7de112e9e,Virna Jandiroba,Tabatha Ricci,Virna Jandiroba,Decision - Unanimous,SIG_ONLY,1,0.0,1,2,0,False
+721642e7de112e9e,Virna Jandiroba,Tabatha Ricci,Virna Jandiroba,Decision - Unanimous,SIG_KD,1,0.0,1,2,0,False
+721642e7de112e9e,Virna Jandiroba,Tabatha Ricci,Virna Jandiroba,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+721642e7de112e9e,Virna Jandiroba,Tabatha Ricci,Virna Jandiroba,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+721642e7de112e9e,Virna Jandiroba,Tabatha Ricci,Virna Jandiroba,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+721642e7de112e9e,Virna Jandiroba,Tabatha Ricci,Virna Jandiroba,Decision - Unanimous,DAMAGE_FIRST,1,0.0,1,2,0,False
+7924f10aac3543de,Jose Delano,Robert Ruchala,Jose Delano,Decision - Unanimous,SIG_ONLY,1,1.0,2,1,0,True
+7924f10aac3543de,Jose Delano,Robert Ruchala,Jose Delano,Decision - Unanimous,SIG_KD,1,1.0,2,1,0,True
+7924f10aac3543de,Jose Delano,Robert Ruchala,Jose Delano,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+7924f10aac3543de,Jose Delano,Robert Ruchala,Jose Delano,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+7924f10aac3543de,Jose Delano,Robert Ruchala,Jose Delano,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+7924f10aac3543de,Jose Delano,Robert Ruchala,Jose Delano,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True
+a5a749aa0061fdb4,Kai Kamaka III,Dakota Hope,Kai Kamaka III,Decision - Split,SIG_ONLY,1,1.0,2,1,0,True
+a5a749aa0061fdb4,Kai Kamaka III,Dakota Hope,Kai Kamaka III,Decision - Split,SIG_KD,1,1.0,2,1,0,True
+a5a749aa0061fdb4,Kai Kamaka III,Dakota Hope,Kai Kamaka III,Decision - Split,SIG_KD_TD,1,1.0,2,1,0,True
+a5a749aa0061fdb4,Kai Kamaka III,Dakota Hope,Kai Kamaka III,Decision - Split,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+a5a749aa0061fdb4,Kai Kamaka III,Dakota Hope,Kai Kamaka III,Decision - Split,OLD_FULL,1,1.0,2,1,0,True
+a5a749aa0061fdb4,Kai Kamaka III,Dakota Hope,Kai Kamaka III,Decision - Split,DAMAGE_FIRST,1,1.0,2,1,0,True
+caf13346cbcfdb03,Dione Barbosa,Melissa Gatto,Dione Barbosa,Decision - Majority,SIG_ONLY,1,0.0,1,2,0,False
+caf13346cbcfdb03,Dione Barbosa,Melissa Gatto,Dione Barbosa,Decision - Majority,SIG_KD,1,0.0,1,2,0,False
+caf13346cbcfdb03,Dione Barbosa,Melissa Gatto,Dione Barbosa,Decision - Majority,SIG_KD_TD,1,1.0,2,1,0,True
+caf13346cbcfdb03,Dione Barbosa,Melissa Gatto,Dione Barbosa,Decision - Majority,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+caf13346cbcfdb03,Dione Barbosa,Melissa Gatto,Dione Barbosa,Decision - Majority,OLD_FULL,1,1.0,2,1,0,True
+caf13346cbcfdb03,Dione Barbosa,Melissa Gatto,Dione Barbosa,Decision - Majority,DAMAGE_FIRST,1,0.0,1,2,0,False
+10ab34056720b6b4,Patricio Pitbull,Aaron Pico,Aaron Pico,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+10ab34056720b6b4,Patricio Pitbull,Aaron Pico,Aaron Pico,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+10ab34056720b6b4,Patricio Pitbull,Aaron Pico,Aaron Pico,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+10ab34056720b6b4,Patricio Pitbull,Aaron Pico,Aaron Pico,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+10ab34056720b6b4,Patricio Pitbull,Aaron Pico,Aaron Pico,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+10ab34056720b6b4,Patricio Pitbull,Aaron Pico,Aaron Pico,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+5b49c3d36907c6df,Charles Radtke,Francisco Prado,Charles Radtke,Decision - Unanimous,SIG_ONLY,1,0.0,1,2,0,False
+5b49c3d36907c6df,Charles Radtke,Francisco Prado,Charles Radtke,Decision - Unanimous,SIG_KD,1,0.0,1,2,0,False
+5b49c3d36907c6df,Charles Radtke,Francisco Prado,Charles Radtke,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+5b49c3d36907c6df,Charles Radtke,Francisco Prado,Charles Radtke,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+5b49c3d36907c6df,Charles Radtke,Francisco Prado,Charles Radtke,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+5b49c3d36907c6df,Charles Radtke,Francisco Prado,Charles Radtke,Decision - Unanimous,DAMAGE_FIRST,1,0.0,1,2,0,False
+903552edaba48f4a,Curtis Blaydes,Josh Hokit,Josh Hokit,Decision - Unanimous,SIG_ONLY,0,1.0,2,1,0,False
+903552edaba48f4a,Curtis Blaydes,Josh Hokit,Josh Hokit,Decision - Unanimous,SIG_KD,0,1.0,2,1,0,False
+903552edaba48f4a,Curtis Blaydes,Josh Hokit,Josh Hokit,Decision - Unanimous,SIG_KD_TD,0,1.0,2,1,0,False
+903552edaba48f4a,Curtis Blaydes,Josh Hokit,Josh Hokit,Decision - Unanimous,SIG_KD_TD_CTRL,0,1.0,2,1,0,False
+903552edaba48f4a,Curtis Blaydes,Josh Hokit,Josh Hokit,Decision - Unanimous,OLD_FULL,0,1.0,2,1,0,False
+903552edaba48f4a,Curtis Blaydes,Josh Hokit,Josh Hokit,Decision - Unanimous,DAMAGE_FIRST,0,1.0,2,1,0,False
+b4e16fb13153efdc,Kevin Holland,Randy Brown,Kevin Holland,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+b4e16fb13153efdc,Kevin Holland,Randy Brown,Kevin Holland,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+b4e16fb13153efdc,Kevin Holland,Randy Brown,Kevin Holland,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+b4e16fb13153efdc,Kevin Holland,Randy Brown,Kevin Holland,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+b4e16fb13153efdc,Kevin Holland,Randy Brown,Kevin Holland,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+b4e16fb13153efdc,Kevin Holland,Randy Brown,Kevin Holland,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+c4d060cff018979a,Dominick Reyes,Johnny Walker,Dominick Reyes,Decision - Split,SIG_ONLY,1,0.0,1,2,0,False
+c4d060cff018979a,Dominick Reyes,Johnny Walker,Dominick Reyes,Decision - Split,SIG_KD,1,0.0,1,2,0,False
+c4d060cff018979a,Dominick Reyes,Johnny Walker,Dominick Reyes,Decision - Split,SIG_KD_TD,1,0.0,1,2,0,False
+c4d060cff018979a,Dominick Reyes,Johnny Walker,Dominick Reyes,Decision - Split,SIG_KD_TD_CTRL,1,0.0,1,2,0,False
+c4d060cff018979a,Dominick Reyes,Johnny Walker,Dominick Reyes,Decision - Split,OLD_FULL,1,0.0,1,2,0,False
+c4d060cff018979a,Dominick Reyes,Johnny Walker,Dominick Reyes,Decision - Split,DAMAGE_FIRST,1,0.0,1,2,0,False
+0df4f4ac27cf2d26,Talita Alencar,Julia Polastri,Talita Alencar,Decision - Unanimous,SIG_ONLY,1,0.0,0,3,0,False
+0df4f4ac27cf2d26,Talita Alencar,Julia Polastri,Talita Alencar,Decision - Unanimous,SIG_KD,1,0.0,0,3,0,False
+0df4f4ac27cf2d26,Talita Alencar,Julia Polastri,Talita Alencar,Decision - Unanimous,SIG_KD_TD,1,0.0,0,3,0,False
+0df4f4ac27cf2d26,Talita Alencar,Julia Polastri,Talita Alencar,Decision - Unanimous,SIG_KD_TD_CTRL,1,0.0,0,3,0,False
+0df4f4ac27cf2d26,Talita Alencar,Julia Polastri,Talita Alencar,Decision - Unanimous,OLD_FULL,1,0.0,0,3,0,False
+0df4f4ac27cf2d26,Talita Alencar,Julia Polastri,Talita Alencar,Decision - Unanimous,DAMAGE_FIRST,1,0.0,0,3,0,False
+2e7f8d0ad385876d,Max Griffin,Victor Valenzuela,Victor Valenzuela,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+2e7f8d0ad385876d,Max Griffin,Victor Valenzuela,Victor Valenzuela,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+2e7f8d0ad385876d,Max Griffin,Victor Valenzuela,Victor Valenzuela,Decision - Unanimous,SIG_KD_TD,0,1.0,2,1,0,False
+2e7f8d0ad385876d,Max Griffin,Victor Valenzuela,Victor Valenzuela,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+2e7f8d0ad385876d,Max Griffin,Victor Valenzuela,Victor Valenzuela,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+2e7f8d0ad385876d,Max Griffin,Victor Valenzuela,Victor Valenzuela,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+348de8e364ecf041,Montel Jackson,Raoni Barcelos,Raoni Barcelos,Decision - Split,SIG_ONLY,0,1.0,2,1,0,False
+348de8e364ecf041,Montel Jackson,Raoni Barcelos,Raoni Barcelos,Decision - Split,SIG_KD,0,1.0,2,1,0,False
+348de8e364ecf041,Montel Jackson,Raoni Barcelos,Raoni Barcelos,Decision - Split,SIG_KD_TD,0,1.0,2,1,0,False
+348de8e364ecf041,Montel Jackson,Raoni Barcelos,Raoni Barcelos,Decision - Split,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+348de8e364ecf041,Montel Jackson,Raoni Barcelos,Raoni Barcelos,Decision - Split,OLD_FULL,0,0.0,1,2,0,True
+348de8e364ecf041,Montel Jackson,Raoni Barcelos,Raoni Barcelos,Decision - Split,DAMAGE_FIRST,0,1.0,2,1,0,False
+67f24cf244134661,Rodolfo Vieira,Eric McConico,Eric McConico,Decision - Unanimous,SIG_ONLY,0,0.0,0,2,1,True
+67f24cf244134661,Rodolfo Vieira,Eric McConico,Eric McConico,Decision - Unanimous,SIG_KD,0,,1,1,1,
+67f24cf244134661,Rodolfo Vieira,Eric McConico,Eric McConico,Decision - Unanimous,SIG_KD_TD,0,,1,1,1,
+67f24cf244134661,Rodolfo Vieira,Eric McConico,Eric McConico,Decision - Unanimous,SIG_KD_TD_CTRL,0,1.0,2,1,0,False
+67f24cf244134661,Rodolfo Vieira,Eric McConico,Eric McConico,Decision - Unanimous,OLD_FULL,0,1.0,2,1,0,False
+67f24cf244134661,Rodolfo Vieira,Eric McConico,Eric McConico,Decision - Unanimous,DAMAGE_FIRST,0,1.0,2,1,0,False
+84951374e4cdc679,Rafa Garcia,Alexander Hernandez,Rafa Garcia,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+84951374e4cdc679,Rafa Garcia,Alexander Hernandez,Rafa Garcia,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+84951374e4cdc679,Rafa Garcia,Alexander Hernandez,Rafa Garcia,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+84951374e4cdc679,Rafa Garcia,Alexander Hernandez,Rafa Garcia,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+84951374e4cdc679,Rafa Garcia,Alexander Hernandez,Rafa Garcia,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+84951374e4cdc679,Rafa Garcia,Alexander Hernandez,Rafa Garcia,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+c7fb90f1355291e4,Francis Marshall,Lucas Brennan,Francis Marshall,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+c7fb90f1355291e4,Francis Marshall,Lucas Brennan,Francis Marshall,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+c7fb90f1355291e4,Francis Marshall,Lucas Brennan,Francis Marshall,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+c7fb90f1355291e4,Francis Marshall,Lucas Brennan,Francis Marshall,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+c7fb90f1355291e4,Francis Marshall,Lucas Brennan,Francis Marshall,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+c7fb90f1355291e4,Francis Marshall,Lucas Brennan,Francis Marshall,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+cb745968bd16bf56,Norma Dumont,Joselyne Edwards,Joselyne Edwards,Decision - Unanimous,SIG_ONLY,0,0.0,0,2,1,True
+cb745968bd16bf56,Norma Dumont,Joselyne Edwards,Joselyne Edwards,Decision - Unanimous,SIG_KD,0,0.0,0,2,1,True
+cb745968bd16bf56,Norma Dumont,Joselyne Edwards,Joselyne Edwards,Decision - Unanimous,SIG_KD_TD,0,0.0,0,2,1,True
+cb745968bd16bf56,Norma Dumont,Joselyne Edwards,Joselyne Edwards,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+cb745968bd16bf56,Norma Dumont,Joselyne Edwards,Joselyne Edwards,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+cb745968bd16bf56,Norma Dumont,Joselyne Edwards,Joselyne Edwards,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+d421f3cd158fd055,Jafel Filho,Cody Durden,Cody Durden,Decision - Unanimous,SIG_ONLY,0,0.0,1,2,0,True
+d421f3cd158fd055,Jafel Filho,Cody Durden,Cody Durden,Decision - Unanimous,SIG_KD,0,0.0,1,2,0,True
+d421f3cd158fd055,Jafel Filho,Cody Durden,Cody Durden,Decision - Unanimous,SIG_KD_TD,0,0.0,1,2,0,True
+d421f3cd158fd055,Jafel Filho,Cody Durden,Cody Durden,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+d421f3cd158fd055,Jafel Filho,Cody Durden,Cody Durden,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+d421f3cd158fd055,Jafel Filho,Cody Durden,Cody Durden,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+dcfd594b68ff5ae1,Mayra Bueno Silva,Michelle Montague,Michelle Montague,Decision - Unanimous,SIG_ONLY,0,0.0,1,2,0,True
+dcfd594b68ff5ae1,Mayra Bueno Silva,Michelle Montague,Michelle Montague,Decision - Unanimous,SIG_KD,0,0.0,1,2,0,True
+dcfd594b68ff5ae1,Mayra Bueno Silva,Michelle Montague,Michelle Montague,Decision - Unanimous,SIG_KD_TD,0,0.0,1,2,0,True
+dcfd594b68ff5ae1,Mayra Bueno Silva,Michelle Montague,Michelle Montague,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+dcfd594b68ff5ae1,Mayra Bueno Silva,Michelle Montague,Michelle Montague,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+dcfd594b68ff5ae1,Mayra Bueno Silva,Michelle Montague,Michelle Montague,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+f524e42c36028de0,Aljamain Sterling,Youssef Zalal,Aljamain Sterling,Decision - Unanimous,SIG_ONLY,1,,2,2,1,
+f524e42c36028de0,Aljamain Sterling,Youssef Zalal,Aljamain Sterling,Decision - Unanimous,SIG_KD,1,,2,2,1,
+f524e42c36028de0,Aljamain Sterling,Youssef Zalal,Aljamain Sterling,Decision - Unanimous,SIG_KD_TD,1,1.0,4,1,0,True
+f524e42c36028de0,Aljamain Sterling,Youssef Zalal,Aljamain Sterling,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,4,1,0,True
+f524e42c36028de0,Aljamain Sterling,Youssef Zalal,Aljamain Sterling,Decision - Unanimous,OLD_FULL,1,1.0,4,1,0,True
+f524e42c36028de0,Aljamain Sterling,Youssef Zalal,Aljamain Sterling,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,2,0,True
+f5aff2f858311fbc,Davey Grant,Adrian Luna Martinetti,Davey Grant,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+f5aff2f858311fbc,Davey Grant,Adrian Luna Martinetti,Davey Grant,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+f5aff2f858311fbc,Davey Grant,Adrian Luna Martinetti,Davey Grant,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+f5aff2f858311fbc,Davey Grant,Adrian Luna Martinetti,Davey Grant,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+f5aff2f858311fbc,Davey Grant,Adrian Luna Martinetti,Davey Grant,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+f5aff2f858311fbc,Davey Grant,Adrian Luna Martinetti,Davey Grant,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+00bde62cac38e5e9,Colby Thicknesse,Vince Morales,Colby Thicknesse,Decision - Unanimous,SIG_ONLY,1,1.0,2,1,0,True
+00bde62cac38e5e9,Colby Thicknesse,Vince Morales,Colby Thicknesse,Decision - Unanimous,SIG_KD,1,1.0,2,1,0,True
+00bde62cac38e5e9,Colby Thicknesse,Vince Morales,Colby Thicknesse,Decision - Unanimous,SIG_KD_TD,1,0.0,1,2,0,False
+00bde62cac38e5e9,Colby Thicknesse,Vince Morales,Colby Thicknesse,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+00bde62cac38e5e9,Colby Thicknesse,Vince Morales,Colby Thicknesse,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+00bde62cac38e5e9,Colby Thicknesse,Vince Morales,Colby Thicknesse,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True
+2afaa97901d5587c,Tai Tuivasa,Louie Sutherland,Louie Sutherland,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+2afaa97901d5587c,Tai Tuivasa,Louie Sutherland,Louie Sutherland,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+2afaa97901d5587c,Tai Tuivasa,Louie Sutherland,Louie Sutherland,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+2afaa97901d5587c,Tai Tuivasa,Louie Sutherland,Louie Sutherland,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+2afaa97901d5587c,Tai Tuivasa,Louie Sutherland,Louie Sutherland,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+2afaa97901d5587c,Tai Tuivasa,Louie Sutherland,Louie Sutherland,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+46181797eb543a0b,Cam Rowston,Robert Bryczek,Cam Rowston,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+46181797eb543a0b,Cam Rowston,Robert Bryczek,Cam Rowston,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+46181797eb543a0b,Cam Rowston,Robert Bryczek,Cam Rowston,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+46181797eb543a0b,Cam Rowston,Robert Bryczek,Cam Rowston,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+46181797eb543a0b,Cam Rowston,Robert Bryczek,Cam Rowston,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+46181797eb543a0b,Cam Rowston,Robert Bryczek,Cam Rowston,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+7ac4ae301ed699ab,Jonathan Micallef,Themba Gorimbo,Jonathan Micallef,Decision - Split,SIG_ONLY,1,0.0,1,2,0,False
+7ac4ae301ed699ab,Jonathan Micallef,Themba Gorimbo,Jonathan Micallef,Decision - Split,SIG_KD,1,0.0,1,2,0,False
+7ac4ae301ed699ab,Jonathan Micallef,Themba Gorimbo,Jonathan Micallef,Decision - Split,SIG_KD_TD,1,0.0,1,2,0,False
+7ac4ae301ed699ab,Jonathan Micallef,Themba Gorimbo,Jonathan Micallef,Decision - Split,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+7ac4ae301ed699ab,Jonathan Micallef,Themba Gorimbo,Jonathan Micallef,Decision - Split,OLD_FULL,1,1.0,2,1,0,True
+7ac4ae301ed699ab,Jonathan Micallef,Themba Gorimbo,Jonathan Micallef,Decision - Split,DAMAGE_FIRST,1,0.0,1,2,0,False
+afec383a96893ec5,Tim Elliott,Steve Erceg,Steve Erceg,Decision - Unanimous,SIG_ONLY,0,0.0,1,2,0,True
+afec383a96893ec5,Tim Elliott,Steve Erceg,Steve Erceg,Decision - Unanimous,SIG_KD,0,0.0,1,2,0,True
+afec383a96893ec5,Tim Elliott,Steve Erceg,Steve Erceg,Decision - Unanimous,SIG_KD_TD,0,0.0,1,2,0,True
+afec383a96893ec5,Tim Elliott,Steve Erceg,Steve Erceg,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+afec383a96893ec5,Tim Elliott,Steve Erceg,Steve Erceg,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+afec383a96893ec5,Tim Elliott,Steve Erceg,Steve Erceg,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+edff38661bf2866b,Jacob Malkoun,Gerald Meerschaert,Jacob Malkoun,Decision - Unanimous,SIG_ONLY,1,1.0,2,0,1,True
+edff38661bf2866b,Jacob Malkoun,Gerald Meerschaert,Jacob Malkoun,Decision - Unanimous,SIG_KD,1,1.0,2,0,1,True
+edff38661bf2866b,Jacob Malkoun,Gerald Meerschaert,Jacob Malkoun,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+edff38661bf2866b,Jacob Malkoun,Gerald Meerschaert,Jacob Malkoun,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+edff38661bf2866b,Jacob Malkoun,Gerald Meerschaert,Jacob Malkoun,Decision - Unanimous,OLD_FULL,1,0.0,1,2,0,False
+edff38661bf2866b,Jacob Malkoun,Gerald Meerschaert,Jacob Malkoun,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+22ba4f1b0aafbf82,Alexander Volkov,Waldo Cortes Acosta,Alexander Volkov,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+22ba4f1b0aafbf82,Alexander Volkov,Waldo Cortes Acosta,Alexander Volkov,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+22ba4f1b0aafbf82,Alexander Volkov,Waldo Cortes Acosta,Alexander Volkov,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+22ba4f1b0aafbf82,Alexander Volkov,Waldo Cortes Acosta,Alexander Volkov,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+22ba4f1b0aafbf82,Alexander Volkov,Waldo Cortes Acosta,Alexander Volkov,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+22ba4f1b0aafbf82,Alexander Volkov,Waldo Cortes Acosta,Alexander Volkov,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+303018d7459323b4,Pat Sabatini,William Gomis,Pat Sabatini,Decision - Unanimous,SIG_ONLY,1,1.0,2,1,0,True
+303018d7459323b4,Pat Sabatini,William Gomis,Pat Sabatini,Decision - Unanimous,SIG_KD,1,1.0,2,1,0,True
+303018d7459323b4,Pat Sabatini,William Gomis,Pat Sabatini,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+303018d7459323b4,Pat Sabatini,William Gomis,Pat Sabatini,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+303018d7459323b4,Pat Sabatini,William Gomis,Pat Sabatini,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+303018d7459323b4,Pat Sabatini,William Gomis,Pat Sabatini,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True
+70f1621080b3435c,Khamzat Chimaev,Sean Strickland,Sean Strickland,Decision - Split,SIG_ONLY,0,0.0,1,3,1,True
+70f1621080b3435c,Khamzat Chimaev,Sean Strickland,Sean Strickland,Decision - Split,SIG_KD,0,0.0,1,3,1,True
+70f1621080b3435c,Khamzat Chimaev,Sean Strickland,Sean Strickland,Decision - Split,SIG_KD_TD,0,1.0,3,2,0,False
+70f1621080b3435c,Khamzat Chimaev,Sean Strickland,Sean Strickland,Decision - Split,SIG_KD_TD_CTRL,0,1.0,3,2,0,False
+70f1621080b3435c,Khamzat Chimaev,Sean Strickland,Sean Strickland,Decision - Split,OLD_FULL,0,1.0,3,2,0,False
+70f1621080b3435c,Khamzat Chimaev,Sean Strickland,Sean Strickland,Decision - Split,DAMAGE_FIRST,0,0.0,2,3,0,True
+845b8653f9cf839c,Sean Brady,Joaquin Buckley,Sean Brady,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+845b8653f9cf839c,Sean Brady,Joaquin Buckley,Sean Brady,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+845b8653f9cf839c,Sean Brady,Joaquin Buckley,Sean Brady,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+845b8653f9cf839c,Sean Brady,Joaquin Buckley,Sean Brady,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+845b8653f9cf839c,Sean Brady,Joaquin Buckley,Sean Brady,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+845b8653f9cf839c,Sean Brady,Joaquin Buckley,Sean Brady,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+9d35723a53749931,Roman Kopylov,Marco Tulio,Roman Kopylov,Decision - Unanimous,SIG_ONLY,1,0.0,1,2,0,False
+9d35723a53749931,Roman Kopylov,Marco Tulio,Roman Kopylov,Decision - Unanimous,SIG_KD,1,1.0,2,1,0,True
+9d35723a53749931,Roman Kopylov,Marco Tulio,Roman Kopylov,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+9d35723a53749931,Roman Kopylov,Marco Tulio,Roman Kopylov,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+9d35723a53749931,Roman Kopylov,Marco Tulio,Roman Kopylov,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+9d35723a53749931,Roman Kopylov,Marco Tulio,Roman Kopylov,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True
+e92d89cb2d69235e,Clayton Carpenter,Jose Ochoa,Jose Ochoa,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+e92d89cb2d69235e,Clayton Carpenter,Jose Ochoa,Jose Ochoa,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+e92d89cb2d69235e,Clayton Carpenter,Jose Ochoa,Jose Ochoa,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+e92d89cb2d69235e,Clayton Carpenter,Jose Ochoa,Jose Ochoa,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+e92d89cb2d69235e,Clayton Carpenter,Jose Ochoa,Jose Ochoa,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+e92d89cb2d69235e,Clayton Carpenter,Jose Ochoa,Jose Ochoa,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+57bd683efc797fc1,Modestas Bukauskas,Christian Edwards,Modestas Bukauskas,Decision - Split,SIG_ONLY,1,0.0,1,2,0,False
+57bd683efc797fc1,Modestas Bukauskas,Christian Edwards,Modestas Bukauskas,Decision - Split,SIG_KD,1,0.0,1,2,0,False
+57bd683efc797fc1,Modestas Bukauskas,Christian Edwards,Modestas Bukauskas,Decision - Split,SIG_KD_TD,1,0.0,1,2,0,False
+57bd683efc797fc1,Modestas Bukauskas,Christian Edwards,Modestas Bukauskas,Decision - Split,SIG_KD_TD_CTRL,1,0.0,1,2,0,False
+57bd683efc797fc1,Modestas Bukauskas,Christian Edwards,Modestas Bukauskas,Decision - Split,OLD_FULL,1,0.0,1,2,0,False
+57bd683efc797fc1,Modestas Bukauskas,Christian Edwards,Modestas Bukauskas,Decision - Split,DAMAGE_FIRST,1,0.0,1,2,0,False
+5f7111b982bcf6e3,Ketlen Vieira,Jacqueline Cavalcanti,Ketlen Vieira,Decision - Unanimous,SIG_ONLY,1,0.0,1,2,0,False
+5f7111b982bcf6e3,Ketlen Vieira,Jacqueline Cavalcanti,Ketlen Vieira,Decision - Unanimous,SIG_KD,1,0.0,1,2,0,False
+5f7111b982bcf6e3,Ketlen Vieira,Jacqueline Cavalcanti,Ketlen Vieira,Decision - Unanimous,SIG_KD_TD,1,0.0,1,2,0,False
+5f7111b982bcf6e3,Ketlen Vieira,Jacqueline Cavalcanti,Ketlen Vieira,Decision - Unanimous,SIG_KD_TD_CTRL,1,0.0,1,2,0,False
+5f7111b982bcf6e3,Ketlen Vieira,Jacqueline Cavalcanti,Ketlen Vieira,Decision - Unanimous,OLD_FULL,1,0.0,1,2,0,False
+5f7111b982bcf6e3,Ketlen Vieira,Jacqueline Cavalcanti,Ketlen Vieira,Decision - Unanimous,DAMAGE_FIRST,1,0.0,1,2,0,False
+6242cda790f2085d,Tuco Tokkos,Ivan Erslan,Ivan Erslan,Decision - Unanimous,SIG_ONLY,0,1.0,2,1,0,False
+6242cda790f2085d,Tuco Tokkos,Ivan Erslan,Ivan Erslan,Decision - Unanimous,SIG_KD,0,1.0,2,1,0,False
+6242cda790f2085d,Tuco Tokkos,Ivan Erslan,Ivan Erslan,Decision - Unanimous,SIG_KD_TD,0,1.0,2,1,0,False
+6242cda790f2085d,Tuco Tokkos,Ivan Erslan,Ivan Erslan,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+6242cda790f2085d,Tuco Tokkos,Ivan Erslan,Ivan Erslan,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+6242cda790f2085d,Tuco Tokkos,Ivan Erslan,Ivan Erslan,Decision - Unanimous,DAMAGE_FIRST,0,1.0,2,1,0,False
+b482d4452e4d0eee,Daniel Barez,Luis Gurule,Luis Gurule,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+b482d4452e4d0eee,Daniel Barez,Luis Gurule,Luis Gurule,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+b482d4452e4d0eee,Daniel Barez,Luis Gurule,Luis Gurule,Decision - Unanimous,SIG_KD_TD,0,0.0,0,3,0,True
+b482d4452e4d0eee,Daniel Barez,Luis Gurule,Luis Gurule,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+b482d4452e4d0eee,Daniel Barez,Luis Gurule,Luis Gurule,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+b482d4452e4d0eee,Daniel Barez,Luis Gurule,Luis Gurule,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+e4aa608124896794,Arnold Allen,Melquizael Costa,Arnold Allen,Decision - Unanimous,SIG_ONLY,1,0.0,1,2,2,False
+e4aa608124896794,Arnold Allen,Melquizael Costa,Arnold Allen,Decision - Unanimous,SIG_KD,1,1.0,2,1,2,True
+e4aa608124896794,Arnold Allen,Melquizael Costa,Arnold Allen,Decision - Unanimous,SIG_KD_TD,1,1.0,4,1,0,True
+e4aa608124896794,Arnold Allen,Melquizael Costa,Arnold Allen,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,4,1,0,True
+e4aa608124896794,Arnold Allen,Melquizael Costa,Arnold Allen,Decision - Unanimous,OLD_FULL,1,1.0,4,1,0,True
+e4aa608124896794,Arnold Allen,Melquizael Costa,Arnold Allen,Decision - Unanimous,DAMAGE_FIRST,1,1.0,4,1,0,True
+3f719885c9916e06,Angela Hill,Xiong Jingnan,Angela Hill,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+3f719885c9916e06,Angela Hill,Xiong Jingnan,Angela Hill,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+3f719885c9916e06,Angela Hill,Xiong Jingnan,Angela Hill,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+3f719885c9916e06,Angela Hill,Xiong Jingnan,Angela Hill,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+3f719885c9916e06,Angela Hill,Xiong Jingnan,Angela Hill,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+3f719885c9916e06,Angela Hill,Xiong Jingnan,Angela Hill,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+bc0b3c16246e0d1d,Ding Meng,Jose Souza,Jose Souza,Decision - Split,SIG_ONLY,0,1.0,2,1,0,False
+bc0b3c16246e0d1d,Ding Meng,Jose Souza,Jose Souza,Decision - Split,SIG_KD,0,1.0,2,1,0,False
+bc0b3c16246e0d1d,Ding Meng,Jose Souza,Jose Souza,Decision - Split,SIG_KD_TD,0,1.0,2,1,0,False
+bc0b3c16246e0d1d,Ding Meng,Jose Souza,Jose Souza,Decision - Split,SIG_KD_TD_CTRL,0,1.0,2,1,0,False
+bc0b3c16246e0d1d,Ding Meng,Jose Souza,Jose Souza,Decision - Split,OLD_FULL,0,1.0,2,1,0,False
+bc0b3c16246e0d1d,Ding Meng,Jose Souza,Jose Souza,Decision - Split,DAMAGE_FIRST,0,1.0,2,1,0,False
+c1c9dfd0c0952f18,Jake Matthews,Carlston Harris,Jake Matthews,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+c1c9dfd0c0952f18,Jake Matthews,Carlston Harris,Jake Matthews,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+c1c9dfd0c0952f18,Jake Matthews,Carlston Harris,Jake Matthews,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+c1c9dfd0c0952f18,Jake Matthews,Carlston Harris,Jake Matthews,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+c1c9dfd0c0952f18,Jake Matthews,Carlston Harris,Jake Matthews,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+c1c9dfd0c0952f18,Jake Matthews,Carlston Harris,Jake Matthews,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+419fff06f338f5c6,Brendan Allen,Edmen Shahbazyan,Brendan Allen,Decision - Unanimous,SIG_ONLY,1,0.0,1,2,0,False
+419fff06f338f5c6,Brendan Allen,Edmen Shahbazyan,Brendan Allen,Decision - Unanimous,SIG_KD,1,0.0,1,2,0,False
+419fff06f338f5c6,Brendan Allen,Edmen Shahbazyan,Brendan Allen,Decision - Unanimous,SIG_KD_TD,1,0.0,1,2,0,False
+419fff06f338f5c6,Brendan Allen,Edmen Shahbazyan,Brendan Allen,Decision - Unanimous,SIG_KD_TD_CTRL,1,0.0,1,2,0,False
+419fff06f338f5c6,Brendan Allen,Edmen Shahbazyan,Brendan Allen,Decision - Unanimous,OLD_FULL,1,0.0,1,2,0,False
+419fff06f338f5c6,Brendan Allen,Edmen Shahbazyan,Brendan Allen,Decision - Unanimous,DAMAGE_FIRST,1,0.0,1,2,0,False
+58ffa2dac4f2e7d0,Fares Ziam,Tom Nolan,Tom Nolan,Decision - Unanimous,SIG_ONLY,0,0.0,0,3,0,True
+58ffa2dac4f2e7d0,Fares Ziam,Tom Nolan,Tom Nolan,Decision - Unanimous,SIG_KD,0,0.0,0,3,0,True
+58ffa2dac4f2e7d0,Fares Ziam,Tom Nolan,Tom Nolan,Decision - Unanimous,SIG_KD_TD,0,0.0,1,2,0,True
+58ffa2dac4f2e7d0,Fares Ziam,Tom Nolan,Tom Nolan,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,1,2,0,True
+58ffa2dac4f2e7d0,Fares Ziam,Tom Nolan,Tom Nolan,Decision - Unanimous,OLD_FULL,0,0.0,1,2,0,True
+58ffa2dac4f2e7d0,Fares Ziam,Tom Nolan,Tom Nolan,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,3,0,True
+5c69b019e6deee41,Belal Muhammad,Gabriel Bonfim,Gabriel Bonfim,Decision - Unanimous,SIG_ONLY,0,0.0,0,5,0,True
+5c69b019e6deee41,Belal Muhammad,Gabriel Bonfim,Gabriel Bonfim,Decision - Unanimous,SIG_KD,0,0.0,0,5,0,True
+5c69b019e6deee41,Belal Muhammad,Gabriel Bonfim,Gabriel Bonfim,Decision - Unanimous,SIG_KD_TD,0,0.0,0,5,0,True
+5c69b019e6deee41,Belal Muhammad,Gabriel Bonfim,Gabriel Bonfim,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,5,0,True
+5c69b019e6deee41,Belal Muhammad,Gabriel Bonfim,Gabriel Bonfim,Decision - Unanimous,OLD_FULL,0,0.0,0,5,0,True
+5c69b019e6deee41,Belal Muhammad,Gabriel Bonfim,Gabriel Bonfim,Decision - Unanimous,DAMAGE_FIRST,0,0.0,0,5,0,True
+90940d93d6e0998f,Marcus McGhee,John Yannis,Marcus McGhee,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+90940d93d6e0998f,Marcus McGhee,John Yannis,Marcus McGhee,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+90940d93d6e0998f,Marcus McGhee,John Yannis,Marcus McGhee,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+90940d93d6e0998f,Marcus McGhee,John Yannis,Marcus McGhee,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,3,0,0,True
+90940d93d6e0998f,Marcus McGhee,John Yannis,Marcus McGhee,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+90940d93d6e0998f,Marcus McGhee,John Yannis,Marcus McGhee,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+a6b211d8dab5edec,Jeisla Chaves,Yuneisy Duben,Jeisla Chaves,Decision - Split,SIG_ONLY,1,1.0,2,1,0,True
+a6b211d8dab5edec,Jeisla Chaves,Yuneisy Duben,Jeisla Chaves,Decision - Split,SIG_KD,1,1.0,2,1,0,True
+a6b211d8dab5edec,Jeisla Chaves,Yuneisy Duben,Jeisla Chaves,Decision - Split,SIG_KD_TD,1,0.0,1,2,0,False
+a6b211d8dab5edec,Jeisla Chaves,Yuneisy Duben,Jeisla Chaves,Decision - Split,SIG_KD_TD_CTRL,1,0.0,1,2,0,False
+a6b211d8dab5edec,Jeisla Chaves,Yuneisy Duben,Jeisla Chaves,Decision - Split,OLD_FULL,1,0.0,1,2,0,False
+a6b211d8dab5edec,Jeisla Chaves,Yuneisy Duben,Jeisla Chaves,Decision - Split,DAMAGE_FIRST,1,1.0,2,1,0,True
+17d31249c9ab18af,Andre Lima,Kevin Borjas,Kevin Borjas,Decision - Unanimous,SIG_ONLY,0,,1,1,1,
+17d31249c9ab18af,Andre Lima,Kevin Borjas,Kevin Borjas,Decision - Unanimous,SIG_KD,0,,1,1,1,
+17d31249c9ab18af,Andre Lima,Kevin Borjas,Kevin Borjas,Decision - Unanimous,SIG_KD_TD,0,,1,1,1,
+17d31249c9ab18af,Andre Lima,Kevin Borjas,Kevin Borjas,Decision - Unanimous,SIG_KD_TD_CTRL,0,1.0,2,1,0,False
+17d31249c9ab18af,Andre Lima,Kevin Borjas,Kevin Borjas,Decision - Unanimous,OLD_FULL,0,1.0,2,1,0,False
+17d31249c9ab18af,Andre Lima,Kevin Borjas,Kevin Borjas,Decision - Unanimous,DAMAGE_FIRST,0,1.0,2,1,0,False
+3b4803afa824fea3,Allan Nascimento,Mitch Raposo,Mitch Raposo,Decision - Split,SIG_ONLY,0,1.0,2,1,0,False
+3b4803afa824fea3,Allan Nascimento,Mitch Raposo,Mitch Raposo,Decision - Split,SIG_KD,0,1.0,2,1,0,False
+3b4803afa824fea3,Allan Nascimento,Mitch Raposo,Mitch Raposo,Decision - Split,SIG_KD_TD,0,1.0,2,1,0,False
+3b4803afa824fea3,Allan Nascimento,Mitch Raposo,Mitch Raposo,Decision - Split,SIG_KD_TD_CTRL,0,1.0,2,1,0,False
+3b4803afa824fea3,Allan Nascimento,Mitch Raposo,Mitch Raposo,Decision - Split,OLD_FULL,0,1.0,2,1,0,False
+3b4803afa824fea3,Allan Nascimento,Mitch Raposo,Mitch Raposo,Decision - Split,DAMAGE_FIRST,0,1.0,2,1,0,False
+8b809ba1880aded0,Gaston Bolanos,Michael Aswell Jr.,Gaston Bolanos,Decision - Unanimous,SIG_ONLY,1,0.0,1,2,0,False
+8b809ba1880aded0,Gaston Bolanos,Michael Aswell Jr.,Gaston Bolanos,Decision - Unanimous,SIG_KD,1,0.0,1,2,0,False
+8b809ba1880aded0,Gaston Bolanos,Michael Aswell Jr.,Gaston Bolanos,Decision - Unanimous,SIG_KD_TD,1,0.0,1,2,0,False
+8b809ba1880aded0,Gaston Bolanos,Michael Aswell Jr.,Gaston Bolanos,Decision - Unanimous,SIG_KD_TD_CTRL,1,0.0,1,2,0,False
+8b809ba1880aded0,Gaston Bolanos,Michael Aswell Jr.,Gaston Bolanos,Decision - Unanimous,OLD_FULL,1,0.0,1,2,0,False
+8b809ba1880aded0,Gaston Bolanos,Michael Aswell Jr.,Gaston Bolanos,Decision - Unanimous,DAMAGE_FIRST,1,0.0,1,2,0,False
+9efa4de316b8bf43,Shane Collins,Otari Tanzilovi,Shane Collins,Decision - Unanimous,SIG_ONLY,1,1.0,3,0,0,True
+9efa4de316b8bf43,Shane Collins,Otari Tanzilovi,Shane Collins,Decision - Unanimous,SIG_KD,1,1.0,3,0,0,True
+9efa4de316b8bf43,Shane Collins,Otari Tanzilovi,Shane Collins,Decision - Unanimous,SIG_KD_TD,1,1.0,3,0,0,True
+9efa4de316b8bf43,Shane Collins,Otari Tanzilovi,Shane Collins,Decision - Unanimous,SIG_KD_TD_CTRL,1,0.0,1,2,0,False
+9efa4de316b8bf43,Shane Collins,Otari Tanzilovi,Shane Collins,Decision - Unanimous,OLD_FULL,1,1.0,3,0,0,True
+9efa4de316b8bf43,Shane Collins,Otari Tanzilovi,Shane Collins,Decision - Unanimous,DAMAGE_FIRST,1,1.0,3,0,0,True
+b23a1a5d35eb438a,Karol Rosa,Luana Santos,Luana Santos,Decision - Unanimous,SIG_ONLY,0,,1,1,1,
+b23a1a5d35eb438a,Karol Rosa,Luana Santos,Luana Santos,Decision - Unanimous,SIG_KD,0,,1,1,1,
+b23a1a5d35eb438a,Karol Rosa,Luana Santos,Luana Santos,Decision - Unanimous,SIG_KD_TD,0,0.0,0,2,1,True
+b23a1a5d35eb438a,Karol Rosa,Luana Santos,Luana Santos,Decision - Unanimous,SIG_KD_TD_CTRL,0,0.0,0,3,0,True
+b23a1a5d35eb438a,Karol Rosa,Luana Santos,Luana Santos,Decision - Unanimous,OLD_FULL,0,0.0,0,3,0,True
+b23a1a5d35eb438a,Karol Rosa,Luana Santos,Luana Santos,Decision - Unanimous,DAMAGE_FIRST,0,0.0,1,2,0,True
+012c307c9d446c4d,Shara Magomedov,Michel Pereira,Shara Magomedov,Decision - Unanimous,SIG_ONLY,1,1.0,2,1,0,True
+012c307c9d446c4d,Shara Magomedov,Michel Pereira,Shara Magomedov,Decision - Unanimous,SIG_KD,1,1.0,2,1,0,True
+012c307c9d446c4d,Shara Magomedov,Michel Pereira,Shara Magomedov,Decision - Unanimous,SIG_KD_TD,1,1.0,2,1,0,True
+012c307c9d446c4d,Shara Magomedov,Michel Pereira,Shara Magomedov,Decision - Unanimous,SIG_KD_TD_CTRL,1,1.0,2,1,0,True
+012c307c9d446c4d,Shara Magomedov,Michel Pereira,Shara Magomedov,Decision - Unanimous,OLD_FULL,1,1.0,2,1,0,True
+012c307c9d446c4d,Shara Magomedov,Michel Pereira,Shara Magomedov,Decision - Unanimous,DAMAGE_FIRST,1,1.0,2,1,0,True

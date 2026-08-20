@@ -42,12 +42,14 @@ class FighterProfile:
     striking_power: float = 50.0
     damage_durability: float = 50.0
     knockdown_resistance: float = 50.0
+    # Fight-context metadata, not a persisted fighter trait.
+    age_years: float = 30.0
 
     @classmethod
     def from_mapping(cls, row: Mapping[str, object]) -> "FighterProfile":
-        def number(name: str) -> float:
-            value = row.get(name, 50.0)
-            return 50.0 if value is None else float(value)
+        def number(name: str, default: float = 50.0) -> float:
+            value = row.get(name, default)
+            return default if value is None else float(value)
 
         fighter_id = str(row["fighter_id"])
         return cls(
@@ -77,6 +79,7 @@ class FighterProfile:
             striking_power=number("striking_power"),
             damage_durability=number("damage_durability"),
             knockdown_resistance=number("knockdown_resistance"),
+            age_years=number("age_years", 30.0),
         )
 
 

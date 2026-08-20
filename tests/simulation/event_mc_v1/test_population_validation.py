@@ -1,7 +1,14 @@
+import inspect
+
 import pandas as pd
 import pytest
 
+from pipeline.common.paths import FSR_V2_PREFIGHT_SNAPSHOTS_PATH, MASTER_PATH
+from pipeline.simulation.event_mc_v1.components.fsr_v2 import FSR_V2_SIMULATOR_FIELDS, FSR_V2_TRAIT_FIELDS
+from pipeline.simulation.event_mc_v1.diagnostics import population_validation
 from pipeline.simulation.event_mc_v1.diagnostics.population_validation import (
+    _fight,
+    _add_prior_ufc_fight_counts,
     build_cohort,
     compute_metrics,
     observed_duration_seconds,
@@ -9,7 +16,40 @@ from pipeline.simulation.event_mc_v1.diagnostics.population_validation import (
 )
 
 
-def test_one_historical_fight_produces_compact_resolved_row():
+def canonical_row(fighter_id, fight_id="target", event_date="2020-01-02", **changes):
+    values = {name: 0.0 for name in FSR_V2_TRAIT_FIELDS}
+    values.update({"fighter_id": fighter_id, "fighter_name": f"name-{fighter_id}",
+        "fight_id": fight_id, "event_date": pd.Timestamp(event_date),
+        "standing_striking_tendency": .08, "takedown_tendency": .02,
+        "ground_striking_tendency": .05, "submission_tendency": .01,
+        "head_strike_tendency": .7, "body_strike_tendency": .3, "leg_strike_tendency": .2,
+        "stamina_capacity": 100.0, "stamina_depletion_resistance": 61.0,
+        "stamina_performance_resilience": 62.0, "striking_power": 63.0,
+        "damage_durability": 64.0, "knockdown_resistance": 65.0,
+        "standing_accuracy_baseline": .47, "takedown_completion_baseline": .38,
+        "ground_accuracy_baseline": .56, "submission_conversion_baseline": .21,
+        "escape_population_mean_seconds": 42.0})
+    values.update(changes)
+    return values
+
+
+def master_row(fight_id, date, red, blue, **changes):
+    values = {"fight_id": fight_id, "date": date, "r_id": red, "b_id": blue,
+        "r_name": f"master-{red}", "b_name": f"master-{blue}", "winner": f"master-{red}",
+        "division": "Lightweight", "total_rounds": 3, "method": "Decision",
+        "finish_round": 3, "match_time_sec": 900, "r_kd": 0, "b_kd": 0,
+        "r_sub_att": 0, "b_sub_att": 0}
+    values.update(changes)
+    return values
+
+
+def test_one_historical_fight_produces_compact_resolved_row(monkeypatch):
+    masters = [master_row(f"prior-{i}", f"2019-0{i+1}-01", "red", "blue") for i in range(3)]
+    masters.append(master_row("target", "2020-01-02", "red", "blue"))
+    snapshots = pd.DataFrame([canonical_row("red"), canonical_row("blue")])
+    def fake_read(path, *args, **kwargs):
+        return pd.DataFrame(masters) if path == MASTER_PATH else snapshots
+    monkeypatch.setattr(pd, "read_parquet", fake_read)
     cohort, fsr = build_cohort(start_year=2020, limit=1)
     row = simulate_fight(cohort.iloc[0], fsr, paths=2, seed=91)
     assert row["red_win_probability"] + row["blue_win_probability"] == pytest.approx(1)
@@ -17,6 +57,58 @@ def test_one_historical_fight_produces_compact_resolved_row():
     assert not any("trace" in key for key in row)
     repeat = simulate_fight(cohort.iloc[0], fsr, paths=2, seed=91)
     assert row == repeat
+
+
+def test_population_harness_uses_only_canonical_fsr_v2_path():
+    source = inspect.getsource(population_validation)
+    assert "FSR_32_PATH" not in source
+    assert "FSR_V2_PREFIGHT_SNAPSHOTS_PATH" in source
+
+
+def test_cohort_prior_counts_are_strictly_prior_date_and_both_corners(monkeypatch):
+    masters = [
+        master_row("r1", "2019-01-01", "red", "x1"),
+        master_row("r2", "2019-02-01", "red", "x2"),
+        master_row("r3", "2019-03-01", "red", "x3"),
+        master_row("b1", "2019-01-01", "blue", "y1"),
+        master_row("b2", "2019-02-01", "blue", "y2"),
+        master_row("b3", "2020-01-02", "blue", "y3"),
+        # This same-date bout must not make blue eligible for target.
+        master_row("target", "2020-01-02", "red", "blue"),
+        master_row("eligible", "2020-02-01", "red", "blue"),
+    ]
+    snapshots = pd.DataFrame([canonical_row("red", "eligible", "2020-02-01"),
+                              canonical_row("blue", "eligible", "2020-02-01")])
+    seen = []
+    def fake_read(path, *args, **kwargs):
+        seen.append(path)
+        return pd.DataFrame(masters) if path == MASTER_PATH else snapshots
+    monkeypatch.setattr(pd, "read_parquet", fake_read)
+    cohort, _ = build_cohort(start_year=2020)
+    assert cohort["fight_id"].tolist() == ["eligible"]
+    assert cohort.iloc[0]["r_prior_ufc_fights"] == 4
+    assert cohort.iloc[0]["b_prior_ufc_fights"] == 4
+    counted = _add_prior_ufc_fight_counts(pd.DataFrame(masters))
+    target = counted[counted["fight_id"] == "target"].iloc[0]
+    assert target["b_prior_ufc_fights"] == 2
+    assert seen == [MASTER_PATH, FSR_V2_PREFIGHT_SNAPSHOTS_PATH]
+
+
+def test_resolver_uses_id_date_not_names_and_builds_canonical_matchup():
+    row = pd.Series(master_row("target", "2020-01-02", "red", "blue",
+                               r_name="not snapshot name", b_name="also wrong",
+                               event_date=pd.Timestamp("2020-01-02")))
+    fsr = pd.DataFrame([canonical_row("red"), canonical_row("blue")])
+    fight = _fight(row, fsr)
+    assert fight.fsr_v2_matchup is not None
+    assert fight.fsr_v2_matchup.red.fighter_id == "red"
+    assert fight.red_name == "name-red"
+    assert len(FSR_V2_SIMULATOR_FIELDS) == 27
+    assert set(fight.fsr_v2_matchup.red.audit_traits()) == set(FSR_V2_SIMULATOR_FIELDS)
+    with pytest.raises(ValueError, match="found 0"):
+        _fight(row, fsr.assign(event_date=pd.Timestamp("2020-01-03")))
+    with pytest.raises(ValueError, match="found 2"):
+        _fight(row, pd.concat([fsr, fsr.iloc[[0]]], ignore_index=True))
 
 
 def test_metrics_on_controlled_rows_and_exposure_denominator():

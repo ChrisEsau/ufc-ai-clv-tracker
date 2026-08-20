@@ -84,3 +84,33 @@ def test_impact_and_kd_streams_are_deterministic_but_stochastic_across_seeds():
     other = resolve(subject, seed=12)[1][0].payload
     assert one == repeat
     assert one.impact != other.impact
+
+
+def test_attacker_age_translates_power_once_before_impact_without_clipping():
+    young = ImpactTraumaKnockdownModel(
+        MatchupProfiles(
+            fighter("red", striking_power=70.0, age_years=30.0),
+            fighter("blue"),
+        )
+    )
+    old = ImpactTraumaKnockdownModel(
+        MatchupProfiles(
+            fighter("red", striking_power=70.0, age_years=40.0),
+            fighter("blue"),
+        )
+    )
+
+    young_out = resolve(young, seed=21)[1][0].payload
+    old_out = resolve(old, seed=21)[1][0].payload
+
+    rating_delta = -1.15 * (40.0 - 30.0)
+    scale = young.calibration.section("damage")["power_rating_scale"]
+    expected_ratio = np.exp(rating_delta / scale)
+
+    assert old_out.impact == pytest.approx(
+        young_out.impact * expected_ratio
+    )
+    assert old_out.primary_trauma == pytest.approx(
+        young_out.primary_trauma * expected_ratio
+    )
+    assert old_out.impact < young_out.impact

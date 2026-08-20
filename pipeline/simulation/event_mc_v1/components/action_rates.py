@@ -25,6 +25,9 @@ from .profiles import MatchupProfiles, Side
 from ..modifiers import DynamicModifierProvider
 from ..stamina import StaminaModel
 from ..calibration import DEFAULT_CALIBRATION, EventMCCalibration
+from .fsr_v2 import FSRV2Matchup
+from .fsr_v2_actions import FSRV2Candidate
+from .fsr_v2_mechanics import effective_rate, escape_rate
 
 
 @dataclass(frozen=True)
@@ -121,7 +124,9 @@ class FightFlowRateProvider:
     def candidates(self, state: FightState, context: FightContext):
         if state.phase is Phase.DISTANCE:
             return DistanceActionRateProvider(self.profiles, self.stamina_model, self.modifier_provider, self.calibration).candidates(state, context)
-        if state.phase is Phase.CLINCH:
+        # Legacy-only dead branch retained for old diagnostic readability; the
+        # authoritative Phase enum can no longer produce a clinch state.
+        if state.phase.value == "clinch":
             if state.clinch_controller is None:
                 return ()
             controller = Side(state.clinch_controller)
@@ -156,3 +161,119 @@ class FightFlowRateProvider:
 
     def _output(self, state: FightState, side: Side) -> float:
         return 1.0 if self.modifier_provider is None else self.modifier_provider.modifiers(self.profiles.fighter(side), state, side).output_multiplier
+
+
+@dataclass(frozen=True)
+class FSRV2ActionRateProvider:
+    """Locked two-state competing clocks driven only by canonical FSR V2."""
+
+    matchup: FSRV2Matchup
+    profiles: MatchupProfiles
+    stamina_model: StaminaModel | None = None
+    modifier_provider: DynamicModifierProvider | None = None
+    calibration: EventMCCalibration = DEFAULT_CALIBRATION
+
+    def _candidate(self, side: Side, family: str) -> FSRV2Candidate:
+        return FSRV2Candidate(
+            side,
+            family,
+            self.matchup,
+            self.profiles,
+            self.stamina_model,
+            self.modifier_provider,
+            self.calibration,
+        )
+
+    def _output(self, state: FightState, side: Side) -> float:
+        if self.modifier_provider is None:
+            return 1.0
+        return self.modifier_provider.modifiers(self.profiles.fighter(side), state, side).output_multiplier
+
+    def candidates(self, state: FightState, context: FightContext):
+        c = self.calibration.section("fsr_v2_calibration")
+
+        if state.phase is Phase.STANDING:
+            output = []
+            for side in Side:
+                attacker = self.matchup.fighter(side)
+                defender = self.matchup.fighter(side.opponent)
+                for family, tendency, suppression, calibration_multiplier in (
+                    (
+                        "standing_strike",
+                        attacker.standing_striking_tendency,
+                        defender.standing_striking_suppression,
+                        c["standing_strike_rate_multiplier"],
+                    ),
+                    (
+                        "takedown",
+                        attacker.takedown_tendency,
+                        defender.takedown_suppression,
+                        c["takedown_rate_multiplier"],
+                    ),
+                    (
+                        "submission_attempt",
+                        attacker.submission_tendency,
+                        defender.submission_suppression,
+                        1.0,
+                    ),
+                ):
+                    output_multiplier = (
+                        1.0
+                        if family == "submission_attempt"
+                        else self._output(state, side)
+                    )
+
+                    output.append(EventRate(
+                        self._candidate(side, family),
+                        (
+                            tendency * suppression
+                            if family == "submission_attempt"
+                            else effective_rate(tendency, suppression)
+                        )
+                        * calibration_multiplier
+                        * output_multiplier,
+                    ))
+            return tuple(output)
+        if state.ground_controller is None:
+            return ()
+        top = Side(state.ground_controller)
+        bottom = top.opponent
+        output = []
+        for side in Side:
+            attacker = self.matchup.fighter(side)
+            defender = self.matchup.fighter(side.opponent)
+            for family, tendency, suppression in (
+                ("ground_strike", attacker.ground_striking_tendency, defender.ground_striking_suppression),
+                ("submission_attempt", attacker.submission_tendency, defender.submission_suppression),
+            ):
+                calibration_multiplier = (
+                    c["ground_strike_rate_multiplier"]
+                    if family == "ground_strike"
+                    else 1.0
+                )
+                output_multiplier = (
+                    1.0
+                    if family == "submission_attempt"
+                    else self._output(state, side)
+                )
+
+                output.append(EventRate(
+                    self._candidate(side, family),
+                    (
+                        tendency * suppression
+                        if family == "submission_attempt"
+                        else effective_rate(tendency, suppression)
+                    )
+                    * calibration_multiplier
+                    * output_multiplier,
+                ))
+        bottom_fighter, top_fighter = self.matchup.fighter(bottom), self.matchup.fighter(top)
+        output.append(EventRate(
+            self._candidate(bottom, "ground_escape"),
+            escape_rate(
+                bottom_fighter.escape_offense,
+                top_fighter.escape_defense,
+                bottom_fighter.escape_population_mean_seconds,
+            ) * c["escape_rate_multiplier"],
+        ))
+        return tuple(output)

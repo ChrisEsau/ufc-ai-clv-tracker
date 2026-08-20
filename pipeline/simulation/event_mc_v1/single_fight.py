@@ -9,14 +9,14 @@ import time
 
 import pandas as pd
 
-from pipeline.common.paths import MASTER_PATH
+from pipeline.common.paths import MASTER_PATH, FSR_V2_PREFIGHT_SNAPSHOTS_PATH
 
 from .calibration import DEFAULT_RESOLVER
-from .components.action_rates import FightFlowRateProvider
+from .components.action_rates import FightFlowRateProvider, FSRV2ActionRateProvider
+from .components.fsr_v2 import FSRV2FighterInput, FSRV2Matchup
 from .components.actions import ActionAttempt, ActionOutcome
 from .components.profiles import FighterProfile, MatchupProfiles
 from .config import FightConfig
-from .diagnostics.distance_parity import FSR_32_PATH
 from .engine import SimulationEngine
 from .events import ConsequenceEvent, FightFinished, PrimaryEvent, RoundEnded, RoundStarted
 from .finishes import FinishOutcome, KOTKOFinishModel
@@ -32,6 +32,24 @@ from .judging import DeterministicJudgingModel, RoundScore
 DEFAULT_SEED = 20260813
 
 
+def fighter_age_years(dob, event_date) -> float:
+    """Return age on fight date; unknown DOB uses neutral age 30."""
+    if dob is None or pd.isna(dob):
+        return 30.0
+
+    dob = pd.Timestamp(dob)
+    event_date = pd.Timestamp(event_date)
+
+    age = (event_date - dob).days / 365.2425
+
+    if age <= 0.0:
+        raise ValueError(
+            f"invalid DOB/event date: dob={dob}, event_date={event_date}"
+        )
+
+    return float(age)
+
+
 @dataclass(frozen=True)
 class HistoricalFight:
     fight_id: str
@@ -41,6 +59,35 @@ class HistoricalFight:
     division: str
     rounds: int
     profiles: MatchupProfiles
+    fsr_v2_matchup: FSRV2Matchup | None = None
+
+
+def fight_from_fsr_v2_rows(
+    red_row,
+    blue_row,
+    *,
+    fight_id="fsr-v2-fight",
+    date="",
+    division="unknown",
+    rounds=3,
+    red_age_years=30.0,
+    blue_age_years=30.0,
+) -> HistoricalFight:
+    """Create an executable fight from two complete canonical FSR V2 rows."""
+    red_input = dict(red_row)
+    blue_input = dict(blue_row)
+
+    red_input["age_years"] = float(red_age_years)
+    blue_input["age_years"] = float(blue_age_years)
+
+    matchup = FSRV2Matchup(
+        FSRV2FighterInput.from_mapping(red_input),
+        FSRV2FighterInput.from_mapping(blue_input),
+    )
+    profiles = matchup.physical_profiles()
+    return HistoricalFight(str(fight_id), str(date), matchup.red.fighter_name,
+                           matchup.blue.fighter_name, str(division), int(rounds),
+                           profiles, matchup)
 
 
 def resolve_fight(fight_id: str) -> HistoricalFight:
@@ -49,30 +96,46 @@ def resolve_fight(fight_id: str) -> HistoricalFight:
     if len(match) != 1:
         raise ValueError(f"fight_id must resolve exactly once: {fight_id!r} ({len(match)} rows)")
     row = match.iloc[0]
-    fsr = pd.read_parquet(FSR_32_PATH)
+    fsr = pd.read_parquet(FSR_V2_PREFIGHT_SNAPSHOTS_PATH)
     date = pd.Timestamp(row["date"])
-    snapshots = fsr[(fsr["fight_id"].astype(str) == str(fight_id)) & (pd.to_datetime(fsr["date"]) == date)]
-    by_name = snapshots.set_index("fighter_name")
-    if row["r_name"] not in by_name.index or row["b_name"] not in by_name.index:
-        raise ValueError("frozen FSR-32 lacks both prefight profiles for requested fight")
-    def profile(name):
-        values = by_name.loc[name].to_dict(); values["fighter_name"] = name
-        return FighterProfile.from_mapping(values)
-    return HistoricalFight(str(row["fight_id"]), date.date().isoformat(), str(row["r_name"]), str(row["b_name"]), str(row.get("division", "unknown")), int(row.get("total_rounds", 3)), MatchupProfiles(profile(row["r_name"]), profile(row["b_name"])))
+    snapshots = fsr[
+        (fsr["fight_id"].astype(str) == str(fight_id))
+        & (pd.to_datetime(fsr["event_date"]) == date)
+    ]
+    def exact_fighter(fighter_id: object, corner: str) -> dict:
+        matched = snapshots[snapshots["fighter_id"].astype(str) == str(fighter_id)]
+        if len(matched) != 1:
+            raise ValueError(
+                f"canonical FSR V2 must resolve exactly one {corner} row for "
+                f"fight={fight_id!r}, date={date.date()}, fighter_id={fighter_id!r}; "
+                f"found {len(matched)}"
+            )
+        return matched.iloc[0].to_dict()
+    return fight_from_fsr_v2_rows(
+        exact_fighter(row["r_id"], "red"), exact_fighter(row["b_id"], "blue"),
+        fight_id=row["fight_id"], date=date.date().isoformat(),
+        division=row.get("division", "unknown"), rounds=row.get("total_rounds", 3),
+        red_age_years=fighter_age_years(row.get("r_dob"), date),
+        blue_age_years=fighter_age_years(row.get("b_dob"), date),
+    )
 
 
 def build_engine(fight: HistoricalFight, seed: int, sink):
     key = fight.division if fight.division in DEFAULT_RESOLVER.weight_classes else None
     calibration = DEFAULT_RESOLVER.for_weight_class(key)
     stamina = StaminaModel(fight.profiles, calibration=calibration)
+    rate_provider = (FSRV2ActionRateProvider(fight.fsr_v2_matchup, fight.profiles, stamina,
+                                             DynamicModifierProvider(calibration), calibration)
+                     if fight.fsr_v2_matchup is not None else
+                     FightFlowRateProvider(fight.profiles, stamina, DynamicModifierProvider(calibration), calibration))
     return SimulationEngine(
         FightConfig(fight.rounds),
-        FightFlowRateProvider(fight.profiles, stamina, DynamicModifierProvider(calibration), calibration),
+        rate_provider,
         PhysiologyTimeAdvanceModel(stamina, calibration), RNGManager(seed), sink,
         round_recovery_model=stamina,
         physiology_model=ImpactTraumaKnockdownModel(fight.profiles, calibration),
         finish_model=KOTKOFinishModel(fight.profiles, calibration),
-        submission_finish_model=SubmissionFinishModel(fight.profiles, calibration),
+        submission_finish_model=SubmissionFinishModel(fight.profiles, calibration, fight.fsr_v2_matchup),
         judging_model=DeterministicJudgingModel(calibration),
     ), calibration, key
 
@@ -160,7 +223,10 @@ def run_summary(fight: HistoricalFight, paths: int, seed: int):
         print(f"  avg attempts: " + ", ".join(f"{family}={sum(result.sink_result['attempts'][side].get(family,0) for result in rows)/paths:.2f}" for family in families))
         landed = sum(sum(count for key, count in result.sink_result["outcomes"][side].items() if key.endswith("_landed")) for result in rows) / paths
         print(f"  avg landed strike/TD outcomes={landed:.2f}")
-    print("Avg phase seconds:", " ".join(f"{phase}={sum(r.sink_result['phase_seconds'][phase] for r in rows)/paths:.1f}" for phase in ("distance","clinch","ground")))
+    print("Avg phase seconds:", " ".join(
+        f"{phase}={sum(r.sink_result['phase_seconds'][phase] for r in rows)/paths:.1f}"
+        for phase in ("standing", "ground")
+    ))
     return summary
 
 

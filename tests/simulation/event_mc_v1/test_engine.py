@@ -59,14 +59,14 @@ def test_boundaries_truncate_wait_reset_position_and_recompute_rates() -> None:
     provider = Provider(candidate, 1)
     advancer = Accumulator()
     trace = FullTraceEventSink()
-    state = FightState(phase=Phase.CLINCH, clinch_controller="blue")
+    state = FightState(phase=Phase.GROUND, ground_controller="blue")
     result = SimulationEngine(
         FightConfig(2, 5), provider, advancer, RNGManager(1), trace,
         FixedScheduler([6, 1, 20]),
     ).run(state)
     assert advancer.elapsed == [5, 1, 4]
     assert candidate.seen_times == [6]
-    assert provider.observations[1] == (5, Phase.DISTANCE, None, None)
+    assert provider.observations[1] == (5, Phase.STANDING, None, None)
     events = [entry.payload for entry in trace.entries if entry.kind == "event"]
     assert [event.timestamp_seconds for event in events] == sorted(event.timestamp_seconds for event in events)
     assert [(type(event), event.timestamp_seconds) for event in events if isinstance(event, (RoundEnded, RoundStarted))] == [

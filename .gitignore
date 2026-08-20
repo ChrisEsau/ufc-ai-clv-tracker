@@ -17,3 +17,9 @@ Thumbs.db
 *.jpeg
 *.zip
 *.xlsx
+
+# FSR V2 generated histories, checkpoints, and diagnostics
+/data/fsr_v2/
+
+# Generated EVENT MC measurement outputs
+/data/diagnostics/event_mc_v1_fsr_v2_baseline_smoke/

@@ -19,18 +19,29 @@ def evidence(striking=(0, 0), grappling=(0, 0), aggression=(0, 0), control=(0, 0
     return item
 
 
-def test_primary_striking_and_grappling_win_without_control_points():
-    striking = judge(evidence(striking=(5, 1), control=(0, 300)))
+def test_primary_score_combines_striking_grappling_and_control():
+    striking = judge(evidence(striking=(5, 1)))
     grappling = judge(evidence(grappling=(2, 0), striking=(0, 1)))
+    control = judge(evidence(striking=(5, 1), control=(0, 300)))
+
     assert striking.winner is Side.RED and striking.criterion == "PRIMARY"
     assert grappling.winner is Side.RED and grappling.criterion == "PRIMARY"
 
+    # 300 seconds of control is worth 300 * 0.048904 = 14.6712
+    # calibrated significant-strike equivalents, enough to overcome 5-1.
+    assert control.winner is Side.BLUE and control.criterion == "PRIMARY"
 
-def test_hierarchy_uses_aggression_then_control_only_for_close_primary():
-    aggression = judge(evidence(striking=(1, 1.1), aggression=(5, 2), control=(0, 100)))
-    control = judge(evidence(striking=(1, 1.1), aggression=(2, 2), control=(90, 20)))
-    assert aggression.winner is Side.RED and aggression.criterion == "AGGRESSION"
-    assert control.winner is Side.RED and control.criterion == "CONTROL"
+
+def test_aggression_is_only_used_when_calibrated_primary_score_is_exactly_tied():
+    aggression = judge(
+        evidence(
+            striking=(1, 1),
+            aggression=(5, 2),
+            control=(0, 0),
+        )
+    )
+    assert aggression.winner is Side.RED
+    assert aggression.criterion == "AGGRESSION"
 
 
 def test_exact_tie_is_reproducible_and_always_ten_nine():
@@ -78,4 +89,4 @@ def test_aggression_counts_only_offensive_initiative_and_reversal_keeps_grapplin
         snapshots,
     )
     assert subject.evidence.aggression["red"] == 7.0
-    assert subject.evidence.grappling["red"] == 0.35
+    assert subject.evidence.grappling["red"] == 2.854417
