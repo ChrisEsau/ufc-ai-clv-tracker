@@ -11,12 +11,15 @@ import pandas as pd
 from pipeline.common.paths import MASTER_PATH
 from pipeline.simulation.event_clock_mc_v1.compare_event_clock_to_market import (
     GIT_MARKET_PATH,
+    HISTORY_PATH,
     _match_git_fight_rows,
     _read_git_market_outcomes,
     dedupe_snapshot,
     fighter_side,
     implied_probability,
+    load_market_history,
     no_vig_probability,
+    norm,
 )
 
 OUT_DIR = Path("data/diagnostics/event_clock_mc_v1/market_comparisons")
@@ -92,26 +95,148 @@ def _history_moneyline_snapshots(
     bookmaker: str,
     max_commits: int = 160,
 ) -> list[tuple[pd.Timestamp, str, pd.DataFrame]]:
-    """Collect every distinct valid pre-fight DraftKings moneyline snapshot in Git."""
+    """Collect every distinct valid pre-fight moneyline snapshot.
+
+    Primary source is the append-only market intelligence history. Git market
+    snapshots are used only when the history parquet has fewer than two valid
+    observations for the fight.
+    """
+    history = load_market_history(HISTORY_PATH, bookmaker)
+
+    if not history.empty:
+        rows = history[
+            history["market_key"].astype(str).str.lower().isin(["moneyline", "h2h"])
+        ].copy()
+
+        # Prefer stable fight_id, but historical market ids can differ from the
+        # UFC master id. Fall back to normalized displayed matchup names.
+        id_match = rows["fight_id"].astype(str) == str(fight["fight_id"])
+
+        display = rows.get("fight_display", pd.Series("", index=rows.index)).map(norm)
+        red = norm(fight["red"])
+        blue = norm(fight["blue"])
+        name_match = display.isin({
+            norm(f"{fight['red']} vs {fight['blue']}"),
+            norm(f"{fight['blue']} vs {fight['red']}"),
+        })
+
+        rows = rows[id_match | name_match].copy()
+
+        if not rows.empty:
+            # Keep only observations before the actual scheduled commence time
+            # when that timestamp is available in the history.
+            if "commence_time" in rows.columns:
+                commence = pd.to_datetime(rows["commence_time"], utc=True, errors="coerce")
+                valid = commence.isna() | (rows["refresh_timestamp"] < commence)
+                rows = rows[valid].copy()
+
+            snapshots = []
+
+            for ts, group in rows.groupby("refresh_timestamp", sort=True):
+                group = dedupe_snapshot(group.copy())
+
+                # fighter_side()/norm() cannot evaluate pandas.NA as boolean.
+                # Historical market rows legitimately contain missing optional
+                # identity fields, so normalize those to empty strings here.
+                for col in (
+                    "fighter_name",
+                    "side",
+                    "outcome_display",
+                    "comparison_key",
+                ):
+                    if col in group.columns:
+                        group[col] = group[col].fillna("")
+
+                # There can occasionally be more than one provider moneyline
+                # represented at the same refresh. Select a complete two-sided
+                # market rather than mixing prices across market ids.
+                candidates = []
+
+                if "provider_market_id" in group.columns:
+                    for _, market_group in group.groupby(
+                        group["provider_market_id"].astype(str),
+                        dropna=False,
+                    ):
+                        sides = {
+                            fighter_side(row, fight)
+                            for _, row in market_group.iterrows()
+                        }
+                        if {"red", "blue"}.issubset(sides):
+                            candidates.append(market_group.copy())
+                else:
+                    sides = {
+                        fighter_side(row, fight)
+                        for _, row in group.iterrows()
+                    }
+                    if {"red", "blue"}.issubset(sides):
+                        candidates.append(group.copy())
+
+                if not candidates:
+                    continue
+
+                # Deterministic selection. DraftKings normally contributes one
+                # complete moneyline pair per refresh.
+                chosen = candidates[0].reset_index(drop=True)
+                snapshots.append(
+                    (
+                        pd.Timestamp(ts),
+                        str(chosen["refresh_id"].iloc[0]),
+                        chosen,
+                    )
+                )
+
+            if len(snapshots) >= 2:
+                return snapshots
+
+    # Historical parquet unavailable/incomplete: retain the original Git
+    # reconstruction as a fallback.
     snapshots: dict[pd.Timestamp, tuple[str, pd.DataFrame]] = {}
-    for commit in _git_commits_for_event_day(pd.Timestamp(fight["event_date"]), max_commits=max_commits):
+
+    for commit in _git_commits_for_event_day(
+        pd.Timestamp(fight["event_date"]),
+        max_commits=max_commits,
+    ):
         frame = _read_git_market_outcomes(commit)
         rows = _match_git_fight_rows(frame, fight, bookmaker)
+
         if rows.empty:
             continue
-        ml = rows[rows["market_key"].astype(str).str.lower().isin(["moneyline", "h2h"])].copy()
+
+        ml = rows[
+            rows["market_key"].astype(str).str.lower().isin(["moneyline", "h2h"])
+        ].copy()
+
         if ml.empty:
             continue
-        ml["snapshot_timestamp"] = pd.to_datetime(ml["snapshot_timestamp"], utc=True, errors="coerce")
-        for ts, group in ml.dropna(subset=["snapshot_timestamp"]).groupby("snapshot_timestamp", sort=True):
+
+        ml["snapshot_timestamp"] = pd.to_datetime(
+            ml["snapshot_timestamp"],
+            utc=True,
+            errors="coerce",
+        )
+
+        for ts, group in ml.dropna(subset=["snapshot_timestamp"]).groupby(
+            "snapshot_timestamp",
+            sort=True,
+        ):
             group = dedupe_snapshot(group.copy())
-            # Need both fighter sides to calculate a valid no-vig probability.
-            sides = {fighter_side(row, fight) for _, row in group.iterrows()}
+            sides = {
+                fighter_side(row, fight)
+                for _, row in group.iterrows()
+            }
+
             if not {"red", "blue"}.issubset(sides):
                 continue
-            snapshots[pd.Timestamp(ts)] = (commit, group.reset_index(drop=True))
-    return [(ts, snapshots[ts][0], snapshots[ts][1]) for ts in sorted(snapshots)]
 
+            snapshots[pd.Timestamp(ts)] = (
+                f"git_{commit[:12]}",
+                group.reset_index(drop=True),
+            )
+
+    return [
+        (ts, snapshots[ts][0], snapshots[ts][1])
+        for ts in sorted(snapshots)
+    ]
 
 def _find_side_row(snapshot: pd.DataFrame, fight: pd.Series, side: str) -> pd.Series | None:
     if snapshot.empty:
@@ -220,9 +345,9 @@ def audit_file(path: Path, master: pd.DataFrame, bookmaker: str) -> pd.DataFrame
                 "qualifies_strict": qualifies_strict,
                 "won": bool(model_row.get("won", False)),
                 "entry_refresh_timestamp": entry_ts,
-                "entry_refresh_id": f"git_{entry_commit[:12]}",
+                "entry_refresh_id": entry_commit,
                 "closing_refresh_timestamp": close_ts,
-                "closing_refresh_id": f"git_{close_commit[:12]}",
+                "closing_refresh_id": close_commit,
                 "observed_snapshot_count": len(sequence),
             })
 
