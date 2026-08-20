@@ -52,15 +52,20 @@ def predict_target(target_master, fsr_all, models, submission_scale, conversion_
         p = models["completion_models"][fam].predict_probability(x)
         f[f"pred_{fam}_attempted"] = mu
         f[f"pred_{fam}_landed"] = mu * p
+        # build_pair_frame expects historical columns, but forward prediction
+        # never consumes them. Zero placeholders prevent outcome leakage.
+        f[f"{fam}_attempted"] = 0.0
+        f[f"{fam}_landed"] = 0.0
     control, _, _ = models["control_direct_model"].predict(x, exposure)
     f["pred_qualified_control_inflicted_seconds"] = np.minimum(control, f["duration"].to_numpy(float))
+    f["qualified_control_inflicted_seconds"] = 0.0
     for _, g in f.groupby("fight_id"):
         idx = g.index
         total, duration = float(f.loc[idx, "pred_qualified_control_inflicted_seconds"].sum()), float(g["duration"].iloc[0])
         if total > duration:
             f.loc[idx, "pred_qualified_control_inflicted_seconds"] *= duration / total
-    f["standing_attempted"] = f["distance_attempted"] + f["clinch_attempted"]
-    f["standing_landed"] = f["distance_landed"] + f["clinch_landed"]
+    f["standing_attempted"] = 0.0
+    f["standing_landed"] = 0.0
     f["pred_standing_attempted"] = f["pred_distance_attempted"] + f["pred_clinch_attempted"]
     f["pred_standing_landed"] = f["pred_distance_landed"] + f["pred_clinch_landed"]
     f["pred_standing_rate_free_15m"] = np.maximum(models["standing_model"].predict(f[cols]), 0.0)
