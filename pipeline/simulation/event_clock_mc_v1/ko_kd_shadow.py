@@ -67,7 +67,7 @@ class ShadowKOKDCalibration:
     # It will be calibrated in replay rather than assumed final.
     # ------------------------------------------------------------------
 
-    kd_base_probability: float = 0.00559446
+    kd_base_probability: float = 0.00640
 
     kd_power_beta: float = 0.020741
     kd_attacker_age_beta: float = -0.030660
@@ -87,31 +87,36 @@ class ShadowKOKDCalibration:
     # ------------------------------------------------------------------
     # KO/TKO hazard
     #
-    # Historical terminal KO/TKO events / landed significant strike:
-    # ~0.4105% all history, ~0.3733% 2022-2026.
+    # Validated Event Clock shadow calibration.
     #
-    # Start near the recent rate.  Full replay will calibrate the intercept.
+    # Historical replay calibration selected:
+    #   KO base probability   = 0.00250
+    #   prior-KD beta         = +1.00
+    #   elapsed-time beta     = 0.00
     #
-    # Power and age coefficients are intentionally exposed separately.
-    # The prior-KD coefficient is NOT considered known yet.  It will be
-    # calibrated against historical KO incidence and KD->eventual-KO
-    # behavior in the full replay.
+    # Power and fighter-age terms were retained through the orthogonal
+    # ablation study.  Explicit elapsed time was removed because it reduced
+    # KO-side discrimination; prior KD remains the dynamic vulnerability
+    # state for subsequent landed strikes.
+    #
+    # On the 500-fight x 20-path fresh replay:
+    #   realized KD / landed sig = 0.56445%  (hist 0.55945%)
+    #   simulated KO share       = 33.60%    (hist 33.60%)
+    #   fighter KO-winner AUC    = 0.6338
     # ------------------------------------------------------------------
 
-    ko_base_probability: float = 0.00373261
+    ko_base_probability: float = 0.00250
 
-    # Starting ranking coefficients only.  These are deliberately modest.
-    # They are calibration parameters, not frozen empirical constants.
     ko_power_beta: float = 0.0200
     ko_attacker_age_beta: float = -0.0300
     ko_defender_age_beta: float = 0.0300
 
-    # Key shadow calibration parameter.
     ko_prior_kd_beta: float = 1.00
 
-    # Same philosophy as KD: let elapsed time represent the empirically
-    # observed decline first; map stamina explicitly only after validation.
-    ko_elapsed_minute_beta: float = -0.0500
+    # No independent elapsed-time KO penalty in the validated architecture.
+    ko_elapsed_minute_beta: float = 0.0
+
+    # Reserved for a future explicit Event Clock stamina study.
     ko_stamina_beta: float = 0.0
 
 
@@ -325,3 +330,5 @@ class EventClockShadowKOKDModel:
                 prior_defender_kds
             ),
         )
+
+

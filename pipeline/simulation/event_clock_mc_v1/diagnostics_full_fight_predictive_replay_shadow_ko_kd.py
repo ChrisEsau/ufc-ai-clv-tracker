@@ -958,6 +958,10 @@ def main():
         "+ independent SUB clock + Stage-10D judge"
     )
 
+    print(
+        "KO/KD calibration: validated empirical default"
+    )
+
     # -------------------------------------------------------------
     # Direct predictions
     # -------------------------------------------------------------
