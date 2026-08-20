@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import io
 import re
+import subprocess
 from pathlib import Path
 
 import numpy as np
@@ -10,6 +12,7 @@ import pandas as pd
 from pipeline.simulation.event_clock_mc_v1.run_event_or_fight import _slug
 
 HISTORY_PATH = Path("data/market/market_intelligence_history.parquet")
+GIT_MARKET_PATH = "data/market/market_outcomes.parquet"
 OUT_DIR = Path("data/diagnostics/event_clock_mc_v1/market_comparisons")
 
 
@@ -28,7 +31,7 @@ def implied_probability(odds: float) -> float:
 
 def load_market_history(path: Path, bookmaker: str) -> pd.DataFrame:
     if not path.exists():
-        raise RuntimeError(f"Market intelligence history not found: {path}")
+        return pd.DataFrame()
 
     frame = pd.read_parquet(path).copy()
     required = {
@@ -64,28 +67,22 @@ def load_market_history(path: Path, bookmaker: str) -> pd.DataFrame:
         & frame["refresh_timestamp"].notna()
         & frame["american_odds"].notna()
     ].copy()
-
-    if frame.empty:
-        raise RuntimeError(
-            f"No {bookmaker} rows found in market intelligence history: {path}"
-        )
-
     return frame
 
 
 def select_latest_fight_snapshot(history: pd.DataFrame, fight_id: str) -> pd.DataFrame:
+    if history.empty:
+        return pd.DataFrame()
     rows = history[history["fight_id"].astype(str) == str(fight_id)].copy()
     if rows.empty:
         return rows
 
-    # The history artifact is append-only. Once a fight is no longer offered,
-    # later refreshes contribute no rows for that fight, so the latest refresh
-    # containing the fight is its latest captured market state.
     latest = rows["refresh_timestamp"].max()
     rows = rows[rows["refresh_timestamp"] == latest].copy()
+    return dedupe_snapshot(rows)
 
-    # Deduplicate repeated canonical rows within the same refresh while keeping
-    # distinct outcomes/lines/books intact.
+
+def dedupe_snapshot(rows: pd.DataFrame) -> pd.DataFrame:
     dedup = [
         c
         for c in (
@@ -103,9 +100,143 @@ def select_latest_fight_snapshot(history: pd.DataFrame, fight_id: str) -> pd.Dat
         )
         if c in rows.columns
     ]
-    if dedup:
-        rows = rows.drop_duplicates(subset=dedup)
+    return rows.drop_duplicates(subset=dedup) if dedup else rows
+
+
+def _git_commits_before(cutoff: pd.Timestamp, max_commits: int = 120) -> list[str]:
+    cutoff_text = cutoff.tz_convert("UTC").strftime("%Y-%m-%dT%H:%M:%SZ")
+    cmd = [
+        "git",
+        "log",
+        "--all",
+        f"--before={cutoff_text}",
+        "--format=%H",
+        "--",
+        GIT_MARKET_PATH,
+    ]
+    proc = subprocess.run(cmd, check=True, capture_output=True, text=True)
+    commits = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+    return commits[:max_commits]
+
+
+def _read_git_market_outcomes(commit: str) -> pd.DataFrame | None:
+    proc = subprocess.run(
+        ["git", "show", f"{commit}:{GIT_MARKET_PATH}"],
+        check=False,
+        capture_output=True,
+    )
+    if proc.returncode != 0 or not proc.stdout:
+        return None
+    try:
+        return pd.read_parquet(io.BytesIO(proc.stdout))
+    except Exception:
+        return None
+
+
+def _match_git_fight_rows(frame: pd.DataFrame, fight: pd.Series, bookmaker: str) -> pd.DataFrame:
+    required = {"red_fighter", "blue_fighter", "american_odds", "market_key"}
+    if frame is None or frame.empty or not required.issubset(frame.columns):
+        return pd.DataFrame()
+
+    rows = frame.copy()
+    if "bookmaker" in rows.columns:
+        rows = rows[
+            rows["bookmaker"].astype(str).str.casefold() == bookmaker.casefold()
+        ].copy()
+    if rows.empty:
+        return rows
+
+    red = norm(fight["red"])
+    blue = norm(fight["blue"])
+    rnorm = rows["red_fighter"].map(norm)
+    bnorm = rows["blue_fighter"].map(norm)
+    direct = (rnorm == red) & (bnorm == blue)
+    reversed_order = (rnorm == blue) & (bnorm == red)
+    rows = rows[direct | reversed_order].copy()
+    if rows.empty:
+        return rows
+
+    if "snapshot_timestamp" in rows.columns:
+        rows["snapshot_timestamp"] = pd.to_datetime(
+            rows["snapshot_timestamp"], utc=True, errors="coerce"
+        )
+    else:
+        rows["snapshot_timestamp"] = pd.NaT
+
+    if "commence_time" in rows.columns:
+        commence = pd.to_datetime(rows["commence_time"], utc=True, errors="coerce")
+        valid = rows["snapshot_timestamp"].isna() | commence.isna() | (
+            rows["snapshot_timestamp"] < commence
+        )
+        rows = rows[valid].copy()
+    if rows.empty:
+        return rows
+
     return rows
+
+
+def _git_rows_to_history_shape(rows: pd.DataFrame, commit: str) -> pd.DataFrame:
+    out = pd.DataFrame(index=rows.index)
+    out["refresh_id"] = f"git_{commit[:12]}"
+    out["refresh_timestamp"] = rows.get("snapshot_timestamp")
+    out["bookmaker"] = rows.get("bookmaker")
+    out["fight_id"] = rows.get("fight_id")
+    out["market_key"] = rows.get("market_key")
+    out["market_display"] = rows.get("provider_market_name")
+    out["outcome_key"] = rows.get("outcome_key")
+    out["comparison_key"] = rows.get("outcome_join_key")
+    out["outcome_display"] = rows.get("outcome_label")
+    if "outcome_fighter_name" in rows.columns:
+        out["fighter_name"] = rows["outcome_fighter_name"]
+    else:
+        out["fighter_name"] = rows.get("provider_selection_name")
+    out["side"] = rows.get("side")
+    out["american_odds"] = pd.to_numeric(rows.get("american_odds"), errors="coerce")
+    out["implied_probability"] = pd.to_numeric(
+        rows.get("implied_probability"), errors="coerce"
+    )
+    out["decimal_odds"] = pd.to_numeric(rows.get("decimal_odds"), errors="coerce")
+    out["line"] = pd.to_numeric(rows.get("line"), errors="coerce")
+    out["provider_event_id"] = rows.get("provider_event_id")
+    out["provider_market_id"] = rows.get("provider_market_id")
+    out["provider_selection_id"] = rows.get("provider_selection_id")
+    out["provider_market_type_name"] = pd.NA
+    out["snapshot_source_path"] = f"git:{commit}:{GIT_MARKET_PATH}"
+    return out
+
+
+def select_git_fallback_snapshot(
+    fight: pd.Series,
+    bookmaker: str,
+    max_commits: int = 120,
+) -> pd.DataFrame:
+    event_date = pd.to_datetime(fight.get("event_date"), utc=True, errors="coerce")
+    if pd.isna(event_date):
+        return pd.DataFrame()
+    cutoff = event_date.normalize() + pd.Timedelta(days=1)
+
+    best_rows = pd.DataFrame()
+    best_ts = pd.NaT
+    best_commit = None
+
+    for commit in _git_commits_before(cutoff, max_commits=max_commits):
+        frame = _read_git_market_outcomes(commit)
+        rows = _match_git_fight_rows(frame, fight, bookmaker)
+        if rows.empty:
+            continue
+
+        ts = rows["snapshot_timestamp"].max()
+        if pd.isna(ts):
+            continue
+        if pd.isna(best_ts) or ts > best_ts:
+            best_ts = ts
+            best_rows = rows[rows["snapshot_timestamp"] == ts].copy()
+            best_commit = commit
+
+    if best_rows.empty or best_commit is None:
+        return pd.DataFrame()
+
+    return dedupe_snapshot(_git_rows_to_history_shape(best_rows, best_commit))
 
 
 def fighter_side(market_row: pd.Series, fight: pd.Series) -> str | None:
@@ -277,8 +408,8 @@ def no_vig_probability(snapshot: pd.DataFrame, row: pd.Series) -> float | None:
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=(
-            "Compare Event Clock MC output to append-only market intelligence "
-            "history captured by the Operations Market Refresh workflow."
+            "Compare Event Clock MC output to append-only market intelligence history, "
+            "with an automatic Git-history fallback for older cards."
         )
     )
     parser.add_argument("--summary", required=True, type=Path)
@@ -288,6 +419,7 @@ def main() -> None:
     parser.add_argument("--min-edge-pp", type=float, default=5.0)
     parser.add_argument("--min-ev", type=float, default=0.10)
     parser.add_argument("--output-prefix")
+    parser.add_argument("--git-max-commits", type=int, default=120)
     args = parser.parse_args()
 
     summary = pd.read_csv(args.summary)
@@ -298,22 +430,46 @@ def main() -> None:
         paths["fight_id"] = paths["fight_id"].astype(str)
 
     history = load_market_history(args.history, args.bookmaker)
-    print(f"market intelligence rows loaded ({args.bookmaker}): {len(history):,}")
-    print(f"refreshes: {history['refresh_id'].nunique():,}")
-    print(
-        "history range: "
-        f"{history['refresh_timestamp'].min()} through "
-        f"{history['refresh_timestamp'].max()}"
-    )
+    if not history.empty:
+        print(f"market intelligence rows loaded ({args.bookmaker}): {len(history):,}")
+        print(f"refreshes: {history['refresh_id'].nunique():,}")
+        print(
+            "history range: "
+            f"{history['refresh_timestamp'].min()} through "
+            f"{history['refresh_timestamp'].max()}"
+        )
+    else:
+        print("market intelligence history unavailable/empty; Git fallback enabled")
 
     records: list[dict] = []
     missing: list[str] = []
+    source_by_fight: list[dict] = []
 
     for _, fight in summary.iterrows():
         snapshot = select_latest_fight_snapshot(history, str(fight["fight_id"]))
+        source = "market_intelligence_history"
+        if snapshot.empty:
+            snapshot = select_git_fallback_snapshot(
+                fight,
+                args.bookmaker,
+                max_commits=args.git_max_commits,
+            )
+            source = "git_market_outcomes"
+
         if snapshot.empty:
             missing.append(f"{fight['red']} vs {fight['blue']}")
             continue
+
+        source_by_fight.append(
+            {
+                "fight_id": fight["fight_id"],
+                "red": fight["red"],
+                "blue": fight["blue"],
+                "source": source,
+                "refresh_timestamp": snapshot["refresh_timestamp"].max(),
+                "refresh_id": snapshot["refresh_id"].iloc[0],
+            }
+        )
 
         for _, market_row in snapshot.iterrows():
             p_model, bet_key = model_probability(market_row, fight, paths)
@@ -346,6 +502,7 @@ def main() -> None:
                     "red": fight["red"],
                     "blue": fight["blue"],
                     "bookmaker": args.bookmaker,
+                    "market_source": source,
                     "refresh_id": market_row["refresh_id"],
                     "refresh_timestamp": market_row["refresh_timestamp"],
                     "market_key": market_row["market_key"],
@@ -377,7 +534,7 @@ def main() -> None:
     out = pd.DataFrame(records)
     if out.empty:
         raise RuntimeError(
-            "No comparable market-intelligence rows found for this Event Clock output."
+            "No comparable market rows found in market intelligence history or Git fallback."
         )
 
     dedup = [
@@ -414,13 +571,10 @@ def main() -> None:
         for name in missing:
             print("  -", name)
 
-    refreshes = (
-        out[["fight_id", "red", "blue", "refresh_timestamp"]]
-        .drop_duplicates()
-        .sort_values("refresh_timestamp")
-    )
-    print("\nselected market refresh by fight:")
-    print(refreshes.to_string(index=False))
+    sources = pd.DataFrame(source_by_fight)
+    if not sources.empty:
+        print("\nselected market source by fight:")
+        print(sources.sort_values(["refresh_timestamp", "red"]).to_string(index=False))
 
     display = out.sort_values(
         ["qualifies_strict", "expected_roi"], ascending=[False, False]
