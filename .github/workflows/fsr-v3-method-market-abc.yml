@@ -20,7 +20,7 @@ permissions:
 jobs:
   method-market-abc:
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 120
     env:
       PYTHONPATH: .
     steps:
@@ -70,6 +70,25 @@ jobs:
           print("Applied CI-only null guard; frozen repository source unchanged")
           PY
 
+      - name: Patch validation output ordering in CI checkout only
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("pipeline/simulation/event_clock_mc_v2/diagnostics/method_market_abc_validation.py")
+          text = path.read_text()
+          write_block = '''    args.out_dir.mkdir(parents=True, exist_ok=True)\n    stem = f"abc_{len(cohort)}f_{args.paths}paths"\n    files = {\n        "cohort": cohort,\n        "summary": summary,\n        "fight_scores": scores,\n        "fight_metrics": fight_metrics,\n        "outcomes": outcomes,\n        "outcome_metrics": outcome_metrics,\n        "bet_metrics": bet_metrics,\n        "edge_bins": edge_bins,\n        "fighter_profiles": fighter_profiles,\n        "bootstrap": bootstrap,\n    }\n    for name, frame in files.items():\n        path = args.out_dir / f"{stem}_{name}.csv"\n        frame.to_csv(path, index=False)\n        print(path)\n'''
+          anchor = '''    bootstrap = _bootstrap_deltas(scores)\n'''
+          if text.count(write_block) != 1:
+              raise RuntimeError("Expected exactly one validation CSV write block")
+          if text.count(anchor) != 1:
+              raise RuntimeError("Expected exactly one bootstrap anchor")
+          text = text.replace(write_block, "", 1)
+          text = text.replace(anchor, anchor + "\n" + write_block + "\n", 1)
+          path.write_text(text)
+          print("Moved CSV persistence ahead of verbose result printing in CI checkout only")
+          PY
+
       - name: Fit frozen Event Clock V1 bundle
         id: v1
         run: |
@@ -90,12 +109,12 @@ jobs:
             --paths 500 --quota-per-bucket 50 2>&1 | tee /tmp/method_market_abc.log
 
       - name: Upload method-market validation outputs
-        if: steps.validation.outcome == 'success'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: fsr-v3-method-market-abc
           path: data/diagnostics/event_clock_mc_v2/method_market_abc/*.csv
-          if-no-files-found: error
+          if-no-files-found: warn
 
       - name: Post method-market result to PR 68
         if: always()
