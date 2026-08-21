@@ -234,18 +234,106 @@ def assemble_prefight() -> tuple[pd.DataFrame, pd.DataFrame]:
     )
 
 
+def _latest_post_rating(
+    history: pd.DataFrame,
+    rating_name: str,
+    trait: str | None = None,
+) -> pd.DataFrame:
+    """Return each fighter's state after their most recent observed fight."""
+    selected = history if trait is None else history[history["trait"] == trait]
+    selected = (
+        selected.sort_values(["event_date", "fight_id"])
+        .groupby("fighter_id", as_index=False)
+        .tail(1)[["fighter_id", "post_rating"]]
+        .rename(columns={"post_rating": rating_name})
+    )
+    if selected["fighter_id"].duplicated().any():
+        raise ValueError(f"duplicate latest post-fight state for {rating_name}")
+    return selected
+
+
+def _final_global_value(history: pd.DataFrame, column: str) -> float:
+    ordered = history.sort_values(["event_date", "fight_id"])
+    if ordered.empty:
+        raise ValueError(f"cannot publish final global value from empty {column} history")
+    return float(ordered.iloc[-1][column])
+
+
 def assemble_latest(prefight: pd.DataFrame) -> pd.DataFrame:
-    """Overlay newest leakage-safe V3 prefight states onto frozen V2 latest."""
+    """Overlay true post-most-recent-fight V3 states onto frozen V2 latest.
+
+    Historical prefight snapshots intentionally remain pre-fight for leakage-safe
+    replay.  The operational latest table is different: it must include each
+    fighter's most recently observed fight.  Therefore validated V3 traits are
+    taken from the final ``post_rating`` row for that fighter, not from the last
+    prefight snapshot.
+    """
     if not FSR_V2_LATEST_PATH.is_file():
         raise FileNotFoundError(f"missing frozen FSR V2 latest profiles: {FSR_V2_LATEST_PATH}")
     base = pd.read_parquet(FSR_V2_LATEST_PATH).copy()
     base["fighter_id"] = base["fighter_id"].astype(str)
 
-    latest_v3 = (
-        prefight.sort_values(["event_date", "fight_id"])
-        .groupby("fighter_id", as_index=False)
-        .tail(1)
-    )[["fighter_id"] + UPDATED_COLUMNS]
+    td_tendency = _read_history(TAKEDOWN_TENDENCY_HISTORY_PATH)
+    td_suppression = _read_history(TAKEDOWN_SUPPRESSION_HISTORY_PATH)
+    td_effectiveness = _read_history(TAKEDOWN_EFFECTIVENESS_HISTORY_PATH)
+    standing_tendency = _read_history(STANDING_TENDENCY_HISTORY_PATH)
+    standing_suppression = _read_history(STANDING_SUPPRESSION_HISTORY_PATH)
+    standing_effectiveness = _read_history(STANDING_EFFECTIVENESS_HISTORY_PATH)
+    ground_tendency = _read_history(GROUND_TENDENCY_HISTORY_PATH)
+    ground_suppression = _read_history(GROUND_SUPPRESSION_HISTORY_PATH)
+    ground_effectiveness = _read_history(GROUND_EFFECTIVENESS_HISTORY_PATH)
+
+    latest_v3 = _latest_post_rating(td_tendency, "takedown_tendency")
+    for replacement in (
+        _latest_post_rating(td_suppression, "takedown_suppression"),
+        _latest_post_rating(td_effectiveness, "takedown_offense", "takedown_offense"),
+        _latest_post_rating(td_effectiveness, "takedown_defense", "takedown_defense"),
+        _latest_post_rating(standing_tendency, "standing_striking_tendency"),
+        _latest_post_rating(standing_suppression, "standing_striking_suppression"),
+        _latest_post_rating(
+            standing_effectiveness,
+            "standing_striking_offense",
+            "standing_striking_offense",
+        ),
+        _latest_post_rating(
+            standing_effectiveness,
+            "standing_striking_defense",
+            "standing_striking_defense",
+        ),
+        _latest_post_rating(ground_tendency, "ground_striking_tendency"),
+        _latest_post_rating(ground_suppression, "ground_striking_suppression"),
+        _latest_post_rating(ground_effectiveness, "ground_striking_offense"),
+    ):
+        latest_v3 = latest_v3.merge(
+            replacement,
+            on="fighter_id",
+            how="outer",
+            validate="one_to_one",
+        )
+
+    # Global baselines are population quantities, so publish the final
+    # chronological population value consistently for every fighter rather than
+    # freezing each fighter to the baseline from their own last appearance.
+    latest_v3["takedown_completion_baseline"] = _final_global_value(
+        td_effectiveness,
+        "population_baseline",
+    )
+    latest_v3["standing_accuracy_baseline"] = _final_global_value(
+        standing_effectiveness,
+        "population_baseline",
+    )
+    latest_v3["ground_accuracy_baseline"] = _final_global_value(
+        ground_effectiveness,
+        "population_baseline",
+    )
+    latest_v3["ground_striking_burst_baseline"] = _final_global_value(
+        ground_tendency,
+        "population_burst",
+    )
+    latest_v3["ground_striking_population_slope_15m"] = _final_global_value(
+        ground_tendency,
+        "population_rate_15m",
+    )
 
     base = base.drop(
         columns=[
@@ -260,6 +348,8 @@ def assemble_latest(prefight: pd.DataFrame) -> pd.DataFrame:
     ]
     if missing:
         raise ValueError(f"FSR V3 latest overlay has missing validated fields: {missing}")
+    if "ground_striking_defense" in latest.columns:
+        raise AssertionError("rejected ground_striking_defense leaked into FSR V3 latest")
     return latest
 
 
