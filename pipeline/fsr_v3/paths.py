@@ -12,6 +12,14 @@ FSR_V3_PREFIGHT_SNAPSHOTS_PATH = FSR_V3_DIR / "fsr_v3_prefight_snapshots.parquet
 FSR_V3_LATEST_PATH = FSR_V3_DIR / "fsr_v3_latest.parquet"
 FSR_V3_PREFIGHT_UNCERTAINTY_PATH = FSR_V3_DIR / "fsr_v3_prefight_uncertainty.parquet"
 
+TAKEDOWN_TENDENCY_HISTORY_PATH = FSR_V3_HISTORY_DIR / "takedown_tendency.parquet"
+TAKEDOWN_SUPPRESSION_HISTORY_PATH = FSR_V3_HISTORY_DIR / "takedown_suppression.parquet"
+TAKEDOWN_EFFECTIVENESS_HISTORY_PATH = FSR_V3_HISTORY_DIR / "takedown_effectiveness.parquet"
+
+STANDING_TENDENCY_HISTORY_PATH = FSR_V3_HISTORY_DIR / "standing_striking_tendency.parquet"
+STANDING_SUPPRESSION_HISTORY_PATH = FSR_V3_HISTORY_DIR / "standing_striking_suppression.parquet"
+STANDING_EFFECTIVENESS_HISTORY_PATH = FSR_V3_HISTORY_DIR / "standing_striking_effectiveness.parquet"
+
 GROUND_TENDENCY_HISTORY_PATH = FSR_V3_HISTORY_DIR / "ground_striking_tendency.parquet"
 GROUND_SUPPRESSION_HISTORY_PATH = FSR_V3_HISTORY_DIR / "ground_striking_suppression.parquet"
 GROUND_EFFECTIVENESS_HISTORY_PATH = FSR_V3_HISTORY_DIR / "ground_striking_effectiveness.parquet"
