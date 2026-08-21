@@ -12,23 +12,31 @@ from pipeline.fsr_v3.paths import (
     GROUND_TENDENCY_HISTORY_PATH,
 )
 from pipeline.fsr_v3.publish import publish
-from pipeline.fsr_v3.replay.ground import replay_ground_family
+from pipeline.fsr_v3.replay.ground import (
+    build_ground_fighter_fights,
+    replay_ground_suppression,
+    replay_ground_tendency,
+)
+from pipeline.fsr_v3.replay.ground_effectiveness import replay_ground_effectiveness
 
 
 def build_ground(*, publish_snapshots: bool = True) -> None:
     config = FSRV3Config()
-    result = replay_ground_family(config=config)
+    fights = build_ground_fighter_fights()
+    tendency = replay_ground_tendency(fights, config)
+    suppression = replay_ground_suppression(tendency, config)
+    effectiveness = replay_ground_effectiveness(fights, config)
 
     FSR_V3_HISTORY_DIR.mkdir(parents=True, exist_ok=True)
-    result.tendency.to_parquet(GROUND_TENDENCY_HISTORY_PATH, index=False)
-    result.suppression.to_parquet(GROUND_SUPPRESSION_HISTORY_PATH, index=False)
-    result.effectiveness.to_parquet(GROUND_EFFECTIVENESS_HISTORY_PATH, index=False)
+    tendency.to_parquet(GROUND_TENDENCY_HISTORY_PATH, index=False)
+    suppression.to_parquet(GROUND_SUPPRESSION_HISTORY_PATH, index=False)
+    effectiveness.to_parquet(GROUND_EFFECTIVENESS_HISTORY_PATH, index=False)
 
     print(
         "FSR V3 ground histories written: "
-        f"tendency={len(result.tendency):,}, "
-        f"suppression={len(result.suppression):,}, "
-        f"effectiveness={len(result.effectiveness):,}"
+        f"tendency={len(tendency):,}, "
+        f"suppression={len(suppression):,}, "
+        f"effectiveness={len(effectiveness):,}"
     )
 
     if publish_snapshots:
