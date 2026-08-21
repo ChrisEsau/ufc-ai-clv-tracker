@@ -3,7 +3,7 @@
 The model classes, regularization constants, hurdle/control architecture, and
 standing-free-time machinery are imported unchanged from frozen Event Clock V1.
 Only the input feature builder/feature columns and V3 submission-baseline source
-differ.  A V1 bundle must never be used with these V3 feature semantics.
+differ. A V1 bundle must never be used with these V3 feature semantics.
 """
 
 from __future__ import annotations
@@ -46,6 +46,58 @@ from pipeline.simulation.event_clock_mc_v2.feature_builder import (
 )
 
 
+def _add_fitted_direct_predictions(
+    train: pd.DataFrame,
+    x: np.ndarray,
+    exposure: np.ndarray,
+    attempt_models: dict,
+    completion_models: dict,
+    control_direct_model,
+) -> pd.DataFrame:
+    """Attach the in-sample direct predictions required by V1 pair builders.
+
+    Frozen V1 ``fit_inference_models`` receives a training frame that already
+    came through ``prepare_direct_predictions`` and therefore already contains
+    ``pred_*`` columns. ECV2 builds its V3 training frame directly from
+    historical features/targets, so those fitted prediction columns must be
+    created here before calling the unchanged V1 ``build_pair_frame`` helper.
+    """
+    fitted = train.copy()
+
+    for fam in FAMILIES:
+        mu = attempt_models[fam].predict(x, exposure)
+        p = completion_models[fam].predict_probability(x)
+        fitted[f"pred_{fam}_attempted"] = mu
+        fitted[f"pred_{fam}_landed"] = mu * p
+
+    control, _, _ = control_direct_model.predict(x, exposure)
+    fitted["pred_qualified_control_inflicted_seconds"] = np.minimum(
+        control,
+        fitted["duration"].to_numpy(float),
+    )
+
+    # Preserve the same physical fight-level cap used during forward inference:
+    # red + blue predicted control cannot exceed total fight duration.
+    for _, group in fitted.groupby("fight_id"):
+        idx = group.index
+        total = float(
+            fitted.loc[idx, "pred_qualified_control_inflicted_seconds"].sum()
+        )
+        duration = float(group["duration"].iloc[0])
+        if total > duration and total > 0.0:
+            fitted.loc[idx, "pred_qualified_control_inflicted_seconds"] *= (
+                duration / total
+            )
+
+    fitted["pred_standing_attempted"] = (
+        fitted["pred_distance_attempted"] + fitted["pred_clinch_attempted"]
+    )
+    fitted["pred_standing_landed"] = (
+        fitted["pred_distance_landed"] + fitted["pred_clinch_landed"]
+    )
+    return fitted
+
+
 def fit_inference_models_v3(train: pd.DataFrame) -> dict:
     """Fit the frozen V1 direct-model architecture on V3 semantic features."""
     train = train.copy()
@@ -86,7 +138,19 @@ def fit_inference_models_v3(train: pd.DataFrame) -> dict:
         for fam in ("td", "ground")
     }
 
-    standing_train = train.copy()
+    # V1's pair/control models are trained from fitted direct predictions.
+    # Our V3 frame did not previously contain those columns, which caused the
+    # bundle build to fail at build_pair_frame().
+    fitted_train = _add_fitted_direct_predictions(
+        train,
+        x,
+        exposure,
+        attempt_models,
+        completion_models,
+        control_direct_model,
+    )
+
+    standing_train = fitted_train.copy()
     standing_train["standing_attempted"] = (
         standing_train["distance_attempted"] + standing_train["clinch_attempted"]
     )
