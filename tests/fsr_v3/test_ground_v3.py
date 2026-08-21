@@ -5,10 +5,10 @@ import pandas as pd
 
 from pipeline.fsr_v3.config import FSRV3Config
 from pipeline.fsr_v3.replay.ground import (
-    replay_ground_effectiveness,
     replay_ground_suppression,
     replay_ground_tendency,
 )
+from pipeline.fsr_v3.replay.ground_effectiveness import replay_ground_effectiveness
 
 
 def _fighter_fights():
