@@ -7,11 +7,13 @@ on:
     paths:
       - "pipeline/fsr_v3/research/power_structural_study.py"
       - "pipeline/fsr_v3/research/power_sequential_shrinkage_study.py"
+      - "pipeline/fsr_v3/research/power_consequence_validation.py"
       - ".github/workflows/fsr-v3-power-study.yml"
   pull_request:
     paths:
       - "pipeline/fsr_v3/research/power_structural_study.py"
       - "pipeline/fsr_v3/research/power_sequential_shrinkage_study.py"
+      - "pipeline/fsr_v3/research/power_consequence_validation.py"
       - ".github/workflows/fsr-v3-power-study.yml"
   workflow_dispatch:
 
@@ -40,6 +42,7 @@ jobs:
         run: |
           python -m py_compile pipeline/fsr_v3/research/power_structural_study.py
           python -m py_compile pipeline/fsr_v3/research/power_sequential_shrinkage_study.py
+          python -m py_compile pipeline/fsr_v3/research/power_consequence_validation.py
 
       - name: Build frozen FSR V2 snapshots for comparison
         run: |
@@ -51,6 +54,9 @@ jobs:
 
       - name: Run sequential shrinkage study
         run: python -m pipeline.fsr_v3.research.power_sequential_shrinkage_study
+
+      - name: Run final consequence validation
+        run: python -m pipeline.fsr_v3.research.power_consequence_validation
 
       - name: Upload power study outputs
         uses: actions/upload-artifact@v4
