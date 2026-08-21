@@ -35,6 +35,18 @@ jobs:
       - name: Compile diagnostic
         run: python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/fsr_v2_v3_interface_audit.py
 
+      - name: Build frozen FSR V2 histories
+        id: fsr2build
+        run: |
+          set -o pipefail
+          python -m pipeline.fsr_v2.build --all 2>&1 | tee /tmp/fsr2build.log
+
+      - name: Publish frozen FSR V2 snapshots
+        id: fsr2pub
+        run: |
+          set -o pipefail
+          python -m pipeline.fsr_v2.publish 2>&1 | tee /tmp/fsr2pub.log
+
       - name: Build canonical FSR V3
         id: fsr3
         run: |
@@ -72,6 +84,8 @@ jobs:
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
+          FSR2_BUILD_STATUS: ${{ steps.fsr2build.outcome }}
+          FSR2_PUBLISH_STATUS: ${{ steps.fsr2pub.outcome }}
           FSR3_STATUS: ${{ steps.fsr3.outcome }}
           V1_STATUS: ${{ steps.v1.outcome }}
           V2_STATUS: ${{ steps.v2.outcome }}
@@ -82,6 +96,8 @@ jobs:
             echo
             echo "Measurement only — no fight mechanics changed."
             echo
+            echo "- FSR V2 history build: **${FSR2_BUILD_STATUS}**"
+            echo "- FSR V2 snapshot publication: **${FSR2_PUBLISH_STATUS}**"
             echo "- FSR V3 build: **${FSR3_STATUS}**"
             echo "- ECV1 bundle build: **${V1_STATUS}**"
             echo "- ECV2 bundle build: **${V2_STATUS}**"
@@ -101,6 +117,8 @@ jobs:
               if [ -f /tmp/v2.log ]; then tail -n 120 /tmp/v2.log;
               elif [ -f /tmp/v1.log ]; then tail -n 120 /tmp/v1.log;
               elif [ -f /tmp/fsr3.log ]; then tail -n 120 /tmp/fsr3.log;
+              elif [ -f /tmp/fsr2pub.log ]; then tail -n 120 /tmp/fsr2pub.log;
+              elif [ -f /tmp/fsr2build.log ]; then tail -n 120 /tmp/fsr2build.log;
               else echo 'No build log was produced.'; fi
               echo '```'
               echo '</details>'
