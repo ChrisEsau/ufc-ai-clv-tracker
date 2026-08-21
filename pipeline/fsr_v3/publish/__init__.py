@@ -1,14 +1,18 @@
-"""Publish FSR V3 as a safe overlay on the frozen FSR V2 snapshot.
+"""Publish FSR V3 as a safe overlay on the frozen FSR V2 snapshots.
 
-At this stage only the fully validated ground-striking family is replaced.
-Every other field is copied verbatim from FSR V2.  The rejected V2
-``ground_striking_defense`` field is explicitly removed so downstream V3 code
-cannot accidentally continue using it.
+V3 replaces only trait families that were revalidated in the shrinkage and
+variance study:
+
+- takedown tendency / suppression / paired effectiveness
+- standing striking tendency / suppression / paired effectiveness
+- ground striking tendency / suppression / attacker-only effectiveness
+
+Every untested family remains copied verbatim from frozen FSR V2.  The rejected
+``ground_striking_defense`` field is explicitly removed.
 """
 
 from __future__ import annotations
 
-import numpy as np
 import pandas as pd
 
 from pipeline.common.paths import FSR_V2_LATEST_PATH, FSR_V2_PREFIGHT_SNAPSHOTS_PATH
@@ -19,9 +23,46 @@ from pipeline.fsr_v3.paths import (
     GROUND_EFFECTIVENESS_HISTORY_PATH,
     GROUND_SUPPRESSION_HISTORY_PATH,
     GROUND_TENDENCY_HISTORY_PATH,
+    STANDING_EFFECTIVENESS_HISTORY_PATH,
+    STANDING_SUPPRESSION_HISTORY_PATH,
+    STANDING_TENDENCY_HISTORY_PATH,
+    TAKEDOWN_EFFECTIVENESS_HISTORY_PATH,
+    TAKEDOWN_SUPPRESSION_HISTORY_PATH,
+    TAKEDOWN_TENDENCY_HISTORY_PATH,
 )
 
 KEYS = ["event_date", "fight_id", "fighter_id"]
+
+UPDATED_COLUMNS = [
+    "takedown_tendency",
+    "takedown_suppression",
+    "takedown_offense",
+    "takedown_defense",
+    "takedown_completion_baseline",
+    "standing_striking_tendency",
+    "standing_striking_suppression",
+    "standing_striking_offense",
+    "standing_striking_defense",
+    "standing_accuracy_baseline",
+    "ground_striking_tendency",
+    "ground_striking_suppression",
+    "ground_striking_offense",
+    "ground_accuracy_baseline",
+    "ground_striking_burst_baseline",
+    "ground_striking_population_slope_15m",
+]
+
+HISTORY_PATHS = (
+    TAKEDOWN_TENDENCY_HISTORY_PATH,
+    TAKEDOWN_SUPPRESSION_HISTORY_PATH,
+    TAKEDOWN_EFFECTIVENESS_HISTORY_PATH,
+    STANDING_TENDENCY_HISTORY_PATH,
+    STANDING_SUPPRESSION_HISTORY_PATH,
+    STANDING_EFFECTIVENESS_HISTORY_PATH,
+    GROUND_TENDENCY_HISTORY_PATH,
+    GROUND_SUPPRESSION_HISTORY_PATH,
+    GROUND_EFFECTIVENESS_HISTORY_PATH,
+)
 
 
 def _read_history(path):
@@ -36,17 +77,66 @@ def _read_history(path):
 
 def _replacement(history, rating_name, extra_columns=None):
     columns = KEYS + ["pre_rating"] + list((extra_columns or {}).keys())
-    selected = history[columns].copy().rename(columns={"pre_rating": rating_name, **(extra_columns or {})})
-    duplicate = selected.duplicated(KEYS)
-    if duplicate.any():
+    selected = history[columns].copy().rename(
+        columns={"pre_rating": rating_name, **(extra_columns or {})}
+    )
+    if selected.duplicated(KEYS).any():
         raise ValueError(f"duplicate V3 replacement rows for {rating_name}")
     return selected
+
+
+def _paired_replacement(
+    history: pd.DataFrame,
+    offense_trait: str,
+    defense_trait: str,
+    offense_column: str,
+    defense_column: str,
+    baseline_column: str,
+) -> pd.DataFrame:
+    offense = history[history["trait"] == offense_trait][
+        KEYS + ["pre_rating", "population_baseline"]
+    ].copy()
+    defense = history[history["trait"] == defense_trait][
+        KEYS + ["pre_rating"]
+    ].copy()
+    offense = offense.rename(
+        columns={
+            "pre_rating": offense_column,
+            "population_baseline": baseline_column,
+        }
+    )
+    defense = defense.rename(columns={"pre_rating": defense_column})
+    if offense.duplicated(KEYS).any() or defense.duplicated(KEYS).any():
+        raise ValueError(f"duplicate paired V3 rows for {offense_trait}/{defense_trait}")
+    return offense.merge(defense, on=KEYS, how="inner", validate="one_to_one")
+
+
+def _uncertainty_frame(history: pd.DataFrame) -> pd.DataFrame:
+    columns = KEYS + [
+        "trait",
+        "pre_rating",
+        "pre_posterior_sd",
+        "variance_multiplier",
+        "sampling_enabled",
+    ]
+    u = history[columns].copy().rename(
+        columns={
+            "pre_rating": "posterior_mean",
+            "pre_posterior_sd": "posterior_sd",
+        }
+    )
+    if "posterior_family" in history.columns:
+        u["posterior_family"] = history["posterior_family"].values
+    else:
+        positive = history["trait"].str.contains("tendency|suppression", regex=True)
+        u["posterior_family"] = positive.map({True: "positive_grid", False: "normal_grid"})
+    return u
 
 
 def assemble_prefight() -> tuple[pd.DataFrame, pd.DataFrame]:
     if not FSR_V2_PREFIGHT_SNAPSHOTS_PATH.is_file():
         raise FileNotFoundError(
-            "FSR V3 publication requires the frozen FSR V2 prefight snapshot: "
+            "FSR V3 publication requires frozen FSR V2 prefight snapshots: "
             f"{FSR_V2_PREFIGHT_SNAPSHOTS_PATH}"
         )
 
@@ -55,34 +145,52 @@ def assemble_prefight() -> tuple[pd.DataFrame, pd.DataFrame]:
     base["fight_id"] = base["fight_id"].astype(str)
     base["fighter_id"] = base["fighter_id"].astype(str)
 
-    tendency = _read_history(GROUND_TENDENCY_HISTORY_PATH)
-    suppression = _read_history(GROUND_SUPPRESSION_HISTORY_PATH)
-    effectiveness = _read_history(GROUND_EFFECTIVENESS_HISTORY_PATH)
+    td_tendency = _read_history(TAKEDOWN_TENDENCY_HISTORY_PATH)
+    td_suppression = _read_history(TAKEDOWN_SUPPRESSION_HISTORY_PATH)
+    td_effectiveness = _read_history(TAKEDOWN_EFFECTIVENESS_HISTORY_PATH)
+    standing_tendency = _read_history(STANDING_TENDENCY_HISTORY_PATH)
+    standing_suppression = _read_history(STANDING_SUPPRESSION_HISTORY_PATH)
+    standing_effectiveness = _read_history(STANDING_EFFECTIVENESS_HISTORY_PATH)
+    ground_tendency = _read_history(GROUND_TENDENCY_HISTORY_PATH)
+    ground_suppression = _read_history(GROUND_SUPPRESSION_HISTORY_PATH)
+    ground_effectiveness = _read_history(GROUND_EFFECTIVENESS_HISTORY_PATH)
 
-    # Remove every old V2 ground field that V3 redefines or rejects.
-    drop = [
-        "ground_striking_tendency",
-        "ground_striking_suppression",
-        "ground_striking_offense",
-        "ground_striking_defense",
-        "ground_accuracy_baseline",
-        "ground_striking_burst_baseline",
-        "ground_striking_population_slope_15m",
-    ]
-    base = base.drop(columns=[c for c in drop if c in base.columns])
+    # Remove old V2 fields that V3 redefines or rejects.
+    drop = UPDATED_COLUMNS + ["ground_striking_defense"]
+    base = base.drop(columns=[column for column in drop if column in base.columns])
 
     replacements = [
+        _replacement(td_tendency, "takedown_tendency"),
+        _replacement(td_suppression, "takedown_suppression"),
+        _paired_replacement(
+            td_effectiveness,
+            "takedown_offense",
+            "takedown_defense",
+            "takedown_offense",
+            "takedown_defense",
+            "takedown_completion_baseline",
+        ),
+        _replacement(standing_tendency, "standing_striking_tendency"),
+        _replacement(standing_suppression, "standing_striking_suppression"),
+        _paired_replacement(
+            standing_effectiveness,
+            "standing_striking_offense",
+            "standing_striking_defense",
+            "standing_striking_offense",
+            "standing_striking_defense",
+            "standing_accuracy_baseline",
+        ),
         _replacement(
-            tendency,
+            ground_tendency,
             "ground_striking_tendency",
             {
                 "population_burst": "ground_striking_burst_baseline",
                 "population_rate_15m": "ground_striking_population_slope_15m",
             },
         ),
-        _replacement(suppression, "ground_striking_suppression"),
+        _replacement(ground_suppression, "ground_striking_suppression"),
         _replacement(
-            effectiveness,
+            ground_effectiveness,
             "ground_striking_offense",
             {"population_baseline": "ground_accuracy_baseline"},
         ),
@@ -92,40 +200,30 @@ def assemble_prefight() -> tuple[pd.DataFrame, pd.DataFrame]:
     for replacement in replacements:
         out = out.merge(replacement, on=KEYS, how="left", validate="one_to_one")
 
-    required = [
-        "ground_striking_tendency",
-        "ground_striking_suppression",
-        "ground_striking_offense",
-        "ground_accuracy_baseline",
-        "ground_striking_burst_baseline",
+    missing = [
+        name for name in UPDATED_COLUMNS
+        if name not in out.columns or out[name].isna().any()
     ]
-    missing = [name for name in required if name not in out or out[name].isna().any()]
     if missing:
-        raise ValueError(f"FSR V3 ground overlay has missing values: {missing}")
+        raise ValueError(f"FSR V3 overlay has missing validated fields: {missing}")
     if "ground_striking_defense" in out.columns:
         raise AssertionError("rejected ground_striking_defense leaked into FSR V3")
 
-    uncertainty_frames = []
-    for history in (tendency, suppression, effectiveness):
-        u = history[
-            KEYS
-            + [
-                "trait",
-                "pre_rating",
-                "pre_posterior_sd",
-                "variance_multiplier",
-                "sampling_enabled",
-            ]
-        ].copy()
-        u = u.rename(
-            columns={
-                "pre_rating": "posterior_mean",
-                "pre_posterior_sd": "posterior_sd",
-            }
-        )
-        uncertainty_frames.append(u)
-
-    uncertainty = pd.concat(uncertainty_frames, ignore_index=True)
+    histories = (
+        td_tendency,
+        td_suppression,
+        td_effectiveness,
+        standing_tendency,
+        standing_suppression,
+        standing_effectiveness,
+        ground_tendency,
+        ground_suppression,
+        ground_effectiveness,
+    )
+    uncertainty = pd.concat(
+        [_uncertainty_frame(history) for history in histories],
+        ignore_index=True,
+    )
     uncertainty = uncertainty.sort_values(KEYS + ["trait"]).reset_index(drop=True)
     if uncertainty[KEYS + ["trait"]].duplicated().any():
         raise ValueError("duplicate FSR V3 uncertainty rows")
@@ -137,39 +235,40 @@ def assemble_prefight() -> tuple[pd.DataFrame, pd.DataFrame]:
 
 
 def assemble_latest(prefight: pd.DataFrame) -> pd.DataFrame:
-    """Build a conservative latest table from the newest published prefight row.
-
-    This intentionally preserves all non-ground V2 latest fields and replaces
-    the validated ground family with the newest leakage-safe V3 prefight state.
-    A later V3 phase can add a dedicated post-final-event publisher if needed.
-    """
+    """Overlay newest leakage-safe V3 prefight states onto frozen V2 latest."""
     if not FSR_V2_LATEST_PATH.is_file():
         raise FileNotFoundError(f"missing frozen FSR V2 latest profiles: {FSR_V2_LATEST_PATH}")
     base = pd.read_parquet(FSR_V2_LATEST_PATH).copy()
     base["fighter_id"] = base["fighter_id"].astype(str)
 
-    latest_ground = (
+    latest_v3 = (
         prefight.sort_values(["event_date", "fight_id"])
         .groupby("fighter_id", as_index=False)
         .tail(1)
-    )
-    ground_columns = [
-        "fighter_id",
-        "ground_striking_tendency",
-        "ground_striking_suppression",
-        "ground_striking_offense",
-        "ground_accuracy_baseline",
-        "ground_striking_burst_baseline",
-        "ground_striking_population_slope_15m",
-    ]
-    latest_ground = latest_ground[ground_columns]
+    )[["fighter_id"] + UPDATED_COLUMNS]
 
-    drop = [c for c in ground_columns[1:] + ["ground_striking_defense"] if c in base.columns]
-    base = base.drop(columns=drop)
-    return base.merge(latest_ground, on="fighter_id", how="left", validate="one_to_one")
+    base = base.drop(
+        columns=[
+            column for column in UPDATED_COLUMNS + ["ground_striking_defense"]
+            if column in base.columns
+        ]
+    )
+    latest = base.merge(latest_v3, on="fighter_id", how="left", validate="one_to_one")
+    missing = [
+        name for name in UPDATED_COLUMNS
+        if name not in latest.columns or latest[name].isna().any()
+    ]
+    if missing:
+        raise ValueError(f"FSR V3 latest overlay has missing validated fields: {missing}")
+    return latest
 
 
 def publish() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    for path in HISTORY_PATHS:
+        if not path.is_file():
+            raise FileNotFoundError(
+                f"canonical FSR V3 publication requires all validated histories; missing {path}"
+            )
     prefight, uncertainty = assemble_prefight()
     latest = assemble_latest(prefight)
     FSR_V3_PREFIGHT_SNAPSHOTS_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -183,7 +282,7 @@ def publish() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
 def main() -> None:
     prefight, latest, uncertainty = publish()
     print(
-        f"published FSR V3 ground overlay: prefight={len(prefight):,}, "
+        f"published canonical FSR V3 overlay: prefight={len(prefight):,}, "
         f"latest={len(latest):,}, uncertainty={len(uncertainty):,}"
     )
 
