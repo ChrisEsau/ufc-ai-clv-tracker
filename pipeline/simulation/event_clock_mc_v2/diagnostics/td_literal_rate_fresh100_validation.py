@@ -41,6 +41,7 @@ from pipeline.simulation.event_clock_mc_v2.diagnostics.td_literal_control_interf
 
 OUT_DIR = Path("data/diagnostics/event_clock_mc_v2/td_literal_rate_fresh100")
 ARMS = ("current", "literal_rate")
+# Intentionally narrow: this validation does not test V3 TD completion or control ownership.
 
 
 def _actual_winner_probability(frame: pd.DataFrame) -> np.ndarray:
@@ -98,7 +99,6 @@ def main():
             current = _draw_budgets(pair, pair_info, context, np.random.default_rng(seed))
             arms, _ = _arm_budgets(current, pair, pair_info, context, seed)
 
-            # Hard validation of the rate-only isolation.
             literal = arms["literal_rate"]
             allowed = {"red_td_attempted", "red_td_landed", "blue_td_attempted", "blue_td_landed"}
             for key, value in current.items():
