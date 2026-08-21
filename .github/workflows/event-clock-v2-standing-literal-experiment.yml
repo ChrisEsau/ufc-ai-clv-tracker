@@ -8,6 +8,10 @@ on:
     paths:
       - "pipeline/simulation/event_clock_mc_v2/diagnostics/standing_literal_interface_experiment.py"
       - ".github/workflows/event-clock-v2-standing-literal-experiment.yml"
+  pull_request:
+    paths:
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/standing_literal_interface_experiment.py"
+      - ".github/workflows/event-clock-v2-standing-literal-experiment.yml"
   workflow_dispatch:
 
 permissions:
