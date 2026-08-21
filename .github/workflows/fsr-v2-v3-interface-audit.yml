@@ -1,15 +1,16 @@
 name: FSR V2 V3 Interface Audit
 
+# Measurement-only CI diagnostic; no simulator mechanics are modified.
 on:
   push:
     branches:
       - "feature/fsr-v3"
     paths:
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/fsr_v2_v3_interface_audit.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/**"
       - ".github/workflows/fsr-v2-v3-interface-audit.yml"
   pull_request:
     paths:
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/fsr_v2_v3_interface_audit.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/**"
       - ".github/workflows/fsr-v2-v3-interface-audit.yml"
   workflow_dispatch:
 
