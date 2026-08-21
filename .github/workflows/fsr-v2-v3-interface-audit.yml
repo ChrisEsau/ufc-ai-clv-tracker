@@ -53,6 +53,19 @@ jobs:
           set -o pipefail
           python -m pipeline.fsr_v3.build --all 2>&1 | tee /tmp/fsr3.log
 
+      - name: Filter incomplete master rows for frozen bundle rebuild
+        run: |
+          python - <<'PY'
+          import pandas as pd
+          from pipeline.common.paths import MASTER_PATH
+
+          master = pd.read_parquet(MASTER_PATH)
+          keep = master["total_rounds"].notna()
+          dropped = int((~keep).sum())
+          master.loc[keep].to_parquet(MASTER_PATH, index=False)
+          print(f"CI-only master filter: dropped {dropped} rows with null total_rounds")
+          PY
+
       - name: Fit frozen Event Clock V1 bundle
         id: v1
         run: |
