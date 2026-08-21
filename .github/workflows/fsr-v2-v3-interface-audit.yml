@@ -68,19 +68,7 @@ jobs:
           print("Applied CI-only null guard; repository source remains unchanged")
           PY
 
-      - name: Fit frozen Event Clock V1 bundle
-        id: v1
-        run: |
-          set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v1.fit_event_clock_bundle 2>&1 | tee /tmp/v1.log
-
-      - name: Fit Event Clock V2 V3-direct bundle
-        id: v2
-        run: |
-          set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.fit_event_clock_bundle 2>&1 | tee /tmp/v2.log
-
-      - name: Run July 25 interface audit
+      - name: Run July 25 source-fitted interface audit
         id: audit
         run: |
           set -o pipefail
@@ -102,36 +90,30 @@ jobs:
           FSR2_BUILD_STATUS: ${{ steps.fsr2build.outcome }}
           FSR2_PUBLISH_STATUS: ${{ steps.fsr2pub.outcome }}
           FSR3_STATUS: ${{ steps.fsr3.outcome }}
-          V1_STATUS: ${{ steps.v1.outcome }}
-          V2_STATUS: ${{ steps.v2.outcome }}
           AUDIT_STATUS: ${{ steps.audit.outcome }}
         run: |
           {
-            echo "## FSR V2 → V3 interface audit (2026-07-25)"
+            echo "## FSR V2 → V3 source-fitted interface audit (2026-07-25)"
             echo
-            echo "Measurement only — no fight mechanics changed."
+            echo "Measurement only — no persisted Event Clock bundles loaded and no fight mechanics executed."
             echo
             echo "- FSR V2 history build: **${FSR2_BUILD_STATUS}**"
             echo "- FSR V2 snapshot publication: **${FSR2_PUBLISH_STATUS}**"
             echo "- FSR V3 build: **${FSR3_STATUS}**"
-            echo "- ECV1 bundle build: **${V1_STATUS}**"
-            echo "- ECV2 bundle build: **${V2_STATUS}**"
-            echo "- Interface audit: **${AUDIT_STATUS}**"
+            echo "- Direct-interface audit: **${AUDIT_STATUS}**"
             echo
             if [ -f /tmp/interface_audit.log ]; then
               echo '<details open><summary>Audit output</summary>'
               echo
               echo '```text'
-              tail -n 220 /tmp/interface_audit.log
+              tail -n 260 /tmp/interface_audit.log
               echo '```'
               echo '</details>'
             else
               echo '<details open><summary>Last available build output</summary>'
               echo
               echo '```text'
-              if [ -f /tmp/v2.log ]; then tail -n 120 /tmp/v2.log;
-              elif [ -f /tmp/v1.log ]; then tail -n 120 /tmp/v1.log;
-              elif [ -f /tmp/fsr3.log ]; then tail -n 120 /tmp/fsr3.log;
+              if [ -f /tmp/fsr3.log ]; then tail -n 120 /tmp/fsr3.log;
               elif [ -f /tmp/fsr2pub.log ]; then tail -n 120 /tmp/fsr2pub.log;
               elif [ -f /tmp/fsr2build.log ]; then tail -n 120 /tmp/fsr2build.log;
               else echo 'No build log was produced.'; fi
