@@ -115,14 +115,132 @@ def _exact_snapshot(
 
 
 def _mean_path_traits(record: dict) -> FighterPathTraits:
-    # Reuse the adapter validation and immutable trait contract.  No uncertainty
-    # rows are needed because direct feature training/prediction is mean-only.
     return initialize_fighter_path_traits(
         record,
         None,
         rng=np.random.default_rng(0),
         sample_epistemic=False,
     )
+
+
+def _trait_value(record: dict, traits: FighterPathTraits, attr: str) -> float:
+    if attr in traits.values:
+        return _finite(traits.values[attr])
+    return _finite(record.get(attr))
+
+
+def _directional_feature_row(
+    *,
+    master_row,
+    event_date: pd.Timestamp,
+    duration: float,
+    side: str,
+    fighter_record: dict,
+    fighter_traits: FighterPathTraits,
+    opponent_record: dict,
+    opponent_traits: FighterPathTraits,
+    fighter_age: float,
+    opponent_age: float,
+) -> dict:
+    runtime = derive_runtime_inputs(fighter_traits, opponent_traits)
+    row = {
+        "fight_id": str(master_row["fight_id"]),
+        "event_date": event_date,
+        "side": side,
+        "fighter_id": str(fighter_record["fighter_id"]),
+        "opponent_id": str(opponent_record["fighter_id"]),
+        "fighter_name": str(fighter_record.get("fighter_name", "")),
+        "opponent_name": str(opponent_record.get("fighter_name", "")),
+        "duration": float(duration),
+        "scheduled_rounds": float(master_row["total_rounds"]),
+        "fighter_age": _finite(fighter_age),
+        "opponent_age": _finite(opponent_age),
+    }
+
+    for attr in FSR_V3_ATTRS:
+        row[f"self_{attr}"] = _trait_value(fighter_record, fighter_traits, attr)
+        row[f"opp_{attr}"] = _trait_value(opponent_record, opponent_traits, attr)
+
+    # Compatibility feature names retained so frozen V1 model classes can be
+    # reused.  These columns have V3 semantics and require a V3-fitted bundle.
+    row["effective_standing_rate"] = runtime.standing_rate_15m
+    row["effective_td_rate"] = runtime.takedown_rate_15m
+    row["effective_ground_rate"] = runtime.ground_slope_rate_15m_own_control
+    row["ground_burst_attempts"] = runtime.ground_burst_attempts
+
+    # Preserve exact V1 TD age translation; do not mutate persisted FSR state.
+    if np.isfinite(row["fighter_age"]):
+        td_age_offset = TAKEDOWN_ATTACKER_AGE_LOGIT_PER_YEAR * (
+            row["fighter_age"] - TAKEDOWN_ATTACKER_AGE_CENTER_YEARS
+        )
+    else:
+        td_age_offset = 0.0
+
+    p = float(np.clip(runtime.takedown_completion, 1e-9, 1.0 - 1e-9))
+    td_logit = np.log(p / (1.0 - p)) + td_age_offset
+    row["td_completion_matchup"] = float(1.0 / (1.0 + np.exp(-td_logit)))
+    row["standing_accuracy_matchup"] = runtime.standing_accuracy
+    row["ground_accuracy_matchup"] = runtime.ground_accuracy
+
+    bottom_population_mean = _finite(opponent_record.get("escape_population_mean_seconds"))
+    bottom_escape_offense = _trait_value(opponent_record, opponent_traits, "escape_offense")
+    top_escape_defense = _trait_value(fighter_record, fighter_traits, "escape_defense")
+    retention_mean = bottom_population_mean * exp(
+        -bottom_escape_offense + top_escape_defense
+    )
+    row["retention_mean_base"] = retention_mean
+    row["successful_td_pressure"] = (
+        row["effective_td_rate"] * row["td_completion_matchup"]
+    )
+    row["control_pressure"] = row["successful_td_pressure"] * retention_mean
+    row["age_edge"] = (
+        row["fighter_age"] - row["opponent_age"]
+        if np.isfinite(row["fighter_age"]) and np.isfinite(row["opponent_age"])
+        else np.nan
+    )
+    return row
+
+
+def build_sampled_fight_feature_rows_v3(
+    master_row,
+    *,
+    red_record: dict,
+    blue_record: dict,
+    red_traits: FighterPathTraits,
+    blue_traits: FighterPathTraits,
+) -> pd.DataFrame:
+    """Build scheduled-horizon direct features from one path's fixed FSR draws."""
+    event_date = pd.Timestamp(master_row["event_date"]).normalize()
+    duration = float(master_row["total_rounds"]) * 300.0
+    red_age = fighter_age_years(master_row.get("r_dob"), event_date)
+    blue_age = fighter_age_years(master_row.get("b_dob"), event_date)
+    rows = [
+        _directional_feature_row(
+            master_row=master_row,
+            event_date=event_date,
+            duration=duration,
+            side="red",
+            fighter_record=red_record,
+            fighter_traits=red_traits,
+            opponent_record=blue_record,
+            opponent_traits=blue_traits,
+            fighter_age=red_age,
+            opponent_age=blue_age,
+        ),
+        _directional_feature_row(
+            master_row=master_row,
+            event_date=event_date,
+            duration=duration,
+            side="blue",
+            fighter_record=blue_record,
+            fighter_traits=blue_traits,
+            opponent_record=red_record,
+            opponent_traits=red_traits,
+            fighter_age=blue_age,
+            opponent_age=red_age,
+        ),
+    ]
+    return pd.DataFrame(rows)
 
 
 def build_feature_rows_v3(
@@ -133,15 +251,13 @@ def build_feature_rows_v3(
 ) -> pd.DataFrame:
     """Build one V3 direct-model row per fighter-fight.
 
-    Training uses observed historical exposure, matching V1.  Forward target
-    construction passes ``scheduled_duration=True`` and therefore never uses a
-    historical finish time.
+    Training uses observed historical exposure, matching V1. Forward target
+    construction passes ``scheduled_duration=True`` and never uses finish time.
     """
     frame = fsr.copy()
     frame["event_date"] = pd.to_datetime(frame["event_date"], errors="raise").dt.normalize()
     frame["fight_id"] = frame["fight_id"].astype(str)
     frame["fighter_id"] = frame["fighter_id"].astype(str)
-
     rows: list[dict] = []
     skipped = 0
 
@@ -150,18 +266,12 @@ def build_feature_rows_v3(
         event_date = pd.Timestamp(master_row["event_date"]).normalize()
         try:
             red_record = _exact_snapshot(
-                frame,
-                fight_id=fight_id,
-                event_date=event_date,
-                fighter_id=str(master_row["r_id"]),
-                corner="red",
+                frame, fight_id=fight_id, event_date=event_date,
+                fighter_id=str(master_row["r_id"]), corner="red",
             )
             blue_record = _exact_snapshot(
-                frame,
-                fight_id=fight_id,
-                event_date=event_date,
-                fighter_id=str(master_row["b_id"]),
-                corner="blue",
+                frame, fight_id=fight_id, event_date=event_date,
+                fighter_id=str(master_row["b_id"]), corner="blue",
             )
             red_traits = _mean_path_traits(red_record)
             blue_traits = _mean_path_traits(blue_record)
@@ -169,86 +279,48 @@ def build_feature_rows_v3(
             skipped += 1
             continue
 
-        if scheduled_duration:
-            duration = float(master_row["total_rounds"]) * 300.0
-        else:
-            duration = float(stage1_observed_duration_seconds(master_row))
-
+        duration = (
+            float(master_row["total_rounds"]) * 300.0
+            if scheduled_duration
+            else float(stage1_observed_duration_seconds(master_row))
+        )
         red_age = fighter_age_years(master_row.get("r_dob"), event_date)
         blue_age = fighter_age_years(master_row.get("b_dob"), event_date)
-
-        corners = {
-            "red": (red_record, red_traits, blue_record, blue_traits, red_age, blue_age),
-            "blue": (blue_record, blue_traits, red_record, red_traits, blue_age, red_age),
-        }
-
-        for side in ("red", "blue"):
-            fighter, fighter_traits, opponent, opponent_traits, fighter_age, opponent_age = corners[side]
-            runtime = derive_runtime_inputs(fighter_traits, opponent_traits)
-
-            row = {
-                "fight_id": fight_id,
-                "event_date": event_date,
-                "side": side,
-                "fighter_id": str(fighter["fighter_id"]),
-                "opponent_id": str(opponent["fighter_id"]),
-                "fighter_name": str(fighter.get("fighter_name", "")),
-                "opponent_name": str(opponent.get("fighter_name", "")),
-                "duration": duration,
-                "scheduled_rounds": float(master_row["total_rounds"]),
-                "fighter_age": _finite(fighter_age),
-                "opponent_age": _finite(opponent_age),
-            }
-
-            for attr in FSR_V3_ATTRS:
-                row[f"self_{attr}"] = _finite(fighter.get(attr))
-                row[f"opp_{attr}"] = _finite(opponent.get(attr))
-
-            # Compatibility feature names retained so the frozen model classes
-            # can be reused. Their V3 semantics are documented and the V2 bundle
-            # must never be reused with them.
-            row["effective_standing_rate"] = runtime.standing_rate_15m
-            row["effective_td_rate"] = runtime.takedown_rate_15m
-            row["effective_ground_rate"] = runtime.ground_slope_rate_15m_own_control
-            row["ground_burst_attempts"] = runtime.ground_burst_attempts
-
-            # Preserve the exact V1 TD age translation on top of the V3 paired
-            # offense/defense mean.  Age is not persisted into FSR V3.
-            if np.isfinite(row["fighter_age"]):
-                td_age_offset = TAKEDOWN_ATTACKER_AGE_LOGIT_PER_YEAR * (
-                    row["fighter_age"] - TAKEDOWN_ATTACKER_AGE_CENTER_YEARS
-                )
-            else:
-                td_age_offset = 0.0
-
-            p = float(np.clip(runtime.takedown_completion, 1e-9, 1.0 - 1e-9))
-            td_logit = np.log(p / (1.0 - p)) + td_age_offset
-            row["td_completion_matchup"] = float(1.0 / (1.0 + np.exp(-td_logit)))
-            row["standing_accuracy_matchup"] = runtime.standing_accuracy
-            row["ground_accuracy_matchup"] = runtime.ground_accuracy
-
-            bottom_population_mean = _finite(opponent.get("escape_population_mean_seconds"))
-            bottom_escape_offense = _finite(opponent.get("escape_offense"))
-            top_escape_defense = _finite(fighter.get("escape_defense"))
-            retention_mean = bottom_population_mean * exp(
-                -bottom_escape_offense + top_escape_defense
-            )
-            row["retention_mean_base"] = retention_mean
-            row["successful_td_pressure"] = (
-                row["effective_td_rate"] * row["td_completion_matchup"]
-            )
-            row["control_pressure"] = row["successful_td_pressure"] * retention_mean
-            row["age_edge"] = (
-                row["fighter_age"] - row["opponent_age"]
-                if np.isfinite(row["fighter_age"]) and np.isfinite(row["opponent_age"])
-                else np.nan
-            )
-            rows.append(row)
+        rows.extend(
+            [
+                _directional_feature_row(
+                    master_row=master_row,
+                    event_date=event_date,
+                    duration=duration,
+                    side="red",
+                    fighter_record=red_record,
+                    fighter_traits=red_traits,
+                    opponent_record=blue_record,
+                    opponent_traits=blue_traits,
+                    fighter_age=red_age,
+                    opponent_age=blue_age,
+                ),
+                _directional_feature_row(
+                    master_row=master_row,
+                    event_date=event_date,
+                    duration=duration,
+                    side="blue",
+                    fighter_record=blue_record,
+                    fighter_traits=blue_traits,
+                    opponent_record=red_record,
+                    opponent_traits=red_traits,
+                    fighter_age=blue_age,
+                    opponent_age=red_age,
+                ),
+            ]
+        )
 
     result = pd.DataFrame(rows)
     if not result.empty:
-        expected_cols = direct_feature_columns_v3()
-        missing = [column for column in expected_cols if column not in result.columns]
+        missing = [
+            column for column in direct_feature_columns_v3()
+            if column not in result.columns
+        ]
         if missing:
             raise RuntimeError(f"V3 direct feature builder missing columns: {missing}")
     print(
