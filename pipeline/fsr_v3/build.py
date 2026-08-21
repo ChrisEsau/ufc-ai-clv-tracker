@@ -11,6 +11,7 @@ from pipeline.fsr_v3.paths import (
     GROUND_EFFECTIVENESS_HISTORY_PATH,
     GROUND_SUPPRESSION_HISTORY_PATH,
     GROUND_TENDENCY_HISTORY_PATH,
+    POWER_HISTORY_PATH,
     STANDING_EFFECTIVENESS_HISTORY_PATH,
     STANDING_SUPPRESSION_HISTORY_PATH,
     STANDING_TENDENCY_HISTORY_PATH,
@@ -31,6 +32,7 @@ from pipeline.fsr_v3.replay.paired_effectiveness import (
     standing_effectiveness_spec,
     takedown_effectiveness_spec,
 )
+from pipeline.fsr_v3.replay.power import replay_power
 from pipeline.fsr_v3.replay.rate_families import (
     build_rate_fighter_fights,
     replay_suppression,
@@ -101,6 +103,17 @@ def build_ground(paired, config: FSRV3Config) -> None:
     )
 
 
+def build_power(config: FSRV3Config) -> None:
+    history = replay_power(config)
+    _write(history, POWER_HISTORY_PATH)
+    active = history[history["validated_regime"].astype(bool)]
+    print(
+        "FSR V3 striking power history written: "
+        f"rows={len(history):,}, validated_2020plus={len(active):,}, "
+        f"sigma={config.power_sigma:.2f}, rho={config.power_rho:.2f}, c=0"
+    )
+
+
 def _all_histories_exist() -> bool:
     paths = (
         TAKEDOWN_TENDENCY_HISTORY_PATH,
@@ -112,6 +125,7 @@ def _all_histories_exist() -> bool:
         GROUND_TENDENCY_HISTORY_PATH,
         GROUND_SUPPRESSION_HISTORY_PATH,
         GROUND_EFFECTIVENESS_HISTORY_PATH,
+        POWER_HISTORY_PATH,
     )
     return all(path.is_file() for path in paths)
 
@@ -121,10 +135,14 @@ def main() -> None:
     parser.add_argument("--takedowns", action="store_true")
     parser.add_argument("--standing-striking", action="store_true")
     parser.add_argument("--ground-striking", action="store_true")
+    parser.add_argument("--power", action="store_true")
     parser.add_argument(
         "--all",
         action="store_true",
-        help="Build all validated V3 families: takedown, standing striking, ground striking.",
+        help=(
+            "Build all validated V3 families: takedown, standing striking, "
+            "ground striking, and striking power."
+        ),
     )
     parser.add_argument(
         "--no-publish",
@@ -132,11 +150,22 @@ def main() -> None:
         help="Write histories only; do not publish canonical V3 snapshots.",
     )
     args = parser.parse_args()
-    if not any((args.takedowns, args.standing_striking, args.ground_striking, args.all)):
-        parser.error("select --takedowns, --standing-striking, --ground-striking, or --all")
+    if not any(
+        (
+            args.takedowns,
+            args.standing_striking,
+            args.ground_striking,
+            args.power,
+            args.all,
+        )
+    ):
+        parser.error(
+            "select --takedowns, --standing-striking, --ground-striking, --power, or --all"
+        )
 
     config = FSRV3Config()
-    paired = build_paired_rounds()
+    needs_paired = args.all or args.takedowns or args.standing_striking or args.ground_striking
+    paired = build_paired_rounds() if needs_paired else None
 
     if args.all or args.takedowns:
         build_takedowns(paired, config)
@@ -144,11 +173,13 @@ def main() -> None:
         build_standing(paired, config)
     if args.all or args.ground_striking:
         build_ground(paired, config)
+    if args.all or args.power:
+        build_power(config)
 
     if not args.no_publish:
         if not _all_histories_exist():
             print(
-                "Canonical FSR V3 publication skipped: all nine validated history files "
+                "Canonical FSR V3 publication skipped: all ten validated history files "
                 "are required. Run `python -m pipeline.fsr_v3.build --all`."
             )
         else:

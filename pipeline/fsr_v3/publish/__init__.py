@@ -1,14 +1,16 @@
 """Publish FSR V3 as a safe overlay on the frozen FSR V2 snapshots.
 
-V3 replaces only trait families that were revalidated in the shrinkage and
-variance study:
+V3 replaces only trait families that survived chronological validation:
 
 - takedown tendency / suppression / paired effectiveness
 - standing striking tendency / suppression / paired effectiveness
 - ground striking tendency / suppression / attacker-only effectiveness
+- attacker-only striking power (native KD-logit posterior mean)
 
-Every untested family remains copied verbatim from frozen FSR V2.  The rejected
-``ground_striking_defense`` field is explicitly removed.
+Every untested family remains copied verbatim from frozen FSR V2.  Rebuilt V3
+power replaces the old V2 ``striking_power`` field with ``striking_power_v3``
+to prevent accidental scale mixing.  The rejected ``ground_striking_defense``
+field is also explicitly removed.
 """
 
 from __future__ import annotations
@@ -23,6 +25,7 @@ from pipeline.fsr_v3.paths import (
     GROUND_EFFECTIVENESS_HISTORY_PATH,
     GROUND_SUPPRESSION_HISTORY_PATH,
     GROUND_TENDENCY_HISTORY_PATH,
+    POWER_HISTORY_PATH,
     STANDING_EFFECTIVENESS_HISTORY_PATH,
     STANDING_SUPPRESSION_HISTORY_PATH,
     STANDING_TENDENCY_HISTORY_PATH,
@@ -50,6 +53,12 @@ UPDATED_COLUMNS = [
     "ground_accuracy_baseline",
     "ground_striking_burst_baseline",
     "ground_striking_population_slope_15m",
+    "striking_power_v3",
+]
+
+REPLACED_OR_REJECTED_V2_COLUMNS = [
+    "ground_striking_defense",
+    "striking_power",
 ]
 
 HISTORY_PATHS = (
@@ -62,6 +71,7 @@ HISTORY_PATHS = (
     GROUND_TENDENCY_HISTORY_PATH,
     GROUND_SUPPRESSION_HISTORY_PATH,
     GROUND_EFFECTIVENESS_HISTORY_PATH,
+    POWER_HISTORY_PATH,
 )
 
 
@@ -154,9 +164,10 @@ def assemble_prefight() -> tuple[pd.DataFrame, pd.DataFrame]:
     ground_tendency = _read_history(GROUND_TENDENCY_HISTORY_PATH)
     ground_suppression = _read_history(GROUND_SUPPRESSION_HISTORY_PATH)
     ground_effectiveness = _read_history(GROUND_EFFECTIVENESS_HISTORY_PATH)
+    power = _read_history(POWER_HISTORY_PATH)
 
     # Remove old V2 fields that V3 redefines or rejects.
-    drop = UPDATED_COLUMNS + ["ground_striking_defense"]
+    drop = UPDATED_COLUMNS + REPLACED_OR_REJECTED_V2_COLUMNS
     base = base.drop(columns=[column for column in drop if column in base.columns])
 
     replacements = [
@@ -194,6 +205,7 @@ def assemble_prefight() -> tuple[pd.DataFrame, pd.DataFrame]:
             "ground_striking_offense",
             {"population_baseline": "ground_accuracy_baseline"},
         ),
+        _replacement(power, "striking_power_v3"),
     ]
 
     out = base
@@ -208,6 +220,8 @@ def assemble_prefight() -> tuple[pd.DataFrame, pd.DataFrame]:
         raise ValueError(f"FSR V3 overlay has missing validated fields: {missing}")
     if "ground_striking_defense" in out.columns:
         raise AssertionError("rejected ground_striking_defense leaked into FSR V3")
+    if "striking_power" in out.columns:
+        raise AssertionError("frozen V2 striking_power leaked into rebuilt FSR V3")
 
     histories = (
         td_tendency,
@@ -219,6 +233,7 @@ def assemble_prefight() -> tuple[pd.DataFrame, pd.DataFrame]:
         ground_tendency,
         ground_suppression,
         ground_effectiveness,
+        power,
     )
     uncertainty = pd.concat(
         [_uncertainty_frame(history) for history in histories],
@@ -282,6 +297,7 @@ def assemble_latest(prefight: pd.DataFrame) -> pd.DataFrame:
     ground_tendency = _read_history(GROUND_TENDENCY_HISTORY_PATH)
     ground_suppression = _read_history(GROUND_SUPPRESSION_HISTORY_PATH)
     ground_effectiveness = _read_history(GROUND_EFFECTIVENESS_HISTORY_PATH)
+    power = _read_history(POWER_HISTORY_PATH)
 
     latest_v3 = _latest_post_rating(td_tendency, "takedown_tendency")
     for replacement in (
@@ -303,6 +319,7 @@ def assemble_latest(prefight: pd.DataFrame) -> pd.DataFrame:
         _latest_post_rating(ground_tendency, "ground_striking_tendency"),
         _latest_post_rating(ground_suppression, "ground_striking_suppression"),
         _latest_post_rating(ground_effectiveness, "ground_striking_offense"),
+        _latest_post_rating(power, "striking_power_v3"),
     ):
         latest_v3 = latest_v3.merge(
             replacement,
@@ -337,7 +354,8 @@ def assemble_latest(prefight: pd.DataFrame) -> pd.DataFrame:
 
     base = base.drop(
         columns=[
-            column for column in UPDATED_COLUMNS + ["ground_striking_defense"]
+            column
+            for column in UPDATED_COLUMNS + REPLACED_OR_REJECTED_V2_COLUMNS
             if column in base.columns
         ]
     )
@@ -350,6 +368,8 @@ def assemble_latest(prefight: pd.DataFrame) -> pd.DataFrame:
         raise ValueError(f"FSR V3 latest overlay has missing validated fields: {missing}")
     if "ground_striking_defense" in latest.columns:
         raise AssertionError("rejected ground_striking_defense leaked into FSR V3 latest")
+    if "striking_power" in latest.columns:
+        raise AssertionError("frozen V2 striking_power leaked into rebuilt FSR V3 latest")
     return latest
 
 

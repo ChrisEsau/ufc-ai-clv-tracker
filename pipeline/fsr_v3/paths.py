@@ -23,3 +23,5 @@ STANDING_EFFECTIVENESS_HISTORY_PATH = FSR_V3_HISTORY_DIR / "standing_striking_ef
 GROUND_TENDENCY_HISTORY_PATH = FSR_V3_HISTORY_DIR / "ground_striking_tendency.parquet"
 GROUND_SUPPRESSION_HISTORY_PATH = FSR_V3_HISTORY_DIR / "ground_striking_suppression.parquet"
 GROUND_EFFECTIVENESS_HISTORY_PATH = FSR_V3_HISTORY_DIR / "ground_striking_effectiveness.parquet"
+
+POWER_HISTORY_PATH = FSR_V3_HISTORY_DIR / "striking_power_v3.parquet"

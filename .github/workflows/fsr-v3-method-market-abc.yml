@@ -5,10 +5,22 @@ on:
     branches:
       - "feature/fsr-v3"
     paths:
+      - "pipeline/fsr_v3/replay/power.py"
+      - "pipeline/fsr_v3/config.py"
+      - "pipeline/fsr_v3/paths.py"
+      - "pipeline/fsr_v3/build.py"
+      - "pipeline/fsr_v3/publish/**"
+      - "pipeline/simulation/event_clock_mc_v2/fit_event_clock_bundle.py"
       - "pipeline/simulation/event_clock_mc_v2/diagnostics/method_market_abc_validation.py"
       - ".github/workflows/fsr-v3-method-market-abc.yml"
   pull_request:
     paths:
+      - "pipeline/fsr_v3/replay/power.py"
+      - "pipeline/fsr_v3/config.py"
+      - "pipeline/fsr_v3/paths.py"
+      - "pipeline/fsr_v3/build.py"
+      - "pipeline/fsr_v3/publish/**"
+      - "pipeline/simulation/event_clock_mc_v2/fit_event_clock_bundle.py"
       - "pipeline/simulation/event_clock_mc_v2/diagnostics/method_market_abc_validation.py"
       - ".github/workflows/fsr-v3-method-market-abc.yml"
   workflow_dispatch:

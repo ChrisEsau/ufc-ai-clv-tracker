@@ -1,10 +1,14 @@
-"""Fit FSR V3 direct inference while preserving the frozen Event Clock V1 context.
+"""Fit FSR V3 direct inference while preserving frozen Event Clock V1 mechanics.
 
 The parent V1 context remains the source of every calibrated Stage-9, control,
-submission, judge, stamina, and KO/KD object. Its canonical V2 snapshots are
-also retained only for the frozen detailed-path profile construction, because
-V3 intentionally inherits those physical/stamina/submission fields unchanged.
-FSR V3 is used for the direct flow/budget layer and its epistemic path draws.
+submission, judge, stamina, KD, and KO/TKO mechanic.  ECV2 replaces only inputs
+that have independently passed FSR V3 validation:
+
+1. direct flow features use canonical FSR V3 state;
+2. the frozen detailed-path profile copy receives V3 striking power only.
+
+All other physical/stamina/submission profile fields remain inherited from the
+parent V1 bundle.
 """
 from __future__ import annotations
 
@@ -16,6 +20,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import joblib
+import numpy as np
 import pandas as pd
 
 from pipeline.common.paths import MASTER_PATH
@@ -23,6 +28,7 @@ from pipeline.fsr_v3.paths import FSR_V3_PREFIGHT_SNAPSHOTS_PATH
 from pipeline.simulation.event_clock_mc_v1.fit_event_clock_bundle import (
     DEFAULT_BUNDLE_PATH as V1_BUNDLE_PATH,
 )
+from pipeline.simulation.event_clock_mc_v1.ko_kd_shadow import ShadowKOKDCalibration
 from pipeline.simulation.event_clock_mc_v1.prototype_stage1 import build_historical_targets
 from pipeline.simulation.event_clock_mc_v1.prototype_stage2 import CUTOFF, TRAIN_MAX_FIGHTS
 from pipeline.simulation.event_clock_mc_v2.feature_builder import build_feature_rows_v3
@@ -30,6 +36,7 @@ from pipeline.simulation.event_clock_mc_v2.inference import fit_inference_models
 
 DEFAULT_BUNDLE_PATH = Path("data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib")
 DEFAULT_MANIFEST_PATH = Path("data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle_manifest.json")
+POWER_NATIVE_COLUMN = "striking_power_v3"
 
 
 def git_sha():
@@ -46,6 +53,71 @@ def load_v1_parent(path):
     if payload.get("schema_version") != 2:
         raise RuntimeError(f"Expected V1 bundle schema 2, got {payload.get('schema_version')!r}")
     return payload
+
+
+def legacy_power_equivalent(v3_latent_power) -> np.ndarray:
+    """Translate native V3 power into the rating coordinate frozen V1 expects.
+
+    V3 power is a logit effect on KD probability per landed significant strike.
+    Frozen Event Clock KD uses
+
+        kd_power_beta * (striking_power - 50)
+
+    so the semantics-preserving coordinate transform is exactly
+
+        striking_power_equivalent = 50 + v3_latent / kd_power_beta
+
+    This is not fitted to Event Clock outcomes and is not clipped.  It simply
+    changes coordinates so the frozen KD coefficient applies a unit coefficient
+    to the validated V3 latent effect.  The frozen KO coefficient then implies
+    ~0.964 logit per latent unit, close to the independently held-out power
+    consequence fit (~0.934) without retuning the KO system.
+    """
+    beta = float(ShadowKOKDCalibration().kd_power_beta)
+    if not np.isfinite(beta) or beta <= 0.0:
+        raise RuntimeError(f"invalid frozen KD power beta: {beta}")
+    latent = np.asarray(v3_latent_power, dtype=float)
+    if not np.isfinite(latent).all():
+        raise RuntimeError("non-finite V3 striking power latent")
+    return 50.0 + latent / beta
+
+
+def overlay_v3_power_on_frozen_profiles(
+    frozen_profiles: pd.DataFrame,
+    fsr_v3: pd.DataFrame,
+) -> pd.DataFrame:
+    """Replace only striking power in the detailed-mechanics profile snapshot."""
+    required = {"fight_id", "fighter_id", POWER_NATIVE_COLUMN}
+    missing = required.difference(fsr_v3.columns)
+    if missing:
+        raise RuntimeError(f"canonical FSR V3 missing power columns: {sorted(missing)}")
+
+    base = frozen_profiles.copy()
+    if "striking_power" not in base.columns:
+        raise RuntimeError("parent V1 mechanics profiles are missing striking_power")
+    base["fight_id"] = base["fight_id"].astype(str)
+    base["fighter_id"] = base["fighter_id"].astype(str)
+
+    power = fsr_v3[["fight_id", "fighter_id", POWER_NATIVE_COLUMN]].copy()
+    power["fight_id"] = power["fight_id"].astype(str)
+    power["fighter_id"] = power["fighter_id"].astype(str)
+    if power.duplicated(["fight_id", "fighter_id"]).any():
+        raise RuntimeError("duplicate canonical V3 power rows")
+
+    merged = base.merge(
+        power,
+        on=["fight_id", "fighter_id"],
+        how="left",
+        validate="one_to_one",
+    )
+    if merged[POWER_NATIVE_COLUMN].isna().any():
+        count = int(merged[POWER_NATIVE_COLUMN].isna().sum())
+        raise RuntimeError(f"V3 power overlay missing {count} frozen mechanics profile rows")
+
+    merged["striking_power"] = legacy_power_equivalent(
+        merged[POWER_NATIVE_COLUMN].to_numpy(float)
+    )
+    return merged.drop(columns=[POWER_NATIVE_COLUMN])
 
 
 def build_training_master_v3():
@@ -78,7 +150,7 @@ def build_v3_training_frame():
     if train["fight_id"].nunique() != len(master):
         missing = sorted(set(master["fight_id"]) - set(train["fight_id"]))
         raise RuntimeError(f"V3 direct training lost {len(missing)} fights: {missing[:10]}")
-    return train, master
+    return train, master, fsr
 
 
 def main():
@@ -94,20 +166,24 @@ def main():
     print(f"parent V1 bundle: {args.v1_bundle}")
     print("mechanics/calibration refit: NO")
     print("direct V3 inference refit: YES")
+    print("detailed-profile change: V3 striking power ONLY")
 
     parent = load_v1_parent(args.v1_bundle)
     context = deepcopy(parent["context"])
     if "fsr_all" not in context:
         raise RuntimeError("Parent V1 bundle is missing frozen mechanics FSR snapshots")
 
-    train, train_master = build_v3_training_frame()
+    train, train_master, fsr = build_v3_training_frame()
     print(f"V3 direct-model training fights: {train['fight_id'].nunique():,}")
     print(f"V3 direct-model fighter-fight rows: {len(train):,}")
     context["inference_models"] = fit_inference_models_v3(train)
-    # Deliberately do NOT replace context['fsr_all']; it remains the exact V1
-    # profile source for frozen detailed-path mechanics. V3 snapshots are loaded
-    # separately by the V2 runner for all direct-flow and uncertainty work.
 
+    # Frozen fight mechanics remain unchanged.  Only the newly validated power
+    # input is translated into the coordinate expected by the frozen KD/KO
+    # hazard; all other detailed-path profile fields stay from the V1 parent.
+    context["fsr_all"] = overlay_v3_power_on_frozen_profiles(context["fsr_all"], fsr)
+
+    calibration = ShadowKOKDCalibration()
     parent_meta = dict(context.get("bundle_metadata", {}))
     metadata = {
         **parent_meta,
@@ -116,13 +192,23 @@ def main():
         "git_sha": git_sha(),
         "parent_v1_bundle": str(args.v1_bundle),
         "parent_v1_git_sha": parent_meta.get("git_sha", "unknown"),
-        "fsr_version": "v3_direct_flow_with_v1_inherited_physics",
+        "fsr_version": "v3_direct_flow_plus_v3_power_with_v1_other_physics",
         "direct_inference_schema": "event_clock_mc_v2_fsr_v3_direct_v1",
         "direct_training_fights": int(train["fight_id"].nunique()),
         "direct_training_first_event_date": str(pd.Timestamp(train_master["event_date"].min()).date()),
         "direct_training_last_event_date": str(pd.Timestamp(train_master["event_date"].max()).date()),
         "mechanics_source": "frozen Event Clock V1 bundle; unchanged",
-        "mechanics_profile_source": "parent V1 fsr_all; V3 inherited fields unchanged",
+        "mechanics_profile_source": (
+            "parent V1 fsr_all with only striking_power replaced from validated V3 latent"
+        ),
+        "power_native_column": POWER_NATIVE_COLUMN,
+        "power_native_semantics": "attacker KD logit effect per landed significant strike",
+        "power_epistemic_sampling": False,
+        "power_translation": "50 + striking_power_v3 / frozen_kd_power_beta",
+        "frozen_kd_power_beta": float(calibration.kd_power_beta),
+        "implied_ko_beta_per_v3_latent": float(
+            calibration.ko_power_beta / calibration.kd_power_beta
+        ),
         "epistemic_modes": ["means_only", "validated_path_sampling"],
         "epistemic_positive_projection": "moment_matched_gamma",
     }
@@ -138,7 +224,12 @@ def main():
     print(f"manifest: {args.manifest}")
     print(f"parent mechanics git SHA: {metadata['parent_v1_git_sha']}")
     print(f"V2 git SHA: {metadata['git_sha']}")
-    print("DONE — mechanics preserved; V3 direct inference frozen.")
+    print(
+        "V3 power translation: latent -> frozen profile via "
+        f"KD beta {metadata['frozen_kd_power_beta']:.6f}; "
+        f"implied KO beta/latent={metadata['implied_ko_beta_per_v3_latent']:.4f}"
+    )
+    print("DONE — mechanics preserved; V3 direct inference and validated power input frozen.")
 
 
 if __name__ == "__main__":

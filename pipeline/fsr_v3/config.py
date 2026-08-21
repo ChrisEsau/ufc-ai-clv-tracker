@@ -116,6 +116,22 @@ class FSRV3Config:
     ground_suppression_variance_multiplier: float = 0.0
     ground_effectiveness_variance_multiplier: float = 0.0
 
+    # ------------------------------------------------------------------
+    # Striking power
+    # K ~ BetaBinomial(N landed significant strikes, p, rho)
+    # logit(p) = beta_population + attacker_power
+    # attacker_power ~ Normal(0, .50^2)
+    # Selected sequential model: rho=.01, c=0 (posterior mean only).
+    # No KO-win bonus and no age baked into the persisted trait.
+    # ------------------------------------------------------------------
+    power_sigma: float = 0.50
+    power_rho: float = 0.01
+    power_variance_multiplier: float = 0.0
+    power_grid_min: float = -4.0
+    power_grid_max: float = 4.0
+    power_grid_points: int = 321
+    power_train_state_cutoff: str = "2020-01-01"
+
     # Numerical safeguards.
     probability_epsilon: float = 1e-9
     minimum_positive: float = 1e-12
