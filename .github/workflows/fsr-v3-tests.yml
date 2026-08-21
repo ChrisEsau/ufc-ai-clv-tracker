@@ -1,6 +1,13 @@
 name: FSR V3 Tests
 
 on:
+  push:
+    branches:
+      - "feature/fsr-v3"
+    paths:
+      - "pipeline/fsr_v3/**"
+      - "tests/fsr_v3/**"
+      - ".github/workflows/fsr-v3-tests.yml"
   pull_request:
     paths:
       - "pipeline/fsr_v3/**"
