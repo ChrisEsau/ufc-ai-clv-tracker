@@ -8,14 +8,11 @@ on:
     paths:
       - "pipeline/simulation/event_clock_mc_v2/diagnostics/**"
       - ".github/workflows/fsr-v2-v3-interface-audit.yml"
-  pull_request:
-    paths:
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/**"
-      - ".github/workflows/fsr-v2-v3-interface-audit.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   interface-audit:
@@ -39,22 +36,74 @@ jobs:
         run: python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/fsr_v2_v3_interface_audit.py
 
       - name: Build canonical FSR V3
-        run: python -m pipeline.fsr_v3.build --all
+        id: fsr3
+        run: |
+          set -o pipefail
+          python -m pipeline.fsr_v3.build --all 2>&1 | tee /tmp/fsr3.log
 
       - name: Fit frozen Event Clock V1 bundle
-        run: python -m pipeline.simulation.event_clock_mc_v1.fit_event_clock_bundle
+        id: v1
+        run: |
+          set -o pipefail
+          python -m pipeline.simulation.event_clock_mc_v1.fit_event_clock_bundle 2>&1 | tee /tmp/v1.log
 
       - name: Fit Event Clock V2 V3-direct bundle
-        run: python -m pipeline.simulation.event_clock_mc_v2.fit_event_clock_bundle
+        id: v2
+        run: |
+          set -o pipefail
+          python -m pipeline.simulation.event_clock_mc_v2.fit_event_clock_bundle 2>&1 | tee /tmp/v2.log
 
       - name: Run July 25 interface audit
+        id: audit
         run: |
+          set -o pipefail
           python pipeline/simulation/event_clock_mc_v2/diagnostics/fsr_v2_v3_interface_audit.py \
-            --event-date 2026-07-25
+            --event-date 2026-07-25 2>&1 | tee /tmp/interface_audit.log
 
       - name: Upload interface audit
+        if: steps.audit.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: fsr-v2-v3-interface-audit-2026-07-25
           path: data/diagnostics/event_clock_mc_v2/interface_audit/2026_07_25_*.csv
           if-no-files-found: error
+
+      - name: Post audit result to PR 68
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FSR3_STATUS: ${{ steps.fsr3.outcome }}
+          V1_STATUS: ${{ steps.v1.outcome }}
+          V2_STATUS: ${{ steps.v2.outcome }}
+          AUDIT_STATUS: ${{ steps.audit.outcome }}
+        run: |
+          {
+            echo "## FSR V2 → V3 interface audit (2026-07-25)"
+            echo
+            echo "Measurement only — no fight mechanics changed."
+            echo
+            echo "- FSR V3 build: **${FSR3_STATUS}**"
+            echo "- ECV1 bundle build: **${V1_STATUS}**"
+            echo "- ECV2 bundle build: **${V2_STATUS}**"
+            echo "- Interface audit: **${AUDIT_STATUS}**"
+            echo
+            if [ -f /tmp/interface_audit.log ]; then
+              echo '<details open><summary>Audit output</summary>'
+              echo
+              echo '```text'
+              tail -n 220 /tmp/interface_audit.log
+              echo '```'
+              echo '</details>'
+            else
+              echo '<details open><summary>Last available build output</summary>'
+              echo
+              echo '```text'
+              if [ -f /tmp/v2.log ]; then tail -n 120 /tmp/v2.log;
+              elif [ -f /tmp/v1.log ]; then tail -n 120 /tmp/v1.log;
+              elif [ -f /tmp/fsr3.log ]; then tail -n 120 /tmp/fsr3.log;
+              else echo 'No build log was produced.'; fi
+              echo '```'
+              echo '</details>'
+            fi
+          } > /tmp/audit_comment.md
+          gh pr comment 68 --repo ChrisEsau/ufc-ai-clv-tracker --body-file /tmp/audit_comment.md
