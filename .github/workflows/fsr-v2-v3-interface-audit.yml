@@ -53,17 +53,19 @@ jobs:
           set -o pipefail
           python -m pipeline.fsr_v3.build --all 2>&1 | tee /tmp/fsr3.log
 
-      - name: Filter incomplete master rows for frozen bundle rebuild
+      - name: Patch incomplete-row guard in CI checkout only
         run: |
           python - <<'PY'
-          import pandas as pd
-          from pipeline.common.paths import MASTER_PATH
+          from pathlib import Path
 
-          master = pd.read_parquet(MASTER_PATH)
-          keep = master["total_rounds"].notna()
-          dropped = int((~keep).sum())
-          master.loc[keep].to_parquet(MASTER_PATH, index=False)
-          print(f"CI-only master filter: dropped {dropped} rows with null total_rounds")
+          path = Path("pipeline/simulation/event_mc_v1/diagnostics/fresh_100_fight_predictive_replay.py")
+          text = path.read_text()
+          old = '''            and method in METHODS\n            and int(row["total_rounds"]) in {3, 5}\n            and pd.notna(row["match_time_sec"])\n'''
+          new = '''            and method in METHODS\n            and pd.notna(row["total_rounds"])\n            and int(row["total_rounds"]) in {3, 5}\n            and pd.notna(row["match_time_sec"])\n'''
+          if old not in text:
+              raise RuntimeError("Expected frozen cohort-selector block not found")
+          path.write_text(text.replace(old, new, 1))
+          print("Applied CI-only null guard; repository source remains unchanged")
           PY
 
       - name: Fit frozen Event Clock V1 bundle
