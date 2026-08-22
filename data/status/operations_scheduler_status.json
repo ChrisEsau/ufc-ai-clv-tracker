@@ -1950,7 +1950,7 @@
   "dispatched_runbooks": [],
   "due_runbooks": [],
   "errors": [],
-  "last_checked_at": "2026-08-22T21:24:08.979538+00:00",
+  "last_checked_at": "2026-08-22T22:24:48.173337+00:00",
   "next_due_runbook": {
     "catchup_grace_minutes": 180,
     "display_name": "Fight Day Monitor",
@@ -1962,5 +1962,5 @@
   "skipped_runbooks": [],
   "status": "completed",
   "timezone": "America/Chicago",
-  "updated_at": "2026-08-22T21:24:08.981302+00:00"
+  "updated_at": "2026-08-22T22:24:48.178254+00:00"
 }
