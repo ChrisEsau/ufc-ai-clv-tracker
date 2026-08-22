@@ -17,10 +17,12 @@ SEED = 20260822
 VALIDATION_START = pd.Timestamp("2022-01-01")
 HOLDOUT_START = pd.Timestamp("2024-01-01")
 DEFAULT_OUT = Path("data/diagnostics/fsr_v3/active_trait_audit/submission_conversion")
-SIGMAS = (0.0, 0.15, 0.30, 0.45, 0.60, 0.80)
-CS = (0.0, 0.25, 0.50, 0.75, 1.0, 1.25)
-GRID = np.linspace(-2.5, 2.5, 501)
-GH_X, GH_W = hermgauss(15)
+# The first pass improved monotonically through sigma=.80 and c=1.25, so the
+# refinement deliberately extends both boundaries before any promotion decision.
+SIGMAS = (0.0, 0.30, 0.60, 0.80, 1.00, 1.25, 1.50)
+CS = (0.0, 0.25, 0.50, 0.75, 1.0, 1.25, 1.50, 2.0, 3.0)
+GRID = np.linspace(-5.0, 5.0, 801)
+GH_X, GH_W = hermgauss(21)
 GH_W = GH_W / np.sqrt(np.pi)
 
 
