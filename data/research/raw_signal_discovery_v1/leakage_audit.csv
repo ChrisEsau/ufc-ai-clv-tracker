@@ -1,0 +1,7 @@
+check,passed,value
+self_history_strictly_prior_date,True,0
+opponent_history_strictly_prior_date,True,0
+exactly_two_directional_rows_per_fight,True,{2: 8654}
+targets_complement_within_fight,True,0
+no_forbidden_feature_names,True,[]
+outer_rows_reserved_present,True,2674
