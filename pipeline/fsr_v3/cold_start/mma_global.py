@@ -1,7 +1,7 @@
 """Adapter for a broad longitudinal MMA fight database.
 
 The first supported source is the public ``MMAStats and fights Complete
-Database`` DuckDB dataset.  Only dated fight facts are consumed here.  Current
+Database`` DuckDB dataset. Only dated fight facts are consumed here. Current
 profile fields (current age, current record, gym, etc.) are deliberately not
 used for historical validation.
 """
@@ -18,45 +18,29 @@ DEFAULT_ELO = 1500.0
 DEFAULT_ELO_K = 24.0
 
 
-def _canonicalize_fight_ids(frame: pd.DataFrame) -> pd.DataFrame:
-    """Make source fight identifiers globally stable without hiding duplicates.
+def _clean_source_fights(frame: pd.DataFrame) -> pd.DataFrame:
+    """Enforce source-level fight identity and reject unusable fighter rows.
 
-    The public database's ``fight_id`` is not guaranteed to be globally unique
-    across every organization/source.  Preserve it as ``source_fight_id`` and
-    construct an auditable composite identifier from source id, organization,
-    date, and the normalized unordered fighter pair.  Rows that are exact
-    representations of the same source fight are collapsed once; any remaining
-    composite collision is retained with an explicit occurrence suffix.
+    The public data dictionary specifies ``fight_id`` as a unique primary key.
+    We preserve it exactly. A small number of source anomalies can have missing
+    fighter names or both sides collapse to the same normalized name; those rows
+    cannot support fighter-level history and are excluded explicitly rather than
+    weakening downstream duplicate checks.
     """
     x = frame.copy()
-    x["source_fight_id"] = x["fight_id"].astype(str)
     x["event_date"] = pd.to_datetime(x["event_date"], errors="raise").dt.normalize()
-    x["organization"] = x["organization"].fillna("unknown").astype(str).str.lower().str.strip()
+    x["fight_id"] = x["fight_id"].astype(str)
+    if x["fight_id"].duplicated().any():
+        duplicate_count = int(x["fight_id"].duplicated(keep=False).sum())
+        raise ValueError(f"MMA Global source violated unique fight_id contract: {duplicate_count} duplicate rows")
+
     f1 = x["fighter_1"].map(normalize_name)
     f2 = x["fighter_2"].map(normalize_name)
-    x["_pair_key"] = ["~".join(sorted((a, b))) for a, b in zip(f1, f2)]
-
-    source_key = ["source_fight_id", "organization", "event_date", "_pair_key"]
-    x = x.drop_duplicates(subset=source_key, keep="first").copy()
-    date_key = x["event_date"].dt.strftime("%Y%m%d")
-    x["fight_id"] = (
-        "mma-global:"
-        + x["organization"].str.replace(r"[^a-z0-9]+", "_", regex=True).str.strip("_")
-        + ":"
-        + date_key
-        + ":"
-        + x["_pair_key"]
-        + ":"
-        + x["source_fight_id"]
-    )
-
-    duplicate = x.duplicated("fight_id", keep=False)
-    if duplicate.any():
-        occurrence = x.loc[duplicate].groupby("fight_id", sort=False).cumcount().astype(str)
-        x.loc[duplicate, "fight_id"] = x.loc[duplicate, "fight_id"] + ":dup" + occurrence
-    if x["fight_id"].duplicated().any():
-        raise RuntimeError("MMA Global canonical fight id construction failed")
-    return x.drop(columns=["_pair_key"]).reset_index(drop=True)
+    invalid = (f1 == "") | (f2 == "") | (f1 == f2)
+    if invalid.any():
+        print(f"MMA Global: excluding {int(invalid.sum())} invalid/self-match fight rows")
+        x = x.loc[~invalid].copy()
+    return x.reset_index(drop=True)
 
 
 def load_mma_global_wide(path: str | Path) -> pd.DataFrame:
@@ -81,7 +65,7 @@ def load_mma_global_wide(path: str | Path) -> pd.DataFrame:
         frame = con.execute(query).fetchdf()
     finally:
         con.close()
-    frame = _canonicalize_fight_ids(frame)
+    frame = _clean_source_fights(frame)
     return frame.sort_values(["event_date", "fight_id"]).reset_index(drop=True)
 
 
