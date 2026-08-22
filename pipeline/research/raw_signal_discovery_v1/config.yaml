@@ -1,0 +1,43 @@
+inputs:
+  round_stats_path: data/fight_details/ufc_round_stats.parquet
+  master_path: data/master/ufc_master.parquet
+
+outputs:
+  root: data/research/raw_signal_discovery_v1
+  prefight_feature_bank: data/research/raw_signal_discovery_v1/prefight_feature_bank.parquet
+  feature_manifest: data/research/raw_signal_discovery_v1/feature_manifest.csv
+  leakage_audit: data/research/raw_signal_discovery_v1/leakage_audit.csv
+  development_metrics: data/research/raw_signal_discovery_v1/development_metrics.csv
+  development_predictions: data/research/raw_signal_discovery_v1/development_predictions.csv
+  fold_feature_importance: data/research/raw_signal_discovery_v1/fold_feature_importance.csv
+  signal_stability: data/research/raw_signal_discovery_v1/signal_stability.csv
+  research_summary: data/research/raw_signal_discovery_v1/research_summary.json
+
+feature_factory:
+  fight_windows: [1, 2, 3, 5]
+  day_windows: [180, 365, 730]
+  aggregations: [mean, std, median, min, max, slope]
+  epsilon: 0.000001
+
+validation:
+  development_years: [2020, 2021, 2022, 2023]
+  outer_start: 2024-01-01
+  minimum_train_fights: 500
+  suspicious_single_feature_auc: 0.80
+
+model:
+  random_seed: 20260822
+  xgb:
+    n_estimators: 1200
+    learning_rate: 0.03
+    max_depth: 3
+    min_child_weight: 10
+    subsample: 0.80
+    colsample_bytree: 0.60
+    reg_alpha: 0.50
+    reg_lambda: 10.0
+    max_bin: 256
+    early_stopping_rounds: 60
+  logistic:
+    C: 0.10
+    max_iter: 1500
