@@ -1,0 +1,67 @@
+name: Reach Mechanics Robustness V1
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "research/reach-mechanics-v1"
+    paths:
+      - "pipeline/research/reach_mechanics_robustness_v1/**"
+      - ".github/workflows/reach-mechanics-robustness-v1.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  robustness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install focused research dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy pandas pyarrow pyyaml scipy scikit-learn statsmodels
+
+      - name: Compile reach robustness study
+        run: python -m py_compile pipeline/research/reach_mechanics_robustness_v1/run.py
+
+      - name: Run reach mechanics robustness study
+        run: python -m pipeline.research.reach_mechanics_robustness_v1.run
+
+      - name: Upload robustness outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reach-mechanics-robustness-v1
+          path: data/research/reach_mechanics_robustness_v1/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Persist compact robustness results
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f \
+            data/research/reach_mechanics_robustness_v1/robustness_fold_metrics.csv \
+            data/research/reach_mechanics_robustness_v1/robustness_scenario_summary.csv \
+            data/research/reach_mechanics_robustness_v1/division_fold_metrics.csv \
+            data/research/reach_mechanics_robustness_v1/division_summary.csv \
+            data/research/reach_mechanics_robustness_v1/extreme_reach_fighters.csv \
+            data/research/reach_mechanics_robustness_v1/robustness_gate.csv \
+            data/research/reach_mechanics_robustness_v1/audit.csv \
+            data/research/reach_mechanics_robustness_v1/summary.json
+          if git diff --cached --quiet; then
+            echo "No compact robustness result changes to commit"
+          else
+            git commit -m "research: persist reach mechanics robustness v1 results"
+            git push origin HEAD:research/reach-mechanics-v1
+          fi
