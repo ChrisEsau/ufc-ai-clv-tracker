@@ -1,0 +1,5 @@
+check,passed,value
+outer_start_unchanged,True,2024-01-01
+outer_rows_never_scored,True,2674
+development_rows_only,True,14634
+development_folds_only,True,"[2020, 2021, 2022, 2023]"
