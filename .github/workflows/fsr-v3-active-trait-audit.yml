@@ -37,7 +37,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: python -m pip install numpy pandas scipy pyarrow scikit-learn
+      - run: python -m pip install numpy pandas scipy pyarrow scikit-learn pyyaml
       - name: Compile KD resistance audit
         run: |
           python -m py_compile pipeline/fsr_v3/research/active_trait_audit_sources.py
@@ -89,7 +89,7 @@ jobs:
 
   submission-conversion-traits:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
     env:
       PYTHONPATH: .
     steps:
