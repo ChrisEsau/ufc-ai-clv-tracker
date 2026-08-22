@@ -86,10 +86,17 @@ def add_prior_counts(frame):
 
 
 def score_candidate(tendency, suppression, fsr):
-    sup = suppression.rename(columns={
+    # suppression rows are defender-centric: fighter_id is the defender whose
+    # multiplier applies to the tendency row's opponent.  Select only the
+    # defender key before renaming so the original attacker opponent_id does not
+    # become a duplicate column label.
+    sup = suppression[[
+        "event_date", "fight_id", "fighter_id", "pre_rating",
+        "pre_posterior_sd", "population_multiplier",
+    ]].rename(columns={
         "fighter_id": "opponent_id", "pre_rating": "suppression_mean",
         "pre_posterior_sd": "suppression_sd", "population_multiplier": "suppression_population",
-    })[["event_date", "fight_id", "opponent_id", "suppression_mean", "suppression_sd", "suppression_population"]]
+    })
     x = tendency.merge(sup, on=["event_date", "fight_id", "opponent_id"], how="inner", validate="one_to_one")
     legacy_self = fsr[["event_date", "fight_id", "fighter_id", "submission_tendency"]].copy()
     legacy_opp = fsr[["event_date", "fight_id", "fighter_id", "submission_suppression"]].rename(
