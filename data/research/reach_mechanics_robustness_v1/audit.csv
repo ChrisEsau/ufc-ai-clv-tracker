@@ -1,0 +1,7 @@
+check,passed,value
+outer_start_unchanged,True,2024-01-01
+development_rows_only,True,10444
+fsr_rows_resolved,True,10444
+reach_edges_antisymmetric,True,0.0
+shortlist_only,True,"['distance_attempt_rate', 'td_completion']"
+chronological_folds_only,True,"[2020, 2021, 2022, 2023]"

@@ -1,0 +1,3 @@
+mechanic,robust_scenarios_available,robust_scenarios_passed,evaluable_divisions,positive_beta_divisions,improving_divisions,robustness_pass
+distance_attempt_rate,5,4,10,9,6,True
+td_completion,5,4,8,6,1,True

@@ -1,0 +1,30 @@
+{
+  "protocol": "development-only reach robustness; 2024+ sealed",
+  "fsr_missing_directional_rows_outside_reconstructed_period": 2188,
+  "development_rows": 10444,
+  "development_fights": 5222,
+  "shortlist": [
+    "distance_attempt_rate",
+    "td_completion"
+  ],
+  "gates": [
+    {
+      "mechanic": "distance_attempt_rate",
+      "robust_scenarios_available": 5,
+      "robust_scenarios_passed": 4,
+      "evaluable_divisions": 10,
+      "positive_beta_divisions": 9,
+      "improving_divisions": 6,
+      "robustness_pass": true
+    },
+    {
+      "mechanic": "td_completion",
+      "robust_scenarios_available": 5,
+      "robust_scenarios_passed": 4,
+      "evaluable_divisions": 8,
+      "positive_beta_divisions": 6,
+      "improving_divisions": 1,
+      "robustness_pass": true
+    }
+  ]
+}
