@@ -62,16 +62,20 @@ def _lognormal_variance(mean, sd):
     return float(np.log1p((sd / mean) ** 2))
 
 
+def _row_nb2_ll(y, mu, alpha):
+    return float(nb2_log_likelihood(float(y), float(mu), float(alpha)))
+
+
 def predictive_ll(y, exposure, q, qsd, s, ssd, alpha, c):
     base_mean = exposure / 900.0 * q * s
     if c <= 0:
-        return float(nb2_log_likelihood(y, base_mean, alpha))
+        return _row_nb2_ll(y, base_mean, alpha)
     v = c * (_lognormal_variance(q, qsd) + _lognormal_variance(s, ssd))
     if v <= 1e-14:
-        return float(nb2_log_likelihood(y, base_mean, alpha))
+        return _row_nb2_ll(y, base_mean, alpha)
     log_mu = np.log(max(base_mean, 1e-12)) - 0.5 * v
     means = np.exp(log_mu + np.sqrt(2.0 * v) * GH_X)
-    lls = nb2_log_likelihood(y, means, alpha)
+    lls = nb2_log_likelihood(float(y), means, float(alpha))
     m = float(np.max(lls))
     return float(m + np.log(np.sum(GH_W * np.exp(lls - m))))
 
@@ -86,10 +90,9 @@ def add_prior_counts(frame):
 
 
 def score_candidate(tendency, suppression, fsr):
-    # suppression rows are defender-centric: fighter_id is the defender whose
-    # multiplier applies to the tendency row's opponent.  Select only the
-    # defender key before renaming so the original attacker opponent_id does not
-    # become a duplicate column label.
+    # Suppression rows are defender-centric: fighter_id is the defender whose
+    # multiplier applies to the tendency row's opponent. Select only that key
+    # before renaming so the original attacker opponent_id is never duplicated.
     sup = suppression[[
         "event_date", "fight_id", "fighter_id", "pre_rating",
         "pre_posterior_sd", "population_multiplier",
@@ -108,9 +111,21 @@ def score_candidate(tendency, suppression, fsr):
     x["new_mean"] = x["denominator"] / 900.0 * x["pre_rating"] * x["suppression_mean"]
     x["population_mean"] = x["denominator"] / 900.0 * x["population_rate_15m"] * x["suppression_population"]
     x["legacy_mean"] = x["denominator"] * x["submission_tendency"] * x["legacy_suppression"]
-    x["population_ll"] = nb2_log_likelihood(x["numerator"], x["population_mean"], x["observation_alpha"])
-    x["legacy_ll"] = nb2_log_likelihood(x["numerator"], x["legacy_mean"], x["observation_alpha"])
-    x["plugin_ll"] = nb2_log_likelihood(x["numerator"], x["new_mean"], x["observation_alpha"])
+
+    # The shared NB2 helper intentionally takes one scalar alpha. Observation
+    # dispersion varies by replay date, so score each row with its own scalar.
+    x["population_ll"] = [
+        _row_nb2_ll(y, mu, a)
+        for y, mu, a in zip(x["numerator"], x["population_mean"], x["observation_alpha"])
+    ]
+    x["legacy_ll"] = [
+        _row_nb2_ll(y, mu, a)
+        for y, mu, a in zip(x["numerator"], x["legacy_mean"], x["observation_alpha"])
+    ]
+    x["plugin_ll"] = [
+        _row_nb2_ll(y, mu, a)
+        for y, mu, a in zip(x["numerator"], x["new_mean"], x["observation_alpha"])
+    ]
     x["plugin_abs_error"] = (x["numerator"] - x["new_mean"]).abs()
     x["legacy_abs_error"] = (x["numerator"] - x["legacy_mean"]).abs()
     for c in C_CANDIDATES:
