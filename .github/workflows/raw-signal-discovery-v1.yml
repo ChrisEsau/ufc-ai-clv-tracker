@@ -34,10 +34,14 @@ jobs:
         run: |
           python -m py_compile pipeline/research/raw_signal_discovery_v1/build_feature_bank.py
           python -m py_compile pipeline/research/raw_signal_discovery_v1/train_discovery.py
+          python -m py_compile pipeline/research/raw_signal_discovery_v1/dissect_signals.py
           python -m py_compile pipeline/research/raw_signal_discovery_v1/run.py
 
       - name: Run development-only raw signal discovery
         run: python -m pipeline.research.raw_signal_discovery_v1.run
+
+      - name: Run development-only signal dissection
+        run: python -m pipeline.research.raw_signal_discovery_v1.dissect_signals
 
       - name: Upload research outputs
         if: always()
@@ -60,7 +64,15 @@ jobs:
             data/research/raw_signal_discovery_v1/suspicious_single_feature_auc.csv \
             data/research/raw_signal_discovery_v1/fold_feature_importance.csv \
             data/research/raw_signal_discovery_v1/signal_stability.csv \
-            data/research/raw_signal_discovery_v1/research_summary.json
+            data/research/raw_signal_discovery_v1/research_summary.json \
+            data/research/raw_signal_discovery_v1/family_ablation_metrics.csv \
+            data/research/raw_signal_discovery_v1/family_ablation_summary.csv \
+            data/research/raw_signal_discovery_v1/feature_family_counts.csv \
+            data/research/raw_signal_discovery_v1/signed_shap_fold_summary.csv \
+            data/research/raw_signal_discovery_v1/signed_shap_direction_summary.csv \
+            data/research/raw_signal_discovery_v1/signed_shap_dependence_bins.csv \
+            data/research/raw_signal_discovery_v1/dissection_audit.csv \
+            data/research/raw_signal_discovery_v1/dissection_summary.json
           if git diff --cached --quiet; then
             echo "No compact result changes to commit"
           else
