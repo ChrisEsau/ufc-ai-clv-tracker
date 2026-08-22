@@ -8,6 +8,11 @@ on:
       - "pipeline/fsr_v3/cold_start/**"
       - "tests/fsr_v3/test_cold_start.py"
       - ".github/workflows/fsr-v3-cold-start-study.yml"
+  pull_request:
+    branches:
+      - "feature/fsr-v3"
+    paths:
+      - ".github/workflows/fsr-v3-cold-start-study.yml"
   workflow_dispatch:
 
 permissions:
