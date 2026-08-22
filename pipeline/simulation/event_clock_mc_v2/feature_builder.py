@@ -18,6 +18,9 @@ from pipeline.simulation.event_clock_mc_v2.fsr_v3_adapter import (
     derive_runtime_inputs,
     initialize_fighter_path_traits,
 )
+from pipeline.simulation.event_clock_mc_v2.reach_translation import (
+    directional_reach_inputs,
+)
 
 FSR_V3_ATTRS = (
     "standing_striking_tendency", "standing_striking_suppression",
@@ -94,6 +97,12 @@ def _directional_row(master_row, event_date, duration, side, fighter, fighter_tr
         "duration": float(duration), "scheduled_rounds": float(master_row["total_rounds"]),
         "fighter_age": _finite(fighter_age), "opponent_age": _finite(opponent_age),
     }
+    # Reach is a fight-specific physical matchup translation, not an FSR trait
+    # and not a fitted direct-model feature.  We carry it alongside the model
+    # features so inference can apply the validated post-model distance-volume
+    # adjustment without altering persisted FSR state or the frozen model schema.
+    row.update(directional_reach_inputs(master_row, side))
+
     for attr in FSR_V3_ATTRS:
         row[f"self_{attr}"] = _trait_value(fighter, fighter_traits, attr)
         row[f"opp_{attr}"] = _trait_value(opponent, opponent_traits, attr)
