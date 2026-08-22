@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "feature/fsr-v3"
+      - "research/fsr-v3-cold-start-run2"
     paths:
       - "pipeline/fsr_v3/cold_start/**"
       - ".github/workflows/fsr-v3-cold-start-study.yml"
