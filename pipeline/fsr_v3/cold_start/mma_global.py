@@ -18,6 +18,47 @@ DEFAULT_ELO = 1500.0
 DEFAULT_ELO_K = 24.0
 
 
+def _canonicalize_fight_ids(frame: pd.DataFrame) -> pd.DataFrame:
+    """Make source fight identifiers globally stable without hiding duplicates.
+
+    The public database's ``fight_id`` is not guaranteed to be globally unique
+    across every organization/source.  Preserve it as ``source_fight_id`` and
+    construct an auditable composite identifier from source id, organization,
+    date, and the normalized unordered fighter pair.  Rows that are exact
+    representations of the same source fight are collapsed once; any remaining
+    composite collision is retained with an explicit occurrence suffix.
+    """
+    x = frame.copy()
+    x["source_fight_id"] = x["fight_id"].astype(str)
+    x["event_date"] = pd.to_datetime(x["event_date"], errors="raise").dt.normalize()
+    x["organization"] = x["organization"].fillna("unknown").astype(str).str.lower().str.strip()
+    f1 = x["fighter_1"].map(normalize_name)
+    f2 = x["fighter_2"].map(normalize_name)
+    x["_pair_key"] = ["~".join(sorted((a, b))) for a, b in zip(f1, f2)]
+
+    source_key = ["source_fight_id", "organization", "event_date", "_pair_key"]
+    x = x.drop_duplicates(subset=source_key, keep="first").copy()
+    date_key = x["event_date"].dt.strftime("%Y%m%d")
+    x["fight_id"] = (
+        "mma-global:"
+        + x["organization"].str.replace(r"[^a-z0-9]+", "_", regex=True).str.strip("_")
+        + ":"
+        + date_key
+        + ":"
+        + x["_pair_key"]
+        + ":"
+        + x["source_fight_id"]
+    )
+
+    duplicate = x.duplicated("fight_id", keep=False)
+    if duplicate.any():
+        occurrence = x.loc[duplicate].groupby("fight_id", sort=False).cumcount().astype(str)
+        x.loc[duplicate, "fight_id"] = x.loc[duplicate, "fight_id"] + ":dup" + occurrence
+    if x["fight_id"].duplicated().any():
+        raise RuntimeError("MMA Global canonical fight id construction failed")
+    return x.drop(columns=["_pair_key"]).reset_index(drop=True)
+
+
 def load_mma_global_wide(path: str | Path) -> pd.DataFrame:
     """Load the dated longitudinal fight fact table from a local DuckDB file."""
     try:
@@ -40,8 +81,7 @@ def load_mma_global_wide(path: str | Path) -> pd.DataFrame:
         frame = con.execute(query).fetchdf()
     finally:
         con.close()
-    frame["event_date"] = pd.to_datetime(frame["event_date"], errors="raise").dt.normalize()
-    frame["fight_id"] = frame["fight_id"].astype(str)
+    frame = _canonicalize_fight_ids(frame)
     return frame.sort_values(["event_date", "fight_id"]).reset_index(drop=True)
 
 
@@ -76,7 +116,6 @@ def add_leakage_safe_elo(
         day["f1_pre_elo"] = f1_pre
         day["f2_pre_elo"] = f2_pre
         pending: dict[str, float] = {}
-        counts: dict[str, int] = {}
         for row in day.itertuples(index=False):
             r1 = float(row.f1_pre_elo)
             r2 = float(row.f2_pre_elo)
@@ -90,8 +129,6 @@ def add_leakage_safe_elo(
             delta = float(k_factor) * (s1 - e1)
             pending[row.f1_key] = pending.get(row.f1_key, 0.0) + delta
             pending[row.f2_key] = pending.get(row.f2_key, 0.0) - delta
-            counts[row.f1_key] = counts.get(row.f1_key, 0) + 1
-            counts[row.f2_key] = counts.get(row.f2_key, 0) + 1
         for key, delta in pending.items():
             # Multiple same-day fights share the same prefight state; aggregate
             # their deltas rather than invent an intra-day chronology.
