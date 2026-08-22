@@ -7,6 +7,10 @@ on:
     paths:
       - "pipeline/simulation/event_clock_mc_v2/run_live_card_canonical_c.py"
       - ".github/workflows/canonical-c-live-card.yml"
+  pull_request:
+    paths:
+      - "pipeline/simulation/event_clock_mc_v2/run_live_card_canonical_c.py"
+      - ".github/workflows/canonical-c-live-card.yml"
   workflow_dispatch:
 
 permissions:
