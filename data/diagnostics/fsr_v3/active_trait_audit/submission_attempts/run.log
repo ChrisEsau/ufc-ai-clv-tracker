@@ -1,17 +1,41 @@
-Traceback (most recent call last):
-  File "<frozen runpy>", line 198, in _run_module_as_main
-  File "<frozen runpy>", line 88, in _run_code
-  File "/home/runner/work/ufc-ai-clv-tracker/ufc-ai-clv-tracker/pipeline/fsr_v3/research/run_submission_attempt_prior_variance_audit.py", line 18, in <module>
-    main()
-  File "/home/runner/work/ufc-ai-clv-tracker/ufc-ai-clv-tracker/pipeline/fsr_v3/research/run_submission_attempt_prior_variance_audit.py", line 14, in main
-    audit.main()
-  File "/home/runner/work/ufc-ai-clv-tracker/ufc-ai-clv-tracker/pipeline/fsr_v3/research/submission_attempt_prior_variance_audit.py", line 166, in main
-    scored = score_candidate(tendency_cache[k], suppression, fsr)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/work/ufc-ai-clv-tracker/ufc-ai-clv-tracker/pipeline/fsr_v3/research/submission_attempt_prior_variance_audit.py", line 111, in score_candidate
-    x["population_ll"] = nb2_log_likelihood(x["numerator"], x["population_mean"], x["observation_alpha"])
-                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/work/ufc-ai-clv-tracker/ufc-ai-clv-tracker/pipeline/fsr_v3/replay/math.py", line 12, in nb2_log_likelihood
-    alpha = max(float(alpha), 1e-12)
-                ^^^^^^^^^^^^
-TypeError: float() argument must be a string or a real number, not 'Series'
+========================================================================================================================
+FSR V3 ACTIVE TRAIT AUDIT — SUBMISSION ATTEMPTS
+========================================================================================================================
+TOP VALIDATION PRIOR SETTINGS
+ k_seconds  suppression_shape  rows  fights     total_ll   mean_ll      mae
+    1800.0                8.0  1820     910 -1390.136100 -0.763811 0.564661
+    1800.0                5.0  1820     910 -1390.333728 -0.763920 0.561406
+    1800.0                3.0  1820     910 -1391.864742 -0.764761 0.558032
+     900.0                8.0  1820     910 -1392.662344 -0.765199 0.566717
+    2700.0                8.0  1820     910 -1392.768625 -0.765257 0.567067
+    2700.0                5.0  1820     910 -1392.833937 -0.765293 0.563940
+     900.0                5.0  1820     910 -1392.969405 -0.765368 0.563389
+    2700.0                3.0  1820     910 -1394.210402 -0.766050 0.560612
+     900.0                3.0  1820     910 -1394.571460 -0.766248 0.559941
+    1800.0                2.0  1820     910 -1394.839008 -0.766395 0.556686
+    3600.0                5.0  1820     910 -1395.548193 -0.766785 0.566958
+    3600.0                8.0  1820     910 -1395.592958 -0.766809 0.570054
+selected K=1800s suppression_shape=8
+EPISTEMIC C
+   c               window  rows  fights     total_ll   mean_ll      mae
+0.00 validation_2022_2023  1820     910 -1380.254556 -0.758382 0.564661
+0.00     holdout_2024plus  2188    1094 -1550.944988 -0.708841 0.532670
+0.25 validation_2022_2023  1820     910 -1382.195871 -0.759448 0.564661
+0.25     holdout_2024plus  2188    1094 -1552.737125 -0.709660 0.532670
+0.50 validation_2022_2023  1820     910 -1384.543815 -0.760738 0.564661
+0.50     holdout_2024plus  2188    1094 -1555.022986 -0.710705 0.532670
+0.75 validation_2022_2023  1820     910 -1387.209269 -0.762203 0.564661
+0.75     holdout_2024plus  2188    1094 -1557.687056 -0.711923 0.532670
+1.00 validation_2022_2023  1820     910 -1390.136100 -0.763811 0.564661
+1.00     holdout_2024plus  2188    1094 -1560.662196 -0.713283 0.532670
+1.25 validation_2022_2023  1820     910 -1393.286384 -0.765542 0.564661
+1.25     holdout_2024plus  2188    1094 -1563.904524 -0.714764 0.532670
+selected c=0
+HOLDOUT vs population LL=+44.102 CI[+30.392,+57.921] P>0=1.000
+HOLDOUT vs inherited V2 submission traits LL=-9.792 CI[-20.140,+0.251] P>0=0.029
+prior_bucket   rows  fights  delta_ll_vs_population  delta_ll_vs_legacy  plugin_mae  legacy_mae
+           0  304.0   257.0                0.472284            0.475666    0.481036    0.487193
+           1  244.0   222.0                2.497050           -1.172174    0.577432    0.562452
+           2  204.0   193.0                2.005569           -0.485368    0.470130    0.462809
+       3plus 1436.0   894.0               39.127130           -8.610067    0.544879    0.504147
+artifacts: data/diagnostics/fsr_v3/active_trait_audit/submission_attempts
