@@ -1,0 +1,44 @@
+name: FSR V3 Prior Strength Study
+
+on:
+  push:
+    branches:
+      - "research/fsr-v3-prior-strength"
+    paths:
+      - "pipeline/fsr_v3/research/prior_strength_study.py"
+      - ".github/workflows/fsr-v3-prior-strength-study.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prior-strength-study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install focused dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy pandas scipy pyarrow
+
+      - name: Compile research diagnostic
+        run: python -m py_compile pipeline/fsr_v3/research/prior_strength_study.py
+
+      - name: Run native-target prior strength study
+        run: python -m pipeline.fsr_v3.research.prior_strength_study
+
+      - name: Upload prior strength outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: fsr-v3-prior-strength-study
+          path: data/diagnostics/fsr_v3_prior_strength/*.csv
+          if-no-files-found: error
