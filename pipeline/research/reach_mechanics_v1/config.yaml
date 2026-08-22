@@ -1,0 +1,16 @@
+inputs:
+  master_path: data/master/ufc_master.parquet
+  fsr_v3_prefight_path: data/fsr_v3/fsr_v3_prefight_snapshots.parquet
+
+outputs:
+  root: data/research/reach_mechanics_v1
+
+validation:
+  development_years: [2020, 2021, 2022, 2023]
+  outer_start: 2024-01-01
+  minimum_train_rows: 1000
+  minimum_valid_rows: 150
+
+physical:
+  reach_saturation_inches: 4.0
+  reach_bins: [-100.0, -6.0, -4.0, -2.0, 0.0, 2.0, 4.0, 6.0, 100.0]
