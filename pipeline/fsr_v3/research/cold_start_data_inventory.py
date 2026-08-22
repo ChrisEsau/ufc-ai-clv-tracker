@@ -69,7 +69,10 @@ def master_record_temporality() -> None:
         pieces.append(z)
     long = pd.concat(pieces, ignore_index=True).dropna(subset=["fighter_id"])
     long["date"] = pd.to_datetime(long["date"], errors="coerce")
-    long["record"] = long[["wins", "losses", "draws"]].astype(str).agg("-".join, axis=1)
+    long["record"] = long.apply(
+        lambda row: f"{row['wins']}-{row['losses']}-{row['draws']}",
+        axis=1,
+    )
     variation = long.groupby("fighter_id")["record"].nunique()
     multi = variation[variation > 1]
     print("\nUFC MASTER PROFILE-RECORD TEMPORALITY")
