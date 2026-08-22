@@ -14,9 +14,11 @@ outputs:
   research_summary: data/research/raw_signal_discovery_v1/research_summary.json
 
 feature_factory:
-  fight_windows: [1, 2, 3, 5]
-  day_windows: [180, 365, 730]
-  aggregations: [mean, std, median, min, max, slope]
+  # V1 intentionally stays in the low-thousands of matchup features. If signal
+  # survives, median/min/max and tsfresh become challenger expansions later.
+  fight_windows: [1, 3, 5]
+  day_windows: [365, 730]
+  aggregations: [mean, std, slope]
   epsilon: 0.000001
 
 validation:
