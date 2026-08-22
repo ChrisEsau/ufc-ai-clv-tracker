@@ -13,6 +13,16 @@ on:
       - "pipeline/fsr_v3/research/submission_conversion_trait_audit.py"
       - "pipeline/fsr_v3/research/run_submission_conversion_trait_audit.py"
       - ".github/workflows/fsr-v3-active-trait-audit.yml"
+  pull_request:
+    paths:
+      - "pipeline/fsr_v3/research/active_trait_audit_sources.py"
+      - "pipeline/fsr_v3/research/kd_resistance_prior_variance_audit.py"
+      - "pipeline/fsr_v3/research/run_kd_resistance_prior_variance_audit.py"
+      - "pipeline/fsr_v3/research/submission_attempt_prior_variance_audit.py"
+      - "pipeline/fsr_v3/research/run_submission_attempt_prior_variance_audit.py"
+      - "pipeline/fsr_v3/research/submission_conversion_trait_audit.py"
+      - "pipeline/fsr_v3/research/run_submission_conversion_trait_audit.py"
+      - ".github/workflows/fsr-v3-active-trait-audit.yml"
   workflow_dispatch:
 
 permissions:
@@ -118,7 +128,7 @@ jobs:
           if-no-files-found: warn
 
   persist-results:
-    if: always()
+    if: always() && github.event_name == 'push'
     needs:
       - escape-prior-variance
       - kd-resistance-prior-variance
