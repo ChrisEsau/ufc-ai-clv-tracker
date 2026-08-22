@@ -8,17 +8,20 @@ on:
       - "pipeline/fsr_v3/research/power_structural_study.py"
       - "pipeline/fsr_v3/research/power_sequential_shrinkage_study.py"
       - "pipeline/fsr_v3/research/power_consequence_validation.py"
+      - "pipeline/fsr_v3/research/prior_strength_study.py"
       - ".github/workflows/fsr-v3-power-study.yml"
   pull_request:
     paths:
       - "pipeline/fsr_v3/research/power_structural_study.py"
       - "pipeline/fsr_v3/research/power_sequential_shrinkage_study.py"
       - "pipeline/fsr_v3/research/power_consequence_validation.py"
+      - "pipeline/fsr_v3/research/prior_strength_study.py"
       - ".github/workflows/fsr-v3-power-study.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   power-study:
@@ -64,3 +67,53 @@ jobs:
           name: fsr-v3-power-research
           path: data/diagnostics/fsr_v3_power/*.csv
           if-no-files-found: error
+
+  prior-strength-study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install focused dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy pandas scipy pyarrow
+
+      - name: Compile prior strength study
+        run: python -m py_compile pipeline/fsr_v3/research/prior_strength_study.py
+
+      - name: Run native-target prior strength study
+        run: |
+          set -o pipefail
+          python -m pipeline.fsr_v3.research.prior_strength_study 2>&1 | tee /tmp/prior_strength.log
+
+      - name: Upload prior strength outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: fsr-v3-prior-strength-study
+          path: data/diagnostics/fsr_v3_prior_strength/*.csv
+          if-no-files-found: error
+
+      - name: Post prior strength result to PR
+        if: always() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo "## FSR V3 early-career prior-strength audit"
+            echo
+            if [ -f /tmp/prior_strength.log ]; then
+              echo '```text'
+              tail -n 120 /tmp/prior_strength.log
+              echo '```'
+            else
+              echo "Prior-strength study did not produce a log."
+            fi
+          } > /tmp/prior_strength_comment.md
+          gh pr comment "${{ github.event.pull_request.number }}" --repo ChrisEsau/ufc-ai-clv-tracker --body-file /tmp/prior_strength_comment.md
