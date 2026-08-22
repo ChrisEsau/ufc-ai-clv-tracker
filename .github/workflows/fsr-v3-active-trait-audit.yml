@@ -5,12 +5,13 @@ on:
     branches:
       - "research/fsr-v3-active-trait-audit"
     paths:
-      - "pipeline/fsr_v3/research/escape_prior_variance_audit.py"
-      - "pipeline/fsr_v3/research/run_escape_prior_variance_audit.py"
+      - "pipeline/fsr_v3/research/active_trait_audit_sources.py"
       - "pipeline/fsr_v3/research/kd_resistance_prior_variance_audit.py"
       - "pipeline/fsr_v3/research/run_kd_resistance_prior_variance_audit.py"
       - "pipeline/fsr_v3/research/submission_attempt_prior_variance_audit.py"
+      - "pipeline/fsr_v3/research/run_submission_attempt_prior_variance_audit.py"
       - "pipeline/fsr_v3/research/submission_conversion_trait_audit.py"
+      - "pipeline/fsr_v3/research/run_submission_conversion_trait_audit.py"
       - ".github/workflows/fsr-v3-active-trait-audit.yml"
   workflow_dispatch:
 
@@ -18,34 +19,17 @@ permissions:
   contents: write
 
 jobs:
+  # Escape/retention already passed and its artifacts are committed on this
+  # research branch. Do not burn runner time recomputing it on repair pushes.
   escape-prior-variance:
+    if: ${{ false }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      PYTHONPATH: .
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: python -m pip install numpy pandas scipy pyarrow
-      - name: Compile escape audit
-        run: |
-          python -m py_compile pipeline/fsr_v3/research/escape_prior_variance_audit.py
-          python -m py_compile pipeline/fsr_v3/research/run_escape_prior_variance_audit.py
-      - name: Run escape retention audit
-        run: python -m pipeline.fsr_v3.research.run_escape_prior_variance_audit
-      - name: Upload escape audit artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: fsr-v3-escape-prior-variance-audit
-          path: data/diagnostics/fsr_v3/active_trait_audit/escape/
-          if-no-files-found: warn
+      - run: echo "escape audit already complete"
 
   kd-resistance-prior-variance:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     env:
       PYTHONPATH: .
     steps:
@@ -53,13 +37,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: python -m pip install numpy pandas scipy pyarrow
+      - run: python -m pip install numpy pandas scipy pyarrow scikit-learn
       - name: Compile KD resistance audit
         run: |
+          python -m py_compile pipeline/fsr_v3/research/active_trait_audit_sources.py
           python -m py_compile pipeline/fsr_v3/research/kd_resistance_prior_variance_audit.py
           python -m py_compile pipeline/fsr_v3/research/run_kd_resistance_prior_variance_audit.py
       - name: Run KD resistance audit
-        run: python -m pipeline.fsr_v3.research.run_kd_resistance_prior_variance_audit
+        shell: bash
+        run: |
+          mkdir -p data/diagnostics/fsr_v3/active_trait_audit/kd_resistance
+          set -o pipefail
+          python -m pipeline.fsr_v3.research.run_kd_resistance_prior_variance_audit 2>&1 | tee data/diagnostics/fsr_v3/active_trait_audit/kd_resistance/run.log
       - name: Upload KD resistance artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -70,7 +59,7 @@ jobs:
 
   submission-attempt-prior-variance:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 50
     env:
       PYTHONPATH: .
     steps:
@@ -80,9 +69,16 @@ jobs:
           python-version: "3.11"
       - run: python -m pip install numpy pandas scipy pyarrow
       - name: Compile submission attempt audit
-        run: python -m py_compile pipeline/fsr_v3/research/submission_attempt_prior_variance_audit.py
+        run: |
+          python -m py_compile pipeline/fsr_v3/research/active_trait_audit_sources.py
+          python -m py_compile pipeline/fsr_v3/research/submission_attempt_prior_variance_audit.py
+          python -m py_compile pipeline/fsr_v3/research/run_submission_attempt_prior_variance_audit.py
       - name: Run submission attempt audit
-        run: python -m pipeline.fsr_v3.research.submission_attempt_prior_variance_audit
+        shell: bash
+        run: |
+          mkdir -p data/diagnostics/fsr_v3/active_trait_audit/submission_attempts
+          set -o pipefail
+          python -m pipeline.fsr_v3.research.run_submission_attempt_prior_variance_audit 2>&1 | tee data/diagnostics/fsr_v3/active_trait_audit/submission_attempts/run.log
       - name: Upload submission attempt artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -93,7 +89,7 @@ jobs:
 
   submission-conversion-traits:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     env:
       PYTHONPATH: .
     steps:
@@ -103,9 +99,16 @@ jobs:
           python-version: "3.11"
       - run: python -m pip install numpy pandas scipy pyarrow
       - name: Compile submission conversion audit
-        run: python -m py_compile pipeline/fsr_v3/research/submission_conversion_trait_audit.py
+        run: |
+          python -m py_compile pipeline/fsr_v3/research/active_trait_audit_sources.py
+          python -m py_compile pipeline/fsr_v3/research/submission_conversion_trait_audit.py
+          python -m py_compile pipeline/fsr_v3/research/run_submission_conversion_trait_audit.py
       - name: Run submission conversion audit
-        run: python -m pipeline.fsr_v3.research.submission_conversion_trait_audit
+        shell: bash
+        run: |
+          mkdir -p data/diagnostics/fsr_v3/active_trait_audit/submission_conversion
+          set -o pipefail
+          python -m pipeline.fsr_v3.research.run_submission_conversion_trait_audit 2>&1 | tee data/diagnostics/fsr_v3/active_trait_audit/submission_conversion/run.log
       - name: Upload submission conversion artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -126,12 +129,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: research/fsr-v3-active-trait-audit
-      - name: Download escape results
-        continue-on-error: true
-        uses: actions/download-artifact@v4
-        with:
-          name: fsr-v3-escape-prior-variance-audit
-          path: data/diagnostics/fsr_v3/active_trait_audit/escape
       - name: Download KD resistance results
         continue-on-error: true
         uses: actions/download-artifact@v4
@@ -154,7 +151,7 @@ jobs:
         run: |
           mkdir -p data/diagnostics/fsr_v3/active_trait_audit
           cat > data/diagnostics/fsr_v3/active_trait_audit/audit_run_status.txt <<EOF
-          escape=${{ needs.escape-prior-variance.result }}
+          escape=success_previous_run
           kd_resistance=${{ needs.kd-resistance-prior-variance.result }}
           submission_attempts=${{ needs.submission-attempt-prior-variance.result }}
           submission_conversion=${{ needs.submission-conversion-traits.result }}
@@ -169,5 +166,5 @@ jobs:
             echo "No audit artifacts to commit"
             exit 0
           fi
-          git commit -m "Record FSR V3 active trait audit results"
+          git commit -m "Record repaired FSR V3 active trait audit results"
           git push origin HEAD:research/fsr-v3-active-trait-audit
