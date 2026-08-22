@@ -46,6 +46,61 @@ from pipeline.simulation.event_clock_mc_v2.feature_builder import (
 )
 
 
+REACH_MULTIPLIER_COLUMN = "distance_reach_multiplier"
+
+
+def _distance_reach_multipliers(frame: pd.DataFrame) -> np.ndarray:
+    """Return validated distance-volume multipliers, neutral for legacy frames."""
+    if REACH_MULTIPLIER_COLUMN not in frame.columns:
+        return np.ones(len(frame), dtype=float)
+    values = pd.to_numeric(frame[REACH_MULTIPLIER_COLUMN], errors="coerce").to_numpy(float)
+    values = np.where(np.isfinite(values), values, 1.0)
+    if np.any(values <= 0.0):
+        raise ValueError("distance reach multipliers must be positive")
+    return values
+
+
+def _apply_distance_reach_translation(frame: pd.DataFrame) -> pd.DataFrame:
+    """Apply reach only to distance volume and derive the standing-rate change.
+
+    Event Clock Stage 9 draws a combined standing attempt budget from
+    ``pred_standing_rate_free_15m``.  Reach was validated only for DISTANCE
+    attempt volume, not clinch volume or landing accuracy.  We therefore:
+
+    1. multiply predicted distance attempts and landings by the reach multiplier;
+    2. leave clinch predictions unchanged;
+    3. compute the implied combined-standing volume ratio so the same effect can
+       be applied to the Stage-9 free-time standing rate later.
+
+    Scaling both distance attempts and distance landings preserves predicted
+    distance accuracy exactly.
+    """
+    f = frame.copy()
+    multiplier = _distance_reach_multipliers(f)
+
+    base_distance_attempted = f["pred_distance_attempted"].to_numpy(float).copy()
+    base_distance_landed = f["pred_distance_landed"].to_numpy(float).copy()
+    clinch_attempted = f["pred_clinch_attempted"].to_numpy(float)
+
+    f["pred_distance_attempted_base_no_reach"] = base_distance_attempted
+    f["pred_distance_landed_base_no_reach"] = base_distance_landed
+    f["pred_distance_attempted"] = base_distance_attempted * multiplier
+    f["pred_distance_landed"] = base_distance_landed * multiplier
+
+    base_standing_attempted = base_distance_attempted + clinch_attempted
+    translated_standing_attempted = (
+        f["pred_distance_attempted"].to_numpy(float) + clinch_attempted
+    )
+    standing_multiplier = np.divide(
+        translated_standing_attempted,
+        base_standing_attempted,
+        out=np.ones_like(translated_standing_attempted),
+        where=base_standing_attempted > 1e-12,
+    )
+    f["standing_reach_rate_multiplier"] = standing_multiplier
+    return f
+
+
 def _add_fitted_direct_predictions(
     train: pd.DataFrame,
     x: np.ndarray,
@@ -61,6 +116,10 @@ def _add_fitted_direct_predictions(
     ``pred_*`` columns. ECV2 builds its V3 training frame directly from
     historical features/targets, so those fitted prediction columns must be
     created here before calling the unchanged V1 ``build_pair_frame`` helper.
+
+    Reach is intentionally NOT folded into these fitted base models.  It is a
+    separately validated post-model matchup translation applied only in forward
+    inference, preserving the frozen direct-model schema and coefficients.
     """
     fitted = train.copy()
 
@@ -241,6 +300,11 @@ def predict_feature_frame_v3(
         f[f"{fam}_attempted"] = 0.0
         f[f"{fam}_landed"] = 0.0
 
+    # Apply the empirically validated reach translation after the frozen direct
+    # models.  This keeps model fitting/schema unchanged and changes only the
+    # supported distance-volume mechanic.
+    f = _apply_distance_reach_translation(f)
+
     control, _, _ = models["control_direct_model"].predict(x, exposure)
     f["pred_qualified_control_inflicted_seconds"] = np.minimum(
         control,
@@ -259,9 +323,13 @@ def predict_feature_frame_v3(
     f["standing_landed"] = 0.0
     f["pred_standing_attempted"] = f["pred_distance_attempted"] + f["pred_clinch_attempted"]
     f["pred_standing_landed"] = f["pred_distance_landed"] + f["pred_clinch_landed"]
-    f["pred_standing_rate_free_15m"] = np.maximum(
+    base_standing_rate = np.maximum(
         models["standing_model"].predict(f[cols]),
         0.0,
+    )
+    f["pred_standing_rate_free_15m_base_no_reach"] = base_standing_rate
+    f["pred_standing_rate_free_15m"] = (
+        base_standing_rate * f["standing_reach_rate_multiplier"].to_numpy(float)
     )
 
     for fam in ("td", "ground"):
