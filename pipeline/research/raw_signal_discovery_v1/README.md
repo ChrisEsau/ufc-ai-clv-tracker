@@ -41,11 +41,11 @@ Historical raw round statistics are first aggregated into fighter-fight observat
 - career
 - last 1 fight
 - last 3 fights
-- last 5 fights
-- prior 365 days
 - prior 730 days
 
-V1 summaries use mean, standard deviation, and chronological slope. Candidate metrics include strike, target, location, takedown, submission, control, damage, round-progression, accuracy, share, and volatility signals.
+V1 summaries use mean and standard deviation. Comparing recent-window means with career means lets the tree model discover recent shifts, while the standard deviations expose fighter-specific volatility. Chronological slopes, additional windows, and tsfresh are intentionally deferred until this bounded development gate shows useful signal.
+
+Candidate metrics include strike, target, location, takedown, submission, control, damage, round-progression, accuracy, share, and volatility signals.
 
 Current prefight physical context includes age, height, reach, weight, and stance indicators. Fight context includes scheduled rounds and title-fight status.
 
