@@ -33,9 +33,10 @@ jobs:
       - name: Compile tsfresh challenger
         run: |
           python -m py_compile pipeline/research/raw_signal_tsfresh_v1/run.py
+          python -m py_compile pipeline/research/raw_signal_tsfresh_v1/entrypoint.py
 
       - name: Run development-only tsfresh challenger
-        run: python -m pipeline.research.raw_signal_tsfresh_v1.run
+        run: python -m pipeline.research.raw_signal_tsfresh_v1.entrypoint
 
       - name: Upload tsfresh research outputs
         if: always()
