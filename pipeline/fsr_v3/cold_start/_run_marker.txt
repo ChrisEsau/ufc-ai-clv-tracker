@@ -1,0 +1,2 @@
+FSR V3 cold-start research implementation checkpoint.
+Production integration: disabled.
