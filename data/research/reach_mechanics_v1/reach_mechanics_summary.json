@@ -1,0 +1,62 @@
+{
+  "protocol": "development-only FSR-offset reach mechanics study; 2024+ reserved and not scored",
+  "outer_rows_reserved_not_scored": 2188,
+  "fsr_missing_directional_rows": 2188,
+  "development_common_rows": 10444,
+  "development_common_fights": 5222,
+  "primary_control_model": "division_age_height",
+  "primary_reach_model": "division_age_height_reach",
+  "reach_saturation_inches": 4.0,
+  "mechanics": [
+    "distance_attempt_rate",
+    "distance_accuracy",
+    "td_attempt_rate",
+    "td_completion",
+    "ground_attempt_rate",
+    "ground_accuracy"
+  ],
+  "nominations": [
+    {
+      "mechanic": "distance_attempt_rate",
+      "mean_delta_primary": -0.01808956887740587,
+      "folds_improved": 3,
+      "reach_direction_stable_3_of_4": true,
+      "nominated_for_followup": true
+    },
+    {
+      "mechanic": "distance_accuracy",
+      "mean_delta_primary": 1.6544862935230498e-06,
+      "folds_improved": 2,
+      "reach_direction_stable_3_of_4": false,
+      "nominated_for_followup": false
+    },
+    {
+      "mechanic": "td_attempt_rate",
+      "mean_delta_primary": 8.964752801210452e-07,
+      "folds_improved": 3,
+      "reach_direction_stable_3_of_4": true,
+      "nominated_for_followup": false
+    },
+    {
+      "mechanic": "td_completion",
+      "mean_delta_primary": -0.00029899110070460977,
+      "folds_improved": 3,
+      "reach_direction_stable_3_of_4": true,
+      "nominated_for_followup": true
+    },
+    {
+      "mechanic": "ground_attempt_rate",
+      "mean_delta_primary": 0.0005053445788663069,
+      "folds_improved": 1,
+      "reach_direction_stable_3_of_4": true,
+      "nominated_for_followup": false
+    },
+    {
+      "mechanic": "ground_accuracy",
+      "mean_delta_primary": 5.48049988816357e-05,
+      "folds_improved": 1,
+      "reach_direction_stable_3_of_4": true,
+      "nominated_for_followup": false
+    }
+  ]
+}

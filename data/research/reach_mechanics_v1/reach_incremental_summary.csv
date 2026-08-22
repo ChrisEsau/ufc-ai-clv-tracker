@@ -1,0 +1,13 @@
+mechanic,candidate,folds,folds_improved,mean_delta_primary_vs_age_height,mean_age_height_score,mean_candidate_score
+distance_attempt_rate,division_age_height_reach,4,3,-0.01808956887740587,8.93263406155495,8.914544492677544
+distance_attempt_rate,division_age_height_reach_tanh,4,3,-0.01978699166095188,8.93263406155495,8.912847069893997
+distance_accuracy,division_age_height_reach,4,2,1.6544862935230498e-06,0.6826912207275418,0.6826928752138355
+distance_accuracy,division_age_height_reach_tanh,4,2,7.755958985972145e-06,0.6826912207275418,0.6826989766865279
+td_attempt_rate,division_age_height_reach,4,3,8.964752801210452e-07,2.460880127484121,2.4608810239594012
+td_attempt_rate,division_age_height_reach_tanh,4,3,-0.0006545432240603333,2.460880127484121,2.4602255842600607
+td_completion,division_age_height_reach,4,3,-0.00029899110070460977,0.6473145292870892,0.6470155381863846
+td_completion,division_age_height_reach_tanh,4,3,-0.00016579391803792087,0.6473145292870892,0.6471487353690513
+ground_attempt_rate,division_age_height_reach,4,1,0.0005053445788663069,9.125743071815334,9.126248416394201
+ground_attempt_rate,division_age_height_reach_tanh,4,2,0.0005474353969674439,9.125743071815334,9.126290507212302
+ground_accuracy,division_age_height_reach,4,1,5.48049988816357e-05,0.5926014503268088,0.5926562553256903
+ground_accuracy,division_age_height_reach_tanh,4,3,2.985532919719258e-05,0.5926014503268088,0.592631305656006

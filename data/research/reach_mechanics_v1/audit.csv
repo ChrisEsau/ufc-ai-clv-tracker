@@ -1,0 +1,8 @@
+check,passed,value
+outer_start_unchanged,True,2024-01-01
+outer_rows_never_scored,True,2188
+fsr_v3_rows_resolved,True,11202
+exactly_two_directional_rows_per_fight,True,{2: 6695}
+reach_edges_antisymmetric,True,0.0
+development_folds_only,True,"[2020, 2021, 2022, 2023]"
+predictors_are_prefight_physical_only,True,"['age_edge', 'ape_edge', 'height_edge', 'reach_edge', 'reach_tanh']"
