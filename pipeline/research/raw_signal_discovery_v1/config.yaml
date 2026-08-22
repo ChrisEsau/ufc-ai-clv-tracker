@@ -28,6 +28,10 @@ validation:
   minimum_train_fights: 500
   suspicious_single_feature_auc: 0.80
 
+dissection:
+  top_signed_shap_features: 30
+  dependence_bins: 10
+
 model:
   random_seed: 20260822
   xgb:
