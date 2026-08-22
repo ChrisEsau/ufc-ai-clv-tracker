@@ -25,3 +25,5 @@ GROUND_SUPPRESSION_HISTORY_PATH = FSR_V3_HISTORY_DIR / "ground_striking_suppress
 GROUND_EFFECTIVENESS_HISTORY_PATH = FSR_V3_HISTORY_DIR / "ground_striking_effectiveness.parquet"
 
 POWER_HISTORY_PATH = FSR_V3_HISTORY_DIR / "striking_power_v3.parquet"
+ESCAPE_HISTORY_PATH = FSR_V3_HISTORY_DIR / "escape_effectiveness_v3.parquet"
+KD_RESISTANCE_HISTORY_PATH = FSR_V3_HISTORY_DIR / "knockdown_resistance_v3.parquet"
