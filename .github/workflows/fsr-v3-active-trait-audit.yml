@@ -7,11 +7,15 @@ on:
     paths:
       - "pipeline/fsr_v3/research/escape_prior_variance_audit.py"
       - "pipeline/fsr_v3/research/run_escape_prior_variance_audit.py"
+      - "pipeline/fsr_v3/research/kd_resistance_prior_variance_audit.py"
+      - "pipeline/fsr_v3/research/submission_prior_variance_audit.py"
       - ".github/workflows/fsr-v3-active-trait-audit.yml"
   pull_request:
     paths:
       - "pipeline/fsr_v3/research/escape_prior_variance_audit.py"
       - "pipeline/fsr_v3/research/run_escape_prior_variance_audit.py"
+      - "pipeline/fsr_v3/research/kd_resistance_prior_variance_audit.py"
+      - "pipeline/fsr_v3/research/submission_prior_variance_audit.py"
       - ".github/workflows/fsr-v3-active-trait-audit.yml"
   workflow_dispatch:
 
@@ -31,16 +35,40 @@ jobs:
           python-version: "3.11"
       - name: Install audit dependencies
         run: python -m pip install numpy pandas scipy pyarrow
-      - name: Compile research audit
+      - name: Compile escape audit
         run: |
           python -m py_compile pipeline/fsr_v3/research/escape_prior_variance_audit.py
           python -m py_compile pipeline/fsr_v3/research/run_escape_prior_variance_audit.py
       - name: Run escape retention audit
         run: python -m pipeline.fsr_v3.research.run_escape_prior_variance_audit
-      - name: Upload audit artifacts
+      - name: Upload escape audit artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: fsr-v3-escape-prior-variance-audit
           path: data/diagnostics/fsr_v3/active_trait_audit/escape/
+          if-no-files-found: warn
+
+  kd-resistance-prior-variance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install audit dependencies
+        run: python -m pip install numpy pandas scipy pyarrow
+      - name: Compile KD resistance audit
+        run: python -m py_compile pipeline/fsr_v3/research/kd_resistance_prior_variance_audit.py
+      - name: Run KD resistance audit
+        run: python -m pipeline.fsr_v3.research.kd_resistance_prior_variance_audit
+      - name: Upload KD resistance artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fsr-v3-kd-resistance-prior-variance-audit
+          path: data/diagnostics/fsr_v3/active_trait_audit/kd_resistance/
           if-no-files-found: warn
