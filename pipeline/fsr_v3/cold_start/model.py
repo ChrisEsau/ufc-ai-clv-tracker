@@ -7,7 +7,7 @@ from typing import Iterable
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
-from scipy.special import logsumexp
+from scipy.special import gammaln, logsumexp
 
 from pipeline.fsr_v3.replay.math import nb2_log_likelihood
 
@@ -25,6 +25,22 @@ MODEL_FEATURE_COLUMNS = [
 MODEL_FEATURE_COLUMNS += [
     "has_external_record", "has_opponent_quality", "has_pathway_stats", "has_pedigree"
 ]
+
+
+def _nb2_log_likelihood_vector(y, mu, alpha):
+    """NB2 log likelihood with row-varying dispersion for external-model fitting."""
+    y = np.asarray(y, dtype=float)
+    mu = np.maximum(np.asarray(mu, dtype=float), 1e-12)
+    alpha = np.maximum(np.asarray(alpha, dtype=float), 1e-12)
+    size = 1.0 / alpha
+    p = size / (size + mu)
+    return (
+        gammaln(y + size)
+        - gammaln(size)
+        - gammaln(y + 1.0)
+        + size * np.log(p)
+        + y * np.log1p(-p)
+    )
 
 
 @dataclass
@@ -107,7 +123,7 @@ class ColdStartNB2RateModel:
             eta = np.clip(intercept + x @ beta, -3.0, 3.0)
             q = q_pop * np.exp(eta)
             mu = exposure / 900.0 * q
-            ll = float(np.sum(nb2_log_likelihood(y, mu, alpha)))
+            ll = float(np.sum(_nb2_log_likelihood_vector(y, mu, alpha)))
             penalty = 0.5 * ridge * float(np.dot(beta, beta))
             return -ll + penalty
 
