@@ -10,7 +10,7 @@ on:
       - ".github/workflows/raw-signal-discovery-v1.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   discovery:
@@ -47,3 +47,23 @@ jobs:
           path: data/research/raw_signal_discovery_v1/
           if-no-files-found: warn
           retention-days: 14
+
+      - name: Persist compact research results on branch
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f \
+            data/research/raw_signal_discovery_v1/development_metrics.csv \
+            data/research/raw_signal_discovery_v1/development_predictions.csv \
+            data/research/raw_signal_discovery_v1/leakage_audit.csv \
+            data/research/raw_signal_discovery_v1/suspicious_single_feature_auc.csv \
+            data/research/raw_signal_discovery_v1/fold_feature_importance.csv \
+            data/research/raw_signal_discovery_v1/signal_stability.csv \
+            data/research/raw_signal_discovery_v1/research_summary.json
+          if git diff --cached --quiet; then
+            echo "No compact result changes to commit"
+          else
+            git commit -m "research: persist raw signal discovery v1 results"
+            git push origin HEAD:research/raw-signal-discovery-v1
+          fi
