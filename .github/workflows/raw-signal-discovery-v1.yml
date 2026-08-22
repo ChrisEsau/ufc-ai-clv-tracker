@@ -1,0 +1,49 @@
+name: Raw Signal Discovery V1
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "research/raw-signal-discovery-v1"
+    paths:
+      - "pipeline/research/raw_signal_discovery_v1/**"
+      - ".github/workflows/raw-signal-discovery-v1.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  discovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install focused research dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy pandas pyarrow pyyaml scikit-learn xgboost
+
+      - name: Compile research package
+        run: |
+          python -m py_compile pipeline/research/raw_signal_discovery_v1/build_feature_bank.py
+          python -m py_compile pipeline/research/raw_signal_discovery_v1/train_discovery.py
+          python -m py_compile pipeline/research/raw_signal_discovery_v1/run.py
+
+      - name: Run development-only raw signal discovery
+        run: python -m pipeline.research.raw_signal_discovery_v1.run
+
+      - name: Upload research outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: raw-signal-discovery-v1
+          path: data/research/raw_signal_discovery_v1/
+          if-no-files-found: warn
+          retention-days: 14
