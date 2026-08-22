@@ -1,0 +1,28 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/runner/work/ufc-ai-clv-tracker/ufc-ai-clv-tracker/pipeline/fsr_v3/research/run_submission_attempt_prior_variance_audit.py", line 18, in <module>
+    main()
+  File "/home/runner/work/ufc-ai-clv-tracker/ufc-ai-clv-tracker/pipeline/fsr_v3/research/run_submission_attempt_prior_variance_audit.py", line 14, in main
+    audit.main()
+  File "/home/runner/work/ufc-ai-clv-tracker/ufc-ai-clv-tracker/pipeline/fsr_v3/research/submission_attempt_prior_variance_audit.py", line 159, in main
+    scored = score_candidate(tendency_cache[k], suppression, fsr)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/ufc-ai-clv-tracker/ufc-ai-clv-tracker/pipeline/fsr_v3/research/submission_attempt_prior_variance_audit.py", line 93, in score_candidate
+    x = tendency.merge(sup, on=["event_date", "fight_id", "opponent_id"], how="inner", validate="one_to_one")
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.16/x64/lib/python3.11/site-packages/pandas/core/frame.py", line 12902, in merge
+    return merge(
+           ^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.16/x64/lib/python3.11/site-packages/pandas/core/reshape/merge.py", line 385, in merge
+    op = _MergeOperation(
+         ^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.16/x64/lib/python3.11/site-packages/pandas/core/reshape/merge.py", line 1018, in __init__
+    ) = self._get_merge_keys()
+        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.16/x64/lib/python3.11/site-packages/pandas/core/reshape/merge.py", line 1620, in _get_merge_keys
+    right_keys.append(right._get_label_or_level_values(rk))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.16/x64/lib/python3.11/site-packages/pandas/core/generic.py", line 1780, in _get_label_or_level_values
+    raise ValueError(
+ValueError: The column label 'opponent_id' is not unique.

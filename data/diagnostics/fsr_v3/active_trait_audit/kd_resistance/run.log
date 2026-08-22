@@ -1,0 +1,20 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/runner/work/ufc-ai-clv-tracker/ufc-ai-clv-tracker/pipeline/fsr_v3/research/run_kd_resistance_prior_variance_audit.py", line 8, in <module>
+    from pipeline.fsr_v3.research import kd_resistance_prior_variance_audit as audit
+  File "/home/runner/work/ufc-ai-clv-tracker/ufc-ai-clv-tracker/pipeline/fsr_v3/research/kd_resistance_prior_variance_audit.py", line 18, in <module>
+    from pipeline.simulation.event_clock_mc_v1.ko_kd_shadow import ShadowKOKDCalibration
+  File "/home/runner/work/ufc-ai-clv-tracker/ufc-ai-clv-tracker/pipeline/simulation/event_clock_mc_v1/ko_kd_shadow.py", line 33, in <module>
+    from pipeline.simulation.event_mc_v1.components.profiles import (
+  File "/home/runner/work/ufc-ai-clv-tracker/ufc-ai-clv-tracker/pipeline/simulation/event_mc_v1/components/__init__.py", line 3, in <module>
+    from .action_rates import DistanceActionRateProvider
+  File "/home/runner/work/ufc-ai-clv-tracker/ufc-ai-clv-tracker/pipeline/simulation/event_mc_v1/components/action_rates.py", line 8, in <module>
+    from .actions import DistanceCandidate, PhaseCandidate
+  File "/home/runner/work/ufc-ai-clv-tracker/ufc-ai-clv-tracker/pipeline/simulation/event_mc_v1/components/actions.py", line 11, in <module>
+    from ..modifiers import DynamicModifierProvider, DynamicModifiers
+  File "/home/runner/work/ufc-ai-clv-tracker/ufc-ai-clv-tracker/pipeline/simulation/event_mc_v1/modifiers.py", line 9, in <module>
+    from .calibration import DEFAULT_CALIBRATION, EventMCCalibration
+  File "/home/runner/work/ufc-ai-clv-tracker/ufc-ai-clv-tracker/pipeline/simulation/event_mc_v1/calibration.py", line 12, in <module>
+    import yaml
+ModuleNotFoundError: No module named 'yaml'
