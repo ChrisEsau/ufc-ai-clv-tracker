@@ -1,5 +1,5 @@
 escape=success_previous_run
-kd_resistance=failure
+kd_resistance=success
 submission_attempts=failure
 submission_conversion=success
-source_sha=83e7c4b094ab2653035593512ac330e652d9469a
+source_sha=0fffea9f56c132c40007d6235065e40b91a2c494
