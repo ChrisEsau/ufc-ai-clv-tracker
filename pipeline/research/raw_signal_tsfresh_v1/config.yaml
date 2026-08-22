@@ -1,0 +1,39 @@
+inputs:
+  discovery_config: pipeline/research/raw_signal_discovery_v1/config.yaml
+
+outputs:
+  root: data/research/raw_signal_tsfresh_v1
+
+validation:
+  development_years: [2020, 2021, 2022, 2023]
+  outer_start: 2024-01-01
+
+sequence:
+  max_history_fights: 12
+  metrics:
+    - kd_per15
+    - sig_str_landed_per15
+    - sig_str_attempted_per15
+    - total_str_landed_per15
+    - total_str_attempted_per15
+    - td_landed_per15
+    - td_attempted_per15
+    - sub_att_per15
+    - rev_per15
+    - ctrl_sec_per15
+    - head_landed_per15
+    - head_attempted_per15
+    - body_landed_per15
+    - body_attempted_per15
+    - leg_landed_per15
+    - leg_attempted_per15
+    - distance_landed_per15
+    - distance_attempted_per15
+    - clinch_landed_per15
+    - clinch_attempted_per15
+    - ground_landed_per15
+    - ground_attempted_per15
+    - control_share
+
+tsfresh:
+  n_jobs: 2
