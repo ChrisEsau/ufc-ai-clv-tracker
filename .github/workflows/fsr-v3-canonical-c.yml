@@ -1,5 +1,7 @@
 name: FSR V3 Canonical C Validation
 
+# Execution-only research branch marker.  This branch changes no model code;
+# it exists only to expose the canonical-C pull-request check in isolation.
 on:
   push:
     branches:
