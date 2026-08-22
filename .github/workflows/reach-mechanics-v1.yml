@@ -31,10 +31,12 @@ jobs:
           python -m pip install numpy pandas pyarrow pyyaml scipy scikit-learn statsmodels
 
       - name: Compile reach study
-        run: python -m py_compile pipeline/research/reach_mechanics_v1/run.py
+        run: |
+          python -m py_compile pipeline/research/reach_mechanics_v1/run.py
+          python -m py_compile pipeline/research/reach_mechanics_v1/entrypoint.py
 
       - name: Run development-only reach mechanics study
-        run: python -m pipeline.research.reach_mechanics_v1.run
+        run: python -m pipeline.research.reach_mechanics_v1.entrypoint
 
       - name: Upload reach research outputs
         if: always()
