@@ -9,6 +9,11 @@ existing validated V3 publication:
 Submission traits remain inherited from V2 because their V3 candidates did not
 beat the inherited traits on holdout.  Compatibility-only V2 physical columns
 are otherwise untouched.
+
+KD-resistance uncertainty remains in its native history rather than the generic
+prefight uncertainty table.  The generic table is consumed by the positive
+Gamma path sampler; KD resistance is Normal and is sampled separately at the
+canonical C detailed-physics boundary.
 """
 
 from __future__ import annotations
@@ -155,15 +160,17 @@ def overlay_active_traits(
     if missing:
         raise RuntimeError(f"active V3 latest overlay has missing fields: {missing}")
 
+    # Escape is mean-only and can safely join the generic uncertainty table as
+    # a non-sampled trait.  KD resistance remains in KD_RESISTANCE_HISTORY_PATH
+    # because its Normal posterior is sampled by canonical C at the detailed
+    # physics boundary, not by the positive-trait Gamma sampler.
     uncertainty = pd.read_parquet(FSR_V3_PREFIGHT_UNCERTAINTY_PATH).copy()
     key = KEYS + ["trait"]
     uncertainty = uncertainty[
-        ~uncertainty["trait"].isin(
-            ["escape_offense", "escape_defense", "knockdown_resistance_v3"]
-        )
+        ~uncertainty["trait"].isin(["escape_offense", "escape_defense"])
     ].copy()
     uncertainty = pd.concat(
-        [uncertainty, _uncertainty_rows(escape), _uncertainty_rows(kd)],
+        [uncertainty, _uncertainty_rows(escape)],
         ignore_index=True,
     ).sort_values(key).reset_index(drop=True)
     if uncertainty.duplicated(key).any():
