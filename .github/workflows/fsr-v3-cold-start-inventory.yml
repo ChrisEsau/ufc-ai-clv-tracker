@@ -27,7 +27,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install parquet reader
-        run: python -m pip install pyarrow
+      - name: Install inventory dependencies
+        run: python -m pip install pandas pyarrow
       - name: Run cold-start inventory
         run: python -m pipeline.fsr_v3.research.cold_start_data_inventory
