@@ -26,11 +26,12 @@ If there is no usable external evidence, the cold-start layer contributes zero e
 - No future fight results, future profile records, or current-profile fields in historical validation.
 - No fuzzy name matches hidden inside the model. Ambiguous aliases must be resolved in an explicit auditable mapping.
 - External evidence is never inserted as if it were UFC observation data.
+- Cross-promotion Elo for this layer is computed from **non-UFC fights only**, preventing UFC results from being re-imported and double-counted.
 - No production FSR or Event Clock promotion without held-out native-target improvement.
 
 ## v0.1 evidence
 
-The first runnable source adapter is `mma_global.py`, which accepts the public longitudinal MMA fight database containing dated fight history across many organizations. Only dated fight facts are consumed. From those facts the pipeline derives:
+The first runnable source adapter is `mma_global.py`, which accepts the public longitudinal MMA fight database containing dated fight history across thousands of organizations. Only dated fight facts are consumed. From those facts the pipeline derives:
 
 - pre-target professional record and win rate;
 - KO/TKO, submission and decision win/loss mix;
@@ -38,10 +39,10 @@ The first runnable source adapter is `mma_global.py`, which accepts the public l
 - fight duration / early-finish tendencies;
 - number of organizations and major-organization experience;
 - promotion-specific experience (PFL, Bellator, LFA, Cage Warriors, Rizin, ACA, KSW, Oktagon);
-- leakage-safe cross-promotion Elo and opponent-quality summaries;
+- leakage-safe non-UFC Elo and opponent-quality summaries;
 - physical measurements when present.
 
-The current repository does **not** contain a broad historical external-MMA observation table, so the source database is supplied at study/build time and is not committed into the repo.
+The current repository does **not** persist a broad historical external-MMA observation table, so the source database is supplied at study/build time and is not committed into the repo.
 
 Optional interfaces already exist for:
 
@@ -84,7 +85,9 @@ Default chronological split:
 
 - model training: 2012-01-01 through 2021-12-31;
 - external-strength calibration: 2022-01-01 through 2023-12-31;
-- untouched test: 2024-01-01 onward.
+- untouched test: 2024-01-01 through 2025-12-31.
+
+The public MMA source currently extends through 2026-01-31, so the default historical gate deliberately ends at 2025-12-31. That prevents later 2026 targets from being penalized by source staleness rather than model quality.
 
 The test scores:
 
@@ -92,16 +95,16 @@ The test scores:
 - UFC fight #2 (`1` prior observation);
 - UFC fight #3 (`2` prior observations).
 
-For fight #2/#3 the model adds the exact accumulated V3 UFC NB2 likelihood state to the cold-start prior, preserving the production same-date delayed update semantics.
+For fight #2/#3 the model adds the exact accumulated V3 UFC NB2 likelihood state to the cold-start prior, preserving the production same-date delayed update semantics. The validation asserts that `K_ext=0` reproduces the current V3 prefight rating before any cold-start comparison is accepted.
 
-Primary gate: posterior-predictive native log likelihood, with posterior-mean plug-in likelihood, count MAE, evidence coverage, calibration tables and fight-cluster bootstrap as secondary diagnostics.
+Primary gate: posterior-predictive native log likelihood, with posterior-mean plug-in likelihood, count MAE, evidence coverage, year splits, calibration tables and fight-cluster bootstrap as secondary diagnostics.
 
 ## Commands
 
 Run focused tests:
 
 ```bash
-pytest -q tests/test_fsr_v3_cold_start.py
+pytest -q tests/fsr_v3/test_cold_start.py
 ```
 
 Run the historical study with a local longitudinal MMA DuckDB:
