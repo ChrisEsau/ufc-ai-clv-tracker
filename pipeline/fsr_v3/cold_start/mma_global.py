@@ -4,6 +4,10 @@ The first supported source is the public ``MMAStats and fights Complete
 Database`` DuckDB dataset. Only dated fight facts are consumed here. Current
 profile fields (current age, current record, gym, etc.) are deliberately not
 used for historical validation.
+
+Cold-start opponent quality is intentionally computed from non-UFC fights only.
+That prevents prior UFC results from being re-imported through the external
+layer and counted twice when a fighter leaves and later returns to the UFC.
 """
 from __future__ import annotations
 
@@ -19,20 +23,15 @@ DEFAULT_ELO_K = 24.0
 
 
 def _clean_source_fights(frame: pd.DataFrame) -> pd.DataFrame:
-    """Enforce source-level fight identity and reject unusable fighter rows.
-
-    The public data dictionary specifies ``fight_id`` as a unique primary key.
-    We preserve it exactly. A small number of source anomalies can have missing
-    fighter names or both sides collapse to the same normalized name; those rows
-    cannot support fighter-level history and are excluded explicitly rather than
-    weakening downstream duplicate checks.
-    """
+    """Enforce source-level fight identity and reject unusable fighter rows."""
     x = frame.copy()
     x["event_date"] = pd.to_datetime(x["event_date"], errors="raise").dt.normalize()
     x["fight_id"] = x["fight_id"].astype(str)
     if x["fight_id"].duplicated().any():
         duplicate_count = int(x["fight_id"].duplicated(keep=False).sum())
-        raise ValueError(f"MMA Global source violated unique fight_id contract: {duplicate_count} duplicate rows")
+        raise ValueError(
+            f"MMA Global source violated unique fight_id contract: {duplicate_count} duplicate rows"
+        )
 
     f1 = x["fighter_1"].map(normalize_name)
     f2 = x["fighter_2"].map(normalize_name)
@@ -79,11 +78,12 @@ def add_leakage_safe_elo(
     initial: float = DEFAULT_ELO,
     k_factor: float = DEFAULT_ELO_K,
 ) -> pd.DataFrame:
-    """Add pre/post cross-promotion Elo using only prior-date outcomes.
+    """Add pre/post Elo using only prior-date outcomes in the supplied frame.
 
     Same-date changes are delayed to remove arbitrary row-order dependence.
-    This is an internal objective opponent-quality baseline; FightMatrix can be
-    added later as a second, independent quality source.
+    Callers control the evidence universe; ``load_mma_global_fighter_bouts``
+    supplies non-UFC fights only so the cold-start quality signal remains
+    independent of UFC observations.
     """
     x = wide.copy()
     x["event_date"] = pd.to_datetime(x["event_date"], errors="raise").dt.normalize()
@@ -114,8 +114,6 @@ def add_leakage_safe_elo(
             pending[row.f1_key] = pending.get(row.f1_key, 0.0) + delta
             pending[row.f2_key] = pending.get(row.f2_key, 0.0) - delta
         for key, delta in pending.items():
-            # Multiple same-day fights share the same prefight state; aggregate
-            # their deltas rather than invent an intra-day chronology.
             ratings[key] = ratings.get(key, initial) + delta
         day["f1_post_elo"] = day["f1_key"].map(lambda key: ratings.get(key, initial))
         day["f2_post_elo"] = day["f2_key"].map(lambda key: ratings.get(key, initial))
@@ -169,4 +167,12 @@ def to_fighter_long(wide: pd.DataFrame) -> pd.DataFrame:
 
 
 def load_mma_global_fighter_bouts(path: str | Path) -> pd.DataFrame:
-    return to_fighter_long(add_leakage_safe_elo(load_mma_global_wide(path)))
+    """Load canonical cold-start evidence with UFC rows excluded before Elo."""
+    wide = load_mma_global_wide(path)
+    org = wide["organization"].fillna("").astype(str).str.lower().str.strip()
+    non_ufc = wide[~org.map(lambda value: value == "ufc" or "ultimate fighting championship" in value)].copy()
+    print(
+        f"MMA Global cold-start source: {len(non_ufc):,} non-UFC fights "
+        f"({len(wide) - len(non_ufc):,} UFC rows excluded before Elo)"
+    )
+    return to_fighter_long(add_leakage_safe_elo(non_ufc))
