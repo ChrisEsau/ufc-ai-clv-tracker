@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "feature/fsr-v3"
+      - "research/fsr-v3-cold-start-run"
     paths:
       - "pipeline/fsr_v3/cold_start/**"
       - "tests/test_fsr_v3_cold_start.py"
