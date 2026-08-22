@@ -1,8 +1,8 @@
 """Held-out native-target validation for the FSR V3 cold-start layer.
 
-Nothing in this module changes published FSR.  It trains an external-evidence
+Nothing in this module changes published FSR. It trains an external-evidence
 model on historical UFC debut outcomes, calibrates external equivalent evidence
-strength on a later time window, and scores a still-later holdout.  The same
+strength on a later time window, and scores a still-later holdout. The same
 external prior is also tested after one and two UFC observations by adding the
 exact accumulated V3 UFC likelihood state.
 """
@@ -35,6 +35,7 @@ class ColdStartSplit:
     train_start: str = "2012-01-01"
     calibration_start: str = "2022-01-01"
     test_start: str = "2024-01-01"
+    test_end: str | None = "2025-12-31"
 
 
 @dataclass
@@ -83,6 +84,7 @@ def _score_history(
     spec: RateFamilySpec,
     extra_seconds: dict[str, float],
     test_start: pd.Timestamp,
+    test_end: pd.Timestamp | None,
 ) -> pd.DataFrame:
     """Score baseline vs cold-start prior with exact same accumulated UFC state."""
     grid = _grid(spec)
@@ -113,6 +115,15 @@ def _score_history(
             base_w = normalize_log_weights(base_lp)
             base_mean, base_sd = weighted_mean_sd(grid, base_w)
 
+            # The zero-external branch must be mathematically identical to the
+            # validated V3 production replay before this study can be trusted.
+            production_pre = record.get("pre_rating", np.nan)
+            if pd.notna(production_pre) and abs(base_mean - float(production_pre)) > 1e-7:
+                raise AssertionError(
+                    f"{spec.name} cold-start baseline parity failed for {fighter} "
+                    f"on {event_date}: replay={base_mean} production={production_pre}"
+                )
+
             bucket = str(record.get("evidence_bucket", "none"))
             k_ext = float(extra_seconds.get(bucket, 0.0))
             q_ext = record.get("external_predicted_rate_15m", np.nan)
@@ -136,11 +147,15 @@ def _score_history(
             else:
                 base_pred_ll = ext_pred_ll = base_plugin_ll = ext_plugin_ll = np.nan
 
-            if pd.Timestamp(event_date) >= test_start and int(record["prior_ufc_fights"]) <= 2:
+            in_test = pd.Timestamp(event_date) >= test_start
+            if test_end is not None:
+                in_test = in_test and pd.Timestamp(event_date) <= test_end
+            if in_test and int(record["prior_ufc_fights"]) <= 2:
                 rows.append(
                     {
                         "family": spec.name,
                         "event_date": pd.Timestamp(event_date),
+                        "test_year": int(pd.Timestamp(event_date).year),
                         "fight_id": str(record["fight_id"]),
                         "fighter_id": fighter,
                         "fighter_name": record["fighter_name"],
@@ -198,7 +213,32 @@ def _summary(scores: pd.DataFrame) -> pd.DataFrame:
                 {
                     "family": str(g["family"].iloc[0]),
                     "coverage": coverage,
+                    "test_year": "ALL",
                     "ufc_bucket": bucket,
+                    "rows": int(len(g)),
+                    "fights": int(g["fight_id"].nunique()),
+                    "predictive_ll_delta": float(g["delta_predictive_ll"].sum()),
+                    "mean_predictive_ll_delta": float(g["delta_predictive_ll"].mean()),
+                    "plugin_ll_delta": float(g["delta_plugin_ll"].sum()),
+                    "baseline_mae_count": float(base_err.mean()),
+                    "cold_start_mae_count": float(cold_err.mean()),
+                    "mae_delta": float(cold_err.mean() - base_err.mean()),
+                    "mean_extra_seconds": float(g["external_extra_seconds"].mean()),
+                }
+            )
+        for year, y in c.groupby("test_year", sort=True):
+            g = y[y["prior_ufc_fights"].isin([0, 1])]
+            g = g[np.isfinite(g["delta_predictive_ll"])]
+            if g.empty:
+                continue
+            base_err = np.abs(g["baseline_predicted_count"] - g["actual_count"])
+            cold_err = np.abs(g["cold_start_predicted_count"] - g["actual_count"])
+            records.append(
+                {
+                    "family": str(g["family"].iloc[0]),
+                    "coverage": coverage,
+                    "test_year": str(int(year)),
+                    "ufc_bucket": "EARLY_0_1",
                     "rows": int(len(g)),
                     "fights": int(g["fight_id"].nunique()),
                     "predictive_ll_delta": float(g["delta_predictive_ll"].sum()),
@@ -255,7 +295,7 @@ def validate_rate_family(
             [
                 "event_date", "fight_id", "fighter_id", "fighter_name", "opponent_id",
                 "opponent_name", "numerator", "exposure_seconds", "population_rate_15m",
-                "observation_alpha", "prior_ufc_fights", "ufc_bucket", "as_of_date",
+                "observation_alpha", "pre_rating", "prior_ufc_fights", "ufc_bucket", "as_of_date",
             ]
         ],
         external_bouts,
@@ -264,6 +304,12 @@ def validate_rate_family(
     train_start = pd.Timestamp(split.train_start)
     cal_start = pd.Timestamp(split.calibration_start)
     test_start = pd.Timestamp(split.test_start)
+    test_end = pd.Timestamp(split.test_end) if split.test_end is not None else None
+    if not (train_start < cal_start < test_start):
+        raise ValueError("cold-start split must satisfy train_start < calibration_start < test_start")
+    if test_end is not None and test_end < test_start:
+        raise ValueError("cold-start test_end must be on/after test_start")
+
     train = snapshots[
         (snapshots["event_date"] >= train_start)
         & (snapshots["event_date"] < cal_start)
@@ -290,15 +336,26 @@ def validate_rate_family(
         grid=_grid(spec),
         candidates=(0.0, 30.0, 60.0, 90.0, 135.0, 180.0, 270.0, 360.0, 540.0, 720.0, 1080.0, 1440.0),
     )
+    # Sparse calibration cells are not allowed to create confident priors.
+    calibration_counts = calibration.groupby("evidence_bucket").size().to_dict()
+    for bucket in list(chosen):
+        if bucket == "none" or int(calibration_counts.get(bucket, 0)) < 25:
+            chosen[bucket] = 0.0
+
     scores = _score_history(
         snapshots,
         spec=spec,
         extra_seconds=chosen,
         test_start=test_start,
+        test_end=test_end,
     )
+
+    coverage_source = snapshots
+    if test_end is not None:
+        coverage_source = coverage_source[coverage_source["event_date"] <= test_end]
     coverage = (
-        snapshots.assign(period=np.select(
-            [snapshots["event_date"] < cal_start, snapshots["event_date"] < test_start],
+        coverage_source.assign(period=np.select(
+            [coverage_source["event_date"] < cal_start, coverage_source["event_date"] < test_start],
             ["train", "calibration"],
             default="test",
         ))
