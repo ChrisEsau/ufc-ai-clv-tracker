@@ -1,0 +1,108 @@
+name: Reach Sacramento Validation V1
+
+on:
+  push:
+    branches:
+      - "validation/reach-sacramento-v1"
+    paths:
+      - ".github/workflows/reach-sacramento-validation-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sacramento:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install focused dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy pandas scipy scikit-learn statsmodels joblib pyarrow pyyaml pytest
+
+      - name: Verify promoted reach implementation
+        run: |
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/reach_translation.py
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/feature_builder.py
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/inference.py
+          pytest -q tests/simulation/event_clock_mc_v2/test_reach_translation_v3.py
+
+      - name: Build frozen FSR V2 source histories
+        run: python -m pipeline.fsr_v2.build --all
+
+      - name: Publish frozen FSR V2 source snapshots
+        run: python -m pipeline.fsr_v2.publish
+
+      - name: Build final canonical FSR V3
+        run: python -m pipeline.fsr_v3.build_canonical
+
+      - name: Patch incomplete-row cohort guard in CI checkout only
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("pipeline/simulation/event_mc_v1/diagnostics/fresh_100_fight_predictive_replay.py")
+          text = path.read_text()
+          old = '''            and method in METHODS\n            and int(row["total_rounds"]) in {3, 5}\n            and pd.notna(row["match_time_sec"])\n'''
+          new = '''            and method in METHODS\n            and pd.notna(row["total_rounds"])\n            and int(row["total_rounds"]) in {3, 5}\n            and pd.notna(row["match_time_sec"])\n'''
+          if old in text:
+              path.write_text(text.replace(old, new, 1))
+              print("Applied CI-only null guard")
+          else:
+              print("Null guard already present; no patch needed")
+          PY
+
+      - name: Fit frozen Event Clock V1 parent bundle
+        run: python -m pipeline.simulation.event_clock_mc_v1.fit_event_clock_bundle
+
+      - name: Fit Event Clock V2 bundle with promoted reach translation
+        run: python -m pipeline.simulation.event_clock_mc_v2.fit_event_clock_bundle
+
+      - name: Run Sacramento card — 2000 paths validated epistemic
+        run: |
+          set -o pipefail
+          python -m pipeline.simulation.event_clock_mc_v2.run_event_or_fight_frozen \
+            --event-date 2026-08-22 \
+            --paths 2000 \
+            --epistemic validated \
+            --output-prefix sacramento_reach_promoted \
+            2>&1 | tee /tmp/sacramento_reach_promoted.log
+
+      - name: Print Sacramento headline
+        if: always()
+        run: |
+          if [ -f /tmp/sacramento_reach_promoted.log ]; then
+            tail -n 120 /tmp/sacramento_reach_promoted.log
+          fi
+
+      - name: Upload Sacramento validation outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reach-sacramento-validation-v1
+          path: |
+            data/diagnostics/event_clock_mc_v2/event_predictions/sacramento_reach_promoted_2000paths_summary.csv
+            /tmp/sacramento_reach_promoted.log
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Persist compact Sacramento summary
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f data/diagnostics/event_clock_mc_v2/event_predictions/sacramento_reach_promoted_2000paths_summary.csv
+          if git diff --cached --quiet; then
+            echo "No Sacramento summary changes to commit"
+          else
+            git commit -m "validation: persist Sacramento reach results"
+            git push origin HEAD:validation/reach-sacramento-v1
+          fi
