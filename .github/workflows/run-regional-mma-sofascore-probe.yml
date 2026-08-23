@@ -15,9 +15,9 @@ on:
         description: "Maximum events to retrieve"
         required: true
         default: "3"
-  push:
+  pull_request:
     branches:
-      - feature/regional-mma-scraper
+      - feature/fsr-v3
     paths:
       - scrapers/sofascore_mma_apify.py
       - .github/workflows/run-regional-mma-sofascore-probe.yml
