@@ -19,6 +19,7 @@ from pipeline.simulation.event_clock_mc_v2.inference import (
 from pipeline.simulation.event_clock_mc_v2.reach_translation import (
     DISTANCE_REACH_EDGE_CAP_INCHES,
     DISTANCE_REACH_LOG_RATE_PER_INCH,
+    _measure_inches,
     directional_reach_inputs,
     distance_reach_multiplier,
 )
@@ -63,13 +64,23 @@ def _traits(record: dict):
     )
 
 
+def test_canonical_numeric_master_reach_is_converted_from_cm_to_inches():
+    assert _measure_inches(190.50) == pytest.approx(75.0)
+    assert _measure_inches("182.88") == pytest.approx(72.0)
+    assert _measure_inches("75 in") == pytest.approx(75.0)
+    assert _measure_inches('75"') == pytest.approx(75.0)
+
+
 def test_reach_translation_is_directional_and_reciprocal_inside_cap():
-    master = {"r_reach": 76.0, "b_reach": 72.0}
+    # Canonical master reach is centimeters: 76 in vs 72 in.
+    master = {"r_reach": 193.04, "b_reach": 182.88}
     red = directional_reach_inputs(master, "red")
     blue = directional_reach_inputs(master, "blue")
 
-    assert red["reach_edge_inches"] == 4.0
-    assert blue["reach_edge_inches"] == -4.0
+    assert red["self_reach_inches"] == pytest.approx(76.0)
+    assert blue["self_reach_inches"] == pytest.approx(72.0)
+    assert red["reach_edge_inches"] == pytest.approx(4.0)
+    assert blue["reach_edge_inches"] == pytest.approx(-4.0)
     assert red["distance_reach_multiplier"] == pytest.approx(
         exp(DISTANCE_REACH_LOG_RATE_PER_INCH * 4.0)
     )
@@ -85,7 +96,7 @@ def test_reach_translation_caps_extreme_edges_at_six_inches():
 
 
 def test_missing_reach_is_neutral():
-    red = directional_reach_inputs({"r_reach": None, "b_reach": 72.0}, "red")
+    red = directional_reach_inputs({"r_reach": None, "b_reach": 182.88}, "red")
     assert np.isnan(red["reach_edge_inches"])
     assert np.isnan(red["reach_edge_capped_inches"])
     assert red["distance_reach_multiplier"] == 1.0
@@ -103,8 +114,9 @@ def test_sampled_feature_builder_carries_reach_without_changing_fsr_schema():
             "b_id": "B",
             "r_dob": "1990-01-01",
             "b_dob": "1992-01-01",
-            "r_reach": 78.0,
-            "b_reach": 72.0,
+            # Canonical master centimeters: 78 in vs 72 in.
+            "r_reach": 198.12,
+            "b_reach": 182.88,
         }
     )
     frame = build_sampled_fight_feature_rows_v3(
@@ -117,9 +129,9 @@ def test_sampled_feature_builder_carries_reach_without_changing_fsr_schema():
     red_row = frame.loc[frame["side"].eq("red")].iloc[0]
     blue_row = frame.loc[frame["side"].eq("blue")].iloc[0]
 
-    assert red_row["reach_edge_inches"] == 6.0
-    assert blue_row["reach_edge_inches"] == -6.0
-    assert red_row["reach_edge_capped_inches"] == 6.0
+    assert red_row["reach_edge_inches"] == pytest.approx(6.0)
+    assert blue_row["reach_edge_inches"] == pytest.approx(-6.0)
+    assert red_row["reach_edge_capped_inches"] == pytest.approx(6.0)
     assert "distance_reach_multiplier" not in direct_feature_columns_v3()
     assert "reach_edge_inches" not in direct_feature_columns_v3()
 
