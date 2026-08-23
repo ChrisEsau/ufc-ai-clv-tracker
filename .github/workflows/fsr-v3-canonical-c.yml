@@ -1,6 +1,6 @@
-name: Weight Class Audit - Men's Lightweight
+name: Weight Class Audit - Men's Welterweight
 
-# Trigger refresh: 2026-08-23 lightweight simulate-only audit
+# Trigger refresh: 2026-08-23 welterweight simulate-only audit
 on:
   workflow_dispatch:
   push:
@@ -48,28 +48,28 @@ jobs:
           test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
           python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/weight_class_audit.py
 
-      - name: Run men's lightweight audit
+      - name: Run men's welterweight audit
         run: |
           set -o pipefail
           python -m pipeline.simulation.event_clock_mc_v2.diagnostics.weight_class_audit \
-            --division lightweight \
+            --division welterweight \
             --target-n 100 \
             --paths 500 \
             --seed 20260823 \
-            --out-dir data/diagnostics/event_clock_mc_v2/weight_class_audit/lightweight \
-            2>&1 | tee /tmp/lightweight_audit.log
+            --out-dir data/diagnostics/event_clock_mc_v2/weight_class_audit/welterweight \
+            2>&1 | tee /tmp/welterweight_audit.log
 
-      - name: Print lightweight audit headline
+      - name: Print welterweight audit headline
         if: always()
         run: |
-          if [ -f /tmp/lightweight_audit.log ]; then
-            tail -n 180 /tmp/lightweight_audit.log
+          if [ -f /tmp/welterweight_audit.log ]; then
+            tail -n 180 /tmp/welterweight_audit.log
           fi
 
-      - name: Upload lightweight audit outputs
+      - name: Upload welterweight audit outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: weight-class-audit-lightweight
-          path: data/diagnostics/event_clock_mc_v2/weight_class_audit/lightweight/*.csv
+          name: weight-class-audit-welterweight
+          path: data/diagnostics/event_clock_mc_v2/weight_class_audit/welterweight/*.csv
           if-no-files-found: warn
