@@ -32,7 +32,7 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
 
     env:
       PROBE_DATE: ${{ inputs.date || '2025-09-07' }}
@@ -56,46 +56,25 @@ jobs:
 
       - name: Probe regional MMA JSON
         run: |
-          mkdir -p .github/probe-results
-          set +e
           python -m scrapers.sofascore_mma \
             --date "$PROBE_DATE" \
             --promotion "$PROBE_PROMOTION" \
             --max-events "$PROBE_MAX_EVENTS" \
             --sleep-seconds 1.0 \
-            --base-url "https://api.sofascore.com/api/v1" \
-            > .github/probe-results/probe.log 2>&1
-          code=$?
-          set -e
-          {
-            echo "date=$PROBE_DATE"
-            echo "promotion=$PROBE_PROMOTION"
-            echo "base_url=https://api.sofascore.com/api/v1"
-            echo "exit_code=$code"
-            echo ""
-            echo "=== probe output ==="
-            cat .github/probe-results/probe.log
-            echo ""
-            echo "=== coverage summary ==="
-            cat "data/audits/regional_mma/sofascore/$PROBE_DATE/coverage_summary.json" 2>/dev/null || true
-          } > .github/probe-results/latest.txt
-          cat .github/probe-results/latest.txt
+            --base-url "https://api.sofascore.com/api/v1"
 
-      - name: Commit push-probe result
-        if: github.event_name == 'push' && github.ref == 'refs/heads/feature/regional-mma-scraper'
+      - name: Print coverage summary
+        if: always()
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .github/probe-results/latest.txt
-          git commit -m "Record SofaScore API probe result" || exit 0
-          git push origin HEAD:feature/regional-mma-scraper
+          echo "=== generated files ==="
+          find data/audits/regional_mma -maxdepth 4 -type f -print 2>/dev/null || true
+          echo "=== coverage summary ==="
+          cat "data/audits/regional_mma/sofascore/$PROBE_DATE/coverage_summary.json" 2>/dev/null || true
 
       - name: Upload probe artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: regional-mma-sofascore-probe-${{ env.PROBE_DATE }}
-          path: |
-            data/audits/regional_mma/sofascore/
-            .github/probe-results/latest.txt
+          path: data/audits/regional_mma/sofascore/
           if-no-files-found: warn
