@@ -2,6 +2,10 @@
 
 Research-only. This writes audit artifacts and does not touch FSR or UFC round stats.
 The Apify token is read from the environment and is never persisted.
+
+Regional event dates from commission/Tapology-style sources often differ from SofaScore's
+indexed UTC/provider date by 1-2 days. We therefore search a small forward date window and
+validate the opponent locally before accepting a match.
 """
 
 from __future__ import annotations
@@ -9,6 +13,7 @@ from __future__ import annotations
 import json
 import os
 from collections import defaultdict
+from datetime import date as date_cls, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +25,7 @@ ACTOR_ID = "automation-lab~sofascore-live-events-statistics-scraper"
 API_URL = f"https://api.apify.com/v2/actors/{ACTOR_ID}/run-sync-get-dataset-items"
 OUTPUT_DIR = AUDITS_DIR / "regional_mma" / "sofascore" / "sacramento_debuts"
 MAX_CHARGE_PER_LOOKUP_USD = 0.01
+DATE_OFFSETS = (1, 2, 3)
 
 # Standard professional MMA only; Ryan Kuse's Karate Combat and Gamebred bare-knuckle
 # bouts are intentionally excluded from this first cold-start pull.
@@ -64,22 +70,30 @@ TARGETS: dict[str, list[tuple[str, str]]] = {
 }
 
 
-def run_lookup(token: str, fighter: str, date: str) -> list[dict[str, Any]]:
+def surname(name: str) -> str:
+    return name.strip().split()[-1]
+
+
+def shifted_date(day: str, offset: int) -> str:
+    return (date_cls.fromisoformat(day) + timedelta(days=offset)).isoformat()
+
+
+def run_lookup(token: str, fighter: str, query_date: str) -> list[dict[str, Any]]:
     payload = {
         "mode": "date",
         "sport": "mma",
-        "date": date,
+        "date": query_date,
         "eventIds": [],
         "eventUrls": [],
         "includeStatistics": True,
-        "status": "finished",
-        "team": fighter,
+        "status": "all",
+        "team": surname(fighter),
         "tournament": "",
-        "maxItems": 1,
+        "maxItems": 5,
     }
     response = requests.post(
         API_URL,
-        params={"maxItems": 1, "maxTotalChargeUsd": MAX_CHARGE_PER_LOOKUP_USD},
+        params={"maxItems": 5, "maxTotalChargeUsd": MAX_CHARGE_PER_LOOKUP_USD},
         headers={
             "Authorization": f"Bearer {token}",
             "Accept": "application/json",
@@ -91,22 +105,64 @@ def run_lookup(token: str, fighter: str, date: str) -> list[dict[str, Any]]:
     response.raise_for_status()
     data = response.json()
     if not isinstance(data, list):
-        raise RuntimeError(f"Expected list from Apify for {fighter} {date}")
+        raise RuntimeError(f"Expected list from Apify for {fighter} {query_date}")
     return [item for item in data if isinstance(item, dict)]
 
 
+def team_name(item: dict[str, Any], side: str) -> str:
+    value = item.get(f"{side}Team")
+    return str(value.get("name", "")) if isinstance(value, dict) else ""
+
+
 def side_for_fighter(item: dict[str, Any], fighter: str) -> str | None:
-    home = item.get("homeTeam") if isinstance(item.get("homeTeam"), dict) else {}
-    away = item.get("awayTeam") if isinstance(item.get("awayTeam"), dict) else {}
-    f = fighter.casefold()
-    if f in str(home.get("name", "")).casefold():
+    needle = surname(fighter).casefold()
+    if needle in team_name(item, "home").casefold():
         return "home"
-    if f in str(away.get("name", "")).casefold():
+    if needle in team_name(item, "away").casefold():
         return "away"
     return None
 
 
-def summarize_event(item: dict[str, Any], fighter: str, expected_opponent: str, target_date: str) -> dict[str, Any]:
+def opponent_matches(item: dict[str, Any], fighter: str, expected_opponent: str) -> bool:
+    side = side_for_fighter(item, fighter)
+    if side is None:
+        return False
+    opponent_side = "away" if side == "home" else "home"
+    expected_last = surname(expected_opponent).casefold()
+    return expected_last in team_name(item, opponent_side).casefold()
+
+
+def find_event(token: str, fighter: str, target_date: str, expected_opponent: str) -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
+    attempts: list[dict[str, Any]] = []
+    for offset in DATE_OFFSETS:
+        query_date = shifted_date(target_date, offset)
+        try:
+            items = run_lookup(token, fighter, query_date)
+        except Exception as exc:
+            attempts.append({"query_date": query_date, "offset_days": offset, "error": str(exc)})
+            continue
+
+        attempts.append({
+            "query_date": query_date,
+            "offset_days": offset,
+            "returned": len(items),
+            "events": [
+                {
+                    "event_id": item.get("eventId"),
+                    "home": team_name(item, "home"),
+                    "away": team_name(item, "away"),
+                    "status": item.get("status"),
+                }
+                for item in items
+            ],
+        })
+        for item in items:
+            if opponent_matches(item, fighter, expected_opponent):
+                return item, attempts
+    return None, attempts
+
+
+def summarize_event(item: dict[str, Any], fighter: str, expected_opponent: str, target_date: str, attempts: list[dict[str, Any]]) -> dict[str, Any]:
     stats = item.get("statistics") if isinstance(item.get("statistics"), list) else []
     home = item.get("homeTeam") if isinstance(item.get("homeTeam"), dict) else {}
     away = item.get("awayTeam") if isinstance(item.get("awayTeam"), dict) else {}
@@ -143,6 +199,7 @@ def summarize_event(item: dict[str, Any], fighter: str, expected_opponent: str, 
         "periods": periods,
         "stat_names": names,
         "fighter_all_period_values": all_rows,
+        "lookup_attempts": attempts,
     }
 
 
@@ -154,31 +211,32 @@ def main() -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     raw_records: list[dict[str, Any]] = []
     summaries: list[dict[str, Any]] = []
-    errors: list[dict[str, Any]] = []
 
     total = sum(len(v) for v in TARGETS.values())
     index = 0
     for fighter, fights in TARGETS.items():
-        for date, opponent in fights:
+        for target_date, opponent in fights:
             index += 1
-            print(f"[{index}/{total}] {fighter} vs {opponent} ({date})")
-            try:
-                items = run_lookup(token, fighter, date)
-            except Exception as exc:
-                errors.append({"fighter": fighter, "date": date, "opponent": opponent, "error": str(exc)})
-                continue
-            if not items:
+            print(f"[{index}/{total}] {fighter} vs {opponent} ({target_date})")
+            item, attempts = find_event(token, fighter, target_date, opponent)
+            if item is None:
                 summaries.append({
                     "fighter": fighter,
-                    "target_date": date,
+                    "target_date": target_date,
                     "expected_opponent": opponent,
                     "matched": False,
                     "has_statistics": False,
+                    "lookup_attempts": attempts,
                 })
                 continue
-            item = items[0]
-            raw_records.append({"fighter": fighter, "target_date": date, "expected_opponent": opponent, "record": item})
-            summary = summarize_event(item, fighter, opponent, date)
+
+            raw_records.append({
+                "fighter": fighter,
+                "target_date": target_date,
+                "expected_opponent": opponent,
+                "record": item,
+            })
+            summary = summarize_event(item, fighter, opponent, target_date, attempts)
             summary["matched"] = True
             summaries.append(summary)
 
@@ -188,17 +246,17 @@ def main() -> None:
         bucket["targeted"] += 1
         bucket["matched"] += int(bool(row.get("matched")))
         bucket["with_statistics"] += int(bool(row.get("has_statistics")))
-    for err in errors:
-        by_fighter[err["fighter"]]["targeted"] += 1
 
+    lookup_attempt_count = sum(len(row.get("lookup_attempts", [])) for row in summaries)
     report = {
         "scope": "Sacramento 2026 UFC debutants, pre-UFC standard professional MMA",
-        "lookup_count": total,
+        "fight_count": total,
+        "lookup_attempt_count": lookup_attempt_count,
+        "date_offsets_days": list(DATE_OFFSETS),
         "max_charge_per_lookup_usd": MAX_CHARGE_PER_LOOKUP_USD,
-        "theoretical_max_charge_usd": round(total * MAX_CHARGE_PER_LOOKUP_USD, 2),
+        "theoretical_max_charge_usd": round(total * len(DATE_OFFSETS) * MAX_CHARGE_PER_LOOKUP_USD, 2),
         "by_fighter": dict(by_fighter),
         "fights": summaries,
-        "errors": errors,
     }
 
     (OUTPUT_DIR / "raw.json").write_text(json.dumps(raw_records, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
