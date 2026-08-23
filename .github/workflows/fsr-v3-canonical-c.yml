@@ -1,6 +1,6 @@
-name: Weight Class Audit - Women's Bantamweight
+name: Event Clock V2 Pace Survival Decomposition
 
-# Trigger refresh: 2026-08-23 women's-bantamweight simulate-only audit
+# Trigger refresh: 2026-08-23 all-division pace-survival diagnostic
 on:
   workflow_dispatch:
   push:
@@ -40,36 +40,35 @@ jobs:
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
 
-      - name: Verify frozen state
+      - name: Verify frozen state and diagnostic
         run: |
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
           test -f data/fsr_v3/fsr_v3_prefight_uncertainty.parquet
           test -f data/models/event_clock_mc_v1/event_clock_frozen_bundle.joblib
           test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/weight_class_audit.py
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/pace_survival_decomposition.py
 
-      - name: Run women's bantamweight audit
+      - name: Run all-division pace and survival decomposition
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.weight_class_audit \
-            --division "women's bantamweight" \
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.pace_survival_decomposition \
             --target-n 100 \
-            --paths 500 \
+            --paths 100 \
             --seed 20260823 \
-            --out-dir data/diagnostics/event_clock_mc_v2/weight_class_audit/womens_bantamweight \
-            2>&1 | tee /tmp/womens_bantamweight_audit.log
+            --out-dir data/diagnostics/event_clock_mc_v2/pace_survival_decomposition \
+            2>&1 | tee /tmp/pace_survival_decomposition.log
 
-      - name: Print women's bantamweight audit headline
+      - name: Print diagnostic headline
         if: always()
         run: |
-          if [ -f /tmp/womens_bantamweight_audit.log ]; then
-            tail -n 180 /tmp/womens_bantamweight_audit.log
+          if [ -f /tmp/pace_survival_decomposition.log ]; then
+            tail -n 260 /tmp/pace_survival_decomposition.log
           fi
 
-      - name: Upload women's bantamweight audit outputs
+      - name: Upload pace survival outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: weight-class-audit-womens-bantamweight
-          path: data/diagnostics/event_clock_mc_v2/weight_class_audit/womens_bantamweight/*.csv
+          name: event-clock-v2-pace-survival-decomposition
+          path: data/diagnostics/event_clock_mc_v2/pace_survival_decomposition/*.csv
           if-no-files-found: warn
