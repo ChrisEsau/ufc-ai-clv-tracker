@@ -1,0 +1,58 @@
+name: FSR V3 KD Bootstrap Refinement
+
+on:
+  push:
+    branches:
+      - "research/fsr-v3-active-trait-audit"
+    paths:
+      - ".github/workflows/fsr-v3-kd-bootstrap-refinement.yml"
+  pull_request:
+    paths:
+      - ".github/workflows/fsr-v3-kd-bootstrap-refinement.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install numpy pandas
+      - name: Refine fight-cluster bootstrap
+        run: |
+          python - <<'PY'
+          import numpy as np
+          import pandas as pd
+
+          path = "data/diagnostics/fsr_v3/active_trait_audit/kd_resistance/holdout_rows.csv"
+          x = pd.read_csv(path)
+          grouped = x.groupby("fight_id")[["predictive_ll_c_1", "predictive_ll_c_1.25", "legacy_ll", "population_ll"]].sum()
+          rng = np.random.default_rng(20260822)
+          draws = 50000
+          chunk = 1000
+
+          def boot(a, b):
+              delta = (grouped[a] - grouped[b]).to_numpy(float)
+              n = len(delta)
+              sims = []
+              for _ in range(0, draws, chunk):
+                  m = min(chunk, draws - len(sims) * chunk)
+                  idx = rng.integers(0, n, size=(m, n))
+                  sims.append(delta[idx].sum(axis=1))
+              sims = np.concatenate(sims)
+              return delta.sum(), np.quantile(sims, .025), np.quantile(sims, .975), np.mean(sims > 0)
+
+          for c in ("predictive_ll_c_1", "predictive_ll_c_1.25"):
+              d, lo, hi, p = boot(c, "legacy_ll")
+              print(f"{c} vs legacy: delta={d:+.6f} CI[{lo:+.6f},{hi:+.6f}] P>0={p:.6f}")
+              d, lo, hi, p = boot(c, "population_ll")
+              print(f"{c} vs population: delta={d:+.6f} CI[{lo:+.6f},{hi:+.6f}] P>0={p:.6f}")
+          d, lo, hi, p = boot("predictive_ll_c_1.25", "predictive_ll_c_1")
+          print(f"c1.25 vs c1: delta={d:+.6f} CI[{lo:+.6f},{hi:+.6f}] P>0={p:.6f}")
+          PY
