@@ -1,6 +1,6 @@
-name: Event Clock V2 Pace Survival Decomposition
+name: Event Clock V2 Lethality Round Bucket
 
-# Trigger refresh: 2026-08-23 all-division pace-survival diagnostic 50 paths
+# Trigger refresh: 2026-08-23 R1-R3 lethality bucket diagnostic 25 paths
 on:
   workflow_dispatch:
   push:
@@ -42,33 +42,34 @@ jobs:
 
       - name: Verify frozen state and diagnostic
         run: |
+          test -f data/fight_details/ufc_round_stats.parquet
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
           test -f data/fsr_v3/fsr_v3_prefight_uncertainty.parquet
           test -f data/models/event_clock_mc_v1/event_clock_frozen_bundle.joblib
           test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/pace_survival_decomposition.py
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/lethality_round_bucket.py
 
-      - name: Run all-division pace and survival decomposition
+      - name: Run all-division R1-R3 lethality bucket diagnostic
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.pace_survival_decomposition \
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.lethality_round_bucket \
             --target-n 100 \
-            --paths 50 \
+            --paths 25 \
             --seed 20260823 \
-            --out-dir data/diagnostics/event_clock_mc_v2/pace_survival_decomposition \
-            2>&1 | tee /tmp/pace_survival_decomposition.log
+            --out-dir data/diagnostics/event_clock_mc_v2/lethality_round_bucket \
+            2>&1 | tee /tmp/lethality_round_bucket.log
 
-      - name: Print diagnostic headline
+      - name: Print round bucket summary
         if: always()
         run: |
-          if [ -f /tmp/pace_survival_decomposition.log ]; then
-            tail -n 260 /tmp/pace_survival_decomposition.log
+          if [ -f /tmp/lethality_round_bucket.log ]; then
+            tail -n 280 /tmp/lethality_round_bucket.log
           fi
 
-      - name: Upload pace survival outputs
+      - name: Upload lethality round bucket outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-pace-survival-decomposition
-          path: data/diagnostics/event_clock_mc_v2/pace_survival_decomposition/*.csv
+          name: event-clock-v2-lethality-round-bucket
+          path: data/diagnostics/event_clock_mc_v2/lethality_round_bucket/*.csv
           if-no-files-found: warn
