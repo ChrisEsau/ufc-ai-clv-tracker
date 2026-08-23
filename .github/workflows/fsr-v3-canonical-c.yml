@@ -1,6 +1,6 @@
 name: Weight Class Audit - Men's Light Heavyweight
 
-# Trigger refresh: 2026-08-23 light-heavyweight simulate-only audit
+# Trigger refresh: 2026-08-23 light-heavyweight simulate-only audit (space-normalized division label)
 on:
   workflow_dispatch:
   push:
@@ -52,7 +52,7 @@ jobs:
         run: |
           set -o pipefail
           python -m pipeline.simulation.event_clock_mc_v2.diagnostics.weight_class_audit \
-            --division light_heavyweight \
+            --division "light heavyweight" \
             --target-n 100 \
             --paths 500 \
             --seed 20260823 \
