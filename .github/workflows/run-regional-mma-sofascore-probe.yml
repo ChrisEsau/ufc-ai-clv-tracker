@@ -7,7 +7,7 @@ on:
     branches:
       - feature/fsr-v3
     paths:
-      - scrapers/sacramento_debut_apify_pull.py
+      - scrapers/terrance_chatman_apify_pull.py
       - .github/workflows/run-regional-mma-sofascore-probe.yml
 
 jobs:
@@ -31,13 +31,13 @@ jobs:
       - name: Install dependencies
         run: python -m pip install --disable-pip-version-check requests
 
-      - name: Pull Sacramento debut pre-UFC regional data
-        run: python -m scrapers.sacramento_debut_apify_pull
+      - name: Pull Terrance Chatman regional history
+        run: python -m scrapers.terrance_chatman_apify_pull
 
-      - name: Upload raw audit artifact
+      - name: Upload one-fighter audit artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: sacramento-debut-regional-mma
-          path: data/audits/regional_mma/sofascore/sacramento_debuts/
+          name: terrance-chatman-regional-mma
+          path: data/audits/regional_mma/sofascore/terrance_chatman/
           if-no-files-found: warn
