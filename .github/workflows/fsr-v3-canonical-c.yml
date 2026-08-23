@@ -1,6 +1,6 @@
-name: Weight Class Audit - Women's Flyweight
+name: Weight Class Audit - Women's Bantamweight
 
-# Trigger refresh: 2026-08-23 women's-flyweight simulate-only audit
+# Trigger refresh: 2026-08-23 women's-bantamweight simulate-only audit
 on:
   workflow_dispatch:
   push:
@@ -48,28 +48,28 @@ jobs:
           test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
           python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/weight_class_audit.py
 
-      - name: Run women's flyweight audit
+      - name: Run women's bantamweight audit
         run: |
           set -o pipefail
           python -m pipeline.simulation.event_clock_mc_v2.diagnostics.weight_class_audit \
-            --division "women's flyweight" \
+            --division "women's bantamweight" \
             --target-n 100 \
             --paths 500 \
             --seed 20260823 \
-            --out-dir data/diagnostics/event_clock_mc_v2/weight_class_audit/womens_flyweight \
-            2>&1 | tee /tmp/womens_flyweight_audit.log
+            --out-dir data/diagnostics/event_clock_mc_v2/weight_class_audit/womens_bantamweight \
+            2>&1 | tee /tmp/womens_bantamweight_audit.log
 
-      - name: Print women's flyweight audit headline
+      - name: Print women's bantamweight audit headline
         if: always()
         run: |
-          if [ -f /tmp/womens_flyweight_audit.log ]; then
-            tail -n 180 /tmp/womens_flyweight_audit.log
+          if [ -f /tmp/womens_bantamweight_audit.log ]; then
+            tail -n 180 /tmp/womens_bantamweight_audit.log
           fi
 
-      - name: Upload women's flyweight audit outputs
+      - name: Upload women's bantamweight audit outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: weight-class-audit-womens-flyweight
-          path: data/diagnostics/event_clock_mc_v2/weight_class_audit/womens_flyweight/*.csv
+          name: weight-class-audit-womens-bantamweight
+          path: data/diagnostics/event_clock_mc_v2/weight_class_audit/womens_bantamweight/*.csv
           if-no-files-found: warn
