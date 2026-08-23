@@ -1,8 +1,8 @@
 """Low-cost one-fighter regional MMA pull for Terrance Chatman.
 
 Research-only. Chatman's SofaScore fighter ID was resolved in the first one-fighter
-probe. This follow-up performs one batched match search for his known pre-UFC bouts,
-then one exact-event statistics pull. The Apify token is never persisted.
+probe. This follow-up uses the same working search Actor for five precise bout-name
+queries, then one exact-event statistics pull. The Apify token is never persisted.
 """
 
 from __future__ import annotations
@@ -20,7 +20,6 @@ FIGHTER = "Terrance Chatman"
 FIGHTER_ID = 1159222
 FIGHTER_SURNAME = "chatman"
 
-# Maters was already resolved by the first one-fighter search.
 KNOWN_EVENT_IDS = {"Dwight Maters": "15229560"}
 MISSING_BOUT_QUERIES = {
     "Erick Prieto": "Terrance Chatman Erick Prieto",
@@ -30,14 +29,15 @@ MISSING_BOUT_QUERIES = {
     "Juan Torres": "Terrance Chatman Juan Torres",
 }
 
-MATCH_SEARCH_ACTOR_ID = "abotapi~sofascore-scraper"
+SEARCH_ACTOR_ID = "gio21~sofascore-scraper"
 STATS_ACTOR_ID = "automation-lab~sofascore-live-events-statistics-scraper"
-MATCH_SEARCH_URL = f"https://api.apify.com/v2/actors/{MATCH_SEARCH_ACTOR_ID}/run-sync-get-dataset-items"
+SEARCH_URL = f"https://api.apify.com/v2/actors/{SEARCH_ACTOR_ID}/run-sync-get-dataset-items"
 STATS_URL = f"https://api.apify.com/v2/actors/{STATS_ACTOR_ID}/run-sync-get-dataset-items"
 
 OUTPUT_DIR = AUDITS_DIR / "regional_mma" / "sofascore" / "terrance_chatman"
-MATCH_SEARCH_MAX_CHARGE_USD = 0.025
-STATS_MAX_CHARGE_USD = 0.025
+SEARCH_MAX_ITEMS = 2
+SEARCH_MAX_CHARGE_PER_BOUT_USD = 0.01
+STATS_MAX_CHARGE_USD = 0.02
 
 
 def _post_actor(url: str, token: str, payload: dict[str, Any], *, max_items: int, max_charge_usd: float) -> list[dict[str, Any]]:
@@ -63,28 +63,6 @@ def _post_actor(url: str, token: str, payload: dict[str, Any], *, max_items: int
     return [item for item in data if isinstance(item, dict)]
 
 
-def search_missing_bouts(token: str) -> list[dict[str, Any]]:
-    return _post_actor(
-        MATCH_SEARCH_URL,
-        token,
-        {
-            "mode": "search",
-            "searchQueries": list(MISSING_BOUT_QUERIES.values()),
-            "searchType": "match",
-            "includeStatistics": False,
-            "includeLineups": False,
-            "includeIncidents": False,
-            "includeOdds": False,
-            "includeVotes": False,
-            "includeStandings": False,
-            "includeSquad": False,
-            "maxItems": 10,
-        },
-        max_items=10,
-        max_charge_usd=MATCH_SEARCH_MAX_CHARGE_USD,
-    )
-
-
 def _flat_team_name(item: dict[str, Any], side: str) -> str:
     value = item.get(f"{side}Team")
     if isinstance(value, dict):
@@ -92,40 +70,65 @@ def _flat_team_name(item: dict[str, Any], side: str) -> str:
     return str(value or "")
 
 
-def _contains_name(text: str, name: str) -> bool:
-    return name.casefold() in text.casefold()
+def _candidate_text(item: dict[str, Any]) -> str:
+    return " ".join(
+        [
+            str(item.get("name", "")),
+            _flat_team_name(item, "home"),
+            _flat_team_name(item, "away"),
+            str(item.get("slug", "")),
+        ]
+    ).casefold()
 
 
-def _valid_chatman_bout(item: dict[str, Any], opponent: str) -> bool:
-    home = _flat_team_name(item, "home")
-    away = _flat_team_name(item, "away")
-    names = f"{home} {away} {item.get('name', '')}"
-    return FIGHTER_SURNAME in names.casefold() and _contains_name(names, opponent)
+def search_one_bout(token: str, opponent: str, query: str) -> tuple[str | None, list[dict[str, Any]]]:
+    items = _post_actor(
+        SEARCH_URL,
+        token,
+        {
+            "searchTerm": query,
+            "includeMatches": False,
+            "maxItems": SEARCH_MAX_ITEMS,
+        },
+        max_items=SEARCH_MAX_ITEMS,
+        max_charge_usd=SEARCH_MAX_CHARGE_PER_BOUT_USD,
+    )
+
+    opponent_last = opponent.split()[-1].casefold()
+    for item in items:
+        text = _candidate_text(item)
+        if FIGHTER_SURNAME not in text or opponent_last not in text:
+            continue
+        event_id = item.get("sofascoreId") or item.get("id")
+        if event_id is not None:
+            return str(event_id), items
+    return None, items
 
 
-def resolve_event_ids(search_items: list[dict[str, Any]]) -> tuple[dict[str, str], list[dict[str, Any]]]:
+def resolve_event_ids(token: str) -> tuple[dict[str, str], list[dict[str, Any]], list[dict[str, Any]]]:
     resolved = dict(KNOWN_EVENT_IDS)
     evidence: list[dict[str, Any]] = []
+    all_search_items: list[dict[str, Any]] = []
 
-    for opponent in MISSING_BOUT_QUERIES:
-        candidates = [item for item in search_items if _valid_chatman_bout(item, opponent)]
-        chosen = candidates[0] if candidates else None
-        event_id = None
-        if chosen is not None:
-            event_id = chosen.get("id") or chosen.get("sofascoreId")
+    for opponent, query in MISSING_BOUT_QUERIES.items():
+        try:
+            event_id, items = search_one_bout(token, opponent, query)
+            all_search_items.extend(items)
+            evidence.append(
+                {
+                    "opponent": opponent,
+                    "query": query,
+                    "returned": len(items),
+                    "event_id": event_id,
+                    "candidate_names": [str(item.get("name", "")) for item in items],
+                }
+            )
             if event_id is not None:
-                resolved[opponent] = str(event_id)
-        evidence.append(
-            {
-                "opponent": opponent,
-                "matched": event_id is not None,
-                "event_id": str(event_id) if event_id is not None else None,
-                "candidate_count": len(candidates),
-                "candidate_names": [str(item.get("name", "")) for item in candidates[:5]],
-            }
-        )
+                resolved[opponent] = event_id
+        except Exception as exc:
+            evidence.append({"opponent": opponent, "query": query, "error": str(exc)})
 
-    return resolved, evidence
+    return resolved, evidence, all_search_items
 
 
 def fetch_event_stats(token: str, event_ids: list[str]) -> list[dict[str, Any]]:
@@ -196,8 +199,7 @@ def main() -> None:
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    search_items = search_missing_bouts(token)
-    resolved, evidence = resolve_event_ids(search_items)
+    resolved, evidence, search_items = resolve_event_ids(token)
     event_ids = list(dict.fromkeys(resolved.values()))
     events = fetch_event_stats(token, event_ids)
 
@@ -205,12 +207,11 @@ def main() -> None:
         "fighter": FIGHTER,
         "fighter_sofascore_id": FIGHTER_ID,
         "target_pre_ufc_bouts": 6,
-        "batched_search_records": len(search_items),
         "resolved_opponent_event_ids": resolved,
         "resolved_bout_count": len(resolved),
         "detailed_events_returned": len(events),
         "events_with_statistics": sum(bool(item.get("hasStatistics")) for item in events),
-        "hard_charge_cap_usd": round(MATCH_SEARCH_MAX_CHARGE_USD + STATS_MAX_CHARGE_USD, 3),
+        "hard_charge_cap_usd": round(len(MISSING_BOUT_QUERIES) * SEARCH_MAX_CHARGE_PER_BOUT_USD + STATS_MAX_CHARGE_USD, 2),
         "search_evidence": evidence,
         "events": [summarize_event(item) for item in events],
     }
