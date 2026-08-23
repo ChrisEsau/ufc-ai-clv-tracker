@@ -15,6 +15,13 @@ on:
         description: "Maximum fights to probe; 0 means no limit"
         required: true
         default: "3"
+  pull_request:
+    branches:
+      - feature/fsr-v3
+    paths:
+      - scrapers/sofascore_mma.py
+      - tests/experimental/test_sofascore_mma.py
+      - .github/workflows/run-regional-mma-sofascore-probe.yml
   push:
     branches:
       - feature/regional-mma-scraper
