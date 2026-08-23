@@ -1,0 +1,72 @@
+name: Regional MMA SofaScore Probe
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "MMA date (YYYY-MM-DD)"
+        required: true
+        default: "2025-09-07"
+      promotion:
+        description: "Promotion substring (for example LFA or Fury)"
+        required: false
+        default: "LFA"
+      max_events:
+        description: "Maximum fights to probe; 0 means no limit"
+        required: true
+        default: "3"
+  push:
+    branches:
+      - feature/regional-mma-scraper
+    paths:
+      - .github/workflows/run-regional-mma-sofascore-probe.yml
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    env:
+      PROBE_DATE: ${{ inputs.date || '2025-09-07' }}
+      PROBE_PROMOTION: ${{ inputs.promotion || 'LFA' }}
+      PROBE_MAX_EVENTS: ${{ inputs.max_events || '3' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install probe dependencies
+        run: python -m pip install --disable-pip-version-check requests pytest
+
+      - name: Run parser tests
+        run: python -m pytest tests/experimental/test_sofascore_mma.py -q
+
+      - name: Probe regional MMA JSON
+        run: |
+          python -m scrapers.sofascore_mma \
+            --date "$PROBE_DATE" \
+            --promotion "$PROBE_PROMOTION" \
+            --max-events "$PROBE_MAX_EVENTS" \
+            --sleep-seconds 1.0
+
+      - name: Print coverage summary
+        if: always()
+        run: |
+          echo "=== generated files ==="
+          find data/audits/regional_mma -maxdepth 4 -type f -print 2>/dev/null || true
+          echo "=== coverage summary ==="
+          cat "data/audits/regional_mma/sofascore/$PROBE_DATE/coverage_summary.json" 2>/dev/null || true
+
+      - name: Upload probe artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regional-mma-sofascore-probe-${{ env.PROBE_DATE }}
+          path: data/audits/regional_mma/sofascore/
+          if-no-files-found: warn
