@@ -32,7 +32,7 @@ jobs:
       PROBE_DATE: ${{ inputs.date || '2025-09-07' }}
       PROBE_TOURNAMENT: ${{ inputs.tournament || 'LFA' }}
       PROBE_MAX_ITEMS: ${{ inputs.max_items || '3' }}
-      APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+      APIFY_TOKEN: ${{ secrets.apify }}
 
     steps:
       - name: Checkout
@@ -55,7 +55,7 @@ jobs:
           mkdir -p .github/probe-results data/audits/regional_mma/sofascore
           if [ -z "$APIFY_TOKEN" ]; then
             echo "exit_code=1" > .github/probe-results/apify_latest.txt
-            echo "APIFY_TOKEN repository secret is not available" >> .github/probe-results/apify_latest.txt
+            echo "apify repository secret is not available" >> .github/probe-results/apify_latest.txt
             exit 1
           fi
 
