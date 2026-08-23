@@ -1,4 +1,4 @@
-name: FSR V3 Canonical C Validation
+name: Weight Class Audit Seed - Men's Bantamweight
 
 on:
   pull_request:
@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 jobs:
-  canonical-c:
+  seed-and-audit:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
@@ -50,9 +50,6 @@ jobs:
           new = '''            and method in METHODS\n            and pd.notna(row["total_rounds"])\n            and int(row["total_rounds"]) in {3, 5}\n            and pd.notna(row["match_time_sec"])\n'''
           if old in text:
               path.write_text(text.replace(old, new, 1))
-              print("Applied CI-only null guard; repository source unchanged")
-          else:
-              print("Null guard already present or source changed")
           PY
 
       - name: Fit frozen Event Clock V1 parent bundle
@@ -61,28 +58,39 @@ jobs:
       - name: Fit Event Clock V2 direct bundle from final V3
         run: python -m pipeline.simulation.event_clock_mc_v2.fit_event_clock_bundle
 
-      - name: Run men's flyweight audit
+      - name: Persist canonical weight-class simulation state
+        uses: actions/upload-artifact@v4
+        with:
+          name: canonical-weight-class-state
+          path: |
+            data/fsr_v3/**
+            data/models/event_clock_mc_v1/**
+            data/models/event_clock_mc_v2/**
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Run men's bantamweight audit
         run: |
           set -o pipefail
           python -m pipeline.simulation.event_clock_mc_v2.diagnostics.weight_class_audit \
-            --division flyweight \
+            --division bantamweight \
             --target-n 100 \
             --paths 500 \
             --seed 20260823 \
-            --out-dir data/diagnostics/event_clock_mc_v2/weight_class_audit/flyweight \
-            2>&1 | tee /tmp/flyweight_audit.log
+            --out-dir data/diagnostics/event_clock_mc_v2/weight_class_audit/bantamweight \
+            2>&1 | tee /tmp/bantamweight_audit.log
 
-      - name: Print flyweight audit headline
+      - name: Print bantamweight audit headline
         if: always()
         run: |
-          if [ -f /tmp/flyweight_audit.log ]; then
-            tail -n 160 /tmp/flyweight_audit.log
+          if [ -f /tmp/bantamweight_audit.log ]; then
+            tail -n 180 /tmp/bantamweight_audit.log
           fi
 
-      - name: Upload flyweight audit outputs
+      - name: Upload bantamweight audit outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: weight-class-audit-flyweight
-          path: data/diagnostics/event_clock_mc_v2/weight_class_audit/flyweight/*.csv
+          name: weight-class-audit-bantamweight
+          path: data/diagnostics/event_clock_mc_v2/weight_class_audit/bantamweight/*.csv
           if-no-files-found: warn
