@@ -2,9 +2,9 @@ name: Regional MMA SofaScore Probe
 
 on:
   workflow_dispatch:
-  push:
+  pull_request:
     branches:
-      - feature/regional-mma-scraper
+      - feature/fsr-v3
     paths:
       - scrapers/sacramento_debut_apify_pull.py
       - .github/workflows/run-regional-mma-sofascore-probe.yml
@@ -62,15 +62,6 @@ PY
 
           cat /tmp/sacramento_debuts.log
           exit "$status"
-
-      - name: Commit audit summary
-        if: always()
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .github/probe-results/sacramento_debuts_latest.json
-          git diff --cached --quiet || git commit -m "Record Sacramento debut regional pull"
-          git push origin HEAD:feature/regional-mma-scraper
 
       - name: Upload raw audit artifact
         if: always()
