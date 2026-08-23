@@ -1,0 +1,294 @@
+name: Reach MC Historical Validation
+
+on:
+  push:
+    branches:
+      - "research/reach-mc-validation-20260823"
+    paths:
+      - ".github/workflows/reach-mc-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reach-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install focused dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy pandas scipy scikit-learn statsmodels joblib pyarrow pyyaml pytest
+
+      - name: Run reach integration unit tests
+        run: pytest -q tests/simulation/event_clock_mc_v2/test_reach_translation_v3.py
+
+      - name: Build frozen FSR V2 source histories
+        run: python -m pipeline.fsr_v2.build --all
+
+      - name: Publish frozen FSR V2 source snapshots
+        run: python -m pipeline.fsr_v2.publish
+
+      - name: Build final canonical FSR V3
+        run: python -m pipeline.fsr_v3.build_canonical
+
+      - name: Patch incomplete-row cohort guard in CI checkout only
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("pipeline/simulation/event_mc_v1/diagnostics/fresh_100_fight_predictive_replay.py")
+          text = path.read_text()
+          old = '''            and method in METHODS\n            and int(row["total_rounds"]) in {3, 5}\n            and pd.notna(row["match_time_sec"])\n'''
+          new = '''            and method in METHODS\n            and pd.notna(row["total_rounds"])\n            and int(row["total_rounds"]) in {3, 5}\n            and pd.notna(row["match_time_sec"])\n'''
+          if old in text:
+              path.write_text(text.replace(old, new, 1))
+              print("Applied CI-only null guard")
+          else:
+              print("Null guard already present or source changed; continuing")
+          PY
+
+      - name: Fit frozen Event Clock V1 parent bundle
+        run: python -m pipeline.simulation.event_clock_mc_v1.fit_event_clock_bundle
+
+      - name: Fit Event Clock V2 bundle
+        run: python -m pipeline.simulation.event_clock_mc_v2.fit_event_clock_bundle
+
+      - name: Run 12-fight reach ON vs OFF historical MC
+        run: |
+          set -o pipefail
+          python - <<'PY' 2>&1 | tee /tmp/reach_mc_validation.log
+          from __future__ import annotations
+
+          from pathlib import Path
+          import numpy as np
+          import pandas as pd
+
+          from pipeline.common.paths import MASTER_PATH
+          from pipeline.fsr_v3.paths import FSR_V3_PREFIGHT_SNAPSHOTS_PATH
+          from pipeline.simulation.event_clock_mc_v2.feature_builder import build_feature_rows_v3
+          from pipeline.simulation.event_clock_mc_v2.inference import (
+              load_submission_baseline_v3,
+              predict_feature_frame_v3,
+          )
+          from pipeline.simulation.event_clock_mc_v2.reach_translation import _measure_inches
+          from pipeline.simulation.event_clock_mc_v2.run_event_or_fight_frozen import (
+              _draw_budgets,
+              _submission_inputs,
+              load_frozen_context,
+          )
+          from pipeline.simulation.event_clock_mc_v2.fit_event_clock_bundle import DEFAULT_BUNDLE_PATH
+          from pipeline.simulation.event_clock_mc_v1.run_event_or_fight import (
+              simulate_detailed_path,
+              summarize_fight,
+          )
+          from pipeline.simulation.event_mc_v1.diagnostics.population_validation import _fight
+
+          PATHS = 500
+          N_FIGHTS = 12
+          SEED = 20260823
+          DETAILED_PATH_SEED_OFFSET = 50_000_000
+          OUT = Path("data/diagnostics/event_clock_mc_v2/reach_validation")
+          OUT.mkdir(parents=True, exist_ok=True)
+
+          master = pd.read_parquet(MASTER_PATH).drop_duplicates("fight_id").copy()
+          master["fight_id"] = master["fight_id"].astype(str)
+          master["event_date"] = pd.to_datetime(master["date"], errors="coerce").dt.normalize()
+          master["total_rounds_num"] = pd.to_numeric(master["total_rounds"], errors="coerce")
+          master["finish_round_num"] = pd.to_numeric(master["finish_round"], errors="coerce")
+          master["match_time_num"] = pd.to_numeric(master["match_time_sec"], errors="coerce")
+          master["r_reach_inches"] = master["r_reach"].map(_measure_inches)
+          master["b_reach_inches"] = master["b_reach"].map(_measure_inches)
+          master["reach_edge_abs"] = (master["r_reach_inches"] - master["b_reach_inches"]).abs()
+
+          fsr = pd.read_parquet(FSR_V3_PREFIGHT_SNAPSHOTS_PATH).copy()
+          fsr["fight_id"] = fsr["fight_id"].astype(str)
+          fsr_ids = set(fsr.groupby("fight_id").size().loc[lambda s: s >= 2].index.astype(str))
+
+          eligible = master[
+              master["fight_id"].isin(fsr_ids)
+              & master["event_date"].notna()
+              & master["winner"].notna()
+              & master["method"].notna()
+              & master["total_rounds_num"].isin([3, 5])
+              & master["finish_round_num"].notna()
+              & master["match_time_num"].notna()
+              & np.isfinite(master["r_reach_inches"])
+              & np.isfinite(master["b_reach_inches"])
+          ].copy()
+
+          # Keep the study small and reasonably current, then maximize reach leverage.
+          recent = eligible.sort_values(["event_date", "fight_id"], ascending=[False, True]).head(300)
+          candidate = recent.sort_values(["reach_edge_abs", "event_date"], ascending=[False, False]).head(40).copy()
+
+          # Build once to exclude any fight lacking an exact V3 feature snapshot.
+          candidate_features = build_feature_rows_v3(candidate, fsr, scheduled_duration=True)
+          valid_ids = set(candidate_features["fight_id"].astype(str))
+          target = candidate[candidate["fight_id"].isin(valid_ids)].head(N_FIGHTS).copy()
+          if len(target) < N_FIGHTS:
+              raise RuntimeError(f"Only {len(target)} fully usable reach-validation fights found")
+          target_ids = set(target["fight_id"].astype(str))
+          features = candidate_features[candidate_features["fight_id"].astype(str).isin(target_ids)].copy()
+
+          context = load_frozen_context(DEFAULT_BUNDLE_PATH)
+          baseline = load_submission_baseline_v3()
+
+          on_features = features.copy()
+          off_features = features.copy()
+          off_features["distance_reach_multiplier"] = 1.0
+
+          on_pair, on_control = predict_feature_frame_v3(
+              on_features,
+              context["inference_models"],
+              context["submission_scale"],
+              context["conversion_offset"],
+              submission_baseline=baseline,
+          )
+          off_pair, off_control = predict_feature_frame_v3(
+              off_features,
+              context["inference_models"],
+              context["submission_scale"],
+              context["conversion_offset"],
+              submission_baseline=baseline,
+          )
+
+          master_lookup = {str(r["fight_id"]): r for _, r in master.iterrows()}
+
+          def simulate_scenario(label, fighter_frame, control_frame):
+              control_lookup = {str(r["fight_id"]): r for _, r in control_frame.iterrows()}
+              summaries = []
+              for fight_index, (fight_id, pair) in enumerate(fighter_frame.groupby("fight_id", sort=False)):
+                  fight_id = str(fight_id)
+                  row = master_lookup[fight_id]
+                  fight = _fight(row, context["fsr_all"])
+                  pair_info = control_lookup[fight_id]
+                  sub_rate, convert = _submission_inputs(pair)
+                  path_rows = []
+                  for path in range(PATHS):
+                      seed = SEED + fight_index * 1_000_000 + path
+                      budgets = _draw_budgets(pair, pair_info, context, np.random.default_rng(seed))
+                      result = simulate_detailed_path(
+                          fight,
+                          budgets,
+                          sub_rate,
+                          convert,
+                          context["judge_model"],
+                          context["judge_features"],
+                          seed + DETAILED_PATH_SEED_OFFSET,
+                      )
+                      path_rows.append(result)
+                  summary = summarize_fight(fight_id, pair, path_rows, row)
+                  paths = pd.DataFrame(path_rows)
+                  summary["scenario"] = label
+                  summary["mean_red_standing_attempted"] = float(paths["red_standing_attempted"].mean())
+                  summary["mean_blue_standing_attempted"] = float(paths["blue_standing_attempted"].mean())
+                  red_feature = pair[pair["side"].eq("red")].iloc[0]
+                  blue_feature = pair[pair["side"].eq("blue")].iloc[0]
+                  summary["red_reach_edge"] = float(red_feature.get("reach_edge_inches", np.nan))
+                  summary["blue_reach_edge"] = float(blue_feature.get("reach_edge_inches", np.nan))
+                  summary["red_distance_reach_multiplier"] = float(red_feature.get("distance_reach_multiplier", 1.0))
+                  summary["blue_distance_reach_multiplier"] = float(blue_feature.get("distance_reach_multiplier", 1.0))
+                  summaries.append(summary)
+                  print(f"{label:>3} {fight_index+1:02d}/{N_FIGHTS}: {row['r_name']} vs {row['b_name']} | p_red={summary['p_red_win']:.3f}")
+              return pd.DataFrame(summaries)
+
+          on = simulate_scenario("on", on_pair, on_control)
+          off = simulate_scenario("off", off_pair, off_control)
+          all_summary = pd.concat([on, off], ignore_index=True)
+
+          for frame in (on, off):
+              y = frame["actual_winner"].eq("red").astype(float).to_numpy()
+              p = frame["p_red_win"].to_numpy(float)
+              frame["brier"] = (p - y) ** 2
+              frame["actual_winner_probability"] = np.where(y > 0.5, p, 1.0 - p)
+              frame["logloss"] = -np.log(np.clip(frame["actual_winner_probability"], 1e-9, 1.0))
+
+          merged = on.merge(
+              off,
+              on=["fight_id", "red", "blue", "actual_winner", "actual_method"],
+              suffixes=("_on", "_off"),
+              validate="one_to_one",
+          )
+          merged["delta_p_red"] = merged["p_red_win_on"] - merged["p_red_win_off"]
+          merged["delta_actual_winner_probability"] = (
+              merged["actual_winner_probability_on"] - merged["actual_winner_probability_off"]
+          )
+          merged["delta_red_standing_attempted"] = (
+              merged["mean_red_standing_attempted_on"] - merged["mean_red_standing_attempted_off"]
+          )
+          merged["delta_blue_standing_attempted"] = (
+              merged["mean_blue_standing_attempted_on"] - merged["mean_blue_standing_attempted_off"]
+          )
+
+          # Deterministic upstream sanity: sign of translated standing-rate change must match reach edge.
+          on_rates = on_pair[[
+              "fight_id", "side", "reach_edge_inches",
+              "pred_standing_rate_free_15m", "pred_standing_rate_free_15m_base_no_reach",
+          ]].copy()
+          on_rates["rate_delta"] = (
+              on_rates["pred_standing_rate_free_15m"] - on_rates["pred_standing_rate_free_15m_base_no_reach"]
+          )
+          directional = on_rates[np.isfinite(on_rates["reach_edge_inches"]) & (on_rates["reach_edge_inches"].abs() > 1e-12)]
+          sign_ok = np.sign(directional["rate_delta"].to_numpy()) == np.sign(directional["reach_edge_inches"].to_numpy())
+
+          def metrics(frame):
+              return {
+                  "ml_accuracy": float((frame["predicted_winner"] == frame["actual_winner"]).mean()),
+                  "brier": float(frame["brier"].mean()),
+                  "logloss": float(frame["logloss"].mean()),
+                  "mean_actual_winner_probability": float(frame["actual_winner_probability"].mean()),
+              }
+
+          on_m = metrics(on)
+          off_m = metrics(off)
+          headline = pd.DataFrame([
+              {"metric": k, "reach_on": on_m[k], "reach_off": off_m[k], "delta_on_minus_off": on_m[k] - off_m[k]}
+              for k in on_m
+          ])
+
+          all_summary.to_csv(OUT / "scenario_summary.csv", index=False)
+          merged.to_csv(OUT / "fight_comparison.csv", index=False)
+          on_rates.to_csv(OUT / "translated_standing_rates.csv", index=False)
+          headline.to_csv(OUT / "headline_metrics.csv", index=False)
+
+          print("\n" + "=" * 120)
+          print("REACH MC VALIDATION HEADLINE")
+          print("=" * 120)
+          print(target[["event_date", "r_name", "b_name", "r_reach_inches", "b_reach_inches", "reach_edge_abs"]].to_string(index=False))
+          print("\nScenario metrics:")
+          print(headline.to_string(index=False, float_format=lambda x: f"{x:.6f}"))
+          print(f"\nDirectional Stage-9 rate sign checks: {int(sign_ok.sum())}/{len(sign_ok)}")
+          print(f"Mean |delta p_red|: {merged['delta_p_red'].abs().mean():.6f}")
+          print(f"Max  |delta p_red|: {merged['delta_p_red'].abs().max():.6f}")
+          print(f"Mean delta actual-winner probability: {merged['delta_actual_winner_probability'].mean():+.6f}")
+          print("\nPer-fight comparison:")
+          print(merged[[
+              "red", "blue", "actual_winner", "red_reach_edge_on",
+              "p_red_win_off", "p_red_win_on", "delta_p_red",
+              "delta_actual_winner_probability",
+              "delta_red_standing_attempted", "delta_blue_standing_attempted",
+          ]].to_string(index=False, float_format=lambda x: f"{x:.4f}"))
+          PY
+
+      - name: Print validation tail
+        if: always()
+        run: |
+          if [ -f /tmp/reach_mc_validation.log ]; then
+            tail -n 160 /tmp/reach_mc_validation.log
+          fi
+
+      - name: Upload reach validation outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reach-mc-historical-validation
+          path: data/diagnostics/event_clock_mc_v2/reach_validation/*.csv
+          if-no-files-found: warn
