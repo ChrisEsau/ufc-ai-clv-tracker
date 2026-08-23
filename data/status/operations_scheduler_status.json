@@ -1990,7 +1990,7 @@
   "dispatched_runbooks": [],
   "due_runbooks": [],
   "errors": [],
-  "last_checked_at": "2026-08-23T01:35:00.822076+00:00",
+  "last_checked_at": "2026-08-23T03:04:58.204806+00:00",
   "next_due_runbook": {
     "catchup_grace_minutes": 2880,
     "display_name": "Monday Reset",
@@ -1999,27 +1999,8 @@
     "scheduled_time": "05:00",
     "workflow_file": "run-monday-reset-orchestrator.yml"
   },
-  "skipped_runbooks": [
-    {
-      "catchup_grace_minutes": 180,
-      "dispatch_key": "fight_day_monitor_v1:2026-08-22T17:55:America/Chicago",
-      "display_name": "Fight Day Monitor",
-      "inputs": {
-        "max_draftkings_events": "all",
-        "mode": "production",
-        "model_mode": "production",
-        "official_closing_snapshot": true,
-        "snapshot_model_mode": "production"
-      },
-      "minutes_late": 160.01,
-      "reason": "already_dispatched",
-      "runbook_id": "fight_day_monitor_v1",
-      "scheduled_at_local": "2026-08-22T17:55:00-05:00",
-      "scheduled_time": "17:55",
-      "workflow_file": "run-fight-day-monitor.yml"
-    }
-  ],
+  "skipped_runbooks": [],
   "status": "completed",
   "timezone": "America/Chicago",
-  "updated_at": "2026-08-23T01:35:00.827907+00:00"
+  "updated_at": "2026-08-23T03:04:58.214342+00:00"
 }
