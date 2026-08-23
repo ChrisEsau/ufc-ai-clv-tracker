@@ -1,6 +1,6 @@
-name: Weight Class Audit - Men's Middleweight
+name: Weight Class Audit - Men's Light Heavyweight
 
-# Trigger refresh: 2026-08-23 middleweight simulate-only audit
+# Trigger refresh: 2026-08-23 light-heavyweight simulate-only audit
 on:
   workflow_dispatch:
   push:
@@ -48,28 +48,28 @@ jobs:
           test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
           python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/weight_class_audit.py
 
-      - name: Run men's middleweight audit
+      - name: Run men's light heavyweight audit
         run: |
           set -o pipefail
           python -m pipeline.simulation.event_clock_mc_v2.diagnostics.weight_class_audit \
-            --division middleweight \
+            --division light_heavyweight \
             --target-n 100 \
             --paths 500 \
             --seed 20260823 \
-            --out-dir data/diagnostics/event_clock_mc_v2/weight_class_audit/middleweight \
-            2>&1 | tee /tmp/middleweight_audit.log
+            --out-dir data/diagnostics/event_clock_mc_v2/weight_class_audit/light_heavyweight \
+            2>&1 | tee /tmp/light_heavyweight_audit.log
 
-      - name: Print middleweight audit headline
+      - name: Print light heavyweight audit headline
         if: always()
         run: |
-          if [ -f /tmp/middleweight_audit.log ]; then
-            tail -n 180 /tmp/middleweight_audit.log
+          if [ -f /tmp/light_heavyweight_audit.log ]; then
+            tail -n 180 /tmp/light_heavyweight_audit.log
           fi
 
-      - name: Upload middleweight audit outputs
+      - name: Upload light heavyweight audit outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: weight-class-audit-middleweight
-          path: data/diagnostics/event_clock_mc_v2/weight_class_audit/middleweight/*.csv
+          name: weight-class-audit-light-heavyweight
+          path: data/diagnostics/event_clock_mc_v2/weight_class_audit/light_heavyweight/*.csv
           if-no-files-found: warn
