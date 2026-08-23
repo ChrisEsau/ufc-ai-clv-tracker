@@ -5,7 +5,9 @@ stable incremental signal only for distance-attempt volume after controlling
 for FSR V3 expectation, division, age, and height.  The robustness pass retained
 that effect under a +/-6 inch clipped reach edge.
 
-This module therefore exposes one narrow physical matchup translation:
+The canonical UFC master stores fighter reach in centimeters.  This module owns
+the unit boundary and converts those master values to inches before applying the
+validated per-inch coefficient:
 
     distance attempt multiplier = exp(beta * clipped_reach_edge_inches)
 
@@ -23,10 +25,16 @@ import numpy as np
 # isolated research branch.
 DISTANCE_REACH_LOG_RATE_PER_INCH = 0.002494322594196729
 DISTANCE_REACH_EDGE_CAP_INCHES = 6.0
+MASTER_REACH_CM_PER_INCH = 2.54
 
 
 def _measure_inches(value: object) -> float:
-    """Parse master physical measurements into inches when possible."""
+    """Parse canonical master reach values into inches.
+
+    Canonical numeric/bare-numeric master reach values are centimeters because
+    UFCStats profile ingestion converts source inches to cm before publication.
+    Explicit inch/feet strings remain supported for defensive compatibility.
+    """
     if value is None:
         return np.nan
     try:
@@ -34,13 +42,17 @@ def _measure_inches(value: object) -> float:
             return np.nan
     except (TypeError, ValueError):
         pass
+
     if isinstance(value, (int, float, np.number)):
         numeric = float(value)
-        return numeric if np.isfinite(numeric) else np.nan
+        if not np.isfinite(numeric):
+            return np.nan
+        return numeric / MASTER_REACH_CM_PER_INCH
 
     text = str(value).strip().lower()
     if not text or text in {"--", "nan", "none"}:
         return np.nan
+
     if "'" in text:
         cleaned = text.replace('"', "").replace("in", "")
         feet_text, _, inches_text = cleaned.partition("'")
@@ -57,7 +69,17 @@ def _measure_inches(value: object) -> float:
         parsed = float(parts[0])
     except ValueError:
         return np.nan
-    return parsed if np.isfinite(parsed) else np.nan
+    if not np.isfinite(parsed):
+        return np.nan
+
+    # Explicit unit strings override canonical bare-numeric master semantics.
+    if '"' in text or " inch" in text or text.endswith("in"):
+        return parsed
+    if "cm" in text:
+        return parsed / MASTER_REACH_CM_PER_INCH
+
+    # Bare strings mirror canonical numeric master values: centimeters.
+    return parsed / MASTER_REACH_CM_PER_INCH
 
 
 def distance_reach_multiplier(reach_edge_inches: float) -> tuple[float, float]:
