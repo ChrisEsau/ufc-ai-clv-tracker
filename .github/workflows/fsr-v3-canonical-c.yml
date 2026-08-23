@@ -1,6 +1,6 @@
-name: Weight Class Audit - Men's Heavyweight
+name: Weight Class Audit - Women's Strawweight
 
-# Trigger refresh: 2026-08-23 heavyweight simulate-only audit
+# Trigger refresh: 2026-08-23 women's-strawweight simulate-only audit
 on:
   workflow_dispatch:
   push:
@@ -48,28 +48,28 @@ jobs:
           test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
           python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/weight_class_audit.py
 
-      - name: Run men's heavyweight audit
+      - name: Run women's strawweight audit
         run: |
           set -o pipefail
           python -m pipeline.simulation.event_clock_mc_v2.diagnostics.weight_class_audit \
-            --division heavyweight \
+            --division "women's strawweight" \
             --target-n 100 \
             --paths 500 \
             --seed 20260823 \
-            --out-dir data/diagnostics/event_clock_mc_v2/weight_class_audit/heavyweight \
-            2>&1 | tee /tmp/heavyweight_audit.log
+            --out-dir data/diagnostics/event_clock_mc_v2/weight_class_audit/womens_strawweight \
+            2>&1 | tee /tmp/womens_strawweight_audit.log
 
-      - name: Print heavyweight audit headline
+      - name: Print women's strawweight audit headline
         if: always()
         run: |
-          if [ -f /tmp/heavyweight_audit.log ]; then
-            tail -n 180 /tmp/heavyweight_audit.log
+          if [ -f /tmp/womens_strawweight_audit.log ]; then
+            tail -n 180 /tmp/womens_strawweight_audit.log
           fi
 
-      - name: Upload heavyweight audit outputs
+      - name: Upload women's strawweight audit outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: weight-class-audit-heavyweight
-          path: data/diagnostics/event_clock_mc_v2/weight_class_audit/heavyweight/*.csv
+          name: weight-class-audit-womens-strawweight
+          path: data/diagnostics/event_clock_mc_v2/weight_class_audit/womens_strawweight/*.csv
           if-no-files-found: warn
