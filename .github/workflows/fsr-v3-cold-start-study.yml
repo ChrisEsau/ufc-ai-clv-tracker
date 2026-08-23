@@ -1,0 +1,67 @@
+name: FSR V3 Cold Start Study
+
+on:
+  push:
+    branches:
+      - "feature/fsr-v3"
+    paths:
+      - "pipeline/fsr_v3/cold_start/**"
+      - ".github/workflows/fsr-v3-cold-start-study.yml"
+  pull_request:
+    paths:
+      - "pipeline/fsr_v3/cold_start/**"
+      - ".github/workflows/fsr-v3-cold-start-study.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cold-start-study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install focused dependencies
+        run: python -m pip install numpy pandas scipy pyarrow duckdb kagglehub
+      - name: Download public longitudinal MMA dataset
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          import kagglehub
+
+          root = Path(kagglehub.dataset_download("leandroiber/mmastats"))
+          print("dataset root:", root)
+          candidates = sorted(root.rglob("*.duckdb")) + sorted(root.rglob("*.db"))
+          print("database candidates:")
+          for path in candidates:
+              print(" -", path, path.stat().st_size)
+          if not candidates:
+              print("downloaded files:")
+              for path in sorted(root.rglob("*")):
+                  if path.is_file():
+                      print(" -", path.relative_to(root), path.stat().st_size)
+              raise SystemExit("No DuckDB database found in public MMA dataset")
+          chosen = max(candidates, key=lambda p: p.stat().st_size)
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as f:
+              f.write(f"MMA_GLOBAL_DUCKDB={chosen}\n")
+          print("using:", chosen)
+          PY
+      - name: Run held-out cold-start study
+        run: |
+          python -m pipeline.fsr_v3.cold_start.study \
+            --mma-global-duckdb "$MMA_GLOBAL_DUCKDB" \
+            --output-dir data/diagnostics/fsr_v3_cold_start
+      - name: Upload cold-start results
+        uses: actions/upload-artifact@v4
+        with:
+          name: fsr-v3-cold-start-study
+          path: data/diagnostics/fsr_v3_cold_start/*.csv
+          if-no-files-found: error
