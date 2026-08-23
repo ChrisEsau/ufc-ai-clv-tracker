@@ -1,6 +1,6 @@
-name: Historical Stamina Lethality Interaction
+name: Event Clock V2 Shared Power Decay Grid
 
-# Trigger refresh: 2026-08-23 historical stamina x round lethality study, canonical metadata collision fix
+# Research-only men's R1-R3 effective-power curve calibration.
 on:
   workflow_dispatch:
   push:
@@ -14,9 +14,9 @@ permissions:
   actions: read
 
 jobs:
-  analyze-only:
+  simulate-only:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 120
     env:
       PYTHONPATH: .
     steps:
@@ -40,32 +40,38 @@ jobs:
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
 
-      - name: Verify historical inputs and diagnostic
+      - name: Verify frozen inputs and research diagnostic
         run: |
           test -f data/fight_details/ufc_round_stats.parquet
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/stamina_lethality_interaction.py
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/run_stamina_lethality_interaction_fixed.py
+          test -f data/fsr_v3/fsr_v3_prefight_uncertainty.parquet
+          test -f data/models/event_clock_mc_v1/event_clock_frozen_bundle.joblib
+          test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/shared_power_decay_grid.py
 
-      - name: Run historical stamina x round lethality interaction
+      - name: Run men's shared power decay grid
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.run_stamina_lethality_interaction_fixed \
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.shared_power_decay_grid \
             --target-n 100 \
-            --out-dir data/diagnostics/event_clock_mc_v2/stamina_lethality_interaction \
-            2>&1 | tee /tmp/stamina_lethality_interaction.log
+            --coarse-paths 8 \
+            --validation-paths 25 \
+            --top-k 3 \
+            --seed 20260823 \
+            --out-dir data/diagnostics/event_clock_mc_v2/shared_power_decay_grid \
+            2>&1 | tee /tmp/shared_power_decay_grid.log
 
-      - name: Print interaction results
+      - name: Print grid results
         if: always()
         run: |
-          if [ -f /tmp/stamina_lethality_interaction.log ]; then
-            tail -n 320 /tmp/stamina_lethality_interaction.log
+          if [ -f /tmp/shared_power_decay_grid.log ]; then
+            tail -n 360 /tmp/shared_power_decay_grid.log
           fi
 
-      - name: Upload stamina interaction outputs
+      - name: Upload shared power decay outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: historical-stamina-lethality-interaction
-          path: data/diagnostics/event_clock_mc_v2/stamina_lethality_interaction/*.csv
+          name: event-clock-v2-shared-power-decay-grid
+          path: data/diagnostics/event_clock_mc_v2/shared_power_decay_grid/*.csv
           if-no-files-found: warn
