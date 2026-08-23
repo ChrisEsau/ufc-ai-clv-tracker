@@ -1,0 +1,45 @@
+name: Regional MMA SofaScore Probe
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - feature/fsr-v3
+    paths:
+      - scrapers/sacramento_debut_apify_pull.py
+      - .github/workflows/run-regional-mma-sofascore-probe.yml
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    env:
+      APIFY_TOKEN: ${{ secrets.apify }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: feature/regional-mma-scraper
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check requests
+
+      - name: Pull Sacramento debut pre-UFC regional data
+        run: python -m scrapers.sacramento_debut_apify_pull
+
+      - name: Upload raw audit artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sacramento-debut-regional-mma
+          path: data/audits/regional_mma/sofascore/sacramento_debuts/
+          if-no-files-found: warn
