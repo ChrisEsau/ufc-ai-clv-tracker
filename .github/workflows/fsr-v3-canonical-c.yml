@@ -1,6 +1,6 @@
 name: Historical Stamina Lethality Interaction
 
-# Trigger refresh: 2026-08-23 historical stamina x round lethality study
+# Trigger refresh: 2026-08-23 historical stamina x round lethality study, finish-round collision fix
 on:
   workflow_dispatch:
   push:
@@ -45,11 +45,12 @@ jobs:
           test -f data/fight_details/ufc_round_stats.parquet
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
           python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/stamina_lethality_interaction.py
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/run_stamina_lethality_interaction_fixed.py
 
       - name: Run historical stamina x round lethality interaction
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.stamina_lethality_interaction \
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.run_stamina_lethality_interaction_fixed \
             --target-n 100 \
             --out-dir data/diagnostics/event_clock_mc_v2/stamina_lethality_interaction \
             2>&1 | tee /tmp/stamina_lethality_interaction.log
