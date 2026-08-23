@@ -1,5 +1,6 @@
 name: Weight Class Audit - Men's Featherweight
 
+# Trigger refresh: 2026-08-23 featherweight simulate-only audit
 on:
   workflow_dispatch:
   push:
