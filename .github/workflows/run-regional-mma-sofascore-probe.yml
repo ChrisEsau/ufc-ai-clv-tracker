@@ -60,7 +60,8 @@ jobs:
             --date "$PROBE_DATE" \
             --promotion "$PROBE_PROMOTION" \
             --max-events "$PROBE_MAX_EVENTS" \
-            --sleep-seconds 1.0
+            --sleep-seconds 1.0 \
+            --base-url "https://api.sofascore.com/api/v1"
 
       - name: Print coverage summary
         if: always()
