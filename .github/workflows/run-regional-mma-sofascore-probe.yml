@@ -3,6 +3,7 @@ name: Regional MMA SofaScore Probe
 on:
   workflow_dispatch:
   pull_request:
+    types: [opened, synchronize, reopened]
     branches:
       - feature/fsr-v3
     paths:
@@ -13,7 +14,7 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
 
     env:
       APIFY_TOKEN: ${{ secrets.apify }}
@@ -33,35 +34,7 @@ jobs:
         run: python -m pip install --disable-pip-version-check requests
 
       - name: Pull Sacramento debut pre-UFC regional data
-        id: apify_probe
-        continue-on-error: true
-        run: |
-          mkdir -p .github/probe-results data/audits/regional_mma/sofascore/sacramento_debuts
-          if [ -z "$APIFY_TOKEN" ]; then
-            echo '{"exit_code":1,"error":"apify repository secret is not available"}' > .github/probe-results/sacramento_debuts_latest.json
-            exit 1
-          fi
-
-          set +e
-          python -m scrapers.sacramento_debut_apify_pull > /tmp/sacramento_debuts.log 2>&1
-          status=$?
-          set -e
-
-          if [ -f data/audits/regional_mma/sofascore/sacramento_debuts/summary.json ]; then
-            cp data/audits/regional_mma/sofascore/sacramento_debuts/summary.json .github/probe-results/sacramento_debuts_latest.json
-          else
-            python - <<'PY'
-import json
-from pathlib import Path
-text = Path('/tmp/sacramento_debuts.log').read_text(errors='replace')[-12000:]
-Path('.github/probe-results/sacramento_debuts_latest.json').write_text(
-    json.dumps({'exit_code': 1, 'error': text}, indent=2) + '\n'
-)
-PY
-          fi
-
-          cat /tmp/sacramento_debuts.log
-          exit "$status"
+        run: python -m scrapers.sacramento_debut_apify_pull
 
       - name: Upload raw audit artifact
         if: always()
@@ -70,7 +43,3 @@ PY
           name: sacramento-debut-regional-mma
           path: data/audits/regional_mma/sofascore/sacramento_debuts/
           if-no-files-found: warn
-
-      - name: Fail job if pull failed
-        if: steps.apify_probe.outcome == 'failure'
-        run: exit 1
