@@ -1,6 +1,6 @@
 name: Historical Stamina Lethality Interaction
 
-# Trigger refresh: 2026-08-23 historical stamina x round lethality study, finish-round collision fix
+# Trigger refresh: 2026-08-23 historical stamina x round lethality study, canonical metadata collision fix
 on:
   workflow_dispatch:
   push:
