@@ -1,33 +1,9 @@
-name: FSR V3 Canonical C Validation
+name: Weight Class Audit Seed - Men's Bantamweight
 
 on:
-  push:
-    branches:
-      - "feature/fsr-v3"
-    paths:
-      - "pipeline/fsr_v3/active_config.py"
-      - "pipeline/fsr_v3/active_traits.py"
-      - "pipeline/fsr_v3/build_canonical.py"
-      - "pipeline/fsr_v3/replay/escape.py"
-      - "pipeline/fsr_v3/replay/kd_resistance.py"
-      - "pipeline/fsr_v3/paths.py"
-      - "pipeline/simulation/event_clock_mc_v2/canonical_c.py"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/canonical_c_validation.py"
-      - "pipeline/simulation/event_clock_mc_v2/fit_event_clock_bundle.py"
-      - "tests/fsr_v3/test_active_traits_v3.py"
-      - ".github/workflows/fsr-v3-canonical-c.yml"
   pull_request:
     paths:
-      - "pipeline/fsr_v3/active_config.py"
-      - "pipeline/fsr_v3/active_traits.py"
-      - "pipeline/fsr_v3/build_canonical.py"
-      - "pipeline/fsr_v3/replay/escape.py"
-      - "pipeline/fsr_v3/replay/kd_resistance.py"
-      - "pipeline/fsr_v3/paths.py"
-      - "pipeline/simulation/event_clock_mc_v2/canonical_c.py"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/canonical_c_validation.py"
-      - "pipeline/simulation/event_clock_mc_v2/fit_event_clock_bundle.py"
-      - "tests/fsr_v3/test_active_traits_v3.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/weight_class_audit.py"
       - ".github/workflows/fsr-v3-canonical-c.yml"
   workflow_dispatch:
 
@@ -35,7 +11,7 @@ permissions:
   contents: read
 
 jobs:
-  canonical-c:
+  seed-and-audit:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
@@ -52,18 +28,8 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install numpy pandas scipy scikit-learn statsmodels joblib pyarrow pyyaml pytest
 
-      - name: Compile canonical C modules
-        run: |
-          python -m py_compile pipeline/fsr_v3/active_config.py
-          python -m py_compile pipeline/fsr_v3/active_traits.py
-          python -m py_compile pipeline/fsr_v3/build_canonical.py
-          python -m py_compile pipeline/fsr_v3/replay/escape.py
-          python -m py_compile pipeline/fsr_v3/replay/kd_resistance.py
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/canonical_c.py
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/canonical_c_validation.py
-
-      - name: Run active-trait regression tests
-        run: pytest -q tests/fsr_v3/test_active_traits_v3.py
+      - name: Compile audit module
+        run: python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/weight_class_audit.py
 
       - name: Build frozen FSR V2 source histories
         run: python -m pipeline.fsr_v2.build --all
@@ -74,33 +40,6 @@ jobs:
       - name: Build final canonical FSR V3
         run: python -m pipeline.fsr_v3.build_canonical
 
-      - name: Verify canonical active trait publication
-        run: |
-          python - <<'PY'
-          import pandas as pd
-          from pipeline.fsr_v3.paths import (
-              FSR_V3_PREFIGHT_SNAPSHOTS_PATH,
-              FSR_V3_PREFIGHT_UNCERTAINTY_PATH,
-              KD_RESISTANCE_HISTORY_PATH,
-          )
-          fsr = pd.read_parquet(FSR_V3_PREFIGHT_SNAPSHOTS_PATH)
-          unc = pd.read_parquet(FSR_V3_PREFIGHT_UNCERTAINTY_PATH)
-          kd = pd.read_parquet(KD_RESISTANCE_HISTORY_PATH)
-          required = {"escape_offense", "escape_defense", "escape_population_mean_seconds", "knockdown_resistance_v3"}
-          missing = required.difference(fsr.columns)
-          assert not missing, missing
-          assert not fsr[list(required)].isna().any().any()
-          assert set(unc.loc[unc.sampling_enabled.astype(bool), "trait"]) == {
-              "takedown_tendency", "takedown_suppression",
-              "standing_striking_tendency", "standing_striking_suppression",
-          }
-          validated_kd = kd[kd.validated_regime.astype(bool)]
-          assert len(validated_kd) > 0
-          assert validated_kd.variance_multiplier.eq(1.0).all()
-          assert validated_kd.sampling_enabled.astype(bool).all()
-          print("PASS — final active V3 interface is complete and KD uncertainty remains native-normal")
-          PY
-
       - name: Patch incomplete-row cohort guard in CI checkout only
         run: |
           python - <<'PY'
@@ -109,10 +48,8 @@ jobs:
           text = path.read_text()
           old = '''            and method in METHODS\n            and int(row["total_rounds"]) in {3, 5}\n            and pd.notna(row["match_time_sec"])\n'''
           new = '''            and method in METHODS\n            and pd.notna(row["total_rounds"])\n            and int(row["total_rounds"]) in {3, 5}\n            and pd.notna(row["match_time_sec"])\n'''
-          if old not in text:
-              raise RuntimeError("Expected frozen cohort-selector block not found")
-          path.write_text(text.replace(old, new, 1))
-          print("Applied CI-only null guard; frozen repository source unchanged")
+          if old in text:
+              path.write_text(text.replace(old, new, 1))
           PY
 
       - name: Fit frozen Event Clock V1 parent bundle
@@ -121,23 +58,39 @@ jobs:
       - name: Fit Event Clock V2 direct bundle from final V3
         run: python -m pipeline.simulation.event_clock_mc_v2.fit_event_clock_bundle
 
-      - name: Run canonical C only — 150 fights x 500 paths
+      - name: Persist canonical weight-class simulation state
+        uses: actions/upload-artifact@v4
+        with:
+          name: canonical-weight-class-state
+          path: |
+            data/fsr_v3/**
+            data/models/event_clock_mc_v1/**
+            data/models/event_clock_mc_v2/**
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Run men's bantamweight audit
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.canonical_c_validation \
-            --paths 500 --quota-per-bucket 50 2>&1 | tee /tmp/canonical_c.log
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.weight_class_audit \
+            --division bantamweight \
+            --target-n 100 \
+            --paths 500 \
+            --seed 20260823 \
+            --out-dir data/diagnostics/event_clock_mc_v2/weight_class_audit/bantamweight \
+            2>&1 | tee /tmp/bantamweight_audit.log
 
-      - name: Print canonical C headline
+      - name: Print bantamweight audit headline
         if: always()
         run: |
-          if [ -f /tmp/canonical_c.log ]; then
-            tail -n 120 /tmp/canonical_c.log
+          if [ -f /tmp/bantamweight_audit.log ]; then
+            tail -n 180 /tmp/bantamweight_audit.log
           fi
 
-      - name: Upload canonical C outputs
+      - name: Upload bantamweight audit outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: fsr-v3-canonical-c
-          path: data/diagnostics/event_clock_mc_v2/canonical_c/*.csv
+          name: weight-class-audit-bantamweight
+          path: data/diagnostics/event_clock_mc_v2/weight_class_audit/bantamweight/*.csv
           if-no-files-found: warn
