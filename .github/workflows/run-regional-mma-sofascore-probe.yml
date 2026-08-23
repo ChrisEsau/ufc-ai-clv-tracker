@@ -7,25 +7,19 @@ on:
         description: "MMA date (YYYY-MM-DD)"
         required: true
         default: "2025-09-07"
-      promotion:
-        description: "Promotion substring (for example LFA or Fury)"
-        required: false
-        default: "LFA"
-      max_events:
-        description: "Maximum fights to probe; 0 means no limit"
-        required: true
-        default: "3"
   pull_request:
     branches:
       - feature/fsr-v3
     paths:
       - scrapers/sofascore_mma.py
+      - scrapers/sofascore_mma_selenium_probe.py
       - tests/experimental/test_sofascore_mma.py
       - .github/workflows/run-regional-mma-sofascore-probe.yml
   push:
     branches:
       - feature/regional-mma-scraper
     paths:
+      - scrapers/sofascore_mma_selenium_probe.py
       - .github/workflows/run-regional-mma-sofascore-probe.yml
 
 jobs:
@@ -36,8 +30,6 @@ jobs:
 
     env:
       PROBE_DATE: ${{ inputs.date || '2025-09-07' }}
-      PROBE_PROMOTION: ${{ inputs.promotion || 'LFA' }}
-      PROBE_MAX_EVENTS: ${{ inputs.max_events || '3' }}
 
     steps:
       - name: Checkout
@@ -49,32 +41,27 @@ jobs:
           python-version: "3.12"
 
       - name: Install probe dependencies
-        run: python -m pip install --disable-pip-version-check requests pytest
+        run: python -m pip install --disable-pip-version-check requests pytest selenium webdriver-manager
 
       - name: Run parser tests
         run: python -m pytest tests/experimental/test_sofascore_mma.py -q
 
-      - name: Probe regional MMA JSON
+      - name: Probe SofaScore with existing Selenium helper
         run: |
-          python -m scrapers.sofascore_mma \
+          python -m scrapers.sofascore_mma_selenium_probe \
             --date "$PROBE_DATE" \
-            --promotion "$PROBE_PROMOTION" \
-            --max-events "$PROBE_MAX_EVENTS" \
-            --sleep-seconds 1.0 \
-            --base-url "https://api.sofascore.com/api/v1"
+            --output data/audits/regional_mma/sofascore/selenium_probe.json
 
-      - name: Print coverage summary
+      - name: Print Selenium probe result
         if: always()
         run: |
-          echo "=== generated files ==="
-          find data/audits/regional_mma -maxdepth 4 -type f -print 2>/dev/null || true
-          echo "=== coverage summary ==="
-          cat "data/audits/regional_mma/sofascore/$PROBE_DATE/coverage_summary.json" 2>/dev/null || true
+          echo "=== selenium probe ==="
+          cat data/audits/regional_mma/sofascore/selenium_probe.json 2>/dev/null || true
 
       - name: Upload probe artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: regional-mma-sofascore-probe-${{ env.PROBE_DATE }}
+          name: regional-mma-sofascore-selenium-probe-${{ env.PROBE_DATE }}
           path: data/audits/regional_mma/sofascore/
           if-no-files-found: warn
