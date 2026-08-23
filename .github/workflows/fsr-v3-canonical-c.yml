@@ -1,6 +1,6 @@
 name: Event Clock V2 Pace Survival Decomposition
 
-# Trigger refresh: 2026-08-23 all-division pace-survival diagnostic
+# Trigger refresh: 2026-08-23 all-division pace-survival diagnostic 50 paths
 on:
   workflow_dispatch:
   push:
@@ -53,7 +53,7 @@ jobs:
           set -o pipefail
           python -m pipeline.simulation.event_clock_mc_v2.diagnostics.pace_survival_decomposition \
             --target-n 100 \
-            --paths 100 \
+            --paths 50 \
             --seed 20260823 \
             --out-dir data/diagnostics/event_clock_mc_v2/pace_survival_decomposition \
             2>&1 | tee /tmp/pace_survival_decomposition.log
