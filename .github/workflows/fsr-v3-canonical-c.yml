@@ -1,4 +1,4 @@
-name: Event Clock V2 Bantamweight Standing Effectiveness Falsification
+name: Event Clock V2 Basharat Vazquez FSR Market Target
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
       - research/weight-class-audit-20260823
     paths:
       - ".github/workflows/fsr-v3-canonical-c.yml"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_standing_effectiveness_model_falsification.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/basharat_vazquez_fsr_market_target.py"
 
 permissions:
   contents: read
@@ -36,40 +36,25 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
-      - name: Normalize sparse matrix indices for sklearn
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          p = Path('pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_standing_effectiveness_model_falsification.py')
-          s = p.read_text()
-          s = s.replace(
-              "x=vec.transform([feat(att,deff)])\n                p=float(clf.predict_proba(x)[0,1])",
-              "x=vec.transform([feat(att,deff)])\n                x.indices=x.indices.astype(np.int32,copy=False); x.indptr=x.indptr.astype(np.int32,copy=False)\n                p=float(clf.predict_proba(x)[0,1])",
-          )
-          s = s.replace(
-              "X=vec.transform(Xdict)\n            if not initialized:",
-              "X=vec.transform(Xdict)\n            X.indices=X.indices.astype(np.int32,copy=False); X.indptr=X.indptr.astype(np.int32,copy=False)\n            if not initialized:",
-          )
-          p.write_text(s)
-          PY
-      - name: Verify standing effectiveness falsification inputs
+      - name: Verify FSR market target inputs
         run: |
           test -f data/master/ufc_master.parquet
           test -f data/market/historical_market_outcomes.parquet
-          test -f data/fight_details/ufc_round_stats.parquet
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_standing_effectiveness_model_falsification.py
-      - name: Run standing effectiveness falsification audit
+          test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
+          test -f data/fsr_v3/fsr_v3_prefight_uncertainty.parquet
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/basharat_vazquez_fsr_market_target.py
+      - name: Run Basharat Vazquez FSR market target audit
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.bantamweight_standing_effectiveness_model_falsification \
-            2>&1 | tee /tmp/bantamweight_standing_effectiveness_falsification.log
-      - name: Print standing effectiveness falsification audit
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.basharat_vazquez_fsr_market_target \
+            2>&1 | tee /tmp/basharat_vazquez_fsr_market_target.log
+      - name: Print FSR market target audit
         if: always()
-        run: cat /tmp/bantamweight_standing_effectiveness_falsification.log || true
-      - name: Upload standing effectiveness falsification audit
+        run: cat /tmp/basharat_vazquez_fsr_market_target.log || true
+      - name: Upload FSR market target audit
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-bantamweight-standing-effectiveness-falsification
-          path: data/diagnostics/event_clock_mc_v2/bantamweight_standing_effectiveness_model_falsification/*.csv
+          name: event-clock-v2-basharat-vazquez-fsr-market-target
+          path: data/diagnostics/event_clock_mc_v2/basharat_vazquez_fsr_market_target/*.csv
           if-no-files-found: warn
