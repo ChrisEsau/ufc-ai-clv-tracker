@@ -1,6 +1,6 @@
-name: Event Clock V2 Shared Power Decay Grid
+name: Event Clock V2 Continuous Power Decay Screen
 
-# Research-only men's R1-R3 effective-power curve calibration.
+# Fast research-only men's screen: baseline vs step reference vs continuous power decay.
 on:
   workflow_dispatch:
   push:
@@ -16,7 +16,7 @@ permissions:
 jobs:
   simulate-only:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 30
     env:
       PYTHONPATH: .
     steps:
@@ -47,31 +47,30 @@ jobs:
           test -f data/fsr_v3/fsr_v3_prefight_uncertainty.parquet
           test -f data/models/event_clock_mc_v1/event_clock_frozen_bundle.joblib
           test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/shared_power_decay_grid.py
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/continuous_power_decay_screen.py
 
-      - name: Run men's shared power decay grid
+      - name: Run fast continuous power decay screen
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.shared_power_decay_grid \
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.continuous_power_decay_screen \
             --target-n 100 \
-            --coarse-paths 8 \
-            --validation-paths 25 \
-            --top-k 3 \
+            --sim-n-per-division 20 \
+            --paths 10 \
             --seed 20260823 \
-            --out-dir data/diagnostics/event_clock_mc_v2/shared_power_decay_grid \
-            2>&1 | tee /tmp/shared_power_decay_grid.log
+            --out-dir data/diagnostics/event_clock_mc_v2/continuous_power_decay_screen \
+            2>&1 | tee /tmp/continuous_power_decay_screen.log
 
-      - name: Print grid results
+      - name: Print screen results
         if: always()
         run: |
-          if [ -f /tmp/shared_power_decay_grid.log ]; then
-            tail -n 360 /tmp/shared_power_decay_grid.log
+          if [ -f /tmp/continuous_power_decay_screen.log ]; then
+            tail -n 260 /tmp/continuous_power_decay_screen.log
           fi
 
-      - name: Upload shared power decay outputs
+      - name: Upload continuous power decay outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-shared-power-decay-grid
-          path: data/diagnostics/event_clock_mc_v2/shared_power_decay_grid/*.csv
+          name: event-clock-v2-continuous-power-decay-screen
+          path: data/diagnostics/event_clock_mc_v2/continuous_power_decay_screen/*.csv
           if-no-files-found: warn
