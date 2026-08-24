@@ -1,4 +1,4 @@
-name: Event Clock V2 FSR Residual Feature Screen
+name: Event Clock V2 FSR Dominance Residual Audit
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
       - research/weight-class-audit-20260823
     paths:
       - ".github/workflows/fsr-v3-canonical-c.yml"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/fsr_residual_feature_screen.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/fsr_dominance_residual_audit.py"
 
 permissions:
   contents: read
@@ -40,31 +40,32 @@ jobs:
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
 
-      - name: Verify feature-screen inputs
+      - name: Verify dominance-audit inputs
         run: |
           test -f data/master/ufc_master.parquet
           test -f data/market/historical_market_outcomes.parquet
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/fsr_residual_feature_screen.py
+          test -f data/fight_details/ufc_round_stats.parquet
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/fsr_dominance_residual_audit.py
 
-      - name: Run chronological residual feature-family screen
+      - name: Run chronological dominance residual audit
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.fsr_residual_feature_screen \
-            --out-dir data/diagnostics/event_clock_mc_v2/fsr_residual_feature_screen \
-            2>&1 | tee /tmp/fsr_residual_feature_screen.log
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.fsr_dominance_residual_audit \
+            --out-dir data/diagnostics/event_clock_mc_v2/fsr_dominance_residual_audit \
+            2>&1 | tee /tmp/fsr_dominance_residual_audit.log
 
-      - name: Print feature screen
+      - name: Print dominance audit
         if: always()
         run: |
-          if [ -f /tmp/fsr_residual_feature_screen.log ]; then
-            cat /tmp/fsr_residual_feature_screen.log
+          if [ -f /tmp/fsr_dominance_residual_audit.log ]; then
+            cat /tmp/fsr_dominance_residual_audit.log
           fi
 
-      - name: Upload feature-screen outputs
+      - name: Upload dominance outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-fsr-residual-feature-screen
-          path: data/diagnostics/event_clock_mc_v2/fsr_residual_feature_screen/*.csv
+          name: event-clock-v2-fsr-dominance-residual-audit
+          path: data/diagnostics/event_clock_mc_v2/fsr_dominance_residual_audit/*.csv
           if-no-files-found: warn
