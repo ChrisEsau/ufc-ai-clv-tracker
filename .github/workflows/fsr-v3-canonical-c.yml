@@ -1,6 +1,6 @@
-name: Event Clock V2 KD Finishing Sequence Screen
+name: Event Clock V2 Full Men's KD Sequence Validation
 
-# Research-only men's screen of an abstract post-KD finishing state transition.
+# Full-cohort A/B validation of the selected post-KD finishing-sequence candidate.
 on:
   workflow_dispatch:
   push:
@@ -8,7 +8,7 @@ on:
       - research/weight-class-audit-20260823
     paths:
       - ".github/workflows/fsr-v3-canonical-c.yml"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/kd_finishing_sequence_screen.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/full_mens_kd_sequence_validation.py"
 
 permissions:
   contents: read
@@ -17,7 +17,7 @@ permissions:
 jobs:
   simulate-only:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 70
     env:
       PYTHONPATH: .
     steps:
@@ -41,37 +41,37 @@ jobs:
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
 
-      - name: Verify frozen inputs and research diagnostic
+      - name: Verify frozen inputs and full A/B diagnostic
         run: |
           test -f data/fight_details/ufc_round_stats.parquet
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
           test -f data/fsr_v3/fsr_v3_prefight_uncertainty.parquet
           test -f data/models/event_clock_mc_v1/event_clock_frozen_bundle.joblib
           test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/full_mens_kd_sequence_validation.py
           python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/kd_finishing_sequence_screen.py
 
-      - name: Run KD finishing-sequence screen
+      - name: Run full men's KD sequence A/B validation
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.kd_finishing_sequence_screen \
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.full_mens_kd_sequence_validation \
             --target-n 100 \
-            --sim-n-per-division 20 \
-            --paths 10 \
+            --paths 30 \
             --seed 20260823 \
-            --out-dir data/diagnostics/event_clock_mc_v2/kd_finishing_sequence_screen \
-            2>&1 | tee /tmp/kd_finishing_sequence_screen.log
+            --out-dir data/diagnostics/event_clock_mc_v2/full_mens_kd_sequence_validation \
+            2>&1 | tee /tmp/full_mens_kd_sequence_validation.log
 
-      - name: Print screen results
+      - name: Print validation results
         if: always()
         run: |
-          if [ -f /tmp/kd_finishing_sequence_screen.log ]; then
-            tail -n 340 /tmp/kd_finishing_sequence_screen.log
+          if [ -f /tmp/full_mens_kd_sequence_validation.log ]; then
+            tail -n 500 /tmp/full_mens_kd_sequence_validation.log
           fi
 
-      - name: Upload KD finishing-sequence outputs
+      - name: Upload full men's KD sequence validation outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-kd-finishing-sequence-screen
-          path: data/diagnostics/event_clock_mc_v2/kd_finishing_sequence_screen/*.csv
+          name: event-clock-v2-full-mens-kd-sequence-validation
+          path: data/diagnostics/event_clock_mc_v2/full_mens_kd_sequence_validation/*.csv
           if-no-files-found: warn
