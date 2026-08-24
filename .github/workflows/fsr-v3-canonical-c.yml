@@ -1,6 +1,6 @@
-name: Event Clock V2 Flyweight Joint Tuning Screen
+name: Event Clock V2 Flyweight Decay Shape Screen
 
-# Men's flyweight-only research screen for consequence power and KD-sequence strength.
+# Men's flyweight-only research screen for lower fresh power and slower consequence decay.
 on:
   workflow_dispatch:
   push:
@@ -8,7 +8,7 @@ on:
       - research/weight-class-audit-20260823
     paths:
       - ".github/workflows/fsr-v3-canonical-c.yml"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/flyweight_joint_tuning_screen.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/flyweight_decay_shape_screen.py"
 
 permissions:
   contents: read
@@ -41,7 +41,7 @@ jobs:
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
 
-      - name: Verify frozen inputs and flyweight screen
+      - name: Verify frozen inputs and flyweight decay screen
         run: |
           test -f data/fight_details/ufc_round_stats.parquet
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
@@ -50,28 +50,29 @@ jobs:
           test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
           python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/kd_finishing_sequence_screen.py
           python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/flyweight_joint_tuning_screen.py
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/flyweight_decay_shape_screen.py
 
-      - name: Run flyweight joint tuning screen
+      - name: Run flyweight decay shape screen
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.flyweight_joint_tuning_screen \
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.flyweight_decay_shape_screen \
             --target-n 100 \
             --paths 20 \
             --seed 20260823 \
-            --out-dir data/diagnostics/event_clock_mc_v2/flyweight_joint_tuning_screen \
-            2>&1 | tee /tmp/flyweight_joint_tuning_screen.log
+            --out-dir data/diagnostics/event_clock_mc_v2/flyweight_decay_shape_screen \
+            2>&1 | tee /tmp/flyweight_decay_shape_screen.log
 
-      - name: Print flyweight tuning results
+      - name: Print flyweight decay results
         if: always()
         run: |
-          if [ -f /tmp/flyweight_joint_tuning_screen.log ]; then
-            tail -n 500 /tmp/flyweight_joint_tuning_screen.log
+          if [ -f /tmp/flyweight_decay_shape_screen.log ]; then
+            tail -n 500 /tmp/flyweight_decay_shape_screen.log
           fi
 
-      - name: Upload flyweight tuning outputs
+      - name: Upload flyweight decay outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-flyweight-joint-tuning-screen
-          path: data/diagnostics/event_clock_mc_v2/flyweight_joint_tuning_screen/*.csv
+          name: event-clock-v2-flyweight-decay-shape-screen
+          path: data/diagnostics/event_clock_mc_v2/flyweight_decay_shape_screen/*.csv
           if-no-files-found: warn
