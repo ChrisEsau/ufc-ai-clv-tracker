@@ -1,6 +1,6 @@
-name: Event Clock V2 Flyweight Decay Shape Screen
+name: Event Clock V2 Bantamweight Joint Tuning Screen
 
-# Men's flyweight-only research screen for lower fresh power and slower consequence decay.
+# Men's bantamweight-only research screen for fresh power and KD-sequence strength.
 on:
   workflow_dispatch:
   push:
@@ -8,7 +8,7 @@ on:
       - research/weight-class-audit-20260823
     paths:
       - ".github/workflows/fsr-v3-canonical-c.yml"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/flyweight_decay_shape_screen.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_joint_tuning_screen.py"
 
 permissions:
   contents: read
@@ -17,7 +17,7 @@ permissions:
 jobs:
   simulate-only:
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 55
     env:
       PYTHONPATH: .
     steps:
@@ -41,7 +41,7 @@ jobs:
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
 
-      - name: Verify frozen inputs and flyweight decay screen
+      - name: Verify frozen inputs and bantamweight screen
         run: |
           test -f data/fight_details/ufc_round_stats.parquet
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
@@ -50,29 +50,29 @@ jobs:
           test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
           python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/kd_finishing_sequence_screen.py
           python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/flyweight_joint_tuning_screen.py
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/flyweight_decay_shape_screen.py
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_joint_tuning_screen.py
 
-      - name: Run flyweight decay shape screen
+      - name: Run bantamweight joint tuning screen
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.flyweight_decay_shape_screen \
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.bantamweight_joint_tuning_screen \
             --target-n 100 \
             --paths 20 \
             --seed 20260823 \
-            --out-dir data/diagnostics/event_clock_mc_v2/flyweight_decay_shape_screen \
-            2>&1 | tee /tmp/flyweight_decay_shape_screen.log
+            --out-dir data/diagnostics/event_clock_mc_v2/bantamweight_joint_tuning_screen \
+            2>&1 | tee /tmp/bantamweight_joint_tuning_screen.log
 
-      - name: Print flyweight decay results
+      - name: Print bantamweight tuning results
         if: always()
         run: |
-          if [ -f /tmp/flyweight_decay_shape_screen.log ]; then
-            tail -n 500 /tmp/flyweight_decay_shape_screen.log
+          if [ -f /tmp/bantamweight_joint_tuning_screen.log ]; then
+            tail -n 500 /tmp/bantamweight_joint_tuning_screen.log
           fi
 
-      - name: Upload flyweight decay outputs
+      - name: Upload bantamweight tuning outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-flyweight-decay-shape-screen
-          path: data/diagnostics/event_clock_mc_v2/flyweight_decay_shape_screen/*.csv
+          name: event-clock-v2-bantamweight-joint-tuning-screen
+          path: data/diagnostics/event_clock_mc_v2/bantamweight_joint_tuning_screen/*.csv
           if-no-files-found: warn
