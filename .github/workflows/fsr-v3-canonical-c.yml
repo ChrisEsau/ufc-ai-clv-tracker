@@ -1,4 +1,4 @@
-name: Event Clock V2 Basharat Vazquez FSR Market Target
+name: Event Clock V2 Sandhagen Figueiredo FSR Market Target
 
 on:
   workflow_dispatch:
@@ -8,6 +8,7 @@ on:
     paths:
       - ".github/workflows/fsr-v3-canonical-c.yml"
       - "pipeline/simulation/event_clock_mc_v2/diagnostics/basharat_vazquez_fsr_market_target.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/sandhagen_figueiredo_fsr_market_target.py"
 
 permissions:
   contents: read
@@ -36,25 +37,26 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
-      - name: Verify FSR market target inputs
+      - name: Verify mature FSR market target inputs
         run: |
           test -f data/master/ufc_master.parquet
           test -f data/market/historical_market_outcomes.parquet
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
           test -f data/fsr_v3/fsr_v3_prefight_uncertainty.parquet
           python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/basharat_vazquez_fsr_market_target.py
-      - name: Run Basharat Vazquez FSR market target audit
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/sandhagen_figueiredo_fsr_market_target.py
+      - name: Run Sandhagen Figueiredo FSR market target audit
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.basharat_vazquez_fsr_market_target \
-            2>&1 | tee /tmp/basharat_vazquez_fsr_market_target.log
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.sandhagen_figueiredo_fsr_market_target \
+            2>&1 | tee /tmp/sandhagen_figueiredo_fsr_market_target.log
       - name: Print FSR market target audit
         if: always()
-        run: cat /tmp/basharat_vazquez_fsr_market_target.log || true
+        run: cat /tmp/sandhagen_figueiredo_fsr_market_target.log || true
       - name: Upload FSR market target audit
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-basharat-vazquez-fsr-market-target
-          path: data/diagnostics/event_clock_mc_v2/basharat_vazquez_fsr_market_target/*.csv
+          name: event-clock-v2-sandhagen-figueiredo-fsr-market-target
+          path: data/diagnostics/event_clock_mc_v2/sandhagen_figueiredo_fsr_market_target/*.csv
           if-no-files-found: warn
