@@ -1,4 +1,4 @@
-name: Event Clock V2 Bantamweight Shared Quality Audit
+name: Event Clock V2 Bantamweight Raw Round Stats Audit
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
       - research/weight-class-audit-20260823
     paths:
       - ".github/workflows/fsr-v3-canonical-c.yml"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_shared_quality_latent_audit.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_raw_round_stats_predictive_audit.py"
 
 permissions:
   contents: read
@@ -36,25 +36,25 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
-      - name: Verify shared-quality audit inputs
+      - name: Verify raw round-stat audit inputs
         run: |
           test -f data/master/ufc_master.parquet
           test -f data/market/historical_market_outcomes.parquet
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
           test -f data/fight_details/ufc_round_stats.parquet
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_shared_quality_latent_audit.py
-      - name: Run shared-quality latent audit
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_raw_round_stats_predictive_audit.py
+      - name: Run raw round-stat predictive audit
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.bantamweight_shared_quality_latent_audit \
-            2>&1 | tee /tmp/bantamweight_shared_quality.log
-      - name: Print shared-quality latent audit
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.bantamweight_raw_round_stats_predictive_audit \
+            2>&1 | tee /tmp/bantamweight_raw_round_stats.log
+      - name: Print raw round-stat predictive audit
         if: always()
-        run: cat /tmp/bantamweight_shared_quality.log || true
-      - name: Upload shared-quality latent audit
+        run: cat /tmp/bantamweight_raw_round_stats.log || true
+      - name: Upload raw round-stat predictive audit
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-bantamweight-shared-quality-latent-audit
-          path: data/diagnostics/event_clock_mc_v2/bantamweight_shared_quality_latent_audit/*.csv
+          name: event-clock-v2-bantamweight-raw-round-stats-predictive-audit
+          path: data/diagnostics/event_clock_mc_v2/bantamweight_raw_round_stats_predictive_audit/*.csv
           if-no-files-found: warn
