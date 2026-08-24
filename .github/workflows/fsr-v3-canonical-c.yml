@@ -1,6 +1,6 @@
-name: Event Clock V2 Full Men's KD Sequence Validation
+name: Event Clock V2 Flyweight Joint Tuning Screen
 
-# Full-cohort A/B validation of the selected post-KD finishing-sequence candidate.
+# Men's flyweight-only research screen for consequence power and KD-sequence strength.
 on:
   workflow_dispatch:
   push:
@@ -8,7 +8,7 @@ on:
       - research/weight-class-audit-20260823
     paths:
       - ".github/workflows/fsr-v3-canonical-c.yml"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/full_mens_kd_sequence_validation.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/flyweight_joint_tuning_screen.py"
 
 permissions:
   contents: read
@@ -17,7 +17,7 @@ permissions:
 jobs:
   simulate-only:
     runs-on: ubuntu-latest
-    timeout-minutes: 70
+    timeout-minutes: 50
     env:
       PYTHONPATH: .
     steps:
@@ -41,37 +41,37 @@ jobs:
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
 
-      - name: Verify frozen inputs and full A/B diagnostic
+      - name: Verify frozen inputs and flyweight screen
         run: |
           test -f data/fight_details/ufc_round_stats.parquet
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
           test -f data/fsr_v3/fsr_v3_prefight_uncertainty.parquet
           test -f data/models/event_clock_mc_v1/event_clock_frozen_bundle.joblib
           test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/full_mens_kd_sequence_validation.py
           python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/kd_finishing_sequence_screen.py
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/flyweight_joint_tuning_screen.py
 
-      - name: Run full men's KD sequence A/B validation
+      - name: Run flyweight joint tuning screen
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.full_mens_kd_sequence_validation \
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.flyweight_joint_tuning_screen \
             --target-n 100 \
-            --paths 30 \
+            --paths 20 \
             --seed 20260823 \
-            --out-dir data/diagnostics/event_clock_mc_v2/full_mens_kd_sequence_validation \
-            2>&1 | tee /tmp/full_mens_kd_sequence_validation.log
+            --out-dir data/diagnostics/event_clock_mc_v2/flyweight_joint_tuning_screen \
+            2>&1 | tee /tmp/flyweight_joint_tuning_screen.log
 
-      - name: Print validation results
+      - name: Print flyweight tuning results
         if: always()
         run: |
-          if [ -f /tmp/full_mens_kd_sequence_validation.log ]; then
-            tail -n 500 /tmp/full_mens_kd_sequence_validation.log
+          if [ -f /tmp/flyweight_joint_tuning_screen.log ]; then
+            tail -n 500 /tmp/flyweight_joint_tuning_screen.log
           fi
 
-      - name: Upload full men's KD sequence validation outputs
+      - name: Upload flyweight tuning outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-full-mens-kd-sequence-validation
-          path: data/diagnostics/event_clock_mc_v2/full_mens_kd_sequence_validation/*.csv
+          name: event-clock-v2-flyweight-joint-tuning-screen
+          path: data/diagnostics/event_clock_mc_v2/flyweight_joint_tuning_screen/*.csv
           if-no-files-found: warn
