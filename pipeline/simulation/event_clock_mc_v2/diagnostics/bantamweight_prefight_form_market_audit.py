@@ -14,6 +14,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
 
 MASTER = Path("data/master/ufc_master.parquet")
+DATE_CANDIDATES = ("event_date", "fight_date", "date")
 
 
 def _norm_id(x):
@@ -40,16 +41,26 @@ def _is_finish(method):
     return ("decision" not in s) and (s not in {"", "nan", "none"})
 
 
-def fighter_history(master, fighter_id, before_date, exclude_fight_id):
+def _resolve_date_col(frame):
+    for col in DATE_CANDIDATES:
+        if col in frame.columns:
+            return col
+    raise RuntimeError(
+        f"master has no supported fight-date column; tried {DATE_CANDIDATES}; "
+        f"available columns={list(frame.columns)}"
+    )
+
+
+def fighter_history(master, fighter_id, before_date, exclude_fight_id, date_col):
     fid = _norm_id(fighter_id)
     if not fid:
         return pd.DataFrame()
     h = master[
         ((master["r_id"].astype(str) == fid) | (master["b_id"].astype(str) == fid))
-        & (master["event_date"] < before_date)
+        & (master[date_col] < before_date)
         & (master["fight_id"].astype(str) != str(exclude_fight_id))
     ].copy()
-    return h.sort_values(["event_date", "fight_id"])
+    return h.sort_values([date_col, "fight_id"])
 
 
 def form_features(h, fighter_id):
@@ -72,16 +83,22 @@ def form_features(h, fighter_id):
 
     win_streak = 0
     for x in reversed(outcomes):
-        if x == 1: win_streak += 1
-        else: break
+        if x == 1:
+            win_streak += 1
+        else:
+            break
     loss_streak = 0
     for x in reversed(outcomes):
-        if x == 0: loss_streak += 1
-        else: break
+        if x == 0:
+            loss_streak += 1
+        else:
+            break
     finish_streak = 0
     for w, fw in zip(reversed(outcomes), reversed(finish_wins)):
-        if w == 1 and fw == 1: finish_streak += 1
-        else: break
+        if w == 1 and fw == 1:
+            finish_streak += 1
+        else:
+            break
 
     return {
         "prior_fights": len(outcomes),
@@ -102,7 +119,8 @@ def safe_logit(p):
 
 
 def loocv_rmse(X, y):
-    X = np.asarray(X, dtype=float); y = np.asarray(y, dtype=float)
+    X = np.asarray(X, dtype=float)
+    y = np.asarray(y, dtype=float)
     preds = np.zeros(len(y))
     for i in range(len(y)):
         mask = np.arange(len(y)) != i
@@ -121,7 +139,10 @@ def main():
     market["fight_id"] = market["fight_id"].astype(str)
     master = pd.read_parquet(MASTER).copy()
     master["fight_id"] = master["fight_id"].astype(str)
-    master["event_date"] = pd.to_datetime(master["event_date"]).dt.normalize()
+    date_col = _resolve_date_col(master)
+    master[date_col] = pd.to_datetime(master[date_col], errors="coerce").dt.normalize()
+    if master[date_col].isna().all():
+        raise RuntimeError(f"resolved master date column {date_col!r} contains no parseable dates")
 
     target = master[master["fight_id"].isin(set(market["fight_id"]))].copy()
     if len(target) != len(market):
@@ -132,12 +153,12 @@ def main():
     for _, m in market.iterrows():
         fid = str(m["fight_id"])
         t = target.loc[fid]
-        date = pd.Timestamp(t["event_date"]).normalize()
+        date = pd.Timestamp(t[date_col]).normalize()
         fav_side = str(m["favorite_side"])
         fav_id = t["r_id"] if fav_side == "red" else t["b_id"]
         dog_id = t["b_id"] if fav_side == "red" else t["r_id"]
-        fav = form_features(fighter_history(master, fav_id, date, fid), fav_id)
-        dog = form_features(fighter_history(master, dog_id, date, fid), dog_id)
+        fav = form_features(fighter_history(master, fav_id, date, fid, date_col), fav_id)
+        dog = form_features(fighter_history(master, dog_id, date, fid, date_col), dog_id)
         rec = {
             "fight_id": fid, "favorite": m["favorite"], "underdog": m["underdog"],
             "market_favorite_fair_p": float(m["market_favorite_fair_p"]),
@@ -173,7 +194,6 @@ def main():
         })
     corrs = pd.DataFrame(corr_rows)
 
-    # Incremental test: can form explain market log-odds beyond MC log-odds?
     models = []
     base = out[["mc_logit", "market_logit"]].dropna()
     models.append({"model": "mc_only", "features": "mc_logit", "n": len(base), "loocv_rmse_market_logit": loocv_rmse(base[["mc_logit"]], base["market_logit"])})
@@ -184,7 +204,6 @@ def main():
     models.append({"model": "mc_plus_streak_last5", "features": "mc_logit + delta_win_streak + delta_last5_win_rate", "n": len(z), "loocv_rmse_market_logit": loocv_rmse(z[["mc_logit", "delta_win_streak", "delta_last5_win_rate"]], z["market_logit"])})
     model_df = pd.DataFrame(models).sort_values("loocv_rmse_market_logit")
 
-    # Descriptive buckets by favorite-minus-dog current win streak.
     out["streak_bucket"] = pd.cut(out["delta_win_streak"], [-99,-1,0,1,2,99], labels=["dog_ahead","equal","fav+1","fav+2","fav+3plus"], right=False)
     buckets = out.groupby("streak_bucket", observed=True).agg(
         fights=("fight_id","size"),
@@ -201,7 +220,7 @@ def main():
     buckets.to_csv(args.out_dir/"win_streak_buckets.csv", index=False)
 
     print("BANTAMWEIGHT PREFIGHT FORM VS MARKET AUDIT")
-    print(f"fights={len(out)} | all form strictly prior to target fight")
+    print(f"fights={len(out)} | all form strictly prior to target fight | master date column={date_col}")
     print("\nFORM CORRELATIONS")
     print(corrs.to_string(index=False, float_format=lambda x: f"{x:.4f}"))
     print("\nINCREMENTAL MARKET MODELS (lower LOOCV RMSE is better)")
