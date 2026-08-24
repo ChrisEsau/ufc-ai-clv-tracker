@@ -44,6 +44,7 @@ jobs:
         run: |
           test -f data/master/ufc_master.parquet
           test -f data/diagnostics/event_clock_mc_v1/stage10_decision_judge_fresh.csv
+          test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
           python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_judge_sharpness_audit.py
 
       - name: Run held-out judge sharpness audit
