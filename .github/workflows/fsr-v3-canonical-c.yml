@@ -1,4 +1,4 @@
-name: Event Clock V2 Phase Imposition Falsification
+name: Event Clock V2 Opponent Adjusted Phase Imposition
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
       - research/weight-class-audit-20260823
     paths:
       - ".github/workflows/fsr-v3-canonical-c.yml"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/phase_imposition_falsification.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/phase_imposition_opponent_adjusted.py"
 
 permissions:
   contents: read
@@ -44,26 +44,26 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32726886999
-      - name: Verify phase-imposition inputs
+      - name: Verify opponent-adjusted phase inputs
         run: |
           test -f data/fight_details/ufc_round_stats.parquet
           test -f data/master/ufc_master.parquet
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
           test -f /tmp/market_edge/bet_level_audit.csv
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/phase_imposition_falsification.py
-          mkdir -p data/diagnostics/event_clock_mc_v2/phase_imposition_falsification
-      - name: Run phase-imposition falsification
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/phase_imposition_opponent_adjusted.py
+          mkdir -p data/diagnostics/event_clock_mc_v2/phase_imposition_opponent_adjusted
+      - name: Run opponent-adjusted phase validation
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.phase_imposition_falsification \
-            2>&1 | tee /tmp/phase_imposition_falsification.log
-      - name: Print phase-imposition falsification
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.phase_imposition_opponent_adjusted \
+            2>&1 | tee /tmp/phase_imposition_opponent_adjusted.log
+      - name: Print opponent-adjusted phase validation
         if: always()
-        run: cat /tmp/phase_imposition_falsification.log || true
-      - name: Upload phase-imposition falsification
+        run: cat /tmp/phase_imposition_opponent_adjusted.log || true
+      - name: Upload opponent-adjusted phase validation
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-phase-imposition-falsification
-          path: data/diagnostics/event_clock_mc_v2/phase_imposition_falsification/*.csv
+          name: event-clock-v2-phase-imposition-opponent-adjusted
+          path: data/diagnostics/event_clock_mc_v2/phase_imposition_opponent_adjusted/*.csv
           if-no-files-found: warn
