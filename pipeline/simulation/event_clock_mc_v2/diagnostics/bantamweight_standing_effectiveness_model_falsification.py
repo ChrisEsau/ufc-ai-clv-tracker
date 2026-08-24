@@ -19,7 +19,6 @@ from __future__ import annotations
 from pathlib import Path
 import numpy as np
 import pandas as pd
-from scipy.special import expit
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.linear_model import SGDClassifier
 
@@ -39,11 +38,6 @@ DIVISION = 'bantamweight'
 DIRECT_PRIOR_ATTEMPTS = 40.0
 JOINT_ALPHA = 1e-4
 SEED = 20260824
-EPS = 1e-9
-
-
-def safe_div(a, b):
-    return np.nan if b <= 0 else float(a) / float(b)
 
 
 def weighted_logloss(y, n, p):
@@ -72,10 +66,18 @@ def score_frame(df, pred_col, arm):
     }
 
 
+def _int32_sparse(x):
+    """Keep scipy/sklearn sparse index dtypes compatible on hosted runners."""
+    if hasattr(x, 'indices'):
+        x.indices = x.indices.astype(np.int32, copy=False)
+    if hasattr(x, 'indptr'):
+        x.indptr = x.indptr.astype(np.int32, copy=False)
+    return x
+
+
 def build_joint_predictions(fights: pd.DataFrame) -> pd.DataFrame:
     """Online simultaneous attacker(+1)/defender(-1) effects, same-event delayed."""
     fighters=sorted(set(fights['fighter_id'].astype(str)) | set(fights['opponent_id'].astype(str)))
-    # Fixed vocabulary prevents feature-space drift during partial_fit.
     vocab=[]
     for f in fighters:
         vocab.append(f'off={f}'); vocab.append(f'def={f}')
@@ -96,14 +98,12 @@ def build_joint_predictions(fights: pd.DataFrame) -> pd.DataFrame:
         for r in recs:
             att=str(r['fighter_id']); deff=str(r['opponent_id'])
             if initialized:
-                x=vec.transform([feat(att,deff)])
+                x=_int32_sparse(vec.transform([feat(att,deff)]))
                 p=float(clf.predict_proba(x)[0,1])
             else:
                 p=float(global_y/global_n) if global_n>0 else 0.40
             rows.append({'event_date':event_date,'fight_id':str(r['fight_id']),
                          'fighter_id':att,'joint_probability':p})
-        # Delayed update: turn each grouped binomial observation into one success
-        # pseudo-row and one failure pseudo-row with exact count weights.
         Xdict=[]; yy=[]; ww=[]
         for r in recs:
             n=float(r['attempted']); y=float(r['landed'])
@@ -115,7 +115,7 @@ def build_joint_predictions(fights: pd.DataFrame) -> pd.DataFrame:
                 Xdict.append(d); yy.append(0); ww.append(n-y)
             global_y += y; global_n += n
         if Xdict:
-            X=vec.transform(Xdict)
+            X=_int32_sparse(vec.transform(Xdict))
             if not initialized:
                 clf.partial_fit(X,np.asarray(yy),classes=np.array([0,1]),sample_weight=np.asarray(ww,float))
                 initialized=True
@@ -131,13 +131,10 @@ def main():
     fights['event_date']=pd.to_datetime(fights['event_date']).dt.normalize()
     fights['fight_id']=fights['fight_id'].astype(str); fights['fighter_id']=fights['fighter_id'].astype(str)
 
-    # Current production replay probability for each attacker-fight.
     hist=replay_paired_effectiveness(fights,spec)
     cur=hist[hist['trait'].eq(spec.offense_trait)][['event_date','fight_id','fighter_id','matchup_expected_probability','pre_rating']].copy()
     cur=cur.rename(columns={'matchup_expected_probability':'current_probability','pre_rating':'current_offense'})
 
-    # Direct fighter-only cumulative prior state, with population baseline estimated
-    # only from prior observations. Fixed pseudo-count avoids cold-start extremes.
     x=fights.sort_values(['event_date','fight_id','fighter_id']).copy()
     global_y=0.0; global_n=0.0; state={}
     direct_rows=[]
@@ -170,7 +167,6 @@ def main():
     pred['side']=np.where(pred['fighter_id'].eq(pred['r_id']),'red',np.where(pred['fighter_id'].eq(pred['b_id']),'blue','other'))
     pred=pred[pred['side'].ne('other')].sort_values(['event_date','fight_id','side']).reset_index(drop=True)
 
-    # Final 30% of bantam fights by chronology; every arm is scored on identical rows.
     fight_dates=pred[['event_date','fight_id']].drop_duplicates().sort_values(['event_date','fight_id']).reset_index(drop=True)
     cut=int(len(fight_dates)*0.70)
     test_ids=set(fight_dates.iloc[cut:]['fight_id'])
@@ -183,7 +179,6 @@ def main():
         score_frame(common,'joint_probability','joint_online_offense_defense'),
     ])
 
-    # Fight-level prediction gaps for inspecting strong favorites; market is diagnostic only.
     wide=[]
     for fid,g in test.groupby('fight_id'):
         if set(g['side']) != {'red','blue'}: continue
@@ -198,8 +193,9 @@ def main():
     mcols=['fight_id','favorite_id','market_favorite_fair_p']
     fight_detail=fight_detail.merge(market[mcols],on='fight_id',how='left')
     fight_detail=fight_detail.merge(bw[['fight_id','r_id','b_id']],on='fight_id',how='left')
-    fight_detail['favorite_side']=np.where(fight_detail['favorite_id'].astype(str).eq(fight_detail['r_id'].astype(str)),'red',
-                                           np.where(fight_detail['favorite_id'].astype(str).eq(fight_detail['b_id'].astype(str)),'blue',np.nan))
+    is_red=fight_detail['favorite_id'].astype(str).eq(fight_detail['r_id'].astype(str))
+    is_blue=fight_detail['favorite_id'].astype(str).eq(fight_detail['b_id'].astype(str))
+    fight_detail['favorite_side']=pd.Series(np.where(is_red,'red',np.where(is_blue,'blue','')),index=fight_detail.index,dtype='object').replace('',pd.NA)
     for arm in ['direct','current','joint']:
         gap=fight_detail[f'{arm}_red_minus_blue_accuracy_gap']
         fight_detail[f'{arm}_favorite_accuracy_gap']=np.where(fight_detail['favorite_side'].eq('red'),gap,-gap)
