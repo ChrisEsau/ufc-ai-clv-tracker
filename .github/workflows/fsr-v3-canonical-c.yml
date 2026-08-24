@@ -1,4 +1,4 @@
-name: Event Clock V2 Bantamweight Actual Output Replay
+name: Event Clock V2 Bantamweight Actual Output Replay Zero Subs
 
 on:
   workflow_dispatch:
@@ -48,12 +48,13 @@ jobs:
           test -f data/fight_details/ufc_round_stats.parquet
           python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_actual_output_replay.py
 
-      - name: Run actual-output replay
+      - name: Run actual-output replay zero subs
         run: |
           set -o pipefail
           python -m pipeline.simulation.event_clock_mc_v2.diagnostics.bantamweight_actual_output_replay \
             --fight-id 86df0e75f41784d8 \
             --paths 5000 \
+            --zero-subs \
             --out-dir data/diagnostics/event_clock_mc_v2/bantamweight_actual_output_replay \
             2>&1 | tee /tmp/bantamweight_actual_output_replay.log
 
@@ -68,6 +69,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-bantamweight-actual-output-replay
+          name: event-clock-v2-bantamweight-actual-output-replay-zero-subs
           path: data/diagnostics/event_clock_mc_v2/bantamweight_actual_output_replay/*.csv
           if-no-files-found: warn
