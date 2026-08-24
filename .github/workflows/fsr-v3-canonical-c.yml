@@ -1,6 +1,6 @@
-name: Event Clock V2 Bantamweight Joint Tuning Screen
+name: Event Clock V2 Bantamweight Three Arm Validation
 
-# Men's bantamweight-only research screen for fresh power and KD-sequence strength.
+# High-path men's bantamweight validation for the three shortlisted consequence arms.
 on:
   workflow_dispatch:
   push:
@@ -8,7 +8,7 @@ on:
       - research/weight-class-audit-20260823
     paths:
       - ".github/workflows/fsr-v3-canonical-c.yml"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_joint_tuning_screen.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_three_arm_validation.py"
 
 permissions:
   contents: read
@@ -17,7 +17,7 @@ permissions:
 jobs:
   simulate-only:
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 75
     env:
       PYTHONPATH: .
     steps:
@@ -41,7 +41,7 @@ jobs:
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
 
-      - name: Verify frozen inputs and bantamweight screen
+      - name: Verify frozen inputs and bantamweight validation
         run: |
           test -f data/fight_details/ufc_round_stats.parquet
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
@@ -50,29 +50,29 @@ jobs:
           test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
           python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/kd_finishing_sequence_screen.py
           python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/flyweight_joint_tuning_screen.py
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_joint_tuning_screen.py
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_three_arm_validation.py
 
-      - name: Run bantamweight joint tuning screen
+      - name: Run bantamweight three arm validation
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.bantamweight_joint_tuning_screen \
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.bantamweight_three_arm_validation \
             --target-n 100 \
-            --paths 20 \
+            --paths 100 \
             --seed 20260823 \
-            --out-dir data/diagnostics/event_clock_mc_v2/bantamweight_joint_tuning_screen \
-            2>&1 | tee /tmp/bantamweight_joint_tuning_screen.log
+            --out-dir data/diagnostics/event_clock_mc_v2/bantamweight_three_arm_validation \
+            2>&1 | tee /tmp/bantamweight_three_arm_validation.log
 
-      - name: Print bantamweight tuning results
+      - name: Print bantamweight validation results
         if: always()
         run: |
-          if [ -f /tmp/bantamweight_joint_tuning_screen.log ]; then
-            tail -n 500 /tmp/bantamweight_joint_tuning_screen.log
+          if [ -f /tmp/bantamweight_three_arm_validation.log ]; then
+            tail -n 500 /tmp/bantamweight_three_arm_validation.log
           fi
 
-      - name: Upload bantamweight tuning outputs
+      - name: Upload bantamweight validation outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-bantamweight-joint-tuning-screen
-          path: data/diagnostics/event_clock_mc_v2/bantamweight_joint_tuning_screen/*.csv
+          name: event-clock-v2-bantamweight-three-arm-validation
+          path: data/diagnostics/event_clock_mc_v2/bantamweight_three_arm_validation/*.csv
           if-no-files-found: warn
