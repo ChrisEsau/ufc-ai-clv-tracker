@@ -1,6 +1,6 @@
-name: Event Clock V2 Bantamweight Matchup Sensitivity Decomposition
+name: Event Clock V2 Bantamweight Outcome Path Sensitivity
 
-# Research-only trace of favorite-vs-dog separation through budgets and simulated outputs.
+# Research-only counterfactual attribution of favorite-vs-dog probability compression.
 on:
   workflow_dispatch:
   push:
@@ -8,7 +8,7 @@ on:
       - research/weight-class-audit-20260823
     paths:
       - ".github/workflows/fsr-v3-canonical-c.yml"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_matchup_sensitivity_decomposition.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_outcome_path_sensitivity.py"
 
 permissions:
   contents: read
@@ -17,7 +17,7 @@ permissions:
 jobs:
   diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 20
     env:
       PYTHONPATH: .
     steps:
@@ -30,55 +30,41 @@ jobs:
       - name: Install focused dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install numpy pandas pyarrow scikit-learn joblib pyyaml scipy statsmodels
+          python -m pip install numpy pandas scikit-learn
 
-      - name: Download frozen canonical research state
+      - name: Download completed matchup decomposition
         uses: actions/download-artifact@v4
         with:
-          name: canonical-weight-class-state
-          path: data
+          name: event-clock-v2-bantamweight-matchup-sensitivity-decomposition
+          path: /tmp/bantamweight_matchup_sensitivity_decomposition
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ChrisEsau/ufc-ai-clv-tracker
-          run-id: 32645607979
+          run-id: 32730372808
 
-      - name: Download completed dog compression diagnostic
-        uses: actions/download-artifact@v4
-        with:
-          name: event-clock-v2-bantamweight-dog-compression-diagnostic
-          path: /tmp/bantamweight_dog_compression_diagnostic
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ChrisEsau/ufc-ai-clv-tracker
-          run-id: 32728541146
-
-      - name: Verify decomposition inputs
+      - name: Verify sensitivity inputs
         run: |
-          test -f /tmp/bantamweight_dog_compression_diagnostic/favorite_dog_fight_level.csv
-          test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
-          test -f data/fsr_v3/fsr_v3_prefight_uncertainty.parquet
-          test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_matchup_sensitivity_decomposition.py
+          test -f /tmp/bantamweight_matchup_sensitivity_decomposition/fight_level_stage_decomposition.csv
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_outcome_path_sensitivity.py
 
-      - name: Run matchup sensitivity decomposition
+      - name: Run outcome-path causal sensitivity
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.bantamweight_matchup_sensitivity_decomposition \
-            --priced-fights-path /tmp/bantamweight_dog_compression_diagnostic/favorite_dog_fight_level.csv \
-            --paths 100 \
-            --seed 20260823 \
-            --out-dir data/diagnostics/event_clock_mc_v2/bantamweight_matchup_sensitivity_decomposition \
-            2>&1 | tee /tmp/bantamweight_matchup_sensitivity_decomposition.log
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.bantamweight_outcome_path_sensitivity \
+            --decomposition-path /tmp/bantamweight_matchup_sensitivity_decomposition/fight_level_stage_decomposition.csv \
+            --out-dir data/diagnostics/event_clock_mc_v2/bantamweight_outcome_path_sensitivity \
+            2>&1 | tee /tmp/bantamweight_outcome_path_sensitivity.log
 
-      - name: Print decomposition results
+      - name: Print sensitivity results
         if: always()
         run: |
-          if [ -f /tmp/bantamweight_matchup_sensitivity_decomposition.log ]; then
-            cat /tmp/bantamweight_matchup_sensitivity_decomposition.log
+          if [ -f /tmp/bantamweight_outcome_path_sensitivity.log ]; then
+            cat /tmp/bantamweight_outcome_path_sensitivity.log
           fi
 
-      - name: Upload decomposition outputs
+      - name: Upload sensitivity outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-bantamweight-matchup-sensitivity-decomposition
-          path: data/diagnostics/event_clock_mc_v2/bantamweight_matchup_sensitivity_decomposition/*.csv
+          name: event-clock-v2-bantamweight-outcome-path-sensitivity
+          path: data/diagnostics/event_clock_mc_v2/bantamweight_outcome_path_sensitivity/*.csv
           if-no-files-found: warn
