@@ -1,4 +1,4 @@
-name: Event Clock V2 Held-Out Decision Judge Sharpness Audit
+name: Event Clock V2 Bantamweight Decision Path Input Audit
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
       - research/weight-class-audit-20260823
     paths:
       - ".github/workflows/fsr-v3-canonical-c.yml"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_judge_sharpness_audit.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_decision_path_input_audit.py"
 
 permissions:
   contents: read
@@ -16,7 +16,7 @@ permissions:
 jobs:
   diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       PYTHONPATH: .
     steps:
@@ -40,31 +40,44 @@ jobs:
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
 
-      - name: Verify judge-audit inputs
-        run: |
-          test -f data/master/ufc_master.parquet
-          test -f data/diagnostics/event_clock_mc_v1/stage10_decision_judge_fresh.csv
-          test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_judge_sharpness_audit.py
+      - name: Download completed dog compression diagnostic
+        uses: actions/download-artifact@v4
+        with:
+          name: event-clock-v2-bantamweight-dog-compression-diagnostic
+          path: /tmp/bantamweight_dog_compression_diagnostic
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ChrisEsau/ufc-ai-clv-tracker
+          run-id: 32728541146
 
-      - name: Run held-out judge sharpness audit
+      - name: Verify decision-path inputs
+        run: |
+          test -f /tmp/bantamweight_dog_compression_diagnostic/favorite_dog_fight_level.csv
+          test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
+          test -f data/fsr_v3/fsr_v3_prefight_uncertainty.parquet
+          test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_decision_path_input_audit.py
+
+      - name: Run path-level decision input audit
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.bantamweight_judge_sharpness_audit \
-            --out-dir data/diagnostics/event_clock_mc_v2/bantamweight_judge_sharpness_audit \
-            2>&1 | tee /tmp/bantamweight_judge_sharpness_audit.log
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.bantamweight_decision_path_input_audit \
+            --priced-fights-path /tmp/bantamweight_dog_compression_diagnostic/favorite_dog_fight_level.csv \
+            --paths 100 \
+            --seed 20260823 \
+            --out-dir data/diagnostics/event_clock_mc_v2/bantamweight_decision_path_input_audit \
+            2>&1 | tee /tmp/bantamweight_decision_path_input_audit.log
 
-      - name: Print judge sharpness audit
+      - name: Print decision-path audit
         if: always()
         run: |
-          if [ -f /tmp/bantamweight_judge_sharpness_audit.log ]; then
-            cat /tmp/bantamweight_judge_sharpness_audit.log
+          if [ -f /tmp/bantamweight_decision_path_input_audit.log ]; then
+            cat /tmp/bantamweight_decision_path_input_audit.log
           fi
 
-      - name: Upload judge sharpness outputs
+      - name: Upload decision-path outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-held-out-decision-judge-sharpness-audit
-          path: data/diagnostics/event_clock_mc_v2/bantamweight_judge_sharpness_audit/*.csv
+          name: event-clock-v2-bantamweight-decision-path-input-audit
+          path: data/diagnostics/event_clock_mc_v2/bantamweight_decision_path_input_audit/*.csv
           if-no-files-found: warn
