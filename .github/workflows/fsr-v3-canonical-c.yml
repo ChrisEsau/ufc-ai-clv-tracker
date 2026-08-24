@@ -1,6 +1,6 @@
-name: Event Clock V2 Continuous Power Decay Refinement
+name: Event Clock V2 Full Men's Continuous Power Validation
 
-# Fast research-only men's continuous consequence-curve neighborhood search.
+# Full-cohort validation of the selected research-only consequence curve.
 on:
   workflow_dispatch:
   push:
@@ -8,6 +8,7 @@ on:
       - research/weight-class-audit-20260823
     paths:
       - ".github/workflows/fsr-v3-canonical-c.yml"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/full_mens_continuous_power_validation.py"
 
 permissions:
   contents: read
@@ -16,7 +17,7 @@ permissions:
 jobs:
   simulate-only:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     env:
       PYTHONPATH: .
     steps:
@@ -40,37 +41,37 @@ jobs:
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
 
-      - name: Verify frozen inputs and research diagnostic
+      - name: Verify frozen inputs and full validation diagnostic
         run: |
           test -f data/fight_details/ufc_round_stats.parquet
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
           test -f data/fsr_v3/fsr_v3_prefight_uncertainty.parquet
           test -f data/models/event_clock_mc_v1/event_clock_frozen_bundle.joblib
           test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/continuous_power_decay_refinement.py
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/full_mens_continuous_power_validation.py
 
-      - name: Run fast continuous power decay refinement
+      - name: Run full men's continuous power validation
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.continuous_power_decay_refinement \
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.full_mens_continuous_power_validation \
             --target-n 100 \
-            --sim-n-per-division 15 \
-            --paths 8 \
+            --predictive-paths 20 \
+            --round-paths 10 \
             --seed 20260823 \
-            --out-dir data/diagnostics/event_clock_mc_v2/continuous_power_decay_refinement \
-            2>&1 | tee /tmp/continuous_power_decay_refinement.log
+            --out-dir data/diagnostics/event_clock_mc_v2/full_mens_continuous_power_validation \
+            2>&1 | tee /tmp/full_mens_continuous_power_validation.log
 
-      - name: Print refinement results
+      - name: Print validation results
         if: always()
         run: |
-          if [ -f /tmp/continuous_power_decay_refinement.log ]; then
-            tail -n 320 /tmp/continuous_power_decay_refinement.log
+          if [ -f /tmp/full_mens_continuous_power_validation.log ]; then
+            tail -n 420 /tmp/full_mens_continuous_power_validation.log
           fi
 
-      - name: Upload continuous power decay refinement outputs
+      - name: Upload full men's validation outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-continuous-power-decay-refinement
-          path: data/diagnostics/event_clock_mc_v2/continuous_power_decay_refinement/*.csv
+          name: event-clock-v2-full-mens-continuous-power-validation
+          path: data/diagnostics/event_clock_mc_v2/full_mens_continuous_power_validation/*.csv
           if-no-files-found: warn
