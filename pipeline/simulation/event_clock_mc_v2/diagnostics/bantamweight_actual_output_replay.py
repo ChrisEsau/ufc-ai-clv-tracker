@@ -103,6 +103,7 @@ def main() -> None:
     ap.add_argument('--fight-id', default=DEFAULT_FIGHT_ID)
     ap.add_argument('--paths', type=int, default=5000)
     ap.add_argument('--seed', type=int, default=20260823)
+    ap.add_argument('--zero-subs', action='store_true')
     ap.add_argument('--out-dir', type=Path, required=True)
     args = ap.parse_args()
 
@@ -150,7 +151,10 @@ def main() -> None:
             f'{side}_control': a['control'],
         })
 
-    sub_rates = {side: actual[side]['sub_attempts'] / max(horizon, 1.0) for side in ('red', 'blue')}
+    if args.zero_subs:
+        sub_rates = {'red': 0.0, 'blue': 0.0}
+    else:
+        sub_rates = {side: actual[side]['sub_attempts'] / max(horizon, 1.0) for side in ('red', 'blue')}
 
     context = load_frozen_context(V2_BUNDLE_PATH)
     fsr = load_prefight_snapshots(canonical.FSR_V3_PREFIGHT_SNAPSHOTS_PATH)
@@ -209,6 +213,7 @@ def main() -> None:
         'market_favorite_fair_p': fair_p, 'favorite_side': favorite_side,
         'actual_winner': mr.get('winner_name', mr.get('winner', '')),
         'actual_method': mr.get('method', ''), 'paths': len(paths),
+        'zero_subs': bool(args.zero_subs),
         'replay_favorite_p': favorite_p, 'replay_red_p': red_win, 'replay_blue_p': blue_win,
         'submission_conversion_used': conversion,
     }])
