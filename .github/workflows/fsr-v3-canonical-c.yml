@@ -1,4 +1,4 @@
-name: Event Clock V2 Bantamweight Population FSR Market Audit
+name: Event Clock V2 Bantamweight FSR Prior Strength Audit
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
       - research/weight-class-audit-20260823
     paths:
       - ".github/workflows/fsr-v3-canonical-c.yml"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_fsr_population_inverse_market_audit.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_fsr_shrinkage_attribution.py"
 
 permissions:
   contents: read
@@ -27,7 +27,7 @@ jobs:
       - name: Install focused dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install numpy pandas pyarrow scikit-learn joblib pyyaml
+          python -m pip install numpy pandas pyarrow scipy scikit-learn joblib pyyaml
       - name: Download frozen canonical research state
         uses: actions/download-artifact@v4
         with:
@@ -36,27 +36,25 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
-      - name: Verify population audit inputs
+      - name: Verify shrinkage audit inputs
         run: |
           test -f data/master/ufc_master.parquet
           test -f data/market/historical_market_outcomes.parquet
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
           test -f data/fight_details/ufc_round_stats.parquet
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_fsr_population_inverse_market_audit.py
-      - name: Run population FSR + market audit
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_fsr_shrinkage_attribution.py
+      - name: Run prior-strength attribution
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.bantamweight_fsr_population_inverse_market_audit \
-            --current-paths 100 \
-            --actual-paths 200 \
-            2>&1 | tee /tmp/bantamweight_population_audit.log
-      - name: Print population audit
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.bantamweight_fsr_shrinkage_attribution \
+            2>&1 | tee /tmp/bantamweight_fsr_prior_strength.log
+      - name: Print prior-strength attribution
         if: always()
-        run: cat /tmp/bantamweight_population_audit.log || true
-      - name: Upload population audit
+        run: cat /tmp/bantamweight_fsr_prior_strength.log || true
+      - name: Upload prior-strength attribution
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-bantamweight-fsr-population-market-audit
-          path: data/diagnostics/event_clock_mc_v2/bantamweight_fsr_population_inverse_market_audit/*.csv
+          name: event-clock-v2-bantamweight-fsr-prior-strength-attribution
+          path: data/diagnostics/event_clock_mc_v2/bantamweight_fsr_shrinkage_attribution/*.csv
           if-no-files-found: warn
