@@ -1,4 +1,4 @@
-name: Event Clock V2 FSR Dominance Residual Audit
+name: Event Clock V2 FSR Dominance Matched Cohort Audit
 
 on:
   workflow_dispatch:
@@ -8,6 +8,7 @@ on:
     paths:
       - ".github/workflows/fsr-v3-canonical-c.yml"
       - "pipeline/simulation/event_clock_mc_v2/diagnostics/fsr_dominance_residual_audit.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/fsr_dominance_matched_cohort_audit.py"
 
 permissions:
   contents: read
@@ -40,32 +41,33 @@ jobs:
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
 
-      - name: Verify dominance-audit inputs
+      - name: Verify matched-cohort inputs
         run: |
           test -f data/master/ufc_master.parquet
           test -f data/market/historical_market_outcomes.parquet
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
           test -f data/fight_details/ufc_round_stats.parquet
           python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/fsr_dominance_residual_audit.py
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/fsr_dominance_matched_cohort_audit.py
 
-      - name: Run chronological dominance residual audit
+      - name: Run matched-cohort dominance audit
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.fsr_dominance_residual_audit \
-            --out-dir data/diagnostics/event_clock_mc_v2/fsr_dominance_residual_audit \
-            2>&1 | tee /tmp/fsr_dominance_residual_audit.log
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.fsr_dominance_matched_cohort_audit \
+            --out-dir data/diagnostics/event_clock_mc_v2/fsr_dominance_matched_cohort_audit \
+            2>&1 | tee /tmp/fsr_dominance_matched_cohort_audit.log
 
-      - name: Print dominance audit
+      - name: Print matched-cohort audit
         if: always()
         run: |
-          if [ -f /tmp/fsr_dominance_residual_audit.log ]; then
-            cat /tmp/fsr_dominance_residual_audit.log
+          if [ -f /tmp/fsr_dominance_matched_cohort_audit.log ]; then
+            cat /tmp/fsr_dominance_matched_cohort_audit.log
           fi
 
-      - name: Upload dominance outputs
+      - name: Upload matched-cohort outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-fsr-dominance-residual-audit
-          path: data/diagnostics/event_clock_mc_v2/fsr_dominance_residual_audit/*.csv
+          name: event-clock-v2-fsr-dominance-matched-cohort-audit
+          path: data/diagnostics/event_clock_mc_v2/fsr_dominance_matched_cohort_audit/*.csv
           if-no-files-found: warn
