@@ -1,4 +1,4 @@
-name: Event Clock V2 Bantamweight Budget Variance Decomposition
+name: Event Clock V2 Bantamweight Actual Output Replay
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
       - research/weight-class-audit-20260823
     paths:
       - ".github/workflows/fsr-v3-canonical-c.yml"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_budget_variance_decomposition.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_actual_output_replay.py"
 
 permissions:
   contents: read
@@ -40,33 +40,34 @@ jobs:
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
 
-      - name: Verify variance-decomposition inputs
+      - name: Verify actual-output replay inputs
         run: |
           test -f data/master/ufc_master.parquet
           test -f data/market/historical_market_outcomes.parquet
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_budget_variance_decomposition.py
+          test -f data/fight_details/ufc_round_stats.parquet
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_actual_output_replay.py
 
-      - name: Run budget variance decomposition
+      - name: Run actual-output replay
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.bantamweight_budget_variance_decomposition \
-            --paths 100 \
-            --mean-draws 512 \
-            --out-dir data/diagnostics/event_clock_mc_v2/bantamweight_budget_variance_decomposition \
-            2>&1 | tee /tmp/bantamweight_budget_variance_decomposition.log
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.bantamweight_actual_output_replay \
+            --fight-id 86df0e75f41784d8 \
+            --paths 5000 \
+            --out-dir data/diagnostics/event_clock_mc_v2/bantamweight_actual_output_replay \
+            2>&1 | tee /tmp/bantamweight_actual_output_replay.log
 
-      - name: Print variance decomposition
+      - name: Print actual-output replay
         if: always()
         run: |
-          if [ -f /tmp/bantamweight_budget_variance_decomposition.log ]; then
-            cat /tmp/bantamweight_budget_variance_decomposition.log
+          if [ -f /tmp/bantamweight_actual_output_replay.log ]; then
+            cat /tmp/bantamweight_actual_output_replay.log
           fi
 
-      - name: Upload variance outputs
+      - name: Upload actual-output replay
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-bantamweight-budget-variance-decomposition
-          path: data/diagnostics/event_clock_mc_v2/bantamweight_budget_variance_decomposition/*.csv
+          name: event-clock-v2-bantamweight-actual-output-replay
+          path: data/diagnostics/event_clock_mc_v2/bantamweight_actual_output_replay/*.csv
           if-no-files-found: warn
