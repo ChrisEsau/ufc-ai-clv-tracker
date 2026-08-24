@@ -1,4 +1,4 @@
-name: Event Clock V2 Bantamweight Standing Offense Evidence Trace
+name: Event Clock V2 Bantamweight Standing Effectiveness Falsification
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
       - research/weight-class-audit-20260823
     paths:
       - ".github/workflows/fsr-v3-canonical-c.yml"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_standing_offense_evidence_trace.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_standing_effectiveness_model_falsification.py"
 
 permissions:
   contents: read
@@ -36,25 +36,24 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
-      - name: Verify evidence trace inputs
+      - name: Verify standing effectiveness falsification inputs
         run: |
           test -f data/master/ufc_master.parquet
           test -f data/market/historical_market_outcomes.parquet
-          test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
           test -f data/fight_details/ufc_round_stats.parquet
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_standing_offense_evidence_trace.py
-      - name: Run standing offense evidence trace
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_standing_effectiveness_model_falsification.py
+      - name: Run standing effectiveness falsification audit
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.bantamweight_standing_offense_evidence_trace \
-            2>&1 | tee /tmp/bantamweight_standing_offense_trace.log
-      - name: Print standing offense evidence trace
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.bantamweight_standing_effectiveness_model_falsification \
+            2>&1 | tee /tmp/bantamweight_standing_effectiveness_falsification.log
+      - name: Print standing effectiveness falsification audit
         if: always()
-        run: cat /tmp/bantamweight_standing_offense_trace.log || true
-      - name: Upload standing offense evidence trace
+        run: cat /tmp/bantamweight_standing_effectiveness_falsification.log || true
+      - name: Upload standing effectiveness falsification audit
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-bantamweight-standing-offense-evidence-trace
-          path: data/diagnostics/event_clock_mc_v2/bantamweight_standing_offense_evidence_trace/*.csv
+          name: event-clock-v2-bantamweight-standing-effectiveness-falsification
+          path: data/diagnostics/event_clock_mc_v2/bantamweight_standing_effectiveness_model_falsification/*.csv
           if-no-files-found: warn
