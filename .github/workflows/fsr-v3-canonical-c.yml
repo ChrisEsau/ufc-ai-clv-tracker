@@ -1,6 +1,6 @@
-name: Event Clock V2 Bantamweight Uncertainty Compression AB
+name: Event Clock V2 Bantamweight Matchup Sensitivity Decomposition
 
-# Research-only A/B: current epistemic sampling vs posterior means only.
+# Research-only trace of favorite-vs-dog separation through budgets and simulated outputs.
 on:
   workflow_dispatch:
   push:
@@ -8,14 +8,14 @@ on:
       - research/weight-class-audit-20260823
     paths:
       - ".github/workflows/fsr-v3-canonical-c.yml"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_uncertainty_compression_ab.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_matchup_sensitivity_decomposition.py"
 
 permissions:
   contents: read
   actions: read
 
 jobs:
-  simulate-ab:
+  diagnose:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
@@ -50,35 +50,35 @@ jobs:
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32728541146
 
-      - name: Verify A/B inputs
+      - name: Verify decomposition inputs
         run: |
           test -f /tmp/bantamweight_dog_compression_diagnostic/favorite_dog_fight_level.csv
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
           test -f data/fsr_v3/fsr_v3_prefight_uncertainty.parquet
           test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_uncertainty_compression_ab.py
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_matchup_sensitivity_decomposition.py
 
-      - name: Run uncertainty compression A/B
+      - name: Run matchup sensitivity decomposition
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.bantamweight_uncertainty_compression_ab \
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.bantamweight_matchup_sensitivity_decomposition \
             --priced-fights-path /tmp/bantamweight_dog_compression_diagnostic/favorite_dog_fight_level.csv \
             --paths 100 \
             --seed 20260823 \
-            --out-dir data/diagnostics/event_clock_mc_v2/bantamweight_uncertainty_compression_ab \
-            2>&1 | tee /tmp/bantamweight_uncertainty_compression_ab.log
+            --out-dir data/diagnostics/event_clock_mc_v2/bantamweight_matchup_sensitivity_decomposition \
+            2>&1 | tee /tmp/bantamweight_matchup_sensitivity_decomposition.log
 
-      - name: Print uncertainty A/B
+      - name: Print decomposition results
         if: always()
         run: |
-          if [ -f /tmp/bantamweight_uncertainty_compression_ab.log ]; then
-            cat /tmp/bantamweight_uncertainty_compression_ab.log
+          if [ -f /tmp/bantamweight_matchup_sensitivity_decomposition.log ]; then
+            cat /tmp/bantamweight_matchup_sensitivity_decomposition.log
           fi
 
-      - name: Upload uncertainty A/B outputs
+      - name: Upload decomposition outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-bantamweight-uncertainty-compression-ab
-          path: data/diagnostics/event_clock_mc_v2/bantamweight_uncertainty_compression_ab/*.csv
+          name: event-clock-v2-bantamweight-matchup-sensitivity-decomposition
+          path: data/diagnostics/event_clock_mc_v2/bantamweight_matchup_sensitivity_decomposition/*.csv
           if-no-files-found: warn
