@@ -30,12 +30,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      - name: Install audit dependencies
+        run: python -m pip install -q numpy pandas pyarrow
       - name: Compile prototype
         run: |
           python -m py_compile pipeline/simulation/event_clock_mc_v2/standard_fighter_v1/policy.py
           python -m py_compile pipeline/simulation/event_clock_mc_v2/standard_fighter_v1/scenario_validation.py
           python -m py_compile pipeline/simulation/event_clock_mc_v2/standard_fighter_v1/magnitude_audit.py
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/standard_fighter_v1/real_fsr_audit.py
       - name: Run synthetic scenario validation
         run: python -m pipeline.simulation.event_clock_mc_v2.standard_fighter_v1.scenario_validation
       - name: Run magnitude audit
         run: python -m pipeline.simulation.event_clock_mc_v2.standard_fighter_v1.magnitude_audit
+      - name: Run real FSR V3 capability audit
+        run: python -m pipeline.simulation.event_clock_mc_v2.standard_fighter_v1.real_fsr_audit
