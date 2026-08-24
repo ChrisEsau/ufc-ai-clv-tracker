@@ -1,6 +1,6 @@
-name: Event Clock V2 KD Hurt Follow-up Screen
+name: Event Clock V2 KD Follow-up Clustering Screen
 
-# Research-only men's screen of temporary post-KD KO vulnerability.
+# Research-only men's screen of post-KD temporal strike clustering.
 on:
   workflow_dispatch:
   push:
@@ -8,7 +8,7 @@ on:
       - research/weight-class-audit-20260823
     paths:
       - ".github/workflows/fsr-v3-canonical-c.yml"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/kd_hurt_followup_screen.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/kd_followup_clustering_screen.py"
 
 permissions:
   contents: read
@@ -48,30 +48,30 @@ jobs:
           test -f data/fsr_v3/fsr_v3_prefight_uncertainty.parquet
           test -f data/models/event_clock_mc_v1/event_clock_frozen_bundle.joblib
           test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/kd_hurt_followup_screen.py
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/kd_followup_clustering_screen.py
 
-      - name: Run KD hurt follow-up screen
+      - name: Run KD follow-up clustering screen
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.kd_hurt_followup_screen \
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.kd_followup_clustering_screen \
             --target-n 100 \
             --sim-n-per-division 20 \
             --paths 10 \
             --seed 20260823 \
-            --out-dir data/diagnostics/event_clock_mc_v2/kd_hurt_followup_screen \
-            2>&1 | tee /tmp/kd_hurt_followup_screen.log
+            --out-dir data/diagnostics/event_clock_mc_v2/kd_followup_clustering_screen \
+            2>&1 | tee /tmp/kd_followup_clustering_screen.log
 
       - name: Print screen results
         if: always()
         run: |
-          if [ -f /tmp/kd_hurt_followup_screen.log ]; then
-            tail -n 320 /tmp/kd_hurt_followup_screen.log
+          if [ -f /tmp/kd_followup_clustering_screen.log ]; then
+            tail -n 320 /tmp/kd_followup_clustering_screen.log
           fi
 
-      - name: Upload KD hurt follow-up outputs
+      - name: Upload KD follow-up clustering outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-kd-hurt-followup-screen
-          path: data/diagnostics/event_clock_mc_v2/kd_hurt_followup_screen/*.csv
+          name: event-clock-v2-kd-followup-clustering-screen
+          path: data/diagnostics/event_clock_mc_v2/kd_followup_clustering_screen/*.csv
           if-no-files-found: warn
