@@ -84,6 +84,8 @@ def patched_uncertainty(unc: pd.DataFrame, row: pd.Series, fighter_name: str, al
     target=INVERSE[fighter_name]
     # Only tendency traits are sampled epistemically. Match their posterior mean
     # to the altered FSR mean while retaining the frozen posterior SD/multiplier.
+    # A zero endpoint is a valid deterministic trait value but cannot be Gamma-
+    # projected, so disable epistemic sampling for that trait exactly at zero.
     for trait in ('standing_striking_tendency','takedown_tendency'):
         if trait not in active_traits or trait not in target:
             continue
@@ -91,6 +93,9 @@ def patched_uncertainty(unc: pd.DataFrame, row: pd.Series, fighter_name: str, al
         mean=current + float(alpha)*(needed-current)
         mask=out['trait'].astype(str).eq(trait)
         out.loc[mask,'posterior_mean']=mean
+        if mean <= 0.0:
+            out.loc[mask,'sampling_enabled']=False
+            out.loc[mask,'variance_multiplier']=0.0
     return out
 
 
