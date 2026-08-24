@@ -1,4 +1,4 @@
-name: Event Clock V2 Bantamweight Actual Output Replay Zero Subs
+name: Event Clock V2 Bantamweight FSR Inverse Target
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
       - research/weight-class-audit-20260823
     paths:
       - ".github/workflows/fsr-v3-canonical-c.yml"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_actual_output_replay.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_fsr_inverse_target.py"
 
 permissions:
   contents: read
@@ -16,21 +16,18 @@ permissions:
 jobs:
   diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     env:
       PYTHONPATH: .
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
       - name: Install focused dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install numpy pandas pyarrow scikit-learn joblib pyyaml
-
       - name: Download frozen canonical research state
         uses: actions/download-artifact@v4
         with:
@@ -39,36 +36,17 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
-
-      - name: Verify actual-output replay inputs
-        run: |
-          test -f data/master/ufc_master.parquet
-          test -f data/market/historical_market_outcomes.parquet
-          test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
-          test -f data/fight_details/ufc_round_stats.parquet
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_actual_output_replay.py
-
-      - name: Run actual-output replay zero subs
+      - name: Run FSR inverse target
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.bantamweight_actual_output_replay \
-            --fight-id 86df0e75f41784d8 \
-            --paths 5000 \
-            --zero-subs \
-            --out-dir data/diagnostics/event_clock_mc_v2/bantamweight_actual_output_replay \
-            2>&1 | tee /tmp/bantamweight_actual_output_replay.log
-
-      - name: Print actual-output replay
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.bantamweight_fsr_inverse_target 2>&1 | tee /tmp/fsr_inverse_target.log
+      - name: Print inverse target
         if: always()
-        run: |
-          if [ -f /tmp/bantamweight_actual_output_replay.log ]; then
-            cat /tmp/bantamweight_actual_output_replay.log
-          fi
-
-      - name: Upload actual-output replay
+        run: cat /tmp/fsr_inverse_target.log || true
+      - name: Upload inverse target
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-bantamweight-actual-output-replay-zero-subs
-          path: data/diagnostics/event_clock_mc_v2/bantamweight_actual_output_replay/*.csv
+          name: event-clock-v2-bantamweight-fsr-inverse-target
+          path: data/diagnostics/event_clock_mc_v2/bantamweight_fsr_inverse_target/*.csv
           if-no-files-found: warn
