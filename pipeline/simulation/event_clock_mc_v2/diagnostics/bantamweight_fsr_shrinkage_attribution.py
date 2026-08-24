@@ -1,177 +1,158 @@
-"""Measurement-only bantamweight FSR shrinkage attribution audit.
+"""Leakage-safe Stage-1 FSR prior-strength attribution for bantamweight.
 
-Compares current FSR V3 prefight means against simple counterfactual de-shrunk
-variants and recent-form variants without touching production FSR publication.
-Targets are realized-output inverse values from the existing population audit.
-Also measures market-strength separation and actual winner discrimination.
+Rebuilds the validated standing/takedown rate and paired-effectiveness families
+chronologically under three prior-strength settings: current (1.0), half (0.5),
+and quarter (0.25). No production publication is changed.
+
+Each variant is evaluated against later realized fight outputs at the runtime
+input boundary: standing attempt rate, standing accuracy, takedown attempt rate,
+and takedown completion. Market favorite probability is used only as an external
+separation diagnostic, never as a fitting target.
 """
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
+import math
 import numpy as np
 import pandas as pd
-from sklearn.metrics import roc_auc_score, brier_score_loss, log_loss
 
 from pipeline.common.paths import MASTER_PATH
+from pipeline.fsr_v2.sources.round_stats import build_paired_rounds
+from pipeline.fsr_v3.config import FSRV3Config
 from pipeline.fsr_v3.paths import FSR_V3_PREFIGHT_SNAPSHOTS_PATH
+from pipeline.fsr_v3.replay.rate_families import (
+    standing_spec, takedown_spec, build_rate_fighter_fights, replay_tendency, replay_suppression,
+)
+from pipeline.fsr_v3.replay.paired_effectiveness import (
+    standing_effectiveness_spec, takedown_effectiveness_spec, replay_effectiveness_family,
+)
+from pipeline.simulation.event_clock_mc_v2.diagnostics.fsr_market_residual_audit import build_two_way_market, MARKET_PATH
+from pipeline.simulation.event_clock_mc_v2.diagnostics.bantamweight_fsr_population_inverse_market_audit import (
+    ROUND_STATS, pick_col, fighter_rows, round_totals,
+)
 
-MARKET_PATH = Path('data/market/historical_market_outcomes.parquet')
-ROUND_PATH = Path('data/fight_details/ufc_round_stats.parquet')
-OUT = Path('data/diagnostics/event_clock_mc_v2/bantamweight_fsr_shrinkage_attribution')
-DIVISION = 'Bantamweight'
-EPS=1e-9
-
-TRAITS = [
-    'standing_striking_tendency','standing_striking_offense','standing_striking_defense',
-    'takedown_tendency','takedown_offense','takedown_defense'
-]
+OUT=Path('data/diagnostics/event_clock_mc_v2/bantamweight_fsr_shrinkage_attribution')
+DIVISION='bantamweight'; EPS=1e-9
+KEYS=['event_date','fight_id','fighter_id']
 
 def logit(p):
-    p=np.clip(np.asarray(p,dtype=float),EPS,1-EPS)
-    return np.log(p/(1-p))
+    p=float(np.clip(p,EPS,1-EPS)); return math.log(p/(1-p))
+def sigmoid(x): return 1.0/(1.0+math.exp(-float(np.clip(x,-40,40))))
 
-def sigmoid(x): return 1/(1+np.exp(-np.clip(x,-40,40)))
+def scaled_config(strength: float) -> FSRV3Config:
+    c=FSRV3Config(); s=float(strength)
+    return replace(
+        c,
+        standing_tendency_prior_seconds=c.standing_tendency_prior_seconds*s,
+        takedown_tendency_prior_seconds=c.takedown_tendency_prior_seconds*s,
+        standing_suppression_prior_shape=c.standing_suppression_prior_shape*s,
+        takedown_suppression_prior_shape=c.takedown_suppression_prior_shape*s,
+        # Normal prior precision is proportional to 1/sigma^2.
+        standing_effectiveness_sigma_offense=c.standing_effectiveness_sigma_offense/math.sqrt(s),
+        standing_effectiveness_sigma_defense=c.standing_effectiveness_sigma_defense/math.sqrt(s),
+        takedown_effectiveness_sigma_offense=c.takedown_effectiveness_sigma_offense/math.sqrt(s),
+        takedown_effectiveness_sigma_defense=c.takedown_effectiveness_sigma_defense/math.sqrt(s),
+    )
 
-def col(frame,*names):
-    for n in names:
-        if n in frame.columns: return n
-    raise KeyError(names)
+def hist_trait(frame, trait):
+    x=frame[frame['trait'].eq(trait)][KEYS+['pre_rating']].copy()
+    return x.rename(columns={'pre_rating':trait})
 
-def prepare_market():
-    m=pd.read_parquet(MARKET_PATH).copy(); m['fight_id']=m['fight_id'].astype(str)
-    # canonical historical market rows contain one row per side; use normalized fair probs when available.
-    pcol=next((c for c in ['fair_probability','fair_implied_probability','implied_probability','market_fair_probability'] if c in m.columns),None)
-    sidecol=next((c for c in ['fighter_id','outcome_fighter_id','fighter_name','outcome_name'] if c in m.columns),None)
-    if pcol is None: return pd.DataFrame(columns=['fight_id','market_fav_p'])
-    rows=[]
-    for fid,g in m.groupby('fight_id'):
-        vals=pd.to_numeric(g[pcol],errors='coerce').dropna()
-        if len(vals)<2: continue
-        vals=vals.iloc[:2].to_numpy(float)
-        s=vals.sum()
-        if s>1.05: vals=vals/s
-        rows.append({'fight_id':str(fid),'market_fav_p':float(np.max(vals))})
-    return pd.DataFrame(rows)
-
-def build_realized_targets(master,fsr):
-    r=pd.read_parquet(ROUND_PATH).copy(); r['fight_id']=r['fight_id'].astype(str)
-    # aliases used by prior audit
-    sig_a=col(r,'SIG_STR_ATT','sig_str_att','sig_attempted','SIG_ATT')
-    sig_l=col(r,'SIG_STR_LANDED','sig_str_landed','sig_landed','SIG_LANDED')
-    g_a=next((c for c in ['GROUND_ATT','ground_att','ground_attempted','GROUND_SIG_ATT'] if c in r.columns),None)
-    g_l=next((c for c in ['GROUND_LANDED','ground_landed','ground_sig_landed','GROUND_SIG_LANDED'] if c in r.columns),None)
-    td_a=col(r,'TD_ATT','td_att','td_attempted')
-    td_l=col(r,'TD_LANDED','td_landed')
-    fidcol=col(r,'fighter_id','FIGHTER_ID')
-    agg={sig_a:'sum',sig_l:'sum',td_a:'sum',td_l:'sum'}
-    if g_a: agg[g_a]='sum'
-    if g_l: agg[g_l]='sum'
-    x=r.groupby(['fight_id',fidcol],as_index=False).agg(agg)
-    x=x.rename(columns={fidcol:'fighter_id',sig_a:'sig_att',sig_l:'sig_land',td_a:'td_att',td_l:'td_land'})
-    x['fighter_id']=x['fighter_id'].astype(str)
-    x['ground_att']=pd.to_numeric(x[g_a],errors='coerce').fillna(0) if g_a else 0.0
-    x['ground_land']=pd.to_numeric(x[g_l],errors='coerce').fillna(0) if g_l else 0.0
-    x['standing_att']=(pd.to_numeric(x['sig_att'],errors='coerce').fillna(0)-x['ground_att']).clip(lower=0)
-    x['standing_land']=(pd.to_numeric(x['sig_land'],errors='coerce').fillna(0)-x['ground_land']).clip(lower=0)
-
-    f=fsr.merge(x,on=['fight_id','fighter_id'],how='inner')
-    opp=fsr[['fight_id','fighter_id','standing_striking_suppression','standing_striking_defense','takedown_suppression','takedown_defense']].copy()
-    opp=opp.rename(columns={c:f'opp_{c}' for c in opp.columns if c not in ['fight_id','fighter_id']})
-    pairs=[]
-    for fid,g in f.groupby('fight_id'):
-        if len(g)!=2: continue
-        a,b=g.iloc[0],g.iloc[1]
-        for me,op in [(a,b),(b,a)]:
-            row=me.to_dict()
-            for c in ['standing_striking_suppression','standing_striking_defense','takedown_suppression','takedown_defense']:
-                row[f'opp_{c}']=float(op[c])
-            pairs.append(row)
-    f=pd.DataFrame(pairs)
-    # exposure-normalized standing tendency: realized standing attempts per 15m total fight exposure.
-    md=master[['fight_id','match_time_sec','method','winner','r_id','b_id','r_name','b_name','event_date']].copy()
-    f=f.merge(md,on='fight_id',how='left',validate='many_to_one')
-    exp=pd.to_numeric(f['match_time_sec'],errors='coerce').clip(lower=1)
-    desired_rate=f['standing_att']*900.0/exp
-    f['needed_standing_striking_tendency']=desired_rate/np.clip(f['opp_standing_striking_suppression'].astype(float),EPS,None)
-    acc=np.divide(f['standing_land'],f['standing_att'],out=np.full(len(f),np.nan),where=f['standing_att'].to_numpy()>0)
-    base=f['standing_accuracy_baseline'].astype(float)
-    f['needed_standing_striking_offense']=logit(acc)-logit(base)+f['opp_standing_striking_defense'].astype(float)
-    td_rate=f['td_att']*900.0/exp
-    f['needed_takedown_tendency']=td_rate/np.clip(f['opp_takedown_suppression'].astype(float),EPS,None)
-    comp=np.divide(f['td_land'],f['td_att'],out=np.full(len(f),np.nan),where=f['td_att'].to_numpy()>0)
-    base_td=f['takedown_completion_baseline'].astype(float)
-    f['needed_takedown_offense']=logit(comp)-logit(base_td)+f['opp_takedown_defense'].astype(float)
-    return f
-
-def variant_value(pref, needed, scale):
-    # Counterfactual de-shrink toward realized latent target; measurement-only attribution.
-    return pref + scale*(needed-pref)
-
-def score_variant(frame,name,scale):
-    out=[]
-    for trait in ['standing_striking_tendency','standing_striking_offense','takedown_tendency','takedown_offense']:
-        p=pd.to_numeric(frame[trait],errors='coerce')
-        n=pd.to_numeric(frame[f'needed_{trait}'],errors='coerce')
-        mask=p.notna()&n.notna()&np.isfinite(n)
-        v=variant_value(p[mask].to_numpy(),n[mask].to_numpy(),scale)
-        target=n[mask].to_numpy()
-        out.append({'variant':name,'trait':trait,'n':int(mask.sum()),'mae_to_realized_target':float(np.mean(np.abs(v-target))),
-                    'corr_to_realized_target':float(np.corrcoef(v,target)[0,1]) if mask.sum()>2 and np.std(v)>0 and np.std(target)>0 else np.nan})
+def build_variant(paired: pd.DataFrame, strength: float) -> pd.DataFrame:
+    cfg=scaled_config(strength)
+    ss=standing_spec(cfg); ts=takedown_spec(cfg)
+    sff=build_rate_fighter_fights(ss,paired_rounds=paired)
+    tff=build_rate_fighter_fights(ts,paired_rounds=paired)
+    sth=replay_tendency(sff,ss); ssh=replay_suppression(sth,ss)
+    tth=replay_tendency(tff,ts); tsh=replay_suppression(tth,ts)
+    seh=replay_effectiveness_family(standing_effectiveness_spec(cfg),paired_rounds=paired)
+    teh=replay_effectiveness_family(takedown_effectiveness_spec(cfg),paired_rounds=paired)
+    pieces=[
+        sth[KEYS+['pre_rating']].rename(columns={'pre_rating':'standing_striking_tendency'}),
+        ssh[KEYS+['pre_rating']].rename(columns={'pre_rating':'standing_striking_suppression'}),
+        hist_trait(seh,'standing_striking_offense'), hist_trait(seh,'standing_striking_defense'),
+        tth[KEYS+['pre_rating']].rename(columns={'pre_rating':'takedown_tendency'}),
+        tsh[KEYS+['pre_rating']].rename(columns={'pre_rating':'takedown_suppression'}),
+        hist_trait(teh,'takedown_offense'), hist_trait(teh,'takedown_defense'),
+    ]
+    out=pieces[0]
+    for p in pieces[1:]: out=out.merge(p,on=KEYS,how='outer',validate='one_to_one')
     return out
 
-def matchup_edges(frame,scale):
+def actual_by_fight(cohort):
+    rs=pd.read_parquet(ROUND_STATS).copy(); fcol=pick_col(rs,'fight_id','bout_id'); rs[fcol]=rs[fcol].astype(str)
     rows=[]
-    for fid,g in frame.groupby('fight_id'):
-        if len(g)!=2: continue
-        a,b=g.iloc[0],g.iloc[1]
-        vals=[]
-        for me,op in [(a,b),(b,a)]:
-            so=variant_value(float(me['standing_striking_offense']),float(me['needed_standing_striking_offense']) if np.isfinite(me['needed_standing_striking_offense']) else float(me['standing_striking_offense']),scale)
-            sd=float(op['standing_striking_defense'])
-            st=variant_value(float(me['standing_striking_tendency']),float(me['needed_standing_striking_tendency']),scale)
-            tt=variant_value(float(me['takedown_tendency']),float(me['needed_takedown_tendency']),scale)
-            to=variant_value(float(me['takedown_offense']),float(me['needed_takedown_offense']) if np.isfinite(me['needed_takedown_offense']) else float(me['takedown_offense']),scale)
-            td=float(op['takedown_defense'])
-            # standardized directional strength proxy; only for relative attribution.
-            vals.append(np.array([np.log(max(st,EPS)),so-sd,np.log(max(tt,EPS)),to-td]))
-        edge=float(np.linalg.norm(vals[0]-vals[1]))
-        rows.append({'fight_id':fid,'edge':edge})
+    for _,mr in cohort.iterrows():
+        fr=rs[rs[fcol].eq(str(mr['fight_id']))]; rr,br=fighter_rows(fr,mr)
+        if rr.empty or br.empty: continue
+        exposure=max(float(mr['match_time_sec']),1.0)
+        for side,g,fid in [('red',rr,str(mr['r_id'])),('blue',br,str(mr['b_id']))]:
+            a=round_totals(g)
+            rows.append({'fight_id':str(mr['fight_id']),'event_date':mr['event_date'],'fighter_id':fid,'side':side,
+                'actual_standing_rate_15m':a['standing_att']*900.0/exposure,
+                'actual_standing_accuracy':a['standing_land']/a['standing_att'] if a['standing_att']>0 else np.nan,
+                'actual_td_rate_15m':a['td_att']*900.0/exposure,
+                'actual_td_completion':a['td_land']/a['td_att'] if a['td_att']>0 else np.nan})
     return pd.DataFrame(rows)
+
+def evaluate_variant(name,variant,cohort,actual,base,market):
+    keep=set(cohort['fight_id'].astype(str)); v=variant[variant['fight_id'].isin(keep)].copy()
+    b=base[base['fight_id'].isin(keep)][KEYS+['standing_accuracy_baseline','takedown_completion_baseline']].copy()
+    v=v.merge(b,on=KEYS,how='inner',validate='one_to_one').merge(actual,on=KEYS,how='inner',validate='one_to_one')
+    rows=[]; fights=[]
+    for fid,g in v.groupby('fight_id'):
+        if len(g)!=2: continue
+        a,brow=g.iloc[0],g.iloc[1]; directional=[]
+        for me,op in [(a,brow),(brow,a)]:
+            pr_st=float(me['standing_striking_tendency'])*float(op['standing_striking_suppression'])
+            pr_sa=sigmoid(logit(float(me['standing_accuracy_baseline']))+float(me['standing_striking_offense'])-float(op['standing_striking_defense']))
+            pr_td=float(me['takedown_tendency'])*float(op['takedown_suppression'])
+            pr_tc=sigmoid(logit(float(me['takedown_completion_baseline']))+float(me['takedown_offense'])-float(op['takedown_defense']))
+            vals={'standing_rate_15m':pr_st,'standing_accuracy':pr_sa,'td_rate_15m':pr_td,'td_completion':pr_tc}
+            directional.append(vals)
+            for metric,pred in vals.items():
+                actual_col='actual_'+metric
+                av=float(me[actual_col]) if pd.notna(me[actual_col]) else np.nan
+                rows.append({'variant':name,'fight_id':fid,'fighter_id':me['fighter_id'],'metric':metric,'predicted':pred,'actual':av,
+                             'abs_error':abs(pred-av) if np.isfinite(av) else np.nan})
+        # Scale-free magnitude of matchup separation at runtime boundary.
+        sep=(abs(math.log(max(directional[0]['standing_rate_15m'],EPS)/max(directional[1]['standing_rate_15m'],EPS)))
+             +abs(logit(directional[0]['standing_accuracy'])-logit(directional[1]['standing_accuracy']))
+             +abs(math.log(max(directional[0]['td_rate_15m'],EPS)/max(directional[1]['td_rate_15m'],EPS)))
+             +abs(logit(directional[0]['td_completion'])-logit(directional[1]['td_completion'])))
+        fights.append({'variant':name,'fight_id':fid,'runtime_separation':sep})
+    detail=pd.DataFrame(rows); fd=pd.DataFrame(fights)
+    summary=[]
+    for metric,g in detail.groupby('metric'):
+        z=g.dropna(subset=['actual'])
+        summary.append({'variant':name,'metric':metric,'n':len(z),'mae':float(z['abs_error'].mean()),
+                        'corr_pred_actual':float(z['predicted'].corr(z['actual'])) if len(z)>2 else np.nan,
+                        'pred_sd':float(z['predicted'].std()),'actual_sd':float(z['actual'].std())})
+    priced=fd.merge(market[['fight_id','market_favorite_fair_p']],on='fight_id',how='inner')
+    msum={'variant':name,'n_priced':len(priced),'mean_runtime_separation':float(priced['runtime_separation'].mean()) if len(priced) else np.nan,
+          'corr_separation_market':float(priced['runtime_separation'].corr(priced['market_favorite_fair_p'])) if len(priced)>2 else np.nan}
+    return detail,pd.DataFrame(summary),fd,msum
 
 def main():
     master=pd.read_parquet(MASTER_PATH).drop_duplicates('fight_id').copy(); master['fight_id']=master['fight_id'].astype(str)
     master['event_date']=pd.to_datetime(master['date'],errors='coerce').dt.normalize()
-    master=master[master['division'].astype(str).str.strip().str.lower().eq(DIVISION.lower())].copy()
-    fsr=pd.read_parquet(FSR_V3_PREFIGHT_SNAPSHOTS_PATH).copy(); fsr['fight_id']=fsr['fight_id'].astype(str); fsr['fighter_id']=fsr['fighter_id'].astype(str)
-    fsr=fsr[fsr['fight_id'].isin(set(master['fight_id']))].copy()
-    targets=build_realized_targets(master,fsr)
-    market=prepare_market()
-
-    variants={'current':0.0,'halfway_to_realized':0.5,'three_quarters_to_realized':0.75}
-    summaries=[]; edge_tables=[]
-    for name,s in variants.items():
-        summaries += score_variant(targets,name,s)
-        e=matchup_edges(targets,s); e['variant']=name; edge_tables.append(e)
-    edges=pd.concat(edge_tables,ignore_index=True)
-    priced=edges.merge(market,on='fight_id',how='inner')
-    market_summary=[]
-    for name,g in priced.groupby('variant'):
-        market_summary.append({'variant':name,'n':len(g),'corr_edge_market_fav_p':float(g['edge'].corr(g['market_fav_p'])),
-                               'mean_edge':float(g['edge'].mean()),'mean_market_fav_p':float(g['market_fav_p'].mean())})
-
-    OUT.mkdir(parents=True,exist_ok=True)
-    pd.DataFrame(summaries).to_csv(OUT/'target_fit_summary.csv',index=False)
-    edges.to_csv(OUT/'fight_edges.csv',index=False)
-    priced.to_csv(OUT/'priced_fight_edges.csv',index=False)
-    pd.DataFrame(market_summary).to_csv(OUT/'market_edge_summary.csv',index=False)
-    targets.to_csv(OUT/'fighter_targets.csv',index=False)
-
-    print('BANTAMWEIGHT FSR SHRINKAGE ATTRIBUTION')
-    print(f'fights={targets.fight_id.nunique()} fighter-fights={len(targets)} priced={priced.fight_id.nunique()}')
-    print('\nTARGET FIT')
-    print(pd.DataFrame(summaries).to_string(index=False,float_format=lambda x:f'{x:.4f}'))
-    print('\nMARKET EDGE SEPARATION')
-    print(pd.DataFrame(market_summary).to_string(index=False,float_format=lambda x:f'{x:.4f}'))
-    print('\nNOTE: halfway/three-quarters variants are attribution counterfactuals toward realized latent targets, not production candidates. They quantify how much compression removal would be required; they do not use future data for prediction.')
-
+    cohort=master[master['division'].astype(str).str.strip().str.lower().eq(DIVISION)].copy()
+    base=pd.read_parquet(FSR_V3_PREFIGHT_SNAPSHOTS_PATH).copy(); base['fight_id']=base['fight_id'].astype(str); base['fighter_id']=base['fighter_id'].astype(str); base['event_date']=pd.to_datetime(base['event_date']).dt.normalize()
+    valid=set(base.groupby('fight_id').size().loc[lambda s:s==2].index.astype(str)); cohort=cohort[cohort['fight_id'].isin(valid)&cohort['match_time_sec'].notna()].copy()
+    actual=actual_by_fight(cohort); paired=build_paired_rounds()
+    market=build_two_way_market(MARKET_PATH).copy(); market['fight_id']=market['fight_id'].astype(str); market=market[market['fight_id'].isin(set(cohort['fight_id']))]
+    all_detail=[]; all_summary=[]; all_fights=[]; market_rows=[]
+    for name,strength in [('current_1.00',1.0),('prior_0.50',0.5),('prior_0.25',0.25)]:
+        print(f'building {name}...')
+        variant=build_variant(paired,strength)
+        d,s,f,m=evaluate_variant(name,variant,cohort,actual,base,market)
+        all_detail.append(d); all_summary.append(s); all_fights.append(f); market_rows.append(m)
+    detail=pd.concat(all_detail,ignore_index=True); summary=pd.concat(all_summary,ignore_index=True); fights=pd.concat(all_fights,ignore_index=True); msum=pd.DataFrame(market_rows)
+    OUT.mkdir(parents=True,exist_ok=True); detail.to_csv(OUT/'runtime_output_fit_detail.csv',index=False); summary.to_csv(OUT/'runtime_output_fit_summary.csv',index=False); fights.to_csv(OUT/'fight_runtime_separation.csv',index=False); msum.to_csv(OUT/'market_separation_summary.csv',index=False)
+    print('\nBANTAMWEIGHT FSR PRIOR-STRENGTH ATTRIBUTION — LEAKAGE SAFE')
+    print(f'fights={cohort.fight_id.nunique()} priced={market.fight_id.nunique()}')
+    print('\nRUNTIME OUTPUT FIT'); print(summary.to_string(index=False,float_format=lambda x:f'{x:.5f}'))
+    print('\nMARKET SEPARATION'); print(msum.to_string(index=False,float_format=lambda x:f'{x:.5f}'))
+    print('\nInterpretation rule: weaker priors matter only if they improve realized-output fit AND increase market-strength separation without merely exploding prediction SD.')
 if __name__=='__main__': main()
