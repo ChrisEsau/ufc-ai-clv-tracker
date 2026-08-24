@@ -1,4 +1,4 @@
-name: Event Clock V2 FSR Market Residual Audit
+name: Event Clock V2 FSR Residual Feature Screen
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
       - research/weight-class-audit-20260823
     paths:
       - ".github/workflows/fsr-v3-canonical-c.yml"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/fsr_market_residual_audit.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/fsr_residual_feature_screen.py"
 
 permissions:
   contents: read
@@ -16,7 +16,7 @@ permissions:
 jobs:
   diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       PYTHONPATH: .
     steps:
@@ -40,31 +40,31 @@ jobs:
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
 
-      - name: Verify residual-audit inputs
+      - name: Verify feature-screen inputs
         run: |
           test -f data/master/ufc_master.parquet
           test -f data/market/historical_market_outcomes.parquet
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/fsr_market_residual_audit.py
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/fsr_residual_feature_screen.py
 
-      - name: Run chronological FSR market residual audit
+      - name: Run chronological residual feature-family screen
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.fsr_market_residual_audit \
-            --out-dir data/diagnostics/event_clock_mc_v2/fsr_market_residual_audit \
-            2>&1 | tee /tmp/fsr_market_residual_audit.log
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.fsr_residual_feature_screen \
+            --out-dir data/diagnostics/event_clock_mc_v2/fsr_residual_feature_screen \
+            2>&1 | tee /tmp/fsr_residual_feature_screen.log
 
-      - name: Print residual audit
+      - name: Print feature screen
         if: always()
         run: |
-          if [ -f /tmp/fsr_market_residual_audit.log ]; then
-            cat /tmp/fsr_market_residual_audit.log
+          if [ -f /tmp/fsr_residual_feature_screen.log ]; then
+            cat /tmp/fsr_residual_feature_screen.log
           fi
 
-      - name: Upload residual outputs
+      - name: Upload feature-screen outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-fsr-market-residual-audit
-          path: data/diagnostics/event_clock_mc_v2/fsr_market_residual_audit/*.csv
+          name: event-clock-v2-fsr-residual-feature-screen
+          path: data/diagnostics/event_clock_mc_v2/fsr_residual_feature_screen/*.csv
           if-no-files-found: warn
