@@ -1,4 +1,4 @@
-name: Event Clock V2 FSR Dominance Matched Cohort Audit
+name: Event Clock V2 FSR Dominance Component Screen
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ on:
     paths:
       - ".github/workflows/fsr-v3-canonical-c.yml"
       - "pipeline/simulation/event_clock_mc_v2/diagnostics/fsr_dominance_residual_audit.py"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/fsr_dominance_matched_cohort_audit.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/fsr_dominance_component_screen.py"
 
 permissions:
   contents: read
@@ -41,33 +41,33 @@ jobs:
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
 
-      - name: Verify matched-cohort inputs
+      - name: Verify dominance-component inputs
         run: |
           test -f data/master/ufc_master.parquet
           test -f data/market/historical_market_outcomes.parquet
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
           test -f data/fight_details/ufc_round_stats.parquet
           python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/fsr_dominance_residual_audit.py
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/fsr_dominance_matched_cohort_audit.py
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/fsr_dominance_component_screen.py
 
-      - name: Run matched-cohort dominance audit
+      - name: Run dominance component matched-cohort screen
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.fsr_dominance_matched_cohort_audit \
-            --out-dir data/diagnostics/event_clock_mc_v2/fsr_dominance_matched_cohort_audit \
-            2>&1 | tee /tmp/fsr_dominance_matched_cohort_audit.log
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.fsr_dominance_component_screen \
+            --out-dir data/diagnostics/event_clock_mc_v2/fsr_dominance_component_screen \
+            2>&1 | tee /tmp/fsr_dominance_component_screen.log
 
-      - name: Print matched-cohort audit
+      - name: Print dominance component screen
         if: always()
         run: |
-          if [ -f /tmp/fsr_dominance_matched_cohort_audit.log ]; then
-            cat /tmp/fsr_dominance_matched_cohort_audit.log
+          if [ -f /tmp/fsr_dominance_component_screen.log ]; then
+            cat /tmp/fsr_dominance_component_screen.log
           fi
 
-      - name: Upload matched-cohort outputs
+      - name: Upload dominance component outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-fsr-dominance-matched-cohort-audit
-          path: data/diagnostics/event_clock_mc_v2/fsr_dominance_matched_cohort_audit/*.csv
+          name: event-clock-v2-fsr-dominance-component-screen
+          path: data/diagnostics/event_clock_mc_v2/fsr_dominance_component_screen/*.csv
           if-no-files-found: warn
