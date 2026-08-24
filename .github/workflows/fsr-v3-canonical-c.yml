@@ -1,6 +1,5 @@
-name: Event Clock V2 Bantamweight Outcome Path Sensitivity
+name: Event Clock V2 Held-Out Decision Judge Sharpness Audit
 
-# Research-only counterfactual attribution of favorite-vs-dog probability compression.
 on:
   workflow_dispatch:
   push:
@@ -8,7 +7,7 @@ on:
       - research/weight-class-audit-20260823
     paths:
       - ".github/workflows/fsr-v3-canonical-c.yml"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_outcome_path_sensitivity.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_judge_sharpness_audit.py"
 
 permissions:
   contents: read
@@ -17,7 +16,7 @@ permissions:
 jobs:
   diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       PYTHONPATH: .
     steps:
@@ -30,41 +29,41 @@ jobs:
       - name: Install focused dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install numpy pandas scikit-learn
+          python -m pip install numpy pandas pyarrow scikit-learn joblib pyyaml scipy statsmodels
 
-      - name: Download completed matchup decomposition
+      - name: Download frozen canonical research state
         uses: actions/download-artifact@v4
         with:
-          name: event-clock-v2-bantamweight-matchup-sensitivity-decomposition
-          path: /tmp/bantamweight_matchup_sensitivity_decomposition
+          name: canonical-weight-class-state
+          path: data
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ChrisEsau/ufc-ai-clv-tracker
-          run-id: 32730372808
+          run-id: 32645607979
 
-      - name: Verify sensitivity inputs
+      - name: Verify judge-audit inputs
         run: |
-          test -f /tmp/bantamweight_matchup_sensitivity_decomposition/fight_level_stage_decomposition.csv
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_outcome_path_sensitivity.py
+          test -f data/master/ufc_master.parquet
+          test -f data/diagnostics/event_clock_mc_v1/stage10_decision_judge_fresh.csv
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_judge_sharpness_audit.py
 
-      - name: Run outcome-path causal sensitivity
+      - name: Run held-out judge sharpness audit
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.bantamweight_outcome_path_sensitivity \
-            --decomposition-path /tmp/bantamweight_matchup_sensitivity_decomposition/fight_level_stage_decomposition.csv \
-            --out-dir data/diagnostics/event_clock_mc_v2/bantamweight_outcome_path_sensitivity \
-            2>&1 | tee /tmp/bantamweight_outcome_path_sensitivity.log
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.bantamweight_judge_sharpness_audit \
+            --out-dir data/diagnostics/event_clock_mc_v2/bantamweight_judge_sharpness_audit \
+            2>&1 | tee /tmp/bantamweight_judge_sharpness_audit.log
 
-      - name: Print sensitivity results
+      - name: Print judge sharpness audit
         if: always()
         run: |
-          if [ -f /tmp/bantamweight_outcome_path_sensitivity.log ]; then
-            cat /tmp/bantamweight_outcome_path_sensitivity.log
+          if [ -f /tmp/bantamweight_judge_sharpness_audit.log ]; then
+            cat /tmp/bantamweight_judge_sharpness_audit.log
           fi
 
-      - name: Upload sensitivity outputs
+      - name: Upload judge sharpness outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-bantamweight-outcome-path-sensitivity
-          path: data/diagnostics/event_clock_mc_v2/bantamweight_outcome_path_sensitivity/*.csv
+          name: event-clock-v2-held-out-decision-judge-sharpness-audit
+          path: data/diagnostics/event_clock_mc_v2/bantamweight_judge_sharpness_audit/*.csv
           if-no-files-found: warn
