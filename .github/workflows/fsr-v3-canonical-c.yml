@@ -1,4 +1,4 @@
-name: Event Clock V2 Opponent Adjusted Phase Imposition
+name: Event Clock V2 Dynamic Fighter Policy Prototype
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
       - research/weight-class-audit-20260823
     paths:
       - ".github/workflows/fsr-v3-canonical-c.yml"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/phase_imposition_opponent_adjusted.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/dynamic_fighter_policy_prototype.py"
 
 permissions:
   contents: read
@@ -16,7 +16,7 @@ permissions:
 jobs:
   diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       PYTHONPATH: .
     steps:
@@ -44,26 +44,25 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32726886999
-      - name: Verify opponent-adjusted phase inputs
+      - name: Verify dynamic policy inputs
         run: |
-          test -f data/fight_details/ufc_round_stats.parquet
           test -f data/master/ufc_master.parquet
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
           test -f /tmp/market_edge/bet_level_audit.csv
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/phase_imposition_opponent_adjusted.py
-          mkdir -p data/diagnostics/event_clock_mc_v2/phase_imposition_opponent_adjusted
-      - name: Run opponent-adjusted phase validation
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/dynamic_fighter_policy_prototype.py
+          mkdir -p data/diagnostics/event_clock_mc_v2/dynamic_fighter_policy_prototype
+      - name: Run dynamic fighter policy prototype
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.phase_imposition_opponent_adjusted \
-            2>&1 | tee /tmp/phase_imposition_opponent_adjusted.log
-      - name: Print opponent-adjusted phase validation
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.dynamic_fighter_policy_prototype \
+            2>&1 | tee /tmp/dynamic_fighter_policy_prototype.log
+      - name: Print dynamic fighter policy prototype
         if: always()
-        run: cat /tmp/phase_imposition_opponent_adjusted.log || true
-      - name: Upload opponent-adjusted phase validation
+        run: cat /tmp/dynamic_fighter_policy_prototype.log || true
+      - name: Upload dynamic fighter policy prototype
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-phase-imposition-opponent-adjusted
-          path: data/diagnostics/event_clock_mc_v2/phase_imposition_opponent_adjusted/*.csv
+          name: event-clock-v2-dynamic-fighter-policy-prototype
+          path: data/diagnostics/event_clock_mc_v2/dynamic_fighter_policy_prototype/*.csv
           if-no-files-found: warn
