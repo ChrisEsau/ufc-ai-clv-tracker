@@ -1,4 +1,4 @@
-name: Event Clock V2 FSR Dominance Component Screen
+name: Event Clock V2 Bantamweight Budget Variance Decomposition
 
 on:
   workflow_dispatch:
@@ -7,8 +7,7 @@ on:
       - research/weight-class-audit-20260823
     paths:
       - ".github/workflows/fsr-v3-canonical-c.yml"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/fsr_dominance_residual_audit.py"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/fsr_dominance_component_screen.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_budget_variance_decomposition.py"
 
 permissions:
   contents: read
@@ -30,7 +29,7 @@ jobs:
       - name: Install focused dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install numpy pandas pyarrow scikit-learn
+          python -m pip install numpy pandas pyarrow scikit-learn joblib
 
       - name: Download frozen canonical research state
         uses: actions/download-artifact@v4
@@ -41,33 +40,33 @@ jobs:
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
 
-      - name: Verify dominance-component inputs
+      - name: Verify variance-decomposition inputs
         run: |
           test -f data/master/ufc_master.parquet
           test -f data/market/historical_market_outcomes.parquet
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
-          test -f data/fight_details/ufc_round_stats.parquet
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/fsr_dominance_residual_audit.py
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/fsr_dominance_component_screen.py
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_budget_variance_decomposition.py
 
-      - name: Run dominance component matched-cohort screen
+      - name: Run budget variance decomposition
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.fsr_dominance_component_screen \
-            --out-dir data/diagnostics/event_clock_mc_v2/fsr_dominance_component_screen \
-            2>&1 | tee /tmp/fsr_dominance_component_screen.log
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.bantamweight_budget_variance_decomposition \
+            --paths 100 \
+            --mean-draws 512 \
+            --out-dir data/diagnostics/event_clock_mc_v2/bantamweight_budget_variance_decomposition \
+            2>&1 | tee /tmp/bantamweight_budget_variance_decomposition.log
 
-      - name: Print dominance component screen
+      - name: Print variance decomposition
         if: always()
         run: |
-          if [ -f /tmp/fsr_dominance_component_screen.log ]; then
-            cat /tmp/fsr_dominance_component_screen.log
+          if [ -f /tmp/bantamweight_budget_variance_decomposition.log ]; then
+            cat /tmp/bantamweight_budget_variance_decomposition.log
           fi
 
-      - name: Upload dominance component outputs
+      - name: Upload variance outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-fsr-dominance-component-screen
-          path: data/diagnostics/event_clock_mc_v2/fsr_dominance_component_screen/*.csv
+          name: event-clock-v2-bantamweight-budget-variance-decomposition
+          path: data/diagnostics/event_clock_mc_v2/bantamweight_budget_variance_decomposition/*.csv
           if-no-files-found: warn
