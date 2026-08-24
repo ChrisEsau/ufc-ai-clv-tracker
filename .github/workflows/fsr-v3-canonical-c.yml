@@ -1,6 +1,6 @@
-name: Event Clock V2 Full Men's Continuous Power Validation
+name: Event Clock V2 KD Hurt Follow-up Screen
 
-# Full-cohort validation of the selected research-only consequence curve.
+# Research-only men's screen of temporary post-KD KO vulnerability.
 on:
   workflow_dispatch:
   push:
@@ -8,7 +8,7 @@ on:
       - research/weight-class-audit-20260823
     paths:
       - ".github/workflows/fsr-v3-canonical-c.yml"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/full_mens_continuous_power_validation.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/kd_hurt_followup_screen.py"
 
 permissions:
   contents: read
@@ -17,7 +17,7 @@ permissions:
 jobs:
   simulate-only:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 40
     env:
       PYTHONPATH: .
     steps:
@@ -41,37 +41,37 @@ jobs:
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
 
-      - name: Verify frozen inputs and full validation diagnostic
+      - name: Verify frozen inputs and research diagnostic
         run: |
           test -f data/fight_details/ufc_round_stats.parquet
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
           test -f data/fsr_v3/fsr_v3_prefight_uncertainty.parquet
           test -f data/models/event_clock_mc_v1/event_clock_frozen_bundle.joblib
           test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/full_mens_continuous_power_validation.py
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/kd_hurt_followup_screen.py
 
-      - name: Run full men's continuous power validation
+      - name: Run KD hurt follow-up screen
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.full_mens_continuous_power_validation \
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.kd_hurt_followup_screen \
             --target-n 100 \
-            --predictive-paths 20 \
-            --round-paths 10 \
+            --sim-n-per-division 20 \
+            --paths 10 \
             --seed 20260823 \
-            --out-dir data/diagnostics/event_clock_mc_v2/full_mens_continuous_power_validation \
-            2>&1 | tee /tmp/full_mens_continuous_power_validation.log
+            --out-dir data/diagnostics/event_clock_mc_v2/kd_hurt_followup_screen \
+            2>&1 | tee /tmp/kd_hurt_followup_screen.log
 
-      - name: Print validation results
+      - name: Print screen results
         if: always()
         run: |
-          if [ -f /tmp/full_mens_continuous_power_validation.log ]; then
-            tail -n 420 /tmp/full_mens_continuous_power_validation.log
+          if [ -f /tmp/kd_hurt_followup_screen.log ]; then
+            tail -n 320 /tmp/kd_hurt_followup_screen.log
           fi
 
-      - name: Upload full men's validation outputs
+      - name: Upload KD hurt follow-up outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-full-mens-continuous-power-validation
-          path: data/diagnostics/event_clock_mc_v2/full_mens_continuous_power_validation/*.csv
+          name: event-clock-v2-kd-hurt-followup-screen
+          path: data/diagnostics/event_clock_mc_v2/kd_hurt_followup_screen/*.csv
           if-no-files-found: warn
