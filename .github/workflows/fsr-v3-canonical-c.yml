@@ -36,6 +36,22 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
+      - name: Normalize sparse matrix indices for sklearn
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_standing_effectiveness_model_falsification.py')
+          s = p.read_text()
+          s = s.replace(
+              "x=vec.transform([feat(att,deff)])\n                p=float(clf.predict_proba(x)[0,1])",
+              "x=vec.transform([feat(att,deff)])\n                x.indices=x.indices.astype(np.int32,copy=False); x.indptr=x.indptr.astype(np.int32,copy=False)\n                p=float(clf.predict_proba(x)[0,1])",
+          )
+          s = s.replace(
+              "X=vec.transform(Xdict)\n            if not initialized:",
+              "X=vec.transform(Xdict)\n            X.indices=X.indices.astype(np.int32,copy=False); X.indptr=X.indptr.astype(np.int32,copy=False)\n            if not initialized:",
+          )
+          p.write_text(s)
+          PY
       - name: Verify standing effectiveness falsification inputs
         run: |
           test -f data/master/ufc_master.parquet
