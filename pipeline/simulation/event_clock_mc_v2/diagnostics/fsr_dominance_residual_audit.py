@@ -33,14 +33,11 @@ STAT_ALIASES = {
 }
 
 
-def find_side_col(df, side, aliases):
-    prefixes = ["r_", "red_"] if side == "red" else ["b_", "blue_"]
+def find_stat_col(df, aliases):
     lower = {c.lower(): c for c in df.columns}
-    for p in prefixes:
-        for a in aliases:
-            key = (p + a).lower()
-            if key in lower:
-                return lower[key]
+    for a in aliases:
+        if a.lower() in lower:
+            return lower[a.lower()]
     return None
 
 
@@ -61,33 +58,63 @@ def winner_side(row):
 
 
 def build_fight_dominance(rounds, master):
-    if "fight_id" not in rounds.columns:
-        raise RuntimeError(f"round stats missing fight_id; columns={list(rounds.columns)}")
-    cols = {}
-    for stat, aliases in STAT_ALIASES.items():
-        cols[(stat,"red")] = find_side_col(rounds, "red", aliases)
-        cols[(stat,"blue")] = find_side_col(rounds, "blue", aliases)
-    usable_stats = [s for s in STAT_ALIASES if cols[(s,"red")] and cols[(s,"blue")]]
-    if len(usable_stats) < 2:
-        raise RuntimeError(f"could not resolve enough paired round-stat columns; resolved={cols}; columns={list(rounds.columns)}")
+    required = {"fight_id", "fighter_id", "corner"}
+    missing = required.difference(rounds.columns)
+    if missing:
+        raise RuntimeError(f"round stats missing required fighter-row columns {sorted(missing)}; columns={list(rounds.columns)}")
 
-    agg = []
-    for fid, g in rounds.groupby(rounds["fight_id"].astype(str), sort=False):
-        rec = {"fight_id": str(fid)}
-        for stat in usable_stats:
-            for side in ("red","blue"):
-                rec[f"{side}_{stat}"] = pd.to_numeric(g[cols[(stat,side)]], errors="coerce").fillna(0).sum()
-        agg.append(rec)
-    f = pd.DataFrame(agg)
+    stat_cols = {stat: find_stat_col(rounds, aliases) for stat, aliases in STAT_ALIASES.items()}
+    usable_stats = [s for s, c in stat_cols.items() if c is not None]
+    if len(usable_stats) < 2:
+        raise RuntimeError(f"could not resolve enough fighter-row stat columns; resolved={stat_cols}; columns={list(rounds.columns)}")
+
+    x = rounds.copy()
+    x["fight_id"] = x["fight_id"].astype(str)
+    x["fighter_id"] = x["fighter_id"].astype(str)
+    x["corner_norm"] = x["corner"].astype(str).str.strip().str.lower()
+    x = x[x["corner_norm"].isin(["red", "blue"])].copy()
+    if x.empty:
+        raise RuntimeError(f"round stats corner column has no red/blue rows; values={rounds['corner'].value_counts(dropna=False).head(20).to_dict()}")
+
+    for stat in usable_stats:
+        x[f"stat__{stat}"] = pd.to_numeric(x[stat_cols[stat]], errors="coerce").fillna(0.0)
+
+    agg_cols = [f"stat__{s}" for s in usable_stats]
+    fighter_fight = (
+        x.groupby(["fight_id", "corner_norm", "fighter_id"], as_index=False)[agg_cols]
+        .sum()
+    )
+
+    dup = fighter_fight.duplicated(["fight_id", "corner_norm"], keep=False)
+    if dup.any():
+        bad = fighter_fight.loc[dup, ["fight_id", "corner_norm", "fighter_id"]].head(20).to_dict("records")
+        raise RuntimeError(f"multiple fighters found for one fight/corner after aggregation; examples={bad}")
+
+    wide = fighter_fight.pivot(index="fight_id", columns="corner_norm")
+    wide.columns = [f"{corner}_{field.replace('stat__','')}" for field, corner in wide.columns]
+    wide = wide.reset_index()
+    complete = [c for c in ["red_fighter_id", "blue_fighter_id"] if c in wide.columns]
+    if len(complete) != 2:
+        raise RuntimeError(f"failed to pivot fighter-row stats into red/blue fight rows; columns={list(wide.columns)}")
+    wide = wide[wide["red_fighter_id"].notna() & wide["blue_fighter_id"].notna()].copy()
 
     m = master.copy(); m["fight_id"] = m["fight_id"].astype(str)
     date_col = resolve_date_col(m)
     keep = [c for c in ["fight_id",date_col,"r_id","b_id","winner_id","method","weight_class","division"] if c in m.columns]
-    f = f.merge(m[keep].drop_duplicates("fight_id"), on="fight_id", how="left")
+    f = wide.merge(m[keep].drop_duplicates("fight_id"), on="fight_id", how="left")
     f["fight_date"] = pd.to_datetime(f[date_col], errors="coerce").dt.normalize()
     div_col = "weight_class" if "weight_class" in f.columns else ("division" if "division" in f.columns else None)
     f["division_key"] = f[div_col].astype(str) if div_col else "ALL"
     f["era"] = (f["fight_date"].dt.year // 3 * 3).astype("Int64").astype(str)
+
+    # Validate round-stats fighter identities against master where both are present.
+    if {"r_id", "b_id"}.issubset(f.columns):
+        r_ok = f["r_id"].isna() | (f["r_id"].astype(str) == f["red_fighter_id"].astype(str))
+        b_ok = f["b_id"].isna() | (f["b_id"].astype(str) == f["blue_fighter_id"].astype(str))
+        mismatch = ~(r_ok & b_ok)
+        if mismatch.any():
+            ex = f.loc[mismatch, ["fight_id","red_fighter_id","blue_fighter_id","r_id","b_id"]].head(10).to_dict("records")
+            raise RuntimeError(f"round/master fighter identity mismatch; examples={ex}")
 
     rows = []
     weights = {"sig":1.0,"kd":2.0,"td":0.6,"sub":0.8,"ctrl":0.004}
@@ -97,7 +124,6 @@ def build_fight_dominance(rounds, master):
             parts = {}
             for stat in usable_stats:
                 a = float(r.get(f"{side}_{stat}",0.0)); b = float(r.get(f"{opp}_{stat}",0.0))
-                # bounded share margin avoids raw-scale domination while preserving direction.
                 margin = (a-b)/(a+b+1.0)
                 parts[f"margin_{stat}"] = margin
                 score += weights.get(stat,1.0)*margin
@@ -107,8 +133,8 @@ def build_fight_dominance(rounds, master):
             finish_bonus = 0.75 if is_finish else 0.0
             rows.append({
                 "fight_id":r["fight_id"], "fight_date":r["fight_date"],
-                "fighter_id":str(r["r_id"] if side=="red" else r["b_id"]),
-                "opponent_id":str(r["b_id"] if side=="red" else r["r_id"]),
+                "fighter_id":str(r[f"{side}_fighter_id"]),
+                "opponent_id":str(r[f"{opp}_fighter_id"]),
                 "division_key":r["division_key"], "era":r["era"],
                 "won":int(ws==side) if ws else np.nan,
                 "finish_win":int(is_finish), "raw_dominance":score+finish_bonus,
@@ -118,7 +144,7 @@ def build_fight_dominance(rounds, master):
     grp = d.groupby(["division_key","era"])["raw_dominance"]
     mu = grp.transform("mean"); sd = grp.transform("std").replace(0,np.nan)
     d["dominance_z"] = ((d["raw_dominance"]-mu)/sd).fillna(0.0)
-    return d, usable_stats, cols
+    return d, usable_stats, stat_cols
 
 
 def add_prefight_dominance(matchups, dominance):
@@ -182,7 +208,6 @@ def main():
     wr.append(fit_winner(train,test,fsr_features+dom_features,"fsr_plus_all_dominance"))
     wr=pd.DataFrame(wr)
 
-    # residual correlations against baseline FSR market residual on same chronological test.
     baseline=Pipeline([("scale",StandardScaler()),("ridge",Ridge(alpha=10.0))])
     tr=train.dropna(subset=fsr_features+["market_favorite_fair_p"]); te=test.dropna(subset=fsr_features+["market_favorite_fair_p"])
     baseline.fit(tr[fsr_features],safe_logit(tr["market_favorite_fair_p"])); pred=baseline.predict(te[fsr_features])
