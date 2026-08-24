@@ -1,6 +1,6 @@
-name: Event Clock V2 Bantamweight Dog Compression Diagnostic
+name: Event Clock V2 Bantamweight Uncertainty Compression AB
 
-# Measurement-only decomposition of bantamweight underdog probability inflation.
+# Research-only A/B: current epistemic sampling vs posterior means only.
 on:
   workflow_dispatch:
   push:
@@ -8,16 +8,16 @@ on:
       - research/weight-class-audit-20260823
     paths:
       - ".github/workflows/fsr-v3-canonical-c.yml"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_dog_compression_diagnostic.py"
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_uncertainty_compression_ab.py"
 
 permissions:
   contents: read
   actions: read
 
 jobs:
-  diagnose:
+  simulate-ab:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     env:
       PYTHONPATH: .
     steps:
@@ -41,40 +41,44 @@ jobs:
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
 
-      - name: Download completed bantamweight market audit
+      - name: Download completed dog compression diagnostic
         uses: actions/download-artifact@v4
         with:
-          name: event-clock-v2-bantamweight-market-edge-audit
-          path: /tmp/bantamweight_market_edge_audit
+          name: event-clock-v2-bantamweight-dog-compression-diagnostic
+          path: /tmp/bantamweight_dog_compression_diagnostic
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ChrisEsau/ufc-ai-clv-tracker
-          run-id: 32726886999
+          run-id: 32728541146
 
-      - name: Verify diagnostic inputs
+      - name: Verify A/B inputs
         run: |
-          test -f /tmp/bantamweight_market_edge_audit/bet_level_audit.csv
+          test -f /tmp/bantamweight_dog_compression_diagnostic/favorite_dog_fight_level.csv
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_dog_compression_diagnostic.py
+          test -f data/fsr_v3/fsr_v3_prefight_uncertainty.parquet
+          test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/bantamweight_uncertainty_compression_ab.py
 
-      - name: Run bantamweight dog compression diagnostic
+      - name: Run uncertainty compression A/B
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.bantamweight_dog_compression_diagnostic \
-            --bet-audit-path /tmp/bantamweight_market_edge_audit/bet_level_audit.csv \
-            --out-dir data/diagnostics/event_clock_mc_v2/bantamweight_dog_compression_diagnostic \
-            2>&1 | tee /tmp/bantamweight_dog_compression_diagnostic.log
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.bantamweight_uncertainty_compression_ab \
+            --priced-fights-path /tmp/bantamweight_dog_compression_diagnostic/favorite_dog_fight_level.csv \
+            --paths 100 \
+            --seed 20260823 \
+            --out-dir data/diagnostics/event_clock_mc_v2/bantamweight_uncertainty_compression_ab \
+            2>&1 | tee /tmp/bantamweight_uncertainty_compression_ab.log
 
-      - name: Print compression diagnostic
+      - name: Print uncertainty A/B
         if: always()
         run: |
-          if [ -f /tmp/bantamweight_dog_compression_diagnostic.log ]; then
-            cat /tmp/bantamweight_dog_compression_diagnostic.log
+          if [ -f /tmp/bantamweight_uncertainty_compression_ab.log ]; then
+            cat /tmp/bantamweight_uncertainty_compression_ab.log
           fi
 
-      - name: Upload compression diagnostic outputs
+      - name: Upload uncertainty A/B outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-bantamweight-dog-compression-diagnostic
-          path: data/diagnostics/event_clock_mc_v2/bantamweight_dog_compression_diagnostic/*.csv
+          name: event-clock-v2-bantamweight-uncertainty-compression-ab
+          path: data/diagnostics/event_clock_mc_v2/bantamweight_uncertainty_compression_ab/*.csv
           if-no-files-found: warn
