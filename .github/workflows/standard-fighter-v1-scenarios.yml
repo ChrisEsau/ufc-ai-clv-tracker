@@ -1,0 +1,38 @@
+name: Standard Fighter V1 Synthetic Scenarios
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research/weight-class-audit-20260823
+    paths:
+      - pipeline/simulation/event_clock_mc_v2/standard_fighter_v1/**
+      - pipeline/simulation/event_clock_mc_v2/STANDARD_FIGHTER_V1_DESIGN.md
+      - .github/workflows/standard-fighter-v1-scenarios.yml
+  pull_request:
+    paths:
+      - pipeline/simulation/event_clock_mc_v2/standard_fighter_v1/**
+      - pipeline/simulation/event_clock_mc_v2/STANDARD_FIGHTER_V1_DESIGN.md
+      - .github/workflows/standard-fighter-v1-scenarios.yml
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  PYTHONPATH: .
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Compile prototype
+        run: |
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/standard_fighter_v1/policy.py
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/standard_fighter_v1/scenario_validation.py
+      - name: Run synthetic scenario validation
+        run: python -m pipeline.simulation.event_clock_mc_v2.standard_fighter_v1.scenario_validation
