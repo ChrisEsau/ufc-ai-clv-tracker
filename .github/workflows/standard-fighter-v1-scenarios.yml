@@ -43,6 +43,7 @@ jobs:
       - name: Compile prototype
         run: |
           python -m py_compile pipeline/simulation/event_clock_mc_v2/standard_fighter_v1/policy.py
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/standard_fighter_v1/capability_translation.py
           python -m py_compile pipeline/simulation/event_clock_mc_v2/standard_fighter_v1/scenario_validation.py
           python -m py_compile pipeline/simulation/event_clock_mc_v2/standard_fighter_v1/magnitude_audit.py
           python -m py_compile pipeline/simulation/event_clock_mc_v2/standard_fighter_v1/real_fsr_audit.py
