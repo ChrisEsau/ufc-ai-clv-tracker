@@ -35,7 +35,7 @@ jobs:
           keys=("standing_phase_share","clinch_phase_share","ground_phase_share",
                 "final_stamina_quantiles","round_red_win_probability_distribution",
                 "decision_winner_allocation","decision_round_count_distribution",
-                "submission_finish_time_distribution","submission_winner_allocation",
+                "submission_finish_time_distribution",
                 "submission_offense_edge_among_winners","loser_submission_defense_edge",
                 "mean_submission_conversion_probability","finish_time_distribution")
           print("## Extended judging/submission diagnostics")
