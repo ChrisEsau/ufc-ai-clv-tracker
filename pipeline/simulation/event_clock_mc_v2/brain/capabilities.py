@@ -35,14 +35,12 @@ class UnsupportedCapabilityPlaceholders:
     """Uncalibrated neutral values retained from Standard Fighter V1 research."""
 
     clinch: float = 0.35
-    submission: float = 0.30
     escape: float = 0.40
     reversal: float = 0.30
 
     def __post_init__(self) -> None:
         BrainCapabilities(
             clinch=self.clinch,
-            submission=self.submission,
             escape=self.escape,
             reversal=self.reversal,
         )
@@ -59,12 +57,14 @@ def capabilities_from_percentiles(
     takedown_completion_percentile: float,
     ground_rate_percentile: float,
     ground_accuracy_percentile: float,
+    submission_tendency_percentile: float,
     placeholders: UnsupportedCapabilityPlaceholders = DEFAULT_UNSUPPORTED_CAPABILITIES,
 ) -> BrainCapabilities:
-    """Preserve the validated FSR V3 percentile-to-capability semantics.
+    """Translate chronology-safe empirical ranks into Brain capabilities.
 
-    Population percentile construction and cold-start reporting remain upstream;
-    this pure runtime boundary neither reads FSR artifacts nor alters cold starts.
+    Submission is now the empirical population rank of the inherited prefight
+    submission-tendency trait.  The historical audit showed that tendency adds
+    out-of-sample signal for submission attempts conditional on ground exposure.
     """
     if not isinstance(placeholders, UnsupportedCapabilityPlaceholders):
         raise ValueError("placeholders must be UnsupportedCapabilityPlaceholders")
@@ -75,6 +75,7 @@ def capabilities_from_percentiles(
         takedown_completion_percentile,
         ground_rate_percentile,
         ground_accuracy_percentile,
+        submission_tendency_percentile,
     )
     for value in values:
         if (
@@ -91,7 +92,7 @@ def capabilities_from_percentiles(
         clinch=placeholders.clinch,
         takedown=(values[2] + values[3]) / 2.0,
         ground_top=(values[4] + values[5]) / 2.0,
-        submission=placeholders.submission,
+        submission=values[6],
         escape=placeholders.escape,
         reversal=placeholders.reversal,
     )
