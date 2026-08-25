@@ -61,15 +61,7 @@ def resolve_action(
     calibration = inputs.calibration or DEFAULT_MECHANICS_CALIBRATION_CONFIG
 
     if family in {ActionFamily.STAND_ATTACK, ActionFamily.STAND_COUNTER}:
-        return _strike(
-            event,
-            state,
-            inputs,
-            fighter.standing_strike_landing_probability,
-            rng,
-            calibration,
-            ko_kd_rng,
-        )
+        return _strike(event, state, inputs, fighter.standing_strike_landing_probability, rng, calibration, ko_kd_rng)
     if family is ActionFamily.PRESSURE or family is ActionFamily.RESET_RANGE:
         return ActionResolution(event, ActionOutcome.TACTICAL)
     if family is ActionFamily.CLINCH_ENTRY:
@@ -79,9 +71,7 @@ def resolve_action(
             rng,
             success_outcome=ActionOutcome.SUCCESS,
             failure_outcome=ActionOutcome.FAILURE,
-            transition=TransitionRequest(
-                TransitionKind.ENTER_CLINCH, Phase.STANDING, Phase.CLINCH, event.actor
-            ),
+            transition=TransitionRequest(TransitionKind.ENTER_CLINCH, Phase.STANDING, Phase.CLINCH, event.actor),
         )
     if family is ActionFamily.TAKEDOWN_ENTRY:
         return _binary_transition(
@@ -90,23 +80,10 @@ def resolve_action(
             rng,
             success_outcome=ActionOutcome.SUCCESS,
             failure_outcome=ActionOutcome.STUFFED,
-            transition=TransitionRequest(
-                TransitionKind.DIRECT_TAKEDOWN,
-                Phase.STANDING,
-                Phase.GROUND,
-                event.actor,
-            ),
+            transition=TransitionRequest(TransitionKind.DIRECT_TAKEDOWN, Phase.STANDING, Phase.GROUND, event.actor),
         )
     if family is ActionFamily.CLINCH_STRIKE:
-        return _strike(
-            event,
-            state,
-            inputs,
-            placeholders.clinch_strike_landing_probability,
-            rng,
-            calibration,
-            ko_kd_rng,
-        )
+        return _strike(event, state, inputs, placeholders.clinch_strike_landing_probability, rng, calibration, ko_kd_rng)
     if family is ActionFamily.CLINCH_CONTROL:
         return ActionResolution(event, ActionOutcome.CONTROLLED)
     if family is ActionFamily.CLINCH_TAKEDOWN:
@@ -116,9 +93,7 @@ def resolve_action(
             rng,
             success_outcome=ActionOutcome.SUCCESS,
             failure_outcome=ActionOutcome.STUFFED,
-            transition=TransitionRequest(
-                TransitionKind.CLINCH_TAKEDOWN, Phase.CLINCH, Phase.GROUND, event.actor
-            ),
+            transition=TransitionRequest(TransitionKind.CLINCH_TAKEDOWN, Phase.CLINCH, Phase.GROUND, event.actor),
         )
     if family is ActionFamily.BREAK_CLINCH:
         return _binary_transition(
@@ -127,20 +102,10 @@ def resolve_action(
             rng,
             success_outcome=ActionOutcome.SEPARATED,
             failure_outcome=ActionOutcome.FAILURE,
-            transition=TransitionRequest(
-                TransitionKind.BREAK_CLINCH, Phase.CLINCH, Phase.STANDING
-            ),
+            transition=TransitionRequest(TransitionKind.BREAK_CLINCH, Phase.CLINCH, Phase.STANDING),
         )
     if family in {ActionFamily.GROUND_STRIKE, ActionFamily.BOTTOM_STRIKE}:
-        return _strike(
-            event,
-            state,
-            inputs,
-            fighter.ground_strike_landing_probability,
-            rng,
-            calibration,
-            ko_kd_rng,
-        )
+        return _strike(event, state, inputs, fighter.ground_strike_landing_probability, rng, calibration, ko_kd_rng)
     if family in {ActionFamily.ADVANCE_POSITION, ActionFamily.IMPROVE_POSITION}:
         return ActionResolution(event, ActionOutcome.MAINTAINED)
     if family is ActionFamily.SUBMISSION_ATTACK:
@@ -148,9 +113,9 @@ def resolve_action(
         probability, succeeded = resolve_submission(
             fighter.submission_conversion_baseline,
             fighter.submission_conversion_offset,
-            fighter.submission_offense,
-            defender.submission_defense,
             submission_rng,
+            attacker_offense=fighter.submission_offense,
+            defender_defense=defender.submission_defense,
         )
         return ActionResolution(
             event,
@@ -159,11 +124,7 @@ def resolve_action(
                 attempted=True,
                 conversion_probability=probability,
                 success=succeeded,
-                termination=(
-                    FightTerminationRequest(event.actor, FinishMethod.SUBMISSION)
-                    if succeeded
-                    else None
-                ),
+                termination=FightTerminationRequest(event.actor, FinishMethod.SUBMISSION) if succeeded else None,
             ),
         )
     if family is ActionFamily.CONTROL:
@@ -172,9 +133,7 @@ def resolve_action(
         return ActionResolution(
             event,
             ActionOutcome.ESCAPED,
-            TransitionRequest(
-                TransitionKind.DISENGAGE_GROUND, Phase.GROUND, Phase.STANDING
-            ),
+            TransitionRequest(TransitionKind.DISENGAGE_GROUND, Phase.GROUND, Phase.STANDING),
         )
     if family is ActionFamily.ESCAPE_STAND:
         return _binary_transition(
@@ -183,9 +142,7 @@ def resolve_action(
             rng,
             success_outcome=ActionOutcome.ESCAPED,
             failure_outcome=ActionOutcome.FAILURE,
-            transition=TransitionRequest(
-                TransitionKind.ESCAPE_GROUND, Phase.GROUND, Phase.STANDING
-            ),
+            transition=TransitionRequest(TransitionKind.ESCAPE_GROUND, Phase.GROUND, Phase.STANDING),
         )
     if family is ActionFamily.REVERSAL:
         return _binary_transition(
@@ -194,9 +151,7 @@ def resolve_action(
             rng,
             success_outcome=ActionOutcome.REVERSED,
             failure_outcome=ActionOutcome.FAILURE,
-            transition=TransitionRequest(
-                TransitionKind.REVERSE_GROUND, Phase.GROUND, Phase.GROUND, event.actor
-            ),
+            transition=TransitionRequest(TransitionKind.REVERSE_GROUND, Phase.GROUND, Phase.GROUND, event.actor),
         )
     raise ValueError(f"no mechanics resolver for {family.value}")
 
@@ -214,9 +169,7 @@ def _strike(
     return ActionResolution(
         event,
         ActionOutcome.LANDED if landed else ActionOutcome.MISSED,
-        consequence=resolve_strike_consequence(
-            event, state, inputs, landed, ko_kd_rng or rng, calibration
-        ),
+        consequence=resolve_strike_consequence(event, state, inputs, landed, ko_kd_rng or rng, calibration),
     )
 
 
