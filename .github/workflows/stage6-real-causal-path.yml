@@ -41,19 +41,20 @@ jobs:
           test -f data/fsr_v3/fsr_v3_latest.parquet
           ls -lh data/fsr_v3/fsr_v3_latest.parquet
 
-      - name: Run actual Stage 6 engine path
+      - name: Run actual Stage 6 100-path full-fight batch
         run: |
           echo "GITHUB_SHA=${GITHUB_SHA}"
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.stage6_real_causal_path \
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.stage6_real_causal_batch \
             --red "Aleksandar Rakic" \
             --blue "Marcin Tybura" \
-            --seed 20260825 \
-            --horizon 300 \
-            --output data/diagnostics/event_clock_mc_v2/stage6_real_causal_path.json
+            --paths 100 \
+            --seed-base 20260825 \
+            --horizon 900 \
+            --output data/diagnostics/event_clock_mc_v2/stage6_real_causal_batch_100.json
 
-      - name: Upload real causal path result
+      - name: Upload real causal batch result
         uses: actions/upload-artifact@v4
         with:
-          name: stage6-real-causal-path
-          path: data/diagnostics/event_clock_mc_v2/stage6_real_causal_path.json
+          name: stage6-real-causal-batch-100
+          path: data/diagnostics/event_clock_mc_v2/stage6_real_causal_batch_100.json
           if-no-files-found: error
