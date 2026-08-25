@@ -89,12 +89,15 @@ def _capabilities(attacker: pd.Series, defender: pd.Series, reference: Capabilit
         takedown_completion_percentile=_percentile(pop["td_comp"], runtime.takedown_completion),
         ground_rate_percentile=_percentile(pop["ground_rate"], runtime.ground_slope_rate_15m_own_control),
         ground_accuracy_percentile=_percentile(pop["ground_acc"], runtime.ground_accuracy),
+        submission_tendency_percentile=_percentile(
+            pop["submission_tendency"], float(attacker["submission_tendency"])
+        ),
     ), runtime
 
 
 def _mechanics(runtime) -> FighterMechanics:
     # Standing, TD and ground probabilities are actual canonical FSR V3 matchup transforms.
-    # Submission/escape/reversal do not yet have an approved final Stage 6 runtime translation.
+    # Escape/reversal do not yet have an approved final Stage 6 runtime translation.
     return FighterMechanics(
         standing_strike_landing_probability=runtime.standing_accuracy,
         takedown_completion_probability=runtime.takedown_completion,
@@ -166,7 +169,6 @@ def main() -> None:
             },
         },
         "unresolved_mechanics_placeholders": {
-            "submission_success_probability": 0.0,
             "ground_escape_probability": 0.40,
             "ground_reversal_probability": 0.30,
         },
@@ -228,7 +230,7 @@ def main() -> None:
     print("RED runtime:", asdict(red_runtime))
     print("BLUE capabilities:", asdict(blue_cap))
     print("BLUE runtime:", asdict(blue_runtime))
-    print("\nNOTE: submission=0.0, escape=0.40, reversal=0.30 are unresolved structural mechanics placeholders.")
+    print("\nNOTE: submission policy now uses empirical prefight tendency; escape=0.40 and reversal=0.30 remain unresolved structural mechanics placeholders.")
     print("\nSUMMARY")
     print(json.dumps(payload["summary"], indent=2))
     print("\nEVENT TRACE")
