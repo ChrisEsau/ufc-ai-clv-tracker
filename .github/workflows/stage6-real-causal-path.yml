@@ -1,4 +1,4 @@
-name: Stage 6 Real Causal Path Diagnostic
+name: Rakic-Tybura Full Brain Trace
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   actions: read
 
 jobs:
-  real-causal-path:
+  full-brain-trace:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout exact branch head
@@ -37,24 +37,24 @@ jobs:
       - name: Place and verify canonical FSR V3 artifact
         run: |
           test -f data/canonical-weight-class-state/fsr_v3/fsr_v3_latest.parquet
+          test -f data/canonical-weight-class-state/fsr_v3/fsr_v3_prefight_snapshots.parquet
           cp -a data/canonical-weight-class-state/. data/
           test -f data/fsr_v3/fsr_v3_latest.parquet
-          ls -lh data/fsr_v3/fsr_v3_latest.parquet
+          test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
 
-      - name: Run actual Stage 6 100-path full-fight batch
+      - name: Run one Rakic-Tybura path with full brain probabilities
         run: |
           echo "GITHUB_SHA=${GITHUB_SHA}"
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.stage6_real_causal_batch \
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.rakic_tybura_full_brain_trace \
             --red "Aleksandar Rakic" \
             --blue "Marcin Tybura" \
-            --paths 100 \
-            --seed-base 20260825 \
+            --seed 20260825 \
             --horizon 900 \
-            --output data/diagnostics/event_clock_mc_v2/stage6_real_causal_batch_100.json
+            --output data/diagnostics/event_clock_mc_v2/rakic_tybura_full_brain_trace.json
 
-      - name: Upload real causal batch result
+      - name: Upload full brain trace
         uses: actions/upload-artifact@v4
         with:
-          name: stage6-real-causal-batch-100
-          path: data/diagnostics/event_clock_mc_v2/stage6_real_causal_batch_100.json
+          name: rakic-tybura-full-brain-trace
+          path: data/diagnostics/event_clock_mc_v2/rakic_tybura_full_brain_trace.json
           if-no-files-found: error
