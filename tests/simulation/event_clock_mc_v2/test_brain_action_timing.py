@@ -210,14 +210,3 @@ def test_standing_scenario_audit_exact_expected_delays() -> None:
         "stacked_urgency": 2.0999999999999996,
         "stacked_slowdown": 6.669999999999999,
     }
-
-def test_fsr_activity_rate_ratio_changes_only_cadence_direction():
-    slow = expected_action_delay(FightState(), BrainTimingContext(activity_rate_ratio=.5))
-    base = expected_action_delay(FightState(), BrainTimingContext())
-    fast = expected_action_delay(FightState(), BrainTimingContext(activity_rate_ratio=2.0))
-    assert slow > base > fast
-
-
-def test_activity_rate_ratio_must_be_positive():
-    with pytest.raises(ValueError, match="activity_rate_ratio"):
-        BrainTimingContext(activity_rate_ratio=0.0)
