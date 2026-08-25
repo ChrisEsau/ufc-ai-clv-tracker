@@ -5,6 +5,7 @@ on:
     branches: [research/submission-signal-audit-20260825]
     paths:
       - "pipeline/research/submission_signal_audit.py"
+      - "pipeline/research/submission_edge_scale.py"
       - ".github/workflows/submission-signal-audit.yml"
   workflow_dispatch:
 
@@ -37,12 +38,15 @@ jobs:
           test -f data/fight_details/ufc_round_stats.parquet
           test -f data/master/ufc_master.parquet
       - name: Run submission signal audit
-        run: python -m pipeline.research.submission_signal_audit
+        run: |
+          python -m pipeline.research.submission_signal_audit
+          python -m pipeline.research.submission_edge_scale
       - name: Publish summary
         run: |
           python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
           import json
           d=json.load(open('data/diagnostics/submission_signal_audit.json'))
+          e=json.load(open('data/diagnostics/submission_edge_scale.json'))
           a=d['attempt_propensity']; c=d['conversion']; s=d['scope']
           print('# Submission signal audit')
           print(f"fighter-fights: {s['fighter_fights']} · ground-opportunity rows: {s['ground_opportunity_rows']} · attempt-positive: {s['attempt_positive_rows']} · SUB finishes: {s['submission_finish_rows']}")
@@ -52,16 +56,16 @@ jobs:
           print(f"+ tendency AUC: {a['plus_submission_tendency']['auc']} · delta {a['delta_auc']}")
           print(f"Exposure-only log loss: {a['baseline_exposure_only']['log_loss']:.6f}")
           print(f"+ tendency log loss: {a['plus_submission_tendency']['log_loss']:.6f} · delta {a['delta_log_loss']:.6f}")
-          print(f"Spearman tendency vs attempts/ground-min: {a['spearman_tendency_vs_attempts_per_ground_min']:.4f}")
           print('')
           print('## Conversion')
           print(f"Baseline AUC: {c['plus_conversion_baseline']['auc']}")
           print(f"+ offense-defense edge AUC: {c['plus_offense_minus_opponent_defense']['auc']} · delta {c['delta_auc_matchup_vs_baseline']}")
-          print(f"Baseline log loss: {c['plus_conversion_baseline']['log_loss']:.6f}")
-          print(f"+ edge log loss: {c['plus_offense_minus_opponent_defense']['log_loss']:.6f} · delta {c['delta_log_loss_matchup_vs_baseline']:.6f}")
+          print(f"Raw offense-defense beta: {e['raw_coefficients']['offense_defense_edge']}")
           PY
       - uses: actions/upload-artifact@v4
         with:
           name: submission-signal-audit
-          path: data/diagnostics/submission_signal_audit.json
+          path: |
+            data/diagnostics/submission_signal_audit.json
+            data/diagnostics/submission_edge_scale.json
           retention-days: 30
