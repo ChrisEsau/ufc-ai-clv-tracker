@@ -41,6 +41,8 @@ class BrainIntentPriors:
     standing_attempt_rate_15m: float
     takedown_attempt_rate_15m: float
     clinch_entry_to_standing_ratio: float | None = None
+    ground_strike_odds_multiplier: float = 1.0
+    submission_odds_multiplier: float = 1.0
 
     def __post_init__(self) -> None:
         for name, value in (
@@ -64,6 +66,10 @@ class BrainIntentPriors:
             or ratio < 0.0
         ):
             raise ValueError("clinch_entry_to_standing_ratio must be finite and non-negative")
+        for name in ("ground_strike_odds_multiplier", "submission_odds_multiplier"):
+            value = getattr(self, name)
+            if not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
+                raise ValueError(f"{name} must be finite and positive")
 
     @property
     def takedown_to_standing_ratio(self) -> float:
@@ -140,6 +146,14 @@ def action_probabilities_with_intent_priors(
             + log_weights[ActionFamily.CLINCH_STRIKE]
             + context_delta
         )
+    elif state.phase is Phase.GROUND:
+        for action in (ActionFamily.GROUND_STRIKE, ActionFamily.BOTTOM_STRIKE):
+            if action in log_weights:
+                log_weights[action] += math.log(priors.ground_strike_odds_multiplier)
+        if ActionFamily.SUBMISSION_ATTACK in log_weights:
+            log_weights[ActionFamily.SUBMISSION_ATTACK] += math.log(
+                priors.submission_odds_multiplier
+            )
 
     raw = np.asarray([log_weights[action] for action in actions], dtype=float)
     shifted = raw - np.max(raw)

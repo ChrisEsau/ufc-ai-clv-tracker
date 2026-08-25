@@ -7,7 +7,7 @@ from pipeline.simulation.event_clock_mc_v2.brain.intent_priors import (
 )
 from pipeline.simulation.event_clock_mc_v2.brain.policy import BrainDecisionContext
 from pipeline.simulation.event_clock_mc_v2.causal.events import ActionFamily
-from pipeline.simulation.event_clock_mc_v2.causal.state import FightState, Side
+from pipeline.simulation.event_clock_mc_v2.causal.state import FightState, Phase, Side
 
 
 def _probabilities(priors: BrainIntentPriors, capabilities: BrainCapabilities | None = None):
@@ -82,3 +82,12 @@ def test_intent_priors_validate_rate_semantics() -> None:
         BrainIntentPriors(10.0, -1.0)
     with pytest.raises(ValueError):
         BrainIntentPriors(10.0, 1.0, clinch_entry_to_standing_ratio=-.1)
+
+def test_ground_structural_multipliers_raise_strikes_and_reduce_submissions():
+    state = FightState(phase=Phase.GROUND, ground_controller=Side.RED)
+    base = BrainIntentPriors(80.0, 4.0)
+    corrected = BrainIntentPriors(80.0, 4.0, ground_strike_odds_multiplier=3.0, submission_odds_multiplier=0.3)
+    p0 = {r.action_family:r.probability for r in action_probabilities_with_intent_priors(state, Side.RED, BrainCapabilities(.5,.5,.5,.5,.5,.5,.3,.4,.3), BrainDecisionContext(), base)}
+    p1 = {r.action_family:r.probability for r in action_probabilities_with_intent_priors(state, Side.RED, BrainCapabilities(.5,.5,.5,.5,.5,.5,.3,.4,.3), BrainDecisionContext(), corrected)}
+    assert p1[ActionFamily.GROUND_STRIKE] > p0[ActionFamily.GROUND_STRIKE]
+    assert p1[ActionFamily.SUBMISSION_ATTACK] < p0[ActionFamily.SUBMISSION_ATTACK]
