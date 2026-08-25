@@ -9,11 +9,6 @@ on:
       - pipeline/simulation/event_clock_mc_v2/diagnostics/policy_learnability.py
       - pipeline/simulation/event_clock_mc_v2/diagnostics/policy_adaptation_falsification.py
       - .github/workflows/policy-adaptation-falsification.yml
-  pull_request:
-    paths:
-      - pipeline/simulation/event_clock_mc_v2/diagnostics/policy_learnability.py
-      - pipeline/simulation/event_clock_mc_v2/diagnostics/policy_adaptation_falsification.py
-      - .github/workflows/policy-adaptation-falsification.yml
 
 permissions:
   contents: read
