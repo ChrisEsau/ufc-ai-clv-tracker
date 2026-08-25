@@ -58,6 +58,14 @@ jobs:
             --seed-base 20260825 \
             --output data/diagnostics/event_clock_mc_v2/stage8_td_rate_anchor_shadow.json
 
+      - name: Run ground structure decomposition
+        run: |
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.stage8_ground_structure_decomposition \
+            --fights 25 \
+            --paths-per-fight 50 \
+            --seed-base 20260825 \
+            --output data/diagnostics/event_clock_mc_v2/stage8_ground_structure_decomposition.json
+
       - name: Upload diagnostic results
         uses: actions/upload-artifact@v4
         with:
@@ -65,4 +73,5 @@ jobs:
           path: |
             data/diagnostics/event_clock_mc_v2/stage8_td_policy_floor.json
             data/diagnostics/event_clock_mc_v2/stage8_td_rate_anchor_shadow.json
+            data/diagnostics/event_clock_mc_v2/stage8_ground_structure_decomposition.json
           if-no-files-found: error
