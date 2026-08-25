@@ -5,6 +5,7 @@ import argparse, json, math
 from collections import Counter, defaultdict
 from dataclasses import asdict
 from pathlib import Path
+import joblib
 import numpy as np, pandas as pd
 from pipeline.common.paths import (
     EVENT_CLOCK_V2_COHORT_MANIFEST_PATH,
@@ -36,6 +37,8 @@ from pipeline.simulation.event_clock_mc_v2.mechanics.ko_kd_empirical import (
     kd_probability as empirical_kd_probability,
     ko_probability as empirical_ko_probability,
 )
+from pipeline.simulation.event_clock_mc_v2.fit_event_clock_bundle import DEFAULT_BUNDLE_PATH
+from pipeline.simulation.event_clock_mc_v2.judging import Event2JudgeModel
 from pipeline.simulation.event_clock_mc_v2.standard_fighter_v1.capability_translation import (
     CapabilityReference,
 )
@@ -74,6 +77,7 @@ def run(
     output: Path,
     limit: int | None = None,
     ko_kd_architecture: KOKDArchitecture = KOKDArchitecture.EMPIRICAL_EVENT2,
+    event_name: str | None = None,
 ) -> dict:
     manifest = pd.read_csv(
         EVENT_CLOCK_V2_COHORT_MANIFEST_PATH,
@@ -81,15 +85,30 @@ def run(
     )
     validate_manifest(manifest)
     cohort = select_split(manifest, split)
-    if limit:
-        cohort = cohort.head(limit)
     snapshots = load_prefight_snapshots()
     validate_manifest_prefight_contract(manifest, snapshots)
     cutoff = pd.to_datetime(manifest.date).min()
     reference = CapabilityReference.from_prefight_before(snapshots, cutoff)
     mechanics_config, explicit = load_override_file(config_path)
+    bundle = joblib.load(DEFAULT_BUNDLE_PATH)
+    context = bundle["context"]
+    source_judge = context["judge_model"]
+    training_decisions = int(context.get("judge_training_decisions", 0))
+    judge_model = Event2JudgeModel.from_sklearn(source_judge, training_decisions=training_decisions)
+    submission_offset = float(context["conversion_offset"])
     master = pd.read_parquet(MASTER_PATH).drop_duplicates("fight_id")
     master["fight_id"] = master.fight_id.astype(str)
+    if event_name:
+        selected = master[master.event_name.astype(str).eq(event_name)].copy()
+        if selected.empty:
+            raise ValueError(f"event not found: {event_name}")
+        cohort = pd.DataFrame({
+            "bout_id": selected.fight_id.astype(str), "date": selected.date,
+            "red_fighter_id": selected.r_id.astype(str), "blue_fighter_id": selected.b_id.astype(str),
+            "red_fighter": selected.r_name.astype(str), "blue_fighter": selected.b_name.astype(str),
+        })
+    if limit:
+        cohort = cohort.head(limit)
     lookup = master.set_index("fight_id")
     counts = Counter()
     phase = Counter()
@@ -107,6 +126,18 @@ def run(
     ko_prior = Counter()
     ko_path_kds = []
     age_audit_candidates = []
+    winners = Counter()
+    decision_classes = Counter()
+    decision_round_counts = Counter()
+    round_probabilities = []
+    judge_disagreements = 0
+    submission_attempts = submission_successes = 0
+    submission_probabilities = []
+    submission_finish_times = []
+    submission_winner_offense_edges = []
+    submission_loser_defense_edges = []
+    submission_winners = Counter()
+    fight_path_outcomes = defaultdict(Counter)
     for _, item in cohort.iterrows():
         fight = lookup.loc[str(item.bout_id)]
         # Never censor simulated paths at the realized historical finish time.
@@ -122,8 +153,8 @@ def run(
         bc, br = _capabilities(blue, red, reference)
         red_age = age_years_on_date(fight.get("r_dob"), date)
         blue_age = age_years_on_date(fight.get("b_dob"), date)
-        red_mechanics = fighter_mechanics_from_prefight(red, rr, age_years=red_age)
-        blue_mechanics = fighter_mechanics_from_prefight(blue, br, age_years=blue_age)
+        red_mechanics = fighter_mechanics_from_prefight(red, rr, age_years=red_age, submission_conversion_offset=submission_offset)
+        blue_mechanics = fighter_mechanics_from_prefight(blue, br, age_years=blue_age, submission_conversion_offset=submission_offset)
         for side, mechanics, opponent, dob in (
             ("red", red_mechanics, blue_mechanics, fight.get("r_dob")),
             ("blue", blue_mechanics, red_mechanics, fight.get("b_dob")),
@@ -174,6 +205,7 @@ def run(
             ),
             mechanics_calibration=mechanics_config,
             ko_kd_architecture=ko_kd_architecture,
+            judge_model=judge_model,
         )
         chooser = IntentPriorChooser(
             {
@@ -210,6 +242,7 @@ def run(
                         else None
                     ),
                     asdict(result.final_state),
+                    asdict(result.decision) if result.decision else None,
                 )
                 replay_mismatch += int(signature(out) != signature(replay))
             seconds += out.reported_through_seconds
@@ -251,6 +284,10 @@ def run(
                     a in TD and event.resulting_phase.value == "ground"
                 )
                 counts["knockdowns"] += int(event.knockdown)
+                if event.submission_attempt:
+                    submission_attempts += 1
+                    submission_successes += int(event.submission_success)
+                    submission_probabilities.append(event.submission_probability)
                 if event.knockdown:
                     path_knockdowns += 1
                 if (
@@ -299,9 +336,31 @@ def run(
                         )
             if out.termination:
                 finishes[out.termination.finish_method.value] += 1
+                winners[out.termination.winner.value] += 1
+                path_key = str(item.bout_id)
+                fight_path_outcomes[path_key][out.termination.winner.value] += 1
+                fight_path_outcomes[path_key][f"{out.termination.winner.value}_{out.termination.finish_method.value}"] += 1
+                fight_path_outcomes[path_key][out.termination.finish_method.value] += 1
+                fight_path_outcomes[path_key]["paths"] += 1
+                for rounds_line in (1.5, 2.5, 3.5, 4.5):
+                    fight_path_outcomes[path_key][f"under_{rounds_line}"] += int(out.reported_through_seconds < rounds_line * 300)
                 finish_times.append(out.reported_through_seconds)
                 if out.termination.finish_method.value == "ko_tko":
                     ko_path_kds.append(path_knockdowns)
+                if out.termination.finish_method.value == "submission":
+                    submission_finish_times.append(out.reported_through_seconds)
+                    winner_name = str(item.red_fighter if out.termination.winner is Side.RED else item.blue_fighter)
+                    submission_winners[winner_name] += 1
+                    attacker = red_mechanics if out.termination.winner is Side.RED else blue_mechanics
+                    defender = blue_mechanics if out.termination.winner is Side.RED else red_mechanics
+                    submission_winner_offense_edges.append(attacker.submission_offense - defender.submission_offense)
+                    submission_loser_defense_edges.append(defender.submission_defense - attacker.submission_defense)
+            if out.decision:
+                decision_classes[out.decision.classification] += 1
+                decision_round_counts[len(out.decision.round_probabilities)] += 1
+                round_probabilities.extend(out.decision.round_probabilities)
+                judge_disagreements += int(out.decision.classification == "split_decision")
+                fight_path_outcomes[str(item.bout_id)][out.decision.classification] += 1
             path_fingerprints.append(
                 (
                     str(item.bout_id),
@@ -369,7 +428,46 @@ def run(
         "knockdowns_per_fight": counts["knockdowns"] / total_paths,
         "ko_tko_fight_share": finishes["ko_tko"] / total_paths,
         "submission_fight_share": finishes["submission"] / total_paths,
-        "decision_fight_share": (total_paths - sum(finishes.values())) / total_paths,
+        "decision_fight_share": finishes["decision"] / total_paths,
+        "red_path_win_probability": winners["red"] / total_paths,
+        "blue_path_win_probability": winners["blue"] / total_paths,
+        "unanimous_decision_fight_share": decision_classes["unanimous_decision"] / total_paths,
+        "split_decision_fight_share": decision_classes["split_decision"] / total_paths,
+        "decision_winner_allocation": {side: winners[side] / total_paths for side in ("red", "blue")},
+        "round_red_win_probability_distribution": q(round_probabilities),
+        "judge_disagreement_rate_per_decision": judge_disagreements / max(1, finishes["decision"]),
+        "decision_round_count_distribution": {str(k): v / max(1, finishes["decision"]) for k, v in sorted(decision_round_counts.items())},
+        "submission_conversion_rate_per_attempt": submission_successes / max(1, submission_attempts),
+        "mean_submission_conversion_probability": float(np.mean(submission_probabilities)) if submission_probabilities else None,
+        "submission_finish_time_distribution": q(submission_finish_times),
+        "submission_winner_allocation": dict(submission_winners),
+        "submission_offense_edge_among_winners": float(np.mean(submission_winner_offense_edges)) if submission_winner_offense_edges else None,
+        "loser_submission_defense_edge": float(np.mean(submission_loser_defense_edges)) if submission_loser_defense_edges else None,
+        "judge_model": {
+            "source": judge_model.source,
+            "features": list(("sig_diff", "kd_diff", "td_diff", "sub_diff", "ctrl_diff")),
+            "training_decisions": judge_model.training_decisions,
+            "scaler_mean": list(judge_model.scaler_mean), "scaler_scale": list(judge_model.scaler_scale),
+            "intercept": judge_model.intercept, "coefficients": list(judge_model.coefficients),
+        },
+        "submission_model": {"source": "integrated_event2_replay", "conversion_offset": submission_offset},
+        "fight_probabilities": {
+            str(row.bout_id): {
+                "red_fighter": str(row.red_fighter), "blue_fighter": str(row.blue_fighter),
+                "red_moneyline": fight_path_outcomes[str(row.bout_id)]["red"] / max(1, fight_path_outcomes[str(row.bout_id)]["paths"]),
+                "blue_moneyline": fight_path_outcomes[str(row.bout_id)]["blue"] / max(1, fight_path_outcomes[str(row.bout_id)]["paths"]),
+                **{f"{side}_{method}": fight_path_outcomes[str(row.bout_id)][f"{side}_{method}"] / max(1, fight_path_outcomes[str(row.bout_id)]["paths"])
+                   for side in ("red", "blue") for method in ("ko_tko", "submission", "decision")},
+                **{f"fight_{method}": fight_path_outcomes[str(row.bout_id)][method] / max(1, fight_path_outcomes[str(row.bout_id)]["paths"])
+                   for method in ("ko_tko", "submission", "decision")},
+                "unanimous_decision": fight_path_outcomes[str(row.bout_id)]["unanimous_decision"] / max(1, fight_path_outcomes[str(row.bout_id)]["paths"]),
+                "split_decision": fight_path_outcomes[str(row.bout_id)]["split_decision"] / max(1, fight_path_outcomes[str(row.bout_id)]["paths"]),
+                **{f"under_{line}": fight_path_outcomes[str(row.bout_id)][f"under_{line}"] / max(1, fight_path_outcomes[str(row.bout_id)]["paths"])
+                   for line in (1.5, 2.5, 3.5, 4.5)},
+                **{f"over_{line}": 1.0 - fight_path_outcomes[str(row.bout_id)][f"under_{line}"] / max(1, fight_path_outcomes[str(row.bout_id)]["paths"])
+                   for line in (1.5, 2.5, 3.5, 4.5)},
+            } for row in cohort.itertuples()
+        },
         "mean_trauma_per_fighter_15": float(
             np.mean(trauma) * 900 / (seconds / total_paths)
         ),
@@ -400,7 +498,7 @@ def run(
         "mean_favorite_probability": None,
         "predicted_probability_distribution": None,
         "calibration_bins": None,
-        "diagnostic_note": "V2 causal runner has no approved historical judging/probability layer; predictive and allocation diagnostics without an approved outcome mapper are unavailable, not fabricated.",
+        "diagnostic_note": "Decision judging is EVENT2_TOTAL_JUDGE_ROUND_TRANSFER and is not round-calibrated.",
         "simulator_phase_share_note": "Simulator exposure only; UFCStats has no authoritative historical phase-time denominator.",
     }
     invariants = status(dict(inv), replay_mismatch)
@@ -408,7 +506,7 @@ def run(
     verify_frozen_targets(targets)
     comparisons = evaluate({**metrics, **invariants["counts"]}, targets)
     identity = {
-        "cohort_version": COHORT_VERSION,
+        "cohort_version": event_name or COHORT_VERSION,
         "cohort_manifest_digest": artifact_digest(EVENT_CLOCK_V2_COHORT_MANIFEST_PATH),
         "cohort_split": split,
         "fight_count": len(cohort),
@@ -442,6 +540,7 @@ def main():
     p.add_argument("--paths-per-fight", type=int, default=50)
     p.add_argument("--calibration-config", type=Path)
     p.add_argument("--limit", type=int)
+    p.add_argument("--event-name")
     p.add_argument(
         "--ko-kd-architecture",
         type=KOKDArchitecture,
@@ -461,6 +560,7 @@ def main():
                 output=a.output,
                 limit=a.limit,
                 ko_kd_architecture=a.ko_kd_architecture,
+                event_name=a.event_name,
             ),
             indent=2,
         )

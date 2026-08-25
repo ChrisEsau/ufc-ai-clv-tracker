@@ -96,6 +96,7 @@ class FinishMethod(str, Enum):
 
     SUBMISSION = "submission"
     KO_TKO = "ko_tko"
+    DECISION = "decision"
 
 
 @dataclass(frozen=True)
@@ -112,7 +113,21 @@ class FightTerminationRequest:
             raise ValueError("finish_method must be a FinishMethod value")
 
 
-MechanicsConsequence = StrikeConsequence | FightTerminationRequest
+@dataclass(frozen=True)
+class SubmissionConsequence:
+    attempted: bool
+    conversion_probability: float
+    success: bool
+    termination: FightTerminationRequest | None = None
+
+    def __post_init__(self) -> None:
+        if not 0.0 <= self.conversion_probability <= 1.0:
+            raise ValueError("submission conversion probability must be in [0, 1]")
+        if self.success != (self.termination is not None):
+            raise ValueError("successful submission must have exactly one termination")
+
+
+MechanicsConsequence = StrikeConsequence | FightTerminationRequest | SubmissionConsequence
 
 
 @dataclass(frozen=True)
@@ -137,7 +152,7 @@ class ActionResolution:
         ):
             raise ValueError("transition source_phase must match event source_phase")
         if self.consequence is not None and not isinstance(
-            self.consequence, (StrikeConsequence, FightTerminationRequest)
+            self.consequence, (StrikeConsequence, FightTerminationRequest, SubmissionConsequence)
         ):
             raise ValueError(
                 "consequence must be a typed mechanics consequence or None"

@@ -273,6 +273,9 @@ def test_prefight_power_and_resistance_are_not_age_translated():
         "knockdown_resistance_v3": 0.1,
         "stamina_capacity": 100.0,
         "stamina_depletion_resistance": 60.0,
+        "submission_conversion_baseline": 0.1,
+        "submission_offense": 0.2,
+        "submission_defense": -0.1,
     }
     runtime = SimpleNamespace(
         standing_accuracy=0.5,

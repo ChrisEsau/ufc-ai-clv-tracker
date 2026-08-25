@@ -30,6 +30,9 @@ def row(**updates):
         "knockdown_resistance_v3": 0.15,
         "stamina_capacity": 100.0,
         "stamina_depletion_resistance": 58.0,
+        "submission_conversion_baseline": 0.12,
+        "submission_offense": 0.20,
+        "submission_defense": -0.15,
     }
     values.update(updates)
     return values

@@ -22,11 +22,13 @@ from .resolution import (
     ActionResolution,
     FinishMethod,
     FightTerminationRequest,
+    SubmissionConsequence,
     StrikeConsequence,
     TransitionKind,
     TransitionRequest,
 )
 from .physiology import resolve_strike_consequence
+from .submission import resolve_submission
 
 
 def resolve_action(
@@ -36,6 +38,7 @@ def resolve_action(
     rng: np.random.Generator,
     placeholders: StructuralMVPPlaceholders = StructuralMVPPlaceholders(),
     ko_kd_rng: np.random.Generator | None = None,
+    submission_rng: np.random.Generator | None = None,
 ) -> ActionResolution:
     """Resolve one legal attempt without mutating authoritative state or timeline."""
     validate_action_event(event, state)
@@ -49,6 +52,9 @@ def resolve_action(
         ko_kd_rng = rng
     if not isinstance(ko_kd_rng, np.random.Generator):
         raise ValueError("ko_kd_rng must be a numpy.random.Generator")
+    submission_rng = rng if submission_rng is None else submission_rng
+    if not isinstance(submission_rng, np.random.Generator):
+        raise ValueError("submission_rng must be a numpy.random.Generator")
 
     family = event.action_family
     fighter = inputs.fighter(event.actor)
@@ -138,14 +144,19 @@ def resolve_action(
     if family in {ActionFamily.ADVANCE_POSITION, ActionFamily.IMPROVE_POSITION}:
         return ActionResolution(event, ActionOutcome.MAINTAINED)
     if family is ActionFamily.SUBMISSION_ATTACK:
-        succeeded = _succeeds(fighter.submission_success_probability, rng)
+        probability, succeeded = resolve_submission(
+            fighter.submission_conversion_baseline,
+            fighter.submission_conversion_offset,
+            submission_rng,
+        )
         return ActionResolution(
             event,
             ActionOutcome.SUCCESS if succeeded else ActionOutcome.FAILURE,
-            consequence=(
-                FightTerminationRequest(event.actor, FinishMethod.SUBMISSION)
-                if succeeded
-                else None
+            consequence=SubmissionConsequence(
+                attempted=True,
+                conversion_probability=probability,
+                success=succeeded,
+                termination=(FightTerminationRequest(event.actor, FinishMethod.SUBMISSION) if succeeded else None),
             ),
         )
     if family is ActionFamily.CONTROL:

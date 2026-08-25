@@ -59,6 +59,7 @@ jobs:
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
           test -f data/master/ufc_master.parquet
           test -f data/fight_details/ufc_round_stats.parquet
+          test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
           test "$(python -c 'import yaml; print(yaml.safe_load(open("configs/event_clock_v2/calibration/default.yaml"))["mechanics"])')" = "{}"
 
       - name: Run calibration contract tests
@@ -85,21 +86,21 @@ jobs:
           assert finite(p["simulator_metrics"])
           PY
 
-      - name: A — Legacy Stage-10 baseline (200 fights x 50 paths)
-        run: |
-          python -m pipeline.simulation.event_clock_mc_v2.calibration.runner \
-            --cohort calibration --paths-per-fight 50 \
-            --ko-kd-architecture legacy_stage10 \
-            --calibration-config configs/event_clock_v2/calibration/default.yaml \
-            --output artifacts/event-clock-v2-calibration/legacy-a-ledger.json
-
-      - name: B — Empirical Event2 baseline (200 fights x 50 paths)
+      - name: Judging + submission historical validation (200 fights x 50 paths)
         run: |
           python -m pipeline.simulation.event_clock_mc_v2.calibration.runner \
             --cohort calibration --paths-per-fight 50 \
             --ko-kd-architecture empirical_event2 \
             --calibration-config configs/event_clock_v2/calibration/default.yaml \
-            --output artifacts/event-clock-v2-calibration/empirical-b-ledger.json
+            --output artifacts/event-clock-v2-calibration/judging-submission-200x50.json
+
+      - name: Freedom 250 complete validation (100 paths x 7 fights)
+        run: |
+          python -m pipeline.simulation.event_clock_mc_v2.calibration.runner \
+            --event-name "UFC Freedom 250" --paths-per-fight 100 \
+            --ko-kd-architecture empirical_event2 \
+            --calibration-config configs/event_clock_v2/calibration/default.yaml \
+            --output artifacts/event-clock-v2-calibration/freedom250-100.json
 
       - name: Report baseline metadata
         run: |
@@ -108,7 +109,7 @@ jobs:
           echo "job_name=$GITHUB_JOB" >> "$GITHUB_STEP_SUMMARY"
           python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
           import json
-          for name in ("micro-ledger.json", "legacy-a-ledger.json", "empirical-b-ledger.json"):
+          for name in ("micro-ledger.json", "judging-submission-200x50.json", "freedom250-100.json"):
               d=json.load(open("artifacts/event-clock-v2-calibration/"+name))
               print(f"### {name}")
               print("```json")

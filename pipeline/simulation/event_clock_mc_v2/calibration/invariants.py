@@ -56,6 +56,14 @@ def inspect_path(result) -> dict[str, int]:
                 )
             )
         ),
+        "terminal_outcome_conflict": int(
+            (getattr(result, "decision", None) is not None
+             and getattr(getattr(result.termination, "finish_method", None), "value", None) != "decision")
+            or sum(getattr(e, "submission_success", False) for e in result.events) > 1
+            or sum(getattr(e, "ko_tko", False) for e in result.events) > 1
+            or (any(getattr(e, "submission_success", False) for e in result.events)
+                and any(getattr(e, "ko_tko", False) for e in result.events))
+        ),
     }
 
 

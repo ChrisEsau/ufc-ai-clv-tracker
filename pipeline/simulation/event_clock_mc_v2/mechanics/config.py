@@ -31,6 +31,10 @@ class FighterMechanics:
     stamina_capacity: float = 100.0
     stamina_depletion_resistance: float = 50.0
     age_years: float = 30.0
+    submission_conversion_baseline: float = 0.10
+    submission_offense: float = 0.0
+    submission_defense: float = 0.0
+    submission_conversion_offset: float = 0.0
 
     def __post_init__(self) -> None:
         for field in fields(self)[:6]:
@@ -52,7 +56,7 @@ class FighterMechanics:
                 raise ValueError(f"{field.name} must be finite")
             if field.name == "damage_durability" and value <= 0:
                 raise ValueError("damage_durability must be finite and positive")
-        for field in fields(self)[9:]:
+        for field in fields(self)[9:12]:
             value = getattr(self, field.name)
             if (
                 not isinstance(value, (int, float))
@@ -61,6 +65,11 @@ class FighterMechanics:
                 or value <= 0
             ):
                 raise ValueError(f"{field.name} must be finite and positive")
+        if not 0.0 < self.submission_conversion_baseline < 1.0:
+            raise ValueError("submission_conversion_baseline must be in (0, 1)")
+        for name in ("submission_offense", "submission_defense", "submission_conversion_offset"):
+            if not math.isfinite(getattr(self, name)):
+                raise ValueError(f"{name} must be finite")
 
 
 class KOKDArchitecture(str, Enum):

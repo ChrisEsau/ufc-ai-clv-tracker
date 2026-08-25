@@ -22,6 +22,7 @@ REQUIRED_PREFIGHT_PHYSIOLOGY_COLUMNS = frozenset(
         "event_date", "fight_id", "fighter_id", "striking_power_v3",
         "damage_durability", "knockdown_resistance_v3",
         "stamina_capacity", "stamina_depletion_resistance",
+        "submission_conversion_baseline", "submission_offense", "submission_defense",
     }
 )
 
@@ -69,6 +70,7 @@ def fighter_mechanics_from_prefight(
     ground_escape_probability: float = 0.40,
     ground_reversal_probability: float = 0.30,
     age_years: float = 30.0,
+    submission_conversion_offset: float = 0.0,
 ) -> FighterMechanics:
     """Build mechanics from one exact historical prefight row and matchup runtime."""
     record = dict(prefight_row)
@@ -94,6 +96,10 @@ def fighter_mechanics_from_prefight(
         stamina_capacity=float(record["stamina_capacity"]),
         stamina_depletion_resistance=float(record["stamina_depletion_resistance"]),
         age_years=float(age_years),
+        submission_conversion_baseline=float(record["submission_conversion_baseline"]),
+        submission_offense=float(record["submission_offense"]),
+        submission_defense=float(record["submission_defense"]),
+        submission_conversion_offset=float(submission_conversion_offset),
     )
 
 
