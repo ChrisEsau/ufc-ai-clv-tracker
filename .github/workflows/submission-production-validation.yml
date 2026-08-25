@@ -1,0 +1,71 @@
+name: Submission Production Validation
+
+on:
+  push:
+    branches: [research/submission-signal-audit-20260825]
+    paths:
+      - "pipeline/simulation/event_clock_mc_v2/**"
+      - ".github/workflows/submission-production-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install pytest numpy pandas pyarrow pyyaml scipy scikit-learn joblib
+      - name: Run Event Clock V2 tests
+        run: pytest -q tests/simulation/event_clock_mc_v2
+      - name: Restore canonical historical Brain MC inputs
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 32645607979
+      - name: Install restored canonical inputs
+        run: |
+          cp -a restored/canonical-weight-class-state/. data/
+          test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
+          test -f data/master/ufc_master.parquet
+          test -f data/fight_details/ufc_round_stats.parquet
+          test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
+      - name: Run Fiziev Torres card at 1000 paths
+        run: |
+          mkdir -p artifacts/submission-validation
+          python -m pipeline.simulation.event_clock_mc_v2.event_runner \
+            --event-id 31e1ea6fe6b682f8 \
+            --paths 1000 \
+            --output artifacts/submission-validation/result.json
+      - name: Publish Shara Pereira comparison
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          d=json.load(open('artifacts/submission-validation/result.json'))
+          probs=d['simulator_metrics']['fight_probabilities']
+          rows=probs.values() if isinstance(probs, dict) else probs
+          target=None
+          for f in rows:
+              names=' '.join(str(f.get(k,'')) for k in ('red_fighter','blue_fighter','red','blue','red_name','blue_name'))
+              if 'Shara' in names and 'Pereira' in names:
+                  target=f; break
+          print('# Shara Magomedov vs Michel Pereira — 1000 paths')
+          print('```json')
+          print(json.dumps(target, indent=2))
+          print('```')
+          print(f"invariants: {d['invariant_results']['status']}")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: submission-production-validation
+          path: artifacts/submission-validation/result.json
+          retention-days: 30
