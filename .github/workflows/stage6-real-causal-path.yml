@@ -34,8 +34,10 @@ jobs:
           repository: ${{ github.repository }}
           run-id: 32645607979
 
-      - name: Verify canonical FSR V3 artifact
+      - name: Place and verify canonical FSR V3 artifact
         run: |
+          test -f data/canonical-weight-class-state/fsr_v3/fsr_v3_latest.parquet
+          cp -a data/canonical-weight-class-state/. data/
           test -f data/fsr_v3/fsr_v3_latest.parquet
           ls -lh data/fsr_v3/fsr_v3_latest.parquet
 
