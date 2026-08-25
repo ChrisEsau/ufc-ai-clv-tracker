@@ -1,0 +1,88 @@
+name: Shara Pereira Brain MC Diagnostic
+
+on:
+  push:
+    branches: [feature/brain-mc-event-runner]
+    paths:
+      - ".github/workflows/shara-pereira-diagnostic.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EXPECTED_SOURCE_DIGEST: sha256:a6abd062322eaf0c4a47997f215d7fa82c01c7db2755089fad1a30420da7d639
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install numpy pandas pyarrow pyyaml scipy scikit-learn joblib
+      - name: Restore canonical inputs
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 32645607979
+      - name: Diagnose Shara vs Pereira inputs
+        run: |
+          cp -a restored/canonical-weight-class-state/. data/
+          python - <<'PY' > /tmp/shara.json
+          import json, pandas as pd
+          from dataclasses import asdict
+          from pipeline.common.paths import MASTER_PATH, EVENT_CLOCK_V2_COHORT_MANIFEST_PATH
+          from pipeline.simulation.event_clock_mc_v2.fsr_v3_adapter import load_prefight_snapshots, historical_fighter_rows
+          from pipeline.simulation.event_clock_mc_v2.standard_fighter_v1.capability_translation import CapabilityReference, prior_snapshot_count, translate_capability
+          from pipeline.simulation.event_clock_mc_v2.physiology_adapter import age_years_on_date, fighter_mechanics_from_prefight
+          import joblib
+          from pipeline.simulation.event_clock_mc_v2.fit_event_clock_bundle import DEFAULT_BUNDLE_PATH
+
+          master=pd.read_parquet(MASTER_PATH).drop_duplicates('fight_id')
+          row=master[(master.r_name.astype(str).eq('Shara Magomedov')) & (master.b_name.astype(str).eq('Michel Pereira'))]
+          if row.empty:
+              row=master[(master.r_name.astype(str).eq('Michel Pereira')) & (master.b_name.astype(str).eq('Shara Magomedov'))]
+          if len(row)!=1: raise RuntimeError(f'fight rows={len(row)}')
+          fight=row.iloc[0]
+          fid=str(fight.fight_id); date=pd.Timestamp(fight.date)
+          snapshots=load_prefight_snapshots()
+          manifest=pd.read_csv(EVENT_CLOCK_V2_COHORT_MANIFEST_PATH)
+          cutoff=pd.to_datetime(manifest.date).min()
+          ref=CapabilityReference.from_prefight_before(snapshots, cutoff)
+          red,blue=historical_fighter_rows(snapshots,event_date=date,fight_id=fid,fighter_ids=(str(fight.r_id),str(fight.b_id)))
+          rprior=prior_snapshot_count(snapshots,fighter_id=str(fight.r_id),event_date=date)
+          bprior=prior_snapshot_count(snapshots,fighter_id=str(fight.b_id),event_date=date)
+          rt=translate_capability(red,blue,ref,prior_ufc_fights=rprior)
+          bt=translate_capability(blue,red,ref,prior_ufc_fights=bprior)
+          bundle=joblib.load(DEFAULT_BUNDLE_PATH); off=float(bundle['context']['conversion_offset'])
+          rm=fighter_mechanics_from_prefight(red, rt, age_years=age_years_on_date(fight.get('r_dob'),date), submission_conversion_offset=off)
+          bm=fighter_mechanics_from_prefight(blue, bt, age_years=age_years_on_date(fight.get('b_dob'),date), submission_conversion_offset=off)
+          def compact_series(s):
+              keep=[k for k in s.index if any(x in k.lower() for x in ['standing','strike','power','durab','knock','takedown','ground','submission','stamina','control'])]
+              out={}
+              for k in keep:
+                  v=s[k]
+                  try: v=float(v)
+                  except: continue
+                  if pd.notna(v): out[k]=v
+              return out
+          payload={
+            'fight_id':fid,'date':date.date().isoformat(),'red':str(fight.r_name),'blue':str(fight.b_name),
+            'red_prior_ufc_fights':rprior,'blue_prior_ufc_fights':bprior,
+            'red_capability_translation':asdict(rt),'blue_capability_translation':asdict(bt),
+            'red_mechanics':asdict(rm),'blue_mechanics':asdict(bm),
+            'red_prefight_relevant':compact_series(red),'blue_prefight_relevant':compact_series(blue),
+          }
+          print(json.dumps(payload,indent=2,default=str))
+          PY
+          cat /tmp/shara.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shara-pereira-diagnostic
+          path: /tmp/shara.json
+          retention-days: 30
