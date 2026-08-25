@@ -1,143 +1,68 @@
-name: FSR V3 Canonical C Validation
+name: Event Clock V2 Dynamic Fighter Policy Prototype
 
 on:
+  workflow_dispatch:
   push:
     branches:
-      - "feature/fsr-v3"
+      - research/weight-class-audit-20260823
     paths:
-      - "pipeline/fsr_v3/active_config.py"
-      - "pipeline/fsr_v3/active_traits.py"
-      - "pipeline/fsr_v3/build_canonical.py"
-      - "pipeline/fsr_v3/replay/escape.py"
-      - "pipeline/fsr_v3/replay/kd_resistance.py"
-      - "pipeline/fsr_v3/paths.py"
-      - "pipeline/simulation/event_clock_mc_v2/canonical_c.py"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/canonical_c_validation.py"
-      - "pipeline/simulation/event_clock_mc_v2/fit_event_clock_bundle.py"
-      - "tests/fsr_v3/test_active_traits_v3.py"
       - ".github/workflows/fsr-v3-canonical-c.yml"
-  pull_request:
-    paths:
-      - "pipeline/fsr_v3/active_config.py"
-      - "pipeline/fsr_v3/active_traits.py"
-      - "pipeline/fsr_v3/build_canonical.py"
-      - "pipeline/fsr_v3/replay/escape.py"
-      - "pipeline/fsr_v3/replay/kd_resistance.py"
-      - "pipeline/fsr_v3/paths.py"
-      - "pipeline/simulation/event_clock_mc_v2/canonical_c.py"
-      - "pipeline/simulation/event_clock_mc_v2/diagnostics/canonical_c_validation.py"
-      - "pipeline/simulation/event_clock_mc_v2/fit_event_clock_bundle.py"
-      - "tests/fsr_v3/test_active_traits_v3.py"
-      - ".github/workflows/fsr-v3-canonical-c.yml"
-  workflow_dispatch:
+      - "pipeline/simulation/event_clock_mc_v2/diagnostics/dynamic_fighter_policy_prototype.py"
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
-  canonical-c:
+  diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 45
     env:
       PYTHONPATH: .
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
       - name: Install focused dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install numpy pandas scipy scikit-learn statsmodels joblib pyarrow pyyaml pytest
-
-      - name: Compile canonical C modules
+          python -m pip install numpy pandas pyarrow scipy scikit-learn joblib pyyaml
+      - name: Download frozen canonical research state
+        uses: actions/download-artifact@v4
+        with:
+          name: canonical-weight-class-state
+          path: data
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ChrisEsau/ufc-ai-clv-tracker
+          run-id: 32645607979
+      - name: Download frozen bantamweight market audit
+        uses: actions/download-artifact@v4
+        with:
+          name: event-clock-v2-bantamweight-market-edge-audit
+          path: /tmp/market_edge
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ChrisEsau/ufc-ai-clv-tracker
+          run-id: 32726886999
+      - name: Verify dynamic policy inputs
         run: |
-          python -m py_compile pipeline/fsr_v3/active_config.py
-          python -m py_compile pipeline/fsr_v3/active_traits.py
-          python -m py_compile pipeline/fsr_v3/build_canonical.py
-          python -m py_compile pipeline/fsr_v3/replay/escape.py
-          python -m py_compile pipeline/fsr_v3/replay/kd_resistance.py
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/canonical_c.py
-          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/canonical_c_validation.py
-
-      - name: Run active-trait regression tests
-        run: pytest -q tests/fsr_v3/test_active_traits_v3.py
-
-      - name: Build frozen FSR V2 source histories
-        run: python -m pipeline.fsr_v2.build --all
-
-      - name: Publish frozen FSR V2 source snapshots
-        run: python -m pipeline.fsr_v2.publish
-
-      - name: Build final canonical FSR V3
-        run: python -m pipeline.fsr_v3.build_canonical
-
-      - name: Verify canonical active trait publication
-        run: |
-          python - <<'PY'
-          import pandas as pd
-          from pipeline.fsr_v3.paths import (
-              FSR_V3_PREFIGHT_SNAPSHOTS_PATH,
-              FSR_V3_PREFIGHT_UNCERTAINTY_PATH,
-              KD_RESISTANCE_HISTORY_PATH,
-          )
-          fsr = pd.read_parquet(FSR_V3_PREFIGHT_SNAPSHOTS_PATH)
-          unc = pd.read_parquet(FSR_V3_PREFIGHT_UNCERTAINTY_PATH)
-          kd = pd.read_parquet(KD_RESISTANCE_HISTORY_PATH)
-          required = {"escape_offense", "escape_defense", "escape_population_mean_seconds", "knockdown_resistance_v3"}
-          missing = required.difference(fsr.columns)
-          assert not missing, missing
-          assert not fsr[list(required)].isna().any().any()
-          assert set(unc.loc[unc.sampling_enabled.astype(bool), "trait"]) == {
-              "takedown_tendency", "takedown_suppression",
-              "standing_striking_tendency", "standing_striking_suppression",
-          }
-          validated_kd = kd[kd.validated_regime.astype(bool)]
-          assert len(validated_kd) > 0
-          assert validated_kd.variance_multiplier.eq(1.0).all()
-          assert validated_kd.sampling_enabled.astype(bool).all()
-          print("PASS — final active V3 interface is complete and KD uncertainty remains native-normal")
-          PY
-
-      - name: Patch incomplete-row cohort guard in CI checkout only
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          path = Path("pipeline/simulation/event_mc_v1/diagnostics/fresh_100_fight_predictive_replay.py")
-          text = path.read_text()
-          old = '''            and method in METHODS\n            and int(row["total_rounds"]) in {3, 5}\n            and pd.notna(row["match_time_sec"])\n'''
-          new = '''            and method in METHODS\n            and pd.notna(row["total_rounds"])\n            and int(row["total_rounds"]) in {3, 5}\n            and pd.notna(row["match_time_sec"])\n'''
-          if old not in text:
-              raise RuntimeError("Expected frozen cohort-selector block not found")
-          path.write_text(text.replace(old, new, 1))
-          print("Applied CI-only null guard; frozen repository source unchanged")
-          PY
-
-      - name: Fit frozen Event Clock V1 parent bundle
-        run: python -m pipeline.simulation.event_clock_mc_v1.fit_event_clock_bundle
-
-      - name: Fit Event Clock V2 direct bundle from final V3
-        run: python -m pipeline.simulation.event_clock_mc_v2.fit_event_clock_bundle
-
-      - name: Run canonical C only — 150 fights x 500 paths
+          test -f data/master/ufc_master.parquet
+          test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
+          test -f /tmp/market_edge/bet_level_audit.csv
+          python -m py_compile pipeline/simulation/event_clock_mc_v2/diagnostics/dynamic_fighter_policy_prototype.py
+          mkdir -p data/diagnostics/event_clock_mc_v2/dynamic_fighter_policy_prototype
+      - name: Run dynamic fighter policy prototype
         run: |
           set -o pipefail
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.canonical_c_validation \
-            --paths 500 --quota-per-bucket 50 2>&1 | tee /tmp/canonical_c.log
-
-      - name: Print canonical C headline
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.dynamic_fighter_policy_prototype \
+            2>&1 | tee /tmp/dynamic_fighter_policy_prototype.log
+      - name: Print dynamic fighter policy prototype
         if: always()
-        run: |
-          if [ -f /tmp/canonical_c.log ]; then
-            tail -n 120 /tmp/canonical_c.log
-          fi
-
-      - name: Upload canonical C outputs
+        run: cat /tmp/dynamic_fighter_policy_prototype.log || true
+      - name: Upload dynamic fighter policy prototype
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: fsr-v3-canonical-c
-          path: data/diagnostics/event_clock_mc_v2/canonical_c/*.csv
+          name: event-clock-v2-dynamic-fighter-policy-prototype
+          path: data/diagnostics/event_clock_mc_v2/dynamic_fighter_policy_prototype/*.csv
           if-no-files-found: warn
