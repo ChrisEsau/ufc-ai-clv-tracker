@@ -33,6 +33,9 @@ from pipeline.simulation.event_clock_mc_v1.prototype_stage1 import build_histori
 from pipeline.simulation.event_clock_mc_v1.prototype_stage2 import CUTOFF, TRAIN_MAX_FIGHTS
 from pipeline.simulation.event_clock_mc_v2.feature_builder import build_feature_rows_v3
 from pipeline.simulation.event_clock_mc_v2.inference import fit_inference_models_v3
+from pipeline.simulation.event_clock_mc_v2.physiology_adapter import (
+    legacy_power_equivalent,
+)
 
 DEFAULT_BUNDLE_PATH = Path("data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib")
 DEFAULT_MANIFEST_PATH = Path("data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle_manifest.json")
@@ -53,33 +56,6 @@ def load_v1_parent(path):
     if payload.get("schema_version") != 2:
         raise RuntimeError(f"Expected V1 bundle schema 2, got {payload.get('schema_version')!r}")
     return payload
-
-
-def legacy_power_equivalent(v3_latent_power) -> np.ndarray:
-    """Translate native V3 power into the rating coordinate frozen V1 expects.
-
-    V3 power is a logit effect on KD probability per landed significant strike.
-    Frozen Event Clock KD uses
-
-        kd_power_beta * (striking_power - 50)
-
-    so the semantics-preserving coordinate transform is exactly
-
-        striking_power_equivalent = 50 + v3_latent / kd_power_beta
-
-    This is not fitted to Event Clock outcomes and is not clipped.  It simply
-    changes coordinates so the frozen KD coefficient applies a unit coefficient
-    to the validated V3 latent effect.  The frozen KO coefficient then implies
-    ~0.964 logit per latent unit, close to the independently held-out power
-    consequence fit (~0.934) without retuning the KO system.
-    """
-    beta = float(ShadowKOKDCalibration().kd_power_beta)
-    if not np.isfinite(beta) or beta <= 0.0:
-        raise RuntimeError(f"invalid frozen KD power beta: {beta}")
-    latent = np.asarray(v3_latent_power, dtype=float)
-    if not np.isfinite(latent).all():
-        raise RuntimeError("non-finite V3 striking power latent")
-    return 50.0 + latent / beta
 
 
 def overlay_v3_power_on_frozen_profiles(

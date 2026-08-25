@@ -23,6 +23,9 @@ from pipeline.simulation.event_clock_mc_v2.fsr_v3_adapter import (
     load_latest_profiles,
     load_prefight_snapshots,
 )
+from pipeline.simulation.event_clock_mc_v2.physiology_adapter import (
+    fighter_mechanics_from_prefight,
+)
 from pipeline.simulation.event_clock_mc_v2.standard_fighter_v1.capability_translation import (
     CapabilityReference,
 )
@@ -64,6 +67,7 @@ def main():
     p.add_argument("--ground-strike-multiplier", type=float, default=3.0)
     p.add_argument("--submission-multiplier", type=float, default=0.3)
     p.add_argument("--seed-base", type=int, default=20260826)
+    p.add_argument("--physiology", choices=("canonical", "neutral"), default="canonical")
     p.add_argument(
         "--output",
         type=Path,
@@ -121,12 +125,28 @@ def main():
         rid, bid = str(fight["r_id"]), str(fight["b_id"])
         rc, rr = _capabilities(rf, bf, reference)
         bc, br = _capabilities(bf, rf, reference)
+        red_mechanics = (
+            fighter_mechanics_from_prefight(rf, rr)
+            if a.physiology == "canonical"
+            else _mechanics(rr)
+        )
+        blue_mechanics = (
+            fighter_mechanics_from_prefight(bf, br)
+            if a.physiology == "canonical"
+            else _mechanics(br)
+        )
         inp = EngineInputs(
             FighterEngineInputs(
-                rc, BrainTimingContext(), BrainDecisionContext(), _mechanics(rr)
+                rc,
+                BrainTimingContext(),
+                BrainDecisionContext(),
+                red_mechanics,
             ),
             FighterEngineInputs(
-                bc, BrainTimingContext(), BrainDecisionContext(), _mechanics(br)
+                bc,
+                BrainTimingContext(),
+                BrainDecisionContext(),
+                blue_mechanics,
             ),
         )
         chooser = IntentPriorChooser(
@@ -252,6 +272,7 @@ def main():
         "fights": len(chosen),
         "paths_per_fight": a.paths_per_fight,
         "total_paths": len(chosen) * a.paths_per_fight,
+        "physiology": a.physiology,
         "clinch_ratio": a.clinch_ratio,
         "ground_strike_multiplier": a.ground_strike_multiplier,
         "submission_multiplier": a.submission_multiplier,

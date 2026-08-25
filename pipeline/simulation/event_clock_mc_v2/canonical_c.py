@@ -14,9 +14,9 @@ from dataclasses import replace
 import numpy as np
 import pandas as pd
 
-from pipeline.fsr_v3.active_config import ActiveTraitConfig
 from pipeline.fsr_v3.paths import KD_RESISTANCE_HISTORY_PATH
 from pipeline.simulation.event_mc_v1.components.profiles import MatchupProfiles
+from pipeline.simulation.event_clock_mc_v2.physiology_adapter import legacy_kdres_equivalent
 
 
 def load_kd_resistance_history() -> pd.DataFrame:
@@ -62,20 +62,6 @@ def sample_kd_resistance_latent(
     if not validated or multiplier <= 0.0 or sd <= 0.0:
         return mean
     return float(rng.normal(mean, sd * np.sqrt(multiplier)))
-
-
-def legacy_kdres_equivalent(
-    native_resistance,
-    config: ActiveTraitConfig | None = None,
-):
-    config = config or ActiveTraitConfig()
-    beta = float(config.frozen_event_clock_kdres_beta)
-    if not np.isfinite(beta) or beta >= 0.0:
-        raise RuntimeError(f"invalid frozen KD-resistance beta: {beta}")
-    latent = np.asarray(native_resistance, dtype=float)
-    if not np.isfinite(latent).all():
-        raise ValueError("non-finite native KD resistance")
-    return 50.0 - latent / beta
 
 
 def fight_with_kd_resistance(
