@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import numpy as np
 
-from pipeline.simulation.event_clock_mc_v2.causal.events import ActionEvent, ActionFamily
+from pipeline.simulation.event_clock_mc_v2.causal.events import (
+    ActionEvent,
+    ActionFamily,
+)
 from pipeline.simulation.event_clock_mc_v2.causal.legality import validate_action_event
 from pipeline.simulation.event_clock_mc_v2.causal.state import FightState, Phase
 
@@ -41,7 +44,9 @@ def resolve_action(
     fighter = inputs.fighter(event.actor)
 
     if family in {ActionFamily.STAND_ATTACK, ActionFamily.STAND_COUNTER}:
-        return _strike(event, state, inputs, fighter.standing_strike_landing_probability, rng)
+        return _strike(
+            event, state, inputs, fighter.standing_strike_landing_probability, rng
+        )
     if family is ActionFamily.PRESSURE or family is ActionFamily.RESET_RANGE:
         return ActionResolution(event, ActionOutcome.TACTICAL)
     if family is ActionFamily.CLINCH_ENTRY:
@@ -63,11 +68,16 @@ def resolve_action(
             success_outcome=ActionOutcome.SUCCESS,
             failure_outcome=ActionOutcome.STUFFED,
             transition=TransitionRequest(
-                TransitionKind.DIRECT_TAKEDOWN, Phase.STANDING, Phase.GROUND, event.actor
+                TransitionKind.DIRECT_TAKEDOWN,
+                Phase.STANDING,
+                Phase.GROUND,
+                event.actor,
             ),
         )
     if family is ActionFamily.CLINCH_STRIKE:
-        return _strike(event, state, inputs, placeholders.clinch_strike_landing_probability, rng)
+        return _strike(
+            event, state, inputs, placeholders.clinch_strike_landing_probability, rng
+        )
     if family is ActionFamily.CLINCH_CONTROL:
         return ActionResolution(event, ActionOutcome.CONTROLLED)
     if family is ActionFamily.CLINCH_TAKEDOWN:
@@ -93,7 +103,9 @@ def resolve_action(
             ),
         )
     if family in {ActionFamily.GROUND_STRIKE, ActionFamily.BOTTOM_STRIKE}:
-        return _strike(event, state, inputs, fighter.ground_strike_landing_probability, rng)
+        return _strike(
+            event, state, inputs, fighter.ground_strike_landing_probability, rng
+        )
     if family in {ActionFamily.ADVANCE_POSITION, ActionFamily.IMPROVE_POSITION}:
         return ActionResolution(event, ActionOutcome.MAINTAINED)
     if family is ActionFamily.SUBMISSION_ATTACK:
@@ -142,12 +154,18 @@ def resolve_action(
     raise ValueError(f"no mechanics resolver for {family.value}")
 
 
-def _strike(event: ActionEvent, state: FightState, inputs: MechanicsInputs, probability: float, rng: np.random.Generator) -> ActionResolution:
+def _strike(
+    event: ActionEvent,
+    state: FightState,
+    inputs: MechanicsInputs,
+    probability: float,
+    rng: np.random.Generator,
+) -> ActionResolution:
     landed = _succeeds(probability, rng)
     return ActionResolution(
         event,
         ActionOutcome.LANDED if landed else ActionOutcome.MISSED,
-        consequence=resolve_landed_strike(event,state,inputs,landed,rng),
+        consequence=resolve_landed_strike(event, state, inputs, landed, rng),
     )
 
 

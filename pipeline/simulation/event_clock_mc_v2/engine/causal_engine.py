@@ -28,9 +28,20 @@ from pipeline.simulation.event_clock_mc_v2.brain.timing import (
     DEFAULT_BRAIN_TIMING_CONFIG,
     sample_next_action_delay,
 )
-from pipeline.simulation.event_clock_mc_v2.causal.events import ActionEvent, ActionFamily
-from pipeline.simulation.event_clock_mc_v2.causal.state import FightState, FighterMemory, Phase, Side
-from pipeline.simulation.event_clock_mc_v2.causal.timeline import PhaseSegment, PhaseTimeline
+from pipeline.simulation.event_clock_mc_v2.causal.events import (
+    ActionEvent,
+    ActionFamily,
+)
+from pipeline.simulation.event_clock_mc_v2.causal.state import (
+    FightState,
+    FighterMemory,
+    Phase,
+    Side,
+)
+from pipeline.simulation.event_clock_mc_v2.causal.timeline import (
+    PhaseSegment,
+    PhaseTimeline,
+)
 from pipeline.simulation.event_clock_mc_v2.causal.transitions import (
     clinch_takedown,
     direct_takedown,
@@ -54,7 +65,11 @@ from pipeline.simulation.event_clock_mc_v2.mechanics.resolution import (
     TransitionRequest,
 )
 from pipeline.simulation.event_clock_mc_v2.mechanics.resolver import resolve_action
-from pipeline.simulation.event_clock_mc_v2.mechanics.physiology import advance_physiology,apply_action_consequence,recover_round
+from pipeline.simulation.event_clock_mc_v2.mechanics.physiology import (
+    advance_physiology,
+    apply_action_consequence,
+    recover_round,
+)
 
 
 @dataclass(frozen=True)
@@ -116,7 +131,9 @@ class EngineConfig:
             or self.round_length_seconds <= 0.0
         ):
             raise ValueError("round_length_seconds must be finite and positive")
-        if isinstance(self.number_of_rounds, bool) or not isinstance(self.number_of_rounds, int):
+        if isinstance(self.number_of_rounds, bool) or not isinstance(
+            self.number_of_rounds, int
+        ):
             raise ValueError("number_of_rounds must be an integer")
         if self.number_of_rounds < 1:
             raise ValueError("number_of_rounds must be at least 1")
@@ -144,13 +161,28 @@ class EngineRNGs:
         return self.red_selection if side is Side.RED else self.blue_selection
 
 
-TimingSampler = Callable[[FightState, BrainTimingContext, np.random.Generator, BrainTimingConfig], float]
+TimingSampler = Callable[
+    [FightState, BrainTimingContext, np.random.Generator, BrainTimingConfig], float
+]
 ActionChooser = Callable[
-    [FightState, Side, BrainCapabilities, BrainDecisionContext, np.random.Generator, BrainPolicyConfig],
+    [
+        FightState,
+        Side,
+        BrainCapabilities,
+        BrainDecisionContext,
+        np.random.Generator,
+        BrainPolicyConfig,
+    ],
     ActionFamily,
 ]
 MechanicsResolver = Callable[
-    [ActionEvent, FightState, MechanicsInputs, np.random.Generator, StructuralMVPPlaceholders],
+    [
+        ActionEvent,
+        FightState,
+        MechanicsInputs,
+        np.random.Generator,
+        StructuralMVPPlaceholders,
+    ],
     ActionResolution,
 ]
 
@@ -231,7 +263,10 @@ def run_causal_path(
     state = initial_state
     timeline = PhaseTimeline.from_state(state)
     rngs = EngineRNGs.from_seed(seed)
-    pending = {item.actor: item for item in initialize_pending_actions(state, inputs, rngs, functions)}
+    pending = {
+        item.actor: item
+        for item in initialize_pending_actions(state, inputs, rngs, functions)
+    }
     events: list[CausalEventRecord] = []
     boundaries: list[RoundBoundaryRecord] = []
     termination: FightTerminationRequest | None = None
@@ -239,18 +274,27 @@ def run_causal_path(
     while not state.finished and state.fight_time_seconds < effective_horizon:
         next_pending = min(
             pending.values(),
-            key=lambda item: (item.scheduled_time_seconds, 0 if item.actor is Side.RED else 1),
+            key=lambda item: (
+                item.scheduled_time_seconds,
+                0 if item.actor is Side.RED else 1,
+            ),
         )
         round_end = state.round_number * config.round_length_seconds
 
         # Boundary wins exact timestamp ties with fighter actions.
-        if round_end <= effective_horizon and round_end <= next_pending.scheduled_time_seconds:
+        if (
+            round_end <= effective_horizon
+            and round_end <= next_pending.scheduled_time_seconds
+        ):
             if state.round_number >= config.number_of_rounds:
                 break
-            state = advance_physiology(state,round_end)
+            state = advance_physiology(state, round_end)
             state = start_next_round(state, timeline, round_end)
             state = recover_round(state)
-            state = replace(state, memory=decay_memory(state.memory, round_end, config.memory_config))
+            state = replace(
+                state,
+                memory=decay_memory(state.memory, round_end, config.memory_config),
+            )
             boundaries.append(RoundBoundaryRecord(round_end, state.round_number))
             pending = {
                 item.actor: item
@@ -263,10 +307,14 @@ def run_causal_path(
 
         actor = next_pending.actor
         timestamp = next_pending.scheduled_time_seconds
-        state = advance_physiology(state,timestamp)
-        state = replace(state,memory=decay_memory(state.memory,timestamp,config.memory_config))
+        state = advance_physiology(state, timestamp)
+        state = replace(
+            state, memory=decay_memory(state.memory, timestamp, config.memory_config)
+        )
         fighter = inputs.fighter(actor)
-        current_context = decision_context(state, actor, fighter.decision_context, effective_horizon)
+        current_context = decision_context(
+            state, actor, fighter.decision_context, effective_horizon
+        )
         selected = functions.action_chooser(
             state,
             actor,
@@ -283,16 +331,28 @@ def run_causal_path(
             rngs.mechanics,
             inputs.mechanics_placeholders,
         )
-        state=apply_action_consequence(state,actor,selected,resolution.consequence,fighter.mechanics)
+        state = apply_action_consequence(
+            state, actor, selected, resolution.consequence, fighter.mechanics
+        )
         material_change = resolution.transition is not None
         if resolution.transition is not None:
-            state = apply_transition_request(state, timeline, resolution.transition, timestamp)
+            state = apply_transition_request(
+                state, timeline, resolution.transition, timestamp
+            )
         state = replace(
             state,
             memory=update_memory(state.memory, resolution, config.memory_config),
         )
 
-        requested_termination=(resolution.consequence if isinstance(resolution.consequence,FightTerminationRequest) else resolution.consequence.termination if isinstance(resolution.consequence,StrikeConsequence) else None)
+        requested_termination = (
+            resolution.consequence
+            if isinstance(resolution.consequence, FightTerminationRequest)
+            else (
+                resolution.consequence.termination
+                if isinstance(resolution.consequence, StrikeConsequence)
+                else None
+            )
+        )
         if requested_termination is not None:
             termination = requested_termination
             state = replace(
@@ -314,8 +374,16 @@ def run_causal_path(
                 _controller(state),
                 current_context,
                 state.memory.fighter(actor),
-                resolution.consequence.impact if isinstance(resolution.consequence,StrikeConsequence) else 0.0,
-                resolution.consequence.knockdown if isinstance(resolution.consequence,StrikeConsequence) else False,
+                (
+                    resolution.consequence.impact
+                    if isinstance(resolution.consequence, StrikeConsequence)
+                    else 0.0
+                ),
+                (
+                    resolution.consequence.knockdown
+                    if isinstance(resolution.consequence, StrikeConsequence)
+                    else False
+                ),
             )
         )
 
@@ -342,7 +410,9 @@ def run_causal_path(
         horizon_seconds=effective_horizon,
         reported_through_seconds=reported_through,
         reached_horizon=not state.finished,
-        final_pending_actions=tuple(sorted(pending.values(), key=lambda item: item.actor.value)),
+        final_pending_actions=tuple(
+            sorted(pending.values(), key=lambda item: item.actor.value)
+        ),
     )
 
 

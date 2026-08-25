@@ -38,8 +38,13 @@ class FighterMechanics:
             if not math.isfinite(value) or not 0.0 <= value <= 1.0:
                 raise ValueError(f"{field.name} must be between 0 and 1")
         for field in fields(self)[6:]:
-            value=getattr(self,field.name)
-            if not isinstance(value,(int,float)) or isinstance(value,bool) or not math.isfinite(value) or value<=0:
+            value = getattr(self, field.name)
+            if (
+                not isinstance(value, (int, float))
+                or isinstance(value, bool)
+                or not math.isfinite(value)
+                or value <= 0
+            ):
                 raise ValueError(f"{field.name} must be finite and positive")
 
 

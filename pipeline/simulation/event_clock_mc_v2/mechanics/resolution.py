@@ -54,7 +54,9 @@ class TransitionRequest:
     def __post_init__(self) -> None:
         if not isinstance(self.kind, TransitionKind):
             raise ValueError("kind must be a TransitionKind")
-        if not isinstance(self.source_phase, Phase) or not isinstance(self.target_phase, Phase):
+        if not isinstance(self.source_phase, Phase) or not isinstance(
+            self.target_phase, Phase
+        ):
             raise ValueError("transition phases must be Phase values")
         expected_source, expected_target = _TRANSITION_TOPOLOGY[self.kind]
         if (self.source_phase, self.target_phase) != (expected_source, expected_target):
@@ -66,7 +68,10 @@ class TransitionRequest:
             raise ValueError("transition controller must be a Side value or None")
         if self.target_phase is Phase.STANDING and self.controller is not None:
             raise ValueError("standing transition cannot request a controller")
-        if self.target_phase in {Phase.CLINCH, Phase.GROUND} and self.controller is None:
+        if (
+            self.target_phase in {Phase.CLINCH, Phase.GROUND}
+            and self.controller is None
+        ):
             raise ValueError("clinch and ground transitions require a controller")
 
 
@@ -119,11 +124,18 @@ class ActionResolution:
             raise ValueError("event must be an ActionEvent")
         if not isinstance(self.outcome, ActionOutcome):
             raise ValueError("outcome must be an ActionOutcome")
-        if self.transition is not None and not isinstance(self.transition, TransitionRequest):
+        if self.transition is not None and not isinstance(
+            self.transition, TransitionRequest
+        ):
             raise ValueError("transition must be a TransitionRequest or None")
-        if self.transition is not None and self.transition.source_phase is not self.event.source_phase:
+        if (
+            self.transition is not None
+            and self.transition.source_phase is not self.event.source_phase
+        ):
             raise ValueError("transition source_phase must match event source_phase")
         if self.consequence is not None and not isinstance(
             self.consequence, (StrikeConsequence, FightTerminationRequest)
         ):
-            raise ValueError("consequence must be a typed mechanics consequence or None")
+            raise ValueError(
+                "consequence must be a typed mechanics consequence or None"
+            )

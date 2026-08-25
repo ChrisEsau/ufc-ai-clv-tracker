@@ -40,11 +40,24 @@ class FighterMemory:
     def __post_init__(self) -> None:
         for name in ("striking_edge", "score_state"):
             value = getattr(self, name)
-            if not isinstance(value, (int, float)) or not math.isfinite(value) or not -1 <= value <= 1:
+            if (
+                not isinstance(value, (int, float))
+                or not math.isfinite(value)
+                or not -1 <= value <= 1
+            ):
                 raise ValueError(f"{name} must be finite and in [-1, 1]")
-        for name in ("td_success_recent", "td_failure_recent", "td_defense_success_recent", "control_success_recent"):
+        for name in (
+            "td_success_recent",
+            "td_failure_recent",
+            "td_defense_success_recent",
+            "control_success_recent",
+        ):
             value = getattr(self, name)
-            if not isinstance(value, (int, float)) or not math.isfinite(value) or not 0 <= value <= 1:
+            if (
+                not isinstance(value, (int, float))
+                or not math.isfinite(value)
+                or not 0 <= value <= 1
+            ):
                 raise ValueError(f"{name} must be finite and in [0, 1]")
 
 
@@ -55,9 +68,15 @@ class FightMemory:
     updated_at_seconds: float = 0.0
 
     def __post_init__(self) -> None:
-        if not isinstance(self.red, FighterMemory) or not isinstance(self.blue, FighterMemory):
+        if not isinstance(self.red, FighterMemory) or not isinstance(
+            self.blue, FighterMemory
+        ):
             raise ValueError("fight memory sides must be FighterMemory")
-        if not isinstance(self.updated_at_seconds, (int, float)) or not math.isfinite(self.updated_at_seconds) or self.updated_at_seconds < 0:
+        if (
+            not isinstance(self.updated_at_seconds, (int, float))
+            or not math.isfinite(self.updated_at_seconds)
+            or self.updated_at_seconds < 0
+        ):
             raise ValueError("updated_at_seconds must be finite and non-negative")
 
     def fighter(self, side: Side) -> FighterMemory:
@@ -69,22 +88,33 @@ class FightMemory:
 @dataclass(frozen=True)
 class FighterPhysiology:
     """Single authoritative V2 stamina, trauma, and acute state."""
+
     stamina: float = 1.0
     cumulative_trauma: float = 0.0
     acute_vulnerability: float = 0.0
     knockdowns_suffered: int = 0
+
     def __post_init__(self):
-        if not 0 <= self.stamina <= 1: raise ValueError("stamina must be in [0, 1]")
-        if self.cumulative_trauma < 0 or self.acute_vulnerability < 0: raise ValueError("physiology values cannot be negative")
-        if isinstance(self.knockdowns_suffered,bool) or not isinstance(self.knockdowns_suffered,int) or self.knockdowns_suffered<0: raise ValueError("knockdowns_suffered must be a non-negative integer")
+        if not 0 <= self.stamina <= 1:
+            raise ValueError("stamina must be in [0, 1]")
+        if self.cumulative_trauma < 0 or self.acute_vulnerability < 0:
+            raise ValueError("physiology values cannot be negative")
+        if (
+            isinstance(self.knockdowns_suffered, bool)
+            or not isinstance(self.knockdowns_suffered, int)
+            or self.knockdowns_suffered < 0
+        ):
+            raise ValueError("knockdowns_suffered must be a non-negative integer")
 
 
 @dataclass(frozen=True)
 class FightPhysiology:
     red: FighterPhysiology = FighterPhysiology()
     blue: FighterPhysiology = FighterPhysiology()
-    def fighter(self,side:Side)->FighterPhysiology:
-        if not isinstance(side,Side): raise ValueError("side must be a Side")
+
+    def fighter(self, side: Side) -> FighterPhysiology:
+        if not isinstance(side, Side):
+            raise ValueError("side must be a Side")
         return self.red if side is Side.RED else self.blue
 
 
@@ -134,10 +164,15 @@ class FightState:
             if self.clinch_controller is not None:
                 raise ValueError("ground cannot carry a clinch controller")
 
-        if not self.finished and (self.winner is not None or self.finish_method is not None):
-            raise ValueError("an unfinished fight cannot have a winner or finish method")
+        if not self.finished and (
+            self.winner is not None or self.finish_method is not None
+        ):
+            raise ValueError(
+                "an unfinished fight cannot have a winner or finish method"
+            )
         if not isinstance(self.memory, FightMemory):
             raise ValueError("memory must be FightMemory")
         if self.memory.updated_at_seconds > self.fight_time_seconds:
             raise ValueError("memory cannot be updated beyond fight time")
-        if not isinstance(self.physiology,FightPhysiology): raise ValueError("physiology must be FightPhysiology")
+        if not isinstance(self.physiology, FightPhysiology):
+            raise ValueError("physiology must be FightPhysiology")

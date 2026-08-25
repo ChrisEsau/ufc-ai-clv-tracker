@@ -6,6 +6,7 @@ has no validated fighter-specific FSR trait yet, so its neutral choice rate is
 represented by an explicit population structural prior instead of inheriting
 wrestling capability.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -65,10 +66,16 @@ class BrainIntentPriors:
             or not math.isfinite(ratio)
             or ratio < 0.0
         ):
-            raise ValueError("clinch_entry_to_standing_ratio must be finite and non-negative")
+            raise ValueError(
+                "clinch_entry_to_standing_ratio must be finite and non-negative"
+            )
         for name in ("ground_strike_odds_multiplier", "submission_odds_multiplier"):
             value = getattr(self, name)
-            if not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
+            if (
+                not isinstance(value, (int, float))
+                or not math.isfinite(value)
+                or value <= 0
+            ):
                 raise ValueError(f"{name} must be finite and positive")
 
     @property
@@ -179,4 +186,6 @@ def choose_action_with_intent_priors(
     rows = action_probabilities_with_intent_priors(
         state, actor, capabilities, context, priors, config
     )
-    return rows[int(rng.choice(len(rows), p=[row.probability for row in rows]))].action_family
+    return rows[
+        int(rng.choice(len(rows), p=[row.probability for row in rows]))
+    ].action_family
