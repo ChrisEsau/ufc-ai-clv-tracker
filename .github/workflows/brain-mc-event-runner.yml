@@ -82,10 +82,10 @@ jobs:
               --paths "$paths" \
               --output artifacts/brain-mc-event/result.json
           else
-            # Initial branch validation: automatically execute the first
-            # canonical UFC event after Freedom 250 at 100 paths/fight.
+            # Branch validation: execute the canonical UFC event immediately
+            # after Kape vs Horiguchi at 100 paths/fight.
             python -m pipeline.simulation.event_clock_mc_v2.event_runner \
-              --next-after-event-name "UFC Freedom 250" \
+              --next-after-event-name "UFC Fight Night: Kape vs. Horiguchi" \
               --paths 100 \
               --output artifacts/brain-mc-event/result.json
           fi
