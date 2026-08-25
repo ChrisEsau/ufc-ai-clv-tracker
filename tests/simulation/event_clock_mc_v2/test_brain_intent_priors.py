@@ -10,15 +10,39 @@ from pipeline.simulation.event_clock_mc_v2.causal.events import ActionFamily
 from pipeline.simulation.event_clock_mc_v2.causal.state import FightState, Side
 
 
-def test_neutral_standing_td_to_strike_odds_equal_fsr_rate_ratio() -> None:
-    capabilities = BrainCapabilities(.5, .5, .5, .5, .95, .5, .3, .4, .3)
-    priors = BrainIntentPriors(standing_attempt_rate_15m=90.0, takedown_attempt_rate_15m=4.5)
+def _probabilities(priors: BrainIntentPriors, capabilities: BrainCapabilities | None = None):
+    capabilities = capabilities or BrainCapabilities(.5, .5, .5, .5, .5, .5, .3, .4, .3)
     rows = action_probabilities_with_intent_priors(
         FightState(), Side.RED, capabilities, BrainDecisionContext(), priors
     )
-    probs = {row.action_family: row.probability for row in rows}
+    return {row.action_family: row.probability for row in rows}
+
+
+def test_neutral_standing_td_to_strike_odds_equal_fsr_rate_ratio() -> None:
+    capabilities = BrainCapabilities(.5, .5, .5, .5, .95, .5, .3, .4, .3)
+    priors = BrainIntentPriors(standing_attempt_rate_15m=90.0, takedown_attempt_rate_15m=4.5)
+    probs = _probabilities(priors, capabilities)
     strike = probs[ActionFamily.STAND_ATTACK] + probs[ActionFamily.STAND_COUNTER]
     assert probs[ActionFamily.TAKEDOWN_ENTRY] / strike == pytest.approx(4.5 / 90.0, rel=1e-12)
+
+
+def test_neutral_clinch_entry_odds_equal_population_prior() -> None:
+    priors = BrainIntentPriors(90.0, 4.5, clinch_entry_to_standing_ratio=.04)
+    probs = _probabilities(priors)
+    strike = probs[ActionFamily.STAND_ATTACK] + probs[ActionFamily.STAND_COUNTER]
+    assert probs[ActionFamily.CLINCH_ENTRY] / strike == pytest.approx(.04, rel=1e-12)
+
+
+def test_clinch_capability_does_not_change_neutral_entry_odds_when_prior_fixed() -> None:
+    low = BrainCapabilities(.5, .5, .5, 0.0, .5, .5, .3, .4, .3)
+    high = BrainCapabilities(.5, .5, .5, 1.0, .5, .5, .3, .4, .3)
+    priors = BrainIntentPriors(80.0, 4.0, clinch_entry_to_standing_ratio=.04)
+    low_probs = _probabilities(priors, low)
+    high_probs = _probabilities(priors, high)
+    low_strike = low_probs[ActionFamily.STAND_ATTACK] + low_probs[ActionFamily.STAND_COUNTER]
+    high_strike = high_probs[ActionFamily.STAND_ATTACK] + high_probs[ActionFamily.STAND_COUNTER]
+    assert low_probs[ActionFamily.CLINCH_ENTRY] / low_strike == pytest.approx(.04, rel=1e-12)
+    assert high_probs[ActionFamily.CLINCH_ENTRY] / high_strike == pytest.approx(.04, rel=1e-12)
 
 
 def test_completion_like_capability_does_not_change_neutral_td_odds_when_priors_fixed() -> None:
@@ -56,3 +80,5 @@ def test_intent_priors_validate_rate_semantics() -> None:
         BrainIntentPriors(0.0, 1.0)
     with pytest.raises(ValueError):
         BrainIntentPriors(10.0, -1.0)
+    with pytest.raises(ValueError):
+        BrainIntentPriors(10.0, 1.0, clinch_entry_to_standing_ratio=-.1)
