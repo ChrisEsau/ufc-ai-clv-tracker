@@ -1,0 +1,60 @@
+name: Event Clock V2 Historical Calibration
+on:
+  workflow_dispatch:
+    inputs:
+      cohort: {description: Cohort split, required: true, default: calibration, type: choice, options: [development, calibration, validation]}
+      paths_per_fight: {description: Paths per fight, required: true, default: '50'}
+      seed_set: {description: Frozen seed set, required: true, default: event_clock_v2_matched_seeds_v1}
+      calibration_config: {description: Repository-relative override YAML, required: true, default: configs/event_clock_v2/calibration/default.yaml}
+      mode: {description: Execution mode, required: true, default: calibration, type: choice, options: [micro, population, calibration, validation]}
+  workflow_call:
+    inputs:
+      cohort: {required: true, type: string}
+      paths_per_fight: {required: true, type: number}
+      seed_set: {required: true, type: string}
+      calibration_config: {required: true, type: string}
+      mode: {required: true, type: string}
+permissions: {contents: read, actions: read}
+jobs:
+  calibration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: '${{ github.sha }}'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m pip install numpy pandas pyarrow pytest pyyaml scipy scikit-learn joblib
+      - name: Restore canonical historical prefight state
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: '${{ github.token }}'
+          repository: '${{ github.repository }}'
+          run-id: 32645607979
+      - name: Verify exact SHA and historical inputs
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          cp -a restored/canonical-weight-class-state/. data/
+          test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
+          test -f data/master/ufc_master.parquet
+          test -f data/fight_details/ufc_round_stats.parquet
+          test "${{ inputs.seed_set }}" = event_clock_v2_matched_seeds_v1
+          test "${{ inputs.cohort }}" != final_holdout
+      - name: Tests and manifest/target validation
+        run: python -m pytest tests/simulation/event_clock_mc_v2/calibration -q
+      - name: Run experiment
+        run: |
+          LIMIT=""
+          if [ "${{ inputs.mode }}" = micro ]; then LIMIT="--limit 5"; fi
+          python -m pipeline.simulation.event_clock_mc_v2.calibration.runner \
+            --cohort "${{ inputs.cohort }}" --paths-per-fight "${{ inputs.paths_per_fight }}" \
+            --calibration-config "${{ inputs.calibration_config }}" $LIMIT \
+            --output artifacts/event-clock-v2-calibration/ledger.json
+          echo "sha=$GITHUB_SHA run_id=$GITHUB_RUN_ID job=$GITHUB_JOB" >> "$GITHUB_STEP_SUMMARY"
+          python -c "import json; d=json.load(open('artifacts/event-clock-v2-calibration/ledger.json')); print(json.dumps({'experiment_id':d['experiment_id'],'run_status':d['run_status'],'invariants':d['invariant_results']},indent=2))" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: event-clock-v2-calibration-${{ inputs.mode }}-${{ github.sha }}
+          path: artifacts/event-clock-v2-calibration/
+          if-no-files-found: error

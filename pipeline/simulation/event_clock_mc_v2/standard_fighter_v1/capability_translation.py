@@ -30,7 +30,6 @@ from pipeline.simulation.event_clock_mc_v2.fsr_v3_adapter import (
 )
 from .policy import Capability
 
-
 NEUTRAL_CLINCH = 0.35
 NEUTRAL_SUBMISSION = 0.30
 NEUTRAL_ESCAPE = 0.40
@@ -77,9 +76,15 @@ class CapabilityReference:
 
     @classmethod
     def from_latest(cls, latest: pd.DataFrame) -> "CapabilityReference":
-        median = traits_from_row(_median_row(latest))
+        """Build the live/latest reference; forbidden in historical calibration."""
+        return cls.from_frame(latest)
+
+    @classmethod
+    def from_frame(cls, frame: pd.DataFrame) -> "CapabilityReference":
+        """Build a fixed reference from an explicitly provenance-bounded frame."""
+        median = traits_from_row(_median_row(frame))
         rows: list[dict[str, float | str]] = []
-        for _, row in latest.iterrows():
+        for _, row in frame.iterrows():
             try:
                 runtime = derive_runtime_inputs(traits_from_row(row), median)
             except Exception:
@@ -101,6 +106,24 @@ class CapabilityReference:
                 f"too few valid FSR V3 profiles for capability reference: {len(runtime)}"
             )
         return cls(runtime=runtime)
+
+    @classmethod
+    def from_prefight_before(
+        cls, snapshots: pd.DataFrame, cutoff
+    ) -> "CapabilityReference":
+        """Chronology-safe calibration reference using only pre-cutoff states."""
+        cutoff_date = pd.Timestamp(cutoff).normalize()
+        dated = snapshots.loc[
+            pd.to_datetime(snapshots["event_date"]).dt.normalize().lt(cutoff_date)
+        ].copy()
+        if dated.empty:
+            raise RuntimeError("no prefight states before capability-reference cutoff")
+        # One last known *historical* state per fighter, all observed before the
+        # earliest fight in the frozen cohort. Future performance cannot enter.
+        dated = dated.sort_values(["event_date", "fight_id"]).drop_duplicates(
+            "fighter_id", keep="last"
+        )
+        return cls.from_frame(dated)
 
 
 @dataclass(frozen=True)
@@ -162,14 +185,18 @@ def translate_capability(
     a median opponent.  Directional attacker-vs-defender runtime inputs are used
     for the audited matchup, so opponent suppression/defense affects capability.
     """
-    runtime = derive_runtime_inputs(traits_from_row(attacker), traits_from_row(defender))
+    runtime = derive_runtime_inputs(
+        traits_from_row(attacker), traits_from_row(defender)
+    )
     pop = reference.runtime
 
     standing_rate_pct = _pct(pop["standing_rate"], runtime.standing_rate_15m)
     standing_acc_pct = _pct(pop["standing_acc"], runtime.standing_accuracy)
     td_rate_pct = _pct(pop["td_rate"], runtime.takedown_rate_15m)
     td_comp_pct = _pct(pop["td_comp"], runtime.takedown_completion)
-    ground_rate_pct = _pct(pop["ground_rate"], runtime.ground_slope_rate_15m_own_control)
+    ground_rate_pct = _pct(
+        pop["ground_rate"], runtime.ground_slope_rate_15m_own_control
+    )
     ground_acc_pct = _pct(pop["ground_acc"], runtime.ground_accuracy)
 
     capability = Capability(

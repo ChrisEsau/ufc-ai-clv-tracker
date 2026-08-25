@@ -67,11 +67,42 @@ class MechanicsInputs:
 
     red: FighterMechanics
     blue: FighterMechanics
+    calibration: MechanicsCalibrationConfig = None  # type: ignore[name-defined]
 
     def fighter(self, side: Side) -> FighterMechanics:
         if not isinstance(side, Side):
             raise ValueError("side must be a Side value")
         return self.red if side is Side.RED else self.blue
+
+
+@dataclass(frozen=True)
+class MechanicsCalibrationConfig:
+    """Small canonical mechanics surface available to calibration research."""
+
+    impact_scale: float = 0.50
+    trauma_durability_divisor: float = 40.0
+    kd_slope: float = 2.0
+    kd_midpoint: float = 36.0
+    finish_slope: float = 2.0
+    finish_midpoint: float = 36.0
+    post_kd_finish_logit_bonus: float = 1.0
+    action_cost_scale: float = 1.0
+    top_position_cost_per_second: float = 0.00025
+    bottom_position_cost_per_second: float = 0.00035
+    round_recovery_fraction: float = 0.40
+
+    def __post_init__(self) -> None:
+        for field in fields(self):
+            value = getattr(self, field.name)
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise ValueError(f"{field.name} must be numeric")
+            if not math.isfinite(value) or value <= 0.0:
+                raise ValueError(f"{field.name} must be finite and positive")
+        if self.round_recovery_fraction > 1.0:
+            raise ValueError("round_recovery_fraction must not exceed 1")
+
+
+DEFAULT_MECHANICS_CALIBRATION_CONFIG = MechanicsCalibrationConfig()
 
 
 @dataclass(frozen=True)

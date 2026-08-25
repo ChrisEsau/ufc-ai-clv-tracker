@@ -11,7 +11,12 @@ from pipeline.simulation.event_clock_mc_v2.causal.events import (
 from pipeline.simulation.event_clock_mc_v2.causal.legality import validate_action_event
 from pipeline.simulation.event_clock_mc_v2.causal.state import FightState, Phase
 
-from .config import MechanicsInputs, StructuralMVPPlaceholders
+from .config import (
+    DEFAULT_MECHANICS_CALIBRATION_CONFIG,
+    MechanicsCalibrationConfig,
+    MechanicsInputs,
+    StructuralMVPPlaceholders,
+)
 from .resolution import (
     ActionOutcome,
     ActionResolution,
@@ -42,10 +47,16 @@ def resolve_action(
 
     family = event.action_family
     fighter = inputs.fighter(event.actor)
+    calibration = inputs.calibration or DEFAULT_MECHANICS_CALIBRATION_CONFIG
 
     if family in {ActionFamily.STAND_ATTACK, ActionFamily.STAND_COUNTER}:
         return _strike(
-            event, state, inputs, fighter.standing_strike_landing_probability, rng
+            event,
+            state,
+            inputs,
+            fighter.standing_strike_landing_probability,
+            rng,
+            calibration,
         )
     if family is ActionFamily.PRESSURE or family is ActionFamily.RESET_RANGE:
         return ActionResolution(event, ActionOutcome.TACTICAL)
@@ -76,7 +87,12 @@ def resolve_action(
         )
     if family is ActionFamily.CLINCH_STRIKE:
         return _strike(
-            event, state, inputs, placeholders.clinch_strike_landing_probability, rng
+            event,
+            state,
+            inputs,
+            placeholders.clinch_strike_landing_probability,
+            rng,
+            calibration,
         )
     if family is ActionFamily.CLINCH_CONTROL:
         return ActionResolution(event, ActionOutcome.CONTROLLED)
@@ -104,7 +120,12 @@ def resolve_action(
         )
     if family in {ActionFamily.GROUND_STRIKE, ActionFamily.BOTTOM_STRIKE}:
         return _strike(
-            event, state, inputs, fighter.ground_strike_landing_probability, rng
+            event,
+            state,
+            inputs,
+            fighter.ground_strike_landing_probability,
+            rng,
+            calibration,
         )
     if family in {ActionFamily.ADVANCE_POSITION, ActionFamily.IMPROVE_POSITION}:
         return ActionResolution(event, ActionOutcome.MAINTAINED)
@@ -160,12 +181,15 @@ def _strike(
     inputs: MechanicsInputs,
     probability: float,
     rng: np.random.Generator,
+    calibration: MechanicsCalibrationConfig = DEFAULT_MECHANICS_CALIBRATION_CONFIG,
 ) -> ActionResolution:
     landed = _succeeds(probability, rng)
     return ActionResolution(
         event,
         ActionOutcome.LANDED if landed else ActionOutcome.MISSED,
-        consequence=resolve_landed_strike(event, state, inputs, landed, rng),
+        consequence=resolve_landed_strike(
+            event, state, inputs, landed, rng, calibration
+        ),
     )
 
 

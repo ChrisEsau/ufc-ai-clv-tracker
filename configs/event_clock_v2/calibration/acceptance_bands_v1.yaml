@@ -1,0 +1,4 @@
+version: event_clock_v2_historical_targets_v1
+source: data/calibration/event_clock_v2/historical_targets_v1.json
+policy: Frozen before candidate parameter search; candidates may not redefine targets.
+aggregate_loss: forbidden

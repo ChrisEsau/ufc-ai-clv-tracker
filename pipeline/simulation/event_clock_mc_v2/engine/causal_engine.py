@@ -52,7 +52,9 @@ from pipeline.simulation.event_clock_mc_v2.causal.transitions import (
     start_next_round,
 )
 from pipeline.simulation.event_clock_mc_v2.mechanics.config import (
+    DEFAULT_MECHANICS_CALIBRATION_CONFIG,
     FighterMechanics,
+    MechanicsCalibrationConfig,
     MechanicsInputs,
     StructuralMVPPlaceholders,
 )
@@ -106,6 +108,9 @@ class EngineInputs:
     timing_config: BrainTimingConfig = DEFAULT_BRAIN_TIMING_CONFIG
     policy_config: BrainPolicyConfig = DEFAULT_BRAIN_POLICY_CONFIG
     mechanics_placeholders: StructuralMVPPlaceholders = StructuralMVPPlaceholders()
+    mechanics_calibration: MechanicsCalibrationConfig = (
+        DEFAULT_MECHANICS_CALIBRATION_CONFIG
+    )
 
     def fighter(self, side: Side) -> FighterEngineInputs:
         if not isinstance(side, Side):
@@ -114,7 +119,9 @@ class EngineInputs:
 
     @property
     def mechanics_inputs(self) -> MechanicsInputs:
-        return MechanicsInputs(self.red.mechanics, self.blue.mechanics)
+        return MechanicsInputs(
+            self.red.mechanics, self.blue.mechanics, self.mechanics_calibration
+        )
 
 
 @dataclass(frozen=True)
@@ -288,9 +295,9 @@ def run_causal_path(
         ):
             if state.round_number >= config.number_of_rounds:
                 break
-            state = advance_physiology(state, round_end)
+            state = advance_physiology(state, round_end, inputs.mechanics_calibration)
             state = start_next_round(state, timeline, round_end)
-            state = recover_round(state)
+            state = recover_round(state, inputs.mechanics_calibration)
             state = replace(
                 state,
                 memory=decay_memory(state.memory, round_end, config.memory_config),
@@ -307,7 +314,7 @@ def run_causal_path(
 
         actor = next_pending.actor
         timestamp = next_pending.scheduled_time_seconds
-        state = advance_physiology(state, timestamp)
+        state = advance_physiology(state, timestamp, inputs.mechanics_calibration)
         state = replace(
             state, memory=decay_memory(state.memory, timestamp, config.memory_config)
         )
@@ -332,7 +339,12 @@ def run_causal_path(
             inputs.mechanics_placeholders,
         )
         state = apply_action_consequence(
-            state, actor, selected, resolution.consequence, fighter.mechanics
+            state,
+            actor,
+            selected,
+            resolution.consequence,
+            fighter.mechanics,
+            inputs.mechanics_calibration,
         )
         material_change = resolution.transition is not None
         if resolution.transition is not None:
