@@ -9,6 +9,13 @@ from typing import Callable
 import numpy as np
 
 from pipeline.simulation.event_clock_mc_v2.brain.capabilities import BrainCapabilities
+from pipeline.simulation.event_clock_mc_v2.brain.memory import (
+    DEFAULT_FIGHT_MEMORY_CONFIG,
+    FightMemoryConfig,
+    decision_context,
+    decay_memory,
+    update_memory,
+)
 from pipeline.simulation.event_clock_mc_v2.brain.policy import (
     BrainDecisionContext,
     BrainPolicyConfig,
@@ -22,7 +29,7 @@ from pipeline.simulation.event_clock_mc_v2.brain.timing import (
     sample_next_action_delay,
 )
 from pipeline.simulation.event_clock_mc_v2.causal.events import ActionEvent, ActionFamily
-from pipeline.simulation.event_clock_mc_v2.causal.state import FightState, Phase, Side
+from pipeline.simulation.event_clock_mc_v2.causal.state import FightState, FighterMemory, Phase, Side
 from pipeline.simulation.event_clock_mc_v2.causal.timeline import PhaseSegment, PhaseTimeline
 from pipeline.simulation.event_clock_mc_v2.causal.transitions import (
     clinch_takedown,
@@ -97,6 +104,7 @@ class EngineInputs:
 class EngineConfig:
     round_length_seconds: float = 300.0
     number_of_rounds: int = 3
+    memory_config: FightMemoryConfig = DEFAULT_FIGHT_MEMORY_CONFIG
 
     def __post_init__(self) -> None:
         if (
@@ -169,6 +177,8 @@ class CausalEventRecord:
     transition_kind: TransitionKind | None
     resulting_phase: Phase
     resulting_controller: Side | None
+    pre_decision_context: BrainDecisionContext
+    resulting_actor_memory: FighterMemory
 
 
 @dataclass(frozen=True)
@@ -234,6 +244,7 @@ def run_causal_path(
             if state.round_number >= config.number_of_rounds:
                 break
             state = start_next_round(state, timeline, round_end)
+            state = replace(state, memory=decay_memory(state.memory, round_end, config.memory_config))
             boundaries.append(RoundBoundaryRecord(round_end, state.round_number))
             pending = {
                 item.actor: item
@@ -246,13 +257,18 @@ def run_causal_path(
 
         actor = next_pending.actor
         timestamp = next_pending.scheduled_time_seconds
-        state = replace(state, fight_time_seconds=timestamp)
+        state = replace(
+            state,
+            fight_time_seconds=timestamp,
+            memory=decay_memory(state.memory, timestamp, config.memory_config),
+        )
         fighter = inputs.fighter(actor)
+        current_context = decision_context(state, actor, fighter.decision_context, effective_horizon)
         selected = functions.action_chooser(
             state,
             actor,
             fighter.capabilities,
-            fighter.decision_context,
+            current_context,
             rngs.selection(actor),
             inputs.policy_config,
         )
@@ -267,6 +283,10 @@ def run_causal_path(
         material_change = resolution.transition is not None
         if resolution.transition is not None:
             state = apply_transition_request(state, timeline, resolution.transition, timestamp)
+        state = replace(
+            state,
+            memory=update_memory(state.memory, resolution, config.memory_config),
+        )
 
         if isinstance(resolution.consequence, FightTerminationRequest):
             termination = resolution.consequence
@@ -287,6 +307,8 @@ def run_causal_path(
                 resolution.transition.kind if resolution.transition else None,
                 state.phase,
                 _controller(state),
+                current_context,
+                state.memory.fighter(actor),
             )
         )
 

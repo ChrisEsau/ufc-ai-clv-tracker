@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+import math
 
 
 class Phase(str, Enum):
@@ -26,6 +27,46 @@ class Side(str, Enum):
 
 
 @dataclass(frozen=True)
+class FighterMemory:
+    """Bounded causal evidence accumulated within this simulated path only."""
+
+    striking_edge: float = 0.0
+    td_success_recent: float = 0.0
+    td_failure_recent: float = 0.0
+    td_defense_success_recent: float = 0.0
+    control_success_recent: float = 0.0
+    score_state: float = 0.0
+
+    def __post_init__(self) -> None:
+        for name in ("striking_edge", "score_state"):
+            value = getattr(self, name)
+            if not isinstance(value, (int, float)) or not math.isfinite(value) or not -1 <= value <= 1:
+                raise ValueError(f"{name} must be finite and in [-1, 1]")
+        for name in ("td_success_recent", "td_failure_recent", "td_defense_success_recent", "control_success_recent"):
+            value = getattr(self, name)
+            if not isinstance(value, (int, float)) or not math.isfinite(value) or not 0 <= value <= 1:
+                raise ValueError(f"{name} must be finite and in [0, 1]")
+
+
+@dataclass(frozen=True)
+class FightMemory:
+    red: FighterMemory = FighterMemory()
+    blue: FighterMemory = FighterMemory()
+    updated_at_seconds: float = 0.0
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.red, FighterMemory) or not isinstance(self.blue, FighterMemory):
+            raise ValueError("fight memory sides must be FighterMemory")
+        if not isinstance(self.updated_at_seconds, (int, float)) or not math.isfinite(self.updated_at_seconds) or self.updated_at_seconds < 0:
+            raise ValueError("updated_at_seconds must be finite and non-negative")
+
+    def fighter(self, side: Side) -> FighterMemory:
+        if not isinstance(side, Side):
+            raise ValueError("side must be a Side")
+        return self.red if side is Side.RED else self.blue
+
+
+@dataclass(frozen=True)
 class FightState:
     """Minimal Stage 1 state, validated at every construction boundary."""
 
@@ -38,6 +79,7 @@ class FightState:
     finished: bool = False
     winner: Side | None = None
     finish_method: str | None = None
+    memory: FightMemory = FightMemory()
 
     def __post_init__(self) -> None:
         if not isinstance(self.phase, Phase):
@@ -71,3 +113,7 @@ class FightState:
 
         if not self.finished and (self.winner is not None or self.finish_method is not None):
             raise ValueError("an unfinished fight cannot have a winner or finish method")
+        if not isinstance(self.memory, FightMemory):
+            raise ValueError("memory must be FightMemory")
+        if self.memory.updated_at_seconds > self.fight_time_seconds:
+            raise ValueError("memory cannot be updated beyond fight time")

@@ -15,6 +15,7 @@ from .policy import (
     action_utilities,
     choose_action,
 )
+from .memory import FightMemoryConfig, decision_context, decay_memory, update_memory
 
 __all__ = [
     "BrainTimingConfig",
@@ -29,4 +30,8 @@ __all__ = [
     "choose_action",
     "expected_action_delay",
     "sample_next_action_delay",
+    "FightMemoryConfig",
+    "decision_context",
+    "decay_memory",
+    "update_memory",
 ]
