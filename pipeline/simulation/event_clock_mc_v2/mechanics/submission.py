@@ -5,10 +5,9 @@ from __future__ import annotations
 from math import exp, log
 import numpy as np
 
-# Chronological historical fit on attempt-positive fighter-fights.  The raw
+# Chronological historical fit on attempt-positive fighter-fights. The raw
 # coefficient is applied to inherited prefight submission_offense minus the
-# opponent's inherited prefight submission_defense.  It was estimated after
-# controlling for attempt count and the existing conversion baseline.
+# opponent's inherited prefight submission_defense.
 SUBMISSION_OFFENSE_DEFENSE_BETA = 4.9075089640448715
 
 
@@ -41,10 +40,12 @@ def stage11c_matchup_probability(
 def resolve_submission(
     baseline: float,
     conversion_offset: float,
-    attacker_offense: float,
-    defender_defense: float,
     rng: np.random.Generator,
+    *,
+    attacker_offense: float = 0.0,
+    defender_defense: float = 0.0,
 ) -> tuple[float, bool]:
+    """Sample one attempt; keyword matchup inputs preserve the legacy call shape."""
     probability = submission_conversion_probability(
         baseline,
         conversion_offset,
