@@ -18,6 +18,13 @@ jobs:
       EXPECTED_SOURCE_DIGEST: sha256:a6abd062322eaf0c4a47997f215d7fa82c01c7db2755089fad1a30420da7d639
     steps:
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            pipeline
+            configs
+            data/master
+            .github
+          sparse-checkout-cone-mode: true
 
       - uses: actions/setup-python@v5
         with:
