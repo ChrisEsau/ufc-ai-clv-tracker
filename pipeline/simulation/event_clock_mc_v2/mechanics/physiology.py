@@ -42,36 +42,27 @@ def resolve_landed_strike(
     attacker = inputs.fighter(event.actor)
     defender = inputs.fighter(event.actor.opponent)
     target = state.physiology.fighter(event.actor.opponent)
-
-    # The migrated Stage-10 formulas operate on multiplicative physiology
-    # effects. Legacy 50-centered ratings are converted by FighterMechanics;
-    # canonical V3 supplies its already-native log effects directly.
-    power = exp(attacker.effective_power_log_effect)
+    power = exp((attacker.striking_power - 50) / 55)
     severity = rng.gamma(1, 2)
     if rng.random() < 0.06:
         severity += rng.gamma(1.25, 4.8)
     impact = max(1e-9, power * severity * 0.5)
     trauma = impact * exp(-(defender.damage_durability - 50) / 40)
     new_trauma = target.cumulative_trauma + trauma
-
-    kd_resistance_log = defender.effective_kd_resistance_log_effect
     resistance = max(
         1e-6,
-        exp(kd_resistance_log)
+        exp((defender.knockdown_resistance - 50) / 32)
         * exp(-new_trauma / 80)
         * exp(-target.acute_vulnerability),
     )
     p_kd = _sigmoid(2 * (log(impact / resistance) - log(36)))
     kd = bool(rng.random() < p_kd)
     acute = 0.5 if kd else 0.0
-
-    # Preserve the frozen 50/50 durability/KD-resistance weighting in log
-    # resistance space. With legacy ratings this is algebraically identical to
-    # exp((((durability + kd_rating) / 2) - 50) / 32).
-    durability_log = (defender.damage_durability - 50) / 32
     finish_resistance = max(
         1e-9,
-        exp(0.5 * (durability_log + kd_resistance_log))
+        exp(
+            ((defender.damage_durability + defender.knockdown_resistance) / 2 - 50) / 32
+        )
         * exp(-new_trauma / 120)
         * exp(-(target.acute_vulnerability + acute)),
     )

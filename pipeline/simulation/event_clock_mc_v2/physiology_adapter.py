@@ -1,13 +1,8 @@
 """Canonical historical FSR-to-causal-physiology translation.
 
-Native V3 power and KD resistance are already logit-scale fighter effects.
-Event Clock V2 consumes those native effects directly at the physiology
-boundary. Inherited durability and stamina ratings remain direct prefight
-values.
-
-The legacy coordinate helpers remain only for compatibility with the older
-profile boundary; the V2 causal physiology adapter does not round-trip native
-latents through those synthetic rating coordinates.
+Native V3 power and KD resistance are latent logit effects.  The coordinate
+changes below preserve the already-approved frozen mechanics coefficients;
+inherited durability and stamina ratings remain direct prefight values.
 """
 from __future__ import annotations
 
@@ -23,30 +18,23 @@ from pipeline.simulation.event_clock_mc_v2.mechanics.config import FighterMechan
 FROZEN_KD_POWER_BETA = 0.020741
 REQUIRED_PREFIGHT_PHYSIOLOGY_COLUMNS = frozenset(
     {
-        "event_date",
-        "fight_id",
-        "fighter_id",
-        "striking_power_v3",
-        "damage_durability",
-        "knockdown_resistance_v3",
-        "stamina_capacity",
-        "stamina_depletion_resistance",
+        "event_date", "fight_id", "fighter_id", "striking_power_v3",
+        "damage_durability", "knockdown_resistance_v3",
+        "stamina_capacity", "stamina_depletion_resistance",
     }
 )
 
 
 def legacy_power_equivalent(native_power):
-    """Legacy profile coordinate preserving beta*(rating-50)=native latent."""
+    """Map native V3 power so beta*(rating-50) equals the native latent."""
     latent = np.asarray(native_power, dtype=float)
     if not np.isfinite(latent).all():
         raise ValueError("non-finite V3 striking power")
     return 50.0 + latent / FROZEN_KD_POWER_BETA
 
 
-def legacy_kdres_equivalent(
-    native_resistance, config: ActiveTraitConfig | None = None
-):
-    """Legacy profile coordinate preserving beta*(rating-50)=-native latent."""
+def legacy_kdres_equivalent(native_resistance, config: ActiveTraitConfig | None = None):
+    """Map positive native resistance to the frozen negative-beta coordinate."""
     beta = float((config or ActiveTraitConfig()).frozen_event_clock_kdres_beta)
     if not math.isfinite(beta) or beta >= 0:
         raise RuntimeError(f"invalid frozen KD-resistance beta: {beta}")
@@ -64,31 +52,11 @@ class PhysiologyTraitMapping:
 
 
 PHYSIOLOGY_TRAIT_MAPPING = {
-    "striking_power_log_effect": PhysiologyTraitMapping(
-        "striking_power_v3",
-        "historical prefight V3 attacker KD-production logit latent",
-        "identity: consumed directly as log power effect",
-    ),
-    "damage_durability": PhysiologyTraitMapping(
-        "damage_durability",
-        "historical prefight inherited 10-90 rating",
-        "identity",
-    ),
-    "knockdown_resistance_log_effect": PhysiologyTraitMapping(
-        "knockdown_resistance_v3",
-        "historical prefight V3 defender KD-resistance logit latent",
-        "identity: consumed directly as log resistance effect",
-    ),
-    "stamina_capacity": PhysiologyTraitMapping(
-        "stamina_capacity",
-        "historical canonical fixed capacity",
-        "identity",
-    ),
-    "stamina_depletion_resistance": PhysiologyTraitMapping(
-        "stamina_depletion_resistance",
-        "historical prefight inherited 10-90 rating",
-        "identity",
-    ),
+    "striking_power": PhysiologyTraitMapping("striking_power_v3", "historical prefight V3 KD-production latent", "50 + latent / 0.020741"),
+    "damage_durability": PhysiologyTraitMapping("damage_durability", "historical prefight inherited 10-90 rating", "identity"),
+    "knockdown_resistance": PhysiologyTraitMapping("knockdown_resistance_v3", "historical prefight V3 resistance latent", "50 - latent / -0.014421"),
+    "stamina_capacity": PhysiologyTraitMapping("stamina_capacity", "historical canonical fixed capacity", "identity"),
+    "stamina_depletion_resistance": PhysiologyTraitMapping("stamina_depletion_resistance", "historical prefight inherited 10-90 rating", "identity"),
 }
 
 
@@ -104,12 +72,8 @@ def fighter_mechanics_from_prefight(
     record = dict(prefight_row)
     missing = REQUIRED_PREFIGHT_PHYSIOLOGY_COLUMNS.difference(record)
     if missing:
-        raise ValueError(
-            f"canonical prefight row missing physiology columns: {sorted(missing)}"
-        )
-    for name in REQUIRED_PREFIGHT_PHYSIOLOGY_COLUMNS.difference(
-        {"event_date", "fight_id", "fighter_id"}
-    ):
+        raise ValueError(f"canonical prefight row missing physiology columns: {sorted(missing)}")
+    for name in REQUIRED_PREFIGHT_PHYSIOLOGY_COLUMNS.difference({"event_date", "fight_id", "fighter_id"}):
         value = float(record[name])
         if not math.isfinite(value):
             raise ValueError(f"non-finite canonical prefight physiology value: {name}")
@@ -122,9 +86,9 @@ def fighter_mechanics_from_prefight(
         submission_success_probability=submission_success_probability,
         ground_escape_probability=ground_escape_probability,
         ground_reversal_probability=ground_reversal_probability,
+        striking_power=float(legacy_power_equivalent(record["striking_power_v3"])),
         damage_durability=float(record["damage_durability"]),
+        knockdown_resistance=float(legacy_kdres_equivalent(record["knockdown_resistance_v3"])),
         stamina_capacity=float(record["stamina_capacity"]),
         stamina_depletion_resistance=float(record["stamina_depletion_resistance"]),
-        striking_power_log_effect=float(record["striking_power_v3"]),
-        knockdown_resistance_log_effect=float(record["knockdown_resistance_v3"]),
     )

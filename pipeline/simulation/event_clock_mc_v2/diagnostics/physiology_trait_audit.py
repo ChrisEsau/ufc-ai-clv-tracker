@@ -1,4 +1,4 @@
-"""Audit canonical prefight physiology inputs without creating data artifacts."""
+"""Audit canonical prefight physiology coordinates without creating data artifacts."""
 
 from __future__ import annotations
 
@@ -9,6 +9,10 @@ from pathlib import Path
 import pandas as pd
 
 from pipeline.simulation.event_clock_mc_v2.fsr_v3_adapter import load_prefight_snapshots
+from pipeline.simulation.event_clock_mc_v2.physiology_adapter import (
+    legacy_kdres_equivalent,
+    legacy_power_equivalent,
+)
 
 
 def _summary(series: pd.Series) -> dict[str, float | int]:
@@ -46,9 +50,9 @@ def main() -> None:
         raise RuntimeError(f"canonical artifact missing required traits: {sorted(missing)}")
     translated = pd.DataFrame(
         {
-            "striking_power_log_effect": frame["striking_power_v3"],
+            "striking_power": legacy_power_equivalent(frame["striking_power_v3"]),
             "damage_durability": frame["damage_durability"],
-            "knockdown_resistance_log_effect": frame["knockdown_resistance_v3"],
+            "knockdown_resistance": legacy_kdres_equivalent(frame["knockdown_resistance_v3"]),
             "stamina_capacity": frame["stamina_capacity"],
             "stamina_depletion_resistance": frame["stamina_depletion_resistance"],
         }
