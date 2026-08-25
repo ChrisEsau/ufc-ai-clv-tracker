@@ -86,6 +86,9 @@ class StrikeConsequence:
     knockdown: bool = False
     acute_increment: float = 0.0
     termination: FightTerminationRequest | None = None
+    ko_probability: float = 0.0
+    prior_defender_kds: int = 0
+    ko_kd_architecture: str = "legacy_stage10"
 
 
 class FinishMethod(str, Enum):

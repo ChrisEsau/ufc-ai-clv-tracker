@@ -54,6 +54,7 @@ from pipeline.simulation.event_clock_mc_v2.causal.transitions import (
 from pipeline.simulation.event_clock_mc_v2.mechanics.config import (
     DEFAULT_MECHANICS_CALIBRATION_CONFIG,
     FighterMechanics,
+    KOKDArchitecture,
     MechanicsCalibrationConfig,
     MechanicsInputs,
     StructuralMVPPlaceholders,
@@ -61,6 +62,7 @@ from pipeline.simulation.event_clock_mc_v2.mechanics.config import (
 from pipeline.simulation.event_clock_mc_v2.mechanics.resolution import (
     ActionOutcome,
     ActionResolution,
+    FinishMethod,
     FightTerminationRequest,
     StrikeConsequence,
     TransitionKind,
@@ -111,6 +113,7 @@ class EngineInputs:
     mechanics_calibration: MechanicsCalibrationConfig = (
         DEFAULT_MECHANICS_CALIBRATION_CONFIG
     )
+    ko_kd_architecture: KOKDArchitecture = KOKDArchitecture.EMPIRICAL_EVENT2
 
     def fighter(self, side: Side) -> FighterEngineInputs:
         if not isinstance(side, Side):
@@ -120,7 +123,10 @@ class EngineInputs:
     @property
     def mechanics_inputs(self) -> MechanicsInputs:
         return MechanicsInputs(
-            self.red.mechanics, self.blue.mechanics, self.mechanics_calibration
+            self.red.mechanics,
+            self.blue.mechanics,
+            self.mechanics_calibration,
+            self.ko_kd_architecture,
         )
 
 
@@ -148,17 +154,18 @@ class EngineConfig:
 
 @dataclass(frozen=True)
 class EngineRNGs:
-    """Five fixed independent streams: RED/BLUE timing, RED/BLUE choice, mechanics."""
+    """Six streams; the first five preserve the pre-empirical stream identities."""
 
     red_timing: np.random.Generator
     blue_timing: np.random.Generator
     red_selection: np.random.Generator
     blue_selection: np.random.Generator
     mechanics: np.random.Generator
+    ko_kd: np.random.Generator
 
     @classmethod
     def from_seed(cls, seed: int) -> EngineRNGs:
-        streams = np.random.SeedSequence(seed).spawn(5)
+        streams = np.random.SeedSequence(seed).spawn(6)
         return cls(*(np.random.default_rng(stream) for stream in streams))
 
     def timing(self, side: Side) -> np.random.Generator:
@@ -189,6 +196,7 @@ MechanicsResolver = Callable[
         MechanicsInputs,
         np.random.Generator,
         StructuralMVPPlaceholders,
+        np.random.Generator,
     ],
     ActionResolution,
 ]
@@ -222,6 +230,11 @@ class CausalEventRecord:
     resulting_actor_memory: FighterMemory
     impact: float
     knockdown: bool
+    ko_probability: float
+    kd_probability: float
+    prior_defender_kds: int
+    ko_tko: bool
+    ko_kd_architecture: str | None
 
 
 @dataclass(frozen=True)
@@ -337,6 +350,7 @@ def run_causal_path(
             inputs.mechanics_inputs,
             rngs.mechanics,
             inputs.mechanics_placeholders,
+            rngs.ko_kd,
         )
         state = apply_action_consequence(
             state,
@@ -395,6 +409,32 @@ def run_causal_path(
                     resolution.consequence.knockdown
                     if isinstance(resolution.consequence, StrikeConsequence)
                     else False
+                ),
+                (
+                    resolution.consequence.ko_probability
+                    if isinstance(resolution.consequence, StrikeConsequence)
+                    else 0.0
+                ),
+                (
+                    resolution.consequence.knockdown_probability
+                    if isinstance(resolution.consequence, StrikeConsequence)
+                    else 0.0
+                ),
+                (
+                    resolution.consequence.prior_defender_kds
+                    if isinstance(resolution.consequence, StrikeConsequence)
+                    else 0
+                ),
+                bool(
+                    isinstance(resolution.consequence, StrikeConsequence)
+                    and resolution.consequence.termination is not None
+                    and resolution.consequence.termination.finish_method
+                    is FinishMethod.KO_TKO
+                ),
+                (
+                    resolution.consequence.ko_kd_architecture
+                    if isinstance(resolution.consequence, StrikeConsequence)
+                    else None
                 ),
             )
         )

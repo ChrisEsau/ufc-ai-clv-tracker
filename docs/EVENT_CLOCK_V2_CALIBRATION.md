@@ -61,3 +61,30 @@ and artifact metadata when available. Detailed outputs stay as workflow artifact
 The metrics fingerprint covers deterministic simulator measurements and invariant
 counts, while excluding timestamps and CI metadata. A hard invariant failure or
 an out-of-band metric makes the run `FAIL`; a tolerance warning makes it `WARN`.
+
+## Empirical Event2 KO/KD migration
+
+The Brain MC strike-consequence seam supports an explicit A/B architecture selector:
+`legacy_stage10` and `empirical_event2`. The empirical implementation is V2-native;
+Event Clock V1 is a read-only formula-parity reference and is not imported by the
+production V2 module.
+
+For every landed `STAND_ATTACK`, `STAND_COUNTER`, `CLINCH_STRIKE`,
+`GROUND_STRIKE`, or `BOTTOM_STRIKE`, the empirical resolver reads the pre-strike
+defender `knockdowns_suffered`, rolls KO first, and rolls KD only after KO
+survival. It does not consume impact, current-strike damage, cumulative trauma,
+durability, acute vulnerability, or a same-strike KD bonus. Stamina and KO elapsed
+time coefficients remain exactly zero; KD elapsed time retains the validated
+negative coefficient.
+
+Historical FSR V3 snapshots do not publish fight-date age. Historical replay
+therefore derives age from the canonical master DOB and exact event date using
+`days / 365.2425`. Persisted power and KD-resistance coordinates are passed
+unchanged alongside this separate age predictor; the old power-age translation
+is not applied.
+
+The engine owns a sixth deterministic KO/KD RNG stream from
+`SeedSequence(seed).spawn(6)`. Tests prove the first five streams are unchanged.
+Both A and B use this isolated consequence stream, preventing different KO/KD
+draw counts from reshuffling timing, action selection, landing, or transition
+randomness before the paths naturally diverge through a finish.

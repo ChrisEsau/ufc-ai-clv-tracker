@@ -26,7 +26,7 @@ from .resolution import (
     TransitionKind,
     TransitionRequest,
 )
-from .physiology import resolve_landed_strike
+from .physiology import resolve_strike_consequence
 
 
 def resolve_action(
@@ -35,6 +35,7 @@ def resolve_action(
     inputs: MechanicsInputs,
     rng: np.random.Generator,
     placeholders: StructuralMVPPlaceholders = StructuralMVPPlaceholders(),
+    ko_kd_rng: np.random.Generator | None = None,
 ) -> ActionResolution:
     """Resolve one legal attempt without mutating authoritative state or timeline."""
     validate_action_event(event, state)
@@ -44,6 +45,10 @@ def resolve_action(
         raise ValueError("rng must be a numpy.random.Generator")
     if not isinstance(placeholders, StructuralMVPPlaceholders):
         raise ValueError("placeholders must be StructuralMVPPlaceholders")
+    if ko_kd_rng is None:
+        ko_kd_rng = rng
+    if not isinstance(ko_kd_rng, np.random.Generator):
+        raise ValueError("ko_kd_rng must be a numpy.random.Generator")
 
     family = event.action_family
     fighter = inputs.fighter(event.actor)
@@ -57,6 +62,7 @@ def resolve_action(
             fighter.standing_strike_landing_probability,
             rng,
             calibration,
+            ko_kd_rng,
         )
     if family is ActionFamily.PRESSURE or family is ActionFamily.RESET_RANGE:
         return ActionResolution(event, ActionOutcome.TACTICAL)
@@ -93,6 +99,7 @@ def resolve_action(
             placeholders.clinch_strike_landing_probability,
             rng,
             calibration,
+            ko_kd_rng,
         )
     if family is ActionFamily.CLINCH_CONTROL:
         return ActionResolution(event, ActionOutcome.CONTROLLED)
@@ -126,6 +133,7 @@ def resolve_action(
             fighter.ground_strike_landing_probability,
             rng,
             calibration,
+            ko_kd_rng,
         )
     if family in {ActionFamily.ADVANCE_POSITION, ActionFamily.IMPROVE_POSITION}:
         return ActionResolution(event, ActionOutcome.MAINTAINED)
@@ -182,13 +190,14 @@ def _strike(
     probability: float,
     rng: np.random.Generator,
     calibration: MechanicsCalibrationConfig = DEFAULT_MECHANICS_CALIBRATION_CONFIG,
+    ko_kd_rng: np.random.Generator | None = None,
 ) -> ActionResolution:
     landed = _succeeds(probability, rng)
     return ActionResolution(
         event,
         ActionOutcome.LANDED if landed else ActionOutcome.MISSED,
-        consequence=resolve_landed_strike(
-            event, state, inputs, landed, rng, calibration
+        consequence=resolve_strike_consequence(
+            event, state, inputs, landed, ko_kd_rng or rng, calibration
         ),
     )
 

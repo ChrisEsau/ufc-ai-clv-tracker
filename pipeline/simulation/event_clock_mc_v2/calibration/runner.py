@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 import argparse, json, math
-from collections import Counter
+from collections import Counter, defaultdict
 from dataclasses import asdict
 from pathlib import Path
 import numpy as np, pandas as pd
@@ -28,7 +28,13 @@ from pipeline.simulation.event_clock_mc_v2.fsr_v3_adapter import (
     load_prefight_snapshots,
 )
 from pipeline.simulation.event_clock_mc_v2.physiology_adapter import (
+    age_years_on_date,
     fighter_mechanics_from_prefight,
+)
+from pipeline.simulation.event_clock_mc_v2.mechanics.config import KOKDArchitecture
+from pipeline.simulation.event_clock_mc_v2.mechanics.ko_kd_empirical import (
+    kd_probability as empirical_kd_probability,
+    ko_probability as empirical_ko_probability,
 )
 from pipeline.simulation.event_clock_mc_v2.standard_fighter_v1.capability_translation import (
     CapabilityReference,
@@ -67,6 +73,7 @@ def run(
     config_path: Path | None,
     output: Path,
     limit: int | None = None,
+    ko_kd_architecture: KOKDArchitecture = KOKDArchitecture.EMPIRICAL_EVENT2,
 ) -> dict:
     manifest = pd.read_csv(
         EVENT_CLOCK_V2_COHORT_MANIFEST_PATH,
@@ -95,6 +102,11 @@ def run(
     finishes = Counter()
     path_fingerprints = []
     replay_mismatch = 0
+    phase_ko_kd = defaultdict(Counter)
+    allocation = defaultdict(list)
+    ko_prior = Counter()
+    ko_path_kds = []
+    age_audit_candidates = []
     for _, item in cohort.iterrows():
         fight = lookup.loc[str(item.bout_id)]
         # Never censor simulated paths at the realized historical finish time.
@@ -108,20 +120,60 @@ def run(
         )
         rc, rr = _capabilities(red, blue, reference)
         bc, br = _capabilities(blue, red, reference)
+        red_age = age_years_on_date(fight.get("r_dob"), date)
+        blue_age = age_years_on_date(fight.get("b_dob"), date)
+        red_mechanics = fighter_mechanics_from_prefight(red, rr, age_years=red_age)
+        blue_mechanics = fighter_mechanics_from_prefight(blue, br, age_years=blue_age)
+        for side, mechanics, opponent, dob in (
+            ("red", red_mechanics, blue_mechanics, fight.get("r_dob")),
+            ("blue", blue_mechanics, red_mechanics, fight.get("b_dob")),
+        ):
+            age_audit_candidates.append(
+                {
+                    "bout_id": str(item.bout_id),
+                    "fight_date": date.date().isoformat(),
+                    "side": side,
+                    "fighter": str(
+                        item.red_fighter if side == "red" else item.blue_fighter
+                    ),
+                    "dob": (
+                        None if pd.isna(dob) else pd.Timestamp(dob).date().isoformat()
+                    ),
+                    "age_source": "master_dob_at_exact_fight_date",
+                    "age_years": mechanics.age_years,
+                    "striking_power": mechanics.striking_power,
+                    "knockdown_resistance": mechanics.knockdown_resistance,
+                    "p_ko_prior0": empirical_ko_probability(
+                        mechanics,
+                        opponent,
+                        prior_defender_kds=0,
+                        elapsed_seconds=0.0,
+                        attacker_stamina=1.0,
+                    ),
+                    "p_kd_prior0": empirical_kd_probability(
+                        mechanics,
+                        opponent,
+                        prior_defender_kds=0,
+                        elapsed_seconds=0.0,
+                        attacker_stamina=1.0,
+                    ),
+                }
+            )
         inputs = EngineInputs(
             FighterEngineInputs(
                 rc,
                 BrainTimingContext(),
                 BrainDecisionContext(),
-                fighter_mechanics_from_prefight(red, rr),
+                red_mechanics,
             ),
             FighterEngineInputs(
                 bc,
                 BrainTimingContext(),
                 BrainDecisionContext(),
-                fighter_mechanics_from_prefight(blue, br),
+                blue_mechanics,
             ),
             mechanics_calibration=mechanics_config,
+            ko_kd_architecture=ko_kd_architecture,
         )
         chooser = IntentPriorChooser(
             {
@@ -136,6 +188,7 @@ def run(
         funcs = EngineFunctions(action_chooser=chooser)
         cfg = EngineConfig(number_of_rounds=max(1, math.ceil(horizon / 300)))
         for path_id in range(paths_per_fight):
+            path_knockdowns = 0
             seed = derive_path_seed(SEED_SET_VERSION, str(item.bout_id), path_id)
             out = run_causal_path(
                 inputs, seed=seed, horizon_seconds=horizon, config=cfg, functions=funcs
@@ -198,9 +251,57 @@ def run(
                     a in TD and event.resulting_phase.value == "ground"
                 )
                 counts["knockdowns"] += int(event.knockdown)
+                if event.knockdown:
+                    path_knockdowns += 1
+                if (
+                    event.outcome.value == "landed"
+                    and event.selected_action
+                    in STAND | GROUND | {ActionFamily.CLINCH_STRIKE}
+                ):
+                    family = (
+                        "standing"
+                        if event.selected_action in STAND
+                        else (
+                            "clinch"
+                            if event.selected_action is ActionFamily.CLINCH_STRIKE
+                            else (
+                                "bottom_ground"
+                                if event.selected_action is ActionFamily.BOTTOM_STRIKE
+                                else "ground"
+                            )
+                        )
+                    )
+                    diag = phase_ko_kd[family]
+                    diag["landed_eligible_strikes"] += 1
+                    diag["ko_probability_sum"] += event.ko_probability
+                    if not event.ko_tko:
+                        diag["kd_opportunities"] += 1
+                        diag["kd_probability_sum"] += event.kd_probability
+                    diag["realized_kds"] += int(event.knockdown)
+                    diag["realized_kos"] += int(event.ko_tko)
+                    attacker = (
+                        red_mechanics if event.actor is Side.RED else blue_mechanics
+                    )
+                    defender = (
+                        blue_mechanics if event.actor is Side.RED else red_mechanics
+                    )
+                    power_edge = attacker.striking_power - defender.striking_power
+                    resistance_edge = (
+                        defender.knockdown_resistance - attacker.knockdown_resistance
+                    )
+                    if event.ko_tko:
+                        allocation["ko_power_edges"].append(power_edge)
+                        ko_prior[">=1" if event.prior_defender_kds >= 1 else "0"] += 1
+                    if event.knockdown:
+                        allocation["kd_power_edges"].append(power_edge)
+                        allocation["kd_defender_resistance_edges"].append(
+                            resistance_edge
+                        )
             if out.termination:
                 finishes[out.termination.finish_method.value] += 1
                 finish_times.append(out.reported_through_seconds)
+                if out.termination.finish_method.value == "ko_tko":
+                    ko_path_kds.append(path_knockdowns)
             path_fingerprints.append(
                 (
                     str(item.bout_id),
@@ -228,6 +329,32 @@ def run(
         else {}
     )
     rate = lambda n: float(n * 900 / seconds / 2) if seconds else 0.0
+    phase_breakdown = {
+        family: {
+            "landed_eligible_strikes": int(values["landed_eligible_strikes"]),
+            "mean_p_ko": values["ko_probability_sum"]
+            / max(1, values["landed_eligible_strikes"]),
+            "mean_p_kd_survived_strike": values["kd_probability_sum"]
+            / max(1, values["kd_opportunities"]),
+            "realized_kds": int(values["realized_kds"]),
+            "realized_kos": int(values["realized_kos"]),
+        }
+        for family, values in sorted(phase_ko_kd.items())
+    }
+    allocation_metrics = {
+        key: {
+            "count": len(values),
+            "mean_edge": float(np.mean(values)) if values else None,
+            "positive_edge_share": (
+                float(np.mean(np.asarray(values) > 0)) if values else None
+            ),
+        }
+        for key, values in allocation.items()
+    }
+    age_sorted = sorted(age_audit_candidates, key=lambda row: row["age_years"])
+    age_audit = [
+        age_sorted[index] for index in np.linspace(0, len(age_sorted) - 1, 6, dtype=int)
+    ]
     metrics = {
         "standing_attempts_per_fighter_15": rate(counts["standing"]),
         "clinch_strikes_per_fighter_15": rate(counts["clinch"]),
@@ -251,7 +378,18 @@ def run(
         "mean_final_stamina": float(np.mean(stamina)),
         "final_stamina_quantiles": q(stamina),
         "finish_time_distribution": q(finish_times),
-        "ko_tko_allocation_by_fighter": None,
+        "ko_kd_architecture": ko_kd_architecture.value,
+        "phase_ko_kd_breakdown": phase_breakdown,
+        "kds_per_ko_fight": float(np.mean(ko_path_kds)) if ko_path_kds else None,
+        "ko_allocation_by_prior_defender_kds": {
+            "prior_0_count": int(ko_prior["0"]),
+            "prior_ge_1_count": int(ko_prior[">=1"]),
+            "prior_0_share": ko_prior["0"] / max(1, sum(ko_prior.values())),
+            "prior_ge_1_share": ko_prior[">=1"] / max(1, sum(ko_prior.values())),
+        },
+        "ko_kd_allocation_diagnostics": allocation_metrics,
+        "historical_age_provenance_audit": age_audit,
+        "ko_tko_allocation_by_fighter": allocation_metrics.get("ko_power_edges"),
         "actual_ko_winner_power_edge": None,
         "kd_allocation_relative_to_attacker_power": None,
         "td_allocation_relative_to_td_traits": None,
@@ -276,6 +414,7 @@ def run(
         "fight_count": len(cohort),
         "paths_per_fight": paths_per_fight,
         "seed_set_version": SEED_SET_VERSION,
+        "ko_kd_architecture": ko_kd_architecture.value,
         "target_digest": targets["target_digest"],
         "parameter_config_hash": config_hash(
             resolved_payload(mechanics_config, explicit)
@@ -303,6 +442,12 @@ def main():
     p.add_argument("--paths-per-fight", type=int, default=50)
     p.add_argument("--calibration-config", type=Path)
     p.add_argument("--limit", type=int)
+    p.add_argument(
+        "--ko-kd-architecture",
+        type=KOKDArchitecture,
+        choices=tuple(KOKDArchitecture),
+        default=KOKDArchitecture.EMPIRICAL_EVENT2,
+    )
     p.add_argument("--output", type=Path, required=True)
     a = p.parse_args()
     if a.paths_per_fight < 1:
@@ -315,6 +460,7 @@ def main():
                 config_path=a.calibration_config,
                 output=a.output,
                 limit=a.limit,
+                ko_kd_architecture=a.ko_kd_architecture,
             ),
             indent=2,
         )

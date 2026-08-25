@@ -62,13 +62,14 @@ jobs:
           test "$(python -c 'import yaml; print(yaml.safe_load(open("configs/event_clock_v2/calibration/default.yaml"))["mechanics"])')" = "{}"
 
       - name: Run calibration contract tests
-        run: python -m pytest tests/simulation/event_clock_mc_v2/calibration -q
+        run: python -m pytest tests/simulation/event_clock_mc_v2 -q
 
-      - name: Deterministic micro gate (5 fights x 3 paths)
+      - name: Deterministic empirical micro gate (5 fights x 3 paths)
         run: |
           mkdir -p artifacts/event-clock-v2-calibration
           python -m pipeline.simulation.event_clock_mc_v2.calibration.runner \
             --cohort calibration --paths-per-fight 3 --limit 5 \
+            --ko-kd-architecture empirical_event2 \
             --calibration-config configs/event_clock_v2/calibration/default.yaml \
             --output artifacts/event-clock-v2-calibration/micro-ledger.json
           python - <<'PY'
@@ -84,12 +85,21 @@ jobs:
           assert finite(p["simulator_metrics"])
           PY
 
-      - name: Canonical baseline (200 fights x 50 paths)
+      - name: A — Legacy Stage-10 baseline (200 fights x 50 paths)
         run: |
           python -m pipeline.simulation.event_clock_mc_v2.calibration.runner \
             --cohort calibration --paths-per-fight 50 \
+            --ko-kd-architecture legacy_stage10 \
             --calibration-config configs/event_clock_v2/calibration/default.yaml \
-            --output artifacts/event-clock-v2-calibration/baseline-ledger.json
+            --output artifacts/event-clock-v2-calibration/legacy-a-ledger.json
+
+      - name: B — Empirical Event2 baseline (200 fights x 50 paths)
+        run: |
+          python -m pipeline.simulation.event_clock_mc_v2.calibration.runner \
+            --cohort calibration --paths-per-fight 50 \
+            --ko-kd-architecture empirical_event2 \
+            --calibration-config configs/event_clock_v2/calibration/default.yaml \
+            --output artifacts/event-clock-v2-calibration/empirical-b-ledger.json
 
       - name: Report baseline metadata
         run: |
@@ -98,7 +108,7 @@ jobs:
           echo "job_name=$GITHUB_JOB" >> "$GITHUB_STEP_SUMMARY"
           python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
           import json
-          for name in ("micro-ledger.json", "baseline-ledger.json"):
+          for name in ("micro-ledger.json", "legacy-a-ledger.json", "empirical-b-ledger.json"):
               d=json.load(open("artifacts/event-clock-v2-calibration/"+name))
               print(f"### {name}")
               print("```json")

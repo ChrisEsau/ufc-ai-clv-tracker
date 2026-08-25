@@ -16,8 +16,10 @@ from .config import (
     DEFAULT_MECHANICS_CALIBRATION_CONFIG,
     MechanicsCalibrationConfig,
     MechanicsInputs,
+    KOKDArchitecture,
 )
 from .resolution import FightTerminationRequest, FinishMethod, StrikeConsequence
+from .ko_kd_empirical import resolve_landed_strike as resolve_empirical_ko_kd
 
 ACTION_COSTS = {
     ActionFamily.STAND_ATTACK: 0.70,
@@ -78,11 +80,63 @@ def resolve_landed_strike(
     logit = config.finish_slope * (
         log(max(impact / finish_resistance, 1e-12)) - log(config.finish_midpoint)
     ) + (config.post_kd_finish_logit_bonus if kd else 0)
-    finished = bool(rng.random() < _sigmoid(logit))
+    p_ko = _sigmoid(logit)
+    finished = bool(rng.random() < p_ko)
     term = (
         FightTerminationRequest(event.actor, FinishMethod.KO_TKO) if finished else None
     )
-    return StrikeConsequence(True, impact, trauma, p_kd, kd, acute, term)
+    return StrikeConsequence(
+        landed=True,
+        impact=impact,
+        trauma_increment=trauma,
+        knockdown_probability=p_kd,
+        knockdown=kd,
+        acute_increment=acute,
+        termination=term,
+        ko_probability=p_ko,
+        prior_defender_kds=target.knockdowns_suffered,
+        ko_kd_architecture=KOKDArchitecture.LEGACY_STAGE10.value,
+    )
+
+
+def resolve_strike_consequence(
+    event,
+    state: FightState,
+    inputs: MechanicsInputs,
+    landed: bool,
+    ko_kd_rng: np.random.Generator,
+    config: MechanicsCalibrationConfig = DEFAULT_MECHANICS_CALIBRATION_CONFIG,
+) -> StrikeConsequence:
+    """Dispatch only the KO/KD consequence architecture at the strike seam."""
+    if not landed:
+        return StrikeConsequence(False)
+    # Direct resolver callers that predate the engine selector retain legacy
+    # behavior. EngineInputs explicitly selects the production architecture.
+    architecture = inputs.ko_kd_architecture or KOKDArchitecture.LEGACY_STAGE10
+    if architecture is KOKDArchitecture.LEGACY_STAGE10:
+        return resolve_landed_strike(event, state, inputs, landed, ko_kd_rng, config)
+    if architecture is not KOKDArchitecture.EMPIRICAL_EVENT2:
+        raise ValueError(f"unsupported KO/KD architecture: {architecture}")
+    result = resolve_empirical_ko_kd(
+        state=state,
+        attacker_side=event.actor,
+        attacker=inputs.fighter(event.actor),
+        defender=inputs.fighter(event.actor.opponent),
+        rng=ko_kd_rng,
+    )
+    return StrikeConsequence(
+        landed=True,
+        knockdown_probability=result.kd_probability,
+        knockdown=result.knockdown,
+        termination=(
+            FightTerminationRequest(event.actor, FinishMethod.KO_TKO)
+            if result.ko_tko
+            else None
+        ),
+        ko_probability=result.ko_probability,
+        prior_defender_kds=result.prior_defender_kds,
+        ko_kd_architecture=KOKDArchitecture.EMPIRICAL_EVENT2.value,
+    )
 
 
 def advance_physiology(

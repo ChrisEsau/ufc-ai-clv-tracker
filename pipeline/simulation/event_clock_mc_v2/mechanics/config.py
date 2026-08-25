@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
+from enum import Enum
 import math
 
 from pipeline.simulation.event_clock_mc_v2.causal.state import Side
@@ -29,6 +30,7 @@ class FighterMechanics:
     knockdown_resistance: float = 50.0
     stamina_capacity: float = 100.0
     stamina_depletion_resistance: float = 50.0
+    age_years: float = 30.0
 
     def __post_init__(self) -> None:
         for field in fields(self)[:6]:
@@ -61,6 +63,13 @@ class FighterMechanics:
                 raise ValueError(f"{field.name} must be finite and positive")
 
 
+class KOKDArchitecture(str, Enum):
+    """Explicit strike-consequence architecture; coefficients are not overrides."""
+
+    LEGACY_STAGE10 = "legacy_stage10"
+    EMPIRICAL_EVENT2 = "empirical_event2"
+
+
 @dataclass(frozen=True)
 class MechanicsInputs:
     """Directional mechanics inputs for both fighters in one matchup."""
@@ -68,6 +77,7 @@ class MechanicsInputs:
     red: FighterMechanics
     blue: FighterMechanics
     calibration: MechanicsCalibrationConfig = None  # type: ignore[name-defined]
+    ko_kd_architecture: KOKDArchitecture | None = None
 
     def fighter(self, side: Side) -> FighterMechanics:
         if not isinstance(side, Side):
