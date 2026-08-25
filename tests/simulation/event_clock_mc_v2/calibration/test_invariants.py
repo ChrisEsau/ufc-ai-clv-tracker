@@ -9,7 +9,10 @@ from pipeline.simulation.event_clock_mc_v2.causal.state import Phase
 
 def test_known_invalid_cases_are_detected():
     fighter = SimpleNamespace(
-        stamina=2.0, cumulative_trauma=0.0, acute_vulnerability=0.0
+        stamina=2.0,
+        cumulative_trauma=0.0,
+        acute_vulnerability=0.0,
+        knockdowns_suffered=0,
     )
     result = SimpleNamespace(
         timeline_segments=[SimpleNamespace(duration=-1.0, phase=Phase.GROUND)],

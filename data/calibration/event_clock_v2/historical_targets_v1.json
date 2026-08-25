@@ -306,6 +306,33 @@
   ],
   "historical_comparator_split": "calibration",
   "historical_phase_exposure": null,
+  "metric_groups": {
+    "discrimination_diagnostics": [],
+    "invariants": [
+      "illegal_cross_phase_actions",
+      "timeline_exposure_mismatch",
+      "post_finish_events",
+      "invalid_state_transitions",
+      "nan_or_impossible_state_values",
+      "deterministic_replay_mismatch"
+    ],
+    "physiology_targets": [
+      "knockdowns_per_fight",
+      "ko_tko_fight_share",
+      "submission_fight_share",
+      "decision_fight_share",
+      "mean_fight_duration_seconds"
+    ],
+    "predictive_diagnostics": [],
+    "structural_targets": [
+      "standing_attempts_per_fighter_15",
+      "clinch_strikes_per_fighter_15",
+      "ground_strikes_per_fighter_15",
+      "td_attempts_per_fighter_15",
+      "td_landed_per_fighter_15",
+      "submissions_per_fighter_15"
+    ]
+  },
   "metrics": {
     "clinch_strikes_per_fighter_15": 6.46812977855247,
     "decision_fight_share": 0.555,
@@ -320,6 +347,6 @@
     "td_landed_per_fighter_15": 1.2151883690528067
   },
   "phase_exposure_note": "UFCStats has action-location counts but no authoritative phase-time denominators.",
-  "target_digest": "sha256:3998cfdef4ac5fb6de25a29d73da28e0365c041efc56b90bf10d81e922b2a712",
+  "target_digest": "sha256:ee4c7772c3a33ad197e6772408f919c787eded0461709a572f4d969a9af71c3e",
   "target_schema_version": "event_clock_v2_historical_targets_v1"
 }

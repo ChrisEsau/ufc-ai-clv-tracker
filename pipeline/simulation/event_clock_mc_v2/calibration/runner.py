@@ -43,10 +43,10 @@ from pipeline.simulation.event_clock_mc_v2.diagnostics.stage8_structural_populat
     elapsed_seconds,
 )
 from . import COHORT_VERSION, SEED_SET_VERSION
-from .cohort import select_split, validate_manifest
+from .cohort import select_split, validate_manifest, validate_manifest_prefight_contract
 from .config import config_hash, load_override_file, resolved_payload
 from .invariants import inspect_path, status
-from .ledger import artifact_digest, build_record, write_record
+from .ledger import artifact_digest, build_record, metrics_fingerprint, write_record
 from .seeds import derive_path_seed
 from .targets import evaluate
 
@@ -72,6 +72,7 @@ def run(
     if limit:
         cohort = cohort.head(limit)
     snapshots = load_prefight_snapshots()
+    validate_manifest_prefight_contract(manifest, snapshots)
     cutoff = pd.to_datetime(manifest.date).min()
     reference = CapabilityReference.from_prefight_before(snapshots, cutoff)
     mechanics_config, explicit = load_override_file(config_path)
@@ -278,6 +279,7 @@ def run(
         invariants=invariants,
     )
     record["path_replay_digest"] = config_hash(path_fingerprints)
+    record["metrics_fingerprint"] = metrics_fingerprint(metrics, invariants)
     write_record(record, output)
     return record
 

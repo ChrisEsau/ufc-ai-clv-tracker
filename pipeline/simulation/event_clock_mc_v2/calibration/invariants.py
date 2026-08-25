@@ -3,12 +3,17 @@
 from __future__ import annotations
 import math
 from pipeline.simulation.event_clock_mc_v2.causal.state import Phase
-from pipeline.simulation.event_clock_mc_v2.causal.events import ActionFamily
+from pipeline.simulation.event_clock_mc_v2.causal.legality import (
+    CLINCH_ACTIONS,
+    GROUND_BOTTOM_ACTIONS,
+    GROUND_TOP_ACTIONS,
+    STANDING_ACTIONS,
+)
 
-STANDING = {
-    ActionFamily.STAND_ATTACK,
-    ActionFamily.STAND_COUNTER,
-    ActionFamily.TAKEDOWN_ENTRY,
+PHASE_ACTIONS = {
+    Phase.STANDING: frozenset(STANDING_ACTIONS),
+    Phase.CLINCH: frozenset(CLINCH_ACTIONS),
+    Phase.GROUND: frozenset(GROUND_TOP_ACTIONS + GROUND_BOTTOM_ACTIONS),
 }
 
 
@@ -20,7 +25,7 @@ def inspect_path(result) -> dict[str, int]:
         values.extend((row.stamina, row.cumulative_trauma, row.acute_vulnerability))
     return {
         "illegal_cross_phase_actions": sum(
-            e.source_phase is Phase.GROUND and e.selected_action in STANDING
+            e.selected_action not in PHASE_ACTIONS[e.source_phase]
             for e in result.events
         ),
         "timeline_exposure_mismatch": int(
@@ -40,9 +45,15 @@ def inspect_path(result) -> dict[str, int]:
         "nan_or_impossible_state_values": int(
             any(not math.isfinite(v) for v in values)
             or any(
-                getattr(result.final_state.physiology, s).stamina < 0
-                or getattr(result.final_state.physiology, s).stamina > 1
-                for s in ("red", "blue")
+                row.stamina < 0
+                or row.stamina > 1
+                or row.cumulative_trauma < 0
+                or row.acute_vulnerability < 0
+                or row.knockdowns_suffered < 0
+                for row in (
+                    result.final_state.physiology.red,
+                    result.final_state.physiology.blue,
+                )
             )
         ),
     }

@@ -42,7 +42,11 @@ def resolve_overrides(
     unknown = set(explicit) - ALLOWLIST
     if unknown:
         raise ValueError(f"unknown or frozen mechanics overrides: {sorted(unknown)}")
-    resolved = replace(DEFAULT_MECHANICS_CALIBRATION_CONFIG, **explicit)
+    resolved = (
+        DEFAULT_MECHANICS_CALIBRATION_CONFIG
+        if not explicit
+        else replace(DEFAULT_MECHANICS_CALIBRATION_CONFIG, **explicit)
+    )
     return resolved, explicit
 
 

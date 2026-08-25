@@ -16,6 +16,12 @@ fighters. Contiguous splits are development 400, calibration 200, validation
 refuse to evaluate it. Two prior fights is a cohort definition, not a claim that
 cold start is solved.
 
+Prior-fight counts are updated only after every bout on an event date has been
+evaluated, so another same-date bout cannot become prior evidence. Manifest
+construction and every runner invocation also require exactly one canonical
+prefight row for each `(event_date, fight_id, fighter_id)` corner. Missing,
+wrong-date, and duplicate rows fail before any simulation begins.
+
 Historical fighter inputs are exact `(event_date, fight_id, fighter_id)` prefight
 FSR V3 rows. The old Stage 8 use of `load_latest_profiles()` was leakage: latest
 future performance changed empirical percentile ranks. Calibration instead
@@ -52,3 +58,6 @@ Each ledger record includes stable experiment/config identity, SHA, cohort and
 target versions, paths, seed version, resolved/default and explicit configs,
 fingerprint, acceptance results, invariants, baseline comparison, CI metadata,
 and artifact metadata when available. Detailed outputs stay as workflow artifacts.
+The metrics fingerprint covers deterministic simulator measurements and invariant
+counts, while excluding timestamps and CI metadata. A hard invariant failure or
+an out-of-band metric makes the run `FAIL`; a tolerance warning makes it `WARN`.

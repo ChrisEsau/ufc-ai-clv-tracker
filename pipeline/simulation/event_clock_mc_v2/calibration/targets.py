@@ -74,6 +74,28 @@ def build_targets(manifest: pd.DataFrame) -> dict:
         "historical_comparator_split": "calibration",
         "cohort_bout_ids": sorted(ids),
         "metrics": metrics,
+        "metric_groups": {
+            "structural_targets": [
+                "standing_attempts_per_fighter_15",
+                "clinch_strikes_per_fighter_15",
+                "ground_strikes_per_fighter_15",
+                "td_attempts_per_fighter_15",
+                "td_landed_per_fighter_15",
+                "submissions_per_fighter_15",
+            ],
+            "physiology_targets": [
+                "knockdowns_per_fight",
+                "ko_tko_fight_share",
+                "submission_fight_share",
+                "decision_fight_share",
+                "mean_fight_duration_seconds",
+            ],
+            "discrimination_diagnostics": [],
+            "predictive_diagnostics": [],
+            "invariants": [
+                key for key, band in bands.items() if "required" in band
+            ],
+        },
         "acceptance_bands": bands,
         "historical_phase_exposure": None,
         "phase_exposure_note": "UFCStats has action-location counts but no authoritative phase-time denominators.",
