@@ -93,11 +93,20 @@ def run(
     bundle = joblib.load(DEFAULT_BUNDLE_PATH)
     context = bundle["context"]
     source_judge = context["judge_model"]
-    training_decisions = int(context.get("judge_training_decisions", 0))
-    judge_model = Event2JudgeModel.from_sklearn(source_judge, training_decisions=training_decisions)
     submission_offset = float(context["conversion_offset"])
     master = pd.read_parquet(MASTER_PATH).drop_duplicates("fight_id")
     master["fight_id"] = master.fight_id.astype(str)
+    fsr_source = context["fsr_all"].copy()
+    valid_source_ids = set(fsr_source.groupby(fsr_source.fight_id.astype(str)).size().loc[lambda x: x == 2].index)
+    source_train = master.assign(event_date=pd.to_datetime(master.date))
+    source_train = source_train[
+        (source_train.event_date < pd.Timestamp("2025-03-22"))
+        & source_train.fight_id.isin(valid_source_ids)
+        & source_train.total_rounds.isin([3, 5])
+        & source_train.match_time_sec.notna()
+    ].sort_values(["event_date", "fight_id"]).tail(3000)
+    training_decisions = int(source_train.method.fillna("").astype(str).str.lower().str.contains("decision").sum())
+    judge_model = Event2JudgeModel.from_sklearn(source_judge, training_decisions=training_decisions)
     if event_name:
         selected = master[master.event_name.astype(str).eq(event_name)].copy()
         if selected.empty:
@@ -128,6 +137,7 @@ def run(
     age_audit_candidates = []
     winners = Counter()
     decision_classes = Counter()
+    decision_winners = Counter()
     decision_round_counts = Counter()
     round_probabilities = []
     judge_disagreements = 0
@@ -356,6 +366,7 @@ def run(
                     submission_winner_offense_edges.append(attacker.submission_offense - defender.submission_offense)
                     submission_loser_defense_edges.append(defender.submission_defense - attacker.submission_defense)
             if out.decision:
+                decision_winners[out.decision.winner.value] += 1
                 decision_classes[out.decision.classification] += 1
                 decision_round_counts[len(out.decision.round_probabilities)] += 1
                 round_probabilities.extend(out.decision.round_probabilities)
@@ -433,7 +444,7 @@ def run(
         "blue_path_win_probability": winners["blue"] / total_paths,
         "unanimous_decision_fight_share": decision_classes["unanimous_decision"] / total_paths,
         "split_decision_fight_share": decision_classes["split_decision"] / total_paths,
-        "decision_winner_allocation": {side: winners[side] / total_paths for side in ("red", "blue")},
+        "decision_winner_allocation": {side: decision_winners[side] / max(1, finishes["decision"]) for side in ("red", "blue")},
         "round_red_win_probability_distribution": q(round_probabilities),
         "judge_disagreement_rate_per_decision": judge_disagreements / max(1, finishes["decision"]),
         "decision_round_count_distribution": {str(k): v / max(1, finishes["decision"]) for k, v in sorted(decision_round_counts.items())},

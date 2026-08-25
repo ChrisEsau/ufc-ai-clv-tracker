@@ -14,6 +14,7 @@ on:
 permissions:
   contents: read
   actions: read
+  pull-requests: write
 
 jobs:
   canonical-baseline:
@@ -116,6 +117,38 @@ jobs:
               print(json.dumps({k:d[k] for k in ("experiment_id","fight_count","paths_per_fight","parameter_config_hash","path_replay_digest","metrics_fingerprint","run_status","invariant_results")}, indent=2))
               print("```")
           PY
+
+      - name: Publish compact validation report to PR
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY' > /tmp/validation-comment.md
+          import json
+          historical=json.load(open("artifacts/event-clock-v2-calibration/judging-submission-200x50.json"))
+          freedom=json.load(open("artifacts/event-clock-v2-calibration/freedom250-100.json"))
+          m=historical["simulator_metrics"]
+          keys=("red_path_win_probability","blue_path_win_probability","ko_tko_fight_share",
+                "submission_fight_share","decision_fight_share","unanimous_decision_fight_share",
+                "split_decision_fight_share","mean_fight_duration_seconds","submissions_per_fighter_15",
+                "submission_conversion_rate_per_attempt","judge_disagreement_rate_per_decision",
+                "standing_attempts_per_fighter_15","clinch_strikes_per_fighter_15",
+                "ground_strikes_per_fighter_15","td_attempts_per_fighter_15",
+                "td_landed_per_fighter_15","knockdowns_per_fight","mean_final_stamina")
+          print("## Brain MC judging + submission validation")
+          print(f"SHA `{historical['git_sha']}` · experiment `{historical['experiment_id']}`")
+          print("```json")
+          print(json.dumps({"historical_200x50":{k:m[k] for k in keys},
+                            "judge_model":m["judge_model"],
+                            "submission_model":m["submission_model"],
+                            "invariants":historical["invariant_results"],
+                            "path_replay_digest":historical["path_replay_digest"],
+                            "freedom250_100":freedom["simulator_metrics"]["fight_probabilities"],
+                            "freedom_invariants":freedom["invariant_results"],
+                            "freedom_path_replay_digest":freedom["path_replay_digest"]}, indent=2))
+          print("```")
+          PY
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/validation-comment.md
 
       - name: Upload baseline artifacts
         id: upload
