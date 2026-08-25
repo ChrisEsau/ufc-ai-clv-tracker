@@ -1,0 +1,102 @@
+name: Brain MC Next After Fiziev By ID
+
+on:
+  push:
+    branches: [research/submission-signal-audit-20260825]
+    paths:
+      - ".github/workflows/brain-mc-next-after-fiziev-id.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  run-event:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install numpy pandas pyarrow pyyaml scipy scikit-learn joblib
+
+      - name: Restore canonical historical Brain MC inputs
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 32645607979
+
+      - name: Install restored canonical inputs
+        run: |
+          cp -a restored/canonical-weight-class-state/. data/
+          test -f data/master/ufc_master.parquet
+          test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
+          test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
+
+      - name: Resolve next event id after Fiziev vs Torres
+        id: resolve
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import pandas as pd
+          from pipeline.common.paths import MASTER_PATH
+
+          anchor = "UFC Fight Night: Fiziev vs. Torres"
+          m = pd.read_parquet(MASTER_PATH)
+          name_col = next(c for c in ("event_name","ufcstats_event_name") if c in m.columns)
+          date_col = next(c for c in ("date","event_date","ufcstats_event_date") if c in m.columns)
+          id_col = next((c for c in ("event_id","ufcstats_event_id") if c in m.columns), None)
+          url_col = next((c for c in ("event_url","ufcstats_event_url") if c in m.columns), None)
+          if id_col is None and url_col is None:
+              raise SystemExit("No UFCStats event id/url column in canonical master")
+          e = pd.DataFrame({
+              "name": m[name_col].astype(str).str.strip(),
+              "date": pd.to_datetime(m[date_col], errors="coerce"),
+          })
+          if id_col is not None:
+              e["event_id"] = m[id_col].astype(str).str.strip()
+          else:
+              e["event_id"] = m[url_col].astype(str).str.extract(r"/event-details/([A-Za-z0-9]+)", expand=False).fillna("")
+          e = e.dropna(subset=["date"]).drop_duplicates(["name","date","event_id"]).sort_values(["date","name"])
+          a = e[e.name.eq(anchor)]
+          if a.empty:
+              raise SystemExit(f"Anchor not found: {anchor}")
+          nxt = e[e.date.gt(a.date.max())].iloc[0]
+          if not nxt.event_id:
+              raise SystemExit("Resolved next event has no UFCStats event id")
+          print(f"event_id={nxt.event_id}")
+          print(f"event_name={nxt['name']}")
+          print(f"event_date={nxt['date'].date().isoformat()}")
+          PY
+
+      - name: Run resolved event by explicit UFCStats id at 1000 paths
+        env:
+          EVENT_ID: ${{ steps.resolve.outputs.event_id }}
+        run: |
+          mkdir -p artifacts/brain-mc-next-event
+          python -m pipeline.simulation.event_clock_mc_v2.event_runner \
+            --event-id "$EVENT_ID" \
+            --paths 1000 \
+            --output artifacts/brain-mc-next-event/result.json
+
+      - name: Publish summary
+        env:
+          EVENT_ID: ${{ steps.resolve.outputs.event_id }}
+          EVENT_NAME: ${{ steps.resolve.outputs.event_name }}
+          EVENT_DATE: ${{ steps.resolve.outputs.event_date }}
+        run: |
+          echo "event_name=$EVENT_NAME" >> "$GITHUB_STEP_SUMMARY"
+          echo "event_date=$EVENT_DATE" >> "$GITHUB_STEP_SUMMARY"
+          echo "event_id=$EVENT_ID" >> "$GITHUB_STEP_SUMMARY"
+          echo "paths_per_fight=1000" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: brain-mc-next-after-fiziev-id
+          path: artifacts/brain-mc-next-event/result.json
+          retention-days: 90
