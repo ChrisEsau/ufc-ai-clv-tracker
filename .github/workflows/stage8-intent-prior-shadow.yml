@@ -48,28 +48,19 @@ jobs:
       - name: Test intent-prior contract
         run: pytest -q tests/simulation/event_clock_mc_v2/test_brain_intent_priors.py
 
-      - name: Run intent-prior cohort shadow
+      - name: Run clinch-entry intent sweep
         run: |
           echo "GITHUB_SHA=${GITHUB_SHA}"
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.stage8_intent_prior_shadow \
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.stage8_clinch_intent_sweep \
             --fights 25 \
-            --paths-per-fight 50 \
+            --paths-per-fight 20 \
             --seed-base 20260825 \
-            --output data/diagnostics/event_clock_mc_v2/stage8_intent_prior_shadow.json
+            --ratios 0.01,0.02,0.04,0.06,0.08,0.10 \
+            --output data/diagnostics/event_clock_mc_v2/stage8_clinch_intent_sweep.json
 
-      - name: Run clinch decomposition
-        run: |
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.stage8_clinch_decomposition \
-            --fights 25 \
-            --paths-per-fight 50 \
-            --seed-base 20260825 \
-            --output data/diagnostics/event_clock_mc_v2/stage8_clinch_decomposition.json
-
-      - name: Upload results
+      - name: Upload result
         uses: actions/upload-artifact@v4
         with:
-          name: stage8-intent-prior-shadow
-          path: |
-            data/diagnostics/event_clock_mc_v2/stage8_intent_prior_shadow.json
-            data/diagnostics/event_clock_mc_v2/stage8_clinch_decomposition.json
+          name: stage8-clinch-intent-sweep
+          path: data/diagnostics/event_clock_mc_v2/stage8_clinch_intent_sweep.json
           if-no-files-found: error
