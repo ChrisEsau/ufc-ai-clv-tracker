@@ -49,10 +49,12 @@ from pipeline.simulation.event_clock_mc_v2.mechanics.resolution import (
     ActionOutcome,
     ActionResolution,
     FightTerminationRequest,
+    StrikeConsequence,
     TransitionKind,
     TransitionRequest,
 )
 from pipeline.simulation.event_clock_mc_v2.mechanics.resolver import resolve_action
+from pipeline.simulation.event_clock_mc_v2.mechanics.physiology import advance_physiology,apply_action_consequence,recover_round
 
 
 @dataclass(frozen=True)
@@ -179,6 +181,8 @@ class CausalEventRecord:
     resulting_controller: Side | None
     pre_decision_context: BrainDecisionContext
     resulting_actor_memory: FighterMemory
+    impact: float
+    knockdown: bool
 
 
 @dataclass(frozen=True)
@@ -243,7 +247,9 @@ def run_causal_path(
         if round_end <= effective_horizon and round_end <= next_pending.scheduled_time_seconds:
             if state.round_number >= config.number_of_rounds:
                 break
+            state = advance_physiology(state,round_end)
             state = start_next_round(state, timeline, round_end)
+            state = recover_round(state)
             state = replace(state, memory=decay_memory(state.memory, round_end, config.memory_config))
             boundaries.append(RoundBoundaryRecord(round_end, state.round_number))
             pending = {
@@ -257,11 +263,8 @@ def run_causal_path(
 
         actor = next_pending.actor
         timestamp = next_pending.scheduled_time_seconds
-        state = replace(
-            state,
-            fight_time_seconds=timestamp,
-            memory=decay_memory(state.memory, timestamp, config.memory_config),
-        )
+        state = advance_physiology(state,timestamp)
+        state = replace(state,memory=decay_memory(state.memory,timestamp,config.memory_config))
         fighter = inputs.fighter(actor)
         current_context = decision_context(state, actor, fighter.decision_context, effective_horizon)
         selected = functions.action_chooser(
@@ -280,6 +283,7 @@ def run_causal_path(
             rngs.mechanics,
             inputs.mechanics_placeholders,
         )
+        state=apply_action_consequence(state,actor,selected,resolution.consequence,fighter.mechanics)
         material_change = resolution.transition is not None
         if resolution.transition is not None:
             state = apply_transition_request(state, timeline, resolution.transition, timestamp)
@@ -288,8 +292,9 @@ def run_causal_path(
             memory=update_memory(state.memory, resolution, config.memory_config),
         )
 
-        if isinstance(resolution.consequence, FightTerminationRequest):
-            termination = resolution.consequence
+        requested_termination=(resolution.consequence if isinstance(resolution.consequence,FightTerminationRequest) else resolution.consequence.termination if isinstance(resolution.consequence,StrikeConsequence) else None)
+        if requested_termination is not None:
+            termination = requested_termination
             state = replace(
                 state,
                 finished=True,
@@ -309,6 +314,8 @@ def run_causal_path(
                 _controller(state),
                 current_context,
                 state.memory.fighter(actor),
+                resolution.consequence.impact if isinstance(resolution.consequence,StrikeConsequence) else 0.0,
+                resolution.consequence.knockdown if isinstance(resolution.consequence,StrikeConsequence) else False,
             )
         )
 

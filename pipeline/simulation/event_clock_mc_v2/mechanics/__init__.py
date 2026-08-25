@@ -11,6 +11,7 @@ from .resolution import (
     TransitionRequest,
 )
 from .resolver import resolve_action
+from .physiology import advance_physiology, apply_action_consequence, recover_round
 
 __all__ = [
     "ActionOutcome",
@@ -24,4 +25,7 @@ __all__ = [
     "TransitionKind",
     "TransitionRequest",
     "resolve_action",
+    "advance_physiology",
+    "apply_action_consequence",
+    "recover_round",
 ]

@@ -24,14 +24,23 @@ class FighterMechanics:
     submission_success_probability: float
     ground_escape_probability: float
     ground_reversal_probability: float
+    striking_power: float = 50.0
+    damage_durability: float = 50.0
+    knockdown_resistance: float = 50.0
+    stamina_capacity: float = 100.0
+    stamina_depletion_resistance: float = 50.0
 
     def __post_init__(self) -> None:
-        for field in fields(self):
+        for field in fields(self)[:6]:
             value = getattr(self, field.name)
             if not isinstance(value, (int, float)) or isinstance(value, bool):
                 raise ValueError(f"{field.name} must be a numeric probability")
             if not math.isfinite(value) or not 0.0 <= value <= 1.0:
                 raise ValueError(f"{field.name} must be between 0 and 1")
+        for field in fields(self)[6:]:
+            value=getattr(self,field.name)
+            if not isinstance(value,(int,float)) or isinstance(value,bool) or not math.isfinite(value) or value<=0:
+                raise ValueError(f"{field.name} must be finite and positive")
 
 
 @dataclass(frozen=True)

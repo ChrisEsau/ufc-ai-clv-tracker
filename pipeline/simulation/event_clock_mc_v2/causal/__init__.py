@@ -2,7 +2,7 @@
 
 from .events import ActionEvent, ActionFamily
 from .legality import legal_actions, validate_action_event
-from .state import FightMemory, FighterMemory, FightState, Phase, Side
+from .state import FightMemory, FightPhysiology, FighterMemory, FighterPhysiology, FightState, Phase, Side
 from .timeline import PhaseSegment, PhaseTimeline
 
 __all__ = [
@@ -11,6 +11,8 @@ __all__ = [
     "FightState",
     "FightMemory",
     "FighterMemory",
+    "FightPhysiology",
+    "FighterPhysiology",
     "Phase",
     "PhaseSegment",
     "PhaseTimeline",

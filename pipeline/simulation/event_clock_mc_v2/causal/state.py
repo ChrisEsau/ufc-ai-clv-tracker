@@ -67,6 +67,28 @@ class FightMemory:
 
 
 @dataclass(frozen=True)
+class FighterPhysiology:
+    """Single authoritative V2 stamina, trauma, and acute state."""
+    stamina: float = 1.0
+    cumulative_trauma: float = 0.0
+    acute_vulnerability: float = 0.0
+    knockdowns_suffered: int = 0
+    def __post_init__(self):
+        if not 0 <= self.stamina <= 1: raise ValueError("stamina must be in [0, 1]")
+        if self.cumulative_trauma < 0 or self.acute_vulnerability < 0: raise ValueError("physiology values cannot be negative")
+        if isinstance(self.knockdowns_suffered,bool) or not isinstance(self.knockdowns_suffered,int) or self.knockdowns_suffered<0: raise ValueError("knockdowns_suffered must be a non-negative integer")
+
+
+@dataclass(frozen=True)
+class FightPhysiology:
+    red: FighterPhysiology = FighterPhysiology()
+    blue: FighterPhysiology = FighterPhysiology()
+    def fighter(self,side:Side)->FighterPhysiology:
+        if not isinstance(side,Side): raise ValueError("side must be a Side")
+        return self.red if side is Side.RED else self.blue
+
+
+@dataclass(frozen=True)
 class FightState:
     """Minimal Stage 1 state, validated at every construction boundary."""
 
@@ -80,6 +102,7 @@ class FightState:
     winner: Side | None = None
     finish_method: str | None = None
     memory: FightMemory = FightMemory()
+    physiology: FightPhysiology = FightPhysiology()
 
     def __post_init__(self) -> None:
         if not isinstance(self.phase, Phase):
@@ -117,3 +140,4 @@ class FightState:
             raise ValueError("memory must be FightMemory")
         if self.memory.updated_at_seconds > self.fight_time_seconds:
             raise ValueError("memory cannot be updated beyond fight time")
+        if not isinstance(self.physiology,FightPhysiology): raise ValueError("physiology must be FightPhysiology")

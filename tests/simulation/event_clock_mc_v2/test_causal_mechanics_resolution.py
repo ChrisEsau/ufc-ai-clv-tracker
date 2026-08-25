@@ -387,7 +387,10 @@ def test_strikes_return_landed_or_missed_without_phase_transition(
     )
 
     assert landed.outcome is ActionOutcome.LANDED
-    assert landed.consequence == StrikeConsequence(True)
+    assert isinstance(landed.consequence, StrikeConsequence)
+    assert landed.consequence.landed is True
+    assert landed.consequence.impact > 0
+    assert landed.consequence.trauma_increment > 0
     assert landed.transition is None
     assert missed.outcome is ActionOutcome.MISSED
     assert missed.consequence == StrikeConsequence(False)

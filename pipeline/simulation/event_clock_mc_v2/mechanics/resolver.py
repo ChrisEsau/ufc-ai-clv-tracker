@@ -18,6 +18,7 @@ from .resolution import (
     TransitionKind,
     TransitionRequest,
 )
+from .physiology import resolve_landed_strike
 
 
 def resolve_action(
@@ -40,7 +41,7 @@ def resolve_action(
     fighter = inputs.fighter(event.actor)
 
     if family in {ActionFamily.STAND_ATTACK, ActionFamily.STAND_COUNTER}:
-        return _strike(event, fighter.standing_strike_landing_probability, rng)
+        return _strike(event, state, inputs, fighter.standing_strike_landing_probability, rng)
     if family is ActionFamily.PRESSURE or family is ActionFamily.RESET_RANGE:
         return ActionResolution(event, ActionOutcome.TACTICAL)
     if family is ActionFamily.CLINCH_ENTRY:
@@ -66,7 +67,7 @@ def resolve_action(
             ),
         )
     if family is ActionFamily.CLINCH_STRIKE:
-        return _strike(event, placeholders.clinch_strike_landing_probability, rng)
+        return _strike(event, state, inputs, placeholders.clinch_strike_landing_probability, rng)
     if family is ActionFamily.CLINCH_CONTROL:
         return ActionResolution(event, ActionOutcome.CONTROLLED)
     if family is ActionFamily.CLINCH_TAKEDOWN:
@@ -92,7 +93,7 @@ def resolve_action(
             ),
         )
     if family in {ActionFamily.GROUND_STRIKE, ActionFamily.BOTTOM_STRIKE}:
-        return _strike(event, fighter.ground_strike_landing_probability, rng)
+        return _strike(event, state, inputs, fighter.ground_strike_landing_probability, rng)
     if family in {ActionFamily.ADVANCE_POSITION, ActionFamily.IMPROVE_POSITION}:
         return ActionResolution(event, ActionOutcome.MAINTAINED)
     if family is ActionFamily.SUBMISSION_ATTACK:
@@ -141,12 +142,12 @@ def resolve_action(
     raise ValueError(f"no mechanics resolver for {family.value}")
 
 
-def _strike(event: ActionEvent, probability: float, rng: np.random.Generator) -> ActionResolution:
+def _strike(event: ActionEvent, state: FightState, inputs: MechanicsInputs, probability: float, rng: np.random.Generator) -> ActionResolution:
     landed = _succeeds(probability, rng)
     return ActionResolution(
         event,
         ActionOutcome.LANDED if landed else ActionOutcome.MISSED,
-        consequence=StrikeConsequence(landed),
+        consequence=resolve_landed_strike(event,state,inputs,landed,rng),
     )
 
 

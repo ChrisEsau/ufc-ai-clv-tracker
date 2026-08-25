@@ -72,15 +72,22 @@ class TransitionRequest:
 
 @dataclass(frozen=True)
 class StrikeConsequence:
-    """A landing observation; damage/physiology remains intentionally separate."""
+    """Complete immutable strike consequence for authoritative engine application."""
 
     landed: bool
+    impact: float = 0.0
+    trauma_increment: float = 0.0
+    knockdown_probability: float = 0.0
+    knockdown: bool = False
+    acute_increment: float = 0.0
+    termination: FightTerminationRequest | None = None
 
 
 class FinishMethod(str, Enum):
     """Finish methods that Stage 3 mechanics can currently request."""
 
     SUBMISSION = "submission"
+    KO_TKO = "ko_tko"
 
 
 @dataclass(frozen=True)
