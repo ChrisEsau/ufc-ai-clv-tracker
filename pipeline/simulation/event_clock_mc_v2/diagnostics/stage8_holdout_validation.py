@@ -120,6 +120,9 @@ def main():
     seconds = 0.0
     actual_seconds = 0.0
     illegal = mismatch = 0
+    final_stamina = []
+    final_trauma = []
+    knockdowns = ko_tko_finishes = post_finish_events = 0
     for fi, (fight, rf, bf) in enumerate(chosen):
         horizon = elapsed_seconds(fight)
         rid, bid = str(fight["r_id"]), str(fight["b_id"])
@@ -198,6 +201,19 @@ def main():
             mismatch += not np.isclose(
                 exposure, out.reported_through_seconds, atol=1e-9
             )
+            physiology = out.final_state.physiology
+            final_stamina.extend((physiology.red.stamina, physiology.blue.stamina))
+            final_trauma.extend(
+                (physiology.red.cumulative_trauma, physiology.blue.cumulative_trauma)
+            )
+            knockdowns += sum(event.knockdown for event in out.events)
+            if out.termination is not None and out.termination.method.value == "ko_tko":
+                ko_tko_finishes += 1
+            if out.termination is not None and out.events:
+                post_finish_events += sum(
+                    event.timestamp_seconds > out.events[-1].timestamp_seconds
+                    for event in out.events
+                )
             for e in out.events:
                 ac = e.selected_action
                 if e.source_phase is Phase.GROUND and ac in STANDING:
@@ -279,6 +295,15 @@ def main():
         "invariants": {
             "illegal_cross_phase_actions": illegal,
             "timeline_exposure_mismatches": mismatch,
+            "post_finish_events": post_finish_events,
+        },
+        "physiology_metrics": {
+            "knockdowns_per_fight": knockdowns / (len(chosen) * a.paths_per_fight),
+            "ko_tko_fight_share": ko_tko_finishes / (len(chosen) * a.paths_per_fight),
+            "mean_final_stamina": float(np.mean(final_stamina)),
+            "mean_final_trauma": float(np.mean(final_trauma)),
+            "final_stamina": quantiles(final_stamina),
+            "final_trauma": quantiles(final_trauma),
         },
         "actual_per15_per_fighter": act,
         "sim_per15_per_fighter": sim,
