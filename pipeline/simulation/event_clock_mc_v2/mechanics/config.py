@@ -16,6 +16,12 @@ class FighterMechanics:
     existing FSR V3 ``MatchupRuntimeInputs`` quantities. Submission, escape,
     and reversal probabilities remain explicit caller inputs until their frozen
     mechanics can be composed without importing a legacy state or engine.
+
+    ``striking_power`` and ``knockdown_resistance`` retain the Stage-10 legacy
+    rating coordinate for neutral/backward-compatible callers. Canonical FSR V3
+    may instead provide its native log effects explicitly. The physiology
+    resolver consumes the effective log effects, so native V3 latents do not
+    need to be round-tripped through an artificial unbounded rating.
     """
 
     standing_strike_landing_probability: float
@@ -29,6 +35,8 @@ class FighterMechanics:
     knockdown_resistance: float = 50.0
     stamina_capacity: float = 100.0
     stamina_depletion_resistance: float = 50.0
+    striking_power_log_effect: float | None = None
+    knockdown_resistance_log_effect: float | None = None
 
     def __post_init__(self) -> None:
         for field in fields(self)[:6]:
@@ -37,7 +45,7 @@ class FighterMechanics:
                 raise ValueError(f"{field.name} must be a numeric probability")
             if not math.isfinite(value) or not 0.0 <= value <= 1.0:
                 raise ValueError(f"{field.name} must be between 0 and 1")
-        for field in fields(self)[6:]:
+        for field in fields(self)[6:11]:
             value = getattr(self, field.name)
             if (
                 not isinstance(value, (int, float))
@@ -46,6 +54,30 @@ class FighterMechanics:
                 or value <= 0
             ):
                 raise ValueError(f"{field.name} must be finite and positive")
+        for field in fields(self)[11:]:
+            value = getattr(self, field.name)
+            if value is None:
+                continue
+            if (
+                not isinstance(value, (int, float))
+                or isinstance(value, bool)
+                or not math.isfinite(value)
+            ):
+                raise ValueError(f"{field.name} must be finite when provided")
+
+    @property
+    def effective_power_log_effect(self) -> float:
+        """Log multiplier used by the migrated Stage-10 impact formula."""
+        if self.striking_power_log_effect is not None:
+            return float(self.striking_power_log_effect)
+        return (float(self.striking_power) - 50.0) / 55.0
+
+    @property
+    def effective_kd_resistance_log_effect(self) -> float:
+        """Log resistance used by the migrated Stage-10 KD/finish formulas."""
+        if self.knockdown_resistance_log_effect is not None:
+            return float(self.knockdown_resistance_log_effect)
+        return (float(self.knockdown_resistance) - 50.0) / 32.0
 
 
 @dataclass(frozen=True)
