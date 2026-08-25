@@ -57,9 +57,19 @@ jobs:
             --seed-base 20260825 \
             --output data/diagnostics/event_clock_mc_v2/stage8_intent_prior_shadow.json
 
-      - name: Upload result
+      - name: Run clinch decomposition
+        run: |
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.stage8_clinch_decomposition \
+            --fights 25 \
+            --paths-per-fight 50 \
+            --seed-base 20260825 \
+            --output data/diagnostics/event_clock_mc_v2/stage8_clinch_decomposition.json
+
+      - name: Upload results
         uses: actions/upload-artifact@v4
         with:
           name: stage8-intent-prior-shadow
-          path: data/diagnostics/event_clock_mc_v2/stage8_intent_prior_shadow.json
+          path: |
+            data/diagnostics/event_clock_mc_v2/stage8_intent_prior_shadow.json
+            data/diagnostics/event_clock_mc_v2/stage8_clinch_decomposition.json
           if-no-files-found: error
