@@ -19,6 +19,7 @@ from pipeline.simulation.event_clock_mc_v2.mechanics.resolution import (
     FinishMethod,
     FightTerminationRequest,
     StrikeConsequence,
+    SubmissionConsequence,
     TransitionKind,
     TransitionRequest,
 )
@@ -26,12 +27,12 @@ from pipeline.simulation.event_clock_mc_v2.mechanics.resolver import resolve_act
 
 
 SUCCESS_INPUTS = MechanicsInputs(
-    red=FighterMechanics(1.0, 1.0, 1.0, 1.0, 1.0, 1.0),
-    blue=FighterMechanics(1.0, 1.0, 1.0, 1.0, 1.0, 1.0),
+    red=FighterMechanics(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, submission_conversion_baseline=1-1e-8),
+    blue=FighterMechanics(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, submission_conversion_baseline=1-1e-8),
 )
 FAILURE_INPUTS = MechanicsInputs(
-    red=FighterMechanics(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-    blue=FighterMechanics(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+    red=FighterMechanics(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, submission_conversion_baseline=1e-8),
+    blue=FighterMechanics(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, submission_conversion_baseline=1e-8),
 )
 SUCCESS_PLACEHOLDERS = StructuralMVPPlaceholders(1.0, 1.0, 1.0)
 FAILURE_PLACEHOLDERS = StructuralMVPPlaceholders(0.0, 0.0, 0.0)
@@ -406,12 +407,13 @@ def test_submission_success_requests_termination_without_mutating_state() -> Non
     failed = resolve_action(event, state, FAILURE_INPUTS, np.random.default_rng(3))
 
     assert succeeded.outcome is ActionOutcome.SUCCESS
-    assert succeeded.consequence == FightTerminationRequest(
-        Side.BLUE, FinishMethod.SUBMISSION
-    )
-    assert succeeded.consequence.finish_method is FinishMethod.SUBMISSION
+    assert isinstance(succeeded.consequence, SubmissionConsequence)
+    assert succeeded.consequence.termination == FightTerminationRequest(Side.BLUE, FinishMethod.SUBMISSION)
+    assert succeeded.consequence.termination.finish_method is FinishMethod.SUBMISSION
     assert failed.outcome is ActionOutcome.FAILURE
-    assert failed.consequence is None
+    assert isinstance(failed.consequence, SubmissionConsequence)
+    assert failed.consequence.attempted and not failed.consequence.success
+    assert failed.consequence.termination is None
     assert state == state_before
     assert state.finished is False
 

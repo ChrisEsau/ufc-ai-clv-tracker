@@ -11,6 +11,7 @@ import math
 from collections.abc import Mapping
 
 import numpy as np
+import pandas as pd
 
 from pipeline.fsr_v3.active_config import ActiveTraitConfig
 from pipeline.simulation.event_clock_mc_v2.mechanics.config import FighterMechanics
@@ -21,6 +22,7 @@ REQUIRED_PREFIGHT_PHYSIOLOGY_COLUMNS = frozenset(
         "event_date", "fight_id", "fighter_id", "striking_power_v3",
         "damage_durability", "knockdown_resistance_v3",
         "stamina_capacity", "stamina_depletion_resistance",
+        "submission_conversion_baseline", "submission_offense", "submission_defense",
     }
 )
 
@@ -67,6 +69,8 @@ def fighter_mechanics_from_prefight(
     submission_success_probability: float = 0.0,
     ground_escape_probability: float = 0.40,
     ground_reversal_probability: float = 0.30,
+    age_years: float = 30.0,
+    submission_conversion_offset: float = 0.0,
 ) -> FighterMechanics:
     """Build mechanics from one exact historical prefight row and matchup runtime."""
     record = dict(prefight_row)
@@ -91,4 +95,21 @@ def fighter_mechanics_from_prefight(
         knockdown_resistance=float(legacy_kdres_equivalent(record["knockdown_resistance_v3"])),
         stamina_capacity=float(record["stamina_capacity"]),
         stamina_depletion_resistance=float(record["stamina_depletion_resistance"]),
+        age_years=float(age_years),
+        submission_conversion_baseline=float(record["submission_conversion_baseline"]),
+        submission_offense=float(record["submission_offense"]),
+        submission_defense=float(record["submission_defense"]),
+        submission_conversion_offset=float(submission_conversion_offset),
     )
+
+
+def age_years_on_date(dob, event_date) -> float:
+    """Derive exact fight-date age when snapshots do not publish canonical age."""
+    if dob is None or pd.isna(dob):
+        return 30.0
+    birth = pd.Timestamp(dob)
+    fight_date = pd.Timestamp(event_date)
+    age = (fight_date - birth).days / 365.2425
+    if not np.isfinite(age) or age <= 0.0:
+        raise ValueError(f"invalid DOB/event date: dob={dob}, event_date={event_date}")
+    return float(age)

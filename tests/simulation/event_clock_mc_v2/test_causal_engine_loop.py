@@ -39,8 +39,8 @@ RED_TIMING = BrainTimingContext(own_fatigue=.1)
 BLUE_TIMING = BrainTimingContext(own_fatigue=.2)
 CAPABILITIES = BrainCapabilities(.5, .5, .5, .5, .5, .5, .5, .5, .5)
 DECISION = BrainDecisionContext()
-SUCCESS_MECHANICS = FighterMechanics(1, 1, 1, 1, 1, 1)
-FAILURE_MECHANICS = FighterMechanics(0, 0, 0, 0, 0, 0)
+SUCCESS_MECHANICS = FighterMechanics(1, 1, 1, 1, 1, 1, submission_conversion_baseline=1 - 1e-8)
+FAILURE_MECHANICS = FighterMechanics(0, 0, 0, 0, 0, 0, submission_conversion_baseline=1e-8)
 SUCCESS_PLACEHOLDERS = StructuralMVPPlaceholders(1, 1, 1)
 FAILURE_PLACEHOLDERS = StructuralMVPPlaceholders(0, 0, 0)
 
@@ -105,11 +105,11 @@ def test_earliest_actor_executes_at_authoritative_time_and_exact_event_reaches_m
     chooser = ScriptChooser([], [ActionFamily.PRESSURE])
     received: list[ActionEvent] = []
 
-    def spy(event, state, inputs, rng, placeholders):
+    def spy(event, state, inputs, rng, placeholders, ko_kd_rng, submission_rng):
         received.append(event)
         assert event.timestamp_seconds == state.fight_time_seconds
         assert event.source_phase is state.phase
-        return resolve_action(event, state, inputs, rng, placeholders)
+        return resolve_action(event, state, inputs, rng, placeholders, ko_kd_rng, submission_rng)
 
     result = run_causal_path(
         _inputs(),

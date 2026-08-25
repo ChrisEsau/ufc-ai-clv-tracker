@@ -1,0 +1,3 @@
+version: event_clock_v2_matched_seeds_v1
+derivation: sha256(seed_set_version|bout_id|path_id), first unsigned 64 bits
+configuration_identity_in_seed: false

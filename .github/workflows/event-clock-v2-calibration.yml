@@ -1,0 +1,170 @@
+name: Event Clock V2 Historical Calibration
+
+on:
+  pull_request:
+    branches: [refactor/event-clock-v2-brain-timeline]
+    paths:
+      - "pipeline/simulation/event_clock_mc_v2/**"
+      - "tests/simulation/event_clock_mc_v2/**"
+      - "configs/event_clock_v2/**"
+      - "data/calibration/event_clock_v2/**"
+      - ".github/workflows/event-clock-v2-calibration.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: write
+
+jobs:
+  canonical-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      RESEARCH_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      EXPECTED_SOURCE_DIGEST: sha256:a6abd062322eaf0c4a47997f215d7fa82c01c7db2755089fad1a30420da7d639
+    steps:
+      - name: Checkout exact research SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RESEARCH_SHA }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: python -m pip install numpy pandas pyarrow pytest pyyaml scipy scikit-learn joblib
+
+      - name: Verify approved source artifact metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$RESEARCH_SHA"
+          actual=$(gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/9494902022 --jq .digest)
+          test "$actual" = "$EXPECTED_SOURCE_DIGEST"
+          echo "canonical_source_artifact_id=9494902022" >> "$GITHUB_STEP_SUMMARY"
+          echo "canonical_source_artifact_digest=$actual" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Restore canonical historical prefight state
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 32645607979
+
+      - name: Verify restored historical inputs
+        run: |
+          cp -a restored/canonical-weight-class-state/. data/
+          test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
+          test -f data/master/ufc_master.parquet
+          test -f data/fight_details/ufc_round_stats.parquet
+          test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
+          test "$(python -c 'import yaml; print(yaml.safe_load(open("configs/event_clock_v2/calibration/default.yaml"))["mechanics"])')" = "{}"
+
+      - name: Run calibration contract tests
+        run: python -m pytest tests/simulation/event_clock_mc_v2 -q
+
+      - name: Deterministic empirical micro gate (5 fights x 3 paths)
+        run: |
+          mkdir -p artifacts/event-clock-v2-calibration
+          python -m pipeline.simulation.event_clock_mc_v2.calibration.runner \
+            --cohort calibration --paths-per-fight 3 --limit 5 \
+            --ko-kd-architecture empirical_event2 \
+            --calibration-config configs/event_clock_v2/calibration/default.yaml \
+            --output artifacts/event-clock-v2-calibration/micro-ledger.json
+          python - <<'PY'
+          import json, math
+          p = json.load(open("artifacts/event-clock-v2-calibration/micro-ledger.json"))
+          assert p["parameter_config"]["explicit_overrides"] == {}
+          assert p["invariant_results"]["status"] == "PASS", p["invariant_results"]
+          assert p["invariant_results"]["counts"]["deterministic_replay_mismatch"] == 0
+          def finite(value):
+              if isinstance(value, dict): return all(finite(v) for v in value.values())
+              if isinstance(value, list): return all(finite(v) for v in value)
+              return not isinstance(value, float) or math.isfinite(value)
+          assert finite(p["simulator_metrics"])
+          PY
+
+      - name: Judging + submission historical validation (200 fights x 50 paths)
+        run: |
+          python -m pipeline.simulation.event_clock_mc_v2.calibration.runner \
+            --cohort calibration --paths-per-fight 50 \
+            --ko-kd-architecture empirical_event2 \
+            --calibration-config configs/event_clock_v2/calibration/default.yaml \
+            --output artifacts/event-clock-v2-calibration/judging-submission-200x50.json
+
+      - name: Freedom 250 complete validation (100 paths x 7 fights)
+        run: |
+          python -m pipeline.simulation.event_clock_mc_v2.calibration.runner \
+            --event-name "UFC Freedom 250" --paths-per-fight 100 \
+            --ko-kd-architecture empirical_event2 \
+            --calibration-config configs/event_clock_v2/calibration/default.yaml \
+            --output artifacts/event-clock-v2-calibration/freedom250-100.json
+
+      - name: Report baseline metadata
+        run: |
+          echo "research_sha=$RESEARCH_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "actions_run_id=$GITHUB_RUN_ID" >> "$GITHUB_STEP_SUMMARY"
+          echo "job_name=$GITHUB_JOB" >> "$GITHUB_STEP_SUMMARY"
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          for name in ("micro-ledger.json", "judging-submission-200x50.json", "freedom250-100.json"):
+              d=json.load(open("artifacts/event-clock-v2-calibration/"+name))
+              print(f"### {name}")
+              print("```json")
+              print(json.dumps({k:d[k] for k in ("experiment_id","fight_count","paths_per_fight","parameter_config_hash","path_replay_digest","metrics_fingerprint","run_status","invariant_results")}, indent=2))
+              print("```")
+          PY
+
+      - name: Publish compact validation report to PR
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY' > /tmp/validation-comment.md
+          import json
+          historical=json.load(open("artifacts/event-clock-v2-calibration/judging-submission-200x50.json"))
+          freedom=json.load(open("artifacts/event-clock-v2-calibration/freedom250-100.json"))
+          m=historical["simulator_metrics"]
+          keys=("red_path_win_probability","blue_path_win_probability","ko_tko_fight_share",
+                "submission_fight_share","decision_fight_share","unanimous_decision_fight_share",
+                "split_decision_fight_share","mean_fight_duration_seconds","submissions_per_fighter_15",
+                "submission_conversion_rate_per_attempt","judge_disagreement_rate_per_decision",
+                "standing_attempts_per_fighter_15","clinch_strikes_per_fighter_15",
+                "ground_strikes_per_fighter_15","td_attempts_per_fighter_15",
+                "td_landed_per_fighter_15","knockdowns_per_fight","mean_final_stamina",
+                "standing_phase_share","clinch_phase_share","ground_phase_share",
+                "final_stamina_quantiles","round_red_win_probability_distribution",
+                "decision_winner_allocation","decision_round_count_distribution",
+                "submission_finish_time_distribution","submission_offense_edge_among_winners",
+                "loser_submission_defense_edge","mean_submission_conversion_probability")
+          print("## Brain MC judging + submission validation")
+          print(f"SHA `{historical['git_sha']}` · experiment `{historical['experiment_id']}`")
+          print("```json")
+          print(json.dumps({"historical_200x50":{k:m[k] for k in keys},
+                            "judge_model":m["judge_model"],
+                            "submission_model":m["submission_model"],
+                            "invariants":historical["invariant_results"],
+                            "path_replay_digest":historical["path_replay_digest"],
+                            "freedom250_100":freedom["simulator_metrics"]["fight_probabilities"],
+                            "freedom_invariants":freedom["invariant_results"],
+                            "freedom_path_replay_digest":freedom["path_replay_digest"]}, indent=2))
+          print("```")
+          PY
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/validation-comment.md
+
+      - name: Upload baseline artifacts
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: event-clock-v2-canonical-baseline-${{ env.RESEARCH_SHA }}
+          path: artifacts/event-clock-v2-calibration/
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Report uploaded artifact identity
+        run: |
+          echo "artifact_id=${{ steps.upload.outputs.artifact-id }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "artifact_digest=${{ steps.upload.outputs.artifact-digest }}" >> "$GITHUB_STEP_SUMMARY"

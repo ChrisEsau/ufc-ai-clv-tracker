@@ -52,15 +52,20 @@ from pipeline.simulation.event_clock_mc_v2.causal.transitions import (
     start_next_round,
 )
 from pipeline.simulation.event_clock_mc_v2.mechanics.config import (
+    DEFAULT_MECHANICS_CALIBRATION_CONFIG,
     FighterMechanics,
+    KOKDArchitecture,
+    MechanicsCalibrationConfig,
     MechanicsInputs,
     StructuralMVPPlaceholders,
 )
 from pipeline.simulation.event_clock_mc_v2.mechanics.resolution import (
     ActionOutcome,
     ActionResolution,
+    FinishMethod,
     FightTerminationRequest,
     StrikeConsequence,
+    SubmissionConsequence,
     TransitionKind,
     TransitionRequest,
 )
@@ -69,6 +74,12 @@ from pipeline.simulation.event_clock_mc_v2.mechanics.physiology import (
     advance_physiology,
     apply_action_consequence,
     recover_round,
+)
+from pipeline.simulation.event_clock_mc_v2.judging import (
+    EVENT2_TOTAL_JUDGE_ROUND_TRANSFER,
+    DecisionResult,
+    Event2JudgeModel,
+    score_decision,
 )
 
 
@@ -106,6 +117,11 @@ class EngineInputs:
     timing_config: BrainTimingConfig = DEFAULT_BRAIN_TIMING_CONFIG
     policy_config: BrainPolicyConfig = DEFAULT_BRAIN_POLICY_CONFIG
     mechanics_placeholders: StructuralMVPPlaceholders = StructuralMVPPlaceholders()
+    mechanics_calibration: MechanicsCalibrationConfig = (
+        DEFAULT_MECHANICS_CALIBRATION_CONFIG
+    )
+    ko_kd_architecture: KOKDArchitecture = KOKDArchitecture.EMPIRICAL_EVENT2
+    judge_model: Event2JudgeModel = EVENT2_TOTAL_JUDGE_ROUND_TRANSFER
 
     def fighter(self, side: Side) -> FighterEngineInputs:
         if not isinstance(side, Side):
@@ -114,7 +130,12 @@ class EngineInputs:
 
     @property
     def mechanics_inputs(self) -> MechanicsInputs:
-        return MechanicsInputs(self.red.mechanics, self.blue.mechanics)
+        return MechanicsInputs(
+            self.red.mechanics,
+            self.blue.mechanics,
+            self.mechanics_calibration,
+            self.ko_kd_architecture,
+        )
 
 
 @dataclass(frozen=True)
@@ -141,17 +162,20 @@ class EngineConfig:
 
 @dataclass(frozen=True)
 class EngineRNGs:
-    """Five fixed independent streams: RED/BLUE timing, RED/BLUE choice, mechanics."""
+    """Eight streams; the first six preserve all pre-judging stream identities."""
 
     red_timing: np.random.Generator
     blue_timing: np.random.Generator
     red_selection: np.random.Generator
     blue_selection: np.random.Generator
     mechanics: np.random.Generator
+    ko_kd: np.random.Generator
+    submission: np.random.Generator
+    judging: np.random.Generator
 
     @classmethod
     def from_seed(cls, seed: int) -> EngineRNGs:
-        streams = np.random.SeedSequence(seed).spawn(5)
+        streams = np.random.SeedSequence(seed).spawn(8)
         return cls(*(np.random.default_rng(stream) for stream in streams))
 
     def timing(self, side: Side) -> np.random.Generator:
@@ -182,6 +206,8 @@ MechanicsResolver = Callable[
         MechanicsInputs,
         np.random.Generator,
         StructuralMVPPlaceholders,
+        np.random.Generator,
+        np.random.Generator,
     ],
     ActionResolution,
 ]
@@ -215,6 +241,14 @@ class CausalEventRecord:
     resulting_actor_memory: FighterMemory
     impact: float
     knockdown: bool
+    ko_probability: float
+    kd_probability: float
+    prior_defender_kds: int
+    ko_tko: bool
+    ko_kd_architecture: str | None
+    submission_attempt: bool
+    submission_probability: float
+    submission_success: bool
 
 
 @dataclass(frozen=True)
@@ -234,6 +268,7 @@ class CausalPathResult:
     reported_through_seconds: float
     reached_horizon: bool
     final_pending_actions: tuple[PendingAction, ...]
+    decision: DecisionResult | None = None
 
 
 def initialize_pending_actions(
@@ -288,9 +323,9 @@ def run_causal_path(
         ):
             if state.round_number >= config.number_of_rounds:
                 break
-            state = advance_physiology(state, round_end)
+            state = advance_physiology(state, round_end, inputs.mechanics_calibration)
             state = start_next_round(state, timeline, round_end)
-            state = recover_round(state)
+            state = recover_round(state, inputs.mechanics_calibration)
             state = replace(
                 state,
                 memory=decay_memory(state.memory, round_end, config.memory_config),
@@ -307,7 +342,7 @@ def run_causal_path(
 
         actor = next_pending.actor
         timestamp = next_pending.scheduled_time_seconds
-        state = advance_physiology(state, timestamp)
+        state = advance_physiology(state, timestamp, inputs.mechanics_calibration)
         state = replace(
             state, memory=decay_memory(state.memory, timestamp, config.memory_config)
         )
@@ -330,9 +365,16 @@ def run_causal_path(
             inputs.mechanics_inputs,
             rngs.mechanics,
             inputs.mechanics_placeholders,
+            rngs.ko_kd,
+            rngs.submission,
         )
         state = apply_action_consequence(
-            state, actor, selected, resolution.consequence, fighter.mechanics
+            state,
+            actor,
+            selected,
+            resolution.consequence,
+            fighter.mechanics,
+            inputs.mechanics_calibration,
         )
         material_change = resolution.transition is not None
         if resolution.transition is not None:
@@ -348,8 +390,8 @@ def run_causal_path(
             resolution.consequence
             if isinstance(resolution.consequence, FightTerminationRequest)
             else (
-                resolution.consequence.termination
-                if isinstance(resolution.consequence, StrikeConsequence)
+            resolution.consequence.termination
+                if isinstance(resolution.consequence, (StrikeConsequence, SubmissionConsequence))
                 else None
             )
         )
@@ -384,6 +426,35 @@ def run_causal_path(
                     if isinstance(resolution.consequence, StrikeConsequence)
                     else False
                 ),
+                (
+                    resolution.consequence.ko_probability
+                    if isinstance(resolution.consequence, StrikeConsequence)
+                    else 0.0
+                ),
+                (
+                    resolution.consequence.knockdown_probability
+                    if isinstance(resolution.consequence, StrikeConsequence)
+                    else 0.0
+                ),
+                (
+                    resolution.consequence.prior_defender_kds
+                    if isinstance(resolution.consequence, StrikeConsequence)
+                    else 0
+                ),
+                bool(
+                    isinstance(resolution.consequence, StrikeConsequence)
+                    and resolution.consequence.termination is not None
+                    and resolution.consequence.termination.finish_method
+                    is FinishMethod.KO_TKO
+                ),
+                (
+                    resolution.consequence.ko_kd_architecture
+                    if isinstance(resolution.consequence, StrikeConsequence)
+                    else None
+                ),
+                isinstance(resolution.consequence, SubmissionConsequence),
+                (resolution.consequence.conversion_probability if isinstance(resolution.consequence, SubmissionConsequence) else 0.0),
+                bool(isinstance(resolution.consequence, SubmissionConsequence) and resolution.consequence.success),
             )
         )
 
@@ -398,9 +469,23 @@ def run_causal_path(
         else:
             pending[actor] = _sample_pending(state, actor, inputs, rngs, functions)
 
+    reached_scheduled_horizon = not state.finished
     reported_through = state.fight_time_seconds if state.finished else effective_horizon
     timeline_segments = timeline.segments_through(reported_through)
     timeline.validate()
+    decision = None
+    if reached_scheduled_horizon and math.isclose(effective_horizon, config.round_length_seconds * config.number_of_rounds):
+        decision = score_decision(
+            events,
+            timeline_segments,
+            rounds=config.number_of_rounds,
+            round_length=config.round_length_seconds,
+            model=inputs.judge_model,
+            rng=rngs.judging,
+        )
+        termination = FightTerminationRequest(decision.winner, FinishMethod.DECISION)
+        state = replace(state, fight_time_seconds=effective_horizon, finished=True,
+                        winner=decision.winner, finish_method=decision.classification)
     return CausalPathResult(
         final_state=state,
         timeline_segments=timeline_segments,
@@ -409,10 +494,11 @@ def run_causal_path(
         termination=termination,
         horizon_seconds=effective_horizon,
         reported_through_seconds=reported_through,
-        reached_horizon=not state.finished,
+        reached_horizon=reached_scheduled_horizon,
         final_pending_actions=tuple(
             sorted(pending.values(), key=lambda item: item.actor.value)
         ),
+        decision=decision,
     )
 
 

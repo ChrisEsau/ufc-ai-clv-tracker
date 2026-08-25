@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
+from enum import Enum
 import math
 
 from pipeline.simulation.event_clock_mc_v2.causal.state import Side
@@ -29,6 +30,11 @@ class FighterMechanics:
     knockdown_resistance: float = 50.0
     stamina_capacity: float = 100.0
     stamina_depletion_resistance: float = 50.0
+    age_years: float = 30.0
+    submission_conversion_baseline: float = 0.10
+    submission_offense: float = 0.0
+    submission_defense: float = 0.0
+    submission_conversion_offset: float = 0.0
 
     def __post_init__(self) -> None:
         for field in fields(self)[:6]:
@@ -50,7 +56,7 @@ class FighterMechanics:
                 raise ValueError(f"{field.name} must be finite")
             if field.name == "damage_durability" and value <= 0:
                 raise ValueError("damage_durability must be finite and positive")
-        for field in fields(self)[9:]:
+        for field in fields(self)[9:12]:
             value = getattr(self, field.name)
             if (
                 not isinstance(value, (int, float))
@@ -59,6 +65,18 @@ class FighterMechanics:
                 or value <= 0
             ):
                 raise ValueError(f"{field.name} must be finite and positive")
+        if not 0.0 < self.submission_conversion_baseline < 1.0:
+            raise ValueError("submission_conversion_baseline must be in (0, 1)")
+        for name in ("submission_offense", "submission_defense", "submission_conversion_offset"):
+            if not math.isfinite(getattr(self, name)):
+                raise ValueError(f"{name} must be finite")
+
+
+class KOKDArchitecture(str, Enum):
+    """Explicit strike-consequence architecture; coefficients are not overrides."""
+
+    LEGACY_STAGE10 = "legacy_stage10"
+    EMPIRICAL_EVENT2 = "empirical_event2"
 
 
 @dataclass(frozen=True)
@@ -67,11 +85,43 @@ class MechanicsInputs:
 
     red: FighterMechanics
     blue: FighterMechanics
+    calibration: MechanicsCalibrationConfig = None  # type: ignore[name-defined]
+    ko_kd_architecture: KOKDArchitecture | None = None
 
     def fighter(self, side: Side) -> FighterMechanics:
         if not isinstance(side, Side):
             raise ValueError("side must be a Side value")
         return self.red if side is Side.RED else self.blue
+
+
+@dataclass(frozen=True)
+class MechanicsCalibrationConfig:
+    """Small canonical mechanics surface available to calibration research."""
+
+    impact_scale: float = 0.50
+    trauma_durability_divisor: float = 40.0
+    kd_slope: float = 2.0
+    kd_midpoint: float = 36.0
+    finish_slope: float = 2.0
+    finish_midpoint: float = 36.0
+    post_kd_finish_logit_bonus: float = 1.0
+    action_cost_scale: float = 1.0
+    top_position_cost_per_second: float = 0.00025
+    bottom_position_cost_per_second: float = 0.00035
+    round_recovery_fraction: float = 0.40
+
+    def __post_init__(self) -> None:
+        for field in fields(self):
+            value = getattr(self, field.name)
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise ValueError(f"{field.name} must be numeric")
+            if not math.isfinite(value) or value <= 0.0:
+                raise ValueError(f"{field.name} must be finite and positive")
+        if self.round_recovery_fraction > 1.0:
+            raise ValueError("round_recovery_fraction must not exceed 1")
+
+
+DEFAULT_MECHANICS_CALIBRATION_CONFIG = MechanicsCalibrationConfig()
 
 
 @dataclass(frozen=True)
