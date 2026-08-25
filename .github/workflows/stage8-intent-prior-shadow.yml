@@ -13,6 +13,8 @@ permissions:
 jobs:
   intent-prior-shadow:
     runs-on: ubuntu-24.04
+    env:
+      PYTHONPATH: .
     steps:
       - name: Checkout exact branch head
         uses: actions/checkout@v4
