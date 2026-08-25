@@ -1,0 +1,132 @@
+name: Brain MC Event Runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      event_id:
+        description: "Canonical UFCStats event id"
+        required: true
+        type: string
+      paths:
+        description: "Monte Carlo paths per fight"
+        required: true
+        default: "100"
+        type: string
+  push:
+    branches: [feature/brain-mc-event-runner]
+    paths:
+      - "pipeline/simulation/event_clock_mc_v2/event_runner.py"
+      - ".github/workflows/brain-mc-event-runner.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  run-event:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      EXPECTED_BASE_SHA: 344377bba51b988397982d7b176df0e549d84691
+      EXPECTED_SOURCE_DIGEST: sha256:a6abd062322eaf0c4a47997f215d7fa82c01c7db2755089fad1a30420da7d639
+    steps:
+      - name: Checkout event-runner branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: python -m pip install numpy pandas pyarrow pyyaml scipy scikit-learn joblib
+
+      - name: Verify validated Brain MC ancestry and source artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git merge-base --is-ancestor "$EXPECTED_BASE_SHA" HEAD
+          actual=$(gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/9494902022 --jq .digest)
+          test "$actual" = "$EXPECTED_SOURCE_DIGEST"
+          echo "validated_brain_mc_base=$EXPECTED_BASE_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "event_runner_sha=$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Restore canonical historical Brain MC inputs
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 32645607979
+
+      - name: Verify restored inputs
+        run: |
+          cp -a restored/canonical-weight-class-state/. data/
+          test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
+          test -f data/master/ufc_master.parquet
+          test -f data/fight_details/ufc_round_stats.parquet
+          test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
+
+      - name: Run selected event
+        id: simulate
+        env:
+          INPUT_EVENT_ID: ${{ inputs.event_id }}
+          INPUT_PATHS: ${{ inputs.paths }}
+        run: |
+          mkdir -p artifacts/brain-mc-event
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            paths="${INPUT_PATHS:-100}"
+            python -m pipeline.simulation.event_clock_mc_v2.event_runner \
+              --event-id "$INPUT_EVENT_ID" \
+              --paths "$paths" \
+              --output artifacts/brain-mc-event/result.json
+          else
+            # Initial branch validation: automatically execute the first
+            # canonical UFC event after Freedom 250 at 100 paths/fight.
+            python -m pipeline.simulation.event_clock_mc_v2.event_runner \
+              --next-after-event-name "UFC Freedom 250" \
+              --paths 100 \
+              --output artifacts/brain-mc-event/result.json
+          fi
+
+      - name: Publish compact event summary
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          d=json.load(open('artifacts/brain-mc-event/result.json'))
+          e=d['event_runner']; m=d['simulator_metrics']
+          print(f"## {e['event_name']} — Brain MC")
+          print(f"event_id: `{e['resolved_event_id']}`")
+          print(f"date: {e['event_date']} · paths/fight: {e['paths_per_fight']} · fights: {d['fight_count']}")
+          print('')
+          probs=m.get('fight_probabilities', [])
+          if isinstance(probs, dict):
+              iterable=probs.values()
+          else:
+              iterable=probs
+          for f in iterable:
+              red=f.get('red_fighter') or f.get('red') or f.get('red_name')
+              blue=f.get('blue_fighter') or f.get('blue') or f.get('blue_name')
+              print(f"### {red} vs {blue}")
+              print('```json')
+              print(json.dumps(f, indent=2))
+              print('```')
+          print('')
+          print(f"invariants: `{d['invariant_results']['status']}`")
+          print(f"path digest: `{d['path_replay_digest']}`")
+          PY
+
+      - name: Upload event result
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: brain-mc-event-${{ github.run_id }}
+          path: artifacts/brain-mc-event/result.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Report artifact identity
+        run: |
+          echo "artifact_id=${{ steps.upload.outputs.artifact-id }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "artifact_digest=${{ steps.upload.outputs.artifact-digest }}" >> "$GITHUB_STEP_SUMMARY"
