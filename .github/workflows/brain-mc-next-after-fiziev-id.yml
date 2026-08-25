@@ -94,6 +94,7 @@ jobs:
           echo "event_date=$EVENT_DATE" >> "$GITHUB_STEP_SUMMARY"
           echo "event_id=$EVENT_ID" >> "$GITHUB_STEP_SUMMARY"
           echo "paths_per_fight=1000" >> "$GITHUB_STEP_SUMMARY"
+          echo "submission_mapping_sha=$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
         with:
