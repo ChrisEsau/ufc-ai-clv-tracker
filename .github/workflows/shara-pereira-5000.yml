@@ -1,0 +1,91 @@
+name: Shara Pereira 5000 Path Audit
+
+on:
+  push:
+    branches: [feature/brain-mc-event-runner]
+    paths:
+      - ".github/workflows/shara-pereira-5000.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      EXPECTED_SOURCE_DIGEST: sha256:a6abd062322eaf0c4a47997f215d7fa82c01c7db2755089fad1a30420da7d639
+      TARGET_FIGHT_ID: 012c307c9d446c4d
+      TARGET_EVENT: "UFC Fight Night: Fiziev vs Torres"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install numpy pandas pyarrow pyyaml scipy scikit-learn joblib
+      - name: Restore canonical inputs
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 32645607979
+      - name: Verify and isolate target fight
+        run: |
+          cp -a restored/canonical-weight-class-state/. data/
+          python - <<'PY'
+          import os, pandas as pd
+          from pipeline.common.paths import MASTER_PATH
+          fid=os.environ['TARGET_FIGHT_ID']
+          m=pd.read_parquet(MASTER_PATH)
+          row=m[m.fight_id.astype(str).eq(fid)]
+          if len(row)!=1:
+              raise SystemExit(f'target fight matches={len(row)}')
+          event=str(row.iloc[0].event_name)
+          print('canonical event:', event)
+          print('fight:', row.iloc[0].r_name, 'vs', row.iloc[0].b_name)
+          # Keep the full master for judge training/lookup, but make only the target
+          # bout selectable under its canonical event name for this diagnostic run.
+          same=m.event_name.astype(str).eq(event)
+          other=same & ~m.fight_id.astype(str).eq(fid)
+          m.loc[other, 'event_name']='__SHARA_AUDIT_EXCLUDED__'
+          m.to_parquet(MASTER_PATH, index=False)
+          print('isolated target rows:', int(m.event_name.astype(str).eq(event).sum()))
+          open('/tmp/event_name.txt','w').write(event)
+          PY
+      - name: Run Shara Pereira 5000 paths
+        run: |
+          mkdir -p artifacts/shara-pereira-5000
+          EVENT_NAME="$(cat /tmp/event_name.txt)"
+          python -m pipeline.simulation.event_clock_mc_v2.calibration.runner \
+            --event-name "$EVENT_NAME" \
+            --paths-per-fight 5000 \
+            --ko-kd-architecture empirical_event2 \
+            --calibration-config configs/event_clock_v2/calibration/default.yaml \
+            --output artifacts/shara-pereira-5000/result.json
+      - name: Print diagnostic summary
+        run: |
+          python - <<'PY'
+          import json
+          d=json.load(open('artifacts/shara-pereira-5000/result.json'))
+          m=d['simulator_metrics']
+          keys=[
+            'fight_probabilities','ko_tko_fight_share','submission_fight_share','decision_fight_share',
+            'unanimous_decision_fight_share','split_decision_fight_share','judge_disagreement_rate_per_decision',
+            'standing_attempts_per_fighter_15','clinch_strikes_per_fighter_15','ground_strikes_per_fighter_15',
+            'td_attempts_per_fighter_15','td_landed_per_fighter_15','submissions_per_fighter_15',
+            'submission_conversion_rate_per_attempt','knockdowns_per_fight','mean_fight_duration_seconds',
+            'phase_time_share','mean_final_stamina','judge_model','submission_model'
+          ]
+          print(json.dumps({k:m.get(k) for k in keys}, indent=2))
+          print('invariants', d['invariant_results'])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shara-pereira-5000
+          path: artifacts/shara-pereira-5000/result.json
+          retention-days: 30
