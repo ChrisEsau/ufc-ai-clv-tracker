@@ -40,6 +40,14 @@ class FightState:
     finish_method: str | None = None
 
     def __post_init__(self) -> None:
+        if not isinstance(self.phase, Phase):
+            raise ValueError("phase must be a Phase value")
+        for field_name, controller in (
+            ("clinch_controller", self.clinch_controller),
+            ("ground_controller", self.ground_controller),
+        ):
+            if controller is not None and not isinstance(controller, Side):
+                raise ValueError(f"{field_name} must be a Side value or None")
         if self.fight_time_seconds < 0.0:
             raise ValueError("fight_time_seconds cannot be negative")
         if self.round_number < 1:
@@ -51,6 +59,8 @@ class FightState:
             if self.clinch_controller is not None or self.ground_controller is not None:
                 raise ValueError("standing cannot carry a controller")
         elif self.phase is Phase.CLINCH:
+            if self.clinch_controller is None:
+                raise ValueError("clinch requires a clinch controller")
             if self.ground_controller is not None:
                 raise ValueError("clinch cannot carry a ground controller")
         elif self.phase is Phase.GROUND:

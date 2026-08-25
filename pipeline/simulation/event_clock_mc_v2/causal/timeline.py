@@ -19,6 +19,7 @@ class PhaseSegment:
     def __post_init__(self) -> None:
         if self.end_time < self.start_time:
             raise ValueError("phase segment duration cannot be negative")
+        _validate_controller(self.phase, self.controller)
 
     @property
     def duration(self) -> float:
@@ -31,6 +32,11 @@ class ActivePhase:
     phase: Phase
     controller: Side | None
     entry_reason: str
+
+    def __post_init__(self) -> None:
+        if self.start_time < 0.0:
+            raise ValueError("active phase start time cannot be negative")
+        _validate_controller(self.phase, self.controller)
 
 
 class PhaseTimeline:
@@ -72,10 +78,6 @@ class PhaseTimeline:
         self._close(timestamp, exit_reason)
         self._active = ActivePhase(timestamp, phase, controller, entry_reason)
 
-    def close(self, *, timestamp: float, exit_reason: str) -> None:
-        """Close the active segment at a validation or fight horizon."""
-        self._close(timestamp, exit_reason)
-
     def _close(self, timestamp: float, exit_reason: str) -> None:
         active = self._active
         if active is None:
@@ -113,6 +115,31 @@ class PhaseTimeline:
             exposure[segment.phase] += segment.duration
         return exposure
 
+    def segments_through(self, timestamp: float) -> tuple[PhaseSegment, ...]:
+        """Return a non-destructive exposure snapshot through ``timestamp``."""
+        active = self._active
+        if active is None:
+            raise ValueError("timeline has no active phase to snapshot")
+        if timestamp < active.start_time:
+            raise ValueError("snapshot time cannot precede the active phase")
+        return self.segments + (
+            PhaseSegment(
+                start_time=active.start_time,
+                end_time=timestamp,
+                phase=active.phase,
+                controller=active.controller,
+                entry_reason=active.entry_reason,
+                exit_reason="reporting_horizon",
+            ),
+        )
+
+    def exposure_seconds_through(self, timestamp: float) -> dict[Phase, float]:
+        """Calculate exposure through a horizon without changing the timeline."""
+        exposure = {phase: 0.0 for phase in Phase}
+        for segment in self.segments_through(timestamp):
+            exposure[segment.phase] += segment.duration
+        return exposure
+
 
 def _controller_for(state: FightState) -> Side | None:
     if state.phase is Phase.CLINCH:
@@ -120,3 +147,17 @@ def _controller_for(state: FightState) -> Side | None:
     if state.phase is Phase.GROUND:
         return state.ground_controller
     return None
+
+
+def _validate_controller(phase: Phase, controller: Side | None) -> None:
+    """Apply the same authoritative controller contract to every timeline record."""
+    if not isinstance(phase, Phase):
+        raise ValueError("timeline phase must be a Phase value")
+    if controller is not None and not isinstance(controller, Side):
+        raise ValueError("timeline controller must be a Side value or None")
+    if phase is Phase.STANDING and controller is not None:
+        raise ValueError("standing phase cannot carry a controller")
+    if phase is Phase.CLINCH and controller is None:
+        raise ValueError("clinch phase requires a controller")
+    if phase is Phase.GROUND and controller is None:
+        raise ValueError("ground phase requires a controller")

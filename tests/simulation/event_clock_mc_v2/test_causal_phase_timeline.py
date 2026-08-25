@@ -5,7 +5,6 @@ import pytest
 from pipeline.simulation.event_clock_mc_v2.causal.state import FightState, Phase, Side
 from pipeline.simulation.event_clock_mc_v2.causal.timeline import ActivePhase, PhaseSegment, PhaseTimeline
 from pipeline.simulation.event_clock_mc_v2.causal.transitions import (
-    close_at_horizon,
     clinch_takedown,
     direct_takedown,
     enter_clinch,
@@ -34,8 +33,14 @@ def test_standing_rejects_controllers(clinch_controller, ground_controller) -> N
 
 
 def test_clinch_and_ground_controller_invariants() -> None:
+    with pytest.raises(ValueError, match="clinch requires"):
+        FightState(phase=Phase.CLINCH)
     with pytest.raises(ValueError, match="clinch cannot carry a ground"):
-        FightState(phase=Phase.CLINCH, ground_controller=Side.RED)
+        FightState(
+            phase=Phase.CLINCH,
+            clinch_controller=Side.BLUE,
+            ground_controller=Side.RED,
+        )
     with pytest.raises(ValueError, match="ground requires"):
         FightState(phase=Phase.GROUND)
     with pytest.raises(ValueError, match="ground cannot carry a clinch"):
@@ -44,6 +49,50 @@ def test_clinch_and_ground_controller_invariants() -> None:
             clinch_controller=Side.BLUE,
             ground_controller=Side.RED,
         )
+
+
+@pytest.mark.parametrize("record_type", [PhaseSegment, ActivePhase])
+def test_standing_timeline_records_reject_controller(record_type) -> None:
+    if record_type is PhaseSegment:
+        args = (0.0, 5.0, Phase.STANDING, Side.RED, "start", "end")
+    else:
+        args = (0.0, Phase.STANDING, Side.RED, "start")
+
+    with pytest.raises(ValueError, match="standing phase cannot carry"):
+        record_type(*args)
+
+
+@pytest.mark.parametrize("record_type", [PhaseSegment, ActivePhase])
+def test_ground_timeline_records_require_controller(record_type) -> None:
+    if record_type is PhaseSegment:
+        args = (0.0, 5.0, Phase.GROUND, None, "start", "end")
+    else:
+        args = (0.0, Phase.GROUND, None, "start")
+
+    with pytest.raises(ValueError, match="ground phase requires"):
+        record_type(*args)
+
+
+@pytest.mark.parametrize("record_type", [PhaseSegment, ActivePhase])
+def test_clinch_timeline_records_require_explicit_controller(record_type) -> None:
+    if record_type is PhaseSegment:
+        args = (0.0, 5.0, Phase.CLINCH, None, "start", "end")
+    else:
+        args = (0.0, Phase.CLINCH, None, "start")
+
+    with pytest.raises(ValueError, match="clinch phase requires"):
+        record_type(*args)
+
+
+@pytest.mark.parametrize("record_type", [PhaseSegment, ActivePhase])
+def test_timeline_records_reject_free_form_controller_values(record_type) -> None:
+    if record_type is PhaseSegment:
+        args = (0.0, 5.0, Phase.CLINCH, "red", "start", "end")
+    else:
+        args = (0.0, Phase.CLINCH, "red", "start")
+
+    with pytest.raises(ValueError, match="must be a Side"):
+        record_type(*args)
 
 
 def test_clinch_transition_sets_only_clinch_controller_and_separation_clears_it() -> None:
@@ -150,10 +199,10 @@ def test_scripted_path_exactly_conserves_phase_exposure() -> None:
     state, timeline = _scripted_path()
 
     assert state.phase is Phase.STANDING
-    assert state.fight_time_seconds == 90.0
+    assert state.fight_time_seconds == 71.0
     assert [
         (segment.start_time, segment.end_time, segment.phase, segment.controller)
-        for segment in timeline.segments
+        for segment in timeline.segments_through(90.0)
     ] == [
         (0.0, 20.0, Phase.STANDING, None),
         (20.0, 32.0, Phase.CLINCH, Side.RED),
@@ -161,13 +210,39 @@ def test_scripted_path_exactly_conserves_phase_exposure() -> None:
         (50.0, 71.0, Phase.GROUND, Side.BLUE),
         (71.0, 90.0, Phase.STANDING, None),
     ]
-    assert timeline.exposure_seconds() == {
+    assert timeline.exposure_seconds_through(90.0) == {
         Phase.STANDING: 39.0,
         Phase.CLINCH: 12.0,
         Phase.GROUND: 39.0,
     }
-    assert sum(timeline.exposure_seconds().values()) == 90.0
+    assert sum(timeline.exposure_seconds_through(90.0).values()) == 90.0
     timeline.validate()
+
+
+def test_reporting_horizon_is_non_destructive_and_allows_later_transition() -> None:
+    state, timeline = _scripted_path()
+    completed_before = timeline.segments
+    active_before = timeline.active
+
+    snapshot = timeline.segments_through(90.0)
+
+    assert snapshot[-1] == PhaseSegment(
+        71.0,
+        90.0,
+        Phase.STANDING,
+        None,
+        "ground_escape",
+        "reporting_horizon",
+    )
+    assert timeline.segments == completed_before
+    assert timeline.active is active_before
+    assert timeline.active.start_time == state.phase_started_at == 71.0
+    assert timeline.active.phase is state.phase is Phase.STANDING
+
+    state = enter_clinch(state, timeline, 100.0, Side.RED)
+    assert state.phase is Phase.CLINCH
+    assert timeline.segments[-1].end_time == 100.0
+    assert timeline.active == ActivePhase(100.0, Phase.CLINCH, Side.RED, "clinch_entry")
 
 
 def test_repeated_deterministic_construction_is_identical() -> None:
@@ -189,5 +264,4 @@ def _scripted_path() -> tuple[FightState, PhaseTimeline]:
     state = clinch_takedown(state, timeline, 32.0, Side.RED)
     state = reverse_ground(state, timeline, 50.0, Side.BLUE)
     state = escape_ground(state, timeline, 71.0)
-    state = close_at_horizon(state, timeline, 90.0)
     return state, timeline

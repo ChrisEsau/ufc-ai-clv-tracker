@@ -76,28 +76,6 @@ def start_next_round(
     )
 
 
-def close_at_horizon(
-    state: FightState,
-    timeline: PhaseTimeline,
-    timestamp: float,
-    *,
-    exit_reason: str = "validation_horizon",
-) -> FightState:
-    """Advance state and close its active segment without opening a successor."""
-    if timestamp < state.fight_time_seconds:
-        raise ValueError("time cannot move backward")
-    if timeline.active is None:
-        raise ValueError("timeline has no active phase")
-    if (
-        timeline.active.phase is not state.phase
-        or timeline.active.start_time != state.phase_started_at
-        or timeline.active.controller != _state_controller(state)
-    ):
-        raise ValueError("fight state and active timeline phase are inconsistent")
-    timeline.close(timestamp=timestamp, exit_reason=exit_reason)
-    return replace(state, fight_time_seconds=timestamp)
-
-
 def _apply_transition(
     state: FightState,
     timeline: PhaseTimeline,
