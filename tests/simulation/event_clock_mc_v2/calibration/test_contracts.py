@@ -175,8 +175,15 @@ def test_historical_targets_are_frozen_grouped_and_digest_bound():
         "discrimination_diagnostics",
         "predictive_diagnostics",
         "invariants",
+        "diagnostic_only",
     }
     assert targets["historical_comparator_split"] == "calibration"
+    assert targets["acceptance_bands"]["submission_fight_share"]["diagnostic_only"]
+
+
+def test_scheduled_horizon_does_not_use_realized_finish_time():
+    fight = pd.Series({"total_rounds": 3, "match_time_sec": 75})
+    assert runner.scheduled_horizon_seconds(fight, "bout") == 900.0
 
 
 def test_exact_prefight_contract_rejects_missing_wrong_date_and_duplicates():
@@ -250,7 +257,9 @@ def test_maturity_counts_exclude_all_same_date_fights(tmp_path, monkeypatch):
             for fighter in (red, blue)
         ]
     )
-    paths = [tmp_path / name for name in ("master.parquet", "rounds.parquet", "fsr.parquet")]
+    paths = [
+        tmp_path / name for name in ("master.parquet", "rounds.parquet", "fsr.parquet")
+    ]
     for frame, path in zip((master, rounds, snapshots), paths):
         frame.to_parquet(path, index=False)
     result, audit = build_manifest(*paths)

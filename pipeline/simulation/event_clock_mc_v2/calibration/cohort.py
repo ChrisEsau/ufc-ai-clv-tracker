@@ -117,7 +117,9 @@ def _canonical_prefight_keys(frame: pd.DataFrame) -> pd.DataFrame:
     if missing := required - set(frame):
         raise ValueError(f"prefight snapshots missing {sorted(missing)}")
     keys = frame.loc[:, sorted(required)].copy()
-    keys["event_date"] = pd.to_datetime(keys["event_date"], errors="coerce").dt.normalize()
+    keys["event_date"] = pd.to_datetime(
+        keys["event_date"], errors="coerce"
+    ).dt.normalize()
     keys["fight_id"] = keys["fight_id"].astype(str)
     keys["fighter_id"] = keys["fighter_id"].astype(str)
     return keys

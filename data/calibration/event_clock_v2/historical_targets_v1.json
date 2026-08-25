@@ -29,6 +29,10 @@
       "required": 0,
       "target": 0
     },
+    "impossible_physiology_state": {
+      "required": 0,
+      "target": 0
+    },
     "invalid_state_transitions": {
       "required": 0,
       "target": 0
@@ -54,7 +58,7 @@
       "warn_high": 908.7479999999999,
       "warn_low": 605.832
     },
-    "nan_or_impossible_state_values": {
+    "nan_or_non_finite_state": {
       "required": 0,
       "target": 0
     },
@@ -70,6 +74,7 @@
       "warn_low": 89.3903260309789
     },
     "submission_fight_share": {
+      "diagnostic_only": true,
       "fail_high": 0.18200000000000002,
       "fail_low": 0.098,
       "target": 0.14,
@@ -307,19 +312,22 @@
   "historical_comparator_split": "calibration",
   "historical_phase_exposure": null,
   "metric_groups": {
+    "diagnostic_only": [
+      "submission_fight_share"
+    ],
     "discrimination_diagnostics": [],
     "invariants": [
       "illegal_cross_phase_actions",
       "timeline_exposure_mismatch",
       "post_finish_events",
       "invalid_state_transitions",
-      "nan_or_impossible_state_values",
+      "nan_or_non_finite_state",
+      "impossible_physiology_state",
       "deterministic_replay_mismatch"
     ],
     "physiology_targets": [
       "knockdowns_per_fight",
       "ko_tko_fight_share",
-      "submission_fight_share",
       "decision_fight_share",
       "mean_fight_duration_seconds"
     ],
@@ -347,6 +355,6 @@
     "td_landed_per_fighter_15": 1.2151883690528067
   },
   "phase_exposure_note": "UFCStats has action-location counts but no authoritative phase-time denominators.",
-  "target_digest": "sha256:ee4c7772c3a33ad197e6772408f919c787eded0461709a572f4d969a9af71c3e",
+  "target_digest": "sha256:13c24864a047831ab7f1b7939348baae73c12cb8bf2a26016beb0edf85e65d13",
   "target_schema_version": "event_clock_v2_historical_targets_v1"
 }

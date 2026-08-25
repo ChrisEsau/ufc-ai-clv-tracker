@@ -35,5 +35,6 @@ def test_known_invalid_cases_are_detected():
     assert counts["timeline_exposure_mismatch"] == 1
     assert counts["post_finish_events"] == 1
     assert counts["invalid_state_transitions"] == 1
-    assert counts["nan_or_impossible_state_values"] == 1
+    assert counts["nan_or_non_finite_state"] == 0
+    assert counts["impossible_physiology_state"] == 1
     assert status(counts)["status"] == "FAIL"

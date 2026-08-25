@@ -1,60 +1,121 @@
 name: Event Clock V2 Historical Calibration
+
 on:
+  pull_request:
+    branches: [refactor/event-clock-v2-brain-timeline]
+    paths:
+      - "pipeline/simulation/event_clock_mc_v2/**"
+      - "tests/simulation/event_clock_mc_v2/**"
+      - "configs/event_clock_v2/**"
+      - "data/calibration/event_clock_v2/**"
+      - ".github/workflows/event-clock-v2-calibration.yml"
   workflow_dispatch:
-    inputs:
-      cohort: {description: Cohort split, required: true, default: calibration, type: choice, options: [development, calibration, validation]}
-      paths_per_fight: {description: Paths per fight, required: true, default: '50'}
-      seed_set: {description: Frozen seed set, required: true, default: event_clock_v2_matched_seeds_v1}
-      calibration_config: {description: Repository-relative override YAML, required: true, default: configs/event_clock_v2/calibration/default.yaml}
-      mode: {description: Execution mode, required: true, default: calibration, type: choice, options: [micro, population, calibration, validation]}
-  workflow_call:
-    inputs:
-      cohort: {required: true, type: string}
-      paths_per_fight: {required: true, type: number}
-      seed_set: {required: true, type: string}
-      calibration_config: {required: true, type: string}
-      mode: {required: true, type: string}
-permissions: {contents: read, actions: read}
+
+permissions:
+  contents: read
+  actions: read
+
 jobs:
-  calibration:
+  canonical-baseline:
     runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      RESEARCH_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      EXPECTED_SOURCE_DIGEST: sha256:a6abd062322eaf0c4a47997f215d7fa82c01c7db2755089fad1a30420da7d639
     steps:
-      - uses: actions/checkout@v4
-        with: {ref: '${{ github.sha }}'}
+      - name: Checkout exact research SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RESEARCH_SHA }}
+
       - uses: actions/setup-python@v5
-        with: {python-version: '3.12'}
+        with:
+          python-version: "3.12"
+
       - run: python -m pip install numpy pandas pyarrow pytest pyyaml scipy scikit-learn joblib
+
+      - name: Verify approved source artifact metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$RESEARCH_SHA"
+          actual=$(gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/9494902022 --jq .digest)
+          test "$actual" = "$EXPECTED_SOURCE_DIGEST"
+          echo "canonical_source_artifact_id=9494902022" >> "$GITHUB_STEP_SUMMARY"
+          echo "canonical_source_artifact_digest=$actual" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Restore canonical historical prefight state
         uses: actions/download-artifact@v4
         with:
           artifact-ids: 9494902022
           path: restored
-          github-token: '${{ github.token }}'
-          repository: '${{ github.repository }}'
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
           run-id: 32645607979
-      - name: Verify exact SHA and historical inputs
+
+      - name: Verify restored historical inputs
         run: |
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           cp -a restored/canonical-weight-class-state/. data/
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
           test -f data/master/ufc_master.parquet
           test -f data/fight_details/ufc_round_stats.parquet
-          test "${{ inputs.seed_set }}" = event_clock_v2_matched_seeds_v1
-          test "${{ inputs.cohort }}" != final_holdout
-      - name: Tests and manifest/target validation
+          test "$(python -c 'import yaml; print(yaml.safe_load(open("configs/event_clock_v2/calibration/default.yaml"))["mechanics"])')" = "{}"
+
+      - name: Run calibration contract tests
         run: python -m pytest tests/simulation/event_clock_mc_v2/calibration -q
-      - name: Run experiment
+
+      - name: Deterministic micro gate (5 fights x 3 paths)
         run: |
-          LIMIT=""
-          if [ "${{ inputs.mode }}" = micro ]; then LIMIT="--limit 5"; fi
+          mkdir -p artifacts/event-clock-v2-calibration
           python -m pipeline.simulation.event_clock_mc_v2.calibration.runner \
-            --cohort "${{ inputs.cohort }}" --paths-per-fight "${{ inputs.paths_per_fight }}" \
-            --calibration-config "${{ inputs.calibration_config }}" $LIMIT \
-            --output artifacts/event-clock-v2-calibration/ledger.json
-          echo "sha=$GITHUB_SHA run_id=$GITHUB_RUN_ID job=$GITHUB_JOB" >> "$GITHUB_STEP_SUMMARY"
-          python -c "import json; d=json.load(open('artifacts/event-clock-v2-calibration/ledger.json')); print(json.dumps({'experiment_id':d['experiment_id'],'run_status':d['run_status'],'invariants':d['invariant_results']},indent=2))" >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
+            --cohort calibration --paths-per-fight 3 --limit 5 \
+            --calibration-config configs/event_clock_v2/calibration/default.yaml \
+            --output artifacts/event-clock-v2-calibration/micro-ledger.json
+          python - <<'PY'
+          import json, math
+          p = json.load(open("artifacts/event-clock-v2-calibration/micro-ledger.json"))
+          assert p["parameter_config"]["explicit_overrides"] == {}
+          assert p["invariant_results"]["status"] == "PASS", p["invariant_results"]
+          assert p["invariant_results"]["counts"]["deterministic_replay_mismatch"] == 0
+          def finite(value):
+              if isinstance(value, dict): return all(finite(v) for v in value.values())
+              if isinstance(value, list): return all(finite(v) for v in value)
+              return not isinstance(value, float) or math.isfinite(value)
+          assert finite(p["simulator_metrics"])
+          PY
+
+      - name: Canonical baseline (200 fights x 50 paths)
+        run: |
+          python -m pipeline.simulation.event_clock_mc_v2.calibration.runner \
+            --cohort calibration --paths-per-fight 50 \
+            --calibration-config configs/event_clock_v2/calibration/default.yaml \
+            --output artifacts/event-clock-v2-calibration/baseline-ledger.json
+
+      - name: Report baseline metadata
+        run: |
+          echo "research_sha=$RESEARCH_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "actions_run_id=$GITHUB_RUN_ID" >> "$GITHUB_STEP_SUMMARY"
+          echo "job_name=$GITHUB_JOB" >> "$GITHUB_STEP_SUMMARY"
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          for name in ("micro-ledger.json", "baseline-ledger.json"):
+              d=json.load(open("artifacts/event-clock-v2-calibration/"+name))
+              print(f"### {name}")
+              print("```json")
+              print(json.dumps({k:d[k] for k in ("experiment_id","fight_count","paths_per_fight","parameter_config_hash","path_replay_digest","metrics_fingerprint","run_status","invariant_results")}, indent=2))
+              print("```")
+          PY
+
+      - name: Upload baseline artifacts
+        id: upload
+        uses: actions/upload-artifact@v4
         with:
-          name: event-clock-v2-calibration-${{ inputs.mode }}-${{ github.sha }}
+          name: event-clock-v2-canonical-baseline-${{ env.RESEARCH_SHA }}
           path: artifacts/event-clock-v2-calibration/
           if-no-files-found: error
+          retention-days: 90
+
+      - name: Report uploaded artifact identity
+        run: |
+          echo "artifact_id=${{ steps.upload.outputs.artifact-id }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "artifact_digest=${{ steps.upload.outputs.artifact-digest }}" >> "$GITHUB_STEP_SUMMARY"

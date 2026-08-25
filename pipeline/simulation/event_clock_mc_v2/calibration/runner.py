@@ -39,20 +39,25 @@ from pipeline.simulation.event_clock_mc_v2.diagnostics.stage6_real_causal_path i
 from pipeline.simulation.event_clock_mc_v2.diagnostics.stage8_intent_prior_shadow import (
     IntentPriorChooser,
 )
-from pipeline.simulation.event_clock_mc_v2.diagnostics.stage8_structural_population import (
-    elapsed_seconds,
-)
 from . import COHORT_VERSION, SEED_SET_VERSION
 from .cohort import select_split, validate_manifest, validate_manifest_prefight_contract
 from .config import config_hash, load_override_file, resolved_payload
 from .invariants import inspect_path, status
 from .ledger import artifact_digest, build_record, metrics_fingerprint, write_record
 from .seeds import derive_path_seed
-from .targets import evaluate
+from .targets import evaluate, verify_frozen_targets
 
 STAND = {ActionFamily.STAND_ATTACK, ActionFamily.STAND_COUNTER}
 GROUND = {ActionFamily.GROUND_STRIKE, ActionFamily.BOTTOM_STRIKE}
 TD = {ActionFamily.TAKEDOWN_ENTRY, ActionFamily.CLINCH_TAKEDOWN}
+
+
+def scheduled_horizon_seconds(fight: pd.Series, bout_id: str) -> float:
+    """Return the scheduled limit, independent of realized historical duration."""
+    scheduled_rounds = int(fight["total_rounds"])
+    if scheduled_rounds < 1:
+        raise ValueError(f"invalid scheduled rounds for bout {bout_id}")
+    return float(scheduled_rounds * 300)
 
 
 def run(
@@ -92,7 +97,8 @@ def run(
     replay_mismatch = 0
     for _, item in cohort.iterrows():
         fight = lookup.loc[str(item.bout_id)]
-        horizon = elapsed_seconds(fight)
+        # Never censor simulated paths at the realized historical finish time.
+        horizon = scheduled_horizon_seconds(fight, str(item.bout_id))
         date = pd.Timestamp(item.date)
         red, blue = historical_fighter_rows(
             snapshots,
@@ -215,6 +221,8 @@ def run(
             "p50": float(np.quantile(x, 0.5)),
             "p75": float(np.quantile(x, 0.75)),
             "p90": float(np.quantile(x, 0.9)),
+            "p95": float(np.quantile(x, 0.95)),
+            "max": float(np.max(x)),
         }
         if x
         else {}
@@ -259,6 +267,7 @@ def run(
     }
     invariants = status(dict(inv), replay_mismatch)
     targets = json.loads(EVENT_CLOCK_V2_HISTORICAL_TARGETS_PATH.read_text())
+    verify_frozen_targets(targets)
     comparisons = evaluate({**metrics, **invariants["counts"]}, targets)
     identity = {
         "cohort_version": COHORT_VERSION,

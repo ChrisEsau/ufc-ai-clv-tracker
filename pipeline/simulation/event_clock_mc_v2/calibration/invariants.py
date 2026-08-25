@@ -42,9 +42,9 @@ def inspect_path(result) -> dict[str, int]:
         "invalid_state_transitions": int(
             any(segment.duration < 0 for segment in result.timeline_segments)
         ),
-        "nan_or_impossible_state_values": int(
-            any(not math.isfinite(v) for v in values)
-            or any(
+        "nan_or_non_finite_state": int(any(not math.isfinite(v) for v in values)),
+        "impossible_physiology_state": int(
+            any(
                 row.stamina < 0
                 or row.stamina > 1
                 or row.cumulative_trauma < 0

@@ -5,7 +5,7 @@ import hashlib, json
 from pathlib import Path
 import pandas as pd
 from pipeline.common.paths import MASTER_PATH, ROUND_STATS_PATH
-from . import TARGET_VERSION
+from . import EXPECTED_TARGET_DIGEST, TARGET_VERSION
 
 
 def build_targets(manifest: pd.DataFrame) -> dict:
@@ -64,11 +64,15 @@ def build_targets(manifest: pd.DataFrame) -> dict:
                 "timeline_exposure_mismatch",
                 "post_finish_events",
                 "invalid_state_transitions",
-                "nan_or_impossible_state_values",
+                "nan_or_non_finite_state",
+                "impossible_physiology_state",
                 "deterministic_replay_mismatch",
             )
         }
     )
+    # Canonical V2 currently fixes submission conversion at zero. Preserve the
+    # empirical value as evidence, but do not present it as a reachable gate.
+    bands["submission_fight_share"]["diagnostic_only"] = True
     payload = {
         "target_schema_version": TARGET_VERSION,
         "historical_comparator_split": "calibration",
@@ -86,15 +90,13 @@ def build_targets(manifest: pd.DataFrame) -> dict:
             "physiology_targets": [
                 "knockdowns_per_fight",
                 "ko_tko_fight_share",
-                "submission_fight_share",
                 "decision_fight_share",
                 "mean_fight_duration_seconds",
             ],
+            "diagnostic_only": ["submission_fight_share"],
             "discrimination_diagnostics": [],
             "predictive_diagnostics": [],
-            "invariants": [
-                key for key, band in bands.items() if "required" in band
-            ],
+            "invariants": [key for key, band in bands.items() if "required" in band],
         },
         "acceptance_bands": bands,
         "historical_phase_exposure": None,
@@ -112,6 +114,14 @@ def build_targets(manifest: pd.DataFrame) -> dict:
 def evaluate(metrics: dict, targets: dict) -> dict:
     result = {}
     for key, band in targets["acceptance_bands"].items():
+        if band.get("diagnostic_only"):
+            result[key] = {
+                "status": "WARN",
+                "reason": "diagnostic only: canonical V2 has no approved submission conversion model",
+                "value": metrics.get(key),
+                **band,
+            }
+            continue
         if key not in metrics:
             result[key] = {"status": "WARN", "reason": "not available"}
             continue
@@ -126,3 +136,21 @@ def evaluate(metrics: dict, targets: dict) -> dict:
             state = "FAIL"
         result[key] = {"status": state, "value": value, **band}
     return result
+
+
+def verify_frozen_targets(targets: dict) -> None:
+    """Verify the payload against both self-declared and independently pinned digests."""
+    declared = targets.get("target_digest")
+    unsigned = dict(targets)
+    unsigned.pop("target_digest", None)
+    actual = (
+        "sha256:"
+        + hashlib.sha256(
+            json.dumps(unsigned, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+    )
+    if declared != actual or actual != EXPECTED_TARGET_DIGEST:
+        raise ValueError(
+            f"frozen historical target digest mismatch: declared={declared} "
+            f"actual={actual} expected={EXPECTED_TARGET_DIGEST}"
+        )
