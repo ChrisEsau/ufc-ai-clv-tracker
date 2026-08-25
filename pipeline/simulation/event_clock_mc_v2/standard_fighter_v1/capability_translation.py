@@ -3,18 +3,6 @@
 This module owns the research boundary between validated/matchup-aware FSR V3
 runtime quantities and the dimensionless capability inputs used by the Standard
 Fighter decision policy.
-
-Important constraints
----------------------
-* It does not change FSR V3 ratings or Event Clock mechanics.
-* It does not classify fighters into archetypes.
-* Standing, takedown and ground-top capabilities are matchup-aware empirical
-  ranks of already-derived Event Clock V2 runtime quantities.
-* Clinch, submission, escape and reversal remain explicit neutral placeholders
-  until a separate semantic mapping is reviewed.  No hidden proxy is invented.
-* Cold start is metadata only: a fighter is flagged when there are zero prior
-  UFC FSR snapshots before the audited fight.  The flag does not alter the
-  capability values.
 """
 
 from __future__ import annotations
@@ -31,7 +19,6 @@ from pipeline.simulation.event_clock_mc_v2.fsr_v3_adapter import (
 from .policy import Capability
 
 NEUTRAL_CLINCH = 0.35
-NEUTRAL_SUBMISSION = 0.30
 NEUTRAL_ESCAPE = 0.40
 NEUTRAL_REVERSAL = 0.30
 
@@ -76,18 +63,21 @@ class CapabilityReference:
 
     @classmethod
     def from_latest(cls, latest: pd.DataFrame) -> "CapabilityReference":
-        """Build the live/latest reference; forbidden in historical calibration."""
         return cls.from_frame(latest)
 
     @classmethod
     def from_frame(cls, frame: pd.DataFrame) -> "CapabilityReference":
-        """Build a fixed reference from an explicitly provenance-bounded frame."""
+        if "submission_tendency" not in frame.columns:
+            raise ValueError("capability reference requires submission_tendency")
         median = traits_from_row(_median_row(frame))
         rows: list[dict[str, float | str]] = []
         for _, row in frame.iterrows():
             try:
                 runtime = derive_runtime_inputs(traits_from_row(row), median)
+                submission_tendency = float(row["submission_tendency"])
             except Exception:
+                continue
+            if not np.isfinite(submission_tendency):
                 continue
             rows.append(
                 {
@@ -98,6 +88,7 @@ class CapabilityReference:
                     "td_comp": runtime.takedown_completion,
                     "ground_rate": runtime.ground_slope_rate_15m_own_control,
                     "ground_acc": runtime.ground_accuracy,
+                    "submission_tendency": submission_tendency,
                 }
             )
         runtime = pd.DataFrame(rows)
@@ -111,15 +102,12 @@ class CapabilityReference:
     def from_prefight_before(
         cls, snapshots: pd.DataFrame, cutoff
     ) -> "CapabilityReference":
-        """Chronology-safe calibration reference using only pre-cutoff states."""
         cutoff_date = pd.Timestamp(cutoff).normalize()
         dated = snapshots.loc[
             pd.to_datetime(snapshots["event_date"]).dt.normalize().lt(cutoff_date)
         ].copy()
         if dated.empty:
             raise RuntimeError("no prefight states before capability-reference cutoff")
-        # One last known *historical* state per fighter, all observed before the
-        # earliest fight in the frozen cohort. Future performance cannot enter.
         dated = dated.sort_values(["event_date", "fight_id"]).drop_duplicates(
             "fighter_id", keep="last"
         )
@@ -143,6 +131,7 @@ class CapabilityTranslation:
     takedown_completion_percentile: float
     ground_rate_percentile: float
     ground_accuracy_percentile: float
+    submission_tendency_percentile: float
     prior_ufc_fights: int
     cold_start: bool
 
@@ -153,15 +142,12 @@ def prior_snapshot_count(
     fighter_id: str,
     event_date,
 ) -> int:
-    """Count strictly prior-date UFC FSR snapshots for one fighter."""
     date = pd.Timestamp(event_date).normalize()
     fighter = str(fighter_id)
     rows = snapshots[
         snapshots["fighter_id"].astype(str).eq(fighter)
         & pd.to_datetime(snapshots["event_date"]).dt.normalize().lt(date)
     ]
-    # One prefight snapshot per UFC fight; same-date rows are intentionally not
-    # counted because V3 treats same-date fights as sharing the same prefight state.
     return int(rows[["event_date", "fight_id"]].drop_duplicates().shape[0])
 
 
@@ -172,19 +158,6 @@ def translate_capability(
     *,
     prior_ufc_fights: int,
 ) -> CapabilityTranslation:
-    """Translate one directional FSR matchup into Standard Fighter capability.
-
-    V1 semantics:
-    * standing = mean(empirical standing-rate rank, landing-accuracy rank)
-    * counter = landing-accuracy rank
-    * pressure = standing-rate rank
-    * takedown = mean(empirical TD-generation rank, TD-completion rank)
-    * ground_top = mean(empirical top-strike-rate rank, ground-accuracy rank)
-
-    All ranks are measured against the canonical latest-profile population facing
-    a median opponent.  Directional attacker-vs-defender runtime inputs are used
-    for the audited matchup, so opponent suppression/defense affects capability.
-    """
     runtime = derive_runtime_inputs(
         traits_from_row(attacker), traits_from_row(defender)
     )
@@ -198,6 +171,9 @@ def translate_capability(
         pop["ground_rate"], runtime.ground_slope_rate_15m_own_control
     )
     ground_acc_pct = _pct(pop["ground_acc"], runtime.ground_accuracy)
+    submission_pct = _pct(
+        pop["submission_tendency"], float(attacker["submission_tendency"])
+    )
 
     capability = Capability(
         standing=(standing_rate_pct + standing_acc_pct) / 2.0,
@@ -206,7 +182,7 @@ def translate_capability(
         clinch=NEUTRAL_CLINCH,
         takedown=(td_rate_pct + td_comp_pct) / 2.0,
         ground_top=(ground_rate_pct + ground_acc_pct) / 2.0,
-        submission=NEUTRAL_SUBMISSION,
+        submission=submission_pct,
         escape=NEUTRAL_ESCAPE,
         reversal=NEUTRAL_REVERSAL,
     )
@@ -228,6 +204,7 @@ def translate_capability(
         takedown_completion_percentile=td_comp_pct,
         ground_rate_percentile=ground_rate_pct,
         ground_accuracy_percentile=ground_acc_pct,
+        submission_tendency_percentile=submission_pct,
         prior_ufc_fights=prior,
         cold_start=(prior == 0),
     )
