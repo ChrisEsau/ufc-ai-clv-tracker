@@ -1,0 +1,74 @@
+name: Stage 6 Real Causal Path Diagnostic
+
+on:
+  push:
+    branches:
+      - refactor/event-clock-v2-brain-timeline
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  real-causal-path:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact branch head
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install diagnostic dependencies
+        run: python -m pip install --upgrade pip numpy pandas pyarrow
+
+      - name: Restore canonical FSR V3 artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_ID: '9494902022'
+        run: |
+          python - <<'PY'
+          import os
+          import urllib.request
+          from pathlib import Path
+
+          artifact_id = os.environ['ARTIFACT_ID']
+          repo = os.environ['GITHUB_REPOSITORY']
+          token = os.environ['GH_TOKEN']
+          url = f'https://api.github.com/repos/{repo}/actions/artifacts/{artifact_id}/zip'
+          request = urllib.request.Request(
+              url,
+              headers={
+                  'Authorization': f'Bearer {token}',
+                  'Accept': 'application/vnd.github+json',
+                  'X-GitHub-Api-Version': '2022-11-28',
+              },
+          )
+          with urllib.request.urlopen(request) as response:
+              Path('/tmp/canonical-weight-class-state.zip').write_bytes(response.read())
+          PY
+          mkdir -p data
+          unzip -q /tmp/canonical-weight-class-state.zip -d data
+          test -f data/fsr_v3/fsr_v3_latest.parquet
+          sha256sum /tmp/canonical-weight-class-state.zip
+          ls -lh data/fsr_v3/fsr_v3_latest.parquet
+
+      - name: Run actual Stage 6 engine path
+        run: |
+          echo "GITHUB_SHA=${GITHUB_SHA}"
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.stage6_real_causal_path \
+            --red "Aleksandar Rakic" \
+            --blue "Marcin Tybura" \
+            --seed 20260825 \
+            --horizon 300 \
+            --output data/diagnostics/event_clock_mc_v2/stage6_real_causal_path.json
+
+      - name: Upload real causal path result
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage6-real-causal-path
+          path: data/diagnostics/event_clock_mc_v2/stage6_real_causal_path.json
+          if-no-files-found: error
