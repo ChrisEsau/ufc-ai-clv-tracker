@@ -12,6 +12,7 @@ from .config import MechanicsInputs, StructuralMVPPlaceholders
 from .resolution import (
     ActionOutcome,
     ActionResolution,
+    FinishMethod,
     FightTerminationRequest,
     StrikeConsequence,
     TransitionKind,
@@ -99,7 +100,11 @@ def resolve_action(
         return ActionResolution(
             event,
             ActionOutcome.SUCCESS if succeeded else ActionOutcome.FAILURE,
-            consequence=FightTerminationRequest(event.actor) if succeeded else None,
+            consequence=(
+                FightTerminationRequest(event.actor, FinishMethod.SUBMISSION)
+                if succeeded
+                else None
+            ),
         )
     if family is ActionFamily.CONTROL:
         return ActionResolution(event, ActionOutcome.CONTROLLED)

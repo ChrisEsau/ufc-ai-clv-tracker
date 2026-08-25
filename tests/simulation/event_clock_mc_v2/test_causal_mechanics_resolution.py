@@ -16,6 +16,7 @@ from pipeline.simulation.event_clock_mc_v2.mechanics.config import (
 from pipeline.simulation.event_clock_mc_v2.mechanics.resolution import (
     ActionOutcome,
     ActionResolution,
+    FinishMethod,
     FightTerminationRequest,
     StrikeConsequence,
     TransitionKind,
@@ -69,6 +70,113 @@ def test_resolution_contract_is_frozen_and_typed() -> None:
         result.outcome = ActionOutcome.SUCCESS
     with pytest.raises(ValueError, match="typed mechanics consequence"):
         ActionResolution(event, ActionOutcome.TACTICAL, consequence={"damage": 1})
+
+
+@pytest.mark.parametrize(
+    ("kind", "source", "target", "controller"),
+    [
+        (TransitionKind.ENTER_CLINCH, Phase.STANDING, Phase.CLINCH, Side.RED),
+        (TransitionKind.DIRECT_TAKEDOWN, Phase.STANDING, Phase.GROUND, Side.BLUE),
+        (TransitionKind.CLINCH_TAKEDOWN, Phase.CLINCH, Phase.GROUND, Side.RED),
+        (TransitionKind.BREAK_CLINCH, Phase.CLINCH, Phase.STANDING, None),
+        (TransitionKind.ESCAPE_GROUND, Phase.GROUND, Phase.STANDING, None),
+        (TransitionKind.REVERSE_GROUND, Phase.GROUND, Phase.GROUND, Side.BLUE),
+        (TransitionKind.DISENGAGE_GROUND, Phase.GROUND, Phase.STANDING, None),
+    ],
+)
+def test_transition_request_accepts_exact_topology(
+    kind: TransitionKind, source: Phase, target: Phase, controller: Side | None
+) -> None:
+    assert TransitionRequest(kind, source, target, controller) == TransitionRequest(
+        kind=kind,
+        source_phase=source,
+        target_phase=target,
+        controller=controller,
+    )
+
+
+@pytest.mark.parametrize(
+    ("kind", "source", "target", "controller"),
+    [
+        (TransitionKind.ENTER_CLINCH, Phase.GROUND, Phase.CLINCH, Side.RED),
+        (TransitionKind.ENTER_CLINCH, Phase.STANDING, Phase.GROUND, Side.RED),
+        (TransitionKind.DIRECT_TAKEDOWN, Phase.CLINCH, Phase.GROUND, Side.RED),
+        (TransitionKind.CLINCH_TAKEDOWN, Phase.STANDING, Phase.GROUND, Side.RED),
+        (TransitionKind.BREAK_CLINCH, Phase.STANDING, Phase.STANDING, None),
+        (TransitionKind.BREAK_CLINCH, Phase.CLINCH, Phase.GROUND, Side.RED),
+        (TransitionKind.ESCAPE_GROUND, Phase.STANDING, Phase.STANDING, None),
+        (TransitionKind.ESCAPE_GROUND, Phase.GROUND, Phase.CLINCH, Side.RED),
+        (TransitionKind.REVERSE_GROUND, Phase.GROUND, Phase.STANDING, None),
+        (TransitionKind.DISENGAGE_GROUND, Phase.CLINCH, Phase.STANDING, None),
+        (TransitionKind.DISENGAGE_GROUND, Phase.GROUND, Phase.GROUND, Side.RED),
+    ],
+)
+def test_transition_request_rejects_wrong_topology(
+    kind: TransitionKind, source: Phase, target: Phase, controller: Side | None
+) -> None:
+    with pytest.raises(ValueError, match="requires"):
+        TransitionRequest(kind, source, target, controller)
+
+
+@pytest.mark.parametrize(
+    ("kind", "source", "target", "controller"),
+    [
+        (TransitionKind.ENTER_CLINCH, Phase.STANDING, Phase.CLINCH, None),
+        (TransitionKind.DIRECT_TAKEDOWN, Phase.STANDING, Phase.GROUND, None),
+        (TransitionKind.CLINCH_TAKEDOWN, Phase.CLINCH, Phase.GROUND, None),
+        (TransitionKind.REVERSE_GROUND, Phase.GROUND, Phase.GROUND, None),
+        (TransitionKind.BREAK_CLINCH, Phase.CLINCH, Phase.STANDING, Side.RED),
+        (TransitionKind.ESCAPE_GROUND, Phase.GROUND, Phase.STANDING, Side.BLUE),
+        (TransitionKind.DISENGAGE_GROUND, Phase.GROUND, Phase.STANDING, Side.RED),
+    ],
+)
+def test_transition_request_enforces_controller_contract(
+    kind: TransitionKind, source: Phase, target: Phase, controller: Side | None
+) -> None:
+    with pytest.raises(ValueError, match="controller"):
+        TransitionRequest(kind, source, target, controller)
+
+
+@pytest.mark.parametrize(
+    "values",
+    [
+        ("enter_clinch", Phase.STANDING, Phase.CLINCH, Side.RED),
+        (TransitionKind.ENTER_CLINCH, "standing", Phase.CLINCH, Side.RED),
+        (TransitionKind.ENTER_CLINCH, Phase.STANDING, "clinch", Side.RED),
+    ],
+)
+def test_transition_request_rejects_free_form_enums(values) -> None:
+    with pytest.raises(ValueError):
+        TransitionRequest(*values)
+
+
+@pytest.mark.parametrize("winner", [Side.RED, Side.BLUE])
+def test_termination_request_accepts_typed_winner_and_finish(winner: Side) -> None:
+    assert FightTerminationRequest(winner) == FightTerminationRequest(
+        winner=winner, finish_method=FinishMethod.SUBMISSION
+    )
+
+
+@pytest.mark.parametrize("winner", ["red", "blue", object(), None])
+def test_termination_request_rejects_untyped_winner(winner) -> None:
+    with pytest.raises(ValueError, match="winner must be a Side"):
+        FightTerminationRequest(winner)
+
+
+@pytest.mark.parametrize("finish_method", ["SUBMISSION", "submission", "KO", object()])
+def test_termination_request_rejects_free_form_finish_method(finish_method) -> None:
+    with pytest.raises(ValueError, match="must be a FinishMethod"):
+        FightTerminationRequest(Side.RED, finish_method)
+
+
+def test_resolution_rejects_transition_from_different_event_phase() -> None:
+    event = _event(ActionFamily.CLINCH_ENTRY, Phase.GROUND)
+    transition = TransitionRequest(
+        TransitionKind.ENTER_CLINCH, Phase.STANDING, Phase.CLINCH, Side.RED
+    )
+
+    with pytest.raises(ValueError, match="must match event"):
+        ActionResolution(event, ActionOutcome.SUCCESS, transition)
 
 
 def test_resolver_rejects_illegal_and_source_phase_mismatched_events() -> None:
@@ -295,7 +403,10 @@ def test_submission_success_requests_termination_without_mutating_state() -> Non
     failed = resolve_action(event, state, FAILURE_INPUTS, np.random.default_rng(3))
 
     assert succeeded.outcome is ActionOutcome.SUCCESS
-    assert succeeded.consequence == FightTerminationRequest(Side.BLUE)
+    assert succeeded.consequence == FightTerminationRequest(
+        Side.BLUE, FinishMethod.SUBMISSION
+    )
+    assert succeeded.consequence.finish_method is FinishMethod.SUBMISSION
     assert failed.outcome is ActionOutcome.FAILURE
     assert failed.consequence is None
     assert state == state_before

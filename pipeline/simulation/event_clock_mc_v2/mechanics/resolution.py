@@ -33,6 +33,17 @@ class TransitionKind(str, Enum):
     DISENGAGE_GROUND = "disengage_ground"
 
 
+_TRANSITION_TOPOLOGY = {
+    TransitionKind.ENTER_CLINCH: (Phase.STANDING, Phase.CLINCH),
+    TransitionKind.DIRECT_TAKEDOWN: (Phase.STANDING, Phase.GROUND),
+    TransitionKind.CLINCH_TAKEDOWN: (Phase.CLINCH, Phase.GROUND),
+    TransitionKind.BREAK_CLINCH: (Phase.CLINCH, Phase.STANDING),
+    TransitionKind.ESCAPE_GROUND: (Phase.GROUND, Phase.STANDING),
+    TransitionKind.REVERSE_GROUND: (Phase.GROUND, Phase.GROUND),
+    TransitionKind.DISENGAGE_GROUND: (Phase.GROUND, Phase.STANDING),
+}
+
+
 @dataclass(frozen=True)
 class TransitionRequest:
     kind: TransitionKind
@@ -45,6 +56,12 @@ class TransitionRequest:
             raise ValueError("kind must be a TransitionKind")
         if not isinstance(self.source_phase, Phase) or not isinstance(self.target_phase, Phase):
             raise ValueError("transition phases must be Phase values")
+        expected_source, expected_target = _TRANSITION_TOPOLOGY[self.kind]
+        if (self.source_phase, self.target_phase) != (expected_source, expected_target):
+            raise ValueError(
+                f"{self.kind.value} requires "
+                f"{expected_source.value} -> {expected_target.value}"
+            )
         if self.controller is not None and not isinstance(self.controller, Side):
             raise ValueError("transition controller must be a Side value or None")
         if self.target_phase is Phase.STANDING and self.controller is not None:
@@ -60,12 +77,24 @@ class StrikeConsequence:
     landed: bool
 
 
+class FinishMethod(str, Enum):
+    """Finish methods that Stage 3 mechanics can currently request."""
+
+    SUBMISSION = "submission"
+
+
 @dataclass(frozen=True)
 class FightTerminationRequest:
     """Submission termination intent for the future engine to apply."""
 
     winner: Side
-    finish_method: str = "SUBMISSION"
+    finish_method: FinishMethod = FinishMethod.SUBMISSION
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.winner, Side):
+            raise ValueError("winner must be a Side value")
+        if not isinstance(self.finish_method, FinishMethod):
+            raise ValueError("finish_method must be a FinishMethod value")
 
 
 MechanicsConsequence = StrikeConsequence | FightTerminationRequest
@@ -85,6 +114,8 @@ class ActionResolution:
             raise ValueError("outcome must be an ActionOutcome")
         if self.transition is not None and not isinstance(self.transition, TransitionRequest):
             raise ValueError("transition must be a TransitionRequest or None")
+        if self.transition is not None and self.transition.source_phase is not self.event.source_phase:
+            raise ValueError("transition source_phase must match event source_phase")
         if self.consequence is not None and not isinstance(
             self.consequence, (StrikeConsequence, FightTerminationRequest)
         ):

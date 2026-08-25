@@ -19,7 +19,7 @@ engine. These semantics must be revisited only through an approved later stage.
 | `BREAK_CLINCH` | Direct/MVP | Contested separation under neutral assumption | Yes | Success requests standing |
 | `GROUND_STRIKE` | Direct | Top strike using matchup ground accuracy | Yes | Landing observation only |
 | `ADVANCE_POSITION` | Maintenance/MVP | Position-improvement intent; detailed position is not represented | No | `MAINTAINED`; no transition |
-| `SUBMISSION_ATTACK` | Direct | Submission attempt using explicit matchup success input | Yes | Success requests submission termination; state is not mutated |
+| `SUBMISSION_ATTACK` | Direct | Submission attempt using explicit matchup success input | Yes | Success requests typed `FinishMethod.SUBMISSION` termination; state is not mutated |
 | `CONTROL` | Maintenance/MVP | Maintains top control without fabricated duration or damage | No | `CONTROLLED`; no transition |
 | `DISENGAGE` | Tactical | Top fighter deliberately returns the fight to standing | No | Requests standing |
 | `ESCAPE_STAND` | Direct | Bottom escape using explicit matchup escape probability | Yes | Success requests standing |

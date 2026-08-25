@@ -4,6 +4,7 @@ from .config import FighterMechanics, MechanicsInputs, StructuralMVPPlaceholders
 from .resolution import (
     ActionOutcome,
     ActionResolution,
+    FinishMethod,
     FightTerminationRequest,
     StrikeConsequence,
     TransitionKind,
@@ -14,6 +15,7 @@ from .resolver import resolve_action
 __all__ = [
     "ActionOutcome",
     "ActionResolution",
+    "FinishMethod",
     "FightTerminationRequest",
     "FighterMechanics",
     "MechanicsInputs",
