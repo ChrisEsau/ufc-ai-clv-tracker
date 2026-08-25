@@ -9,11 +9,6 @@ on:
       - pipeline/simulation/event_clock_mc_v2/standard_fighter_v1/**
       - pipeline/simulation/event_clock_mc_v2/STANDARD_FIGHTER_V1_DESIGN.md
       - .github/workflows/standard-fighter-v1-scenarios.yml
-  pull_request:
-    paths:
-      - pipeline/simulation/event_clock_mc_v2/standard_fighter_v1/**
-      - pipeline/simulation/event_clock_mc_v2/STANDARD_FIGHTER_V1_DESIGN.md
-      - .github/workflows/standard-fighter-v1-scenarios.yml
 
 permissions:
   contents: read
