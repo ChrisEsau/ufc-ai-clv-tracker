@@ -27,6 +27,8 @@ jobs:
           test -f data/fsr_v3/fsr_v3_latest.parquet
           echo 'source_artifact_digest=sha256:a6abd062322eaf0c4a47997f215d7fa82c01c7db2755089fad1a30420da7d639'
       - run: python -m pytest tests/simulation/event_clock_mc_v2 -q
+      - name: Controlled physiology and frozen-V1 micro validation
+        run: python -m pipeline.simulation.event_clock_mc_v2.diagnostics.physiology_mechanics_validation --output data/diagnostics/event_clock_mc_v2/physiology_mechanics_validation.json
       - name: Audit historical physiology traits
         run: python -m pipeline.simulation.event_clock_mc_v2.diagnostics.physiology_trait_audit --output data/diagnostics/event_clock_mc_v2/physiology_trait_audit.json
       - name: Neutral physiology baseline (100 fights x 20 paths)
