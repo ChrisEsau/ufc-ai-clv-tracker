@@ -66,6 +66,14 @@ jobs:
             --seed-base 20260825 \
             --output data/diagnostics/event_clock_mc_v2/stage8_ground_structure_decomposition.json
 
+      - name: Run TD + ground rate anchor shadow
+        run: |
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.stage8_td_ground_rate_anchor_shadow \
+            --fights 25 \
+            --paths-per-fight 50 \
+            --seed-base 20260825 \
+            --output data/diagnostics/event_clock_mc_v2/stage8_td_ground_rate_anchor_shadow.json
+
       - name: Upload diagnostic results
         uses: actions/upload-artifact@v4
         with:
@@ -74,4 +82,5 @@ jobs:
             data/diagnostics/event_clock_mc_v2/stage8_td_policy_floor.json
             data/diagnostics/event_clock_mc_v2/stage8_td_rate_anchor_shadow.json
             data/diagnostics/event_clock_mc_v2/stage8_ground_structure_decomposition.json
+            data/diagnostics/event_clock_mc_v2/stage8_td_ground_rate_anchor_shadow.json
           if-no-files-found: error
