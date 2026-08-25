@@ -207,11 +207,14 @@ def main():
                 (physiology.red.cumulative_trauma, physiology.blue.cumulative_trauma)
             )
             knockdowns += sum(event.knockdown for event in out.events)
-            if out.termination is not None and out.termination.method.value == "ko_tko":
+            if (
+                out.termination is not None
+                and out.termination.finish_method.value == "ko_tko"
+            ):
                 ko_tko_finishes += 1
-            if out.termination is not None and out.events:
+            if out.termination is not None:
                 post_finish_events += sum(
-                    event.timestamp_seconds > out.events[-1].timestamp_seconds
+                    event.timestamp_seconds > out.reported_through_seconds
                     for event in out.events
                 )
             for e in out.events:
