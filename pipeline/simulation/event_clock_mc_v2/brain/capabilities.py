@@ -6,6 +6,10 @@ from dataclasses import dataclass, fields
 import math
 
 
+SUBMISSION_CAPABILITY_CENTER = 0.30
+SUBMISSION_CAPABILITY_SPAN = 0.40
+
+
 @dataclass(frozen=True)
 class BrainCapabilities:
     standing: float = 0.0
@@ -35,7 +39,7 @@ class UnsupportedCapabilityPlaceholders:
     """Neutral fallbacks for callers that do not supply an approved mapping."""
 
     clinch: float = 0.35
-    submission: float = 0.30
+    submission: float = SUBMISSION_CAPABILITY_CENTER
     escape: float = 0.40
     reversal: float = 0.30
 
@@ -49,6 +53,27 @@ class UnsupportedCapabilityPlaceholders:
 
 
 DEFAULT_UNSUPPORTED_CAPABILITIES = UnsupportedCapabilityPlaceholders()
+
+
+def submission_capability_from_tendency_percentile(percentile: float) -> float:
+    """Map submission tendency rank onto the Brain's legacy-centered capability scale.
+
+    The historical audit validates monotonic fighter differentiation, but a direct
+    0..1 percentile mapping materially overproduced submission attempts.  Keep the
+    historical neutral population center at 0.30 and use a compressed 0.10..0.50
+    range so tendency changes fighter allocation without raising the population
+    baseline by construction.
+    """
+    if (
+        isinstance(percentile, bool)
+        or not isinstance(percentile, (int, float))
+        or not math.isfinite(percentile)
+        or not 0.0 <= percentile <= 1.0
+    ):
+        raise ValueError("submission tendency percentile must be finite in [0, 1]")
+    return SUBMISSION_CAPABILITY_CENTER + SUBMISSION_CAPABILITY_SPAN * (
+        float(percentile) - 0.5
+    )
 
 
 def capabilities_from_percentiles(
@@ -89,9 +114,9 @@ def capabilities_from_percentiles(
     if submission_tendency_percentile is None:
         submission = placeholders.submission
     else:
-        submission = float(submission_tendency_percentile)
-        if not math.isfinite(submission) or not 0.0 <= submission <= 1.0:
-            raise ValueError("submission tendency percentile must be finite in [0, 1]")
+        submission = submission_capability_from_tendency_percentile(
+            submission_tendency_percentile
+        )
     return BrainCapabilities(
         standing=(values[0] + values[1]) / 2.0,
         counter=values[1],
