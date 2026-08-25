@@ -1,4 +1,4 @@
-name: Brain MC Next After Fiziev By ID
+name: Brain MC Next Event By ID
 
 on:
   push:
@@ -39,14 +39,14 @@ jobs:
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
           test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
 
-      - name: Resolve next event id after Fiziev vs Torres
+      - name: Resolve next event id after UFC 329
         id: resolve
         run: |
           python - <<'PY' >> "$GITHUB_OUTPUT"
           import pandas as pd
           from pipeline.common.paths import MASTER_PATH
 
-          anchor = "UFC Fight Night: Fiziev vs. Torres"
+          anchor = "UFC 329: McGregor vs. Holloway 2"
           m = pd.read_parquet(MASTER_PATH)
           name_col = next(c for c in ("event_name","ufcstats_event_name") if c in m.columns)
           date_col = next(c for c in ("date","event_date","ufcstats_event_date") if c in m.columns)
@@ -94,10 +94,25 @@ jobs:
           echo "event_date=$EVENT_DATE" >> "$GITHUB_STEP_SUMMARY"
           echo "event_id=$EVENT_ID" >> "$GITHUB_STEP_SUMMARY"
           echo "paths_per_fight=1000" >> "$GITHUB_STEP_SUMMARY"
-          echo "submission_mapping_sha=$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
+          echo "model_sha=$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          d = json.load(open("artifacts/brain-mc-next-event/result.json"))
+          a = d["cold_start_audit"]
+          print(f"cold_start_fights={a['cold_start_fights']}")
+          print(f"mature_fights={a['mature_fights']}")
+          print("")
+          print("## Cold-start audit")
+          for f in a["fights"]:
+              flag = "COLD START" if f["cold_start"] else "MATURE"
+              print(
+                  f"- {flag}: {f['red_fighter']} ({f['red_prior_ufc_fights']}) vs "
+                  f"{f['blue_fighter']} ({f['blue_prior_ufc_fights']})"
+              )
+          PY
 
       - uses: actions/upload-artifact@v4
         with:
-          name: brain-mc-next-after-fiziev-id
+          name: brain-mc-next-after-ufc329
           path: artifacts/brain-mc-next-event/result.json
           retention-days: 90
