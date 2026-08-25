@@ -32,15 +32,17 @@ class BrainCapabilities:
 
 @dataclass(frozen=True)
 class UnsupportedCapabilityPlaceholders:
-    """Uncalibrated neutral values retained from Standard Fighter V1 research."""
+    """Neutral fallbacks for callers that do not supply an approved mapping."""
 
     clinch: float = 0.35
+    submission: float = 0.30
     escape: float = 0.40
     reversal: float = 0.30
 
     def __post_init__(self) -> None:
         BrainCapabilities(
             clinch=self.clinch,
+            submission=self.submission,
             escape=self.escape,
             reversal=self.reversal,
         )
@@ -57,14 +59,14 @@ def capabilities_from_percentiles(
     takedown_completion_percentile: float,
     ground_rate_percentile: float,
     ground_accuracy_percentile: float,
-    submission_tendency_percentile: float,
+    submission_tendency_percentile: float | None = None,
     placeholders: UnsupportedCapabilityPlaceholders = DEFAULT_UNSUPPORTED_CAPABILITIES,
 ) -> BrainCapabilities:
     """Translate chronology-safe empirical ranks into Brain capabilities.
 
-    Submission is now the empirical population rank of the inherited prefight
-    submission-tendency trait.  The historical audit showed that tendency adds
-    out-of-sample signal for submission attempts conditional on ground exposure.
+    Production Event Clock callers supply ``submission_tendency_percentile``;
+    legacy diagnostics that do not have that reference retain the explicit 0.30
+    fallback instead of silently inventing a proxy.
     """
     if not isinstance(placeholders, UnsupportedCapabilityPlaceholders):
         raise ValueError("placeholders must be UnsupportedCapabilityPlaceholders")
@@ -75,7 +77,6 @@ def capabilities_from_percentiles(
         takedown_completion_percentile,
         ground_rate_percentile,
         ground_accuracy_percentile,
-        submission_tendency_percentile,
     )
     for value in values:
         if (
@@ -85,6 +86,12 @@ def capabilities_from_percentiles(
             or not 0.0 <= value <= 1.0
         ):
             raise ValueError("capability percentiles must be finite values in [0, 1]")
+    if submission_tendency_percentile is None:
+        submission = placeholders.submission
+    else:
+        submission = float(submission_tendency_percentile)
+        if not math.isfinite(submission) or not 0.0 <= submission <= 1.0:
+            raise ValueError("submission tendency percentile must be finite in [0, 1]")
     return BrainCapabilities(
         standing=(values[0] + values[1]) / 2.0,
         counter=values[1],
@@ -92,7 +99,7 @@ def capabilities_from_percentiles(
         clinch=placeholders.clinch,
         takedown=(values[2] + values[3]) / 2.0,
         ground_top=(values[4] + values[5]) / 2.0,
-        submission=values[6],
+        submission=submission,
         escape=placeholders.escape,
         reversal=placeholders.reversal,
     )
