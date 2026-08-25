@@ -40,7 +40,7 @@ def main():
  counts=Counter(); actual=defaultdict(float); phases=defaultdict(float); durations=defaultdict(list); group=defaultdict(Counter); seconds=0.;actual_seconds=0.;illegal=mismatch=0
  for fi,(fight,rf,bf) in enumerate(chosen):
   horizon=elapsed_seconds(fight); rid,bid=str(fight['r_id']),str(fight['b_id']);rc,rr=_capabilities(rf,bf,reference);bc,br=_capabilities(bf,rf,reference)
-  inp=EngineInputs(FighterEngineInputs(rc,BrainTimingContext(activity_rate_ratio=min(2.0,max(.2,rr.standing_rate_15m/120.0))),BrainDecisionContext(),_mechanics(rr)),FighterEngineInputs(bc,BrainTimingContext(activity_rate_ratio=min(2.0,max(.2,br.standing_rate_15m/120.0))),BrainDecisionContext(),_mechanics(br)))
+  inp=EngineInputs(FighterEngineInputs(rc,BrainTimingContext(activity_rate_ratio=max(.2,rr.standing_rate_15m/120.0)),BrainDecisionContext(),_mechanics(rr)),FighterEngineInputs(bc,BrainTimingContext(activity_rate_ratio=max(.2,br.standing_rate_15m/120.0)),BrainDecisionContext(),_mechanics(br)))
   chooser=IntentPriorChooser({Side.RED:BrainIntentPriors(rr.standing_rate_15m,rr.takedown_rate_15m,a.clinch_ratio,a.ground_strike_multiplier,a.submission_multiplier),Side.BLUE:BrainIntentPriors(br.standing_rate_15m,br.takedown_rate_15m,a.clinch_ratio,a.ground_strike_multiplier,a.submission_multiplier)})
   funcs=EngineFunctions(action_chooser=chooser); cfg=EngineConfig(number_of_rounds=max(1,math.ceil(horizon/300)))
   for side,fid in [('red',rid),('blue',bid)]:
