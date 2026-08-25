@@ -24,8 +24,8 @@ jobs:
           cp -a data/canonical-weight-class-state/. data/
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
           test -f data/fsr_v3/fsr_v3_latest.parquet
-      - name: Execute second 100-fight fresh holdout
-        run: python -m pipeline.simulation.event_clock_mc_v2.diagnostics.stage8_holdout_validation --fights 100 --paths-per-fight 20 --exclude-discovery-fights 125 --clinch-ratio 0.06 --ground-strike-multiplier 3.0 --submission-multiplier 0.3
+      - name: Execute third 100-fight fresh holdout
+        run: python -m pipeline.simulation.event_clock_mc_v2.diagnostics.stage8_holdout_validation --fights 100 --paths-per-fight 20 --exclude-discovery-fights 225 --clinch-ratio 0.06 --ground-strike-multiplier 3.0 --submission-multiplier 0.3
       - uses: actions/upload-artifact@v4
         with:
           name: stage8-fresh-holdout

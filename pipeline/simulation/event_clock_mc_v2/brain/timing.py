@@ -41,11 +41,15 @@ class BrainTimingContext:
     opponent_hurt: float = 0.0
     score_state: float = 0.0
     late_urgency: float = 0.0
+    activity_rate_ratio: float = 1.0
 
     def __post_init__(self) -> None:
         for name in ("own_fatigue", "own_hurt", "opponent_hurt", "late_urgency"):
             _validate_bounded(getattr(self, name), name, 0.0, 1.0)
         _validate_bounded(self.score_state, "score_state", -1.0, 1.0)
+        _validate_finite_number(self.activity_rate_ratio, "activity_rate_ratio")
+        if self.activity_rate_ratio <= 0.0:
+            raise ValueError("activity_rate_ratio must be positive")
 
 
 @dataclass(frozen=True)
@@ -126,6 +130,7 @@ def expected_action_delay(
         * own_hurt_factor
         * opponent_hurt_factor
         * score_factor
+        / context.activity_rate_ratio
     )
     return float(np.clip(mean, config.minimum_delay_seconds, config.maximum_delay_seconds))
 
