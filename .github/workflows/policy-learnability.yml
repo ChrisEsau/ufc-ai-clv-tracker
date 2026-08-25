@@ -8,10 +8,6 @@ on:
     paths:
       - pipeline/simulation/event_clock_mc_v2/diagnostics/policy_learnability.py
       - .github/workflows/policy-learnability.yml
-  pull_request:
-    paths:
-      - pipeline/simulation/event_clock_mc_v2/diagnostics/policy_learnability.py
-      - .github/workflows/policy-learnability.yml
 
 permissions:
   contents: read
