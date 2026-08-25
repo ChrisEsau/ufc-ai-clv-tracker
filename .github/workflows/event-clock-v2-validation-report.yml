@@ -1,0 +1,45 @@
+name: Event Clock V2 Validation Report
+
+on:
+  pull_request:
+    branches: [refactor/event-clock-v2-brain-timeline]
+    paths: [".github/workflows/event-clock-v2-validation-report.yml"]
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: write
+
+jobs:
+  report-frozen-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download approved judging/submission validation artifact
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9577026570
+          path: validation
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 32882746841
+
+      - name: Publish extended compact report
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY' > /tmp/report.md
+          import json
+          path="validation/event-clock-v2-canonical-baseline-344377bba51b988397982d7b176df0e549d84691/judging-submission-200x50.json"
+          d=json.load(open(path)); m=d["simulator_metrics"]
+          keys=("standing_phase_share","clinch_phase_share","ground_phase_share",
+                "final_stamina_quantiles","round_red_win_probability_distribution",
+                "decision_winner_allocation","decision_round_count_distribution",
+                "submission_finish_time_distribution","submission_winner_allocation",
+                "submission_offense_edge_among_winners","loser_submission_defense_edge",
+                "mean_submission_conversion_probability","finish_time_distribution")
+          print("## Extended judging/submission diagnostics")
+          print("```json")
+          print(json.dumps({k:m[k] for k in keys},indent=2,sort_keys=True))
+          print("```")
+          PY
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/report.md
