@@ -4,6 +4,8 @@ Date: 2026-08-24
 Branch: `research/weight-class-audit-20260823`
 Status: research/design only; no Event Clock mechanics integration
 
+> **Integration source of truth:** the later brain-driven Event Clock V2 refactor is governed by `BRAIN_DRIVEN_EVENT_CLOCK_V2_CONTEXT.md` and `BRAIN_DRIVEN_EVENT_CLOCK_V2_IMPLEMENTATION_PLAN.md`. Where this older document discusses shadow integration, policy ticks beside an independently generated Event Clock path, or any other integration assumption that conflicts with the newer causal contract, the newer documents supersede it. The agreed causal ownership is: **brain generates fighter-initiated timeline events; mechanics resolve their outcomes.**
+
 ## Objective
 
 Build a small, generic MMA decision layer that answers:
@@ -207,7 +209,7 @@ Interpretation: "I'm touching this guy up; stay here."
 
 ### B. Losing striking exchanges
 
-If opponent recent striking effectiveness or damage is clearly favorable:
+If opponent recent striking effectiveness or damage are clearly favorable:
 
 - reduce willingness to remain in the same open exchange;
 - raise `RESET_RANGE`;
