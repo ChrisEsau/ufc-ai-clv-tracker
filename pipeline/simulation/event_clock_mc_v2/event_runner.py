@@ -1,10 +1,15 @@
 """Generic full-card runner for the Event Clock V2 / Brain MC.
 
-The public selector is UFC event id + paths per fight.  The implementation
+The public selector is UFC event id + paths per fight. The implementation
 resolves the event id to the canonical master event name, then delegates to
 the deterministic calibration runner so event runs use the same prefight
 FSR state, Brain MC engine, empirical Event2 KO/KD, submissions, judging,
 and matched path-seed semantics as validation.
+
+Every event run also reports strictly-prior UFC fight counts for both fighters.
+A bout is flagged as cold start when either fighter has fewer than three
+strictly-prior UFC fights. This is reporting metadata only; it does not alter
+fighter state, mechanics, policy, seeds, or simulation probabilities.
 """
 
 from __future__ import annotations
@@ -26,6 +31,7 @@ _EVENT_URL_COLUMNS = ("event_url", "ufcstats_event_url")
 _EVENT_NAME_COLUMNS = ("event_name", "ufcstats_event_name")
 _EVENT_DATE_COLUMNS = ("date", "event_date", "ufcstats_event_date")
 _EVENT_ID_RE = re.compile(r"/event-details/([A-Za-z0-9]+)")
+_COLD_START_MIN_PRIOR_UFC_FIGHTS = 3
 
 
 def _first_column(frame: pd.DataFrame, candidates: tuple[str, ...]) -> str | None:
@@ -59,9 +65,6 @@ def _master_events() -> pd.DataFrame:
             .str.strip()
         )
     else:
-        # Older master snapshots may not persist UFCStats event ids.  Keeping
-        # the field explicit lets next-event discovery still run and makes an
-        # --event-id request fail loudly rather than matching the wrong card.
         events["event_id"] = ""
 
     events = (
@@ -105,6 +108,62 @@ def resolve_next_event(after_event_name: str) -> pd.Series:
     return later.iloc[0]
 
 
+def _cold_start_audit(event_name: str, event_date: pd.Timestamp) -> dict:
+    """Return per-bout strictly-prior UFC experience without changing simulation."""
+    master = pd.read_parquet(MASTER_PATH).drop_duplicates("fight_id").copy()
+    required = {"fight_id", "date", "event_name", "r_id", "b_id", "r_name", "b_name"}
+    missing = sorted(required.difference(master.columns))
+    if missing:
+        raise RuntimeError(f"canonical master missing cold-start audit columns: {missing}")
+
+    master["date"] = pd.to_datetime(master["date"], errors="coerce").dt.normalize()
+    master["r_id"] = master["r_id"].astype(str)
+    master["b_id"] = master["b_id"].astype(str)
+    target_date = pd.Timestamp(event_date).normalize()
+    card = master[
+        master["event_name"].astype(str).eq(str(event_name))
+        & master["date"].eq(target_date)
+    ].copy()
+    if card.empty:
+        raise RuntimeError(f"cold-start audit found no fights for event: {event_name}")
+
+    prior = master[master["date"].lt(target_date)]
+    rows = []
+    for _, fight in card.sort_values("fight_id").iterrows():
+        red_id = str(fight["r_id"])
+        blue_id = str(fight["b_id"])
+        red_prior = int(((prior["r_id"] == red_id) | (prior["b_id"] == red_id)).sum())
+        blue_prior = int(((prior["r_id"] == blue_id) | (prior["b_id"] == blue_id)).sum())
+        cold_start = (
+            red_prior < _COLD_START_MIN_PRIOR_UFC_FIGHTS
+            or blue_prior < _COLD_START_MIN_PRIOR_UFC_FIGHTS
+        )
+        rows.append(
+            {
+                "bout_id": str(fight["fight_id"]),
+                "red_fighter": str(fight["r_name"]),
+                "blue_fighter": str(fight["b_name"]),
+                "red_prior_ufc_fights": red_prior,
+                "blue_prior_ufc_fights": blue_prior,
+                "cold_start": bool(cold_start),
+                "mature": bool(not cold_start),
+            }
+        )
+
+    cold_count = sum(int(row["cold_start"]) for row in rows)
+    return {
+        "definition": (
+            "cold_start if either fighter has fewer than 3 strictly-prior UFC fights"
+        ),
+        "minimum_prior_ufc_fights_per_fighter": _COLD_START_MIN_PRIOR_UFC_FIGHTS,
+        "strictly_prior": True,
+        "cold_start_fights": cold_count,
+        "mature_fights": len(rows) - cold_count,
+        "total_fights": len(rows),
+        "fights": rows,
+    }
+
+
 def run_event(
     *,
     event_id: str | None,
@@ -124,7 +183,8 @@ def run_event(
     )
     resolved_id = str(selected.event_id).strip()
     resolved_name = str(selected.event_name).strip()
-    resolved_date = pd.Timestamp(selected.event_date).date().isoformat()
+    resolved_timestamp = pd.Timestamp(selected.event_date)
+    resolved_date = resolved_timestamp.date().isoformat()
 
     record = run(
         split="calibration",
@@ -141,7 +201,10 @@ def run_event(
         "event_date": resolved_date,
         "paths_per_fight": int(paths_per_fight),
     }
-    # Persist the augmented record, not only the delegated calibration record.
+    record["cold_start_audit"] = _cold_start_audit(
+        resolved_name,
+        resolved_timestamp,
+    )
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n")
     return record
