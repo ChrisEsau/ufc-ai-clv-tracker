@@ -205,7 +205,7 @@ def main() -> None:
         "invariants": {"illegal_ground_standing_actions": illegal, "timeline_exposure_mismatches": exposure_mismatch},
         "simulated_phase_share": {key: value / phase_total for key, value in phase_seconds.items()},
         "actual_vs_shadow_per15": {
-            key: {"actual": per15(actual[key], actual_seconds), "shadow": per15(sim[key], sim_seconds / args.paths_per_fight)}
+            key: {"actual": per15(actual[key], actual_seconds), "shadow": per15(sim[key], actual_seconds)}
             for key in ("standing_att", "ground_att", "td_att", "td_land", "sub_att")
         },
         "fights_detail": fight_rows,
