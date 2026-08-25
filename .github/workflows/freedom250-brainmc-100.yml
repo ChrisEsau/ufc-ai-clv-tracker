@@ -1,0 +1,86 @@
+name: Freedom 250 Brain MC 100 Paths
+
+on:
+  push:
+    branches: [ops/freedom250-brainmc-100]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  freedom250:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      EXPECTED_BASE_SHA: d42b214c2583b6ce1409eb3ab5e6507aee2827ae
+      EXPECTED_SOURCE_DIGEST: sha256:a6abd062322eaf0c4a47997f215d7fa82c01c7db2755089fad1a30420da7d639
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: python -m pip install numpy pandas pyarrow pyyaml scipy scikit-learn joblib
+
+      - name: Verify source ancestry and canonical artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git merge-base --is-ancestor "$EXPECTED_BASE_SHA" HEAD
+          actual=$(gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/9494902022 --jq .digest)
+          test "$actual" = "$EXPECTED_SOURCE_DIGEST"
+          echo "base_brain_mc_sha=$EXPECTED_BASE_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "ops_sha=$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
+          echo "canonical_source_digest=$actual" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Restore canonical historical FSR state
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 32645607979
+
+      - name: Restore and verify inputs
+        run: |
+          cp -a restored/canonical-weight-class-state/. data/
+          test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
+          test -f data/master/ufc_master.parquet
+
+      - name: Run Freedom 250 Brain MC
+        run: python -m pipeline.simulation.event_clock_mc_v2.diagnostics.freedom250_brainmc_100
+
+      - name: Add compact results to summary
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          d=json.load(open('artifacts/freedom250-brainmc-100/results.json'))
+          print('## Freedom 250 — Brain MC — 100 paths/fight')
+          print('')
+          for f in d['fights']:
+              ml=f['moneyline']; p=f['props']; a=f['aggregate']
+              print(f"### {f['red']} vs {f['blue']}")
+              print(f"- finish win mass: {f['red']} {ml['red_finish_win_mass']:.1%} | {f['blue']} {ml['blue_finish_win_mass']:.1%} | unresolved decisions {ml['decision_unresolved_mass']:.1%}")
+              print(f"- KO {p['fight_ko_tko']:.1%} | SUB {p['fight_submission']:.1%} | distance/unresolved {p['goes_distance_unresolved']:.1%}")
+              print(f"- U1.5 {p['under_1_5']:.1%} | O1.5 {p['over_1_5']:.1%} | U2.5 {p['under_2_5']:.1%} | O2.5 {p['over_2_5']:.1%}")
+              print(f"- mean duration {a['mean_duration_seconds']:.1f}s")
+              print('')
+          PY
+
+      - name: Upload results
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: freedom250-brainmc-100-results
+          path: artifacts/freedom250-brainmc-100/results.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Report artifact
+        run: |
+          echo "artifact_id=${{ steps.upload.outputs.artifact-id }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "artifact_digest=${{ steps.upload.outputs.artifact-digest }}" >> "$GITHUB_STEP_SUMMARY"
