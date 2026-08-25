@@ -144,9 +144,12 @@ def resolve_action(
     if family in {ActionFamily.ADVANCE_POSITION, ActionFamily.IMPROVE_POSITION}:
         return ActionResolution(event, ActionOutcome.MAINTAINED)
     if family is ActionFamily.SUBMISSION_ATTACK:
+        defender = inputs.fighter(event.actor.opponent)
         probability, succeeded = resolve_submission(
             fighter.submission_conversion_baseline,
             fighter.submission_conversion_offset,
+            fighter.submission_offense,
+            defender.submission_defense,
             submission_rng,
         )
         return ActionResolution(
@@ -156,7 +159,11 @@ def resolve_action(
                 attempted=True,
                 conversion_probability=probability,
                 success=succeeded,
-                termination=(FightTerminationRequest(event.actor, FinishMethod.SUBMISSION) if succeeded else None),
+                termination=(
+                    FightTerminationRequest(event.actor, FinishMethod.SUBMISSION)
+                    if succeeded
+                    else None
+                ),
             ),
         )
     if family is ActionFamily.CONTROL:
