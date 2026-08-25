@@ -1,5 +1,7 @@
 name: Stage 8 Fresh Holdout Validation
 on:
+  push:
+    branches: [refactor/event-clock-v2-brain-timeline]
   workflow_dispatch:
 permissions: {contents: read, actions: read}
 jobs:
