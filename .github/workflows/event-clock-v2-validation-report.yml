@@ -29,7 +29,8 @@ jobs:
         run: |
           python - <<'PY' > /tmp/report.md
           import json
-          path="validation/event-clock-v2-canonical-baseline-344377bba51b988397982d7b176df0e549d84691/judging-submission-200x50.json"
+          from pathlib import Path
+          path=next(Path("validation").rglob("judging-submission-200x50.json"))
           d=json.load(open(path)); m=d["simulator_metrics"]
           keys=("standing_phase_share","clinch_phase_share","ground_phase_share",
                 "final_stamina_quantiles","round_red_win_probability_distribution",
