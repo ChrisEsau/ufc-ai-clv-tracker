@@ -1,0 +1,230 @@
+name: Reach Striking Signal Audit
+
+on:
+  push:
+    branches: [research/submission-signal-audit-20260825]
+    paths:
+      - ".github/workflows/reach-striking-signal-audit.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install numpy pandas pyarrow scipy scikit-learn
+
+      - name: Restore canonical historical Brain MC inputs
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 32645607979
+
+      - name: Install restored canonical inputs
+        run: |
+          cp -a restored/canonical-weight-class-state/. data/
+          test -f data/master/ufc_master.parquet
+          test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
+
+      - name: Validate reach signal conditional on prefight FSR standing representation
+        run: |
+          mkdir -p artifacts/reach-striking-audit
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import numpy as np
+          import pandas as pd
+          from scipy import stats
+          from sklearn.linear_model import LinearRegression
+          from sklearn.metrics import mean_absolute_error, mean_squared_error
+
+          from pipeline.common.paths import MASTER_PATH
+          from pipeline.simulation.event_clock_mc_v2.fsr_v3_adapter import (
+              load_prefight_snapshots,
+              historical_fighter_rows,
+              derive_runtime_inputs,
+          )
+          from pipeline.simulation.event_clock_mc_v2.standard_fighter_v1.capability_translation import traits_from_row
+
+          OUT = Path('artifacts/reach-striking-audit')
+          master = pd.read_parquet(MASTER_PATH).drop_duplicates('fight_id').copy()
+          master['date'] = pd.to_datetime(master['date'], errors='coerce').dt.normalize()
+          snaps = load_prefight_snapshots()
+
+          required = [
+              'fight_id','date','r_id','b_id','r_name','b_name','r_reach','b_reach',
+              'r_dist_landed','b_dist_landed','r_dist_atmpted','b_dist_atmpted',
+              'finish_round','match_time_sec'
+          ]
+          missing = [c for c in required if c not in master.columns]
+          if missing:
+              raise RuntimeError(f'master missing required columns: {missing}')
+
+          # Normalize reach robustly; canonical values are expected numeric inches.
+          for c in ['r_reach','b_reach']:
+              master[c] = pd.to_numeric(master[c], errors='coerce')
+          for c in ['r_dist_landed','b_dist_landed','r_dist_atmpted','b_dist_atmpted','finish_round','match_time_sec']:
+              master[c] = pd.to_numeric(master[c], errors='coerce')
+
+          # Strictly-prior UFC counts from master, computed once chronologically.
+          prior_counts = {}
+          seen = {}
+          for date, day in master.sort_values(['date','fight_id']).groupby('date', sort=True):
+              for idx, f in day.iterrows():
+                  rid, bid = str(f.r_id), str(f.b_id)
+                  prior_counts[(str(f.fight_id), rid)] = seen.get(rid, 0)
+                  prior_counts[(str(f.fight_id), bid)] = seen.get(bid, 0)
+              for idx, f in day.iterrows():
+                  rid, bid = str(f.r_id), str(f.b_id)
+                  seen[rid] = seen.get(rid, 0) + 1
+                  seen[bid] = seen.get(bid, 0) + 1
+
+          rows=[]
+          skipped={'no_snapshot':0,'cold':0,'missing_reach':0,'bad_exposure':0,'bad_stats':0}
+          for _, f in master.sort_values(['date','fight_id']).iterrows():
+              if pd.isna(f.date):
+                  continue
+              rid,bid=str(f.r_id),str(f.b_id)
+              fid=str(f.fight_id)
+              rp=prior_counts.get((fid,rid),0); bp=prior_counts.get((fid,bid),0)
+              if rp < 3 or bp < 3:
+                  skipped['cold'] += 1; continue
+              if not np.isfinite(f.r_reach) or not np.isfinite(f.b_reach):
+                  skipped['missing_reach'] += 1; continue
+              vals=[f.r_dist_landed,f.b_dist_landed,f.r_dist_atmpted,f.b_dist_atmpted]
+              if not all(np.isfinite(x) and x >= 0 for x in vals):
+                  skipped['bad_stats'] += 1; continue
+              elapsed=(float(f.finish_round)-1.0)*300.0 + float(f.match_time_sec)
+              if not np.isfinite(elapsed) or elapsed <= 0:
+                  skipped['bad_exposure'] += 1; continue
+              try:
+                  rr,br=historical_fighter_rows(snaps,event_date=f.date,fight_id=fid,fighter_ids=(rid,bid))
+              except Exception:
+                  skipped['no_snapshot'] += 1; continue
+              rrt=derive_runtime_inputs(traits_from_row(rr),traits_from_row(br))
+              brt=derive_runtime_inputs(traits_from_row(br),traits_from_row(rr))
+              scale=900.0/elapsed
+              r_att=float(f.r_dist_atmpted)*scale; b_att=float(f.b_dist_atmpted)*scale
+              r_land=float(f.r_dist_landed)*scale; b_land=float(f.b_dist_landed)*scale
+              r_acc=float(f.r_dist_landed)/float(f.r_dist_atmpted) if f.r_dist_atmpted>0 else np.nan
+              b_acc=float(f.b_dist_landed)/float(f.b_dist_atmpted) if f.b_dist_atmpted>0 else np.nan
+              rows.append({
+                  'fight_id':fid,'date':str(f.date.date()),'red':str(f.r_name),'blue':str(f.b_name),
+                  'division':str(f.get('division','')),
+                  'red_prior':rp,'blue_prior':bp,
+                  'reach_delta':float(f.r_reach-f.b_reach),
+                  'abs_reach_delta':abs(float(f.r_reach-f.b_reach)),
+                  'fsr_rate_diff':float(rrt.standing_rate_15m-brt.standing_rate_15m),
+                  'fsr_acc_diff':float(rrt.standing_accuracy-brt.standing_accuracy),
+                  'fsr_expected_landed_diff':float(rrt.standing_rate_15m*rrt.standing_accuracy-brt.standing_rate_15m*brt.standing_accuracy),
+                  'actual_dist_attempt_diff_15m':r_att-b_att,
+                  'actual_dist_landed_diff_15m':r_land-b_land,
+                  'actual_dist_acc_diff':r_acc-b_acc if np.isfinite(r_acc) and np.isfinite(b_acc) else np.nan,
+                  'elapsed_sec':elapsed,
+              })
+
+          df=pd.DataFrame(rows)
+          if len(df) < 200:
+              raise RuntimeError(f'too few mature joined fights: {len(df)}')
+          df['date']=pd.to_datetime(df.date)
+          df=df.sort_values(['date','fight_id']).reset_index(drop=True)
+
+          # 80/20 chronological split, no random leakage.
+          cut=max(1,int(len(df)*0.80))
+          train=df.iloc[:cut].copy(); test=df.iloc[cut:].copy()
+          split_date=str(test.date.min().date())
+
+          baseline=['fsr_rate_diff','fsr_acc_diff','fsr_expected_landed_diff']
+          plus=baseline+['reach_delta']
+
+          def fit_eval(target, features):
+              tr=train.dropna(subset=[target]+features); te=test.dropna(subset=[target]+features)
+              model=LinearRegression().fit(tr[features],tr[target])
+              pred=model.predict(te[features])
+              y=te[target].to_numpy()
+              return model,tr,te,pred,{
+                  'n_train':len(tr),'n_test':len(te),
+                  'mae':float(mean_absolute_error(y,pred)),
+                  'rmse':float(mean_squared_error(y,pred)**0.5),
+                  'r2':float(model.score(te[features],te[target])),
+                  'pearson_r':float(np.corrcoef(y,pred)[0,1]) if len(y)>2 and np.std(y)>0 and np.std(pred)>0 else None,
+                  'coefficients':{k:float(v) for k,v in zip(features,model.coef_)},
+                  'intercept':float(model.intercept_),
+              }
+
+          targets=['actual_dist_attempt_diff_15m','actual_dist_landed_diff_15m','actual_dist_acc_diff']
+          results={}
+          for target in targets:
+              bmod,btr,bte,bpred,bm=fit_eval(target,baseline)
+              pmod,ptr,pte,ppred,pm=fit_eval(target,plus)
+              # Residual test: baseline fit only on train, then correlate HOLDOUT residual with reach.
+              common=bte.copy()
+              resid=common[target].to_numpy()-bmod.predict(common[baseline])
+              reach=common.reach_delta.to_numpy()
+              if len(common)>2 and np.std(reach)>0 and np.std(resid)>0:
+                  r,p=stats.pearsonr(reach,resid)
+                  slope,intercept,rval,pval,se=stats.linregress(reach,resid)
+              else:
+                  r=p=slope=pval=se=np.nan
+              results[target]={
+                  'baseline':bm,'plus_reach':pm,
+                  'delta_mae':float(pm['mae']-bm['mae']),
+                  'delta_rmse':float(pm['rmse']-bm['rmse']),
+                  'delta_r2':float(pm['r2']-bm['r2']),
+                  'holdout_baseline_residual_vs_reach':{
+                      'pearson_r':None if not np.isfinite(r) else float(r),
+                      'pearson_p':None if not np.isfinite(p) else float(p),
+                      'slope_per_inch':None if not np.isfinite(slope) else float(slope),
+                      'slope_p':None if not np.isfinite(pval) else float(pval),
+                      'slope_se':None if not np.isfinite(se) else float(se),
+                  }
+              }
+
+          # Pure descriptive symmetry test: red-perspective outcome signed by reach advantage.
+          desc=df[['reach_delta','actual_dist_attempt_diff_15m','actual_dist_landed_diff_15m','actual_dist_acc_diff']].copy()
+          desc['reach_bin']=pd.cut(desc.reach_delta,[-99,-4,-2,0,2,4,99],right=False)
+          bins=[]
+          for key,g in desc.groupby('reach_bin',observed=True):
+              bins.append({
+                  'bin':str(key),'n':len(g),'mean_reach_delta':float(g.reach_delta.mean()),
+                  'mean_attempt_diff_15m':float(g.actual_dist_attempt_diff_15m.mean()),
+                  'mean_landed_diff_15m':float(g.actual_dist_landed_diff_15m.mean()),
+                  'mean_acc_diff':float(g.actual_dist_acc_diff.mean(skipna=True)),
+              })
+
+          # Patterson diagnostic row if present.
+          patt=df[(df.red.str.contains('Ponzinibbio',case=False,na=False)) | (df.blue.str.contains('Ponzinibbio',case=False,na=False))]
+          patt=patt[(patt.red.str.contains('Patterson',case=False,na=False)) | (patt.blue.str.contains('Patterson',case=False,na=False))]
+
+          out={
+              'study':'reach delta -> distance striking conditional on prefight FSR V3 standing representation',
+              'population':'mature UFC fights only: both fighters >=3 strictly prior UFC fights',
+              'unit':'one fight, red-minus-blue directional row',
+              'chronological_split':{'train_fraction':0.8,'holdout_start':split_date,'n_total':len(df),'n_train':len(train),'n_holdout':len(test)},
+              'features':{'baseline':baseline,'candidate_added':'reach_delta_inches'},
+              'targets':results,
+              'reach_bins':bins,
+              'skipped':skipped,
+              'patterson_rows':patt.to_dict('records'),
+          }
+          (OUT/'summary.json').write_text(json.dumps(out,indent=2,default=str)+'\n')
+          df.to_csv(OUT/'joined_fights.csv',index=False)
+          print(json.dumps(out,indent=2,default=str))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reach-striking-signal-audit
+          path: artifacts/reach-striking-audit/
+          retention-days: 90
