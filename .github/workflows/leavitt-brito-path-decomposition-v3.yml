@@ -1,0 +1,47 @@
+name: Leavitt Brito 500 Path Decomposition V3
+
+on:
+  push:
+    branches:
+      - diagnostic/leavitt-brito-brain-inputs-20260826
+    paths:
+      - '.github/workflows/leavitt-brito-path-decomposition-v3.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  decompose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Sparse shallow checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            pipeline
+            configs
+            config
+            data/master
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: python -m pip install numpy pandas pyarrow pyyaml scipy scikit-learn joblib
+
+      - name: Restore canonical historical Brain MC inputs
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 32645607979
+
+      - name: Decompose exact 500 Leavitt Brito paths
+        run: |
+          cp -a restored/canonical-weight-class-state/. data/
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.leavitt_brito_path_decomposition
