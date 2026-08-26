@@ -1,0 +1,434 @@
+name: Stirling Last-3 FSR Shadow
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/stirling-last3-fsr-shadow.yml'
+
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: python -m pip install numpy pandas pyarrow pyyaml scipy scikit-learn joblib
+
+      - name: Restore canonical historical inputs
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ChrisEsau/ufc-ai-clv-tracker
+          run-id: 32645607979
+          artifact-ids: 9494902022
+          path: restored
+
+      - name: Install restored inputs
+        run: |
+          find restored -maxdepth 4 -type f | sort | head -100
+          cp -R restored/* .
+
+      - name: Run full-history vs last-3 striking FSR shadow
+        run: |
+          python - <<'PY'
+          import json, math
+          from pathlib import Path
+
+          import numpy as np
+          import pandas as pd
+          from scipy.special import expit
+
+          from pipeline.common.paths import MASTER_PATH
+          from pipeline.fsr_v3.config import FSRV3Config
+          from pipeline.fsr_v3.active_config import ActiveTraitConfig
+          from pipeline.fsr_v3.paths import (
+              FSR_V3_PREFIGHT_SNAPSHOTS_PATH,
+              STANDING_TENDENCY_HISTORY_PATH,
+              STANDING_SUPPRESSION_HISTORY_PATH,
+              STANDING_EFFECTIVENESS_HISTORY_PATH,
+              POWER_HISTORY_PATH,
+              KD_RESISTANCE_HISTORY_PATH,
+          )
+          from pipeline.fsr_v3.replay.math import (
+              nb2_log_likelihood,
+              beta_binomial_log_likelihood,
+              normalize_log_weights,
+              weighted_mean_sd,
+          )
+          from pipeline.fsr_v3.replay.rate_families import standing_spec, _log_gamma_prior
+          from pipeline.fsr_v3.replay.paired_effectiveness import (
+              standing_effectiveness_spec,
+              _normal_prior,
+          )
+          from pipeline.fsr_v3.replay.power import (
+              _prepare_observations as prepare_power_observations,
+              _power_grid,
+              _prior_logweights as power_prior_logweights,
+              _grid_loglik as power_grid_loglik,
+              _posterior_moments as power_posterior_moments,
+          )
+          from pipeline.fsr_v3.replay.kd_resistance import (
+              _prepare_observations as prepare_kd_observations,
+              _grid as kd_grid,
+              _prior_logweights as kd_prior_logweights,
+              _moments as kd_moments,
+          )
+          from pipeline.simulation.event_clock_mc_v2.calibration.runner import run
+          from pipeline.simulation.event_clock_mc_v2.mechanics.config import KOKDArchitecture
+          from pipeline.simulation.event_clock_mc_v2.fsr_v3_adapter import (
+              load_prefight_snapshots,
+              historical_fighter_rows,
+          )
+          from pipeline.simulation.event_clock_mc_v2.standard_fighter_v1.capability_translation import (
+              CapabilityReference,
+          )
+          from pipeline.simulation.event_clock_mc_v2.diagnostics.stage6_real_causal_path import _capabilities
+          from pipeline.simulation.event_clock_mc_v2.physiology_adapter import (
+              age_years_on_date,
+              fighter_mechanics_from_prefight,
+          )
+          from pipeline.simulation.event_clock_mc_v2.mechanics.ko_kd_empirical import (
+              ko_probability,
+              kd_probability,
+          )
+
+          OUT = Path('data/diagnostics/event_clock_v2/stirling_last3_fsr')
+          OUT.mkdir(parents=True, exist_ok=True)
+
+          def as_dates(frame, col='event_date'):
+              frame = frame.copy()
+              frame[col] = pd.to_datetime(frame[col], errors='raise').dt.normalize()
+              frame['fight_id'] = frame['fight_id'].astype(str)
+              frame['fighter_id'] = frame['fighter_id'].astype(str)
+              return frame
+
+          master = pd.read_parquet(MASTER_PATH).drop_duplicates('fight_id').copy()
+          master['fight_id'] = master['fight_id'].astype(str)
+          mask = (
+              master['r_name'].astype(str).str.contains('Blachowicz|Stirling', case=False, regex=True)
+              & master['b_name'].astype(str).str.contains('Blachowicz|Stirling', case=False, regex=True)
+          )
+          if mask.sum() != 1:
+              # robust unordered-name fallback
+              mask = master.apply(
+                  lambda r: {str(r['r_name']), str(r['b_name'])} == {'Jan Blachowicz', 'Navajo Stirling'},
+                  axis=1,
+              )
+          if mask.sum() != 1:
+              raise RuntimeError(f'expected exactly one Jan Blachowicz/Navajo Stirling fight, found {int(mask.sum())}')
+          fight = master.loc[mask].iloc[0]
+          fight_id = str(fight['fight_id'])
+          event_name = str(fight['event_name'])
+          target_date = pd.Timestamp(fight['date']).normalize()
+          fighter_ids = {
+              str(fight['r_name']): str(fight['r_id']),
+              str(fight['b_name']): str(fight['b_id']),
+          }
+
+          # Isolate this bout while preserving the complete historical master for all prior calculations.
+          same_event_other = master['event_name'].astype(str).eq(event_name) & ~master['fight_id'].eq(fight_id)
+          master.loc[same_event_other, 'event_name'] = master.loc[same_event_other, 'event_name'].astype(str) + ' [shadow excluded]'
+          master.to_parquet(MASTER_PATH, index=False)
+
+          snapshots = as_dates(pd.read_parquet(FSR_V3_PREFIGHT_SNAPSHOTS_PATH))
+          original_target = snapshots[
+              snapshots['event_date'].eq(target_date)
+              & snapshots['fight_id'].eq(fight_id)
+              & snapshots['fighter_id'].isin(fighter_ids.values())
+          ].copy()
+          if len(original_target) != 2:
+              raise RuntimeError(f'expected two target snapshot rows, found {len(original_target)}')
+
+          rate_cfg = FSRV3Config()
+          active_cfg = ActiveTraitConfig()
+          rate_spec = standing_spec(rate_cfg)
+          eff_spec = standing_effectiveness_spec(rate_cfg)
+
+          tendency = as_dates(pd.read_parquet(STANDING_TENDENCY_HISTORY_PATH))
+          suppression = as_dates(pd.read_parquet(STANDING_SUPPRESSION_HISTORY_PATH))
+          effectiveness = as_dates(pd.read_parquet(STANDING_EFFECTIVENESS_HISTORY_PATH))
+          power_hist = as_dates(pd.read_parquet(POWER_HISTORY_PATH))
+          kd_hist = as_dates(pd.read_parquet(KD_RESISTANCE_HISTORY_PATH))
+
+          power_obs = prepare_power_observations().copy()
+          power_obs['date'] = pd.to_datetime(power_obs['date'], errors='raise').dt.normalize()
+          power_obs['fight_id'] = power_obs['fight_id'].astype(str)
+          power_obs['fighter_id'] = power_obs['fighter_id'].astype(str)
+
+          kd_obs = prepare_kd_observations(active_cfg).copy()
+          kd_obs['event_date'] = pd.to_datetime(kd_obs['event_date'], errors='raise').dt.normalize()
+          kd_obs['fight_id'] = kd_obs['fight_id'].astype(str)
+          kd_obs['fighter_id'] = kd_obs['fighter_id'].astype(str)
+
+          def target_row(frame, fighter_id, trait=None):
+              q = frame[
+                  frame['event_date'].eq(target_date)
+                  & frame['fight_id'].eq(fight_id)
+                  & frame['fighter_id'].eq(str(fighter_id))
+              ]
+              if trait is not None:
+                  q = q[q['trait'].astype(str).eq(trait)]
+              if len(q) != 1:
+                  raise RuntimeError(f'target row mismatch fighter={fighter_id} trait={trait}: {len(q)}')
+              return q.iloc[0]
+
+          def recent_three(frame, fighter_id, date_col='event_date', trait=None):
+              q = frame[
+                  frame['fighter_id'].astype(str).eq(str(fighter_id))
+                  & pd.to_datetime(frame[date_col]).dt.normalize().lt(target_date)
+              ].copy()
+              if trait is not None:
+                  q = q[q['trait'].astype(str).eq(trait)]
+              return q.sort_values([date_col, 'fight_id']).tail(3)
+
+          def recent_tendency(fighter_id):
+              t = target_row(tendency, fighter_id)
+              grid = np.linspace(rate_spec.tendency_grid_min, rate_spec.tendency_grid_max, rate_spec.tendency_grid_points)
+              q_pop = float(t['population_rate_15m'])
+              shape = max(q_pop * float(t['prior_seconds']) / 900.0, 1e-9)
+              lp = _log_gamma_prior(grid, q_pop, shape)
+              recent = recent_three(tendency, fighter_id)
+              for r in recent.itertuples(index=False):
+                  exposure = float(r.denominator)
+                  if exposure > 0:
+                      mu = exposure / 900.0 * grid
+                      lp += nb2_log_likelihood(float(r.numerator), mu, float(r.observation_alpha))
+              mean, sd = weighted_mean_sd(grid, normalize_log_weights(lp))
+              return float(mean), float(sd), recent
+
+          def recent_suppression(fighter_id):
+              t = target_row(suppression, fighter_id)
+              grid = np.linspace(rate_spec.suppression_grid_min, rate_spec.suppression_grid_max, rate_spec.suppression_grid_points)
+              lp = _log_gamma_prior(grid, float(t['population_multiplier']), float(t['prior_shape']))
+              recent = recent_three(suppression, fighter_id)
+              for r in recent.itertuples(index=False):
+                  expected = float(r.opponent_expected_attempts)
+                  if expected > 0:
+                      lp += nb2_log_likelihood(
+                          float(r.opponent_actual_attempts), expected * grid, float(r.observation_alpha)
+                      )
+              mean, sd = weighted_mean_sd(grid, normalize_log_weights(lp))
+              return float(mean), float(sd), recent
+
+          def recent_effect(fighter_id, trait):
+              t = target_row(effectiveness, fighter_id, trait)
+              grid = np.linspace(eff_spec.grid_min, eff_spec.grid_max, eff_spec.grid_points)
+              sigma = float(t['prior_sigma'])
+              lp = _normal_prior(grid, sigma)
+              recent = recent_three(effectiveness, fighter_id, trait=trait)
+              for r in recent.itertuples(index=False):
+                  n = float(r.attempted)
+                  if n <= 0:
+                      continue
+                  beta = math.log(float(r.population_baseline) / (1.0 - float(r.population_baseline)))
+                  if trait == eff_spec.offense_trait:
+                      reciprocal = effectiveness[
+                          effectiveness['event_date'].eq(pd.Timestamp(r.event_date))
+                          & effectiveness['fight_id'].eq(str(r.fight_id))
+                          & effectiveness['fighter_id'].eq(str(r.opponent_id))
+                          & effectiveness['trait'].astype(str).eq(eff_spec.defense_trait)
+                      ]
+                      if len(reciprocal) != 1:
+                          raise RuntimeError('missing reciprocal defense row')
+                      opp = float(reciprocal.iloc[0]['pre_rating'])
+                      p = expit(beta + grid - opp)
+                  else:
+                      reciprocal = effectiveness[
+                          effectiveness['event_date'].eq(pd.Timestamp(r.event_date))
+                          & effectiveness['fight_id'].eq(str(r.fight_id))
+                          & effectiveness['fighter_id'].eq(str(r.opponent_id))
+                          & effectiveness['trait'].astype(str).eq(eff_spec.offense_trait)
+                      ]
+                      if len(reciprocal) != 1:
+                          raise RuntimeError('missing reciprocal offense row')
+                      opp = float(reciprocal.iloc[0]['pre_rating'])
+                      p = expit(beta + opp - grid)
+                  lp += beta_binomial_log_likelihood(float(r.landed), n, p, float(r.rho))
+              mean, sd = weighted_mean_sd(grid, normalize_log_weights(lp))
+              return float(mean), float(sd), recent
+
+          def recent_power(fighter_id):
+              t = target_row(power_hist, fighter_id)
+              grid = _power_grid(rate_cfg)
+              lp = power_prior_logweights(grid, float(rate_cfg.power_sigma))
+              recent = power_obs[
+                  power_obs['fighter_id'].eq(str(fighter_id))
+                  & power_obs['date'].lt(target_date)
+              ].sort_values(['date', 'fight_id']).tail(3)
+              beta = float(t['population_beta'])
+              rho = float(rate_cfg.power_rho)
+              for r in recent.itertuples(index=False):
+                  if float(r.sig_landed) > 0:
+                      lp += power_grid_loglik(
+                          k=float(r.kd_scored), n=float(r.sig_landed), beta=beta, rho=rho, grid=grid
+                      )
+              mean, sd = power_posterior_moments(lp, grid)
+              return float(mean), float(sd), recent
+
+          def recent_kdres(fighter_id):
+              t = target_row(kd_hist, fighter_id)
+              grid = kd_grid(active_cfg)
+              lp = kd_prior_logweights(grid, float(t['sigma']))
+              recent = kd_obs[
+                  kd_obs['fighter_id'].eq(str(fighter_id))
+                  & kd_obs['event_date'].lt(target_date)
+              ].sort_values(['event_date', 'fight_id']).tail(3)
+              beta = float(t['population_beta'])
+              rho = float(t['rho'])
+              for r in recent.itertuples(index=False):
+                  if float(r.n) > 0:
+                      p = expit(beta + float(r.context_offset) - grid)
+                      lp += beta_binomial_log_likelihood(float(r.k), float(r.n), p, rho)
+              mean, sd = kd_moments(lp, grid)
+              return float(mean), float(sd), recent
+
+          # Run exact canonical baseline first with the same isolated fight and seeds.
+          baseline_path = OUT / 'baseline.json'
+          baseline = run(
+              split='calibration',
+              paths_per_fight=1000,
+              config_path=Path('configs/event_clock_v2/calibration/default.yaml'),
+              output=baseline_path,
+              ko_kd_architecture=KOKDArchitecture.EMPIRICAL_EVENT2,
+              event_name=event_name,
+          )
+
+          changes = {}
+          recent_dates = {}
+          for fighter_name, fighter_id in fighter_ids.items():
+              tend, tend_sd, tend_rows = recent_tendency(fighter_id)
+              supp, supp_sd, supp_rows = recent_suppression(fighter_id)
+              off, off_sd, off_rows = recent_effect(fighter_id, eff_spec.offense_trait)
+              deff, def_sd, def_rows = recent_effect(fighter_id, eff_spec.defense_trait)
+              power, power_sd, power_rows = recent_power(fighter_id)
+              kdres, kdres_sd, kd_rows = recent_kdres(fighter_id)
+
+              idx = (
+                  snapshots['event_date'].eq(target_date)
+                  & snapshots['fight_id'].eq(fight_id)
+                  & snapshots['fighter_id'].eq(str(fighter_id))
+              )
+              before = snapshots.loc[idx].iloc[0]
+              updates = {
+                  'standing_striking_tendency': tend,
+                  'standing_striking_suppression': supp,
+                  'standing_striking_offense': off,
+                  'standing_striking_defense': deff,
+                  'striking_power_v3': power,
+                  'knockdown_resistance_v3': kdres,
+              }
+              changes[fighter_name] = {
+                  key: {'full_history': float(before[key]), 'last3': float(value), 'delta': float(value - before[key])}
+                  for key, value in updates.items()
+              }
+              for key, value in updates.items():
+                  snapshots.loc[idx, key] = value
+
+              recent_dates[fighter_name] = {
+                  'standing_tendency_fights': [pd.Timestamp(x).date().isoformat() for x in tend_rows['event_date']],
+                  'power_fights': [pd.Timestamp(x).date().isoformat() for x in power_rows['date']],
+                  'kdres_fights': [pd.Timestamp(x).date().isoformat() for x in kd_rows['event_date']],
+              }
+
+          snapshots.to_parquet(FSR_V3_PREFIGHT_SNAPSHOTS_PATH, index=False)
+
+          # Compare the translated matchup inputs/capabilities before and after.
+          manifest = pd.read_csv('data/calibration/event_clock_v2/cohort_manifest.csv')
+          cutoff = pd.to_datetime(manifest['date']).min()
+          reference = CapabilityReference.from_prefight_before(load_prefight_snapshots(), cutoff)
+
+          def matchup_summary(snapshot_frame):
+              red, blue = historical_fighter_rows(
+                  snapshot_frame,
+                  event_date=target_date,
+                  fight_id=fight_id,
+                  fighter_ids=(str(fight['r_id']), str(fight['b_id'])),
+              )
+              rc, rr = _capabilities(red, blue, reference)
+              bc, br = _capabilities(blue, red, reference)
+              red_age = age_years_on_date(fight.get('r_dob'), target_date)
+              blue_age = age_years_on_date(fight.get('b_dob'), target_date)
+              rm = fighter_mechanics_from_prefight(red, rr, age_years=red_age)
+              bm = fighter_mechanics_from_prefight(blue, br, age_years=blue_age)
+              return {
+                  str(fight['r_name']): {
+                      'standing_rate_15m': float(rr.standing_rate_15m),
+                      'standing_accuracy': float(rr.standing_accuracy),
+                      'capability_standing': float(rc.standing),
+                      'capability_counter': float(rc.counter),
+                      'capability_pressure': float(rc.pressure),
+                      'striking_power': float(rm.striking_power),
+                      'knockdown_resistance': float(rm.knockdown_resistance),
+                      'age': float(rm.age_years),
+                      'p_ko_prior0': float(ko_probability(rm, bm, prior_defender_kds=0, elapsed_seconds=0, attacker_stamina=1.0)),
+                      'p_kd_prior0': float(kd_probability(rm, bm, prior_defender_kds=0, elapsed_seconds=0, attacker_stamina=1.0)),
+                  },
+                  str(fight['b_name']): {
+                      'standing_rate_15m': float(br.standing_rate_15m),
+                      'standing_accuracy': float(br.standing_accuracy),
+                      'capability_standing': float(bc.standing),
+                      'capability_counter': float(bc.counter),
+                      'capability_pressure': float(bc.pressure),
+                      'striking_power': float(bm.striking_power),
+                      'knockdown_resistance': float(bm.knockdown_resistance),
+                      'age': float(bm.age_years),
+                      'p_ko_prior0': float(ko_probability(bm, rm, prior_defender_kds=0, elapsed_seconds=0, attacker_stamina=1.0)),
+                      'p_kd_prior0': float(kd_probability(bm, rm, prior_defender_kds=0, elapsed_seconds=0, attacker_stamina=1.0)),
+                  },
+              }
+
+          canonical_snapshot = snapshots.copy()
+          for fighter_name, fighter_id in fighter_ids.items():
+              idx_new = (
+                  canonical_snapshot['event_date'].eq(target_date)
+                  & canonical_snapshot['fight_id'].eq(fight_id)
+                  & canonical_snapshot['fighter_id'].eq(str(fighter_id))
+              )
+              old = original_target[original_target['fighter_id'].eq(str(fighter_id))].iloc[0]
+              for col in [
+                  'standing_striking_tendency','standing_striking_suppression',
+                  'standing_striking_offense','standing_striking_defense',
+                  'striking_power_v3','knockdown_resistance_v3'
+              ]:
+                  canonical_snapshot.loc[idx_new, col] = old[col]
+
+          translated_full = matchup_summary(canonical_snapshot)
+          translated_last3 = matchup_summary(load_prefight_snapshots())
+
+          last3_path = OUT / 'last3.json'
+          last3 = run(
+              split='calibration',
+              paths_per_fight=1000,
+              config_path=Path('configs/event_clock_v2/calibration/default.yaml'),
+              output=last3_path,
+              ko_kd_architecture=KOKDArchitecture.EMPIRICAL_EVENT2,
+              event_name=event_name,
+          )
+
+          audit = {
+              'fight_id': fight_id,
+              'event_name': event_name,
+              'event_date': target_date.date().isoformat(),
+              'fighters': fighter_ids,
+              'definition': 'last three strictly-prior UFC fights; rebuild only simulator-active striking FSR families (standing tendency/suppression/offense/defense, power, KD resistance) from existing validated V3 likelihoods and population priors; ground, wrestling, submission unchanged',
+              'changes': changes,
+              'recent_fight_dates': recent_dates,
+              'translated_full_history': translated_full,
+              'translated_last3': translated_last3,
+              'baseline_fight_outcomes': baseline.get('fight_path_outcomes'),
+              'last3_fight_outcomes': last3.get('fight_path_outcomes'),
+          }
+          (OUT / 'audit.json').write_text(json.dumps(audit, indent=2, sort_keys=True) + '\n')
+          print(json.dumps(audit, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload study artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stirling-last3-fsr-shadow
+          path: data/diagnostics/event_clock_v2/stirling_last3_fsr/
