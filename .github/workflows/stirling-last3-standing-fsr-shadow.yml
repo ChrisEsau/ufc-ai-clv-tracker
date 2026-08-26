@@ -29,14 +29,14 @@ jobs:
       - name: Install restored inputs
         run: |
           find canonical_state -maxdepth 3 -type f -print
-          mkdir -p data/fsr_v3 models/event_clock_mc_v2 models/event_clock_mc_v1
+          mkdir -p data/fsr_v3 data/models/event_clock_mc_v2 data/models/event_clock_mc_v1
           cp canonical_state/fsr_v3/fsr_v3_latest.parquet data/fsr_v3/
           cp canonical_state/fsr_v3/fsr_v3_prefight_snapshots.parquet data/fsr_v3/
           cp canonical_state/fsr_v3/fsr_v3_prefight_uncertainty.parquet data/fsr_v3/
           mkdir -p data/fsr_v3/history
           cp -r canonical_state/fsr_v3/history/* data/fsr_v3/history/
-          cp canonical_state/models/event_clock_mc_v2/* models/event_clock_mc_v2/
-          cp canonical_state/models/event_clock_mc_v1/* models/event_clock_mc_v1/
+          cp canonical_state/models/event_clock_mc_v2/* data/models/event_clock_mc_v2/
+          cp canonical_state/models/event_clock_mc_v1/* data/models/event_clock_mc_v1/
       - name: Run last-3 standing FSR shadow
         run: python -m pipeline.research.stirling_last3_standing_fsr_shadow
       - name: Upload results
