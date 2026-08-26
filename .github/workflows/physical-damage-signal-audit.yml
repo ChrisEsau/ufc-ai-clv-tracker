@@ -1,0 +1,193 @@
+name: Physical Damage Signal Audit
+
+on:
+  push:
+    branches: [research/submission-signal-audit-20260825]
+    paths:
+      - ".github/workflows/physical-damage-signal-audit.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install numpy pandas pyarrow scipy scikit-learn
+
+      - name: Restore canonical historical inputs
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 32645607979
+
+      - name: Install restored inputs
+        run: |
+          cp -a restored/canonical-weight-class-state/. data/
+          test -f data/master/ufc_master.parquet
+          test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
+
+      - name: Evaluate physical effects on KD and KO susceptibility
+        run: |
+          mkdir -p artifacts/physical-damage-audit
+          python - <<'PY'
+          import json, math, re
+          from pathlib import Path
+          import numpy as np
+          import pandas as pd
+          from sklearn.linear_model import LinearRegression, LogisticRegression
+          from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score, roc_auc_score, log_loss, brier_score_loss
+          from pipeline.common.paths import MASTER_PATH
+          from pipeline.simulation.event_clock_mc_v2.fsr_v3_adapter import load_prefight_snapshots, historical_fighter_rows, derive_runtime_inputs
+          from pipeline.simulation.event_clock_mc_v2.standard_fighter_v1.capability_translation import traits_from_row
+
+          OUT=Path('artifacts/physical-damage-audit')
+          m=pd.read_parquet(MASTER_PATH).drop_duplicates('fight_id').copy()
+          m['date']=pd.to_datetime(m['date'],errors='coerce').dt.normalize()
+          m=m.sort_values(['date','fight_id']).reset_index(drop=True)
+          snaps=load_prefight_snapshots()
+
+          def num(v):
+              try:
+                  x=float(v); return x if np.isfinite(x) else np.nan
+              except: return np.nan
+          def age(dob,date):
+              d=pd.to_datetime(dob,errors='coerce')
+              return np.nan if pd.isna(d) or pd.isna(date) else (pd.Timestamp(date)-d).days/365.2425
+          def ko_method(x):
+              s=str(x).upper()
+              return ('KO' in s or 'TKO' in s)
+
+          hist={}
+          rows=[]
+          for _,f in m.iterrows():
+              fid=str(f.fight_id); date=f.date
+              rid,bid=str(f.r_id),str(f.b_id)
+              rh=hist.setdefault(rid,{'f':0,'kd':0.,'kol':0})
+              bh=hist.setdefault(bid,{'f':0,'kd':0.,'kol':0})
+              mature=(rh['f']>=3 and bh['f']>=3)
+              if mature:
+                  try:
+                      rr,br=historical_fighter_rows(snaps,event_date=date,fight_id=fid,fighter_ids=(rid,bid))
+                      rrt=derive_runtime_inputs(traits_from_row(rr),traits_from_row(br))
+                      brt=derive_runtime_inputs(traits_from_row(br),traits_from_row(rr))
+                  except Exception:
+                      rr=br=rrt=brt=None
+                  if rrt is not None:
+                      vals={
+                        'r_age':age(f.r_dob,date),'b_age':age(f.b_dob,date),
+                        'r_reach':num(f.r_reach),'b_reach':num(f.b_reach),
+                        'r_height':num(f.r_height),'b_height':num(f.b_height),
+                      }
+                      if all(np.isfinite(v) for v in vals.values()):
+                          winner=str(f.winner_id) if pd.notna(f.winner_id) else ''
+                          isko=ko_method(f.method)
+                          sides=[
+                            ('r','b',rid,str(f.r_name),rh,bh,rrt,brt,num(f.b_kd),winner==bid and isko),
+                            ('b','r',bid,str(f.b_name),bh,rh,brt,rrt,num(f.r_kd),winner==rid and isko),
+                          ]
+                          for s,o,who,name,hh,oh,rt,ort,kds,kol in sides:
+                              if not np.isfinite(kds): continue
+                              own_age=vals[f'{s}_age']; opp_age=vals[f'{o}_age']
+                              reach_delta=vals[f'{s}_reach']-vals[f'{o}_reach']
+                              height_delta=vals[f'{s}_height']-vals[f'{o}_height']
+                              rec={
+                                'fight_id':fid,'date':date,'fighter_id':who,'fighter':name,
+                                'kd_suffered':float(kds),'any_kd_suffered':float(kds>0),'ko_loss':float(kol),
+                                'prior_fights':hh['f'],'prior_kd_suffered_per_fight':hh['kd']/max(hh['f'],1),
+                                'prior_ko_losses_per_fight':hh['kol']/max(hh['f'],1),
+                                'opp_prior_kd_suffered_per_fight':oh['kd']/max(oh['f'],1),
+                                'opp_prior_ko_losses_per_fight':oh['kol']/max(oh['f'],1),
+                                'own_age':own_age,'opp_age':opp_age,'age_delta':own_age-opp_age,
+                                'reach_delta':reach_delta,'height_delta':height_delta,
+                                'opp_standing_rate':float(ort.standing_rate_15m),'opp_standing_acc':float(ort.standing_accuracy),
+                                'own_standing_rate':float(rt.standing_rate_15m),'own_standing_acc':float(rt.standing_accuracy),
+                              }
+                              # carry any available physiology-like prefight traits as optional controls
+                              ownrow=rr if s=='r' else br; oprow=br if s=='r' else rr
+                              for key in ['power','durability','knockdown_resistance','kd_resistance','stamina_capacity','depletion_resistance']:
+                                  if key in ownrow.index and pd.notna(ownrow[key]): rec['own_'+key]=float(ownrow[key])
+                                  if key in oprow.index and pd.notna(oprow[key]): rec['opp_'+key]=float(oprow[key])
+                              rows.append(rec)
+              # update history strictly after row creation
+              rkd=num(f.b_kd); bkd=num(f.r_kd)
+              if np.isfinite(rkd): rh['kd']+=rkd
+              if np.isfinite(bkd): bh['kd']+=bkd
+              if ko_method(f.method):
+                  winner=str(f.winner_id) if pd.notna(f.winner_id) else ''
+                  if winner==bid: rh['kol']+=1
+                  elif winner==rid: bh['kol']+=1
+              rh['f']+=1; bh['f']+=1
+
+          df=pd.DataFrame(rows).sort_values(['date','fight_id','fighter_id']).reset_index(drop=True)
+          if len(df)<1000: raise RuntimeError(f'too few rows {len(df)}')
+          dates=np.sort(df.date.unique()); cutoff=pd.Timestamp(dates[int(math.floor(len(dates)*0.8))])
+          tr=df[df.date<cutoff].copy(); ho=df[df.date>=cutoff].copy()
+          age_center=float(tr.own_age.mean())
+          for x in (tr,ho,df):
+              x['own_age_c']=x.own_age-age_center
+              x['age_over35']=np.maximum(x.own_age-35.,0.)
+              x['age_over38']=np.maximum(x.own_age-38.,0.)
+              x['older_by5']=(x.age_delta>=5).astype(float)
+              x['older_by10']=(x.age_delta>=10).astype(float)
+
+          baseline=['prior_kd_suffered_per_fight','prior_ko_losses_per_fight','opp_prior_kd_suffered_per_fight','opp_prior_ko_losses_per_fight','opp_standing_rate','opp_standing_acc','own_standing_rate','own_standing_acc']
+          optional=[]
+          for c in ['own_durability','own_knockdown_resistance','own_kd_resistance','opp_power']:
+              if c in df.columns and tr[c].notna().mean()>.9 and ho[c].notna().mean()>.9:
+                  optional.append(c)
+          baseline+=optional
+          physical=baseline+['own_age_c','age_delta','reach_delta','height_delta']
+          candidates=['age_over35','age_over38','older_by5','older_by10']
+
+          def lin(cols,target):
+              mod=LinearRegression().fit(tr[cols],tr[target]); p=mod.predict(ho[cols]); y=ho[target]
+              return mod,{'mae':float(mean_absolute_error(y,p)),'rmse':float(mean_squared_error(y,p)**.5),'r2':float(r2_score(y,p))}
+          def logit(cols,target):
+              mod=LogisticRegression(max_iter=3000,C=1.0).fit(tr[cols],tr[target]); p=mod.predict_proba(ho[cols])[:,1]; y=ho[target]
+              return mod,{'auc':float(roc_auc_score(y,p)),'logloss':float(log_loss(y,p)),'brier':float(brier_score_loss(y,p)),'mean_pred':float(p.mean()),'actual_rate':float(y.mean())}
+
+          result={'n_rows':int(len(df)),'n_fights':int(df.fight_id.nunique()),'train_rows':int(len(tr)),'holdout_rows':int(len(ho)),'holdout_start':str(cutoff.date()),'baseline_features':baseline,'optional_fsr_controls':optional,'targets':{}}
+          for target,kind in [('kd_suffered','lin'),('any_kd_suffered','logit'),('ko_loss','logit')]:
+              fn=lin if kind=='lin' else logit
+              bm,bmet=fn(baseline,target); pm,pmet=fn(physical,target)
+              out={'baseline':bmet,'physical_main':pmet,'physical_coefficients':dict(zip(physical,[float(v) for v in pm.coef_.ravel()] if kind=='logit' else [float(v) for v in pm.coef_])), 'nonlinear_age_terms':[]}
+              for term in candidates:
+                  mm,met=fn(physical+[term],target)
+                  rec={'term':term,'coefficient':float(mm.coef_.ravel()[-1] if kind=='logit' else mm.coef_[-1]),'metrics':met}
+                  if kind=='lin':
+                      rec['delta_rmse_vs_main']=met['rmse']-pmet['rmse']; rec['delta_r2_vs_main']=met['r2']-pmet['r2']
+                  else:
+                      rec['delta_auc_vs_main']=met['auc']-pmet['auc']; rec['delta_logloss_vs_main']=met['logloss']-pmet['logloss']; rec['delta_brier_vs_main']=met['brier']-pmet['brier']
+                  out['nonlinear_age_terms'].append(rec)
+              result['targets'][target]=out
+
+          # raw diagnostic bins, useful sanity check without model assumptions
+          df['age_bin']=pd.cut(df.own_age,[-99,30,33,35,38,41,99],right=False)
+          bins=df.groupby('age_bin',observed=True).agg(n=('ko_loss','size'),kd_rate=('any_kd_suffered','mean'),ko_loss_rate=('ko_loss','mean'),mean_kd=('kd_suffered','mean')).reset_index()
+          bins['age_bin']=bins.age_bin.astype(str)
+          result['age_bins']=bins.to_dict('records')
+          for r in result['age_bins']:
+              for k,v in list(r.items()):
+                  if isinstance(v,(np.integer,np.floating)): r[k]=v.item()
+
+          df.to_csv(OUT/'fighter_rows.csv',index=False)
+          with open(OUT/'results.json','w') as fh: json.dump(result,fh,indent=2,sort_keys=True)
+          print(json.dumps(result,indent=2,sort_keys=True))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: physical-damage-signal-audit
+          path: artifacts/physical-damage-audit/
+          retention-days: 90
