@@ -98,3 +98,5 @@ jobs:
         with:
           name: fsr-recency-cohort-last5
           path: data/diagnostics/fsr_recency_cohort/
+
+# low-level ref trigger for last5 cohort 2026-08-26
