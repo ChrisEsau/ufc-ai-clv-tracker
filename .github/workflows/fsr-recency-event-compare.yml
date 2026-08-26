@@ -7,12 +7,14 @@ on:
     paths:
       - 'pipeline/research/fsr_recency_event_compare.py'
       - 'pipeline/research/fsr_last5_input_compare.py'
+      - 'pipeline/research/fsr_recency_cohort_shadow.py'
       - '.github/workflows/fsr-recency-event-compare.yml'
   pull_request:
     branches:
       - research/submission-signal-audit-20260825
     paths:
       - 'pipeline/research/fsr_last5_input_compare.py'
+      - 'pipeline/research/fsr_recency_cohort_shadow.py'
       - '.github/workflows/fsr-recency-event-compare.yml'
 
 jobs:
@@ -44,9 +46,55 @@ jobs:
           cp canonical_state/models/event_clock_mc_v1/* data/models/event_clock_mc_v1/
       - name: Build last3 vs last5 input comparison
         run: python -m pipeline.research.fsr_last5_input_compare
-      - name: Upload results
+      - name: Upload input comparison
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: fsr-last5-input-compare
           path: data/diagnostics/fsr_last5_input_compare/
+
+  cohort-last5:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install numpy pandas pyarrow pyyaml scipy scikit-learn joblib
+      - name: Restore canonical historical inputs
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ChrisEsau/ufc-ai-clv-tracker
+          run-id: 32645607979
+          name: canonical-weight-class-state
+          path: canonical_state
+      - name: Install canonical state
+        run: |
+          mkdir -p data/fsr_v3 data/fsr_v3/history data/models/event_clock_mc_v2 data/models/event_clock_mc_v1
+          cp canonical_state/fsr_v3/fsr_v3_latest.parquet data/fsr_v3/
+          cp canonical_state/fsr_v3/fsr_v3_prefight_snapshots.parquet data/fsr_v3/
+          cp canonical_state/fsr_v3/fsr_v3_prefight_uncertainty.parquet data/fsr_v3/
+          cp -r canonical_state/fsr_v3/history/* data/fsr_v3/history/
+          cp canonical_state/models/event_clock_mc_v2/* data/models/event_clock_mc_v2/
+          cp canonical_state/models/event_clock_mc_v1/* data/models/event_clock_mc_v1/
+      - name: Patch cohort scheduled-round validity
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('pipeline/research/fsr_recency_cohort_shadow.py')
+          s = p.read_text()
+          old = 'if seen[rid] >= 3 and seen[bid] >= 3 and y is not None and has_snap:'
+          new = 'if seen[rid] >= 3 and seen[bid] >= 3 and y is not None and has_snap and pd.notna(row.get("total_rounds")) and int(row["total_rounds"]) in (3, 5):'
+          if old in s:
+              p.write_text(s.replace(old, new, 1))
+          PY
+      - name: Run 150-fight last5 cohort
+        run: python -m pipeline.research.fsr_recency_cohort_shadow
+      - name: Upload cohort results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fsr-recency-cohort-last5
+          path: data/diagnostics/fsr_recency_cohort/
