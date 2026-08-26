@@ -39,14 +39,14 @@ jobs:
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
           test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
 
-      - name: Resolve next event id after Du Plessis vs Usman
+      - name: Resolve next event id after Ankalaev vs Guskov
         id: resolve
         run: |
           python - <<'PY' >> "$GITHUB_OUTPUT"
           import pandas as pd
           from pipeline.common.paths import MASTER_PATH
 
-          anchor = "UFC Fight Night: Du Plessis vs. Usman"
+          anchor = "UFC Fight Night: Ankalaev vs. Guskov"
           m = pd.read_parquet(MASTER_PATH)
           name_col = next(c for c in ("event_name","ufcstats_event_name") if c in m.columns)
           date_col = next(c for c in ("date","event_date","ufcstats_event_date") if c in m.columns)
@@ -113,6 +113,6 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: brain-mc-next-after-ddp-usman
+          name: brain-mc-next-after-ankalaev-guskov
           path: artifacts/brain-mc-next-event/result.json
           retention-days: 90
