@@ -1,0 +1,48 @@
+name: Brain Standing Attempt Calibration
+
+on:
+  push:
+    branches:
+      - research/brain-attempt-calibration-20260826
+    paths:
+      - .github/workflows/brain-standing-attempt-calibration.yml
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  standing-attempt-calibration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Sparse shallow checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            pipeline
+            configs
+            config
+            data/master
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: python -m pip install numpy pandas pyarrow pyyaml scipy scikit-learn joblib
+
+      - name: Restore canonical historical Brain MC inputs
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ChrisEsau/ufc-ai-clv-tracker
+          run-id: 32645607979
+
+      - name: Run standing-attempt calibration only
+        run: |
+          cp -a restored/canonical-weight-class-state/. data/
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.brain_standing_attempt_calibration
