@@ -1,0 +1,137 @@
+name: Leavitt Brito Brain Inputs
+
+on:
+  push:
+    branches:
+      - diagnostic/leavitt-brito-brain-inputs-20260826
+    paths:
+      - '.github/workflows/leavitt-brito-brain-inputs.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  brain-inputs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: python -m pip install numpy pandas pyarrow
+
+      - name: Restore canonical historical Brain MC inputs
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 32645607979
+
+      - name: Compute exact Leavitt Brito Brain inputs
+        run: |
+          cp -a restored/canonical-weight-class-state/. data/
+          python - <<'PY'
+          import json, math
+          import numpy as np
+          import pandas as pd
+
+          EPS=1e-9
+          FIGHT_ID='44cfbb8c3c356c65'
+          FIGHT_DATE=pd.Timestamp('2026-06-06')
+          REFERENCE_CUTOFF=pd.Timestamp('2023-02-04')
+
+          def logit(p):
+              p=float(np.clip(float(p),EPS,1-EPS)); return math.log(p/(1-p))
+          def sigmoid(x):
+              x=float(np.clip(x,-40,40)); return 1/(1+math.exp(-x))
+          def numeric_row(row):
+              out={}
+              for k,v in row.items():
+                  if k=='fighter_id': continue
+                  try: x=float(v)
+                  except: continue
+                  if np.isfinite(x): out[k]=x
+              return out
+          def runtime(attacker, defender):
+              a=numeric_row(attacker); d=numeric_row(defender)
+              return {
+                'standing_rate_15m': max(a['standing_striking_tendency']*d['standing_striking_suppression'],0.0),
+                'takedown_rate_15m': max(a['takedown_tendency']*d['takedown_suppression'],0.0),
+                'ground_rate_15m_own_control': max(a['ground_striking_tendency']*d['ground_striking_suppression'],0.0),
+                'ground_burst_attempts': max(a['ground_striking_burst_baseline'],0.0),
+                'standing_accuracy': sigmoid(logit(a['standing_accuracy_baseline'])+a['standing_striking_offense']-d['standing_striking_defense']),
+                'takedown_completion': sigmoid(logit(a['takedown_completion_baseline'])+a['takedown_offense']-d['takedown_defense']),
+                'ground_accuracy': sigmoid(logit(a['ground_accuracy_baseline'])+a['ground_striking_offense']),
+              }
+          def pct(series,value):
+              arr=np.asarray(series,dtype=float); arr=arr[np.isfinite(arr)]
+              return float(np.mean(arr <= float(value)))
+
+          s=pd.read_parquet('data/fsr_v3/fsr_v3_prefight_snapshots.parquet')
+          s['event_date']=pd.to_datetime(s['event_date']).dt.normalize()
+          s['fight_id']=s['fight_id'].astype(str); s['fighter_id']=s['fighter_id'].astype(str)
+
+          dated=s[s.event_date.lt(REFERENCE_CUTOFF)].sort_values(['event_date','fight_id']).drop_duplicates('fighter_id',keep='last')
+          med={'fighter_id':'POP_MEDIAN'}
+          for c in dated.columns:
+              if c!='fighter_id' and pd.api.types.is_numeric_dtype(dated[c]):
+                  med[c]=float(dated[c].median())
+          med=pd.Series(med)
+          refs=[]
+          for _,r in dated.iterrows():
+              try:
+                  rt=runtime(r,med)
+                  st=float(r['submission_tendency'])
+                  if not np.isfinite(st): continue
+              except Exception:
+                  continue
+              refs.append({'standing_rate':rt['standing_rate_15m'],'standing_acc':rt['standing_accuracy'],'td_rate':rt['takedown_rate_15m'],'td_comp':rt['takedown_completion'],'ground_rate':rt['ground_rate_15m_own_control'],'ground_acc':rt['ground_accuracy'],'submission_tendency':st})
+          ref=pd.DataFrame(refs)
+
+          rows=s[(s.event_date.eq(FIGHT_DATE)) & s.fight_id.eq(FIGHT_ID)].copy()
+          lookup=rows.set_index('fighter_name')
+          brito=lookup.loc['Joanderson Brito']; leavitt=lookup.loc['Jordan Leavitt']
+
+          def brain(attacker,defender):
+              rt=runtime(attacker,defender)
+              p={
+                'standing_rate_percentile':pct(ref.standing_rate,rt['standing_rate_15m']),
+                'standing_accuracy_percentile':pct(ref.standing_acc,rt['standing_accuracy']),
+                'takedown_rate_percentile':pct(ref.td_rate,rt['takedown_rate_15m']),
+                'takedown_completion_percentile':pct(ref.td_comp,rt['takedown_completion']),
+                'ground_rate_percentile':pct(ref.ground_rate,rt['ground_rate_15m_own_control']),
+                'ground_accuracy_percentile':pct(ref.ground_acc,rt['ground_accuracy']),
+                'submission_tendency_percentile':pct(ref.submission_tendency,float(attacker['submission_tendency'])),
+              }
+              cap={
+                'standing':(p['standing_rate_percentile']+p['standing_accuracy_percentile'])/2,
+                'counter':p['standing_accuracy_percentile'],
+                'pressure':p['standing_rate_percentile'],
+                'clinch':0.35,
+                'takedown':(p['takedown_rate_percentile']+p['takedown_completion_percentile'])/2,
+                'ground_top':(p['ground_rate_percentile']+p['ground_accuracy_percentile'])/2,
+                'submission':0.30+0.40*(p['submission_tendency_percentile']-0.5),
+                'escape':0.40,
+                'reversal':0.30,
+              }
+              priors={
+                'standing_attempt_rate_15m':rt['standing_rate_15m'],
+                'takedown_attempt_rate_15m':rt['takedown_rate_15m'],
+                'takedown_to_standing_ratio':rt['takedown_rate_15m']/rt['standing_rate_15m'],
+                'clinch_entry_to_standing_ratio':0.06,
+                'ground_strike_odds_multiplier':3.0,
+                'submission_odds_multiplier':0.3,
+              }
+              return {'runtime':rt,'percentiles':p,'capabilities':cap,'intent_priors':priors}
+
+          out={
+            'reference_cutoff':'2023-02-04',
+            'reference_fighter_count':len(ref),
+            'Joanderson Brito':brain(brito,leavitt),
+            'Jordan Leavitt':brain(leavitt,brito),
+          }
+          print(json.dumps(out,indent=2,sort_keys=True))
+          PY
