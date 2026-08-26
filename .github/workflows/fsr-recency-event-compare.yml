@@ -8,6 +8,7 @@ on:
       - 'pipeline/research/fsr_recency_event_compare.py'
       - 'pipeline/research/fsr_last5_input_compare.py'
       - 'pipeline/research/fsr_recency_cohort_shadow.py'
+      - 'pipeline/research/leavitt_brito_fsr_extract.py'
       - '.github/workflows/fsr-recency-event-compare.yml'
   pull_request:
     branches:
@@ -15,9 +16,39 @@ on:
     paths:
       - 'pipeline/research/fsr_last5_input_compare.py'
       - 'pipeline/research/fsr_recency_cohort_shadow.py'
+      - 'pipeline/research/leavitt_brito_fsr_extract.py'
       - '.github/workflows/fsr-recency-event-compare.yml'
 
 jobs:
+  leavitt-brito-fsr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install numpy pandas pyarrow
+      - name: Restore canonical historical inputs
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ChrisEsau/ufc-ai-clv-tracker
+          run-id: 32645607979
+          name: canonical-weight-class-state
+          path: canonical_state
+      - name: Install canonical prefight snapshots
+        run: |
+          mkdir -p data/fsr_v3
+          cp canonical_state/fsr_v3/fsr_v3_prefight_snapshots.parquet data/fsr_v3/
+      - name: Extract Leavitt vs Brito prefight FSR
+        run: python -m pipeline.research.leavitt_brito_fsr_extract
+      - name: Upload exact prefight rows
+        uses: actions/upload-artifact@v4
+        with:
+          name: leavitt-brito-fsr
+          path: data/diagnostics/leavitt_brito_fsr/
+
   compare:
     runs-on: ubuntu-latest
     timeout-minutes: 120
@@ -98,5 +129,3 @@ jobs:
         with:
           name: fsr-recency-cohort-last5
           path: data/diagnostics/fsr_recency_cohort/
-
-# low-level ref trigger for last5 cohort 2026-08-26
