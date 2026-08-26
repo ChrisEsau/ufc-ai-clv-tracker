@@ -22,7 +22,6 @@ last5 = rec.build_variant(canonical, 'last3')
 def pick(df, variant):
     x = df[df['fighter_name'].isin(TARGETS)].copy()
     x['event_date'] = pd.to_datetime(x['event_date'])
-    # Keep 2026 target-era prefight rows and select latest row per fighter.
     x = x[x['event_date'] <= pd.Timestamp('2026-08-26')]
     x = x.sort_values(['fighter_name','event_date']).groupby('fighter_name', as_index=False).tail(1)
     x['variant'] = variant
@@ -32,14 +31,12 @@ rows = pd.concat([pick(canonical,'canonical'), pick(last3,'last3'), pick(last5,'
 
 meta = ['variant','event_date','fight_id','fighter_id','fighter_name','opponent_name']
 trait_cols = [c for c in rows.columns if c not in meta and pd.api.types.is_numeric_dtype(rows[c])]
-# Keep the V3-native rating-like fields plus runtime-relevant physical/damage inputs when present.
 keep = [c for c in trait_cols if any(k in c.lower() for k in [
     'standing','takedown','ground','power','knockdown','escape'
 ])]
 cols = [c for c in meta if c in rows.columns] + keep
 rows[cols].to_csv(OUT/'comparison.csv', index=False)
 
-# Long-form deltas for easier review.
 base = rows[rows.variant=='canonical'].set_index('fighter_name')
 long=[]
 for _,r in rows[rows.variant!='canonical'].iterrows():
