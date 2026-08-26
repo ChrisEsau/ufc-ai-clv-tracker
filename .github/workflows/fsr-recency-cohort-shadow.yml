@@ -36,6 +36,18 @@ jobs:
           cp -r canonical_state/fsr_v3/history/* data/fsr_v3/history/
           cp canonical_state/models/event_clock_mc_v2/* data/models/event_clock_mc_v2/
           cp canonical_state/models/event_clock_mc_v1/* data/models/event_clock_mc_v1/
+      - name: Patch cohort scheduled-round validity
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('pipeline/research/fsr_recency_cohort_shadow.py')
+          s = p.read_text()
+          old = 'if seen[rid] >= 3 and seen[bid] >= 3 and y is not None and has_snap:'
+          new = 'if seen[rid] >= 3 and seen[bid] >= 3 and y is not None and has_snap and pd.notna(row.get("total_rounds")) and int(row["total_rounds"]) in (3, 5):'
+          if old not in s:
+              raise SystemExit('cohort selector patch target not found')
+          p.write_text(s.replace(old, new, 1))
+          PY
       - name: Run recency cohort
         run: python -m pipeline.research.fsr_recency_cohort_shadow
       - name: Upload results
