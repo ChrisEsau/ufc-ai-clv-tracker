@@ -1,0 +1,131 @@
+name: Physical Main Shadow Counterfactual
+
+on:
+  push:
+    branches: [research/submission-signal-audit-20260825]
+    paths:
+      - ".github/workflows/physical-main-shadow-counterfactual.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  shadow:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install numpy pandas pyarrow pyyaml scipy scikit-learn joblib
+
+      - name: Restore canonical historical Brain MC inputs
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 32645607979
+
+      - name: Install restored canonical inputs
+        run: |
+          cp -a restored/canonical-weight-class-state/. data/
+          test -f data/master/ufc_master.parquet
+          test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
+          test -f data/fsr_v3/fsr_v3_prefight_uncertainty.parquet
+
+      - name: Apply validated physical main effects in shadow data only
+        run: |
+          mkdir -p artifacts/physical-shadow
+          python - <<'PY'
+          import json, math, re
+          from pathlib import Path
+          import numpy as np
+          import pandas as pd
+          from pipeline.common.paths import MASTER_PATH
+          from pipeline.simulation.event_clock_mc_v2.fsr_v3_adapter import (
+              load_prefight_snapshots, historical_fighter_rows, derive_runtime_inputs
+          )
+          from pipeline.simulation.event_clock_mc_v2.standard_fighter_v1.capability_translation import traits_from_row
+
+          SNAP=Path('data/fsr_v3/fsr_v3_prefight_snapshots.parquet')
+          UNC=Path('data/fsr_v3/fsr_v3_prefight_uncertainty.parquet')
+          master=pd.read_parquet(MASTER_PATH).drop_duplicates('fight_id').copy()
+          master['date']=pd.to_datetime(master['date']).dt.normalize()
+          snaps=pd.read_parquet(SNAP).copy()
+          snaps['event_date']=pd.to_datetime(snaps['event_date']).dt.normalize()
+          snaps['fighter_id']=snaps['fighter_id'].astype(str); snaps['fight_id']=snaps['fight_id'].astype(str)
+          unc=pd.read_parquet(UNC).copy()
+          unc['event_date']=pd.to_datetime(unc['event_date']).dt.normalize(); unc['fighter_id']=unc['fighter_id'].astype(str); unc['fight_id']=unc['fight_id'].astype(str)
+
+          AGE_CENTER=31.74728423960637
+          # Chronological-holdout coefficients from Physical Interaction Signal Audit.
+          RATE={'reach_delta':0.17234867701085377,'height_delta':0.046882702312278535,'own_age_c':0.10629672214202945,'age_delta':-0.5119706512856643}
+          ACC={'reach_delta':0.00019029675159341203,'height_delta':-0.0006951718681974563,'own_age_c':0.0019360974012324408,'age_delta':-0.0020543774780402216}
+
+          def inches(v):
+              if isinstance(v,(int,float,np.integer,np.floating)): return float(v)
+              s=str(v); m=re.match(r"^(\d+)\s*'\s*(\d+(?:\.\d+)?)",s)
+              if m: return float(m.group(1))*12+float(m.group(2))
+              q=re.findall(r"[-+]?\d*\.?\d+",s); return float(q[0])
+          def age(dob,date): return (pd.Timestamp(date)-pd.to_datetime(dob)).days/365.2425
+          def logit(p): p=float(np.clip(p,1e-8,1-1e-8)); return math.log(p/(1-p))
+          def sig(x): return 1/(1+math.exp(-max(min(x,40),-40)))
+
+          targets=[
+              ('UFC Fight Night: Ankalaev vs. Guskov','Santiago Ponzinibbio','Sam Patterson'),
+              ('UFC Fight Night: Medic vs. Rodriguez','Jan Blachowicz','Navajo Stirling'),
+          ]
+          audit=[]
+          for event,a_name,b_name in targets:
+              f=master[(master.event_name==event) & (((master.r_name==a_name)&(master.b_name==b_name))|((master.r_name==b_name)&(master.b_name==a_name)))].iloc[0]
+              date=pd.Timestamp(f.date); fid=str(f.fight_id)
+              info={str(f.r_id):{'name':str(f.r_name),'reach':inches(f.r_reach),'height':inches(f.r_height),'age':age(f.r_dob,date)},
+                    str(f.b_id):{'name':str(f.b_name),'reach':inches(f.b_reach),'height':inches(f.b_height),'age':age(f.b_dob,date)}}
+              ids=list(info)
+              rr,bb=historical_fighter_rows(snaps,event_date=date,fight_id=fid,fighter_ids=(ids[0],ids[1]))
+              rows={ids[0]:rr,ids[1]:bb}
+              for own,opp in [(ids[0],ids[1]),(ids[1],ids[0])]:
+                  rt=derive_runtime_inputs(traits_from_row(rows[own]),traits_from_row(rows[opp]))
+                  rd=info[own]['reach']-info[opp]['reach']; hd=info[own]['height']-info[opp]['height']; ad=info[own]['age']-info[opp]['age']; oac=info[own]['age']-AGE_CENTER
+                  dr=RATE['reach_delta']*rd+RATE['height_delta']*hd+RATE['own_age_c']*oac+RATE['age_delta']*ad
+                  da=ACC['reach_delta']*rd+ACC['height_delta']*hd+ACC['own_age_c']*oac+ACC['age_delta']*ad
+                  new_rate=max(1e-6,float(rt.standing_rate_15m)+dr)
+                  new_acc=float(np.clip(float(rt.standing_accuracy)+da,0.02,0.98))
+                  idx=(snaps.event_date.eq(date)&snaps.fight_id.eq(fid)&snaps.fighter_id.eq(own))
+                  old_t=float(snaps.loc[idx,'standing_striking_tendency'].iloc[0]); factor=new_rate/float(rt.standing_rate_15m)
+                  snaps.loc[idx,'standing_striking_tendency']=old_t*factor
+                  # Preserve epistemic CV for sampled standing tendency.
+                  uidx=(unc.event_date.eq(date)&unc.fight_id.eq(fid)&unc.fighter_id.eq(own)&unc.trait.eq('standing_striking_tendency'))
+                  if uidx.any():
+                      unc.loc[uidx,'posterior_mean']=unc.loc[uidx,'posterior_mean'].astype(float)*factor
+                      unc.loc[uidx,'posterior_sd']=unc.loc[uidx,'posterior_sd'].astype(float)*factor
+                  # Adjust attacker baseline logit to make the directional matchup accuracy equal new_acc.
+                  base=float(snaps.loc[idx,'standing_accuracy_baseline'].iloc[0])
+                  snaps.loc[idx,'standing_accuracy_baseline']=sig(logit(base)+(logit(new_acc)-logit(float(rt.standing_accuracy))))
+                  audit.append({'event':event,'fight_id':fid,'fighter':info[own]['name'],'opponent':info[opp]['name'],'reach_delta_in':rd,'height_delta_in':hd,'age':info[own]['age'],'age_delta':ad,'old_standing_rate':float(rt.standing_rate_15m),'rate_delta':dr,'new_standing_rate':new_rate,'old_standing_accuracy':float(rt.standing_accuracy),'accuracy_delta':da,'new_standing_accuracy':new_acc})
+          snaps.to_parquet(SNAP,index=False); unc.to_parquet(UNC,index=False)
+          Path('artifacts/physical-shadow/adjustments.json').write_text(json.dumps(audit,indent=2))
+          print(json.dumps(audit,indent=2))
+          PY
+
+      - name: Run both shadow events at 1000 paths
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from pipeline.simulation.event_clock_mc_v2.calibration.runner import run
+          from pipeline.simulation.event_clock_mc_v2.mechanics.config import KOKDArchitecture
+          events=[('UFC Fight Night: Ankalaev vs. Guskov','artifacts/physical-shadow/ankalaev_shadow.json'),('UFC Fight Night: Medic vs. Rodriguez','artifacts/physical-shadow/medic_shadow.json')]
+          for event,out in events:
+              run(split='calibration',paths_per_fight=1000,config_path=Path('configs/event_clock_v2/calibration/default.yaml'),output=Path(out),ko_kd_architecture=KOKDArchitecture.EMPIRICAL_EVENT2,event_name=event)
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: physical-main-shadow-counterfactual
+          path: artifacts/physical-shadow/
+          retention-days: 90
