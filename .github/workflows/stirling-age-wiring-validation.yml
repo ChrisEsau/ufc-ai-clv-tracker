@@ -1,0 +1,99 @@
+name: Stirling Age Wiring Validation
+
+on:
+  push:
+    branches: [research/submission-signal-audit-20260825]
+    paths:
+      - ".github/workflows/stirling-age-wiring-validation.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install numpy pandas pyarrow pyyaml scipy scikit-learn joblib
+      - name: Restore canonical historical inputs
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 32645607979
+      - name: Install restored inputs
+        run: |
+          cp -a restored/canonical-weight-class-state/. data/
+      - name: Validate Stirling age wiring and counterfactual
+        run: |
+          mkdir -p artifacts/stirling-age-validation
+          python - <<'PY'
+          import json, math
+          from pathlib import Path
+          import pandas as pd
+          from pipeline.common.paths import MASTER_PATH
+          from pipeline.simulation.event_clock_mc_v2.fsr_v3_adapter import load_prefight_snapshots, historical_fighter_rows
+          from pipeline.simulation.event_clock_mc_v2.standard_fighter_v1.capability_translation import CapabilityReference
+          from pipeline.simulation.event_clock_mc_v2.diagnostics.stage6_real_causal_path import _capabilities
+          from pipeline.simulation.event_clock_mc_v2.physiology_adapter import age_years_on_date, fighter_mechanics_from_prefight
+          from pipeline.simulation.event_clock_mc_v2.mechanics.ko_kd_empirical import ko_probability, kd_probability
+
+          OUT=Path('artifacts/stirling-age-validation')
+          master=pd.read_parquet(MASTER_PATH).drop_duplicates('fight_id').copy()
+          master['date']=pd.to_datetime(master['date'])
+          f=master[(master.r_name=='Jan Blachowicz') & (master.b_name=='Navajo Stirling')].iloc[0]
+          date=pd.Timestamp(f.date)
+          snaps=load_prefight_snapshots()
+          r,b=historical_fighter_rows(snaps,event_date=date,fight_id=str(f.fight_id),fighter_ids=(str(f.r_id),str(f.b_id)))
+          ref=CapabilityReference.from_prefight_before(snaps,pd.to_datetime(snaps.event_date).min()+pd.Timedelta(days=3650))
+          rc,rr=_capabilities(r,b,ref)
+          bc,br=_capabilities(b,r,ref)
+          ra=age_years_on_date(f.r_dob,date); ba=age_years_on_date(f.b_dob,date)
+          rm=fighter_mechanics_from_prefight(r,rr,age_years=ra)
+          bm=fighter_mechanics_from_prefight(b,br,age_years=ba)
+          rm30=fighter_mechanics_from_prefight(r,rr,age_years=30.0)
+          bm30=fighter_mechanics_from_prefight(b,br,age_years=30.0)
+
+          def probs(att,defn, prior=0, sec=0):
+              return {
+                'ko':ko_probability(att,defn,prior_defender_kds=prior,elapsed_seconds=sec,attacker_stamina=1.0),
+                'kd':kd_probability(att,defn,prior_defender_kds=prior,elapsed_seconds=sec,attacker_stamina=1.0),
+              }
+          actual_jan=probs(rm,bm); neutral_jan=probs(rm30,bm30)
+          actual_st=probs(bm,rm); neutral_st=probs(bm30,rm30)
+          # Decompose age terms in logits exactly.
+          out={
+            'fight_id':str(f.fight_id),'fight_date':str(date.date()),
+            'jan':{'age':ra,'power':rm.striking_power,'kdres':rm.knockdown_resistance,'actual':actual_jan,'both_age30':neutral_jan},
+            'stirling':{'age':ba,'power':bm.striking_power,'kdres':bm.knockdown_resistance,'actual':actual_st,'both_age30':neutral_st},
+            'logit_age_terms':{
+              'jan_attacking':{'attacker_age_ko':-0.03*(ra-30),'defender_age_ko':0.03*(ba-30),'net_ko':-0.03*(ra-30)+0.03*(ba-30),
+                               'attacker_age_kd':-0.030660*(ra-30),'defender_age_kd':0.029369*(ba-30),'net_kd':-0.030660*(ra-30)+0.029369*(ba-30)},
+              'stirling_attacking':{'attacker_age_ko':-0.03*(ba-30),'defender_age_ko':0.03*(ra-30),'net_ko':-0.03*(ba-30)+0.03*(ra-30),
+                                    'attacker_age_kd':-0.030660*(ba-30),'defender_age_kd':0.029369*(ra-30),'net_kd':-0.030660*(ba-30)+0.029369*(ra-30)}
+            },
+            'capabilities':{
+              'jan':rc.__dict__ if hasattr(rc,'__dict__') else str(rc),
+              'stirling':bc.__dict__ if hasattr(bc,'__dict__') else str(bc),
+            },
+            'runtime':{
+              'jan_standing_rate':rr.standing_rate_15m,'jan_standing_acc':rr.standing_accuracy,
+              'stirling_standing_rate':br.standing_rate_15m,'stirling_standing_acc':br.standing_accuracy,
+            }
+          }
+          OUT.joinpath('result.json').write_text(json.dumps(out,indent=2,default=float)+'\n')
+          print(json.dumps(out,indent=2,default=float))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stirling-age-wiring-validation
+          path: artifacts/stirling-age-validation/
+          retention-days: 90
