@@ -23,6 +23,7 @@ jobs:
           sparse-checkout: |
             pipeline
             configs
+            config
 
       - uses: actions/setup-python@v5
         with:
@@ -43,8 +44,8 @@ jobs:
         run: |
           cp -a restored/canonical-weight-class-state/. data/
           python - <<'PY'
-          import json, math
-          from collections import Counter, defaultdict
+          import json
+          from collections import Counter
           from pathlib import Path
           import joblib
           import pandas as pd
@@ -88,7 +89,6 @@ jobs:
           fight=master.set_index('fight_id').loc[FIGHT_ID]
           date=pd.Timestamp(fight['date'])
 
-          # Same judge construction as production runner.
           fsr_source=context['fsr_all'].copy()
           valid_source_ids=set(fsr_source.groupby(fsr_source.fight_id.astype(str)).size().loc[lambda x:x==2].index)
           source_train=master.assign(event_date=pd.to_datetime(master.date))
@@ -118,44 +118,30 @@ jobs:
 
           totals={s:Counter() for s in (Side.RED,Side.BLUE)}
           control={s:0.0 for s in (Side.RED,Side.BLUE)}
-          path_control={s:[] for s in (Side.RED,Side.BLUE)}
           wins=Counter(); methods=Counter(); decision_wins=Counter()
-          path_rows=[]
 
           for path_id in range(PATHS):
             seed=derive_path_seed(SEED_SET_VERSION,FIGHT_ID,path_id)
             out=run_causal_path(inputs,seed=seed,horizon_seconds=horizon,config=cfg,functions=funcs)
-            local={s:Counter() for s in (Side.RED,Side.BLUE)}
-            local_control={s:0.0 for s in (Side.RED,Side.BLUE)}
             for seg in out.timeline_segments:
               if seg.phase is Phase.GROUND and seg.controller in (Side.RED,Side.BLUE):
-                local_control[seg.controller]+=seg.duration
                 control[seg.controller]+=seg.duration
             for ev in out.events:
-              s=ev.actor
-              a=ev.selected_action
-              local[s]['actions']+=1; totals[s]['actions']+=1
-              if a in TD:
-                local[s]['td_attempts']+=1; totals[s]['td_attempts']+=1
-                if ev.resulting_phase is Phase.GROUND and ev.resulting_controller is s:
-                  local[s]['td_success']+=1; totals[s]['td_success']+=1
-              if a in STRIKES:
-                local[s]['strike_attempts']+=1; totals[s]['strike_attempts']+=1
-                if ev.outcome.value=='landed':
-                  local[s]['strikes_landed']+=1; totals[s]['strikes_landed']+=1
-              if a in GROUND:
-                local[s]['ground_strike_attempts']+=1; totals[s]['ground_strike_attempts']+=1
-                if ev.outcome.value=='landed':
-                  local[s]['ground_strikes_landed']+=1; totals[s]['ground_strikes_landed']+=1
+              side=ev.actor; action=ev.selected_action
+              if action in TD:
+                totals[side]['td_attempts']+=1
+                if ev.resulting_phase is Phase.GROUND and ev.resulting_controller is side:
+                  totals[side]['td_success']+=1
+              if action in STRIKES:
+                totals[side]['strike_attempts']+=1
+                if ev.outcome.value=='landed': totals[side]['strikes_landed']+=1
+              if action in GROUND:
+                totals[side]['ground_strike_attempts']+=1
+                if ev.outcome.value=='landed': totals[side]['ground_strikes_landed']+=1
               if ev.submission_attempt:
-                local[s]['sub_attempts']+=1; totals[s]['sub_attempts']+=1
-                if ev.submission_success:
-                  local[s]['sub_success']+=1; totals[s]['sub_success']+=1
-              if ev.knockdown:
-                local[s]['kd']+=1; totals[s]['kd']+=1
-              if ev.ko_tko:
-                local[s]['ko']+=1; totals[s]['ko']+=1
-            for s in (Side.RED,Side.BLUE): path_control[s].append(local_control[s])
+                totals[side]['sub_attempts']+=1
+                if ev.submission_success: totals[side]['sub_success']+=1
+              if ev.knockdown: totals[side]['kd']+=1
             winner=None; method='decision'
             if out.termination:
               winner=out.termination.winner; method=out.termination.finish_method.value
@@ -163,42 +149,29 @@ jobs:
               winner=out.decision.winner; decision_wins[winner]+=1
             if winner is not None: wins[winner]+=1
             methods[method]+=1
-            path_rows.append({
-              'path_id':path_id,
-              'winner':None if winner is None else winner.value,
-              'method':method,
-              'red_td_attempts':local[Side.RED]['td_attempts'],'blue_td_attempts':local[Side.BLUE]['td_attempts'],
-              'red_td_success':local[Side.RED]['td_success'],'blue_td_success':local[Side.BLUE]['td_success'],
-              'red_ground_control':local_control[Side.RED],'blue_ground_control':local_control[Side.BLUE],
-              'red_sub_attempts':local[Side.RED]['sub_attempts'],'blue_sub_attempts':local[Side.BLUE]['sub_attempts'],
-              'red_strikes_landed':local[Side.RED]['strikes_landed'],'blue_strikes_landed':local[Side.BLUE]['strikes_landed'],
-            })
 
-          def side_summary(side,name):
+          def summary(side,name):
             t=totals[side]
             return {
-              'fighter':name,
-              'wins':wins[side],
-              'win_probability':wins[side]/PATHS,
+              'fighter':name,'wins':wins[side],'win_probability':wins[side]/PATHS,
               'decision_wins':decision_wins[side],
               'td_attempts_per_path':t['td_attempts']/PATHS,
               'td_success_per_path':t['td_success']/PATHS,
-              'td_success_rate':(t['td_success']/t['td_attempts'] if t['td_attempts'] else 0),
+              'td_success_rate':t['td_success']/t['td_attempts'] if t['td_attempts'] else 0,
               'ground_control_seconds_per_path':control[side]/PATHS,
               'sub_attempts_per_path':t['sub_attempts']/PATHS,
-              'sub_conversion':(t['sub_success']/t['sub_attempts'] if t['sub_attempts'] else 0),
+              'sub_conversion':t['sub_success']/t['sub_attempts'] if t['sub_attempts'] else 0,
               'strike_attempts_per_path':t['strike_attempts']/PATHS,
               'strikes_landed_per_path':t['strikes_landed']/PATHS,
               'ground_strike_attempts_per_path':t['ground_strike_attempts']/PATHS,
               'ground_strikes_landed_per_path':t['ground_strikes_landed']/PATHS,
               'knockdowns_per_path':t['kd']/PATHS,
             }
-          payload={
-            'fight_id':FIGHT_ID,'paths':PATHS,
-            'red':side_summary(Side.RED,str(fight.r_name)),
-            'blue':side_summary(Side.BLUE,str(fight.b_name)),
-            'methods':dict(methods),
-          }
           print('LEAVITT_BRITO_PATH_DECOMPOSITION')
-          print(json.dumps(payload,indent=2,sort_keys=True))
+          print(json.dumps({
+            'fight_id':FIGHT_ID,'paths':PATHS,
+            'red':summary(Side.RED,str(fight.r_name)),
+            'blue':summary(Side.BLUE,str(fight.b_name)),
+            'methods':dict(methods),
+          },indent=2,sort_keys=True))
           PY
