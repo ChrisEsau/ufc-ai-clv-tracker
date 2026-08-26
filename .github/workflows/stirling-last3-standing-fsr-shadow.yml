@@ -37,9 +37,10 @@ jobs:
           cp -r canonical_state/fsr_v3/history/* data/fsr_v3/history/
           cp canonical_state/models/event_clock_mc_v2/* data/models/event_clock_mc_v2/
           cp canonical_state/models/event_clock_mc_v1/* data/models/event_clock_mc_v1/
-      - name: Patch last-3 row identity retention
+      - name: Patch shadow compatibility fixes
         run: |
           sed -i 's/set_index("fighter_id")/set_index("fighter_id", drop=False)/' pipeline/research/stirling_last3_standing_fsr_shadow.py
+          sed -i 's/record\["metrics"\]/record["simulator_metrics"]/g' pipeline/research/stirling_last3_standing_fsr_shadow.py
       - name: Run last-3 standing FSR shadow
         run: python -m pipeline.research.stirling_last3_standing_fsr_shadow
       - name: Upload results
