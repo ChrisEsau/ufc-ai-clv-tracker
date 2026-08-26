@@ -1,0 +1,48 @@
+name: Belal Bonfim Brain Intent Rate Shadow
+
+on:
+  push:
+    branches:
+      - research/leavitt-brito-dynamic-pressure-shadow-20260826
+    paths:
+      - .github/workflows/belal-bonfim-intent-rate-shadow.yml
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  belal-bonfim-intent-rate-shadow:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Sparse shallow checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            pipeline
+            configs
+            config
+            data/master
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: python -m pip install numpy pandas pyarrow pyyaml scipy scikit-learn joblib
+
+      - name: Restore canonical historical Brain MC inputs
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ChrisEsau/ufc-ai-clv-tracker
+          run-id: 32645607979
+
+      - name: Run Belal Muhammad vs Gabriel Bonfim intent-rate shadow
+        run: |
+          cp -a restored/canonical-weight-class-state/. data/
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.single_fight_intent_rate_shadow --fight-id 5c69b019e6deee41 --paths 500
