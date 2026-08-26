@@ -39,14 +39,14 @@ jobs:
           test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
           test -f data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib
 
-      - name: Resolve next event id after Medic vs Rodriguez
+      - name: Resolve event immediately before Freedom 250
         id: resolve
         run: |
           python - <<'PY' >> "$GITHUB_OUTPUT"
           import pandas as pd
           from pipeline.common.paths import MASTER_PATH
 
-          anchor = "UFC Fight Night: Medic vs. Rodriguez"
+          freedom_250_date = pd.Timestamp("2026-06-14")
           m = pd.read_parquet(MASTER_PATH)
           name_col = next(c for c in ("event_name","ufcstats_event_name") if c in m.columns)
           date_col = next(c for c in ("date","event_date","ufcstats_event_date") if c in m.columns)
@@ -63,15 +63,16 @@ jobs:
           else:
               e["event_id"] = m[url_col].astype(str).str.extract(r"/event-details/([A-Za-z0-9]+)", expand=False).fillna("")
           e = e.dropna(subset=["date"]).drop_duplicates(["name","date","event_id"]).sort_values(["date","name"])
-          a = e[e.name.eq(anchor)]
-          if a.empty:
-              raise SystemExit(f"Anchor not found: {anchor}")
-          nxt = e[e.date.gt(a.date.max())].iloc[0]
-          if not nxt.event_id:
-              raise SystemExit("Resolved next event has no UFCStats event id")
-          print(f"event_id={nxt.event_id}")
-          print(f"event_name={nxt['name']}")
-          print(f"event_date={nxt['date'].date().isoformat()}")
+          prior = e[e.date.lt(freedom_250_date)]
+          if prior.empty:
+              raise SystemExit("No event found before Freedom 250 date")
+          target_date = prior.date.max()
+          target = prior[prior.date.eq(target_date)].iloc[-1]
+          if not target.event_id:
+              raise SystemExit("Resolved prior event has no UFCStats event id")
+          print(f"event_id={target.event_id}")
+          print(f"event_name={target['name']}")
+          print(f"event_date={target['date'].date().isoformat()}")
           PY
 
       - name: Run resolved event by explicit UFCStats id at 1000 paths
@@ -113,6 +114,6 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: brain-mc-next-after-medic-rodriguez
+          name: brain-mc-before-freedom-250
           path: artifacts/brain-mc-next-event/result.json
           retention-days: 90
