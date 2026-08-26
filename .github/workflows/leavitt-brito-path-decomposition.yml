@@ -1,0 +1,204 @@
+name: Leavitt Brito 500 Path Decomposition
+
+on:
+  push:
+    branches:
+      - diagnostic/leavitt-brito-brain-inputs-20260826
+    paths:
+      - '.github/workflows/leavitt-brito-path-decomposition.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  decompose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Sparse shallow checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            pipeline
+            configs
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: python -m pip install numpy pandas pyarrow pyyaml scipy scikit-learn joblib
+
+      - name: Restore canonical historical Brain MC inputs
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 32645607979
+
+      - name: Decompose exact 500 Leavitt Brito paths
+        run: |
+          cp -a restored/canonical-weight-class-state/. data/
+          python - <<'PY'
+          import json, math
+          from collections import Counter, defaultdict
+          from pathlib import Path
+          import joblib
+          import pandas as pd
+
+          from pipeline.common.paths import EVENT_CLOCK_V2_COHORT_MANIFEST_PATH, MASTER_PATH
+          from pipeline.simulation.event_clock_mc_v2.brain.intent_priors import BrainIntentPriors
+          from pipeline.simulation.event_clock_mc_v2.brain.policy import BrainDecisionContext
+          from pipeline.simulation.event_clock_mc_v2.brain.timing import BrainTimingContext
+          from pipeline.simulation.event_clock_mc_v2.causal.events import ActionFamily
+          from pipeline.simulation.event_clock_mc_v2.causal.state import Side, Phase
+          from pipeline.simulation.event_clock_mc_v2.engine import EngineConfig, EngineFunctions, EngineInputs, FighterEngineInputs, run_causal_path
+          from pipeline.simulation.event_clock_mc_v2.fsr_v3_adapter import load_prefight_snapshots, historical_fighter_rows
+          from pipeline.simulation.event_clock_mc_v2.physiology_adapter import age_years_on_date, fighter_mechanics_from_prefight
+          from pipeline.simulation.event_clock_mc_v2.mechanics.config import KOKDArchitecture
+          from pipeline.simulation.event_clock_mc_v2.fit_event_clock_bundle import DEFAULT_BUNDLE_PATH
+          from pipeline.simulation.event_clock_mc_v2.judging import Event2JudgeModel
+          from pipeline.simulation.event_clock_mc_v2.standard_fighter_v1.capability_translation import CapabilityReference
+          from pipeline.simulation.event_clock_mc_v2.diagnostics.stage6_real_causal_path import _capabilities
+          from pipeline.simulation.event_clock_mc_v2.diagnostics.stage8_intent_prior_shadow import IntentPriorChooser
+          from pipeline.simulation.event_clock_mc_v2.calibration.config import load_override_file
+          from pipeline.simulation.event_clock_mc_v2.calibration.seeds import derive_path_seed
+          from pipeline.simulation.event_clock_mc_v2.calibration import SEED_SET_VERSION
+
+          FIGHT_ID='44cfbb8c3c356c65'
+          PATHS=500
+          STAND={ActionFamily.STAND_ATTACK, ActionFamily.STAND_COUNTER}
+          GROUND={ActionFamily.GROUND_STRIKE, ActionFamily.BOTTOM_STRIKE}
+          TD={ActionFamily.TAKEDOWN_ENTRY, ActionFamily.CLINCH_TAKEDOWN}
+          STRIKES=STAND|GROUND|{ActionFamily.CLINCH_STRIKE}
+
+          manifest=pd.read_csv(EVENT_CLOCK_V2_COHORT_MANIFEST_PATH,dtype={'bout_id':str,'red_fighter_id':str,'blue_fighter_id':str})
+          snapshots=load_prefight_snapshots()
+          cutoff=pd.to_datetime(manifest.date).min()
+          reference=CapabilityReference.from_prefight_before(snapshots,cutoff)
+          mechanics_config,_=load_override_file(Path('configs/event_clock_v2/calibration/default.yaml'))
+          bundle=joblib.load(DEFAULT_BUNDLE_PATH)
+          context=bundle['context']
+          submission_offset=float(context['conversion_offset'])
+          master=pd.read_parquet(MASTER_PATH).drop_duplicates('fight_id')
+          master['fight_id']=master.fight_id.astype(str)
+          fight=master.set_index('fight_id').loc[FIGHT_ID]
+          date=pd.Timestamp(fight['date'])
+
+          # Same judge construction as production runner.
+          fsr_source=context['fsr_all'].copy()
+          valid_source_ids=set(fsr_source.groupby(fsr_source.fight_id.astype(str)).size().loc[lambda x:x==2].index)
+          source_train=master.assign(event_date=pd.to_datetime(master.date))
+          source_train=source_train[(source_train.event_date < pd.Timestamp('2025-03-22')) & source_train.fight_id.isin(valid_source_ids) & source_train.total_rounds.isin([3,5]) & source_train.match_time_sec.notna()].sort_values(['event_date','fight_id']).tail(3000)
+          training_decisions=int(source_train.method.fillna('').astype(str).str.lower().str.contains('decision').sum())
+          judge_model=Event2JudgeModel.from_sklearn(context['judge_model'],training_decisions=training_decisions)
+
+          red,blue=historical_fighter_rows(snapshots,event_date=date,fight_id=FIGHT_ID,fighter_ids=(str(fight.r_id),str(fight.b_id)))
+          rc,rr=_capabilities(red,blue,reference)
+          bc,br=_capabilities(blue,red,reference)
+          red_mech=fighter_mechanics_from_prefight(red,rr,age_years=age_years_on_date(fight.get('r_dob'),date),submission_conversion_offset=submission_offset)
+          blue_mech=fighter_mechanics_from_prefight(blue,br,age_years=age_years_on_date(fight.get('b_dob'),date),submission_conversion_offset=submission_offset)
+          inputs=EngineInputs(
+            FighterEngineInputs(rc,BrainTimingContext(),BrainDecisionContext(),red_mech),
+            FighterEngineInputs(bc,BrainTimingContext(),BrainDecisionContext(),blue_mech),
+            mechanics_calibration=mechanics_config,
+            ko_kd_architecture=KOKDArchitecture.EMPIRICAL_EVENT2,
+            judge_model=judge_model,
+          )
+          chooser=IntentPriorChooser({
+            Side.RED:BrainIntentPriors(rr.standing_rate_15m,rr.takedown_rate_15m,0.06,3.0,0.3),
+            Side.BLUE:BrainIntentPriors(br.standing_rate_15m,br.takedown_rate_15m,0.06,3.0,0.3),
+          })
+          funcs=EngineFunctions(action_chooser=chooser)
+          horizon=float(int(fight.total_rounds)*300)
+          cfg=EngineConfig(number_of_rounds=int(fight.total_rounds))
+
+          totals={s:Counter() for s in (Side.RED,Side.BLUE)}
+          control={s:0.0 for s in (Side.RED,Side.BLUE)}
+          path_control={s:[] for s in (Side.RED,Side.BLUE)}
+          wins=Counter(); methods=Counter(); decision_wins=Counter()
+          path_rows=[]
+
+          for path_id in range(PATHS):
+            seed=derive_path_seed(SEED_SET_VERSION,FIGHT_ID,path_id)
+            out=run_causal_path(inputs,seed=seed,horizon_seconds=horizon,config=cfg,functions=funcs)
+            local={s:Counter() for s in (Side.RED,Side.BLUE)}
+            local_control={s:0.0 for s in (Side.RED,Side.BLUE)}
+            for seg in out.timeline_segments:
+              if seg.phase is Phase.GROUND and seg.controller in (Side.RED,Side.BLUE):
+                local_control[seg.controller]+=seg.duration
+                control[seg.controller]+=seg.duration
+            for ev in out.events:
+              s=ev.actor
+              a=ev.selected_action
+              local[s]['actions']+=1; totals[s]['actions']+=1
+              if a in TD:
+                local[s]['td_attempts']+=1; totals[s]['td_attempts']+=1
+                if ev.resulting_phase is Phase.GROUND and ev.resulting_controller is s:
+                  local[s]['td_success']+=1; totals[s]['td_success']+=1
+              if a in STRIKES:
+                local[s]['strike_attempts']+=1; totals[s]['strike_attempts']+=1
+                if ev.outcome.value=='landed':
+                  local[s]['strikes_landed']+=1; totals[s]['strikes_landed']+=1
+              if a in GROUND:
+                local[s]['ground_strike_attempts']+=1; totals[s]['ground_strike_attempts']+=1
+                if ev.outcome.value=='landed':
+                  local[s]['ground_strikes_landed']+=1; totals[s]['ground_strikes_landed']+=1
+              if ev.submission_attempt:
+                local[s]['sub_attempts']+=1; totals[s]['sub_attempts']+=1
+                if ev.submission_success:
+                  local[s]['sub_success']+=1; totals[s]['sub_success']+=1
+              if ev.knockdown:
+                local[s]['kd']+=1; totals[s]['kd']+=1
+              if ev.ko_tko:
+                local[s]['ko']+=1; totals[s]['ko']+=1
+            for s in (Side.RED,Side.BLUE): path_control[s].append(local_control[s])
+            winner=None; method='decision'
+            if out.termination:
+              winner=out.termination.winner; method=out.termination.finish_method.value
+            elif out.decision:
+              winner=out.decision.winner; decision_wins[winner]+=1
+            if winner is not None: wins[winner]+=1
+            methods[method]+=1
+            path_rows.append({
+              'path_id':path_id,
+              'winner':None if winner is None else winner.value,
+              'method':method,
+              'red_td_attempts':local[Side.RED]['td_attempts'],'blue_td_attempts':local[Side.BLUE]['td_attempts'],
+              'red_td_success':local[Side.RED]['td_success'],'blue_td_success':local[Side.BLUE]['td_success'],
+              'red_ground_control':local_control[Side.RED],'blue_ground_control':local_control[Side.BLUE],
+              'red_sub_attempts':local[Side.RED]['sub_attempts'],'blue_sub_attempts':local[Side.BLUE]['sub_attempts'],
+              'red_strikes_landed':local[Side.RED]['strikes_landed'],'blue_strikes_landed':local[Side.BLUE]['strikes_landed'],
+            })
+
+          def side_summary(side,name):
+            t=totals[side]
+            return {
+              'fighter':name,
+              'wins':wins[side],
+              'win_probability':wins[side]/PATHS,
+              'decision_wins':decision_wins[side],
+              'td_attempts_per_path':t['td_attempts']/PATHS,
+              'td_success_per_path':t['td_success']/PATHS,
+              'td_success_rate':(t['td_success']/t['td_attempts'] if t['td_attempts'] else 0),
+              'ground_control_seconds_per_path':control[side]/PATHS,
+              'sub_attempts_per_path':t['sub_attempts']/PATHS,
+              'sub_conversion':(t['sub_success']/t['sub_attempts'] if t['sub_attempts'] else 0),
+              'strike_attempts_per_path':t['strike_attempts']/PATHS,
+              'strikes_landed_per_path':t['strikes_landed']/PATHS,
+              'ground_strike_attempts_per_path':t['ground_strike_attempts']/PATHS,
+              'ground_strikes_landed_per_path':t['ground_strikes_landed']/PATHS,
+              'knockdowns_per_path':t['kd']/PATHS,
+            }
+          payload={
+            'fight_id':FIGHT_ID,'paths':PATHS,
+            'red':side_summary(Side.RED,str(fight.r_name)),
+            'blue':side_summary(Side.BLUE,str(fight.b_name)),
+            'methods':dict(methods),
+          }
+          print('LEAVITT_BRITO_PATH_DECOMPOSITION')
+          print(json.dumps(payload,indent=2,sort_keys=True))
+          PY
