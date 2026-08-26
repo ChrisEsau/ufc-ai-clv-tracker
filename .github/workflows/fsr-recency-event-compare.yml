@@ -1,16 +1,6 @@
 name: FSR Recency Event Compare
 
 on:
-  workflow_dispatch:
-    inputs:
-      event_name:
-        description: Event name
-        required: true
-        default: 'UFC Fight Night: Muhammad vs. Bonfim'
-      paths:
-        description: Paths per fight
-        required: true
-        default: '1000'
   push:
     branches:
       - research/submission-signal-audit-20260825
@@ -23,8 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
-      EVENT_NAME: ${{ github.event.inputs.event_name || 'UFC Fight Night: Muhammad vs. Bonfim' }}
-      PATHS: ${{ github.event.inputs.paths || '1000' }}
+      EVENT_NAME: 'UFC Fight Night: Muhammad vs. Bonfim'
+      PATHS: '1000'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -54,5 +44,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: fsr-recency-event-${{ github.run_id }}
+          name: fsr-recency-event
           path: data/diagnostics/fsr_recency_event/
