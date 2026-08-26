@@ -36,7 +36,7 @@ jobs:
           cp -r canonical_state/fsr_v3/history/* data/fsr_v3/history/
           cp canonical_state/models/event_clock_mc_v2/* data/models/event_clock_mc_v2/
           cp canonical_state/models/event_clock_mc_v1/* data/models/event_clock_mc_v1/
-      - name: Patch cohort scheduled-round validity
+      - name: Patch cohort scheduled-round validity and last-5 variant
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -44,9 +44,16 @@ jobs:
           s = p.read_text()
           old = 'if seen[rid] >= 3 and seen[bid] >= 3 and y is not None and has_snap:'
           new = 'if seen[rid] >= 3 and seen[bid] >= 3 and y is not None and has_snap and pd.notna(row.get("total_rounds")) and int(row["total_rounds"]) in (3, 5):'
-          if old not in s:
-              raise SystemExit('cohort selector patch target not found')
-          p.write_text(s.replace(old, new, 1))
+          if old in s:
+              s = s.replace(old, new, 1)
+          s = s.replace('WINDOW = 3', 'WINDOW = 5', 1)
+          old_variants = 'variants = {"canonical": canonical, "last3_all_v3": build_variant(canonical, "last3"), "blended_ewm_all_v3": build_variant(canonical, "ewm")}'
+          new_variants = 'variants = {"canonical": canonical, "last5_all_v3": build_variant(canonical, "last3")}'
+          if old_variants not in s:
+              raise SystemExit('variant patch target not found')
+          s = s.replace(old_variants, new_variants, 1)
+          s = s.replace('"last3": "same validated V3 likelihood/prior families, fighter evidence limited to three strictly prior fights; population baselines remain all-prior",', '"last5": "same validated V3 likelihood/prior families, fighter evidence limited to five strictly prior fights; population baselines remain all-prior",', 1)
+          p.write_text(s)
           PY
       - name: Run recency cohort
         run: python -m pipeline.research.fsr_recency_cohort_shadow
@@ -54,5 +61,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: fsr-recency-cohort-shadow
+          name: fsr-recency-cohort-last5-shadow
           path: data/diagnostics/fsr_recency_cohort/
