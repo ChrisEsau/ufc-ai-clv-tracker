@@ -1,0 +1,58 @@
+name: FSR Recency Event Compare
+
+on:
+  workflow_dispatch:
+    inputs:
+      event_name:
+        description: Event name
+        required: true
+        default: 'UFC Fight Night: Muhammad vs. Bonfim'
+      paths:
+        description: Paths per fight
+        required: true
+        default: '1000'
+  push:
+    branches:
+      - research/submission-signal-audit-20260825
+    paths:
+      - 'pipeline/research/fsr_recency_event_compare.py'
+      - '.github/workflows/fsr-recency-event-compare.yml'
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      EVENT_NAME: ${{ github.event.inputs.event_name || 'UFC Fight Night: Muhammad vs. Bonfim' }}
+      PATHS: ${{ github.event.inputs.paths || '1000' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install numpy pandas pyarrow pyyaml scipy scikit-learn joblib
+      - name: Restore canonical historical inputs
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ChrisEsau/ufc-ai-clv-tracker
+          run-id: 32645607979
+          name: canonical-weight-class-state
+          path: canonical_state
+      - name: Install canonical state
+        run: |
+          mkdir -p data/fsr_v3 data/fsr_v3/history data/models/event_clock_mc_v2 data/models/event_clock_mc_v1
+          cp canonical_state/fsr_v3/fsr_v3_latest.parquet data/fsr_v3/
+          cp canonical_state/fsr_v3/fsr_v3_prefight_snapshots.parquet data/fsr_v3/
+          cp canonical_state/fsr_v3/fsr_v3_prefight_uncertainty.parquet data/fsr_v3/
+          cp -r canonical_state/fsr_v3/history/* data/fsr_v3/history/
+          cp canonical_state/models/event_clock_mc_v2/* data/models/event_clock_mc_v2/
+          cp canonical_state/models/event_clock_mc_v1/* data/models/event_clock_mc_v1/
+      - name: Run event comparison
+        run: python -m pipeline.research.fsr_recency_event_compare
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fsr-recency-event-${{ github.run_id }}
+          path: data/diagnostics/fsr_recency_event/
