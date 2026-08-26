@@ -44,3 +44,5 @@ jobs:
         with:
           name: fsr-last5-input-compare
           path: data/diagnostics/fsr_last5_input_compare/
+
+# trigger-via-git-ref: 2026-08-26
