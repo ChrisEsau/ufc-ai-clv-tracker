@@ -8,6 +8,12 @@ on:
       - 'pipeline/research/fsr_recency_event_compare.py'
       - 'pipeline/research/fsr_last5_input_compare.py'
       - '.github/workflows/fsr-recency-event-compare.yml'
+  pull_request:
+    branches:
+      - research/submission-signal-audit-20260825
+    paths:
+      - 'pipeline/research/fsr_last5_input_compare.py'
+      - '.github/workflows/fsr-recency-event-compare.yml'
 
 jobs:
   compare:
@@ -44,5 +50,3 @@ jobs:
         with:
           name: fsr-last5-input-compare
           path: data/diagnostics/fsr_last5_input_compare/
-
-# trigger-via-git-ref: 2026-08-26
