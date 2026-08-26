@@ -1,0 +1,111 @@
+name: Simulator Historical Fight Replay
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/round-fight-simulator-v0
+    paths:
+      - ".github/workflows/run-simulation-historical-replay.yml"
+      - "pipeline/simulation/historical_simulator_replay.py"
+      - "pipeline/simulation/run_historical_simulator_replay.py"
+      - "pipeline/simulation/engine.py"
+      - "pipeline/simulation/contracts.py"
+      - "pipeline/simulation/terminal_round.py"
+      - "tests/test_simulation_historical_simulator_replay.py"
+
+permissions:
+  contents: read
+
+jobs:
+  replay-full-simulator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout simulator branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run historical replay tests
+        run: |
+          python -m unittest tests.test_simulation_historical_simulator_replay
+          python -m unittest tests.test_round_simulator
+          python -m unittest tests.test_simulation_terminal_round
+          python -m compileall -q pipeline/simulation
+
+      - name: Build leakage-safe fighter-round table
+        run: |
+          python -m pipeline.simulation.run_build_training_dataset
+
+      - name: Replay 2026 completed fights
+        run: |
+          python -m pipeline.simulation.run_historical_simulator_replay \
+            --test-year 2026 \
+            --simulations-per-fight 500 \
+            --seed 91
+
+      - name: Publish historical replay summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path("data/model_lab/simulation/historical_replay_v0")
+          summary = json.loads((root / "summary.json").read_text(encoding="utf-8"))
+
+          with Path("historical_simulator_replay_summary.md").open(
+              "w", encoding="utf-8"
+          ) as handle:
+              handle.write("# Historical full simulator replay\n\n")
+              handle.write(f"- Holdout year: **{summary['test_year']}**\n")
+              handle.write(f"- Fights: **{summary['fights']}**\n")
+              handle.write(
+                  f"- Simulations per fight: **{summary['simulations_per_fight']}**\n\n"
+              )
+              handle.write("| Task | Simulator | Baseline | Relative improvement |\n")
+              handle.write("|---|---:|---:|---:|\n")
+              comparisons = (
+                  ("Winner Brier", summary["winner_brier"]),
+                  ("Method log loss", summary["method_log_loss"]),
+                  ("Fight-time MAE (sec)", summary["fight_time_mae_seconds"]),
+                  ("Fighter sig-attempt MAE", summary["fighter_sig_attempt_mae"]),
+              )
+              for label, row in comparisons:
+                  handle.write(
+                      f"| {label} | {row['simulator']:.4f} | {row['baseline']:.4f} | "
+                      f"{row['relative_improvement']:.2%} |\n"
+                  )
+              handle.write("\n## Aggregate behavior\n\n")
+              handle.write("| Quantity | Actual | Simulator | Error |\n")
+              handle.write("|---|---:|---:|---:|\n")
+              for row in summary["aggregate_comparison"]:
+                  handle.write(
+                      f"| {row['quantity']} | {row['actual']:.4f} | "
+                      f"{row['simulator']:.4f} | {row['error']:.4f} |\n"
+                  )
+          PY
+
+          cat historical_simulator_replay_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload historical replay artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-historical-fight-replay-v0
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6
+          path: |
+            data/model_lab/simulation/historical_replay_v0/**
+            data/audits/simulation_fighter_round_training_audit.parquet
+            historical_simulator_replay_summary.md

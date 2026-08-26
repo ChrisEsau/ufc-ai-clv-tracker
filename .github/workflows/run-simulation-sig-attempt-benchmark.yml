@@ -1,0 +1,100 @@
+name: Simulator Strike Pace Benchmark
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/round-fight-simulator-v0
+    paths:
+      - ".github/workflows/run-simulation-sig-attempt-benchmark.yml"
+      - "pipeline/simulation/sig_attempt_model.py"
+      - "pipeline/simulation/run_train_sig_attempt_model.py"
+      - "pipeline/simulation/artifacts.py"
+      - "pipeline/simulation/historical_training.py"
+      - "pipeline/simulation/training_dataset.py"
+      - "tests/test_simulation_sig_attempt_model.py"
+
+permissions:
+  contents: read
+
+jobs:
+  walk-forward-benchmark:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout simulator branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run simulator model tests
+        run: |
+          python -m unittest discover -s tests -p 'test_simulation_*.py'
+          python -m compileall -q pipeline/simulation
+
+      - name: Build leakage-safe fighter-round table
+        run: |
+          python -m pipeline.simulation.run_build_training_dataset
+
+      - name: Run significant-strike pace benchmark
+        run: |
+          python -m pipeline.simulation.run_train_sig_attempt_model
+
+      - name: Publish benchmark summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path(
+              "data/model_lab/simulation/models/sig_attempt_pace_v0/benchmark_summary.json"
+          )
+          summary = json.loads(path.read_text(encoding="utf-8"))
+          aggregate = summary["aggregate_metrics"]
+
+          with Path("sig_attempt_benchmark_summary.md").open("w", encoding="utf-8") as handle:
+              handle.write("# Significant-strike pace benchmark\n\n")
+              handle.write(f"- Training rows: **{summary['training_rows']:,}**\n")
+              handle.write(f"- Training fights: **{summary['training_fights']:,}**\n")
+              handle.write(f"- Test years: **{summary['test_years']}**\n")
+              handle.write(f"- Best model: **{summary['best_model']}**\n")
+              incremental = summary.get(
+                  "rfs_incremental_poisson_improvement_vs_context"
+              )
+              if incremental is not None:
+                  handle.write(
+                      f"- RFS improvement vs context: **{incremental:.2%}**\n"
+                  )
+              handle.write("\n| Model | Poisson deviance | Count MAE | Count RMSE |\n")
+              handle.write("|---|---:|---:|---:|\n")
+              for row in aggregate:
+                  handle.write(
+                      f"| {row['model_name']} | "
+                      f"{row['count_poisson_deviance']:.4f} | "
+                      f"{row['count_mae']:.3f} | "
+                      f"{row['count_rmse']:.3f} |\n"
+                  )
+          PY
+
+          cat sig_attempt_benchmark_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload strike pace benchmark artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-sig-attempt-pace-v0
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6
+          path: |
+            data/model_lab/simulation/models/sig_attempt_pace_v0/**
+            data/audits/simulation_fighter_round_training_audit.parquet
+            sig_attempt_benchmark_summary.md

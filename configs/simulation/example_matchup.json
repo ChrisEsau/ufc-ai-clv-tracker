@@ -1,0 +1,58 @@
+{
+  "fight_id": "simulation_demo_001",
+  "event_id": "simulation_demo_event",
+  "scheduled_rounds": 3,
+  "round_seconds": 300,
+  "source_snapshot_id": "manual_demo_v0",
+  "metadata": {
+    "purpose": "Simulator mechanics demonstration only"
+  },
+  "red": {
+    "fighter_id": "demo_red",
+    "fighter_name": "Demo Red",
+    "sig_attempts_per_minute": 6.2,
+    "sig_accuracy": 0.48,
+    "sig_defense": 0.57,
+    "power": 0.64,
+    "durability": 0.72,
+    "td_attempts_per_15": 4.8,
+    "td_accuracy": 0.43,
+    "td_defense": 0.76,
+    "control_seconds_per_takedown": 74.0,
+    "submission_threat": 0.54,
+    "submission_defense": 0.70,
+    "cardio": 0.73,
+    "recovery": 0.68,
+    "pace_sustainability": 0.75,
+    "adaptability": 0.66,
+    "initiative": 0.62,
+    "phase_imposition": 0.60,
+    "metadata": {
+      "source": "manual_demo"
+    }
+  },
+  "blue": {
+    "fighter_id": "demo_blue",
+    "fighter_name": "Demo Blue",
+    "sig_attempts_per_minute": 5.7,
+    "sig_accuracy": 0.45,
+    "sig_defense": 0.55,
+    "power": 0.58,
+    "durability": 0.69,
+    "td_attempts_per_15": 2.9,
+    "td_accuracy": 0.38,
+    "td_defense": 0.71,
+    "control_seconds_per_takedown": 58.0,
+    "submission_threat": 0.42,
+    "submission_defense": 0.67,
+    "cardio": 0.70,
+    "recovery": 0.66,
+    "pace_sustainability": 0.69,
+    "adaptability": 0.63,
+    "initiative": 0.56,
+    "phase_imposition": 0.51,
+    "metadata": {
+      "source": "manual_demo"
+    }
+  }
+}
