@@ -25,6 +25,7 @@ jobs:
             configs
             config
             data/master
+            data/fight_details
 
       - uses: actions/setup-python@v5
         with:
