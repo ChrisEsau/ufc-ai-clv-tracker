@@ -13,7 +13,9 @@ on:
         default: "100"
         type: string
   push:
-    branches: [feature/brain-mc-event-runner]
+    branches:
+      - feature/brain-mc-event-runner
+      - research/brain-mc-muhammad-bonfim-500-20260826
     paths:
       - "pipeline/simulation/event_clock_mc_v2/event_runner.py"
       - ".github/workflows/brain-mc-event-runner.yml"
@@ -82,11 +84,10 @@ jobs:
               --paths "$paths" \
               --output artifacts/brain-mc-event/result.json
           else
-            # Branch validation: execute the canonical UFC event immediately
-            # after Kape vs Horiguchi at 100 paths/fight.
+            # Execution-only trigger branch: June 6, 2026 Muhammad vs Bonfim card.
             python -m pipeline.simulation.event_clock_mc_v2.event_runner \
-              --next-after-event-name "UFC Fight Night: Kape vs. Horiguchi" \
-              --paths 100 \
+              --next-after-event-name "UFC Fight Night: Song vs. Figueiredo" \
+              --paths 500 \
               --output artifacts/brain-mc-event/result.json
           fi
 
