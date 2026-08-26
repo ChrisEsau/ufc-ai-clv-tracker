@@ -1,0 +1,39 @@
+name: Stirling Last3 Standing FSR Shadow
+
+on:
+  push:
+    branches:
+      - research/submission-signal-audit-20260825
+    paths:
+      - 'pipeline/research/stirling_last3_standing_fsr_shadow.py'
+      - '.github/workflows/stirling-last3-standing-fsr-shadow.yml'
+  workflow_dispatch:
+
+jobs:
+  shadow:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install numpy pandas pyarrow pyyaml scipy scikit-learn joblib
+      - name: Restore canonical historical inputs
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ChrisEsau/ufc-ai-clv-tracker
+          run-id: 32645607979
+          name: canonical-weight-class-state
+          path: canonical_state
+      - name: Install restored inputs
+        run: |
+          find canonical_state -maxdepth 3 -type f -print
+          cp -r canonical_state/* .
+      - name: Run last-3 standing FSR shadow
+        run: python -m pipeline.research.stirling_last3_standing_fsr_shadow
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: stirling-last3-standing-fsr-shadow
+          path: data/diagnostics/physical_profile/stirling_last3_shadow/
