@@ -46,4 +46,4 @@ jobs:
       - name: Run standing-attempt calibration only
         run: |
           cp -a restored/canonical-weight-class-state/. data/
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.brain_standing_attempt_calibration
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.brain_standing_attempt_calibration_long_schema
