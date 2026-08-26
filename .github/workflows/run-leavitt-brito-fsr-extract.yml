@@ -1,0 +1,63 @@
+name: Leavitt Brito FSR Extract
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - '.github/workflows/run-leavitt-brito-fsr-extract.yml'
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/submission-signal-audit-20260825
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install pandas pyarrow
+      - name: Restore canonical prefight snapshots
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ChrisEsau/ufc-ai-clv-tracker
+          run-id: 32645607979
+          name: canonical-weight-class-state
+          path: canonical_state
+      - name: Extract Leavitt Brito canonical prefight FSR
+        run: |
+          mkdir -p data/diagnostics/leavitt_brito_fsr
+          python - <<'PY'
+          import pandas as pd
+          from pathlib import Path
+          p = Path('canonical_state/fsr_v3/fsr_v3_prefight_snapshots.parquet')
+          df = pd.read_parquet(p)
+          df['event_date'] = pd.to_datetime(df['event_date'])
+          names = ['Jordan Leavitt', 'Joanderson Brito']
+          x = df[df['fighter_name'].isin(names)].copy()
+          target = pd.Timestamp('2026-06-06')
+          rows = []
+          for name in names:
+              f = x[(x['fighter_name'] == name) & (x['event_date'] <= target)].sort_values('event_date')
+              if f.empty:
+                  raise RuntimeError(f'No prefight row for {name}')
+              rows.append(f.tail(1))
+          out = pd.concat(rows, ignore_index=True)
+          if not (out['event_date'] == target).all():
+              raise RuntimeError(out[['fighter_name','event_date','opponent_name']].to_string(index=False))
+          out.to_csv('data/diagnostics/leavitt_brito_fsr/full_rows.csv', index=False)
+          wanted = [c for c in out.columns if any(k in c.lower() for k in [
+              'fighter_name','opponent_name','event_date','standing','takedown','ground','power','knockdown','escape','submission','durability','stamina'
+          ])]
+          slim = out[wanted]
+          slim.to_csv('data/diagnostics/leavitt_brito_fsr/traits.csv', index=False)
+          print(slim.to_string(index=False))
+          PY
+      - name: Upload exact FSR rows
+        uses: actions/upload-artifact@v4
+        with:
+          name: leavitt-brito-fsr
+          path: data/diagnostics/leavitt_brito_fsr/
