@@ -67,6 +67,16 @@ REQUIRED_FIGHT_OBSERVATION_COLUMNS = [
 ]
 
 
+
+RFS_FIGHT_OBSERVATION_PREFIXES = (
+    "rfs_traj_fight_",
+    "rfs_open_fight_",
+    "rfs_phase_base_fight_",
+    "rfs_phase_interact_fight_",
+    "rfs_dynamic_response_fight_",
+    "rfs_finish_state_fight_",
+)
+
 @dataclass(frozen=True)
 class ValidationCheck:
     """One validation check result."""
@@ -229,7 +239,11 @@ def validate_round_fighter_state(
     )
 
     latest_fight_observation_columns = [
-        column for column in latest.columns if column.startswith("rfs_traj_fight_")
+        column
+        for column in latest.columns
+        if column.startswith(
+            RFS_FIGHT_OBSERVATION_PREFIXES
+        )
     ]
     _add_check(
         checks,
@@ -242,12 +256,26 @@ def validate_round_fighter_state(
     )
 
 
-    rfs_cols = [column for column in history.columns if column.startswith("rfs_traj_")]
-    fight_cols = [
-        column for column in rfs_cols if column.startswith("rfs_traj_fight_")
+    rfs_cols = [
+        column
+        for column in history.columns
+        if column.startswith("rfs_")
     ]
+
+    fight_cols = [
+        column
+        for column in rfs_cols
+        if column.startswith(
+            RFS_FIGHT_OBSERVATION_PREFIXES
+        )
+    ]
+
     state_cols = [
-        column for column in rfs_cols if not column.startswith("rfs_traj_fight_")
+        column
+        for column in rfs_cols
+        if not column.startswith(
+            RFS_FIGHT_OBSERVATION_PREFIXES
+        )
     ]
 
     _add_check(
