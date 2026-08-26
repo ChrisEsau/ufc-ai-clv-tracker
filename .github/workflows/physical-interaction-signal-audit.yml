@@ -1,0 +1,231 @@
+name: Physical Interaction Signal Audit
+
+on:
+  push:
+    branches: [research/submission-signal-audit-20260825]
+    paths:
+      - ".github/workflows/physical-interaction-signal-audit.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install numpy pandas pyarrow scipy scikit-learn
+
+      - name: Restore canonical historical Brain MC inputs
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 32645607979
+
+      - name: Install restored canonical inputs
+        run: |
+          cp -a restored/canonical-weight-class-state/. data/
+          test -f data/master/ufc_master.parquet
+          test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
+
+      - name: Screen physical interactions conditional on FSR
+        run: |
+          mkdir -p artifacts/physical-interaction-audit
+          python - <<'PY'
+          import json, math, re
+          from pathlib import Path
+          import numpy as np
+          import pandas as pd
+          from scipy import stats
+          from sklearn.linear_model import LinearRegression
+          from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+          from pipeline.common.paths import MASTER_PATH
+          from pipeline.simulation.event_clock_mc_v2.fsr_v3_adapter import (
+              load_prefight_snapshots, historical_fighter_rows, derive_runtime_inputs
+          )
+          from pipeline.simulation.event_clock_mc_v2.standard_fighter_v1.capability_translation import traits_from_row
+
+          OUT = Path('artifacts/physical-interaction-audit')
+          master = pd.read_parquet(MASTER_PATH).drop_duplicates('fight_id').copy()
+          master['date'] = pd.to_datetime(master['date'], errors='coerce').dt.normalize()
+          snaps = load_prefight_snapshots()
+
+          def parse_inches(v):
+              if pd.isna(v): return np.nan
+              if isinstance(v, (int,float,np.integer,np.floating)):
+                  x=float(v); return x if np.isfinite(x) else np.nan
+              s=str(v).strip()
+              if not s: return np.nan
+              m=re.match(r"^(\d+)\s*'\s*(\d+(?:\.\d+)?)", s)
+              if m: return float(m.group(1))*12.0+float(m.group(2))
+              nums=re.findall(r"[-+]?\d*\.?\d+", s)
+              return float(nums[0]) if nums else np.nan
+
+          def age_years(dob, date):
+              d=pd.to_datetime(dob, errors='coerce')
+              if pd.isna(d) or pd.isna(date): return np.nan
+              return (pd.Timestamp(date)-pd.Timestamp(d)).days/365.2425
+
+          # strictly-prior UFC fight counts, vectorized by walking chronologically
+          counts={}
+          mature_by_fight={}
+          for _, f in master.sort_values(['date','fight_id']).iterrows():
+              rid,bid=str(f.r_id),str(f.b_id)
+              rn,bn=counts.get(rid,0),counts.get(bid,0)
+              mature_by_fight[str(f.fight_id)] = (rn>=3 and bn>=3)
+              counts[rid]=rn+1; counts[bid]=bn+1
+
+          rows=[]
+          required=['r_dist_atmpted','b_dist_atmpted','r_dist_landed','b_dist_landed','r_reach','b_reach','r_height','b_height','r_dob','b_dob']
+          missing=[c for c in required if c not in master.columns]
+          if missing: raise RuntimeError(f'missing master columns: {missing}')
+
+          for _, f in master.sort_values(['date','fight_id']).iterrows():
+              fid=str(f.fight_id)
+              if not mature_by_fight.get(fid,False): continue
+              date=pd.Timestamp(f.date)
+              try:
+                  rr, br = historical_fighter_rows(snaps,event_date=date,fight_id=fid,fighter_ids=(str(f.r_id),str(f.b_id)))
+                  rrt=derive_runtime_inputs(traits_from_row(rr),traits_from_row(br))
+                  brt=derive_runtime_inputs(traits_from_row(br),traits_from_row(rr))
+              except Exception:
+                  continue
+
+              # exposure from authoritative fight duration
+              rounds=int(f.finish_round) if pd.notna(f.finish_round) else int(f.total_rounds)
+              sec=((rounds-1)*300 + float(f.match_time_sec)) if pd.notna(f.match_time_sec) else float(f.total_rounds)*300
+              if not np.isfinite(sec) or sec<=0: continue
+              scale=900.0/sec
+
+              phys={
+                  'r_reach':parse_inches(f.r_reach),'b_reach':parse_inches(f.b_reach),
+                  'r_height':parse_inches(f.r_height),'b_height':parse_inches(f.b_height),
+                  'r_age':age_years(f.r_dob,date),'b_age':age_years(f.b_dob,date),
+              }
+              if not all(np.isfinite(x) for x in phys.values()): continue
+
+              sides=[
+                  ('r','b',str(f.r_name),rrt,brt,float(f.r_dist_atmpted),float(f.r_dist_landed)),
+                  ('b','r',str(f.b_name),brt,rrt,float(f.b_dist_atmpted),float(f.b_dist_landed)),
+              ]
+              for s,o,name,rt,ort,att,land in sides:
+                  own_reach=phys[f'{s}_reach']; opp_reach=phys[f'{o}_reach']
+                  own_height=phys[f'{s}_height']; opp_height=phys[f'{o}_height']
+                  own_age=phys[f'{s}_age']; opp_age=phys[f'{o}_age']
+                  if att<0 or land<0: continue
+                  rows.append({
+                      'fight_id':fid,'date':date,'fighter':name,'side':s,
+                      'attempts_15':att*scale,'landed_15':land*scale,
+                      'accuracy':land/att if att>0 else 0.0,
+                      'fsr_rate':float(rt.standing_rate_15m),'fsr_acc':float(rt.standing_accuracy),
+                      'opp_fsr_rate':float(ort.standing_rate_15m),'opp_fsr_acc':float(ort.standing_accuracy),
+                      'reach_delta':own_reach-opp_reach,'height_delta':own_height-opp_height,
+                      'own_age':own_age,'opp_age':opp_age,'age_delta':own_age-opp_age,
+                  })
+
+          df=pd.DataFrame(rows).sort_values(['date','fight_id','side']).reset_index(drop=True)
+          if len(df)<1000: raise RuntimeError(f'too few complete mature fighter rows: {len(df)}')
+          # Split by fight date, preserving both sides of each bout together.
+          dates=np.sort(df.date.unique())
+          cutoff=pd.Timestamp(dates[int(math.floor(len(dates)*0.80))])
+          train=df[df.date<cutoff].copy(); hold=df[df.date>=cutoff].copy()
+          if len(train)<500 or len(hold)<100: raise RuntimeError('bad chronological split')
+
+          # Center ages using training only.
+          age_center=float(train.own_age.mean())
+          for x in (train,hold,df):
+              x['own_age_c']=x.own_age-age_center
+              x['opp_age_c']=x.opp_age-age_center
+              x['older_by5']=(x.age_delta>=5).astype(float)
+              x['younger_by5']=(x.age_delta<=-5).astype(float)
+              x['reach_disadv']=np.minimum(x.reach_delta,0.0)
+              x['height_disadv']=np.minimum(x.height_delta,0.0)
+              x['reach_adv']=np.maximum(x.reach_delta,0.0)
+              x['height_adv']=np.maximum(x.height_delta,0.0)
+              x['reach_x_own_age']=x.reach_delta*x.own_age_c
+              x['reach_x_age_delta']=x.reach_delta*x.age_delta
+              x['height_x_own_age']=x.height_delta*x.own_age_c
+              x['height_x_age_delta']=x.height_delta*x.age_delta
+              x['reach_x_height']=x.reach_delta*x.height_delta
+              x['older5_x_reach_disadv']=x.older_by5*x.reach_disadv
+              x['older5_x_height_disadv']=x.older_by5*x.height_disadv
+              x['older5_x_reach_adv']=x.older_by5*x.reach_adv
+              x['younger5_x_reach_adv']=x.younger_by5*x.reach_adv
+
+          baseline=['fsr_rate','fsr_acc','opp_fsr_rate','opp_fsr_acc']
+          main=baseline+['reach_delta','height_delta','own_age_c','age_delta']
+          interactions=[
+              'reach_x_own_age','reach_x_age_delta','height_x_own_age','height_x_age_delta',
+              'reach_x_height','older5_x_reach_disadv','older5_x_height_disadv',
+              'older5_x_reach_adv','younger5_x_reach_adv'
+          ]
+
+          def metrics(y,p):
+              return {'mae':float(mean_absolute_error(y,p)),'rmse':float(mean_squared_error(y,p)**0.5),'r2':float(r2_score(y,p)),'pearson_r':float(np.corrcoef(y,p)[0,1])}
+
+          def fit(cols,target):
+              m=LinearRegression().fit(train[cols],train[target])
+              hp=m.predict(hold[cols])
+              return m,metrics(hold[target],hp),hp
+
+          results={
+              'n_fighter_rows':int(len(df)),'n_fights':int(df.fight_id.nunique()),
+              'train_rows':int(len(train)),'holdout_rows':int(len(hold)),'holdout_start':str(cutoff.date()),
+              'age_center_train':age_center,'targets':{},'interaction_screen':{}
+          }
+
+          for target in ['attempts_15','landed_15','accuracy']:
+              bmod,bmet,bpred=fit(baseline,target)
+              mmod,mmet,mpred=fit(main,target)
+              target_out={'baseline':bmet,'physical_main':mmet,
+                          'main_delta_vs_baseline':{'rmse':mmet['rmse']-bmet['rmse'],'r2':mmet['r2']-bmet['r2']},
+                          'main_coefficients':dict(zip(main,[float(x) for x in mmod.coef_]))}
+              screens=[]
+              for term in interactions:
+                  mod,met,pred=fit(main+[term],target)
+                  # holdout residual association after main effects
+                  resid=hold[target].to_numpy()-mpred
+                  r,p=stats.pearsonr(hold[term].to_numpy(),resid)
+                  screens.append({
+                      'term':term,'coefficient':float(mod.coef_[-1]),
+                      'metrics':met,'delta_rmse_vs_main':float(met['rmse']-mmet['rmse']),
+                      'delta_r2_vs_main':float(met['r2']-mmet['r2']),
+                      'holdout_main_residual_r':float(r),'holdout_main_residual_p':float(p),
+                  })
+              screens=sorted(screens,key=lambda z:(z['delta_rmse_vs_main'],-z['delta_r2_vs_main']))
+              target_out['interactions']=screens
+              results['targets'][target]=target_out
+
+          # Diagnostic rows for the two known inversion archetypes if present.
+          diag=[]
+          for names in [('Santiago Ponzinibbio','Sam Patterson'),('Jan Blachowicz','Navajo Stirling')]:
+              sub=df[df.fighter.isin(names)]
+              # require same fight containing both names
+              for fid,g in sub.groupby('fight_id'):
+                  if set(g.fighter)==set(names):
+                      diag.extend(g[['fight_id','date','fighter','reach_delta','height_delta','own_age','opp_age','age_delta','fsr_rate','fsr_acc','attempts_15','landed_15','accuracy']].to_dict('records'))
+          for row in diag:
+              row['date']=str(pd.Timestamp(row['date']).date())
+              for k,v in list(row.items()):
+                  if isinstance(v,(np.floating,np.integer)): row[k]=v.item()
+          results['diagnostic_rows']=diag
+
+          df.to_csv(OUT/'fighter_rows.csv',index=False)
+          with open(OUT/'results.json','w') as fh: json.dump(results,fh,indent=2,sort_keys=True)
+          print(json.dumps(results,indent=2,sort_keys=True))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: physical-interaction-signal-audit
+          path: artifacts/physical-interaction-audit/
+          retention-days: 90
