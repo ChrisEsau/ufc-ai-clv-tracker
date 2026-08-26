@@ -1,0 +1,55 @@
+name: Allen Shahbazyan Last5 Calibrated Shadow
+
+on:
+  push:
+    branches:
+      - research/allen-shahbazyan-last5-calibrated-shadow-20260826
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  allen-shahbazyan-last5-shadow:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Sparse shallow checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            pipeline
+            configs
+            config
+            data/master
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: python -m pip install numpy pandas pyarrow pyyaml scipy scikit-learn joblib
+
+      - name: Restore canonical historical Brain MC inputs
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ github.token }}
+          repository: ChrisEsau/ufc-ai-clv-tracker
+          run-id: 32645607979
+
+      - name: Run Allen Shahbazyan last5 calibrated shadow only
+        run: |
+          cp -a restored/canonical-weight-class-state/. data/
+          mkdir -p artifacts/allen-shahbazyan-last5-shadow
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.allen_shahbazyan_last5_calibrated_shadow \
+            | tee artifacts/allen-shahbazyan-last5-shadow/result.txt
+
+      - name: Upload shadow result
+        uses: actions/upload-artifact@v4
+        with:
+          name: allen-shahbazyan-last5-calibrated-shadow-${{ github.run_id }}
+          path: artifacts/allen-shahbazyan-last5-shadow/result.txt
+          if-no-files-found: error
+          retention-days: 30
