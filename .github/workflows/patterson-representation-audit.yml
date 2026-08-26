@@ -1,0 +1,171 @@
+name: Patterson Representation Audit
+
+on:
+  push:
+    branches: [research/submission-signal-audit-20260825]
+    paths:
+      - ".github/workflows/patterson-representation-audit.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install numpy pandas pyarrow pyyaml scipy scikit-learn joblib
+
+      - name: Restore canonical historical Brain MC inputs
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 32645607979
+
+      - name: Install restored canonical inputs
+        run: |
+          cp -a restored/canonical-weight-class-state/. data/
+          test -f data/master/ufc_master.parquet
+          test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
+
+      - name: Audit Ponzinibbio vs Patterson prefight representation
+        run: |
+          mkdir -p artifacts/patterson-audit
+          python - <<'PY'
+          import json
+          import numpy as np
+          import pandas as pd
+          from pipeline.common.paths import MASTER_PATH
+          from pipeline.simulation.event_clock_mc_v2.fsr_v3_adapter import (
+              load_prefight_snapshots, historical_fighter_rows, derive_runtime_inputs
+          )
+          from pipeline.simulation.event_clock_mc_v2.standard_fighter_v1.capability_translation import (
+              CapabilityReference, translate_capability, traits_from_row
+          )
+          from pipeline.simulation.event_clock_mc_v2.standard_fighter_v1.policy import (
+              FightState, Phase, utilities, action_probabilities
+          )
+
+          EVENT = "UFC Fight Night: Ankalaev vs. Guskov"
+          RED = "Santiago Ponzinibbio"
+          BLUE = "Sam Patterson"
+
+          master = pd.read_parquet(MASTER_PATH).drop_duplicates("fight_id").copy()
+          master["date"] = pd.to_datetime(master["date"]).dt.normalize()
+          fight = master[(master.event_name == EVENT) & (master.r_name == RED) & (master.b_name == BLUE)]
+          if fight.empty:
+              fight = master[(master.event_name == EVENT) & (master.r_name == BLUE) & (master.b_name == RED)]
+          if len(fight) != 1:
+              raise SystemExit(f"expected one target fight, found {len(fight)}")
+          f = fight.iloc[0]
+          red_id, blue_id = str(f.r_id), str(f.b_id)
+          if str(f.r_name) != RED:
+              red_id, blue_id = blue_id, red_id
+          date = pd.Timestamp(f.date)
+          fight_id = str(f.fight_id)
+
+          snaps = load_prefight_snapshots()
+          red_row, blue_row = historical_fighter_rows(
+              snaps, event_date=date, fight_id=fight_id, fighter_ids=(red_id, blue_id)
+          )
+          ref = CapabilityReference.from_prefight_before(snaps, date)
+
+          def prior_count(fid):
+              prior = master[master.date < date]
+              return int(((prior.r_id.astype(str)==fid) | (prior.b_id.astype(str)==fid)).sum())
+
+          red_n, blue_n = prior_count(red_id), prior_count(blue_id)
+          red_t = translate_capability(red_row, blue_row, ref, prior_ufc_fights=red_n)
+          blue_t = translate_capability(blue_row, red_row, ref, prior_ufc_fights=blue_n)
+          red_rt = derive_runtime_inputs(traits_from_row(red_row), traits_from_row(blue_row))
+          blue_rt = derive_runtime_inputs(traits_from_row(blue_row), traits_from_row(red_row))
+
+          trait_names = [
+              "standing_striking_tendency","standing_striking_suppression",
+              "standing_striking_offense","standing_striking_defense","standing_accuracy_baseline",
+              "takedown_tendency","takedown_suppression","takedown_offense","takedown_defense",
+              "takedown_completion_baseline","ground_striking_tendency","ground_striking_suppression",
+              "ground_striking_offense","ground_accuracy_baseline","ground_striking_burst_baseline",
+              "submission_tendency","striking_power","knockdown_resistance","durability",
+              "stamina_capacity","depletion_resistance"
+          ]
+
+          def clean(v):
+              if isinstance(v,(np.floating,np.integer)): return v.item()
+              return v
+
+          def row_traits(row):
+              out={}
+              for k in trait_names:
+                  if k in row.index:
+                      try:
+                          x=float(row[k])
+                          if np.isfinite(x): out[k]=x
+                      except Exception: pass
+              return out
+
+          def translation_dict(t):
+              c=t.capability
+              return {
+                  "capability": {k: clean(getattr(c,k)) for k in c.__dataclass_fields__},
+                  "runtime": {
+                      "standing_rate_15m": t.standing_rate_15m,
+                      "standing_accuracy": t.standing_accuracy,
+                      "takedown_rate_15m": t.takedown_rate_15m,
+                      "takedown_completion": t.takedown_completion,
+                      "ground_rate_15m_own_control": t.ground_rate_15m_own_control,
+                      "ground_accuracy": t.ground_accuracy,
+                  },
+                  "percentiles": {
+                      "standing_rate":t.standing_rate_percentile,
+                      "standing_accuracy":t.standing_accuracy_percentile,
+                      "takedown_rate":t.takedown_rate_percentile,
+                      "takedown_completion":t.takedown_completion_percentile,
+                      "ground_rate":t.ground_rate_percentile,
+                      "ground_accuracy":t.ground_accuracy_percentile,
+                      "submission_tendency":t.submission_tendency_percentile,
+                  },
+                  "prior_ufc_fights": t.prior_ufc_fights,
+              }
+
+          neutral = FightState(phase=Phase.STANDING)
+          def neutral_policy(t):
+              u=utilities(neutral,t.capability)
+              p=action_probabilities(neutral,t.capability)
+              return {
+                  "utilities": {a.value:clean(v) for a,v in u.items()},
+                  "probabilities": {a.value:clean(v) for a,v in p.items()},
+              }
+
+          out={
+              "event":EVENT,"event_date":str(date.date()),"fight_id":fight_id,
+              "red":{"name":RED,"fighter_id":red_id,"traits":row_traits(red_row),**translation_dict(red_t),"neutral_standing_policy":neutral_policy(red_t)},
+              "blue":{"name":BLUE,"fighter_id":blue_id,"traits":row_traits(blue_row),**translation_dict(blue_t),"neutral_standing_policy":neutral_policy(blue_t)},
+              "directional_deltas_blue_minus_red": {
+                  "standing_rate_15m": blue_t.standing_rate_15m-red_t.standing_rate_15m,
+                  "standing_accuracy": blue_t.standing_accuracy-red_t.standing_accuracy,
+                  "takedown_rate_15m": blue_t.takedown_rate_15m-red_t.takedown_rate_15m,
+                  "takedown_completion": blue_t.takedown_completion-red_t.takedown_completion,
+                  "ground_rate_15m_own_control": blue_t.ground_rate_15m_own_control-red_t.ground_rate_15m_own_control,
+                  "ground_accuracy": blue_t.ground_accuracy-red_t.ground_accuracy,
+              }
+          }
+          with open('artifacts/patterson-audit/audit.json','w') as fh:
+              json.dump(out,fh,indent=2,sort_keys=True)
+          print(json.dumps(out,indent=2,sort_keys=True))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: patterson-representation-audit
+          path: artifacts/patterson-audit/audit.json
+          retention-days: 90
