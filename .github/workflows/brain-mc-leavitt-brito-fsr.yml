@@ -14,11 +14,6 @@ jobs:
   dump-fsr:
     runs-on: ubuntu-latest
     steps:
-      - name: Shallow checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -42,7 +37,6 @@ jobs:
           p='data/fsr_v3/fsr_v3_prefight_snapshots.parquet'
           df=pd.read_parquet(p)
           names={'Jordan Leavitt','Joanderson Brito'}
-          # Locate the target rows robustly across schema naming variants.
           mask=pd.Series(False,index=df.index)
           for c in ['fighter_name','fighter','r_name','b_name','red_fighter','blue_fighter']:
               if c in df.columns:
@@ -56,7 +50,6 @@ jobs:
                   dt=pd.to_datetime(sub[c],errors='coerce')
                   exact=sub.loc[dt.dt.strftime('%Y-%m-%d').eq('2026-06-06')]
                   if len(exact): sub=exact; break
-          # Prefer exact bout if available.
           for c in ['bout_id','fight_id']:
               if c in sub.columns:
                   exact=sub.loc[sub[c].astype(str).eq('44cfbb8c3c356c65')]
@@ -64,7 +57,7 @@ jobs:
           print('COLUMNS:', list(df.columns))
           print('MATCHING_ROWS:', len(sub))
           pd.set_option('display.max_columns', None)
-          pd.set_option('display.width', 400)
+          pd.set_option('display.width', 500)
           pd.set_option('display.max_colwidth', 120)
           print(sub.to_string(index=False))
           PY
