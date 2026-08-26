@@ -80,4 +80,4 @@ for _, r in rows[rows.variant != 'canonical'].iterrows():
 pd.DataFrame(long).to_csv(OUT / 'deltas.csv', index=False)
 print(rows[cols].to_string(index=False))
 
-# PR-trigger marker: input-only last-5 audit.
+# Existing-workflow trigger: input-only last-5 audit.
