@@ -6,15 +6,13 @@ on:
       - research/submission-signal-audit-20260825
     paths:
       - 'pipeline/research/fsr_recency_event_compare.py'
+      - 'pipeline/research/fsr_last5_input_compare.py'
       - '.github/workflows/fsr-recency-event-compare.yml'
 
 jobs:
   compare:
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    env:
-      EVENT_NAME: 'UFC Fight Night: Muhammad vs. Bonfim'
-      PATHS: '1000'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -38,11 +36,11 @@ jobs:
           cp -r canonical_state/fsr_v3/history/* data/fsr_v3/history/
           cp canonical_state/models/event_clock_mc_v2/* data/models/event_clock_mc_v2/
           cp canonical_state/models/event_clock_mc_v1/* data/models/event_clock_mc_v1/
-      - name: Run event comparison
-        run: python -m pipeline.research.fsr_recency_event_compare
+      - name: Build last3 vs last5 input comparison
+        run: python -m pipeline.research.fsr_last5_input_compare
       - name: Upload results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: fsr-recency-event
-          path: data/diagnostics/fsr_recency_event/
+          name: fsr-last5-input-compare
+          path: data/diagnostics/fsr_last5_input_compare/
