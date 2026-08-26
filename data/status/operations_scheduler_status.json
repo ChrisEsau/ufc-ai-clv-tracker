@@ -2048,7 +2048,7 @@
   "dispatched_runbooks": [],
   "due_runbooks": [],
   "errors": [],
-  "last_checked_at": "2026-08-26T06:53:53.886567+00:00",
+  "last_checked_at": "2026-08-26T07:49:51.762624+00:00",
   "next_due_runbook": {
     "catchup_grace_minutes": 1440,
     "display_name": "Market Refresh",
@@ -2069,7 +2069,7 @@
         "skip_bankroll": false,
         "skip_clv": false
       },
-      "minutes_late": 2693.9,
+      "minutes_late": 2749.86,
       "reason": "already_dispatched",
       "runbook_id": "monday_reset_v1",
       "scheduled_at_local": "2026-08-24T05:00:00-05:00",
@@ -2086,7 +2086,7 @@
         "model_mode": "production",
         "snapshot_model_mode": "production"
       },
-      "minutes_late": 1373.9,
+      "minutes_late": 1429.86,
       "reason": "already_dispatched",
       "runbook_id": "market_refresh_v2",
       "scheduled_at_local": "2026-08-25T03:00:00-05:00",
@@ -2103,7 +2103,7 @@
         "model_mode": "production",
         "snapshot_model_mode": "production"
       },
-      "minutes_late": 653.9,
+      "minutes_late": 709.86,
       "reason": "already_dispatched",
       "runbook_id": "market_refresh_v2",
       "scheduled_at_local": "2026-08-25T15:00:00-05:00",
@@ -2113,5 +2113,5 @@
   ],
   "status": "completed",
   "timezone": "America/Chicago",
-  "updated_at": "2026-08-26T06:53:53.892331+00:00"
+  "updated_at": "2026-08-26T07:49:51.764141+00:00"
 }
