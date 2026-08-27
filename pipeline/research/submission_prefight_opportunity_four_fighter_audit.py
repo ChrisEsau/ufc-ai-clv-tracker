@@ -31,6 +31,9 @@ def main():
     suppression = engine.replay(GROUPS["submission_suppression"], fights).history.copy()
     tendency["event_date"] = pd.to_datetime(tendency["event_date"]).dt.normalize()
     suppression["event_date"] = pd.to_datetime(suppression["event_date"]).dt.normalize()
+    for c in ("fighter_id", "fight_id"):
+        tendency[c] = tendency[c].astype(str)
+        suppression[c] = suppression[c].astype(str)
 
     snaps = pd.read_parquet(FSR_V3_PREFIGHT_SNAPSHOTS_PATH).copy()
     snaps["event_date"] = pd.to_datetime(snaps["event_date"]).dt.normalize()
@@ -51,8 +54,8 @@ def main():
         target = m[m["fighter_name"].astype(str).eq(target_name)].iloc[0]
         opp = m[m["fighter_id"].astype(str).eq(str(target.opponent_id))].iloc[0]
 
-        th = tendency[(tendency["fight_id"].astype(str).eq(str(target.fight_id))) & (tendency["fighter_id"].astype(str).eq(str(target.fighter_id)))].iloc[0]
-        sh = suppression[(suppression["fight_id"].astype(str).eq(str(target.fight_id))) & (suppression["fighter_id"].astype(str).eq(str(opp.fighter_id)))].iloc[0]
+        th = tendency[(tendency["fight_id"].eq(str(target.fight_id))) & (tendency["fighter_id"].eq(str(target.fighter_id)))].iloc[0]
+        sh = suppression[(suppression["fight_id"].eq(str(target.fight_id))) & (suppression["fighter_id"].eq(str(opp.fighter_id)))].iloc[0]
 
         snap = snaps[(snaps["fight_id"].eq(str(target.fight_id))) & (snaps["fighter_id"].eq(str(target.fighter_id)))].iloc[0]
         opp_snap = snaps[(snaps["fight_id"].eq(str(target.fight_id))) & (snaps["fighter_id"].eq(str(opp.fighter_id)))].iloc[0]
@@ -60,10 +63,13 @@ def main():
         raw_tendency = float(th.fighter_prior_attempts / th.fighter_prior_exposure_seconds) if float(th.fighter_prior_exposure_seconds) > 0 else None
         population_rate = float(th.population_prior_rate)
         prefight_tendency = float(th.pre_rating)
-        suppression_actual_hist = float(sh.numerator)
-        suppression_expected_hist = float(sh.denominator)
+
+        prior_sup = suppression[(suppression["fighter_id"].eq(str(opp.fighter_id))) & (suppression["event_date"] < date)].copy()
+        suppression_actual_hist = float(prior_sup["raw_numerator"].sum())
+        suppression_expected_hist = float(prior_sup["raw_denominator"].sum())
         raw_suppression = suppression_actual_hist / suppression_expected_hist if suppression_expected_hist > 0 else None
         prefight_suppression = float(sh.pre_rating)
+
         matchup_rate = prefight_tendency * prefight_suppression
         scheduled_seconds = 900.0
 
@@ -75,7 +81,7 @@ def main():
             "date": str(date.date()),
             "attacker_prior_effective_sub_attempts": float(th.fighter_prior_attempts),
             "attacker_prior_exposure_seconds": float(th.fighter_prior_exposure_seconds),
-            "attacker_prior_fights_approx": int((fights[(fights["fighter_id"].eq(str(target.fighter_id))) & (fights["event_date"] < date)])["fight_id"].nunique()),
+            "attacker_prior_fights": int(fights[(fights["fighter_id"].eq(str(target.fighter_id))) & (fights["event_date"] < date)]["fight_id"].nunique()),
             "attacker_raw_attempt_rate_per_15m": None if raw_tendency is None else raw_tendency * 900.0,
             "population_attempt_rate_per_15m": population_rate * 900.0,
             "attacker_prefight_tendency_per_15m": prefight_tendency * 900.0,
