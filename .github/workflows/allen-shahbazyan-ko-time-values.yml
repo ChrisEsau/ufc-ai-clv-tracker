@@ -1,0 +1,48 @@
+name: Allen Shahbazyan KO Time Values
+
+on:
+  push:
+    branches:
+      - research/ko-system-v3-from-scratch-20260826
+    paths:
+      - pipeline/research/allen_shahbazyan_ko_time_values.py
+      - .github/workflows/allen-shahbazyan-ko-time-values.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  values:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            pipeline
+            data/master
+            data/fight_details
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install numpy pandas pyarrow scikit-learn
+      - uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ChrisEsau/ufc-ai-clv-tracker
+          run-id: 32645607979
+      - name: Compute Allen Shahbazyan KO time values
+        run: |
+          set -euo pipefail
+          cp -a restored/canonical-weight-class-state/. data/
+          python -m pipeline.research.allen_shahbazyan_ko_time_values | tee allen-shahbazyan-ko-time-values.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: allen-shahbazyan-ko-time-values-${{ github.run_id }}
+          path: |
+            allen-shahbazyan-ko-time-values.txt
+            data/research/ko_time_survival_oos/allen_shahbazyan_values/
