@@ -3,7 +3,7 @@
 Research architecture only; production is unchanged.
 - standing strike clock = 1.0x raw matchup FSR
 - RESET_RANGE removed
-- takedown clock = 1.40x raw matchup-effective FSR TD rate, live td_factor removed
+- takedown clock = 1.0x raw matchup-effective FSR TD rate, live td_factor removed
 - clinch-entry clock = PIT clean-round fighter x opponent proxy at fitted 2.349514563106796 scale
 - inside-clinch timing unchanged
 - expected-control escape research resolver retained
@@ -27,7 +27,7 @@ from pipeline.simulation.event_clock_mc_v2.causal.state import Side
 from pipeline.simulation.event_clock_mc_v2.diagnostics import leavitt_brito_dynamic_pressure_shadow as pressure_mod
 from pipeline.simulation.event_clock_mc_v2.diagnostics.stage8_structural_population import ROUND_STATS
 
-TD_SCALE = 1.40
+TD_SCALE = 1.0
 CLINCH_SCALE = 2.349514563106796
 EPS = 1e-12
 CLINCH_RATE_BY_SIDE: dict[Side, float] = {}
