@@ -60,3 +60,5 @@ jobs:
           path: artifacts/schnell-costa-ko-v3-opportunity-funnel/result.txt
           if-no-files-found: error
           retention-days: 30
+
+# trigger: 2026-08-27
