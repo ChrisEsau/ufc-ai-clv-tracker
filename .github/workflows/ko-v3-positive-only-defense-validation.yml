@@ -1,0 +1,45 @@
+name: KO V3 Positive-Only Defense Validation
+
+on:
+  push:
+    branches:
+      - research/ko-system-v3-from-scratch-20260826
+    paths:
+      - 'pipeline/research/ko_v3_positive_only_defense_validation.py'
+      - '.github/workflows/ko-v3-positive-only-defense-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Sparse shallow checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            pipeline
+            data/master
+            data/fight_details
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: python -m pip install numpy pandas pyarrow scipy scikit-learn
+      - name: Run validation
+        run: |
+          set -euo pipefail
+          python -m pipeline.research.ko_v3_positive_only_defense_validation | tee positive-only-defense-validation.txt
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: ko-v3-positive-only-defense-validation-${{ github.run_id }}
+          path: |
+            positive-only-defense-validation.txt
+            data/research/ko_v3_positive_only_defense_validation/results.json
+          if-no-files-found: error
+          retention-days: 30
