@@ -5,10 +5,8 @@ prefight FSR V3 standing rate (attacker tendency x defender suppression) to obse
 UFCStats distance significant-strike attempts. Fit is strictly pre-2025; 2025-2026
 is untouched holdout.
 
-Fight exposure is reconstructed from the observed round-stat rows plus the master
-within-round finish clock:
-    elapsed = (max_observed_round - 1) * 300 + match_time_sec
-This avoids historical master-schema drift in round-count / elapsed fields.
+Schema audit confirms master.match_time_sec is already total realized elapsed fight
+seconds (for example, a three-round decision stores 900). Use it directly.
 """
 from __future__ import annotations
 
@@ -27,23 +25,12 @@ CUTOFF = pd.Timestamp("2025-01-01")
 EPS = 1e-12
 
 
-def realized_elapsed_seconds(fight_row: pd.Series, fight_round_rows: pd.DataFrame) -> float:
-    """Reconstruct realized bout exposure from observed rounds + within-round clock."""
-    round_col = pick_col(fight_round_rows, "round", "round_number", required=False)
-    if round_col is None:
-        return float("nan")
-    observed_rounds = pd.to_numeric(fight_round_rows[round_col], errors="coerce").dropna()
-    if observed_rounds.empty:
-        return float("nan")
-    finish_round = float(observed_rounds.max())
-
+def realized_elapsed_seconds(fight_row: pd.Series) -> float:
     match_time = fight_row.get("match_time_sec", fight_row.get("time_seconds", np.nan))
     if pd.isna(match_time):
         return float("nan")
     mt = float(match_time)
-    if finish_round < 1 or mt < 0 or mt > 300:
-        return float("nan")
-    return float((finish_round - 1.0) * 300.0 + mt)
+    return mt if mt > 0 else float("nan")
 
 
 def build_frame() -> pd.DataFrame:
@@ -56,8 +43,7 @@ def build_frame() -> pd.DataFrame:
     rounds = pd.read_parquet(ROUND_STATS).copy()
     fc = pick_col(rounds, "fight_id", "bout_id")
     rounds[fc] = rounds[fc].astype(str)
-    round_groups = {fid: g for fid, g in rounds.groupby(fc)}
-    available = set(round_groups)
+    available = set(rounds[fc].unique())
 
     snaps = load_prefight_snapshots().copy()
     required = {"standing_striking_tendency", "standing_striking_suppression"}
@@ -78,8 +64,7 @@ def build_frame() -> pd.DataFrame:
         red, blue = sg.loc[rid], sg.loc[bid]
         if isinstance(red, pd.DataFrame) or isinstance(blue, pd.DataFrame):
             continue
-        fight_round_rows = round_groups[fid]
-        horizon = realized_elapsed_seconds(pd.Series(fight._asdict()), fight_round_rows)
+        horizon = realized_elapsed_seconds(pd.Series(fight._asdict()))
         if not np.isfinite(horizon) or horizon <= 0:
             continue
         try:
@@ -149,7 +134,7 @@ def main():
         "production_changed": False,
         "target": "fighter-fight UFCStats distance significant-strike attempts",
         "runtime_rate": "attacker standing_striking_tendency * defender standing_striking_suppression",
-        "exposure_semantics": "(max observed round - 1) * 300 + match_time_sec",
+        "exposure_semantics": "master match_time_sec (total realized elapsed seconds)",
         "fit_cutoff": str(CUTOFF.date()),
         "standing_rate_scale": scale,
         "mean_delay_multiplier_equivalent": 1.0/scale,
