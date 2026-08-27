@@ -1,0 +1,56 @@
+name: Schnell Costa EWM05 Canonical KO FSR Shadow
+
+on:
+  push:
+    branches:
+      - research/schnell-costa-ewm05-sixway-20260826
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  schnell-costa-ewm05-canonical-ko-fsr:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Sparse shallow checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            pipeline
+            configs
+            config
+            data/master
+            data/fight_details
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: python -m pip install numpy pandas pyarrow pyyaml scipy scikit-learn joblib
+
+      - name: Restore canonical historical Brain MC inputs
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ github.token }}
+          repository: ChrisEsau/ufc-ai-clv-tracker
+          run-id: 32645607979
+
+      - name: Run Schnell Costa EWM05 with canonical KO FSR
+        run: |
+          cp -a restored/canonical-weight-class-state/. data/
+          mkdir -p artifacts/schnell-costa-ewm05-canonical-ko-fsr
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.schnell_costa_ewm05_canonical_ko_fsr_sixway \
+            | tee artifacts/schnell-costa-ewm05-canonical-ko-fsr/result.txt
+
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: schnell-costa-ewm05-canonical-ko-fsr-${{ github.run_id }}
+          path: artifacts/schnell-costa-ewm05-canonical-ko-fsr/result.txt
+          if-no-files-found: error
+          retention-days: 30
