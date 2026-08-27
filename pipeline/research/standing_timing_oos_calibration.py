@@ -4,6 +4,11 @@ Research only. Fits one population timing scale mapping the exact matchup-effect
 prefight FSR V3 standing rate (attacker tendency x defender suppression) to observed
 UFCStats distance significant-strike attempts. Fit is strictly pre-2025; 2025-2026
 is untouched holdout.
+
+Fight exposure is reconstructed strictly from finish round + within-round match time:
+    elapsed = (finish_round - 1) * 300 + match_time_sec
+This avoids legacy/master elapsed columns whose semantics can represent scheduled or
+otherwise non-realized exposure.
 """
 from __future__ import annotations
 
@@ -13,13 +18,26 @@ import numpy as np
 import pandas as pd
 
 from pipeline.simulation.event_clock_mc_v2.diagnostics.stage8_structural_population import (
-    MASTER, ROUND_STATS, actual_side_totals, elapsed_seconds, pick_col, side_rows,
+    MASTER, ROUND_STATS, actual_side_totals, pick_col, side_rows,
 )
 from pipeline.simulation.event_clock_mc_v2.fsr_v3_adapter import load_prefight_snapshots
 
 OUTDIR = Path("data/research/standing_timing_oos_calibration")
 CUTOFF = pd.Timestamp("2025-01-01")
 EPS = 1e-12
+
+
+def realized_elapsed_seconds(row: pd.Series) -> float:
+    """Reconstruct realized bout exposure from finish round and round clock only."""
+    finish_round = row.get("finish_round", row.get("round", np.nan))
+    match_time = row.get("match_time_sec", row.get("time_seconds", np.nan))
+    if pd.isna(finish_round) or pd.isna(match_time):
+        return float("nan")
+    fr = float(finish_round)
+    mt = float(match_time)
+    if fr < 1 or mt < 0 or mt > 300:
+        return float("nan")
+    return float((fr - 1.0) * 300.0 + mt)
 
 
 def build_frame() -> pd.DataFrame:
@@ -51,10 +69,9 @@ def build_frame() -> pd.DataFrame:
         if rid not in sg.index or bid not in sg.index:
             continue
         red, blue = sg.loc[rid], sg.loc[bid]
-        # Guard against accidental same-fight-id duplicates across dates.
         if isinstance(red, pd.DataFrame) or isinstance(blue, pd.DataFrame):
             continue
-        horizon = elapsed_seconds(pd.Series(fight._asdict()))
+        horizon = realized_elapsed_seconds(pd.Series(fight._asdict()))
         if not np.isfinite(horizon) or horizon <= 0:
             continue
         try:
@@ -105,6 +122,9 @@ def metrics(df: pd.DataFrame, scale: float) -> dict:
         "correlation": float(np.corrcoef(y,pred)[0,1]) if len(y)>1 and np.std(y)>0 and np.std(pred)>0 else None,
         "actual_attempts_per_15_exposure": float(y.sum()/max(total_seconds, EPS)*900.0),
         "predicted_attempts_per_15_exposure": float(pred.sum()/max(total_seconds, EPS)*900.0),
+        "elapsed_seconds_median": float(df.elapsed_seconds.median()),
+        "elapsed_seconds_p90": float(df.elapsed_seconds.quantile(0.90)),
+        "elapsed_seconds_max": float(df.elapsed_seconds.max()),
     }
 
 
@@ -115,13 +135,13 @@ def main():
     if train.empty or holdout.empty:
         raise RuntimeError(f"empty split train={len(train)} holdout={len(holdout)}")
 
-    # Population cadence scale chosen ONLY from pre-2025 aggregate attempt exposure.
     scale = float(train.actual_distance_attempts.sum()/max(train.raw_expected_attempts.sum(), EPS))
     result = {
         "study": "standing timing OOS calibration",
         "production_changed": False,
         "target": "fighter-fight UFCStats distance significant-strike attempts",
         "runtime_rate": "attacker standing_striking_tendency * defender standing_striking_suppression",
+        "exposure_semantics": "(finish_round - 1) * 300 + match_time_sec",
         "fit_cutoff": str(CUTOFF.date()),
         "standing_rate_scale": scale,
         "mean_delay_multiplier_equivalent": 1.0/scale,
