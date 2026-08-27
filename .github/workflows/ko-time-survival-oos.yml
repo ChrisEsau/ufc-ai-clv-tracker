@@ -1,0 +1,48 @@
+name: KO Time Survival OOS
+
+on:
+  push:
+    branches:
+      - research/ko-system-v3-from-scratch-20260826
+    paths:
+      - pipeline/research/ko_time_survival_oos.py
+      - .github/workflows/ko-time-survival-oos.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  study:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            pipeline
+            data/master
+            data/fight_details
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install numpy pandas pyarrow scikit-learn
+      - uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ChrisEsau/ufc-ai-clv-tracker
+          run-id: 32645607979
+      - name: Run KO time survival study
+        run: |
+          set -euo pipefail
+          cp -a restored/canonical-weight-class-state/. data/
+          python -m pipeline.research.ko_time_survival_oos | tee ko-time-survival-oos.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ko-time-survival-oos-${{ github.run_id }}
+          path: |
+            ko-time-survival-oos.txt
+            data/research/ko_time_survival_oos/
