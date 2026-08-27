@@ -29,12 +29,10 @@ def build_frame() -> pd.DataFrame:
     fc = pick_col(rounds, "fight_id", "bout_id")
     rounds[fc] = rounds[fc].astype(str)
 
-    # One row per fighter-fight with actual distance significant-strike attempts.
     keys = []
-    fight_ids = rounds[fc].dropna().astype(str).unique()
     fighter_col = pick_col(rounds, "fighter_id", "fighter")
     side_col = pick_col(rounds, "side", "corner")
-    for fid in fight_ids:
+    for fid in rounds[fc].dropna().astype(str).unique():
         fr = rounds[rounds[fc].astype(str).eq(fid)]
         for fighter_id, g in fr.groupby(fighter_col, dropna=False):
             if pd.isna(fighter_id):
@@ -47,12 +45,10 @@ def build_frame() -> pd.DataFrame:
                 vals = actual_side_totals(side_rows(rounds, fid, str(fighter_id), side))
             except Exception:
                 continue
-            # Fight elapsed exposure is shared by both sides; derive from round rows.
             elapsed = 0.0
             if "fight_elapsed_seconds" in g.columns:
                 elapsed = float(pd.to_numeric(g["fight_elapsed_seconds"], errors="coerce").max())
             if not np.isfinite(elapsed) or elapsed <= 0:
-                # Sum completed round exposure from per-round duration if available.
                 for c in ("round_time_sec", "round_elapsed_seconds", "elapsed_seconds"):
                     if c in g.columns:
                         elapsed = float(pd.to_numeric(g[c], errors="coerce").fillna(0).sum())
@@ -67,15 +63,12 @@ def build_frame() -> pd.DataFrame:
     snaps["fighter_id"] = snaps["fighter_id"].astype(str)
     snaps["event_date"] = pd.to_datetime(snaps["event_date"], errors="coerce").dt.normalize()
 
-    # Locate the matchup-effective standing-rate column used by the simulator.
     candidates = [
         "standing_rate_15m", "standing_attempt_rate_15m", "standing_attempt_rate",
         "standing_rate", "sig_strike_attempt_rate_15m",
     ]
     rate_col = next((c for c in candidates if c in snaps.columns), None)
     if rate_col is None:
-        # FSR V3 snapshot commonly stores component trait names rather than adapter names.
-        # Try any unambiguous standing+rate column.
         matches = [c for c in snaps.columns if "standing" in c.lower() and "rate" in c.lower()]
         if len(matches) != 1:
             raise RuntimeError(f"could not identify standing-rate column; candidates={matches}")
@@ -85,7 +78,6 @@ def build_frame() -> pd.DataFrame:
     f = actual.merge(keep, on=["fight_id", "fighter_id"], how="inner", validate="many_to_one")
     f["fsr_standing_rate_15m"] = pd.to_numeric(f["fsr_standing_rate_15m"], errors="coerce")
 
-    # Prefer explicit elapsed exposure from snapshot if available; otherwise recover from round stats.
     elapsed_candidates = [c for c in snaps.columns if c in {"fight_elapsed_seconds", "elapsed_seconds"}]
     if elapsed_candidates:
         ex = snaps[["fight_id", "fighter_id", elapsed_candidates[0]]].rename(columns={elapsed_candidates[0]:"snapshot_elapsed_seconds"})
@@ -94,8 +86,6 @@ def build_frame() -> pd.DataFrame:
     else:
         f["elapsed_seconds"] = f["elapsed_seconds_raw"]
 
-    # If exposure is still missing, infer from number of round rows and last-round time fields.
-    # Rows without trustworthy exposure are excluded rather than fabricated.
     f = f.replace([np.inf, -np.inf], np.nan).dropna(subset=["event_date", "fsr_standing_rate_15m", "elapsed_seconds"])
     f = f[(f.fsr_standing_rate_15m > 0) & (f.elapsed_seconds > 0)].copy()
     f["raw_expected_attempts"] = f.fsr_standing_rate_15m * f.elapsed_seconds / 900.0
