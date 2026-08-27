@@ -28,6 +28,7 @@ from pipeline.simulation.event_clock_mc_v2.diagnostics import leavitt_brito_inte
 from pipeline.simulation.event_clock_mc_v2.mechanics import physiology as physiology_mod
 from pipeline.simulation.event_clock_mc_v2.mechanics import ko_kd_empirical as ko_mod
 
+# Manual workflow trigger after KD->hurt bridge commit 63674b2.
 PATHS = 500
 EWM_DECAY = 0.50
 STANDING_ATTEMPT_SCALE = 0.25
