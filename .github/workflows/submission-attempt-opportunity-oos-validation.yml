@@ -1,0 +1,54 @@
+name: Submission Attempt Opportunity OOS Validation
+
+on:
+  push:
+    branches:
+      - research/ko-system-v3-from-scratch-20260826
+    paths:
+      - 'pipeline/research/submission_attempt_opportunity_oos_validation.py'
+      - '.github/workflows/submission-attempt-opportunity-oos-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            pipeline
+            configs
+            config
+            data/master
+            data/fight_details
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: python -m pip install numpy pandas pyarrow scipy scikit-learn pyyaml joblib
+      - name: Restore canonical historical Brain MC inputs
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ github.token }}
+          repository: ChrisEsau/ufc-ai-clv-tracker
+          run-id: 32645607979
+      - name: Run validation
+        run: |
+          set -euo pipefail
+          cp -a restored/canonical-weight-class-state/. data/
+          python -m pipeline.research.submission_attempt_opportunity_oos_validation | tee submission-attempt-opportunity-oos-validation.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: submission-attempt-opportunity-oos-${{ github.run_id }}
+          path: |
+            submission-attempt-opportunity-oos-validation.txt
+            data/research/submission_attempt_opportunity_oos_validation/results.json
+          if-no-files-found: error
+          retention-days: 30
