@@ -2,18 +2,11 @@
 
 Production simulator and submission conversion are untouched.
 
-Question
---------
-The validated prefight signal predicts effective submission attempts using total
-fight exposure. The current Brain shadow then converts that unconditional rate
-into a per-ground-action hazard using a 4.4 second ground clock. This diagnostic
-tests whether realized submission attempts are better represented by total fight
-exposure or by explicit modeled ground-opportunity exposure.
+Tests the same validated prefight submission signal under two exposure choices:
+1) total fight exposure;
+2) the repository's existing modeled true-ground exposure.
 
-Ground opportunity uses the existing leakage-safe FSR paired-round field
-``modeled_ground_exposure_seconds``. That field is nonzero only with explicit
-true-ground evidence (TD, ground strike, submission, reversal), with the existing
-zero-control fallback retained. No new ground-time labels are fabricated here.
+No new ground-time labels or finish mechanics are introduced.
 """
 from __future__ import annotations
 
@@ -25,12 +18,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import brier_score_loss, log_loss, roc_auc_score
 
-from pipeline.fsr_v2.replay.engine import aggregate_fights
-from pipeline.fsr_v2.sources.round_stats import build_paired_rounds
-from pipeline.research.submission_attempt_opportunity_oos_validation import (
-    build_frame,
-    fit_scale,
-)
+from pipeline.research.submission_attempt_opportunity_oos_validation import build_frame
 
 OUTDIR = Path("data/research/submission_attempt_ground_opportunity_oos_diagnostic")
 CUTOFF = pd.Timestamp("2025-01-01")
@@ -65,39 +53,18 @@ def metrics(df: pd.DataFrame, mu: np.ndarray) -> dict:
 
 
 def build_ground_frame() -> pd.DataFrame:
-    base = build_frame().copy()
-    paired = build_paired_rounds().copy()
-
-    # Each fighter has one reciprocal row per round. Sum the existing modeled
-    # ground exposure across rounds for that fighter-fight.
-    ground = (
-        paired.groupby(["event_date", "fight_id", "fighter_id"], as_index=False)
-        .agg(
-            modeled_ground_exposure_seconds=("modeled_ground_exposure_seconds", "sum"),
-            explicit_ground_rounds=("explicit_true_ground_evidence", "sum"),
-            ground_activity_rounds=("explicit_true_ground_activity", "sum"),
-            ground_strike_attempts=("ground_attempted", "sum"),
-            td_landed=("td_landed", "sum"),
-            sub_att_raw=("sub_att", "sum"),
-            reversals=("rev", "sum"),
-        )
-    )
-    ground["event_date"] = pd.to_datetime(ground["event_date"]).dt.normalize()
-    for c in ("fight_id", "fighter_id"):
-        ground[c] = ground[c].astype(str)
-
-    f = base.merge(
-        ground,
-        on=["event_date", "fight_id", "fighter_id"],
-        how="left",
-        validate="one_to_one",
-    )
-    fill = [
-        "modeled_ground_exposure_seconds", "explicit_ground_rounds",
-        "ground_activity_rounds", "ground_strike_attempts", "td_landed",
-        "sub_att_raw", "reversals",
+    # build_frame() is based on aggregate_fights(build_paired_rounds()), and the
+    # aggregate already carries modeled_ground_exposure_seconds plus TD/ground/
+    # submission/reversal activity. Do not merge the paired frame a second time.
+    f = build_frame().copy()
+    required = [
+        "modeled_ground_exposure_seconds", "ground_attempted", "td_landed",
+        "sub_att", "rev",
     ]
-    f[fill] = f[fill].fillna(0.0)
+    missing = [c for c in required if c not in f.columns]
+    if missing:
+        raise RuntimeError(f"submission frame missing existing ground fields: {missing}")
+    f[required] = f[required].apply(pd.to_numeric, errors="coerce").fillna(0.0)
     f["has_ground_opportunity"] = f["modeled_ground_exposure_seconds"] > 0
     f["ground_share"] = f["modeled_ground_exposure_seconds"] / np.maximum(
         f["fight_elapsed_seconds"], EPS
@@ -106,38 +73,23 @@ def build_ground_frame() -> pd.DataFrame:
 
 
 def fit_exposure_scale(train: pd.DataFrame, exposure_col: str) -> float:
-    raw_mu = (
-        train["rate_matchup"].to_numpy(float)
-        * train[exposure_col].to_numpy(float)
-    )
+    raw_mu = train["rate_matchup"].to_numpy(float) * train[exposure_col].to_numpy(float)
     y = train["effective_submission_attempts"].to_numpy(float)
     return float(y.sum() / max(raw_mu.sum(), EPS))
 
 
 def evaluate(train: pd.DataFrame, test: pd.DataFrame, exposure_col: str) -> dict:
     scale = fit_exposure_scale(train, exposure_col)
-    mu = (
-        scale
-        * test["rate_matchup"].to_numpy(float)
-        * test[exposure_col].to_numpy(float)
-    )
-    return {
-        "scale": scale,
-        "exposure_col": exposure_col,
-        **metrics(test, mu),
-    }
+    mu = scale * test["rate_matchup"].to_numpy(float) * test[exposure_col].to_numpy(float)
+    return {"scale": scale, "exposure_col": exposure_col, **metrics(test, mu)}
 
 
 def bucket_table(test: pd.DataFrame, ground_scale: float) -> pd.DataFrame:
     x = test.copy()
     bins = [-1e-9, 0, 30, 60, 120, 240, np.inf]
     labels = ["0s", "1-30s", "31-60s", "61-120s", "121-240s", "240s+"]
-    x["ground_exposure_bucket"] = pd.cut(
-        x["modeled_ground_exposure_seconds"], bins=bins, labels=labels
-    )
-    x["ground_mu"] = (
-        ground_scale * x["rate_matchup"] * x["modeled_ground_exposure_seconds"]
-    )
+    x["ground_exposure_bucket"] = pd.cut(x["modeled_ground_exposure_seconds"], bins=bins, labels=labels)
+    x["ground_mu"] = ground_scale * x["rate_matchup"] * x["modeled_ground_exposure_seconds"]
     rows = []
     for label in labels:
         g = x[x["ground_exposure_bucket"].astype(str).eq(label)]
@@ -167,25 +119,14 @@ def main():
     total_model = evaluate(train, test, "fight_elapsed_seconds")
     ground_model = evaluate(train, test, "modeled_ground_exposure_seconds")
 
-    # Also test only fighter-fights where explicit ground opportunity occurred.
     train_ground = train[train.has_ground_opportunity].copy()
     test_ground = test[test.has_ground_opportunity].copy()
-    ground_conditional = evaluate(
-        train_ground, test_ground, "modeled_ground_exposure_seconds"
-    )
+    ground_conditional = evaluate(train_ground, test_ground, "modeled_ground_exposure_seconds")
 
     ground_scale = float(ground_model["scale"])
     test = test.copy()
-    test["mu_total_exposure"] = (
-        float(total_model["scale"])
-        * test["rate_matchup"]
-        * test["fight_elapsed_seconds"]
-    )
-    test["mu_ground_exposure"] = (
-        ground_scale
-        * test["rate_matchup"]
-        * test["modeled_ground_exposure_seconds"]
-    )
+    test["mu_total_exposure"] = float(total_model["scale"]) * test["rate_matchup"] * test["fight_elapsed_seconds"]
+    test["mu_ground_exposure"] = ground_scale * test["rate_matchup"] * test["modeled_ground_exposure_seconds"]
     test["ground_hazard_attempts_per_second"] = ground_scale * test["rate_matchup"]
     test["p_sub_per_4p4s_from_ground_model"] = 1.0 - np.exp(
         -test["ground_hazard_attempts_per_second"] * GROUND_ACTION_SECONDS
@@ -197,8 +138,7 @@ def main():
         "effective_submission_attempts", "fight_elapsed_seconds",
         "modeled_ground_exposure_seconds", "ground_share",
         "submission_tendency", "opp_submission_suppression", "rate_matchup",
-        "mu_total_exposure", "mu_ground_exposure",
-        "p_sub_per_4p4s_from_ground_model",
+        "mu_total_exposure", "mu_ground_exposure", "p_sub_per_4p4s_from_ground_model",
         "fighter_prior_attempts", "fighter_prior_exposure_seconds",
     ]
 
@@ -209,7 +149,7 @@ def main():
         "submission_conversion_changed": False,
         "prefight_signal_changed": False,
         "cutoff": str(CUTOFF.date()),
-        "ground_opportunity_definition": "existing modeled_ground_exposure_seconds from paired round stats",
+        "ground_opportunity_definition": "existing modeled_ground_exposure_seconds from aggregate_fights(build_paired_rounds())",
         "ground_action_seconds_for_interpretation_only": GROUND_ACTION_SECONDS,
         "train_rows": int(len(train)),
         "holdout_rows": int(len(test)),
