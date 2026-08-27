@@ -53,9 +53,6 @@ def metrics(df: pd.DataFrame, mu: np.ndarray) -> dict:
 
 
 def build_ground_frame() -> pd.DataFrame:
-    # build_frame() is based on aggregate_fights(build_paired_rounds()), and the
-    # aggregate already carries modeled_ground_exposure_seconds plus TD/ground/
-    # submission/reversal activity. Do not merge the paired frame a second time.
     f = build_frame().copy()
     required = [
         "modeled_ground_exposure_seconds", "ground_attempted", "td_landed",
@@ -166,12 +163,13 @@ def main():
     }
 
     OUTDIR.mkdir(parents=True, exist_ok=True)
-    (OUTDIR / "results.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+    payload = json.dumps(result, indent=2, default=str)
+    (OUTDIR / "results.json").write_text(payload, encoding="utf-8")
     test.to_csv(OUTDIR / "fighter_fight_holdout.csv", index=False)
     buckets.to_csv(OUTDIR / "ground_exposure_buckets.csv", index=False)
     allen[allen_cols].to_csv(OUTDIR / "allen_shahbazyan.csv", index=False)
 
-    print(json.dumps(result, indent=2))
+    print(payload)
     print("GROUND_EXPOSURE_BUCKETS")
     print(buckets.to_string(index=False))
 
