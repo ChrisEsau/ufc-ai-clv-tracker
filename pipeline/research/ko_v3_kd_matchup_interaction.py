@@ -27,6 +27,8 @@ PRIORS = (100.0, 200.0, 400.0)
 SEL_YEARS = tuple(range(2020, 2025))
 CONF_YEARS = (2025, 2026)
 
+# Workflow trigger marker: 2026-08-27
+
 
 def era_bucket(d: pd.Series) -> pd.Series:
     y = pd.to_datetime(d).dt.year
@@ -63,8 +65,6 @@ def add_features(train: pd.DataFrame, test: pd.DataFrame, decay: float, strength
         x["att_prior"]=x.att_prior.fillna(ga); x["def_prior"]=x.def_prior.fillna(gd)
         x["att_kd_create"]=(x[ac].astype(float)+strength*x.att_prior)/(x[ae].astype(float)+strength)
         x["def_kd_allow"]=(x[dc].astype(float)+strength*x.def_prior)/(x[de].astype(float)+strength)
-        # Center the interaction on training priors so it represents excess matchup vulnerability,
-        # not merely the division/era base rate already carried by the additive terms.
         x["kd_interaction"]=(x.att_kd_create-x.att_prior)*(x.def_kd_allow-x.def_prior)
         x["att_log_exp"]=np.log1p(x[ae].astype(float)); x["def_log_exp"]=np.log1p(x[de].astype(float))
         outs.append(x)
@@ -111,7 +111,7 @@ def main():
     frame=s1.build_matchup_frame(states).copy()
     frame["ko_win"]=frame.ko_win.astype(int)
 
-    rows=[]; configs=[]
+    rows=[]
     for decay in DECAYS:
       for strength in PRIORS:
         for year in sorted(y for y in frame.test_year.unique() if y>=2020):
@@ -138,14 +138,12 @@ def main():
     conf_i=pooled[(pooled.period=="confirmation")&(pooled.arm=="interaction")&(pooled.decay==d)&(pooled.prior_strength==s)].iloc[0]
     conf_a=pooled[(pooled.period=="confirmation")&(pooled.arm=="additive")&(pooled.decay==d)&(pooled.prior_strength==s)].iloc[0]
 
-    # Refit selected configuration on pre-2025 and create pooled 2025-26 calibration and coefficient audit.
     train=frame[frame.event_date < pd.Timestamp("2025-01-01")].copy(); test=frame[frame.test_year.isin(CONF_YEARS)].copy()
     tr,te=add_features(train,test,d,s)
     base=["att_kd_create","def_kd_allow","att_log_exp","def_log_exp","attacker_age","defender_age"]
-    p_a,_,_=fit_predict(tr,te,base); p_i,model,enc=fit_predict(tr,te,base+["kd_interaction"])
+    p_a,_,_=fit_predict(tr,te,base); p_i,_,_=fit_predict(tr,te,base+["kd_interaction"])
     calibration(te,p_a).to_csv(OUT/"calibration_additive.csv",index=False)
     calibration(te,p_i).to_csv(OUT/"calibration_interaction.csv",index=False)
-    # Top-decile precision / extreme false positives.
     def extras(p):
         y=te.ko_win.astype(int).to_numpy(); q=np.quantile(p,.9); top=p>=q
         return dict(top_decile_precision=float(y[top].mean()),extreme_fp_ge_050=int(((p>=.5)&(y==0)).sum()),
