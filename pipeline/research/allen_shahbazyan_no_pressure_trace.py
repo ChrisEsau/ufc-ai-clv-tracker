@@ -1,10 +1,13 @@
-"""Research-only Allen-Shahbazyan path 1 trace with dynamic pressure disabled.
+"""Research-only Allen-Shahbazyan path 1 trace with standing pressure and strike-context inflation disabled.
 
-Keeps the current research setup unchanged except for removing the standing
-pressure multiplier from strike intent. FSR standing pace and live tactical
-context remain active. RESET_RANGE, IMPROVE_POSITION and ADVANCE_POSITION remain
-removed, and the OOS-validated expected-control escape model remains active.
-Production code is unchanged.
+Keeps the current research setup unchanged except:
+- standing strike intent is anchored directly to the prefight FSR standing attempt rate;
+- dynamic pressure does not multiply standing strike rate;
+- live strike_context_factor does not multiply standing strike rate.
+
+TD and clinch live context remain active. RESET_RANGE, IMPROVE_POSITION and
+ADVANCE_POSITION remain removed, and the OOS-validated expected-control escape
+model remains active. Production code is unchanged.
 """
 from __future__ import annotations
 
@@ -16,18 +19,16 @@ from pipeline.simulation.event_clock_mc_v2.diagnostics import leavitt_brito_inte
 _original_standing_rates = intent_mod._standing_rates
 
 
-def _standing_rates_no_pressure_no_reset(state, actor, capabilities, context, priors, config):
-    rates, pressure = _original_standing_rates(
+def _standing_rates_raw_fsr_strike_no_reset(state, actor, capabilities, context, priors, config):
+    rates, _pressure = _original_standing_rates(
         state, actor, capabilities, context, priors, config
     )
     rates = dict(rates)
-    # Original strike rate contains pressure_factor = 0.75 + dynamic_pressure.
-    # Divide it back out so strike intent is anchored only by FSR pace and live
-    # tactical context. No-pressure means multiplier 1.0, not pressure=0.0
-    # (which would still impose a 0.75 multiplier).
-    pressure_factor = 0.75 + float(pressure)
-    rates[ActionFamily.STAND_ATTACK] = (
-        rates[ActionFamily.STAND_ATTACK] / max(pressure_factor, 1e-12)
+    # Remove BOTH dynamic pressure and live strike-context inflation from the
+    # standing strike clock. The strike rate is now exactly the prefight FSR
+    # standing-attempt prior. TD/clinch context are intentionally unchanged.
+    rates[ActionFamily.STAND_ATTACK] = max(
+        float(priors.standing_attempt_rate_15m), 1e-12
     )
     rates.pop(ActionFamily.RESET_RANGE, None)
     return rates, 0.0
@@ -35,10 +36,10 @@ def _standing_rates_no_pressure_no_reset(state, actor, capabilities, context, pr
 
 def main():
     # TraceBrain resolves this function from its defining module at runtime.
-    base_trace._standing_rates_no_reset = _standing_rates_no_pressure_no_reset
-    # The expected-control trace main resolves its imported function here and
-    # installs it into IntentRateBrain for the standing event clock.
-    target._standing_rates_no_reset = _standing_rates_no_pressure_no_reset
+    base_trace._standing_rates_no_reset = _standing_rates_raw_fsr_strike_no_reset
+    # Expected-control trace installs this function into IntentRateBrain for
+    # both the standing event clock and standing action chooser.
+    target._standing_rates_no_reset = _standing_rates_raw_fsr_strike_no_reset
     target.main()
 
 
