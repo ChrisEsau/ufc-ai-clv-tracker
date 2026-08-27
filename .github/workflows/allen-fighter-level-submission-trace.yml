@@ -1,0 +1,47 @@
+name: Allen Fighter-Level Submission Trace
+
+on:
+  push:
+    branches: [research/ko-system-v3-from-scratch-20260826]
+    paths:
+      - 'pipeline/research/allen_shahbazyan_fighter_level_submission_trace.py'
+      - '.github/workflows/allen-fighter-level-submission-trace.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  trace:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            pipeline
+            configs
+            config
+            data/master
+            data/fight_details
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install numpy pandas pyarrow scipy scikit-learn pyyaml joblib
+      - uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ github.token }}
+          repository: ChrisEsau/ufc-ai-clv-tracker
+          run-id: 32645607979
+      - name: Trace
+        run: |
+          set -euo pipefail
+          cp -a restored/canonical-weight-class-state/. data/
+          python -m pipeline.research.allen_shahbazyan_fighter_level_submission_trace | tee allen-fighter-level-submission-trace.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: allen-fighter-level-submission-trace-${{ github.run_id }}
+          path: allen-fighter-level-submission-trace.json
