@@ -1,7 +1,7 @@
-"""Research-only Allen-Shahbazyan same-seed trace using OOS-validated expected control duration.
+"""Research-only Allen-Shahbazyan new-path trace using OOS-validated expected control duration.
 
 Uses point-in-time EWM top retention x opponent control-allowed history to estimate
-expected round control duration conditional on >=1 TD landed.  Individual ground-spell
+expected round control duration conditional on >=1 TD landed. Individual ground-spell
 duration is sampled from the historical positive-TD control-duration ratio distribution,
 scaled to the matchup expectation. Escape attempts before the sampled duration fail;
 the first escape attempt at/after it succeeds.
@@ -18,7 +18,6 @@ import pandas as pd
 
 from pipeline.research.allen_shahbazyan_one_path_brain_trace_v1 import (
     FIGHT_ID,
-    PATH_ID,
     TraceBrain,
     _enum,
     _standing_rates_no_reset,
@@ -39,6 +38,7 @@ from pipeline.simulation.event_clock_mc_v2.mechanics.resolution import (
     TransitionRequest,
 )
 
+PATH_ID = 1
 DATA = Path("data/fight_details/ufc_round_stats.parquet")
 MIN_DURATION = 5.0
 MAX_DURATION = 300.0
@@ -175,7 +175,7 @@ def main():
 
     printable_model = {k: v for k, v in model.items()}
     payload = {
-        "study": "Allen-Shahbazyan same-seed OOS-validated expected-control escape trace",
+        "study": "Allen-Shahbazyan new path OOS-validated expected-control escape trace",
         "production_changed": False,
         "fight_id": FIGHT_ID,
         "path_id": PATH_ID,
