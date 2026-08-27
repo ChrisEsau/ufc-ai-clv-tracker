@@ -36,8 +36,8 @@ FIGHTER_B = "Alessandro Costa"
 
 def resolve_fight_id() -> str:
     master = pd.read_parquet(MASTER_PATH).copy()
-    master["event_date"] = pd.to_datetime(master["event_date"]).dt.normalize()
-    same_day = master.loc[master["event_date"].eq(EVENT_DATE)].copy()
+    master["date"] = pd.to_datetime(master["date"]).dt.normalize()
+    same_day = master.loc[master["date"].eq(EVENT_DATE)].copy()
     mask = (
         (same_day["r_name"].astype(str).eq(FIGHTER_A) & same_day["b_name"].astype(str).eq(FIGHTER_B))
         | (same_day["r_name"].astype(str).eq(FIGHTER_B) & same_day["b_name"].astype(str).eq(FIGHTER_A))
