@@ -99,7 +99,12 @@ def main():
     global RATE_PER_15_BY_SIDE
     RATE_PER_15_BY_SIDE = _build_submission_rates()
     base_trace.action_probabilities_with_intent_priors = _fighter_level_submission_probs
-    no_pressure.target._standing_rates_no_reset = _standing_rates_calibrated
+
+    # no_pressure.main() would overwrite target._standing_rates_no_reset back to
+    # the unscaled raw-FSR function. Install the calibrated function into the
+    # globals that no_pressure.main() itself resolves, so its own wiring step
+    # propagates the calibrated clock into TraceBrain and IntentRateBrain.
+    no_pressure._standing_rates_raw_fsr_strike_no_reset = _standing_rates_calibrated
     no_pressure.main()
 
 
