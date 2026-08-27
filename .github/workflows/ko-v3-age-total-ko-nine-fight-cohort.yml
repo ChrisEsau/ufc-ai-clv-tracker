@@ -15,7 +15,13 @@ permissions:
 
 jobs:
   run-cohort:
+    strategy:
+      fail-fast: false
+      matrix:
+        target_index: [0,1,2,3,4,5,6,7,8]
     runs-on: ubuntu-24.04
+    env:
+      TARGET_INDEX: ${{ matrix.target_index }}
     steps:
       - name: Sparse shallow checkout
         uses: actions/checkout@v4
@@ -44,18 +50,18 @@ jobs:
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
 
-      - name: Run 9-fight cohort
+      - name: Run cohort fight
         run: |
           set -euo pipefail
           cp -a restored/canonical-weight-class-state/. data/
           mkdir -p artifacts/ko-v3-nine-fight
           python -m pipeline.simulation.event_clock_mc_v2.diagnostics.ko_v3_age_total_ko_nine_fight_cohort \
-            | tee artifacts/ko-v3-nine-fight/result.txt
+            | tee artifacts/ko-v3-nine-fight/result-${TARGET_INDEX}.txt
 
       - name: Upload result
         uses: actions/upload-artifact@v4
         with:
-          name: ko-v3-age-total-ko-nine-fight-${{ github.run_id }}
-          path: artifacts/ko-v3-nine-fight/result.txt
+          name: ko-v3-age-total-ko-nine-fight-${{ matrix.target_index }}-${{ github.run_id }}
+          path: artifacts/ko-v3-nine-fight/result-${{ matrix.target_index }}.txt
           if-no-files-found: error
           retention-days: 30
