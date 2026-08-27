@@ -5,6 +5,7 @@ on:
     branches: [research/ko-system-v3-from-scratch-20260826]
     paths:
       - 'pipeline/research/allen_shahbazyan_one_path_brain_trace_v1.py'
+      - 'pipeline/research/allen_shahbazyan_control_time_escape_runner.py'
       - '.github/workflows/allen-shahbazyan-one-path-brain-trace-v2.yml'
   workflow_dispatch:
 
@@ -40,7 +41,7 @@ jobs:
         run: |
           set -euo pipefail
           cp -a restored/canonical-weight-class-state/. data/
-          python -m pipeline.research.allen_shahbazyan_one_path_brain_trace_v1 | tee allen-shahbazyan-one-path-brain-trace.json
+          python -m pipeline.research.allen_shahbazyan_control_time_escape_runner | tee allen-shahbazyan-one-path-brain-trace.json
       - uses: actions/upload-artifact@v4
         with:
           name: allen-shahbazyan-one-path-brain-trace-${{ github.run_id }}
