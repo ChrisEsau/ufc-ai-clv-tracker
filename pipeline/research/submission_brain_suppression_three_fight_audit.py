@@ -49,7 +49,8 @@ def main():
             "actions_per_path":r["actions_per_path"],
             "brain_rate_diagnostics":r["brain_rate_diagnostics"],
             "fsr_td_rate_15m":priors[side].takedown_attempt_rate_15m,
-            "fsr_submission_intent_prior":priors[side].submission_attempt_rate_15m,
+            "brain_submission_odds_multiplier":priors[side].submission_odds_multiplier,
+            "brain_ground_strike_odds_multiplier":priors[side].ground_strike_odds_multiplier,
         })
     print(json.dumps({"study":"submission Brain suppression three-fight audit","production_changed":False,"paths":PATHS,"rows":rows},indent=2,sort_keys=True))
 
