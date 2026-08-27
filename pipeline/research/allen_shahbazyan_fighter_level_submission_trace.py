@@ -31,6 +31,7 @@ GROUND_MEAN_DELAY_SECONDS = 4.0 * 1.10
 STANDING_RATE_SCALE = 0.37591617130457633
 REMOVED = {ActionFamily.IMPROVE_POSITION, ActionFamily.ADVANCE_POSITION}
 _original_probs = base_trace.action_probabilities_with_intent_priors
+_raw_fsr_standing_rates = no_pressure._standing_rates_raw_fsr_strike_no_reset
 RATE_PER_15_BY_SIDE: dict[Side, float] = {}
 
 
@@ -60,7 +61,7 @@ def _fighter_level_submission_probs(state, actor, capabilities, context, priors,
 
 
 def _standing_rates_calibrated(state, actor, capabilities, context, priors, config):
-    rates, pressure = no_pressure._standing_rates_raw_fsr_strike_no_reset(
+    rates, pressure = _raw_fsr_standing_rates(
         state, actor, capabilities, context, priors, config
     )
     rates = dict(rates)
@@ -100,10 +101,10 @@ def main():
     RATE_PER_15_BY_SIDE = _build_submission_rates()
     base_trace.action_probabilities_with_intent_priors = _fighter_level_submission_probs
 
-    # no_pressure.main() would overwrite target._standing_rates_no_reset back to
-    # the unscaled raw-FSR function. Install the calibrated function into the
-    # globals that no_pressure.main() itself resolves, so its own wiring step
-    # propagates the calibrated clock into TraceBrain and IntentRateBrain.
+    # no_pressure.main() installs its module-level standing-rate function into
+    # both TraceBrain and IntentRateBrain. Replace that module-level reference
+    # with the calibrated wrapper, while the wrapper itself retains a captured
+    # reference to the original raw-FSR implementation above.
     no_pressure._standing_rates_raw_fsr_strike_no_reset = _standing_rates_calibrated
     no_pressure.main()
 
