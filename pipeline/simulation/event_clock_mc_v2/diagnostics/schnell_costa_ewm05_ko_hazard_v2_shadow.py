@@ -1,9 +1,10 @@
-"""Schnell vs Costa pure-EWM 0.50 shadow using fitted KO hazard v2 model D.
+"""Schnell vs Costa mixed-recency shadow using fitted KO hazard v2 model D.
 
 Research only. Keeps Brain policy, strike generation, KD hazard, submissions,
-judging, and all non-KO mechanics frozen. Replaces only the direct per-landed-
-strike KO probability with coefficients fit chronologically in
-run_event2_ko_hazard_v2_study.py model D (+ defender KD resistance + durability).
+judging, and all non-KO mechanics frozen. Uses pure EWM 0.50 for the normal
+snapshot but overlays EWM 0.95 only for striking power and KD resistance.
+Replaces only the direct per-landed-strike KO probability with coefficients fit
+chronologically in run_event2_ko_hazard_v2_study.py model D.
 """
 from __future__ import annotations
 
@@ -28,9 +29,9 @@ from pipeline.simulation.event_clock_mc_v2.diagnostics import leavitt_brito_inte
 from pipeline.simulation.event_clock_mc_v2.mechanics import physiology as physiology_mod
 from pipeline.simulation.event_clock_mc_v2.mechanics import ko_kd_empirical as ko_mod
 
-# Manual workflow trigger after KD->hurt bridge commit 63674b2.
 PATHS = 500
-EWM_DECAY = 0.50
+BASE_EWM_DECAY = 0.50
+POWER_KD_EWM_DECAY = 0.95
 STANDING_ATTEMPT_SCALE = 0.25
 BACKUP_PATH = Path("data/fsr_v3/fsr_v3_prefight_snapshots.canonical_backup.parquet")
 MASTER_PATH = Path("data/master/ufc_master.parquet")
@@ -96,6 +97,32 @@ def resolve_fight_id() -> str:
     return str(rows.iloc[0]["fight_id"])
 
 
+def build_mixed_recency_snapshot(canonical: pd.DataFrame) -> pd.DataFrame:
+    """Pure EWM05 snapshot with only power and KD resistance replaced by EWM95."""
+    recency.EWM_CANONICAL_BLEND = 0.0
+
+    recency.EWM_DECAY = BASE_EWM_DECAY
+    ewm05 = recency.build_variant(canonical, "ewm")
+
+    recency.EWM_DECAY = POWER_KD_EWM_DECAY
+    ewm95 = recency.build_variant(canonical, "ewm")
+
+    keys = ["event_date", "fight_id", "fighter_id"]
+    overlay_cols = ["striking_power_v3", "knockdown_resistance_v3"]
+    overlay = ewm95[keys + overlay_cols].copy()
+    renamed = {c: f"{c}__ewm95" for c in overlay_cols}
+    overlay = overlay.rename(columns=renamed)
+
+    mixed = ewm05.merge(overlay, on=keys, how="left", validate="one_to_one")
+    for col in overlay_cols:
+        src = renamed[col]
+        if mixed[src].isna().any():
+            raise RuntimeError(f"EWM95 overlay missing values for {col}")
+        mixed[col] = mixed[src]
+        mixed = mixed.drop(columns=[src])
+    return mixed.sort_values(keys).reset_index(drop=True)
+
+
 def main() -> None:
     fight_id = resolve_fight_id()
     canonical = pd.read_parquet(FSR_V3_PREFIGHT_SNAPSHOTS_PATH).copy()
@@ -103,15 +130,13 @@ def main() -> None:
     canonical["fight_id"] = canonical["fight_id"].astype(str)
     canonical["fighter_id"] = canonical["fighter_id"].astype(str)
 
-    recency.EWM_DECAY = EWM_DECAY
-    recency.EWM_CANONICAL_BLEND = 0.0
-    ewm = recency.build_variant(canonical, "ewm")
+    mixed = build_mixed_recency_snapshot(canonical)
 
     shutil.copy2(FSR_V3_PREFIGHT_SNAPSHOTS_PATH, BACKUP_PATH)
     original_standing_rates = intent_mod._standing_rates
     original_empirical_resolver = physiology_mod.resolve_empirical_ko_kd
     try:
-        ewm.to_parquet(FSR_V3_PREFIGHT_SNAPSHOTS_PATH, index=False)
+        mixed.to_parquet(FSR_V3_PREFIGHT_SNAPSHOTS_PATH, index=False)
         pressure_mod.FIGHT_ID = fight_id
         pressure_mod.PATHS = PATHS
         intent_mod.FIGHT_ID = fight_id
@@ -173,14 +198,16 @@ def main() -> None:
             }
 
         payload = {
-            "diagnostic": "Schnell-Costa pure EWM 0.50 + fitted KO hazard v2 model D",
+            "diagnostic": "Schnell-Costa EWM05 base + EWM95 power/KD resistance + fitted KO hazard v2 model D",
             "fight_id": fight_id,
             "paths": PATHS,
-            "ewm_decay": EWM_DECAY,
+            "base_ewm_decay": BASE_EWM_DECAY,
+            "power_kd_ewm_decay": POWER_KD_EWM_DECAY,
             "canonical_blend": 0.0,
             "standing_attempt_scale": STANDING_ATTEMPT_SCALE,
             "seed_set": SEED_SET_VERSION,
             "production_changed": False,
+            "power_kd_recency_only_changed": True,
             "ko_changed_only": True,
             "kd_hazard_changed": False,
             "ko_v2_coefficients": {
@@ -195,7 +222,7 @@ def main() -> None:
             "mechanics_audit": mechanics_audit,
             "fighter_methods": fighter_methods,
         }
-        print("SCHNELL_COSTA_EWM05_KO_HAZARD_V2_SHADOW")
+        print("SCHNELL_COSTA_EWM05_BASE_EWM95_POWER_KD_KO_HAZARD_V2_SHADOW")
         print(json.dumps(payload, indent=2, sort_keys=True))
     finally:
         physiology_mod.resolve_empirical_ko_kd = original_empirical_resolver
