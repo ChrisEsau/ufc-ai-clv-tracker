@@ -46,6 +46,7 @@ jobs:
 
       - name: Run Schnell Costa EWM05 with KO hazard v2
         run: |
+          set -euo pipefail
           cp -a restored/canonical-weight-class-state/. data/
           mkdir -p artifacts/schnell-costa-ewm05-ko-v2
           python -m pipeline.simulation.event_clock_mc_v2.diagnostics.schnell_costa_ewm05_ko_hazard_v2_shadow \
