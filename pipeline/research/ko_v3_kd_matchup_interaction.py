@@ -107,6 +107,10 @@ def side_discrimination(frame,p):
 def main():
     OUT.mkdir(parents=True,exist_ok=True)
     ff,audit=s1.load_raw_fighter_fights(ROUND_STATS_PATH,MASTER_PATH)
+    # Stage 1 predates this study and did not include 0.80 in its default EWM grid.
+    # Extend the research-only history grid before building states so the requested
+    # EWM80 features are computed from the same leakage-safe sequential history.
+    s1.EWM_DECAYS = tuple(sorted(set(s1.EWM_DECAYS + (0.80,))))
     states=s1.build_prefight_states(ff)
     frame=s1.build_matchup_frame(states).copy()
     frame["ko_win"]=frame.ko_win.astype(int)
