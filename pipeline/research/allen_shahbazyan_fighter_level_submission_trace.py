@@ -8,8 +8,11 @@ that fighter-level rate is converted to one position-invariant per-ground-action
 probability using the structural 4.4-second ground action clock. Remaining legal
 ground actions retain their relative Brain probabilities.
 
-This is an architecture diagnostic, not a claim that the absolute ground-time
-hazard is fully calibrated. Production code is unchanged.
+Standing timing uses the leakage-safe pre-2025 fitted population scale of
+0.37591617130457633 applied to the exact FSR matchup standing rate, with the
+previous pressure and live strike-context multipliers disabled.
+
+This is an architecture diagnostic. Production code is unchanged.
 """
 from __future__ import annotations
 
@@ -25,6 +28,7 @@ from pipeline.simulation.event_clock_mc_v2.causal.state import Phase, Side
 from pipeline.simulation.event_clock_mc_v2.diagnostics import leavitt_brito_dynamic_pressure_shadow as pressure_mod
 
 GROUND_MEAN_DELAY_SECONDS = 4.0 * 1.10
+STANDING_RATE_SCALE = 0.37591617130457633
 REMOVED = {ActionFamily.IMPROVE_POSITION, ActionFamily.ADVANCE_POSITION}
 _original_probs = base_trace.action_probabilities_with_intent_priors
 RATE_PER_15_BY_SIDE: dict[Side, float] = {}
@@ -55,6 +59,17 @@ def _fighter_level_submission_probs(state, actor, capabilities, context, priors,
     return tuple(out)
 
 
+def _standing_rates_calibrated(state, actor, capabilities, context, priors, config):
+    rates, pressure = no_pressure._standing_rates_raw_fsr_strike_no_reset(
+        state, actor, capabilities, context, priors, config
+    )
+    rates = dict(rates)
+    rates[ActionFamily.STAND_ATTACK] = max(
+        float(rates[ActionFamily.STAND_ATTACK]) * STANDING_RATE_SCALE, 1e-12
+    )
+    return rates, pressure
+
+
 def _build_submission_rates():
     pressure_mod.FIGHT_ID = base_trace.FIGHT_ID
     fight, _, _, _, _ = pressure_mod.build_setup()
@@ -72,6 +87,7 @@ def _build_submission_rates():
         Side.BLUE: float(scale * float(by_id[blue_id].rate_matchup) * 900.0),
     }
     names = {Side.RED: str(fight.r_name), Side.BLUE: str(fight.b_name)}
+    print("STANDING_RATE_SCALE", STANDING_RATE_SCALE)
     print("FIGHTER_LEVEL_SUBMISSION_RATES_PER_15", {names[s]: rates[s] for s in Side})
     print("FIGHTER_LEVEL_SUBMISSION_P_PER_GROUND_ACTION", {
         names[s]: 1.0 - math.exp(-(rates[s] / 900.0) * GROUND_MEAN_DELAY_SECONDS) for s in Side
@@ -83,7 +99,7 @@ def main():
     global RATE_PER_15_BY_SIDE
     RATE_PER_15_BY_SIDE = _build_submission_rates()
     base_trace.action_probabilities_with_intent_priors = _fighter_level_submission_probs
-    no_pressure.target._standing_rates_no_reset = no_pressure._standing_rates_raw_fsr_strike_no_reset
+    no_pressure.target._standing_rates_no_reset = _standing_rates_calibrated
     no_pressure.main()
 
 
