@@ -5,11 +5,12 @@ Research only. No production files are changed.
 Key behavior:
 - a KD NEVER finishes on the same strike;
 - every KD starts a persistent hurt/follow-up sequence;
-- the validated post-KD sequence probability is sampled once when the KD occurs;
-- if that sequence is destined to finish, the next landed strike by the KD scorer
+- two-thirds of KDs are sampled as finishing sequences for this calibration check;
+- a sampled finishing sequence cannot be erased by a generic recovery/reset event;
+- if a sequence is destined to finish, the next landed strike by the KD scorer
   ends the fight by KO/TKO;
-- the hurt state is cleared by a clear defensive recovery event (landing back,
-  successful clinch/takedown/escape/reversal/disengage, reset range) or a new round;
+- non-finishing hurt sequences may clear by a clear defensive recovery event or
+  a new round;
 - Brain action selection sees own_hurt/opponent_hurt=1 while the sequence is active;
 - there is no clock half-life, no old FSR power/durability/KD-resistance input,
   and no legacy acute-vulnerability increment.
@@ -28,6 +29,8 @@ from pipeline.simulation.event_clock_mc_v2.mechanics import ko_kd_empirical as k
 from pipeline.simulation.event_clock_mc_v2.mechanics.resolution import ActionOutcome
 from pipeline.simulation.event_clock_mc_v2.mechanics.resolver import resolve_action
 from pipeline.simulation.event_clock_mc_v2.diagnostics import schnell_costa_ko_v3_from_scratch_shadow as base
+
+POST_KD_FINISH_SEQUENCE_PROBABILITY = 2.0 / 3.0
 
 RECOVERY_TRANSITION_ACTIONS = frozenset({
     ActionFamily.CLINCH_ENTRY,
@@ -91,12 +94,12 @@ class HurtFollowupResolver:
         prior = int(target.knockdowns_suffered)
         self.landed[attacker_side] += 1
 
-        # A sampled finishing sequence resolves only on a later landed follow-up.
+        # A designated finishing sequence resolves on the attacker's next landed strike.
         if self.active[attacker_side] and self.will_finish[attacker_side]:
             self.followup_finishes[attacker_side] += 1
             self._clear(attacker_side)
             return ko_mod.EmpiricalKOKDResult(
-                float(h.post_kd_sequence_per_kd), True, 0.0, False, prior
+                POST_KD_FINISH_SEQUENCE_PROBABILITY, True, 0.0, False, prior
             )
 
         p_direct = float(h.direct_finish_per_landed)
@@ -115,7 +118,7 @@ class HurtFollowupResolver:
         self.active[attacker_side] = True
         self.start_round[attacker_side] = int(state.round_number)
         self.will_finish[attacker_side] = bool(
-            rng.random() < float(h.post_kd_sequence_per_kd)
+            rng.random() < POST_KD_FINISH_SEQUENCE_PROBABILITY
         )
         if self.will_finish[attacker_side]:
             self.sequence_finish_intents[attacker_side] += 1
@@ -123,9 +126,13 @@ class HurtFollowupResolver:
         return ko_mod.EmpiricalKOKDResult(p_direct, False, p_kd, True, prior)
 
     def observe_resolution(self, event, resolution):
-        """Clear hurt only when the hurt fighter demonstrates a recovery event."""
+        """Clear only non-finishing hurt sequences on a demonstrated recovery event."""
         hurt_attacker = event.actor.opponent
         if not self.active[hurt_attacker]:
+            return
+        # Once a KD has been sampled into the finishing class, preserve that
+        # sequence until the KD scorer lands the follow-up or the round ends.
+        if self.will_finish[hurt_attacker]:
             return
         recovered = False
         if event.action_family in STRIKES and resolution.outcome is ActionOutcome.LANDED:
@@ -239,19 +246,21 @@ def main():
                 "fighter_id": h.fighter_id,
                 "kd_per_landed": h.kd_per_landed,
                 "direct_finish_per_landed": h.direct_finish_per_landed,
-                "post_kd_sequence_per_kd": h.post_kd_sequence_per_kd,
+                "fitted_post_kd_sequence_per_kd": h.post_kd_sequence_per_kd,
+                "shadow_post_kd_finish_sequence_probability": POST_KD_FINISH_SEQUENCE_PROBABILITY,
                 "resolver_counts": resolver.summary(side),
             }
 
         payload = {
-            "diagnostic": "Schnell-Costa KO V3 persistent hurt follow-up shadow",
+            "diagnostic": "Schnell-Costa KO V3 persistent hurt follow-up shadow — two-thirds KD finish calibration",
             "fight_id": fight_id,
             "paths": base.PATHS,
             "production_changed": False,
             "ko_v3_uses_fsr_physical_traits": False,
             "old_acute_hurt_disabled": True,
             "clock_hurt_decay_used": False,
-            "hurt_state_model": "event-driven until recovery/reset/new round",
+            "hurt_state_model": "event-driven; two-thirds of KDs designated persistent finishing sequences",
+            "post_kd_finish_sequence_probability": POST_KD_FINISH_SEQUENCE_PROBABILITY,
             "kd_can_finish_same_strike": False,
             "brain_action_selection_sees_hurt": True,
             "brain_timing_cadence_changed_by_hurt": False,
