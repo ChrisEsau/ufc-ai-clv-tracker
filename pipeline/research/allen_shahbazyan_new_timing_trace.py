@@ -26,6 +26,10 @@ from pipeline.simulation.event_clock_mc_v2.causal.events import ActionFamily
 from pipeline.simulation.event_clock_mc_v2.causal.state import Side
 from pipeline.simulation.event_clock_mc_v2.diagnostics import leavitt_brito_dynamic_pressure_shadow as pressure_mod
 from pipeline.simulation.event_clock_mc_v2.diagnostics.stage8_structural_population import ROUND_STATS
+from pipeline.simulation.event_clock_mc_v2.fsr_v3_adapter import (
+    historical_fighter_rows,
+    load_prefight_snapshots,
+)
 
 TD_SCALE = 1.0
 CLINCH_SCALE = 2.349514563106796
@@ -39,6 +43,40 @@ def _new_timing_rates(state, actor, capabilities, context, priors, config):
         ActionFamily.TAKEDOWN_ENTRY: max(float(priors.takedown_attempt_rate_15m) * TD_SCALE, EPS),
         ActionFamily.CLINCH_ENTRY: max(float(CLINCH_RATE_BY_SIDE[actor]), EPS),
     }, 0.0
+
+
+def _prefight_td_decomposition():
+    pressure_mod.FIGHT_ID = base_trace.FIGHT_ID
+    fight, _, priors, _, _ = pressure_mod.build_setup()
+    target_date = getattr(fight, "date", None) or getattr(fight, "event_date", None)
+    if target_date is None:
+        raise RuntimeError("fight date unavailable")
+    snapshots = load_prefight_snapshots()
+    red, blue = historical_fighter_rows(
+        snapshots,
+        event_date=target_date,
+        fight_id=base_trace.FIGHT_ID,
+        fighter_ids=(str(fight.r_id), str(fight.b_id)),
+    )
+    payload = {}
+    for side, name, own, opp in (
+        (Side.RED, str(fight.r_name), red, blue),
+        (Side.BLUE, str(fight.b_name), blue, red),
+    ):
+        tendency = float(own["takedown_tendency"])
+        opponent_suppression = float(opp["takedown_suppression"])
+        effective = tendency * opponent_suppression
+        payload[name] = {
+            "fighter_id": str(own["fighter_id"]),
+            "raw_fsr_takedown_tendency_15m": tendency,
+            "opponent_takedown_suppression_multiplier": opponent_suppression,
+            "matchup_effective_td_rate_15m_product": effective,
+            "brain_prior_td_rate_15m": float(priors[side].takedown_attempt_rate_15m),
+            "own_takedown_suppression_multiplier": float(own["takedown_suppression"]),
+            "opponent_raw_fsr_takedown_tendency_15m": float(opp["takedown_tendency"]),
+        }
+    print("TD_PREFIGHT_DECOMPOSITION", payload)
+    return payload
 
 
 def _build_clinch_rates():
@@ -73,6 +111,7 @@ def _build_clinch_rates():
 
 def main():
     global CLINCH_RATE_BY_SIDE
+    _prefight_td_decomposition()
     CLINCH_RATE_BY_SIDE = _build_clinch_rates()
 
     # Install fighter-level submission intent first.
