@@ -1,0 +1,47 @@
+name: Clinch Entry Rate Simulation OOS Calibration
+
+on:
+  push:
+    branches:
+      - research/ko-system-v3-from-scratch-20260826
+    paths:
+      - 'pipeline/research/clinch_entry_rate_simulation_oos_calibration.py'
+      - '.github/workflows/clinch-entry-rate-simulation-oos-calibration.yml'
+  workflow_dispatch:
+
+jobs:
+  calibrate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            pipeline
+            configs
+            config
+            data/master
+            data/fight_details
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install numpy pandas pyarrow scipy scikit-learn pyyaml joblib
+      - uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ChrisEsau/ufc-ai-clv-tracker
+          run-id: 32645607979
+      - name: Calibrate proxy-driven clinch entry rate
+        run: |
+          set -euo pipefail
+          cp -a restored/canonical-weight-class-state/. data/
+          python -m pipeline.research.clinch_entry_rate_simulation_oos_calibration | tee clinch-entry-rate-simulation-oos-calibration.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: clinch-entry-rate-simulation-oos-${{ github.run_id }}
+          path: |
+            clinch-entry-rate-simulation-oos-calibration.json
+            data/research/clinch_entry_rate_simulation_oos/results.json
+            data/research/clinch_entry_rate_simulation_oos/fight_level_results.csv
