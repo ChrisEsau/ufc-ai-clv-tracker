@@ -1,0 +1,53 @@
+name: Submission Attempt Ground Opportunity OOS Diagnostic
+
+on:
+  push:
+    branches:
+      - research/ko-system-v3-from-scratch-20260826
+    paths:
+      - 'pipeline/research/submission_attempt_ground_opportunity_oos_diagnostic.py'
+      - '.github/workflows/submission-attempt-ground-opportunity-oos-diagnostic.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            pipeline
+            configs
+            config
+            data/master
+            data/fight_details
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install numpy pandas pyarrow scipy scikit-learn pyyaml joblib
+      - uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ github.token }}
+          repository: ChrisEsau/ufc-ai-clv-tracker
+          run-id: 32645607979
+      - name: Run submission ground opportunity OOS diagnostic
+        run: |
+          set -euo pipefail
+          cp -a restored/canonical-weight-class-state/. data/
+          python -m pipeline.research.submission_attempt_ground_opportunity_oos_diagnostic | tee submission-attempt-ground-opportunity-oos-diagnostic.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: submission-ground-opportunity-${{ github.run_id }}
+          path: |
+            submission-attempt-ground-opportunity-oos-diagnostic.txt
+            data/research/submission_attempt_ground_opportunity_oos_diagnostic/results.json
+            data/research/submission_attempt_ground_opportunity_oos_diagnostic/fighter_fight_holdout.csv
+            data/research/submission_attempt_ground_opportunity_oos_diagnostic/ground_exposure_buckets.csv
+            data/research/submission_attempt_ground_opportunity_oos_diagnostic/allen_shahbazyan.csv
