@@ -1,0 +1,43 @@
+name: KO V3 Early R1 KO Signal
+
+on:
+  push:
+    branches:
+      - research/ko-system-v3-from-scratch-20260826
+    paths:
+      - 'pipeline/research/ko_v3_early_r1_ko_signal.py'
+      - '.github/workflows/ko-v3-early-r1-ko-signal.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  early-r1-ko-signal:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            pipeline
+            data/master
+            data/fight_details
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: python -m pip install numpy pandas pyarrow scipy scikit-learn
+      - name: Run study
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/ko-v3-early-r1
+          python -m pipeline.research.ko_v3_early_r1_ko_signal | tee artifacts/ko-v3-early-r1/result.txt
+          cp -a data/research/ko_v3_early_r1_ko_signal/. artifacts/ko-v3-early-r1/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ko-v3-early-r1-${{ github.run_id }}
+          path: artifacts/ko-v3-early-r1
+          if-no-files-found: error
+          retention-days: 30
