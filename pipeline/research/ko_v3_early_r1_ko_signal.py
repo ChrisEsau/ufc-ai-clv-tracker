@@ -2,6 +2,9 @@
 
 Research only. Uses raw master/round data and the validated Stage-2 KO V3
 histories. No FSR traits and no MC mechanics changes.
+
+This file is intentionally standalone so the early-finish hypothesis can be
+validated without changing any simulator code.
 """
 from __future__ import annotations
 
@@ -128,7 +131,7 @@ def main():
     ecols=[c for c in early.columns if c.startswith("early_ewm95_") or c.startswith("opp_early_ewm95_")]
     frame=frame.merge(early[["event_date","fight_id","fighter_id"]+ecols], on=["event_date","fight_id","fighter_id"], how="left", validate="one_to_one")
 
-    rows=[]; pred_rows=[]
+    rows=[]
     years=sorted(y for y in frame.test_year.unique() if y>=2020)
     for year in years:
         train=frame[frame.event_date < pd.Timestamp(f"{year}-01-01")].copy()
@@ -149,8 +152,6 @@ def main():
     byyear=pd.DataFrame(rows)
     pooled=[]
     for years_name, years_set in (("selection",SEL_YEARS),("confirmation",CONF_YEARS)):
-        # Reconstruct pooled score by weighting yearly metrics is invalid for log loss/AUC,
-        # so select using weighted yearly log loss; confirmation reports weighted yearly metrics.
         z=byyear[byyear.test_year.isin(years_set)].copy()
         for arm,g in z.groupby("arm"):
             w=g.n.to_numpy(float); pooled.append({
