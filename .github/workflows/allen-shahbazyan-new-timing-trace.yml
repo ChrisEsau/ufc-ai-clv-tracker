@@ -1,0 +1,82 @@
+name: Allen Shahbazyan New Timing Trace
+
+on:
+  push:
+    branches:
+      - research/ko-system-v3-from-scratch-20260826
+    paths:
+      - 'pipeline/research/allen_shahbazyan_new_timing_trace.py'
+      - '.github/workflows/allen-shahbazyan-new-timing-trace.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  trace:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            pipeline
+            configs
+            config
+            data/master
+            data/fight_details
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install numpy pandas pyarrow scipy scikit-learn pyyaml joblib
+      - uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ github.token }}
+          repository: ChrisEsau/ufc-ai-clv-tracker
+          run-id: 32645607979
+      - name: Run Allen-Shahbazyan new timing trace
+        run: |
+          set -euo pipefail
+          cp -a restored/canonical-weight-class-state/. data/
+          python -m pipeline.research.allen_shahbazyan_new_timing_trace | tee allen-shahbazyan-new-timing-trace.txt
+          python - <<'PY'
+          import json, pathlib, pandas as pd
+          p = pathlib.Path('allen-shahbazyan-new-timing-trace.txt')
+          text = p.read_text()
+          marker = '\n{\n  "study"'
+          i = text.find(marker)
+          if i < 0:
+              raise RuntimeError('trace JSON marker not found')
+          payload = json.loads(text[i+1:])
+          rows = []
+          for ev in payload.get('events', []):
+              rows.append({
+                  'fight_id': payload.get('fight_id'),
+                  'path_id': payload.get('path_id'),
+                  'seed': payload.get('seed'),
+                  'event_timestamp': ev.get('event_timestamp'),
+                  'actor_name': ev.get('actor_name'),
+                  'phase': ev.get('phase'),
+                  'selected_action': ev.get('selected_action'),
+                  'outcome': ev.get('outcome'),
+                  'resulting_phase': ev.get('resulting_phase'),
+                  'resulting_controller': ev.get('resulting_controller'),
+                  'submission_attempt': ev.get('submission_attempt'),
+                  'submission_probability': ev.get('submission_probability'),
+                  'submission_success': ev.get('submission_success'),
+                  'knockdown': ev.get('knockdown'),
+                  'ko_tko': ev.get('ko_tko'),
+              })
+          pd.DataFrame(rows).to_csv('allen-shahbazyan-new-timing-events.csv', index=False)
+          pathlib.Path('allen-shahbazyan-new-timing.json').write_text(json.dumps(payload, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: allen-shahbazyan-new-timing-${{ github.run_id }}
+          path: |
+            allen-shahbazyan-new-timing-trace.txt
+            allen-shahbazyan-new-timing.json
+            allen-shahbazyan-new-timing-events.csv
