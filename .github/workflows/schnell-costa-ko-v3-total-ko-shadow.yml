@@ -59,3 +59,5 @@ jobs:
           path: artifacts/schnell-costa-ko-v3-total-ko-shadow/result.txt
           if-no-files-found: error
           retention-days: 30
+
+# Trigger age-adjusted total-KO shadow rerun.
