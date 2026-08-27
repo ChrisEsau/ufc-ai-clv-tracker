@@ -22,7 +22,7 @@ OUTDIR = Path("data/research/allen_shahbazyan_ground_opportunity_submission_500"
 
 
 def main():
-    # Install the exact same research-only stack used by the one-path shadow.
+    # Install the exact same research-only stack used by the successful one-path shadow.
     sub_mod.RATE_PER_15_BY_SIDE = sub_mod._build_submission_rates()
     base_trace.action_probabilities_with_intent_priors = shadow._ground_opportunity_submission_probs
     timing._prefight_td_decomposition()
@@ -35,19 +35,24 @@ def main():
     fight, inputs, priors, horizon, cfg = pressure_mod.build_setup()
     names = {Side.RED: str(fight.r_name), Side.BLUE: str(fight.b_name)}
     target_date = getattr(fight, "date", None) or getattr(fight, "event_date", None)
-    control_model = base_trace._historical_control_model(target_date, names)
+    if target_date is None:
+        raise RuntimeError("fight date unavailable")
+
+    # Match the successful one-path stack: empirical expected-control duration
+    # threshold resolver, not the older Weibull helper.
+    control_model = timing.target._expected_control_model(target_date, names)
 
     results = []
     counts = Counter()
     for path_id in range(PATHS):
         brain = base_trace.TraceBrain(inputs, priors, horizon)
-        resolver = base_trace.ControlTimeEscapeResolver(control_model)
+        seed = derive_path_seed(SEED_SET_VERSION, base_trace.FIGHT_ID, path_id)
+        resolver = timing.target.ExpectedControlEscapeResolver(control_model, seed)
         funcs = EngineFunctions(
             timing_sampler=brain.timing_sampler,
             action_chooser=brain.action_chooser,
             mechanics_resolver=resolver,
         )
-        seed = derive_path_seed(SEED_SET_VERSION, base_trace.FIGHT_ID, path_id)
         out = run_causal_path(inputs, seed=seed, horizon_seconds=horizon, config=cfg, functions=funcs)
         if out.termination is None:
             raise RuntimeError(f"path {path_id} ended without termination")
@@ -69,6 +74,7 @@ def main():
         })
 
     rows = []
+    methods = sorted({m for (_, m) in counts})
     for fighter in (names[Side.RED], names[Side.BLUE]):
         wins = sum(v for (w, _), v in counts.items() if w == fighter)
         row = {
@@ -76,7 +82,7 @@ def main():
             "wins": wins,
             "ml_probability": wins / PATHS,
         }
-        for method in ("decision", "ko_tko", "submission"):
+        for method in methods:
             row[f"{method}_wins"] = counts[(fighter, method)]
             row[f"{method}_probability"] = counts[(fighter, method)] / PATHS
         rows.append(row)
@@ -93,6 +99,7 @@ def main():
         "fight_id": base_trace.FIGHT_ID,
         "seed_set": SEED_SET_VERSION,
         "ground_hazard_multiplier": shadow.GROUND_HAZARD_MULTIPLIER,
+        "methods_observed": methods,
         "summary": rows,
         "mean_submission_attempts": {
             names[Side.RED]: float(paths["allen_submission_attempts"].mean()),
