@@ -1,0 +1,47 @@
+name: KO V3 KD Matchup Interaction
+
+on:
+  push:
+    branches:
+      - research/ko-system-v3-from-scratch-20260826
+    paths:
+      - 'pipeline/research/ko_v3_kd_matchup_interaction.py'
+      - '.github/workflows/ko-v3-kd-matchup-interaction.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  kd-matchup-interaction:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            pipeline
+            data/master
+            data/fight_details
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: python -m pip install numpy pandas pyarrow scipy scikit-learn
+
+      - name: Run KD matchup interaction study
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/ko-v3-kd-matchup-interaction
+          python -m pipeline.research.ko_v3_kd_matchup_interaction \
+            | tee artifacts/ko-v3-kd-matchup-interaction/result.txt
+          cp -a data/research/ko_v3_kd_matchup_interaction/. artifacts/ko-v3-kd-matchup-interaction/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ko-v3-kd-matchup-interaction-${{ github.run_id }}
+          path: artifacts/ko-v3-kd-matchup-interaction
+          if-no-files-found: error
+          retention-days: 30
