@@ -1,0 +1,50 @@
+name: Standing Clock Simulation OOS Calibration
+
+on:
+  push:
+    branches: [research/ko-system-v3-from-scratch-20260826]
+    paths:
+      - 'pipeline/research/standing_clock_simulation_oos_calibration.py'
+      - '.github/workflows/standing-clock-simulation-oos-calibration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  calibrate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            pipeline
+            configs
+            config
+            data/master
+            data/fight_details
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install numpy pandas pyarrow scipy scikit-learn pyyaml joblib
+      - uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ github.token }}
+          repository: ChrisEsau/ufc-ai-clv-tracker
+          run-id: 32645607979
+      - name: Calibrate
+        run: |
+          set -euo pipefail
+          cp -a restored/canonical-weight-class-state/. data/
+          python -m pipeline.research.standing_clock_simulation_oos_calibration | tee standing-clock-simulation-oos-calibration.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: standing-clock-simulation-oos-${{ github.run_id }}
+          path: |
+            standing-clock-simulation-oos-calibration.json
+            data/research/standing_clock_simulation_oos/results.json
+            data/research/standing_clock_simulation_oos/fight_level_results.csv
