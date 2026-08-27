@@ -1,212 +1,87 @@
-"""Validate population-prior shrinkage for the simple all-KO-per-sig hazard.
+"""Validate shrinkage + neutral-preserving matchup blends for all-KO-per-sig.
 
-Research only. Production simulator mechanics are unchanged.
+Research only. Production unchanged. Market never used.
 
-Architecture held fixed:
-    attacker history = prior all KO/TKO wins / prior sig strikes landed
-    defender history = opponent prior all KO/TKO losses / prior sig strikes absorbed
-    combined per-landed hazard = 1 - (1-attacker_rate)*(1-defender_rate)
-    fight KO probability = 1 - (1-combined_per_landed)**current_fight_sig_landed
-
-Only the rate estimator changes. Fighter histories are shrunk toward a population
-KO-per-significant-strike prior computed strictly from fights BEFORE each event date:
-    shrunk_rate = (events + S * population_rate) / (exposure + S)
-where S is measured in significant-strike exposure units.
+The previous literal union blend, 1-(1-attacker)*(1-defender), double-counts the
+population prior: when attacker=defender=p0 it returns about 2*p0. This study keeps
+the same chronological attacker/defender histories and shrinkage, but tests only
+symmetric blends that return p0 when both inputs equal p0.
 
 Selection: 2020-2024. Confirmation: 2025-2026.
-Market data are never used.
 """
 from __future__ import annotations
-
 import json
 from pathlib import Path
-
 import numpy as np
 import pandas as pd
 from sklearn.metrics import brier_score_loss, log_loss, roc_auc_score
-
 from pipeline.common.paths import MASTER_PATH, ROUND_STATS_PATH
 from pipeline.research import ko_v3_from_scratch_stage1 as s1
 
-OUT = Path("data/research/ko_v3_all_ko_per_sig_validation")
-SELECTION_YEARS = tuple(range(2020, 2025))
-CONFIRMATION_YEARS = (2025, 2026)
-PRIOR_STRENGTHS = (0.0, 25.0, 50.0, 100.0, 200.0, 400.0)
+OUT=Path("data/research/ko_v3_all_ko_per_sig_validation")
+SELECTION_YEARS=tuple(range(2020,2025)); CONFIRMATION_YEARS=(2025,2026)
+PRIOR_STRENGTHS=(25.0,50.0,100.0,200.0,400.0)
+BLENDS=("arithmetic_mean","logit_mean","logit_deviation_sum")
 
+def sigmoid(z): return 1/(1+np.exp(-np.clip(np.asarray(z,float),-30,30)))
+def logit(p):
+    p=np.clip(np.asarray(p,float),1e-9,1-1e-9); return np.log(p/(1-p))
 
-def combine(a, d):
-    a = np.clip(np.asarray(a, float), 0.0, 1.0)
-    d = np.clip(np.asarray(d, float), 0.0, 1.0)
-    return 1.0 - (1.0 - a) * (1.0 - d)
+def blend(att,deff,p0,kind):
+    att=np.asarray(att,float); deff=np.asarray(deff,float); p0=np.asarray(p0,float)
+    if kind=="arithmetic_mean": return 0.5*(att+deff)
+    if kind=="logit_mean": return sigmoid(0.5*(logit(att)+logit(deff)))
+    if kind=="logit_deviation_sum": return sigmoid(logit(p0)+(logit(att)-logit(p0))+(logit(deff)-logit(p0)))
+    if kind=="literal_union": return 1-(1-att)*(1-deff)
+    raise ValueError(kind)
 
+def add_strict_population_prior(frame):
+    x=frame.copy(); x["event_date"]=pd.to_datetime(x.event_date).dt.normalize()
+    d=x.groupby("event_date",as_index=False).agg(day_ko=("ko_win","sum"),day_sig=("sig_landed","sum")).sort_values("event_date")
+    d["pk"]=d.day_ko.cumsum().shift(1,fill_value=0.0); d["pn"]=d.day_sig.cumsum().shift(1,fill_value=0.0)
+    d["population_ko_per_sig"]=np.divide(d.pk,d.pn,out=np.full(len(d),np.nan),where=d.pn>0)
+    return x.merge(d[["event_date","population_ko_per_sig","pk","pn"]],on="event_date",how="left",validate="many_to_one")
 
-def add_strict_population_prior(frame: pd.DataFrame) -> pd.DataFrame:
-    """Add global KO/sig prior using only rows from dates strictly before each row."""
-    x = frame.copy()
-    x["event_date"] = pd.to_datetime(x["event_date"]).dt.normalize()
-    daily = (
-        x.groupby("event_date", as_index=False)
-        .agg(day_ko_wins=("ko_win", "sum"), day_sig_landed=("sig_landed", "sum"))
-        .sort_values("event_date")
-    )
-    daily["prior_population_ko_wins"] = daily["day_ko_wins"].cumsum().shift(1, fill_value=0.0)
-    daily["prior_population_sig_landed"] = daily["day_sig_landed"].cumsum().shift(1, fill_value=0.0)
-    daily["population_ko_per_sig"] = np.divide(
-        daily["prior_population_ko_wins"].to_numpy(float),
-        daily["prior_population_sig_landed"].to_numpy(float),
-        out=np.full(len(daily), np.nan, dtype=float),
-        where=daily["prior_population_sig_landed"].to_numpy(float) > 0,
-    )
-    return x.merge(
-        daily[["event_date", "population_ko_per_sig", "prior_population_ko_wins", "prior_population_sig_landed"]],
-        on="event_date",
-        how="left",
-        validate="many_to_one",
-    )
+def shrunk(k,n,p0,s):
+    return (np.asarray(k,float)+s*np.asarray(p0,float))/(np.asarray(n,float)+s)
 
+def metrics(g,p):
+    y=g.ko_win.astype(int).to_numpy(); p=np.clip(np.asarray(p,float),1e-9,1-1e-9)
+    return {"rows":int(len(g)),"ko_wins":int(y.sum()),"actual_ko_win_rate":float(y.mean()),"mean_predicted_ko_probability":float(p.mean()),"calibration_bias":float(p.mean()-y.mean()),"auc":float(roc_auc_score(y,p)),"brier":float(brier_score_loss(y,p)),"log_loss":float(log_loss(y,p,labels=[0,1])),"extreme_false_positives_ge_50":int(((p>=.5)&(y==0)).sum()),"top_decile_precision":float(y[p>=np.quantile(p,.9)].mean()),"mean_p_actual_ko_winners":float(p[y==1].mean()),"mean_p_non_ko":float(p[y==0].mean())}
 
-def shrunk_rate(k, n, p0, strength):
-    k = np.asarray(k, float)
-    n = np.asarray(n, float)
-    p0 = np.asarray(p0, float)
-    s = float(strength)
-    if s == 0.0:
-        return np.divide(k, n, out=p0.copy(), where=n > 0)
-    return (k + s * p0) / (n + s)
-
-
-def metrics(g: pd.DataFrame, p_fight: np.ndarray) -> dict:
-    y = g["ko_win"].astype(int).to_numpy()
-    p = np.clip(np.asarray(p_fight, float), 1e-9, 1.0 - 1e-9)
-    return {
-        "rows": int(len(g)),
-        "ko_wins": int(y.sum()),
-        "actual_ko_win_rate": float(y.mean()),
-        "mean_predicted_ko_probability": float(p.mean()),
-        "calibration_bias": float(p.mean() - y.mean()),
-        "auc": float(roc_auc_score(y, p)) if np.unique(y).size == 2 else np.nan,
-        "brier": float(brier_score_loss(y, p)),
-        "log_loss": float(log_loss(y, p, labels=[0, 1])),
-        "top_decile_precision": float(y[p >= np.quantile(p, 0.9)].mean()) if len(g) else np.nan,
-        "extreme_false_positives_ge_50": int(((p >= 0.50) & (y == 0)).sum()),
-        "mean_p_actual_ko_winners": float(p[y == 1].mean()) if y.sum() else np.nan,
-        "mean_p_non_ko": float(p[y == 0].mean()) if (y == 0).sum() else np.nan,
-    }
-
-
-def add_candidate(frame: pd.DataFrame, strength: float) -> pd.DataFrame:
-    x = frame.copy()
-    p0 = x["population_ko_per_sig"].to_numpy(float)
-    att = shrunk_rate(x["prior_ko_wins"], x["prior_sig_landed"], p0, strength)
-    deff = shrunk_rate(x["opp_prior_ko_losses"], x["opp_prior_sig_absorbed"], p0, strength)
-    valid = np.isfinite(att) & np.isfinite(deff) & x["sig_landed"].gt(0).to_numpy()
-    x = x.loc[valid].copy()
-    att = att[valid]
-    deff = deff[valid]
-    p_sig = combine(att, deff)
-    n = x["sig_landed"].to_numpy(float)
-    p_fight = 1.0 - np.power(1.0 - p_sig, n)
-    x["att_ko_per_sig"] = att
-    x["def_ko_loss_per_sig"] = deff
-    x["combined_per_sig"] = p_sig
-    x["p_fight"] = p_fight
-    x["prior_strength"] = float(strength)
+def candidate(frame,s,kind):
+    x=frame.copy(); p0=x.population_ko_per_sig.to_numpy(float)
+    a=shrunk(x.prior_ko_wins,x.prior_sig_landed,p0,s); d=shrunk(x.opp_prior_ko_losses,x.opp_prior_sig_absorbed,p0,s)
+    valid=np.isfinite(a)&np.isfinite(d)&np.isfinite(p0)&x.sig_landed.gt(0).to_numpy(); x=x.loc[valid].copy(); a=a[valid]; d=d[valid]; p0=p0[valid]
+    ps=np.clip(blend(a,d,p0,kind),0,1); pf=1-np.power(1-ps,x.sig_landed.to_numpy(float))
+    x["att_ko_per_sig"]=a; x["def_ko_loss_per_sig"]=d; x["combined_per_sig"]=ps; x["p_fight"]=pf; x["prior_strength"]=s; x["blend"]=kind
     return x
 
-
-def score_variant(x: pd.DataFrame, years) -> dict:
-    g = x[x.test_year.isin(years)].copy()
-    return metrics(g, g["p_fight"].to_numpy(float))
-
-
-def correct_side(frame: pd.DataFrame, years) -> dict:
-    g = frame[frame.test_year.isin(years)].copy()
-    rows = []
-    for _, b in g.groupby("fight_id"):
-        if len(b) != 2 or not bool(b.ko_win.any()):
-            continue
-        winner = b[b.ko_win].iloc[0]
-        loser = b[~b.ko_win].iloc[0]
-        rows.append(float(winner.p_fight) > float(loser.p_fight))
-    return {"ko_fights": len(rows), "correct_side_rate": float(np.mean(rows)) if rows else np.nan}
-
-
-def zero_hazard_audit(frame: pd.DataFrame, years) -> dict:
-    g = frame[frame.test_year.isin(years)].copy()
-    return {
-        "rows": int(len(g)),
-        "zero_per_sig_hazards": int((g.combined_per_sig <= 0.0).sum()),
-        "zero_fight_probabilities": int((g.p_fight <= 0.0).sum()),
-    }
-
-
-def population_baseline(frame: pd.DataFrame, years) -> dict:
-    g = frame[frame.test_year.isin(years) & frame.sig_landed.gt(0) & frame.population_ko_per_sig.notna()].copy()
-    p0 = g.population_ko_per_sig.to_numpy(float)
-    p = 1.0 - np.power(1.0 - p0, g.sig_landed.to_numpy(float))
-    return metrics(g, p)
-
+def score(x,years):
+    g=x[x.test_year.isin(years)]; return metrics(g,g.p_fight)
+def correct_side(x,years):
+    g=x[x.test_year.isin(years)]; vals=[]
+    for _,b in g.groupby("fight_id"):
+        if len(b)==2 and bool(b.ko_win.any()):
+            w=b[b.ko_win].iloc[0]; l=b[~b.ko_win].iloc[0]; vals.append(float(w.p_fight)>float(l.p_fight))
+    return {"ko_fights":len(vals),"correct_side_rate":float(np.mean(vals))}
+def zeros(x,years):
+    g=x[x.test_year.isin(years)]; return {"rows":int(len(g)),"zero_per_sig_hazards":int((g.combined_per_sig<=0).sum()),"zero_fight_probabilities":int((g.p_fight<=0).sum())}
+def population(frame,years):
+    g=frame[frame.test_year.isin(years)&frame.sig_landed.gt(0)&frame.population_ko_per_sig.notna()]; p=1-np.power(1-g.population_ko_per_sig.to_numpy(float),g.sig_landed.to_numpy(float)); return metrics(g,p)
+def literal_raw(frame,years):
+    x=frame.copy(); p0=x.population_ko_per_sig.to_numpy(float)
+    a=np.divide(x.prior_ko_wins,x.prior_sig_landed,out=p0.copy(),where=x.prior_sig_landed.to_numpy(float)>0)
+    d=np.divide(x.opp_prior_ko_losses,x.opp_prior_sig_absorbed,out=p0.copy(),where=x.opp_prior_sig_absorbed.to_numpy(float)>0)
+    valid=np.isfinite(a)&np.isfinite(d)&x.sig_landed.gt(0).to_numpy(); x=x.loc[valid].copy(); ps=blend(a[valid],d[valid],p0[valid],"literal_union"); x["combined_per_sig"]=ps; x["p_fight"]=1-np.power(1-ps,x.sig_landed.to_numpy(float)); return {"metrics":score(x,years),"correct_side":correct_side(x,years),"zero_audit":zeros(x,years)}
 
 def main():
-    OUT.mkdir(parents=True, exist_ok=True)
-    ff, audit = s1.load_raw_fighter_fights(ROUND_STATS_PATH, MASTER_PATH)
-    states = s1.build_prefight_states(ff)
-    frame = add_strict_population_prior(s1.build_matchup_frame(states))
-
-    variants = {}
-    predictions = []
-    for strength in PRIOR_STRENGTHS:
-        x = add_candidate(frame, strength)
-        key = f"s{int(strength)}"
-        variants[key] = {
-            "prior_strength_sig_strikes": float(strength),
-            "selection": score_variant(x, SELECTION_YEARS),
-            "confirmation": score_variant(x, CONFIRMATION_YEARS),
-            "selection_correct_side": correct_side(x, SELECTION_YEARS),
-            "confirmation_correct_side": correct_side(x, CONFIRMATION_YEARS),
-            "selection_zero_hazard_audit": zero_hazard_audit(x, SELECTION_YEARS),
-            "confirmation_zero_hazard_audit": zero_hazard_audit(x, CONFIRMATION_YEARS),
-        }
-        predictions.append(x[[
-            "event_date", "fight_id", "fighter_id", "fighter_name", "opponent_id",
-            "ko_win", "sig_landed", "population_ko_per_sig", "prior_strength",
-            "att_ko_per_sig", "def_ko_loss_per_sig", "combined_per_sig", "p_fight",
-        ]])
-
-    selected_key = min(variants, key=lambda k: variants[k]["selection"]["log_loss"])
-    selected = variants[selected_key]
-    raw = variants["s0"]
-    report = {
-        "study": "population-prior shrinkage of all KO/TKO per-sig attacker + defender hazard",
-        "architecture_changed": False,
-        "same_date_delayed_fighter_histories": True,
-        "population_prior_strictly_before_event_date": True,
-        "market_used": False,
-        "changes_mc": False,
-        "selection_years": list(SELECTION_YEARS),
-        "confirmation_years": list(CONFIRMATION_YEARS),
-        "prior_strength_grid_sig_strikes": list(PRIOR_STRENGTHS),
-        "selection_rule": "minimum selection log_loss",
-        "selected": {"key": selected_key, **selected},
-        "selected_vs_raw_confirmation": {
-            "log_loss_delta": float(selected["confirmation"]["log_loss"] - raw["confirmation"]["log_loss"]),
-            "brier_delta": float(selected["confirmation"]["brier"] - raw["confirmation"]["brier"]),
-            "auc_delta": float(selected["confirmation"]["auc"] - raw["confirmation"]["auc"]),
-            "calibration_bias_abs_delta": float(abs(selected["confirmation"]["calibration_bias"]) - abs(raw["confirmation"]["calibration_bias"])),
-            "correct_side_delta": float(selected["confirmation_correct_side"]["correct_side_rate"] - raw["confirmation_correct_side"]["correct_side_rate"]),
-        },
-        "population": {
-            "selection": population_baseline(frame, SELECTION_YEARS),
-            "confirmation": population_baseline(frame, CONFIRMATION_YEARS),
-        },
-        "variants": variants,
-        "raw_audit": audit,
-    }
-    (OUT / "report.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
-    pd.concat(predictions, ignore_index=True).to_csv(OUT / "shrinkage_predictions.csv", index=False)
-    print("KO V3 ALL-KO PER-SIG SHRINKAGE VALIDATION")
-    print(json.dumps(report, indent=2, sort_keys=True))
-
-
-if __name__ == "__main__":
-    main()
+    OUT.mkdir(parents=True,exist_ok=True); ff,audit=s1.load_raw_fighter_fights(ROUND_STATS_PATH,MASTER_PATH); frame=add_strict_population_prior(s1.build_matchup_frame(s1.build_prefight_states(ff)))
+    variants={}; preds=[]
+    for kind in BLENDS:
+        for s in PRIOR_STRENGTHS:
+            x=candidate(frame,s,kind); key=f"{kind}_s{int(s)}"; variants[key]={"blend":kind,"prior_strength_sig_strikes":s,"selection":score(x,SELECTION_YEARS),"confirmation":score(x,CONFIRMATION_YEARS),"selection_correct_side":correct_side(x,SELECTION_YEARS),"confirmation_correct_side":correct_side(x,CONFIRMATION_YEARS),"selection_zero_hazard_audit":zeros(x,SELECTION_YEARS),"confirmation_zero_hazard_audit":zeros(x,CONFIRMATION_YEARS)}; preds.append(x[["event_date","fight_id","fighter_id","fighter_name","opponent_id","ko_win","sig_landed","population_ko_per_sig","prior_strength","blend","att_ko_per_sig","def_ko_loss_per_sig","combined_per_sig","p_fight"]])
+    selkey=min(variants,key=lambda k:variants[k]["selection"]["log_loss"]); sel=variants[selkey]
+    report={"study":"neutral-preserving shrinkage/blend for all KO/TKO per sig","market_used":False,"changes_mc":False,"same_date_delayed_fighter_histories":True,"population_prior_strictly_before_event_date":True,"selection_years":list(SELECTION_YEARS),"confirmation_years":list(CONFIRMATION_YEARS),"prior_strength_grid_sig_strikes":list(PRIOR_STRENGTHS),"blend_grid":list(BLENDS),"selection_rule":"minimum 2020-2024 log_loss","selected":{"key":selkey,**sel},"literal_union_raw":{"selection":literal_raw(frame,SELECTION_YEARS),"confirmation":literal_raw(frame,CONFIRMATION_YEARS)},"population":{"selection":population(frame,SELECTION_YEARS),"confirmation":population(frame,CONFIRMATION_YEARS)},"variants":variants,"raw_audit":audit}
+    (OUT/"report.json").write_text(json.dumps(report,indent=2,sort_keys=True)+"\n"); pd.concat(preds,ignore_index=True).to_csv(OUT/"shrinkage_predictions.csv",index=False); print("KO V3 NEUTRAL-PRESERVING SHRINKAGE VALIDATION"); print(json.dumps(report,indent=2,sort_keys=True))
+if __name__=="__main__": main()
