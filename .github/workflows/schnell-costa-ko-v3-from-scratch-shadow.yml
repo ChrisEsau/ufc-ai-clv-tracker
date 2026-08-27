@@ -1,4 +1,4 @@
-name: Schnell Costa KO V3 From Scratch Shadow
+name: Schnell Costa KO V3 Hurt Followup Shadow
 
 on:
   push:
@@ -7,6 +7,7 @@ on:
     paths:
       - 'pipeline/research/ko_v3_from_scratch_shadow.py'
       - 'pipeline/simulation/event_clock_mc_v2/diagnostics/schnell_costa_ko_v3_from_scratch_shadow.py'
+      - 'pipeline/simulation/event_clock_mc_v2/diagnostics/schnell_costa_ko_v3_hurt_followup_shadow.py'
       - '.github/workflows/schnell-costa-ko-v3-from-scratch-shadow.yml'
   workflow_dispatch:
 
@@ -15,7 +16,7 @@ permissions:
   actions: read
 
 jobs:
-  schnell-costa-ko-v3-shadow:
+  schnell-costa-ko-v3-hurt-followup-shadow:
     runs-on: ubuntu-24.04
     steps:
       - name: Sparse shallow checkout
@@ -45,18 +46,18 @@ jobs:
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
 
-      - name: Run Schnell Costa KO V3 shadow
+      - name: Run Schnell Costa KO V3 hurt follow-up shadow
         run: |
           set -euo pipefail
           cp -a restored/canonical-weight-class-state/. data/
-          mkdir -p artifacts/schnell-costa-ko-v3-shadow
-          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.schnell_costa_ko_v3_from_scratch_shadow \
-            | tee artifacts/schnell-costa-ko-v3-shadow/result.txt
+          mkdir -p artifacts/schnell-costa-ko-v3-hurt-followup-shadow
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.schnell_costa_ko_v3_hurt_followup_shadow \
+            | tee artifacts/schnell-costa-ko-v3-hurt-followup-shadow/result.txt
 
       - name: Upload result
         uses: actions/upload-artifact@v4
         with:
-          name: schnell-costa-ko-v3-shadow-${{ github.run_id }}
-          path: artifacts/schnell-costa-ko-v3-shadow/result.txt
+          name: schnell-costa-ko-v3-hurt-followup-shadow-${{ github.run_id }}
+          path: artifacts/schnell-costa-ko-v3-hurt-followup-shadow/result.txt
           if-no-files-found: error
           retention-days: 30
