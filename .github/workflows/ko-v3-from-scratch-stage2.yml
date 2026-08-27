@@ -1,0 +1,44 @@
+name: KO V3 From Scratch Stage 2
+
+on:
+  push:
+    branches:
+      - research/ko-system-v3-from-scratch-20260826
+    paths:
+      - 'pipeline/research/ko_v3_from_scratch_stage1.py'
+      - 'pipeline/research/ko_v3_from_scratch_stage2.py'
+      - '.github/workflows/ko-v3-from-scratch-stage2.yml'
+  workflow_dispatch:
+
+jobs:
+  ko-v3-stage2:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Sparse shallow checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            pipeline
+            data/master
+            data/fight_details
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: python -m pip install numpy pandas pyarrow scipy scikit-learn
+      - name: Run KO V3 Stage 2
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/ko-v3-from-scratch-stage2
+          python -m pipeline.research.ko_v3_from_scratch_stage2 \
+            --out-dir artifacts/ko-v3-from-scratch-stage2 \
+            | tee artifacts/ko-v3-from-scratch-stage2/result.txt
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: ko-v3-from-scratch-stage2-${{ github.run_id }}
+          path: artifacts/ko-v3-from-scratch-stage2
+          if-no-files-found: error
+          retention-days: 30
