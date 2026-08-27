@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# Research-only schema audit for timing exposure reconstruction.
 import json
 import pandas as pd
 import numpy as np
@@ -30,7 +31,6 @@ def main():
     if method_col:
         candidates = candidates[candidates[method_col].astype(str).str.contains("Decision", case=False, na=False)]
 
-    # Sample old, middle, and recent decisions with round-stat coverage.
     available = set(rounds[fc])
     candidates = candidates[candidates.fight_id.isin(available)]
     picks = []
