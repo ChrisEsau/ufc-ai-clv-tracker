@@ -35,6 +35,12 @@ ACTION_COSTS = {
     ActionFamily.REVERSAL: 2.5,
 }
 
+# Research-only bridge from the empirical Event2 KD result into the Brain's
+# existing decaying hurt context.  Legacy Stage 10 already assigned 0.5 acute
+# vulnerability on a KD; reusing that established state magnitude lets a KD
+# activate follow-up behavior without changing the empirical KO/KD hazards.
+EMPIRICAL_KD_HURT_ACUTE_INCREMENT = 0.5
+
 
 def resolve_landed_strike(
     event,
@@ -128,6 +134,14 @@ def resolve_strike_consequence(
         landed=True,
         knockdown_probability=result.kd_probability,
         knockdown=result.knockdown,
+        # Event2 previously incremented the cumulative KD counter but left
+        # acute_vulnerability at zero.  Brain derives own_hurt/opponent_hurt
+        # from acute_vulnerability, so it could not react to a knockdown.
+        # Feed the KD into that existing state; advance_physiology already
+        # decays it with a 30-second half-life.
+        acute_increment=(
+            EMPIRICAL_KD_HURT_ACUTE_INCREMENT if result.knockdown else 0.0
+        ),
         termination=(
             FightTerminationRequest(event.actor, FinishMethod.KO_TKO)
             if result.ko_tko
