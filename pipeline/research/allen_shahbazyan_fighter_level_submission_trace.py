@@ -36,8 +36,6 @@ def _fighter_level_submission_probs(state, actor, capabilities, context, priors,
         return tuple(rows)
 
     rate_15 = float(RATE_PER_15_BY_SIDE[actor])
-    # Poisson probability of >=1 submission-attempt event during one structural
-    # ground action-clock interval. Same fighter-level value whether top/bottom.
     p_sub = float(np.clip(1.0 - math.exp(-(rate_15 / 900.0) * GROUND_MEAN_DELAY_SECONDS), 1e-6, 0.95))
 
     kept_non_sub = [r for r in rows if r.action_family not in REMOVED and r.action_family is not ActionFamily.SUBMISSION_ATTACK]
@@ -85,7 +83,7 @@ def main():
     global RATE_PER_15_BY_SIDE
     RATE_PER_15_BY_SIDE = _build_submission_rates()
     base_trace.action_probabilities_with_intent_priors = _fighter_level_submission_probs
-    no_pressure.target._standing_rates_no_reset = no_pressure._standing_rates_no_pressure_no_reset
+    no_pressure.target._standing_rates_no_reset = no_pressure._standing_rates_raw_fsr_strike_no_reset
     no_pressure.main()
 
 
