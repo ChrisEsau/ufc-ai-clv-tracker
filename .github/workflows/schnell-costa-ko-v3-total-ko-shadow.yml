@@ -1,0 +1,61 @@
+name: Schnell Costa KO V3 Total KO Shadow
+
+on:
+  push:
+    branches:
+      - research/ko-system-v3-from-scratch-20260826
+    paths:
+      - 'pipeline/simulation/event_clock_mc_v2/diagnostics/schnell_costa_ko_v3_total_ko_shadow.py'
+      - '.github/workflows/schnell-costa-ko-v3-total-ko-shadow.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  total-ko-shadow:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Sparse shallow checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            pipeline
+            configs
+            config
+            data/master
+            data/fight_details
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: python -m pip install numpy pandas pyarrow pyyaml scipy scikit-learn joblib
+
+      - name: Restore canonical historical Brain MC inputs
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ github.token }}
+          repository: ChrisEsau/ufc-ai-clv-tracker
+          run-id: 32645607979
+
+      - name: Run total KO shadow
+        run: |
+          set -euo pipefail
+          cp -a restored/canonical-weight-class-state/. data/
+          mkdir -p artifacts/schnell-costa-ko-v3-total-ko-shadow
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.schnell_costa_ko_v3_total_ko_shadow \
+            | tee artifacts/schnell-costa-ko-v3-total-ko-shadow/result.txt
+
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: schnell-costa-ko-v3-total-ko-shadow-${{ github.run_id }}
+          path: artifacts/schnell-costa-ko-v3-total-ko-shadow/result.txt
+          if-no-files-found: error
+          retention-days: 30
