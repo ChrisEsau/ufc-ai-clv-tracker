@@ -6,6 +6,7 @@ on:
       - research/schnell-costa-ewm05-sixway-20260826
     paths:
       - 'pipeline/research/run_event2_ko_hazard_v2_study.py'
+      - 'pipeline/research/run_event2_ko_hazard_v2_study_fast.py'
       - '.github/workflows/event2-ko-hazard-v2-study.yml'
   workflow_dispatch:
 
@@ -45,7 +46,7 @@ jobs:
       - name: Run grouped-strike KO hazard study
         run: |
           cp -a restored/canonical-weight-class-state/. data/
-          python -m pipeline.research.run_event2_ko_hazard_v2_study \
+          python -m pipeline.research.run_event2_ko_hazard_v2_study_fast \
             --bootstrap 500 \
             --output-dir data/research/event2_ko_hazard_v2 \
             | tee event2-ko-hazard-v2.log
