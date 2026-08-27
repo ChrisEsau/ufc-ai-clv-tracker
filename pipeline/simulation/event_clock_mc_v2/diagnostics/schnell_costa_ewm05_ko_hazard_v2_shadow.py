@@ -130,13 +130,15 @@ def main() -> None:
         funcs = EngineFunctions(timing_sampler=brain.timing_sampler, action_chooser=brain.action_chooser)
 
         names = {Side.RED: str(fight.r_name), Side.BLUE: str(fight.b_name)}
+        red_mechanics = inputs.fighter(Side.RED).mechanics
+        blue_mechanics = inputs.fighter(Side.BLUE).mechanics
         prefight_ko = {
-            names[Side.RED]: ko_v2_probability(inputs.fighter(Side.RED), inputs.fighter(Side.BLUE), prior_defender_kds=0),
-            names[Side.BLUE]: ko_v2_probability(inputs.fighter(Side.BLUE), inputs.fighter(Side.RED), prior_defender_kds=0),
+            names[Side.RED]: ko_v2_probability(red_mechanics, blue_mechanics, prior_defender_kds=0),
+            names[Side.BLUE]: ko_v2_probability(blue_mechanics, red_mechanics, prior_defender_kds=0),
         }
         mechanics_audit = {}
         for side in (Side.RED, Side.BLUE):
-            f = inputs.fighter(side)
+            f = inputs.fighter(side).mechanics
             mechanics_audit[names[side]] = {
                 "striking_power": f.striking_power,
                 "damage_durability": f.damage_durability,
