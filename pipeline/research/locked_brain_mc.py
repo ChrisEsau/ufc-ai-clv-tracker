@@ -5,31 +5,19 @@ explicitly approves an exception. Do not create or execute one-off runners,
 ad-hoc fight scripts, alternate harnesses, wrapper runners, or workflow
 monkeypatch runners.
 
-This file contains the locked implementation itself. There is no second harness
-underneath it.
-
-Brain event generation uses one global 1-second availability clock. Standing
-rates come from ``locked_standing_rates``. Ground uses only top ground strike,
-top/bottom submission and bottom escape. CONTROL, BOTTOM_STRIKE, REVERSAL,
-DISENGAGE, IMPROVE_POSITION and ADVANCE_POSITION are removed from the locked
-research ground action set.
-
-CLI examples:
-
-    python -m pipeline.research.locked_brain_mc --fight-id 419fff06f338f5c6 --paths 500
-    python -m pipeline.research.locked_brain_mc --fight-id 419fff06f338f5c6 --paths 1
-
---paths 1 automatically writes event_report.json and event_report.csv with the
-full Brain action distribution plus mechanic probabilities/outcomes for each
-event. Single-path mode skips only the legacy multi-path aggregate scorer after
-the causal path has been generated; mechanics, seeds, KO/KD, submissions, and
-event capture remain unchanged.
+Brain event generation uses one global 1-second availability clock. Rate controls
+action availability once; simultaneous available actions are resolved by a neutral
+uniform collision tie-break. The one-path diagnostic emits both selected-event
+reports and every-second tick reports, then reconciles them to the frozen
+independent KO/TKO survival clock so the reported termination is the actual final
+MC outcome rather than the underlying pre-KO Brain path.
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
+import math
 import shutil
 import subprocess
 import tempfile
@@ -49,13 +37,6 @@ from pipeline.simulation.event_clock_mc_v2.causal.events import ActionFamily
 from pipeline.simulation.event_clock_mc_v2.causal.state import Phase, Side
 from pipeline.simulation.event_clock_mc_v2.engine import EngineFunctions
 from pipeline.simulation.event_clock_mc_v2.diagnostics import leavitt_brito_intent_rate_shadow as intent_mod
-from pipeline.simulation.event_clock_mc_v2.mechanics.resolver import resolve_action
-from pipeline.simulation.event_clock_mc_v2.mechanics.resolution import (
-    ActionOutcome,
-    ActionResolution,
-    TransitionKind,
-    TransitionRequest,
-)
 
 APPROVED_ENTRY_POINT = "pipeline.research.locked_brain_mc"
 RUN_POLICY = (
@@ -99,11 +80,8 @@ def _parse_args(argv=None):
     parser = argparse.ArgumentParser(
         description="Run the single approved fight-agnostic locked Brain MC harness"
     )
-    parser.add_argument("--fight-id", required=True, help="target fight_id from repository master/prefight data")
-    parser.add_argument(
-        "--paths", type=int, default=LOCKED_PATHS,
-        help=f"number of matched-seed paths (default: {LOCKED_PATHS}); --paths 1 automatically emits event_report.json/csv",
-    )
+    parser.add_argument("--fight-id", required=True)
+    parser.add_argument("--paths", type=int, default=LOCKED_PATHS)
     args = parser.parse_args(argv)
     args.fight_id = str(args.fight_id).strip()
     if not args.fight_id:
@@ -146,7 +124,10 @@ def assert_locked_sources() -> dict:
         blobs[path] = actual
         if actual != expected:
             failures.append(f"blob drift: {path}: expected {expected}, got {actual}")
-    drift = subprocess.run(["git", "diff", "--quiet", LOCKED_BASE_COMMIT, "--", *LOCKED_CORE_PATHS], check=False).returncode
+    drift = subprocess.run(
+        ["git", "diff", "--quiet", LOCKED_BASE_COMMIT, "--", *LOCKED_CORE_PATHS],
+        check=False,
+    ).returncode
     if drift != 0:
         changed = _git("diff", "--name-only", LOCKED_BASE_COMMIT, "--", *LOCKED_CORE_PATHS)
         failures.append("core source drift from locked base commit:\n" + changed)
@@ -167,67 +148,8 @@ def locked_standing_rates(state, actor, capabilities, context, priors, config):
             float(priors.takedown_attempt_rate_15m) * float(timing.TD_SCALE),
             EPS,
         ),
-        ActionFamily.CLINCH_ENTRY: max(
-            float(timing.CLINCH_RATE_BY_SIDE[actor]),
-            EPS,
-        ),
+        ActionFamily.CLINCH_ENTRY: max(float(timing.CLINCH_RATE_BY_SIDE[actor]), EPS),
     }, 0.0
-
-
-def _round_budget_resolver_class(original_cls):
-    class RoundBudgetEscapeResolver(original_cls):
-        def __init__(self, model, seed):
-            super().__init__(model, seed)
-            self.round_budgets = {}
-            self.round_consumed = {}
-        def _budget_key(self, state):
-            return (int(state.round_number), state.ground_controller.value)
-        def _ensure_budget(self, state):
-            key = self._budget_key(state)
-            if key not in self.round_budgets:
-                ratio = float(self.rng.choice(self.model["ratios"]))
-                expected = self._expected(state.ground_controller)
-                budget = float(np.clip(expected * ratio, timing.target.MIN_DURATION, timing.target.MAX_DURATION))
-                self.round_budgets[key] = budget
-                self.round_consumed.setdefault(key, 0.0)
-            return self.round_budgets[key]
-        def _spell(self, state):
-            key = (int(state.round_number), state.ground_controller.value, round(float(state.phase_started_at), 9))
-            if key not in self.spells:
-                budget_key = self._budget_key(state)
-                budget = self._ensure_budget(state)
-                consumed = float(self.round_consumed.get(budget_key, 0.0))
-                remaining = max(0.0, budget - consumed)
-                self.spells[key] = {
-                    "round": int(state.round_number), "controller": state.ground_controller.value,
-                    "phase_started_at": float(state.phase_started_at),
-                    "expected_control_seconds": self._expected(state.ground_controller),
-                    "round_control_budget_seconds": budget,
-                    "round_control_consumed_before_spell_seconds": consumed,
-                    "sampled_escape_threshold_seconds": remaining, "round_budget_semantics": True,
-                }
-            return self.spells[key]
-        def _consume_spell(self, state, elapsed):
-            key = self._budget_key(state)
-            budget = self._ensure_budget(state)
-            prior = float(self.round_consumed.get(key, 0.0))
-            self.round_consumed[key] = min(budget, prior + max(float(elapsed), 0.0))
-        def __call__(self, event, state, inputs, rng, placeholders, ko_kd_rng=None, submission_rng=None):
-            if event.action_family is ActionFamily.ESCAPE_STAND:
-                spell = self._spell(state)
-                elapsed = float(state.fight_time_seconds - state.phase_started_at)
-                threshold = float(spell["sampled_escape_threshold_seconds"])
-                succeeded = elapsed >= threshold
-                self.escape_checks.append({"timestamp": float(event.timestamp_seconds), "actor": event.actor.value, "controller": state.ground_controller.value, "elapsed_control_seconds": elapsed, **spell, "success": bool(succeeded)})
-                if succeeded:
-                    self._consume_spell(state, elapsed)
-                return ActionResolution(event, ActionOutcome.ESCAPED if succeeded else ActionOutcome.FAILURE, TransitionRequest(TransitionKind.ESCAPE_GROUND, Phase.GROUND, Phase.STANDING) if succeeded else None)
-            resolution = resolve_action(event, state, inputs, rng, placeholders, ko_kd_rng, submission_rng)
-            if state.phase is Phase.GROUND and resolution.transition is not None and resolution.transition.kind in {TransitionKind.REVERSE_GROUND, TransitionKind.DISENGAGE_GROUND, TransitionKind.ESCAPE_GROUND}:
-                self._consume_spell(state, float(state.fight_time_seconds - state.phase_started_at))
-            return resolution
-    RoundBudgetEscapeResolver.__name__ = "LockedRoundBudgetEscapeResolver"
-    return RoundBudgetEscapeResolver
 
 
 def _primary_mechanic_probability(event, state, inputs, placeholders):
@@ -256,71 +178,307 @@ def _primary_mechanic_probability(event, state, inputs, placeholders):
 
 def _event_report_observer(original_run):
     captured = {}
+
     def observed_run(inputs, *, seed, horizon_seconds, initial_state=None, config=None, functions=None):
         pre_mechanics = []
         original_functions = functions or EngineFunctions()
         original_resolver = original_functions.mechanics_resolver
+
         def observed_resolver(event, state, mechanics_inputs, rng, placeholders, ko_kd_rng=None, submission_rng=None):
-            pre_mechanics.append({"timestamp": float(event.timestamp_seconds), "actor": event.actor.value, "action": event.action_family.value, **_primary_mechanic_probability(event, state, mechanics_inputs, placeholders)})
-            return original_resolver(event, state, mechanics_inputs, rng, placeholders, ko_kd_rng, submission_rng)
-        observed_functions = EngineFunctions(timing_sampler=original_functions.timing_sampler, action_chooser=original_functions.action_chooser, mechanics_resolver=observed_resolver)
+            pre_mechanics.append({
+                "timestamp": float(event.timestamp_seconds),
+                "actor": event.actor.value,
+                "action": event.action_family.value,
+                **_primary_mechanic_probability(event, state, mechanics_inputs, placeholders),
+            })
+            return original_resolver(
+                event, state, mechanics_inputs, rng, placeholders, ko_kd_rng, submission_rng
+            )
+
+        # Preserve escape-rate introspection through the observer wrapper.
+        if hasattr(original_resolver, "escape_mean_seconds"):
+            observed_resolver.escape_mean_seconds = original_resolver.escape_mean_seconds
+        if hasattr(original_resolver, "escape_checks"):
+            observed_resolver.escape_checks = original_resolver.escape_checks
+
+        observed_functions = EngineFunctions(
+            timing_sampler=original_functions.timing_sampler,
+            action_chooser=original_functions.action_chooser,
+            mechanics_resolver=observed_resolver,
+        )
         kwargs = {"seed": seed, "horizon_seconds": horizon_seconds, "functions": observed_functions}
         if initial_state is not None:
             kwargs["initial_state"] = initial_state
         if config is not None:
             kwargs["config"] = config
         out = original_run(inputs, **kwargs)
+
         brain = getattr(original_functions.action_chooser, "__self__", None)
         decisions = list(getattr(brain, "decisions", []))
+        ticks = list(getattr(brain, "tick_trace", []))
         if len(decisions) != len(out.events):
             raise RuntimeError(f"event-report decision/event mismatch: {len(decisions)} != {len(out.events)}")
         if len(pre_mechanics) != len(out.events):
             raise RuntimeError(f"event-report mechanics/event mismatch: {len(pre_mechanics)} != {len(out.events)}")
+
         escape_checks = list(getattr(original_resolver, "escape_checks", []))
-        escape_by_key = {(round(float(x["timestamp"]), 9), str(x["actor"])): x for x in escape_checks}
+        escape_by_key = {
+            (round(float(x["timestamp"]), 9), str(x["actor"])): x for x in escape_checks
+        }
         rows = []
         previous_timestamp = 0.0
-        for index, (decision, event, mechanic) in enumerate(zip(decisions, out.events, pre_mechanics, strict=True)):
+        for index, (decision, event, mechanic) in enumerate(
+            zip(decisions, out.events, pre_mechanics, strict=True)
+        ):
             key = (round(float(event.timestamp_seconds), 9), event.actor.value)
-            primary_probability = float(event.submission_probability) if event.selected_action is ActionFamily.SUBMISSION_ATTACK else mechanic["probability"]
+            primary_probability = (
+                float(event.submission_probability)
+                if event.selected_action is ActionFamily.SUBMISSION_ATTACK
+                else mechanic["probability"]
+            )
             rows.append({
-                "event_index": index, "event_timestamp": float(event.timestamp_seconds),
+                "event_index": index,
+                "event_timestamp": float(event.timestamp_seconds),
                 "seconds_since_prior_event": float(event.timestamp_seconds) - previous_timestamp,
-                "round": int(decision["round"]), "phase": decision["phase"], "actor": event.actor.value,
-                "selected_action": event.selected_action.value, "brain_options": decision["brain_options"],
-                "brain_selected_probability": next((float(x["probability"]) for x in decision["brain_options"] if x["action"] == event.selected_action.value and x.get("actor", event.actor.value) == event.actor.value), None),
-                "dynamic_pressure": decision.get("dynamic_pressure"), "mechanic": mechanic["mechanic"],
-                "mechanic_probability": primary_probability, "outcome": event.outcome.value,
-                "transition_kind": _enum(event.transition_kind), "resulting_phase": event.resulting_phase.value,
-                "resulting_controller": _enum(event.resulting_controller), "escape_model": escape_by_key.get(key),
-                "impact": float(event.impact), "kd_probability": float(event.kd_probability), "knockdown": bool(event.knockdown),
-                "ko_probability": float(event.ko_probability), "ko_tko": bool(event.ko_tko),
-                "submission_attempt": bool(event.submission_attempt), "submission_probability": float(event.submission_probability),
+                "round": int(decision["round"]),
+                "phase": decision["phase"],
+                "actor": event.actor.value,
+                "selected_action": event.selected_action.value,
+                "brain_options": decision["brain_options"],
+                "brain_selected_probability": next(
+                    (
+                        float(x["probability"])
+                        for x in decision["brain_options"]
+                        if x["action"] == event.selected_action.value
+                        and x.get("actor", event.actor.value) == event.actor.value
+                    ),
+                    None,
+                ),
+                "collision_rule": decision.get("collision_rule"),
+                "dynamic_pressure": decision.get("dynamic_pressure"),
+                "mechanic": mechanic["mechanic"],
+                "mechanic_probability": primary_probability,
+                "outcome": event.outcome.value,
+                "transition_kind": _enum(event.transition_kind),
+                "resulting_phase": event.resulting_phase.value,
+                "resulting_controller": _enum(event.resulting_controller),
+                "escape_model": escape_by_key.get(key),
+                "impact": float(event.impact),
+                "kd_probability": float(event.kd_probability),
+                "knockdown": bool(event.knockdown),
+                "strike_level_ko_probability": float(event.ko_probability),
+                "strike_level_ko_tko": bool(event.ko_tko),
+                "submission_attempt": bool(event.submission_attempt),
+                "submission_conversion_probability": float(event.submission_probability),
                 "submission_success": bool(event.submission_success),
             })
             previous_timestamp = float(event.timestamp_seconds)
+
         captured["seed"] = int(seed)
+        captured["brain_reported_through_seconds"] = float(out.reported_through_seconds)
+        captured["brain_termination"] = (
+            None
+            if out.termination is None
+            else {"winner_side": out.termination.winner.value, "method": out.termination.finish_method.value}
+        )
         captured["reported_through_seconds"] = float(out.reported_through_seconds)
-        captured["termination"] = None if out.termination is None else {"winner_side": out.termination.winner.value, "method": out.termination.finish_method.value}
+        captured["termination"] = captured["brain_termination"]
         captured["events"] = rows
+        captured["ticks"] = ticks
         return out
+
     return observed_run, captured
+
+
+def _ko_piece_index(timestamp: float, pieces: int) -> int:
+    # Tick t represents the interval (t-1, t], so t=300 uses the first-round hazard.
+    return min(max(int(math.ceil(max(float(timestamp), EPS) / 300.0)) - 1, 0), pieces - 1)
+
+
+def _reconcile_one_path_finish(captured, outdir: Path, fight) -> None:
+    """Attach the exact frozen KO clock draw and actual final MC termination."""
+    path_file = outdir / "run" / "sim" / "paths.csv"
+    if not path_file.is_file():
+        raise RuntimeError(f"missing one-path KO result: {path_file}")
+    paths = pd.read_csv(path_file)
+    if len(paths) != 1:
+        raise RuntimeError(f"expected one KO path row, found {len(paths)}")
+    row = paths.iloc[0]
+
+    names = {Side.RED: str(fight.r_name), Side.BLUE: str(fight.b_name)}
+    winner_name = str(row["winner"])
+    winner_side = next((side for side, name in names.items() if name == winner_name), None)
+    if winner_side is None:
+        raise RuntimeError(f"could not map final winner {winner_name!r} to fight sides")
+
+    _, _, _, clock = time_ko._time_clock_inputs()
+    hazards = {
+        side: np.asarray(clock[names[side]]["hazards_per_second"], dtype=float)
+        for side in Side
+    }
+    sampled_times = {
+        Side.RED: None if pd.isna(row.get("allen_clock_time")) else float(row["allen_clock_time"]),
+        Side.BLUE: None if pd.isna(row.get("shahbazyan_clock_time")) else float(row["shahbazyan_clock_time"]),
+    }
+
+    final_time = float(row["end_seconds"])
+    final_method = str(row["method"])
+    clock_triggered = bool(row["clock_triggered"])
+
+    reconciled_ticks = []
+    for tick in captured.get("ticks", []):
+        timestamp = float(tick["timestamp"])
+        if timestamp >= final_time - 1e-12:
+            break
+        idx = _ko_piece_index(timestamp, len(hazards[Side.RED]))
+        tick = dict(tick)
+        tick["ko"] = {
+            side.value: {
+                "fighter": names[side],
+                "hazard_per_second": float(hazards[side][idx]),
+                "probability_next_1s": float(1.0 - math.exp(-float(hazards[side][idx]))),
+                "sampled_clock_time": sampled_times[side],
+                "fires_in_this_tick_interval": (
+                    sampled_times[side] is not None
+                    and timestamp - 1.0 < sampled_times[side] <= timestamp
+                ),
+            }
+            for side in Side
+        }
+        reconciled_ticks.append(tick)
+
+    captured["events"] = [
+        event for event in captured.get("events", [])
+        if float(event["event_timestamp"]) < final_time - 1e-12
+    ]
+
+    if final_method == "ko_tko" and clock_triggered:
+        idx = _ko_piece_index(final_time, len(hazards[Side.RED]))
+        prior = reconciled_ticks[-1] if reconciled_ticks else {}
+        reconciled_ticks.append({
+            "tick": None,
+            "timestamp": final_time,
+            "round": int(math.ceil(final_time / 300.0)),
+            "phase": prior.get("phase"),
+            "ground_controller": prior.get("ground_controller"),
+            "clinch_controller": prior.get("clinch_controller"),
+            "options": [],
+            "available_count": 0,
+            "collision": False,
+            "collision_rule": "independent_continuous_ko_clock",
+            "selected_actor": winner_side.value,
+            "selected_action": "ko_clock",
+            "selected_probability_given_available": 1.0,
+            "ko_clock_event": True,
+            "ko": {
+                side.value: {
+                    "fighter": names[side],
+                    "hazard_per_second": float(hazards[side][idx]),
+                    "probability_next_1s": float(1.0 - math.exp(-float(hazards[side][idx]))),
+                    "sampled_clock_time": sampled_times[side],
+                    "fires_in_this_tick_interval": sampled_times[side] == final_time,
+                }
+                for side in Side
+            },
+        })
+
+    captured["ticks"] = reconciled_ticks
+    captured["reported_through_seconds"] = final_time
+    captured["termination"] = {
+        "winner_side": winner_side.value,
+        "winner_name": winner_name,
+        "method": final_method,
+        "end_seconds": final_time,
+    }
+    captured["ko_clock"] = {
+        "architecture": "frozen piecewise continuous-time competing survival clock",
+        "clock_triggered": clock_triggered,
+        "sampled_times": {side.value: sampled_times[side] for side in Side},
+        "fighters": {side.value: names[side] for side in Side},
+        "final_override": final_method == "ko_tko" and clock_triggered,
+    }
+
+
+def _flatten_tick(row: dict) -> dict:
+    flat = {k: v for k, v in row.items() if k not in {"options", "ko"}}
+    flat["options"] = json.dumps(row.get("options", []), separators=(",", ":"))
+    for option in row.get("options", []):
+        actor = str(option.get("actor"))
+        action = option.get("action") or "clinch_opportunity"
+        prefix = f"{actor}_{action}"
+        flat[f"{prefix}_rate_15m"] = option.get("rate_15m")
+        flat[f"{prefix}_availability_probability_1s"] = option.get("availability_probability_1s")
+        flat[f"{prefix}_availability_draw"] = option.get("availability_draw")
+        flat[f"{prefix}_available"] = option.get("available")
+    for side, ko in row.get("ko", {}).items():
+        flat[f"{side}_ko_fighter"] = ko.get("fighter")
+        flat[f"{side}_ko_hazard_per_second"] = ko.get("hazard_per_second")
+        flat[f"{side}_ko_probability_next_1s"] = ko.get("probability_next_1s")
+        flat[f"{side}_ko_sampled_clock_time"] = ko.get("sampled_clock_time")
+        flat[f"{side}_ko_fires_in_interval"] = ko.get("fires_in_this_tick_interval")
+    return flat
 
 
 def _write_event_report(captured, fight_id, outdir):
     if not captured:
         raise RuntimeError("--paths 1 requested event report but no path was captured")
-    payload = {"study": "locked Brain MC one-path event report", "production_changed": False, "fight_id": fight_id, "paths": 1, "seed": captured["seed"], "reported_through_seconds": captured["reported_through_seconds"], "termination": captured["termination"], "events": captured["events"]}
-    (outdir / "event_report.json").write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-    flat_rows = []
+
+    event_payload = {
+        "study": "locked Brain MC one-path selected-event report",
+        "production_changed": False,
+        "fight_id": fight_id,
+        "paths": 1,
+        "seed": captured["seed"],
+        "brain_termination_before_ko_clock": captured.get("brain_termination"),
+        "brain_reported_through_seconds": captured.get("brain_reported_through_seconds"),
+        "reported_through_seconds": captured["reported_through_seconds"],
+        "termination": captured["termination"],
+        "ko_clock": captured.get("ko_clock"),
+        "events": captured["events"],
+    }
+    (outdir / "event_report.json").write_text(
+        json.dumps(event_payload, indent=2) + "\n", encoding="utf-8"
+    )
+    event_rows = []
     for row in captured["events"]:
         flat = dict(row)
         flat["brain_options"] = json.dumps(flat["brain_options"], separators=(",", ":"))
-        flat["escape_model"] = json.dumps(flat["escape_model"], separators=(",", ":")) if flat["escape_model"] is not None else None
-        flat_rows.append(flat)
-    pd.DataFrame(flat_rows).to_csv(outdir / "event_report.csv", index=False)
+        flat["escape_model"] = (
+            json.dumps(flat["escape_model"], separators=(",", ":"))
+            if flat["escape_model"] is not None
+            else None
+        )
+        event_rows.append(flat)
+    pd.DataFrame(event_rows).to_csv(outdir / "event_report.csv", index=False)
+
+    tick_payload = {
+        "study": "locked Brain MC one-path every-second availability report",
+        "production_changed": False,
+        "fight_id": fight_id,
+        "paths": 1,
+        "seed": captured["seed"],
+        "reported_through_seconds": captured["reported_through_seconds"],
+        "termination": captured["termination"],
+        "ko_clock": captured.get("ko_clock"),
+        "ticks": captured.get("ticks", []),
+    }
+    (outdir / "tick_report.json").write_text(
+        json.dumps(tick_payload, indent=2) + "\n", encoding="utf-8"
+    )
+    pd.DataFrame([_flatten_tick(row) for row in captured.get("ticks", [])]).to_csv(
+        outdir / "tick_report.csv", index=False
+    )
+
     print("LOCKED_ONE_PATH_EVENT_REPORT")
-    print(json.dumps(payload, indent=2))
+    print(json.dumps({
+        "fight_id": fight_id,
+        "seed": captured["seed"],
+        "termination": captured["termination"],
+        "brain_termination_before_ko_clock": captured.get("brain_termination"),
+        "ko_clock": captured.get("ko_clock"),
+        "event_count": len(captured.get("events", [])),
+        "tick_rows": len(captured.get("ticks", [])),
+    }, indent=2))
 
 
 def main(*, fight_id: str, paths: int = LOCKED_PATHS) -> None:
@@ -337,6 +495,7 @@ def main(*, fight_id: str, paths: int = LOCKED_PATHS) -> None:
     if not snapshot_path.is_file():
         raise FileNotFoundError(f"canonical FSR snapshot missing: {snapshot_path}")
     original_snapshot_sha256 = _sha256(snapshot_path)
+
     with tempfile.TemporaryDirectory(prefix="locked-brain-canonical-") as td:
         backup = Path(td) / snapshot_path.name
         shutil.copy2(snapshot_path, backup)
@@ -399,14 +558,24 @@ def main(*, fight_id: str, paths: int = LOCKED_PATHS) -> None:
                 observed_run, event_capture = _event_report_observer(tick_clock.run_causal_path)
                 time_ko.run_causal_path = observed_run
                 scored.main = lambda: print("LOCKED_SINGLE_PATH_AGGREGATE_SCORER_SKIPPED")
+
             manifest = {
-                "entry_point": APPROVED_ENTRY_POINT, "single_approved_harness": True, "run_policy": RUN_POLICY,
-                "locked_base_commit": LOCKED_BASE_COMMIT, "verified_blobs": verified_blobs, "fight_id": fight_id,
-                "fight_id_source": "CLI --fight-id", "paths": paths, "paths_source": "CLI --paths or locked default",
-                "event_report": paths == 1, "event_report_files": ["event_report.json", "event_report.csv"] if paths == 1 else [],
-                "single_path_aggregate_scorer_skipped": paths == 1,
-                "ewm_decay": LOCKED_EWM_DECAY, "ewm_canonical_blend": LOCKED_EWM_CANONICAL_BLEND,
+                "entry_point": APPROVED_ENTRY_POINT,
+                "single_approved_harness": True,
+                "run_policy": RUN_POLICY,
+                "locked_base_commit": LOCKED_BASE_COMMIT,
+                "verified_blobs": verified_blobs,
+                "fight_id": fight_id,
+                "paths": paths,
+                "event_report": paths == 1,
+                "event_report_files": [
+                    "event_report.json", "event_report.csv", "tick_report.json", "tick_report.csv"
+                ] if paths == 1 else [],
+                "ewm_decay": LOCKED_EWM_DECAY,
+                "ewm_canonical_blend": LOCKED_EWM_CANONICAL_BLEND,
                 "clock_architecture": "one global 1-second rate-driven action availability clock",
+                "tick_interval_semantics": "300 one-second action intervals per 5-minute round including interval ending at horn",
+                "collision_semantics": "rate determines availability once; simultaneous available actions use uniform 1/N tie-break",
                 "standing_attempt_scale": LOCKED_STANDING_ATTEMPT_SCALE,
                 "standing_rate_source": "pipeline.research.locked_brain_mc.locked_standing_rates",
                 "standing_timing_and_chooser_share_exact_callable": True,
@@ -417,18 +586,22 @@ def main(*, fight_id: str, paths: int = LOCKED_PATHS) -> None:
                 "ground_action_set_bottom": ["submission_attack", "escape_stand"],
                 "ground_actions_removed": ["control", "bottom_strike", "reversal", "disengage", "improve_position", "advance_position"],
                 "escape_semantics": "rate-driven escape event; matchup expected control seconds become mean escape time; selected escape succeeds",
-                "ko": "piecewise time-based competing clock from allen_shahbazyan_time_ko_clock_2000",
+                "ko": "piecewise continuous-time competing survival clock; one-path report reconciled to actual KO override",
                 "kd": "OOS-selected static prefight KD hazard; no within-fight KD escalation",
                 "submission": "OOS-selected fighter-level submission attempt rate mapped to relevant ground opportunity; conversion unchanged",
-                "canonical_artifact_id": CANONICAL_ARTIFACT_ID, "canonical_source_run_id": CANONICAL_SOURCE_RUN_ID,
+                "canonical_artifact_id": CANONICAL_ARTIFACT_ID,
+                "canonical_source_run_id": CANONICAL_SOURCE_RUN_ID,
                 "canonical_artifact_digest": CANONICAL_ARTIFACT_DIGEST,
-                "canonical_snapshot_sha256_before": original_snapshot_sha256, "production_changed": False,
+                "canonical_snapshot_sha256_before": original_snapshot_sha256,
+                "production_changed": False,
             }
             (outdir / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
             print("LOCKED_BRAIN_MC_MANIFEST")
             print(json.dumps(manifest, indent=2))
+
             validated_kd.main()
             if paths == 1:
+                _reconcile_one_path_finish(event_capture, outdir, fight)
                 _write_event_report(event_capture, fight_id, outdir)
         finally:
             recency.EWM_DECAY = original_decay
@@ -444,10 +617,17 @@ def main(*, fight_id: str, paths: int = LOCKED_PATHS) -> None:
             time_ko.run_causal_path = original_time_run
             scored.main = original_scored_main
             shutil.copy2(backup, snapshot_path)
+
     restored_sha256 = _sha256(snapshot_path)
     if restored_sha256 != original_snapshot_sha256:
-        raise RuntimeError(f"canonical FSR restore verification failed: before={original_snapshot_sha256} after={restored_sha256}")
-    restore = {"canonical_snapshot_sha256_before": original_snapshot_sha256, "canonical_snapshot_sha256_after": restored_sha256, "byte_identical_restore": True}
+        raise RuntimeError(
+            f"canonical FSR restore verification failed: before={original_snapshot_sha256} after={restored_sha256}"
+        )
+    restore = {
+        "canonical_snapshot_sha256_before": original_snapshot_sha256,
+        "canonical_snapshot_sha256_after": restored_sha256,
+        "byte_identical_restore": True,
+    }
     (outdir / "restore_verification.json").write_text(json.dumps(restore, indent=2) + "\n", encoding="utf-8")
     print("CANONICAL_RESTORE_VERIFIED")
     print(json.dumps(restore, indent=2))
