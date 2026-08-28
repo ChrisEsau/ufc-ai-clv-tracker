@@ -528,7 +528,13 @@ def main(*, fight_id: str, paths: int = LOCKED_PATHS) -> None:
                 "submission_population_hazard_per_second": sub_p0,
                 "submission_baseline_hazard_per_second": sub_baseline_piece.tolist(),
                 "submission_hazards_per_second": {names[side]: sub_hazards[side].tolist() for side in Side},
-                "submission_matchup_inputs": {names[side]: sub_clock[names[side]] for side in Side},
+                "submission_matchup_inputs": {
+                    names[side]: {
+                        key: (value.tolist() if isinstance(value, np.ndarray) else value)
+                        for key, value in sub_clock[names[side]].items()
+                    }
+                    for side in Side
+                },
                 "kd": "OOS-selected static prefight KD hazard; no within-fight KD escalation",
                 "submission": "ground submission attacks remain Brain/scoring attempts only; they cannot terminate; submission finish comes only from embedded survival clock",
                 "canonical_artifact_id": CANONICAL_ARTIFACT_ID,
