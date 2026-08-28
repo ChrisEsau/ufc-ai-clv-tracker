@@ -82,8 +82,7 @@ jobs:
           path: data/research/locked_brain_bundle
           key: locked-brain-bundle-v1-${{ hashFiles('pipeline/research/locked_brain_bundle.py', 'pipeline/research/fsr_recency_cohort_shadow.py', 'pipeline/research/ko_time_survival_oos.py', 'pipeline/research/sub_time_survival_oos.py') }}
 
-      - name: Restore canonical FSR V3 artifact for bundle build
-        if: steps.request.outputs.build_bundle == 'true'
+      - name: Restore canonical frozen runtime artifact
         uses: actions/download-artifact@v4
         with:
           artifact-ids: 9494902022
@@ -105,6 +104,18 @@ jobs:
         run: |
           echo 'LOCKED Brain historical bundle is missing. Run once with build_bundle=true.' >&2
           exit 1
+
+      - name: Restore frozen simulator runtime dependency
+        if: steps.request.outputs.build_bundle != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          src='restored/canonical-weight-class-state/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib'
+          dst='data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib'
+          test -f "$src"
+          mkdir -p "$(dirname "$dst")"
+          cp "$src" "$dst"
+          echo "LOCKED_RUNTIME_MODEL_RESTORED $dst"
 
       - name: Run single approved locked Brain harness from bundle
         if: steps.request.outputs.build_bundle != 'true'
