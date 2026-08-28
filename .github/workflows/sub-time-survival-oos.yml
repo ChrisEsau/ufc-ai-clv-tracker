@@ -1,0 +1,29 @@
+name: SUB Time Survival OOS
+
+on:
+  push:
+    branches:
+      - research/ko-system-v3-from-scratch-20260826
+    paths:
+      - .github/sub-time-survival-request.json
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas pyarrow numpy scikit-learn
+      - name: Run SUB time survival OOS
+        run: python -m pipeline.research.sub_time_survival_oos
+      - name: Upload outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: sub-time-survival-oos-${{ github.run_id }}
+          path: data/research/sub_time_survival_oos/
