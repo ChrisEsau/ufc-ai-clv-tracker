@@ -1,7 +1,9 @@
-"""Reusable historical input bundle for the locked Brain MC harness.
+"""Reusable historical/runtime input bundle for the locked Brain MC harness.
 
-The bundle materializes expensive historical state once. Runtime fight simulations
-only perform target-fight/date lookups against these immutable files.
+The bundle materializes expensive historical state and the minimal frozen simulator
+runtime context once. Runtime fight simulations only perform target-fight/date
+lookups against these immutable files; they do not download or rebuild legacy
+Event Clock bundles.
 """
 from __future__ import annotations
 
@@ -10,6 +12,7 @@ import json
 import shutil
 from pathlib import Path
 
+import joblib
 import numpy as np
 import pandas as pd
 
@@ -17,8 +20,9 @@ from pipeline.fsr_v3.paths import FSR_V3_PREFIGHT_SNAPSHOTS_PATH
 from pipeline.research import fsr_recency_cohort_shadow as recency
 from pipeline.research import ko_time_survival_oos as ko_surv
 from pipeline.research import sub_time_survival_oos as sub_surv
+from pipeline.simulation.event_clock_mc_v2.fit_event_clock_bundle import DEFAULT_BUNDLE_PATH as LEGACY_RUNTIME_BUNDLE_PATH
 
-BUNDLE_SCHEMA_VERSION = 1
+BUNDLE_SCHEMA_VERSION = 2
 DEFAULT_BUNDLE_DIR = Path("data/research/locked_brain_bundle")
 FILES = {
     "canonical_fsr": "canonical_fsr_v3_prefight_snapshots.parquet",
@@ -27,7 +31,9 @@ FILES = {
     "ko_baselines": "ko_survival_date_baselines.parquet",
     "sub_prefight": "sub_survival_prefight.parquet",
     "sub_baselines": "sub_survival_date_baselines.parquet",
+    "runtime_context": "minimal_runtime_context.joblib",
 }
+RUNTIME_CONTEXT_KEYS = ("conversion_offset", "judge_model", "fsr_all")
 
 
 def _sha256(path: Path) -> str:
@@ -74,6 +80,25 @@ def _date_baselines(ff: pd.DataFrame, module, event_col: str) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def _build_minimal_runtime_context(bundle_dir: Path) -> dict:
+    source = Path(LEGACY_RUNTIME_BUNDLE_PATH)
+    if not source.is_file():
+        raise FileNotFoundError(f"frozen simulator runtime bundle missing during one-time bundle build: {source}")
+    payload = joblib.load(source)
+    context = payload.get("context", {})
+    missing = [key for key in RUNTIME_CONTEXT_KEYS if key not in context]
+    if missing:
+        raise RuntimeError(f"legacy runtime bundle missing required locked Brain context keys: {missing}")
+    minimal = {key: context[key] for key in RUNTIME_CONTEXT_KEYS}
+    target = bundle_dir / FILES["runtime_context"]
+    joblib.dump({"schema_version": 1, "context": minimal}, target, compress=3)
+    return {
+        "source_schema_version": payload.get("schema_version"),
+        "context_keys": list(RUNTIME_CONTEXT_KEYS),
+        "rows_fsr_all": int(len(minimal["fsr_all"])),
+    }
+
+
 def build_bundle(bundle_dir: Path | str = DEFAULT_BUNDLE_DIR) -> dict:
     bundle_dir = Path(bundle_dir)
     bundle_dir.mkdir(parents=True, exist_ok=True)
@@ -108,13 +133,15 @@ def build_bundle(bundle_dir: Path | str = DEFAULT_BUNDLE_DIR) -> dict:
     sub_ff.to_parquet(bundle_dir / FILES["sub_prefight"], index=False)
     _date_baselines(sub_ff, sub_surv, "sub_event").to_parquet(bundle_dir / FILES["sub_baselines"], index=False)
 
+    runtime = _build_minimal_runtime_context(bundle_dir)
     manifest = {
         "schema_version": BUNDLE_SCHEMA_VERSION,
-        "architecture": "historical databases materialized once; locked Brain runtime performs fight/date lookups only",
+        "architecture": "all reusable historical databases plus minimal frozen simulator runtime context materialized once; normal locked Brain runs require this bundle only",
         "ewm_decay": 0.50,
         "ewm_canonical_blend": 0.0,
         "ko_prior_events": 2.0,
         "sub_prior_events": 1.0,
+        "minimal_runtime_context": runtime,
         "files": {key: {"name": name, "sha256": _sha256(bundle_dir / name)} for key, name in FILES.items()},
         "row_counts": {
             "ewm_fsr": int(len(ewm)),
@@ -185,6 +212,15 @@ def install_bundle_runtime(legacy_module, fight_id: str, bundle_dir: Path | str 
     snapshot = Path(FSR_V3_PREFIGHT_SNAPSHOTS_PATH)
     snapshot.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(bundle_dir / FILES["canonical_fsr"], snapshot)
+
+    runtime_payload = joblib.load(bundle_dir / FILES["runtime_context"])
+    runtime_context = runtime_payload.get("context", {})
+    missing = [key for key in RUNTIME_CONTEXT_KEYS if key not in runtime_context]
+    if missing:
+        raise RuntimeError(f"locked Brain bundle runtime context missing keys: {missing}")
+    legacy_runtime = Path(LEGACY_RUNTIME_BUNDLE_PATH)
+    legacy_runtime.parent.mkdir(parents=True, exist_ok=True)
+    joblib.dump({"schema_version": 3, "context": runtime_context}, legacy_runtime, compress=3)
 
     ewm = pd.read_parquet(bundle_dir / FILES["ewm_fsr"])
     ko_ff = pd.read_parquet(bundle_dir / FILES["ko_prefight"])
