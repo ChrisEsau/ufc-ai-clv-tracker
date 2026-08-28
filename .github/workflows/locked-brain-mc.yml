@@ -4,14 +4,19 @@ on:
   workflow_dispatch:
     inputs:
       fight_id:
-        description: Target fight_id
-        required: true
+        description: Target fight_id (not required when building bundle)
+        required: false
         type: string
       paths:
         description: Number of locked Brain paths
         required: false
         default: '500'
         type: string
+      build_bundle:
+        description: Build reusable historical bundle only
+        required: false
+        default: false
+        type: boolean
   push:
     branches:
       - research/ko-system-v3-from-scratch-20260826
@@ -34,14 +39,7 @@ jobs:
           python-version: '3.12'
       - name: Install locked runner dependencies
         run: python -m pip install numpy pandas pyarrow scipy scikit-learn pyyaml joblib
-      - name: Restore canonical FSR V3 artifact
-        uses: actions/download-artifact@v4
-        with:
-          artifact-ids: 9494902022
-          path: restored
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ChrisEsau/ufc-ai-clv-tracker
-          run-id: 32645607979
+
       - name: Resolve locked run request
         id: request
         shell: bash
@@ -50,39 +48,89 @@ jobs:
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             fight_id='${{ inputs.fight_id }}'
             paths='${{ inputs.paths || '500' }}'
+            build_bundle='${{ inputs.build_bundle }}'
           else
             readarray -t values < <(python - <<'PY'
           import json
           from pathlib import Path
-          p = Path('.github/locked-brain-mc-request.json')
-          obj = json.loads(p.read_text())
-          fight_id = str(obj['fight_id']).strip()
+          obj = json.loads(Path('.github/locked-brain-mc-request.json').read_text())
+          fight_id = str(obj.get('fight_id', '')).strip()
           paths = int(obj.get('paths', 500))
-          if not fight_id:
-              raise SystemExit('fight_id must be non-empty')
+          build_bundle = bool(obj.get('build_bundle', False))
+          if not build_bundle and not fight_id:
+              raise SystemExit('fight_id must be non-empty for a simulation run')
           if paths < 1:
               raise SystemExit('paths must be >= 1')
           print(fight_id)
           print(paths)
+          print('true' if build_bundle else 'false')
           PY
             )
             fight_id="${values[0]}"
             paths="${values[1]}"
+            build_bundle="${values[2]}"
           fi
           echo "fight_id=$fight_id" >> "$GITHUB_OUTPUT"
           echo "paths=$paths" >> "$GITHUB_OUTPUT"
-          echo "LOCKED_RUN_REQUEST fight_id=$fight_id paths=$paths event=${{ github.event_name }}"
-      - name: Run single approved locked Brain harness
+          echo "build_bundle=$build_bundle" >> "$GITHUB_OUTPUT"
+          echo "LOCKED_RUN_REQUEST fight_id=$fight_id paths=$paths build_bundle=$build_bundle event=${{ github.event_name }}"
+
+      - name: Restore locked historical bundle cache
+        id: bundle-cache
+        uses: actions/cache@v4
+        with:
+          path: data/research/locked_brain_bundle
+          key: locked-brain-bundle-v1-${{ hashFiles('pipeline/research/locked_brain_bundle.py', 'pipeline/research/fsr_recency_cohort_shadow.py', 'pipeline/research/ko_time_survival_oos.py', 'pipeline/research/sub_time_survival_oos.py') }}
+
+      - name: Restore canonical FSR V3 artifact for bundle build
+        if: steps.request.outputs.build_bundle == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ChrisEsau/ufc-ai-clv-tracker
+          run-id: 32645607979
+
+      - name: Build reusable locked historical bundle
+        if: steps.request.outputs.build_bundle == 'true'
+        shell: bash
         run: |
           set -euo pipefail
           cp -a restored/canonical-weight-class-state/. data/
+          python -m pipeline.research.locked_brain_mc --build-bundle | tee locked-brain-bundle.txt
+
+      - name: Require bundle for normal runs
+        if: steps.request.outputs.build_bundle != 'true' && steps.bundle-cache.outputs.cache-hit != 'true'
+        run: |
+          echo 'LOCKED Brain historical bundle is missing. Run once with build_bundle=true.' >&2
+          exit 1
+
+      - name: Run single approved locked Brain harness from bundle
+        if: steps.request.outputs.build_bundle != 'true'
+        run: |
+          set -euo pipefail
           python -m pipeline.research.locked_brain_mc \
             --fight-id "${{ steps.request.outputs.fight_id }}" \
             --paths "${{ steps.request.outputs.paths }}" | tee locked-brain-mc.txt
+
+      - name: Upload built bundle inspection artifact
+        if: steps.request.outputs.build_bundle == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: locked-brain-historical-bundle-${{ github.run_id }}
+          path: |
+            locked-brain-bundle.txt
+            data/research/locked_brain_bundle/
+          if-no-files-found: error
+          retention-days: 90
+
       - name: Upload locked outputs
+        if: steps.request.outputs.build_bundle != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: locked-brain-mc-${{ steps.request.outputs.fight_id }}-${{ github.run_id }}-paths-${{ steps.request.outputs.paths }}
           path: |
             locked-brain-mc.txt
             data/research/locked_brain_mc/${{ steps.request.outputs.fight_id }}/
+          if-no-files-found: error
