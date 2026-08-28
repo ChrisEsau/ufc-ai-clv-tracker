@@ -3,13 +3,16 @@
 THIS FILE IS THE ONLY APPROVED ENTRY POINT FOR THIS RESEARCH LINE.
 Do not bypass it with ad-hoc Python or alternate runners. Any change to the
 mechanics stack, recency construction, path count, standing scale, KO/KD model,
-submission model, or dependency lock requires explicit user approval first.
+submission model, control-budget semantics, or dependency lock requires explicit
+user approval first.
 
 Frozen condition:
 - target: Brendan Allen vs Edmen Shahbazyan, fight id from the existing trace
 - fighter state: PURE EWM 0.50 FSR shadow (EWM decay=.50, canonical blend=0.0)
 - standing attempt scale: 0.25, research only
 - current Brain grappling/submission timing stack
+- control duration: one sampled round-level budget per controller per round;
+  re-entries consume the remaining budget rather than drawing a fresh round total
 - piecewise time-based KO competing clock
 - OOS-selected static prefight KD hazard, no within-fight KD escalation
 - matched standard Brain seeds
@@ -29,6 +32,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from pipeline.fsr_v3.paths import FSR_V3_PREFIGHT_SNAPSHOTS_PATH
@@ -38,6 +42,14 @@ from pipeline.research import allen_shahbazyan_time_ko_clock_2000 as time_ko
 from pipeline.research import allen_shahbazyan_time_ko_validated_kd_2000 as validated_kd
 from pipeline.research import allen_shahbazyan_decision_scored_outputs_2000 as scored
 from pipeline.simulation.event_clock_mc_v2.causal.events import ActionFamily
+from pipeline.simulation.event_clock_mc_v2.causal.state import Phase
+from pipeline.simulation.event_clock_mc_v2.mechanics.resolver import resolve_action
+from pipeline.simulation.event_clock_mc_v2.mechanics.resolution import (
+    ActionOutcome,
+    ActionResolution,
+    TransitionKind,
+    TransitionRequest,
+)
 
 LOCKED_BASE_COMMIT = "6ba1dd2d1e82aa7dec643bfd6f1d56bdd61b4e92"
 LOCKED_PATHS = 500
@@ -117,6 +129,112 @@ def _scaled_standing_rates(original):
     return locked_scaled_rates
 
 
+def _round_budget_resolver_class(original_cls):
+    """Adapt the validated round-total control target to round-budget semantics.
+
+    The source model predicts fighter-round total control seconds conditional on
+    >=1 landed takedown.  The old research resolver incorrectly sampled that
+    round-total target again for every new ground spell.  This wrapper samples
+    one budget per controller per round and deducts completed spell time from it.
+    """
+
+    class RoundBudgetEscapeResolver(original_cls):
+        def __init__(self, model, seed):
+            super().__init__(model, seed)
+            self.round_budgets: dict[tuple[int, str], float] = {}
+            self.round_consumed: dict[tuple[int, str], float] = {}
+
+        def _budget_key(self, state):
+            return (int(state.round_number), state.ground_controller.value)
+
+        def _ensure_budget(self, state) -> float:
+            key = self._budget_key(state)
+            if key not in self.round_budgets:
+                ratio = float(self.rng.choice(self.model["ratios"]))
+                expected = self._expected(state.ground_controller)
+                budget = float(np.clip(expected * ratio, timing.target.MIN_DURATION, timing.target.MAX_DURATION))
+                self.round_budgets[key] = budget
+                self.round_consumed.setdefault(key, 0.0)
+            return self.round_budgets[key]
+
+        def _spell(self, state):
+            key = (
+                int(state.round_number),
+                state.ground_controller.value,
+                round(float(state.phase_started_at), 9),
+            )
+            if key not in self.spells:
+                budget_key = self._budget_key(state)
+                budget = self._ensure_budget(state)
+                consumed = float(self.round_consumed.get(budget_key, 0.0))
+                remaining = max(0.0, budget - consumed)
+                self.spells[key] = {
+                    "round": int(state.round_number),
+                    "controller": state.ground_controller.value,
+                    "phase_started_at": float(state.phase_started_at),
+                    "expected_control_seconds": self._expected(state.ground_controller),
+                    "round_control_budget_seconds": budget,
+                    "round_control_consumed_before_spell_seconds": consumed,
+                    "sampled_escape_threshold_seconds": remaining,
+                    "round_budget_semantics": True,
+                }
+            return self.spells[key]
+
+        def _consume_spell(self, state, elapsed: float) -> None:
+            key = self._budget_key(state)
+            budget = self._ensure_budget(state)
+            prior = float(self.round_consumed.get(key, 0.0))
+            self.round_consumed[key] = min(budget, prior + max(float(elapsed), 0.0))
+
+        def __call__(self, event, state, inputs, rng, placeholders, ko_kd_rng=None, submission_rng=None):
+            if event.action_family is ActionFamily.ESCAPE_STAND:
+                spell = self._spell(state)
+                elapsed = float(state.fight_time_seconds - state.phase_started_at)
+                threshold = float(spell["sampled_escape_threshold_seconds"])
+                succeeded = elapsed >= threshold
+                self.escape_checks.append({
+                    "timestamp": float(event.timestamp_seconds),
+                    "actor": event.actor.value,
+                    "controller": state.ground_controller.value,
+                    "elapsed_control_seconds": elapsed,
+                    **spell,
+                    "success": bool(succeeded),
+                })
+                if succeeded:
+                    self._consume_spell(state, elapsed)
+                return ActionResolution(
+                    event,
+                    ActionOutcome.ESCAPED if succeeded else ActionOutcome.FAILURE,
+                    TransitionRequest(
+                        TransitionKind.ESCAPE_GROUND,
+                        Phase.GROUND,
+                        Phase.STANDING,
+                    ) if succeeded else None,
+                )
+
+            resolution = resolve_action(
+                event,
+                state,
+                inputs,
+                rng,
+                placeholders,
+                ko_kd_rng,
+                submission_rng,
+            )
+            if state.phase is Phase.GROUND and resolution.transition is not None:
+                if resolution.transition.kind in {
+                    TransitionKind.REVERSE_GROUND,
+                    TransitionKind.DISENGAGE_GROUND,
+                    TransitionKind.ESCAPE_GROUND,
+                }:
+                    elapsed = float(state.fight_time_seconds - state.phase_started_at)
+                    self._consume_spell(state, elapsed)
+            return resolution
+
+    RoundBudgetEscapeResolver.__name__ = "LockedRoundBudgetEscapeResolver"
+    return RoundBudgetEscapeResolver
+
+
 def main() -> None:
     OUTDIR.mkdir(parents=True, exist_ok=True)
     verified_blobs = assert_locked_sources()
@@ -133,6 +251,7 @@ def main() -> None:
         original_decay = recency.EWM_DECAY
         original_blend = recency.EWM_CANONICAL_BLEND
         original_timing = timing._new_timing_rates
+        original_escape_resolver = timing.target.ExpectedControlEscapeResolver
         original_time_paths = time_ko.PATHS
         original_scored_paths = scored.PATHS
         original_validated_out = validated_kd.OUTDIR
@@ -158,6 +277,11 @@ def main() -> None:
             # One and only one standing cadence intervention: calibrated research 0.25.
             timing._new_timing_rates = _scaled_standing_rates(original_timing)
 
+            # Correct semantic unit: one sampled control target per controller per round.
+            timing.target.ExpectedControlEscapeResolver = _round_budget_resolver_class(
+                original_escape_resolver
+            )
+
             # Fixed matched-seed path count for this locked harness.
             time_ko.PATHS = LOCKED_PATHS
             scored.PATHS = LOCKED_PATHS
@@ -172,6 +296,7 @@ def main() -> None:
                 "ewm_decay": LOCKED_EWM_DECAY,
                 "ewm_canonical_blend": LOCKED_EWM_CANONICAL_BLEND,
                 "standing_attempt_scale": LOCKED_STANDING_ATTEMPT_SCALE,
+                "control_duration_semantics": "one sampled round-total control budget per controller per round; re-entries consume remaining budget",
                 "ko": "piecewise time-based competing clock from allen_shahbazyan_time_ko_clock_2000",
                 "kd": "OOS-selected static prefight KD hazard; no within-fight KD escalation",
                 "submission": "current locked ground-opportunity/fighter-level submission research stack",
@@ -191,6 +316,7 @@ def main() -> None:
             recency.EWM_DECAY = original_decay
             recency.EWM_CANONICAL_BLEND = original_blend
             timing._new_timing_rates = original_timing
+            timing.target.ExpectedControlEscapeResolver = original_escape_resolver
             time_ko.PATHS = original_time_paths
             scored.PATHS = original_scored_paths
             validated_kd.OUTDIR = original_validated_out
