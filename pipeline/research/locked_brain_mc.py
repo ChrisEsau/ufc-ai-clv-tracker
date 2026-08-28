@@ -8,9 +8,11 @@ monkeypatch runners.
 This file contains the locked implementation itself. There is no second harness
 underneath it.
 
-Standing intent has one source of truth in this harness: ``locked_standing_rates``.
-The standing timing sampler and standing action chooser are both wired to the
-exact same callable for every locked run.
+Brain event generation uses one global 1-second availability clock. Standing
+rates come from ``locked_standing_rates``. Ground uses only top ground strike,
+top/bottom submission and bottom escape. CONTROL, BOTTOM_STRIKE, REVERSAL,
+DISENGAGE, IMPROVE_POSITION and ADVANCE_POSITION are removed from the locked
+research ground action set.
 
 CLI examples:
 
@@ -42,8 +44,9 @@ from pipeline.research import allen_shahbazyan_new_timing_trace as timing
 from pipeline.research import allen_shahbazyan_time_ko_clock_2000 as time_ko
 from pipeline.research import allen_shahbazyan_time_ko_validated_kd_2000 as validated_kd
 from pipeline.research import allen_shahbazyan_decision_scored_outputs_2000 as scored
+from pipeline.research import locked_brain_tick_clock as tick_clock
 from pipeline.simulation.event_clock_mc_v2.causal.events import ActionFamily
-from pipeline.simulation.event_clock_mc_v2.causal.state import Phase
+from pipeline.simulation.event_clock_mc_v2.causal.state import Phase, Side
 from pipeline.simulation.event_clock_mc_v2.engine import EngineFunctions
 from pipeline.simulation.event_clock_mc_v2.diagnostics import leavitt_brito_intent_rate_shadow as intent_mod
 from pipeline.simulation.event_clock_mc_v2.mechanics.resolver import resolve_action
@@ -153,13 +156,7 @@ def assert_locked_sources() -> dict:
 
 
 def locked_standing_rates(state, actor, capabilities, context, priors, config):
-    """Single source of truth for all locked standing intent rates.
-
-    Timing and selection must both call this exact function. The rates are:
-    research-scaled matchup-effective standing attempts, matchup-effective TD
-    attempts with the frozen TD scale, and the calibrated matchup clinch rate.
-    No RESET_RANGE or live context multiplier is present.
-    """
+    """Single source of truth for all locked standing intent rates."""
     del state, capabilities, context, config
     return {
         ActionFamily.STAND_ATTACK: max(
@@ -251,7 +248,7 @@ def _primary_mechanic_probability(event, state, inputs, placeholders):
     if family is ActionFamily.REVERSAL:
         return {"mechanic": "ground_reversal", "probability": float(fighter.ground_reversal_probability)}
     if family is ActionFamily.ESCAPE_STAND:
-        return {"mechanic": "round_control_budget_escape_threshold", "probability": None}
+        return {"mechanic": "rate_driven_escape_event", "probability": 1.0}
     if family is ActionFamily.SUBMISSION_ATTACK:
         return {"mechanic": "submission_conversion", "probability": None}
     return {"mechanic": "deterministic_or_tactical", "probability": 1.0}
@@ -291,7 +288,7 @@ def _event_report_observer(original_run):
                 "seconds_since_prior_event": float(event.timestamp_seconds) - previous_timestamp,
                 "round": int(decision["round"]), "phase": decision["phase"], "actor": event.actor.value,
                 "selected_action": event.selected_action.value, "brain_options": decision["brain_options"],
-                "brain_selected_probability": next((float(x["probability"]) for x in decision["brain_options"] if x["action"] == event.selected_action.value), None),
+                "brain_selected_probability": next((float(x["probability"]) for x in decision["brain_options"] if x["action"] == event.selected_action.value and x.get("actor", event.actor.value) == event.actor.value), None),
                 "dynamic_pressure": decision.get("dynamic_pressure"), "mechanic": mechanic["mechanic"],
                 "mechanic_probability": primary_probability, "outcome": event.outcome.value,
                 "transition_kind": _enum(event.transition_kind), "resulting_phase": event.resulting_phase.value,
@@ -370,22 +367,36 @@ def main(*, fight_id: str, paths: int = LOCKED_PATHS) -> None:
                 raise RuntimeError(f"expected 2 PURE EWM target rows for {fight_id}, found {len(target)}")
             target.to_csv(outdir / "pure_ewm05_target_fsr_rows.csv", index=False)
 
-            # ONE standing-rate source of truth. IntentRateBrain.timing_sampler
-            # resolves intent_mod._standing_rates at call time, while TraceBrain's
-            # chooser resolves base_trace._standing_rates_no_reset. Both point to
-            # the exact same callable, and time_ko.main also propagates
-            # timing._new_timing_rates into its chooser seams.
             timing._new_timing_rates = locked_standing_rates
             intent_mod._standing_rates = locked_standing_rates
             timing.base_trace._standing_rates_no_reset = locked_standing_rates
             timing.target._standing_rates_no_reset = locked_standing_rates
 
-            timing.target.ExpectedControlEscapeResolver = _round_budget_resolver_class(original_escape_resolver)
+            fight, _, _, _, _ = scored.pressure_mod.build_setup()
+            by_id = target.set_index(target["fighter_id"].astype(str), drop=False)
+            red = by_id.loc[str(fight.r_id)]
+            blue = by_id.loc[str(fight.b_id)]
+            ground_rates = {
+                Side.RED: max(float(red["ground_striking_tendency"]) * float(blue["ground_striking_suppression"]), 0.0),
+                Side.BLUE: max(float(blue["ground_striking_tendency"]) * float(red["ground_striking_suppression"]), 0.0),
+            }
+            ground_bursts = {
+                Side.RED: max(float(red["ground_striking_burst_baseline"]), 0.0),
+                Side.BLUE: max(float(blue["ground_striking_burst_baseline"]), 0.0),
+            }
+            tick_clock.configure(
+                standing_rate_fn=locked_standing_rates,
+                ground_rate_by_side=ground_rates,
+                ground_burst_by_side=ground_bursts,
+            )
+
+            timing.target.ExpectedControlEscapeResolver = tick_clock.AlwaysEscapeResolver
+            time_ko.run_causal_path = tick_clock.run_causal_path
             time_ko.PATHS = paths
             scored.PATHS = paths
             validated_kd.OUTDIR = outdir / "run"
             if paths == 1:
-                observed_run, event_capture = _event_report_observer(original_time_run)
+                observed_run, event_capture = _event_report_observer(tick_clock.run_causal_path)
                 time_ko.run_causal_path = observed_run
                 scored.main = lambda: print("LOCKED_SINGLE_PATH_AGGREGATE_SCORER_SKIPPED")
             manifest = {
@@ -395,13 +406,20 @@ def main(*, fight_id: str, paths: int = LOCKED_PATHS) -> None:
                 "event_report": paths == 1, "event_report_files": ["event_report.json", "event_report.csv"] if paths == 1 else [],
                 "single_path_aggregate_scorer_skipped": paths == 1,
                 "ewm_decay": LOCKED_EWM_DECAY, "ewm_canonical_blend": LOCKED_EWM_CANONICAL_BLEND,
+                "clock_architecture": "one global 1-second rate-driven action availability clock",
                 "standing_attempt_scale": LOCKED_STANDING_ATTEMPT_SCALE,
                 "standing_rate_source": "pipeline.research.locked_brain_mc.locked_standing_rates",
                 "standing_timing_and_chooser_share_exact_callable": True,
-                "control_duration_semantics": "one sampled round-total control budget per controller per round; re-entries consume remaining budget",
+                "ground_rate_source": "FSR V3 ground_striking_tendency x opponent ground_striking_suppression plus validated burst baseline",
+                "ground_rate_15m": {str(fight.r_name): ground_rates[Side.RED], str(fight.b_name): ground_rates[Side.BLUE]},
+                "ground_burst_attempts": {str(fight.r_name): ground_bursts[Side.RED], str(fight.b_name): ground_bursts[Side.BLUE]},
+                "ground_action_set_top": ["ground_strike", "submission_attack"],
+                "ground_action_set_bottom": ["submission_attack", "escape_stand"],
+                "ground_actions_removed": ["control", "bottom_strike", "reversal", "disengage", "improve_position", "advance_position"],
+                "escape_semantics": "rate-driven escape event; matchup expected control seconds become mean escape time; selected escape succeeds",
                 "ko": "piecewise time-based competing clock from allen_shahbazyan_time_ko_clock_2000",
                 "kd": "OOS-selected static prefight KD hazard; no within-fight KD escalation",
-                "submission": "current locked ground-opportunity/fighter-level submission research stack",
+                "submission": "OOS-selected fighter-level submission attempt rate mapped to relevant ground opportunity; conversion unchanged",
                 "canonical_artifact_id": CANONICAL_ARTIFACT_ID, "canonical_source_run_id": CANONICAL_SOURCE_RUN_ID,
                 "canonical_artifact_digest": CANONICAL_ARTIFACT_DIGEST,
                 "canonical_snapshot_sha256_before": original_snapshot_sha256, "production_changed": False,
