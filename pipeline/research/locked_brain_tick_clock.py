@@ -71,6 +71,7 @@ EPS = 1e-12
 TICK_SECONDS = 1.0
 GROUND_RATE_BY_SIDE: dict[Side, float] = {}
 GROUND_BURST_BY_SIDE: dict[Side, float] = {}
+ESCAPE_MEAN_SECONDS_BY_CONTROLLER: dict[Side, float] = {}
 STANDING_RATE_FN = None
 
 REMOVED_GROUND_ACTIONS = {
@@ -96,12 +97,19 @@ def _availability_probability(rate_15m: float) -> float:
 
 
 def _submission_ground_rate(side: Side) -> float:
-    # Preserve the OOS-selected total-time -> relevant-ground-opportunity mapping.
     return max(
         float(sub_mod.RATE_PER_15_BY_SIDE.get(side, 0.0))
         * float(sub_shadow.GROUND_HAZARD_MULTIPLIER),
         0.0,
     )
+
+
+def _escape_mean_seconds(controller: Side, resolver=None) -> float:
+    if resolver is not None and hasattr(resolver, "escape_mean_seconds"):
+        return max(float(resolver.escape_mean_seconds(controller)), 1.0)
+    if controller in ESCAPE_MEAN_SECONDS_BY_CONTROLLER:
+        return max(float(ESCAPE_MEAN_SECONDS_BY_CONTROLLER[controller]), 1.0)
+    raise RuntimeError("escape mean unavailable for locked tick clock")
 
 
 def _append_trace_decision(brain, state, actor, context, options, selected):
@@ -145,6 +153,8 @@ class AlwaysEscapeResolver:
         del seed
         self.model = model
         self.escape_checks = []
+        ESCAPE_MEAN_SECONDS_BY_CONTROLLER[Side.RED] = self.escape_mean_seconds(Side.RED)
+        ESCAPE_MEAN_SECONDS_BY_CONTROLLER[Side.BLUE] = self.escape_mean_seconds(Side.BLUE)
 
     def escape_mean_seconds(self, controller: Side) -> float:
         key = "red_controls_blue" if controller is Side.RED else "blue_controls_red"
@@ -176,10 +186,6 @@ def _ground_candidates(state, brain, rngs, resolver, burst_remaining):
     controller = state.ground_controller
     bottom = controller.opponent
     out = []
-
-    # One-time validated burst attempts are carried as immediate successive
-    # top-strike availabilities; the validated suppressed slope handles the
-    # continuing ground-strike rate after/alongside the burst.
     burst_key = (int(state.round_number), controller, round(float(state.phase_started_at), 9))
     remaining = burst_remaining.get(burst_key)
     if remaining is None:
@@ -211,7 +217,7 @@ def _ground_candidates(state, brain, rngs, resolver, burst_remaining):
                 "weight": max(sub_rate, EPS),
             })
 
-    mean_escape = resolver.escape_mean_seconds(controller)
+    mean_escape = _escape_mean_seconds(controller, resolver)
     escape_rate = 900.0 / mean_escape
     p_escape = _availability_probability(escape_rate)
     if rngs.selection(bottom).random() < p_escape:
@@ -295,8 +301,6 @@ def run_causal_path(
     if brain is None or not hasattr(brain, "priors"):
         raise RuntimeError("locked tick clock requires the locked TraceBrain bound chooser")
     resolver = functions.mechanics_resolver
-    if not hasattr(resolver, "escape_mean_seconds"):
-        raise RuntimeError("locked tick clock requires AlwaysEscapeResolver")
 
     events = []
     boundaries = []
