@@ -33,7 +33,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
-      - name: Run locked Kape Horiguchi with TD-channel observer
+      - name: Run locked Kape Horiguchi with TD timing observer
         run: |
           set -euo pipefail
           cp -a restored/canonical-weight-class-state/. data/
@@ -42,7 +42,7 @@ jobs:
           import pandas as pd
           from pipeline.research import locked_brain_mc_allen_shahbazyan as harness
           from pipeline.simulation.event_clock_mc_v2.causal.events import ActionFamily
-          from pipeline.simulation.event_clock_mc_v2.causal.state import Side
+          from pipeline.simulation.event_clock_mc_v2.causal.state import Phase, Side
 
           event_date = pd.Timestamp('2026-06-20')
           fighter_a = 'Manel Kape'
@@ -86,21 +86,43 @@ jobs:
               result = original_round_stats(out, round_number, round_length)
               if out is not last_out[0]:
                   last_out[0] = out
+                  standing_seconds = sum(
+                      float(seg.duration) for seg in out.timeline_segments
+                      if seg.phase is Phase.STANDING
+                  )
+                  material_transitions = sum(
+                      int(event.transition_kind is not None) for event in out.events
+                  )
+                  standing_reentries = sum(
+                      int(event.transition_kind is not None and event.resulting_phase is Phase.STANDING)
+                      for event in out.events
+                  )
                   row = {
                       'observed_decision_path_index': len(td_rows),
                       'decision_winner': names[out.termination.winner],
                       'fight_seconds': float(out.reported_through_seconds),
+                      'standing_seconds': standing_seconds,
+                      'material_transition_count': material_transitions,
+                      'standing_reentry_count': standing_reentries,
                   }
                   for side in (Side.RED, Side.BLUE):
                       prefix = 'kape' if names[side] == fighter_a else 'horiguchi'
                       direct_attempts = direct_completions = 0
                       clinch_attempts = clinch_completions = 0
+                      direct_attempt_elapsed = []
                       for event in out.events:
                           if event.actor is not side:
                               continue
                           if event.selected_action is ActionFamily.TAKEDOWN_ENTRY:
                               direct_attempts += 1
                               direct_completions += int(event.transition_kind is not None)
+                              seg = next((
+                                  s for s in out.timeline_segments
+                                  if s.phase is Phase.STANDING
+                                  and float(s.start_time) <= float(event.timestamp_seconds) <= float(s.end_time) + 1e-9
+                              ), None)
+                              if seg is not None:
+                                  direct_attempt_elapsed.append(float(event.timestamp_seconds) - float(seg.start_time))
                           elif event.selected_action is ActionFamily.CLINCH_TAKEDOWN:
                               clinch_attempts += 1
                               clinch_completions += int(event.transition_kind is not None)
@@ -112,6 +134,16 @@ jobs:
                       row[f'{prefix}_total_td_attempts'] = direct_attempts + clinch_attempts
                       row[f'{prefix}_total_td_completions'] = direct_completions + clinch_completions
                       row[f'{prefix}_control_seconds'] = ctrl
+                      row[f'{prefix}_direct_td_attempts_per_15m_standing'] = (
+                          direct_attempts * 900.0 / standing_seconds if standing_seconds > 0 else 0.0
+                      )
+                      row[f'{prefix}_mean_seconds_from_standing_entry_to_direct_td'] = (
+                          sum(direct_attempt_elapsed) / len(direct_attempt_elapsed)
+                          if direct_attempt_elapsed else float('nan')
+                      )
+                      row[f'{prefix}_direct_td_within_15s_of_standing_entry'] = sum(
+                          int(x <= 15.0) for x in direct_attempt_elapsed
+                      )
                   td_rows.append(row)
               return result
 
@@ -125,33 +157,45 @@ jobs:
           detail = pd.DataFrame(td_rows)
           required = [
               'kape_direct_td_attempts', 'kape_clinch_td_attempts',
-              'horiguchi_direct_td_attempts', 'horiguchi_clinch_td_attempts'
+              'horiguchi_direct_td_attempts', 'horiguchi_clinch_td_attempts',
+              'standing_seconds', 'material_transition_count', 'standing_reentry_count'
           ]
           missing = [c for c in required if c not in detail.columns]
           if missing:
               raise RuntimeError(f'TD observer produced no usable rows; missing={missing}, rows={len(detail)}')
           detail.to_csv(outdir / 'td_channel_decision_paths.csv', index=False)
+          detail.to_csv(outdir / 'td_timing_reset_decision_paths.csv', index=False)
 
           summary_rows = []
           for winner, g in detail.groupby('decision_winner'):
-              r = {'decision_winner': winner, 'paths': int(len(g))}
+              r = {
+                  'decision_winner': winner,
+                  'paths': int(len(g)),
+                  'mean_standing_seconds': float(g['standing_seconds'].mean()),
+                  'mean_material_transition_count': float(g['material_transition_count'].mean()),
+                  'mean_standing_reentry_count': float(g['standing_reentry_count'].mean()),
+              }
               for fighter in ('kape', 'horiguchi'):
                   for metric in (
                       'direct_td_attempts', 'direct_td_completions',
                       'clinch_td_attempts', 'clinch_td_completions',
-                      'total_td_attempts', 'total_td_completions', 'control_seconds'
+                      'total_td_attempts', 'total_td_completions', 'control_seconds',
+                      'direct_td_attempts_per_15m_standing',
+                      'mean_seconds_from_standing_entry_to_direct_td',
+                      'direct_td_within_15s_of_standing_entry'
                   ):
                       r[f'mean_{fighter}_{metric}'] = float(g[f'{fighter}_{metric}'].mean())
               summary_rows.append(r)
           summary = pd.DataFrame(summary_rows)
           summary.to_csv(outdir / 'td_channel_summary.csv', index=False)
-          print('TD_CHANNEL_SUMMARY')
+          summary.to_csv(outdir / 'td_timing_reset_summary.csv', index=False)
+          print('TD_TIMING_RESET_SUMMARY')
           print(summary.to_string(index=False))
           PY
       - name: Upload locked outputs
         uses: actions/upload-artifact@v4
         with:
-          name: locked-brain-mc-kape-horiguchi-td-audit-${{ github.run_id }}
+          name: locked-brain-mc-kape-horiguchi-td-timing-audit-${{ github.run_id }}
           path: |
             locked-brain-mc-kape-horiguchi.txt
             data/research/locked_brain_mc_allen_shahbazyan/
