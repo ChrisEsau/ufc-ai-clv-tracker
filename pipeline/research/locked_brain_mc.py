@@ -6,11 +6,11 @@ ad-hoc fight scripts, alternate harnesses, wrapper runners, or workflow
 monkeypatch runners.
 
 Brain event generation uses one global 1-second availability clock. Rate controls
-action availability once; simultaneous available actions are resolved by a neutral
-uniform collision tie-break. The one-path diagnostic emits both selected-event
-reports and every-second tick reports, then reconciles them to the frozen
-independent KO/TKO survival clock so the reported termination is the actual final
-MC outcome rather than the underlying pre-KO Brain path.
+action availability once; simultaneous available actions are resolved by conditional
+Brain chooser weights across only those available actions. The one-path diagnostic
+emits both selected-event reports and every-second tick reports, then reconciles them
+to the frozen independent KO/TKO survival clock so the reported termination is the
+actual final MC outcome rather than the underlying pre-KO Brain path.
 """
 from __future__ import annotations
 
@@ -195,7 +195,6 @@ def _event_report_observer(original_run):
                 event, state, mechanics_inputs, rng, placeholders, ko_kd_rng, submission_rng
             )
 
-        # Preserve escape-rate introspection through the observer wrapper.
         if hasattr(original_resolver, "escape_mean_seconds"):
             observed_resolver.escape_mean_seconds = original_resolver.escape_mean_seconds
         if hasattr(original_resolver, "escape_checks"):
@@ -291,7 +290,6 @@ def _event_report_observer(original_run):
 
 
 def _ko_piece_index(timestamp: float, pieces: int) -> int:
-    # Tick t represents the interval (t-1, t], so t=300 uses the first-round hazard.
     return min(max(int(math.ceil(max(float(timestamp), EPS) / 300.0)) - 1, 0), pieces - 1)
 
 
@@ -316,48 +314,75 @@ def _reconcile_one_path_finish(captured, outdir: Path, fight) -> None:
         side: np.asarray(clock[names[side]]["hazards_per_second"], dtype=float)
         for side in Side
     }
+    legacy_clock_columns = {
+        Side.RED: "allen_clock_time",
+        Side.BLUE: "shahbazyan_clock_time",
+    }
     sampled_times = {
-        Side.RED: None if pd.isna(row.get("allen_clock_time")) else float(row["allen_clock_time"]),
-        Side.BLUE: None if pd.isna(row.get("shahbazyan_clock_time")) else float(row["shahbazyan_clock_time"]),
+        side: (
+            None
+            if pd.isna(row.get(legacy_clock_columns[side]))
+            else float(row[legacy_clock_columns[side]])
+        )
+        for side in Side
     }
 
     final_time = float(row["end_seconds"])
     final_method = str(row["method"])
     clock_triggered = bool(row["clock_triggered"])
+    ko_override = final_method == "ko_tko" and clock_triggered
 
     reconciled_ticks = []
-    for tick in captured.get("ticks", []):
-        timestamp = float(tick["timestamp"])
-        if timestamp >= final_time - 1e-12:
+    for source_tick in captured.get("ticks", []):
+        timestamp = float(source_tick["timestamp"])
+        if ko_override:
+            if timestamp >= final_time - 1e-12:
+                break
+        elif timestamp > final_time + 1e-12:
             break
+        tick = dict(source_tick)
+        exposure = float(tick.get("exposure_seconds", 1.0))
         idx = _ko_piece_index(timestamp, len(hazards[Side.RED]))
-        tick = dict(tick)
+        interval_start = timestamp - exposure
         tick["ko"] = {
             side.value: {
                 "fighter": names[side],
                 "hazard_per_second": float(hazards[side][idx]),
+                "exposure_seconds": exposure,
+                "probability_in_interval": float(
+                    1.0 - math.exp(-float(hazards[side][idx]) * exposure)
+                ),
                 "probability_next_1s": float(1.0 - math.exp(-float(hazards[side][idx]))),
                 "sampled_clock_time": sampled_times[side],
                 "fires_in_this_tick_interval": (
                     sampled_times[side] is not None
-                    and timestamp - 1.0 < sampled_times[side] <= timestamp
+                    and interval_start < sampled_times[side] <= timestamp
                 ),
             }
             for side in Side
         }
         reconciled_ticks.append(tick)
 
-    captured["events"] = [
-        event for event in captured.get("events", [])
-        if float(event["event_timestamp"]) < final_time - 1e-12
-    ]
+    if ko_override:
+        captured["events"] = [
+            event for event in captured.get("events", [])
+            if float(event["event_timestamp"]) < final_time - 1e-12
+        ]
+    else:
+        captured["events"] = [
+            event for event in captured.get("events", [])
+            if float(event["event_timestamp"]) <= final_time + 1e-12
+        ]
 
-    if final_method == "ko_tko" and clock_triggered:
+    if ko_override:
         idx = _ko_piece_index(final_time, len(hazards[Side.RED]))
         prior = reconciled_ticks[-1] if reconciled_ticks else {}
+        prior_timestamp = float(prior.get("timestamp", 0.0))
+        partial_exposure = max(final_time - prior_timestamp, 0.0)
         reconciled_ticks.append({
             "tick": None,
             "timestamp": final_time,
+            "exposure_seconds": partial_exposure,
             "round": int(math.ceil(final_time / 300.0)),
             "phase": prior.get("phase"),
             "ground_controller": prior.get("ground_controller"),
@@ -374,9 +399,16 @@ def _reconcile_one_path_finish(captured, outdir: Path, fight) -> None:
                 side.value: {
                     "fighter": names[side],
                     "hazard_per_second": float(hazards[side][idx]),
+                    "exposure_seconds": partial_exposure,
+                    "probability_in_interval": float(
+                        1.0 - math.exp(-float(hazards[side][idx]) * partial_exposure)
+                    ),
                     "probability_next_1s": float(1.0 - math.exp(-float(hazards[side][idx]))),
                     "sampled_clock_time": sampled_times[side],
-                    "fires_in_this_tick_interval": sampled_times[side] == final_time,
+                    "fires_in_this_tick_interval": (
+                        sampled_times[side] is not None
+                        and prior_timestamp < sampled_times[side] <= final_time + 1e-12
+                    ),
                 }
                 for side in Side
             },
@@ -395,7 +427,7 @@ def _reconcile_one_path_finish(captured, outdir: Path, fight) -> None:
         "clock_triggered": clock_triggered,
         "sampled_times": {side.value: sampled_times[side] for side in Side},
         "fighters": {side.value: names[side] for side in Side},
-        "final_override": final_method == "ko_tko" and clock_triggered,
+        "final_override": ko_override,
     }
 
 
@@ -410,9 +442,15 @@ def _flatten_tick(row: dict) -> dict:
         flat[f"{prefix}_availability_probability_1s"] = option.get("availability_probability_1s")
         flat[f"{prefix}_availability_draw"] = option.get("availability_draw")
         flat[f"{prefix}_available"] = option.get("available")
+        flat[f"{prefix}_collision_weight"] = option.get("collision_weight")
+        flat[f"{prefix}_selection_probability_given_available"] = option.get(
+            "selection_probability_given_available"
+        )
     for side, ko in row.get("ko", {}).items():
         flat[f"{side}_ko_fighter"] = ko.get("fighter")
         flat[f"{side}_ko_hazard_per_second"] = ko.get("hazard_per_second")
+        flat[f"{side}_ko_exposure_seconds"] = ko.get("exposure_seconds")
+        flat[f"{side}_ko_probability_in_interval"] = ko.get("probability_in_interval")
         flat[f"{side}_ko_probability_next_1s"] = ko.get("probability_next_1s")
         flat[f"{side}_ko_sampled_clock_time"] = ko.get("sampled_clock_time")
         flat[f"{side}_ko_fires_in_interval"] = ko.get("fires_in_this_tick_interval")
@@ -574,8 +612,8 @@ def main(*, fight_id: str, paths: int = LOCKED_PATHS) -> None:
                 "ewm_decay": LOCKED_EWM_DECAY,
                 "ewm_canonical_blend": LOCKED_EWM_CANONICAL_BLEND,
                 "clock_architecture": "one global 1-second rate-driven action availability clock",
-                "tick_interval_semantics": "300 one-second action intervals per 5-minute round including interval ending at horn",
-                "collision_semantics": "rate determines availability once; simultaneous available actions use uniform 1/N tie-break",
+                "tick_interval_semantics": "300 one-second action intervals per 5-minute round including interval ending at horn; partial exposure honored if present",
+                "collision_semantics": "rate determines availability once; simultaneous available actions are normalized by conditional Brain policy weights",
                 "standing_attempt_scale": LOCKED_STANDING_ATTEMPT_SCALE,
                 "standing_rate_source": "pipeline.research.locked_brain_mc.locked_standing_rates",
                 "standing_timing_and_chooser_share_exact_callable": True,
@@ -586,7 +624,7 @@ def main(*, fight_id: str, paths: int = LOCKED_PATHS) -> None:
                 "ground_action_set_bottom": ["submission_attack", "escape_stand"],
                 "ground_actions_removed": ["control", "bottom_strike", "reversal", "disengage", "improve_position", "advance_position"],
                 "escape_semantics": "rate-driven escape event; matchup expected control seconds become mean escape time; selected escape succeeds",
-                "ko": "piecewise continuous-time competing survival clock; one-path report reconciled to actual KO override",
+                "ko": "piecewise continuous-time competing survival clock; one-path report reconciled to exact final KO override with partial terminal exposure",
                 "kd": "OOS-selected static prefight KD hazard; no within-fight KD escalation",
                 "submission": "OOS-selected fighter-level submission attempt rate mapped to relevant ground opportunity; conversion unchanged",
                 "canonical_artifact_id": CANONICAL_ARTIFACT_ID,
