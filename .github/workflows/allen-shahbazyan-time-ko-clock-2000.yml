@@ -23,6 +23,7 @@ jobs:
           sparse-checkout: |
             pipeline
             config
+            configs
             data/master
             data/fight_details
       - uses: actions/setup-python@v5
