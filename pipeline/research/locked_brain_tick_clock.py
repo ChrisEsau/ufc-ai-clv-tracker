@@ -1,28 +1,12 @@
-"""Research-only 1-second global availability clock for the locked Brain harness.
+"""Research-only 1-second global probability clock for the locked Brain harness.
 
-This module is not an executable runner. It is a scheduler implementation used only
-by pipeline.research.locked_brain_mc. Production Event Clock V2 mechanics remain
-unchanged.
+This module is not an executable runner. It is used only by
+pipeline.research.locked_brain_mc; production Event Clock V2 remains unchanged.
 
-At every one-second interval each currently admissible action receives an independent
-rate-driven availability draw. Rate controls availability exactly once. If no action
-is available the fight advances one second. If one action is available it is selected
-with probability 1. If multiple independently available actions collide in the same
-one-second interval, the locked Brain policy supplies conditional chooser weights
-across only those available actions. Those chooser weights resolve the collision but
-do not create additional action opportunities or alter the availability cadence.
-
-Standing actions:
-  STAND_ATTACK, TAKEDOWN_ENTRY, CLINCH_ENTRY for each fighter.
-Ground actions:
-  controller: GROUND_STRIKE, SUBMISSION_ATTACK
-  bottom:     SUBMISSION_ATTACK, ESCAPE_STAND
-The research ground menu deliberately excludes CONTROL, BOTTOM_STRIKE, REVERSAL,
-DISENGAGE, IMPROVE_POSITION and ADVANCE_POSITION.
-
-Clinch remains mechanically frozen; its existing mean timing is converted to a
-one-second availability probability and its existing intent-prior chooser supplies
-the selected clinch action after a clinch opportunity becomes available.
+Every tick first evaluates the validated time-survival KO/TKO competing risk, then,
+if the fight survives, evaluates the currently admissible Brain actions. Action rates
+control availability exactly once. Simultaneous available actions are resolved by
+conditional Brain chooser weights across only those available actions.
 """
 from __future__ import annotations
 
@@ -74,6 +58,8 @@ TICK_SECONDS = 1.0
 GROUND_RATE_BY_SIDE: dict[Side, float] = {}
 GROUND_BURST_BY_SIDE: dict[Side, float] = {}
 ESCAPE_MEAN_SECONDS_BY_CONTROLLER: dict[Side, float] = {}
+KO_HAZARDS_BY_SIDE: dict[Side, np.ndarray] = {}
+KO_FIGHTER_NAMES_BY_SIDE: dict[Side, str] = {}
 STANDING_RATE_FN = None
 
 REMOVED_GROUND_ACTIONS = {
@@ -86,11 +72,26 @@ REMOVED_GROUND_ACTIONS = {
 }
 
 
-def configure(*, standing_rate_fn, ground_rate_by_side, ground_burst_by_side):
+def configure(
+    *,
+    standing_rate_fn,
+    ground_rate_by_side,
+    ground_burst_by_side,
+    ko_hazards_by_side=None,
+    ko_fighter_names_by_side=None,
+):
     global STANDING_RATE_FN, GROUND_RATE_BY_SIDE, GROUND_BURST_BY_SIDE
+    global KO_HAZARDS_BY_SIDE, KO_FIGHTER_NAMES_BY_SIDE
     STANDING_RATE_FN = standing_rate_fn
     GROUND_RATE_BY_SIDE = {side: float(value) for side, value in ground_rate_by_side.items()}
     GROUND_BURST_BY_SIDE = {side: float(value) for side, value in ground_burst_by_side.items()}
+    KO_HAZARDS_BY_SIDE = {
+        side: np.asarray(value, dtype=float)
+        for side, value in (ko_hazards_by_side or {}).items()
+    }
+    KO_FIGHTER_NAMES_BY_SIDE = {
+        side: str(value) for side, value in (ko_fighter_names_by_side or {}).items()
+    }
 
 
 def _availability_probability(rate_15m: float, exposure_seconds: float = TICK_SECONDS) -> float:
@@ -127,8 +128,59 @@ def _trace_option(actor, action, rate_15m, probability, draw, available, *, sour
     }
 
 
+def _ko_piece_index(timestamp: float, pieces: int) -> int:
+    return min(max(int(math.ceil(max(float(timestamp), EPS) / 300.0)) - 1, 0), pieces - 1)
+
+
+def _ko_tick_probability(tick_end: float, exposure_seconds: float, rng):
+    if not KO_HAZARDS_BY_SIDE:
+        return None, None
+    if set(KO_HAZARDS_BY_SIDE) != {Side.RED, Side.BLUE}:
+        raise RuntimeError("embedded KO clock requires hazards for both sides")
+
+    hazards = {}
+    for side in Side:
+        pieces = KO_HAZARDS_BY_SIDE[side]
+        if pieces.size < 1:
+            raise RuntimeError(f"empty KO hazard vector for {side.value}")
+        hazards[side] = max(float(pieces[_ko_piece_index(tick_end, len(pieces))]), 0.0)
+
+    total_hazard = float(hazards[Side.RED] + hazards[Side.BLUE])
+    exposure = max(float(exposure_seconds), 0.0)
+    any_probability = float(1.0 - math.exp(-total_hazard * exposure)) if total_hazard > 0 else 0.0
+    any_draw = float(rng.random())
+    fires = any_draw < any_probability
+    winner = None
+    cause_draw = None
+    if fires:
+        cause_draw = float(rng.random())
+        red_share = hazards[Side.RED] / total_hazard if total_hazard > 0 else 0.5
+        winner = Side.RED if cause_draw < red_share else Side.BLUE
+
+    ko = {}
+    for side in Side:
+        cause_probability = (
+            any_probability * hazards[side] / total_hazard if total_hazard > 0 else 0.0
+        )
+        ko[side.value] = {
+            "fighter": KO_FIGHTER_NAMES_BY_SIDE.get(side),
+            "hazard_per_second": hazards[side],
+            "exposure_seconds": exposure,
+            "probability_in_interval": cause_probability,
+            "probability_next_1s": (
+                (1.0 - math.exp(-total_hazard)) * hazards[side] / total_hazard
+                if total_hazard > 0 else 0.0
+            ),
+            "any_ko_probability_in_interval": any_probability,
+            "any_ko_draw": any_draw,
+            "cause_draw_if_ko": cause_draw,
+            "sampled_clock_time": float(tick_end) if winner is side else None,
+            "fires_in_this_tick_interval": winner is side,
+        }
+    return winner, ko
+
+
 def _collision_policy_weights(state, brain, inputs, candidates):
-    """Attach conditional Brain chooser weights without reusing the rate signal."""
     if not candidates:
         return
     policy_by_side = {}
@@ -136,25 +188,16 @@ def _collision_policy_weights(state, brain, inputs, candidates):
         fighter = inputs.fighter(side)
         context = decision_context(state, side, fighter.decision_context, math.inf)
         rows = action_probabilities_with_intent_priors(
-            state,
-            side,
-            fighter.capabilities,
-            context,
-            brain.priors[side],
-            inputs.policy_config,
+            state, side, fighter.capabilities, context, brain.priors[side], inputs.policy_config
         )
         policy_by_side[side] = {
             row.action_family: max(float(row.probability), 0.0) for row in rows
         }
-
     weights = []
     for candidate in candidates:
-        weight = float(
-            policy_by_side.get(candidate["actor"], {}).get(candidate["action"], 0.0)
-        )
+        weight = float(policy_by_side.get(candidate["actor"], {}).get(candidate["action"], 0.0))
         candidate["collision_weight"] = weight
         weights.append(weight)
-
     total = float(sum(weights))
     if total <= EPS:
         probability = 1.0 / float(len(candidates))
@@ -167,23 +210,20 @@ def _collision_policy_weights(state, brain, inputs, candidates):
             candidate["collision_weight_fallback"] = False
 
 
-def _append_tick_trace(brain, state, diagnostics, candidates, selected, exposure_seconds):
+def _append_tick_trace(brain, state, diagnostics, candidates, selected, exposure_seconds, ko=None, ko_winner=None):
     if brain is None:
         return
     if not hasattr(brain, "tick_trace"):
         brain.tick_trace = []
-    candidate_lookup = {
-        (row["actor"].value, row["action"].value): row for row in candidates
-    }
+    candidate_lookup = {(row["actor"].value, row["action"].value): row for row in candidates}
     traced_options = []
     for diagnostic in diagnostics:
         row = dict(diagnostic)
         candidate = candidate_lookup.get((row.get("actor"), row.get("action")))
         row["collision_weight"] = None if candidate is None else candidate.get("collision_weight")
-        row["selection_probability_given_available"] = (
-            None if candidate is None else candidate.get("collision_probability")
-        )
+        row["selection_probability_given_available"] = None if candidate is None else candidate.get("collision_probability")
         traced_options.append(row)
+    ko_event = ko_winner is not None
     brain.tick_trace.append({
         "tick": len(brain.tick_trace) + 1,
         "timestamp": float(state.fight_time_seconds),
@@ -195,12 +235,12 @@ def _append_tick_trace(brain, state, diagnostics, candidates, selected, exposure
         "options": traced_options,
         "available_count": len(candidates),
         "collision": len(candidates) > 1,
-        "collision_rule": "brain_policy_weights_among_available",
-        "selected_actor": None if selected is None else selected["actor"].value,
-        "selected_action": None if selected is None else selected["action"].value,
-        "selected_probability_given_available": (
-            None if selected is None else float(selected["collision_probability"])
-        ),
+        "collision_rule": "embedded_ko_first_then_brain_policy_weights_among_available",
+        "selected_actor": ko_winner.value if ko_event else (None if selected is None else selected["actor"].value),
+        "selected_action": "ko_clock" if ko_event else (None if selected is None else selected["action"].value),
+        "selected_probability_given_available": 1.0 if ko_event else (None if selected is None else float(selected["collision_probability"])),
+        "ko_clock_event": ko_event,
+        "ko": ko or {},
     })
 
 
@@ -223,10 +263,7 @@ def _append_trace_decision(brain, state, actor, context, options, selected):
         "round": int(state.round_number),
         "phase": state.phase.value,
         "phase_started_at": float(state.phase_started_at),
-        "ground_control_elapsed_seconds": (
-            float(state.fight_time_seconds - state.phase_started_at)
-            if state.phase is Phase.GROUND else None
-        ),
+        "ground_control_elapsed_seconds": float(state.fight_time_seconds - state.phase_started_at) if state.phase is Phase.GROUND else None,
         "ground_controller": None if state.ground_controller is None else state.ground_controller.value,
         "clinch_controller": None if state.clinch_controller is None else state.clinch_controller.value,
         "actor": actor.value,
@@ -240,7 +277,6 @@ def _append_trace_decision(brain, state, actor, context, options, selected):
 
 
 class AlwaysEscapeResolver:
-    """Escape timing lives in the tick hazard; a selected escape therefore succeeds."""
     def __init__(self, model, seed):
         del seed
         self.model = model
@@ -264,117 +300,70 @@ class AlwaysEscapeResolver:
                 "success": True,
                 "tick_hazard_semantics": True,
             })
-            return ActionResolution(
-                event,
-                ActionOutcome.ESCAPED,
-                TransitionRequest(TransitionKind.ESCAPE_GROUND, Phase.GROUND, Phase.STANDING),
-            )
-        return resolve_action(
-            event, state, inputs, rng, placeholders, ko_kd_rng, submission_rng
-        )
+            return ActionResolution(event, ActionOutcome.ESCAPED, TransitionRequest(TransitionKind.ESCAPE_GROUND, Phase.GROUND, Phase.STANDING))
+        return resolve_action(event, state, inputs, rng, placeholders, ko_kd_rng, submission_rng)
 
 
 def _ground_candidates(state, brain, rngs, resolver, burst_remaining, exposure_seconds):
     del brain
     controller = state.ground_controller
     bottom = controller.opponent
-    out = []
-    diagnostics = []
+    out, diagnostics = [], []
     burst_key = (int(state.round_number), controller, round(float(state.phase_started_at), 9))
     remaining = burst_remaining.get(burst_key)
     if remaining is None:
         remaining = int(rngs.selection(controller).poisson(max(GROUND_BURST_BY_SIDE.get(controller, 0.0), 0.0)))
         burst_remaining[burst_key] = remaining
-
     strike_rate = max(GROUND_RATE_BY_SIDE.get(controller, 0.0), 0.0)
     strike_p = _availability_probability(strike_rate, exposure_seconds)
     if remaining > 0:
-        strike_draw = None
-        strike_available = True
-        effective_p = 1.0
-        source = "burst"
+        strike_draw, strike_available, effective_p, source = None, True, 1.0, "burst"
     else:
         strike_draw = float(rngs.selection(controller).random())
         strike_available = strike_draw < strike_p
-        effective_p = strike_p
-        source = "rate"
-    diagnostics.append(_trace_option(
-        controller, ActionFamily.GROUND_STRIKE, strike_rate, effective_p,
-        strike_draw, strike_available, source=source,
-    ))
+        effective_p, source = strike_p, "rate"
+    diagnostics.append(_trace_option(controller, ActionFamily.GROUND_STRIKE, strike_rate, effective_p, strike_draw, strike_available, source=source))
     if strike_available:
-        out.append({
-            "actor": controller,
-            "action": ActionFamily.GROUND_STRIKE,
-            "rate_15m": strike_rate,
-            "availability_probability": effective_p,
-            "burst_key": burst_key if remaining > 0 else None,
-        })
-
+        out.append({"actor": controller, "action": ActionFamily.GROUND_STRIKE, "rate_15m": strike_rate, "availability_probability": effective_p, "burst_key": burst_key if remaining > 0 else None})
     for side in (controller, bottom):
         sub_rate = _submission_ground_rate(side)
         p = _availability_probability(sub_rate, exposure_seconds)
         draw = float(rngs.selection(side).random())
         available = draw < p
-        diagnostics.append(_trace_option(
-            side, ActionFamily.SUBMISSION_ATTACK, sub_rate, p, draw, available
-        ))
+        diagnostics.append(_trace_option(side, ActionFamily.SUBMISSION_ATTACK, sub_rate, p, draw, available))
         if available:
-            out.append({
-                "actor": side,
-                "action": ActionFamily.SUBMISSION_ATTACK,
-                "rate_15m": sub_rate,
-                "availability_probability": p,
-            })
-
+            out.append({"actor": side, "action": ActionFamily.SUBMISSION_ATTACK, "rate_15m": sub_rate, "availability_probability": p})
     mean_escape = _escape_mean_seconds(controller, resolver)
     escape_rate = 900.0 / mean_escape
     p_escape = _availability_probability(escape_rate, exposure_seconds)
     escape_draw = float(rngs.selection(bottom).random())
     escape_available = escape_draw < p_escape
-    diagnostics.append(_trace_option(
-        bottom, ActionFamily.ESCAPE_STAND, escape_rate, p_escape,
-        escape_draw, escape_available
-    ))
+    diagnostics.append(_trace_option(bottom, ActionFamily.ESCAPE_STAND, escape_rate, p_escape, escape_draw, escape_available))
     if escape_available:
-        out.append({
-            "actor": bottom,
-            "action": ActionFamily.ESCAPE_STAND,
-            "rate_15m": escape_rate,
-            "availability_probability": p_escape,
-        })
+        out.append({"actor": bottom, "action": ActionFamily.ESCAPE_STAND, "rate_15m": escape_rate, "availability_probability": p_escape})
     return out, diagnostics
 
 
 def _standing_candidates(state, brain, inputs, rngs, exposure_seconds):
     if STANDING_RATE_FN is None:
         raise RuntimeError("locked tick clock not configured with standing_rate_fn")
-    out = []
-    diagnostics = []
+    out, diagnostics = [], []
     for side in Side:
         fighter = inputs.fighter(side)
         context = decision_context(state, side, fighter.decision_context, math.inf)
-        rates, _ = STANDING_RATE_FN(
-            state, side, fighter.capabilities, context, brain.priors[side], inputs.policy_config
-        )
+        rates, _ = STANDING_RATE_FN(state, side, fighter.capabilities, context, brain.priors[side], inputs.policy_config)
         for action, rate in rates.items():
             p = _availability_probability(rate, exposure_seconds)
             draw = float(rngs.selection(side).random())
             available = draw < p
             diagnostics.append(_trace_option(side, action, rate, p, draw, available))
             if available:
-                out.append({
-                    "actor": side,
-                    "action": action,
-                    "rate_15m": float(rate),
-                    "availability_probability": p,
-                })
+                out.append({"actor": side, "action": action, "rate_15m": float(rate), "availability_probability": p})
     return out, diagnostics
 
 
 def _clinch_candidates(state, brain, inputs, rngs, exposure_seconds):
-    out = []
-    diagnostics = []
+    out, diagnostics = [], []
     for side in Side:
         fighter = inputs.fighter(side)
         mean = expected_action_delay(state, fighter.timing_context, inputs.timing_config)
@@ -383,26 +372,15 @@ def _clinch_candidates(state, brain, inputs, rngs, exposure_seconds):
         draw = float(rngs.selection(side).random())
         available = draw < p
         if not available:
-            diagnostics.append(_trace_option(
-                side, None, total_rate, p, draw, False, source="clinch_opportunity"
-            ))
+            diagnostics.append(_trace_option(side, None, total_rate, p, draw, False, source="clinch_opportunity"))
             continue
         context = decision_context(state, side, fighter.decision_context, math.inf)
-        rows = action_probabilities_with_intent_priors(
-            state, side, fighter.capabilities, context, brain.priors[side], inputs.policy_config
-        )
+        rows = action_probabilities_with_intent_priors(state, side, fighter.capabilities, context, brain.priors[side], inputs.policy_config)
         probs = np.asarray([row.probability for row in rows], float)
         probs /= probs.sum()
         selected = rows[int(rngs.selection(side).choice(len(rows), p=probs))].action_family
-        diagnostics.append(_trace_option(
-            side, selected, total_rate, p, draw, True, source="clinch_opportunity"
-        ))
-        out.append({
-            "actor": side,
-            "action": selected,
-            "rate_15m": total_rate,
-            "availability_probability": p,
-        })
+        diagnostics.append(_trace_option(side, selected, total_rate, p, draw, True, source="clinch_opportunity"))
+        out.append({"actor": side, "action": selected, "rate_15m": total_rate, "availability_probability": p})
     return out, diagnostics
 
 
@@ -415,22 +393,18 @@ def run_causal_path(
     config: EngineConfig = EngineConfig(),
     functions: EngineFunctions = EngineFunctions(),
 ) -> CausalPathResult:
-    """Run one path on the locked one-second global action-availability clock."""
-    effective_horizon = min(
-        float(horizon_seconds), config.round_length_seconds * config.number_of_rounds
-    )
+    effective_horizon = min(float(horizon_seconds), config.round_length_seconds * config.number_of_rounds)
     state = initial_state
     timeline = PhaseTimeline.from_state(state)
     rngs = EngineRNGs.from_seed(seed)
     competition_rng = np.random.default_rng((int(seed) ^ 0x31434C4F434B) & ((1 << 63) - 1))
+    ko_rng = np.random.default_rng((int(seed) ^ 0x4B4F425241494E) & ((1 << 63) - 1))
     brain = getattr(functions.action_chooser, "__self__", None)
     if brain is None or not hasattr(brain, "priors"):
         raise RuntimeError("locked tick clock requires the locked TraceBrain bound chooser")
     brain.tick_trace = []
     resolver = functions.mechanics_resolver
-
-    events = []
-    boundaries = []
+    events, boundaries = [], []
     termination = None
     burst_remaining = {}
 
@@ -440,102 +414,60 @@ def run_causal_path(
         next_tick = min(tick_start + TICK_SECONDS, effective_horizon, round_end)
         exposure_seconds = max(float(next_tick - tick_start), 0.0)
         if exposure_seconds <= EPS:
-            raise RuntimeError(
-                f"non-positive tick exposure at t={tick_start} round={state.round_number}"
-            )
+            raise RuntimeError(f"non-positive tick exposure at t={tick_start} round={state.round_number}")
         at_round_end = next_tick >= round_end - 1e-12
 
+        ko_winner, ko_trace = _ko_tick_probability(next_tick, exposure_seconds, ko_rng)
         state = advance_physiology(state, next_tick, inputs.mechanics_calibration)
-        state = replace(
-            state, memory=decay_memory(state.memory, next_tick, config.memory_config)
-        )
+        state = replace(state, memory=decay_memory(state.memory, next_tick, config.memory_config))
+
+        if ko_winner is not None:
+            termination = FightTerminationRequest(ko_winner, FinishMethod.KO_TKO)
+            state = replace(state, finished=True, winner=ko_winner, finish_method=FinishMethod.KO_TKO.value)
+            _append_tick_trace(brain, state, [], [], None, exposure_seconds, ko_trace, ko_winner)
+            break
 
         if state.phase is Phase.STANDING:
-            candidates, diagnostics = _standing_candidates(
-                state, brain, inputs, rngs, exposure_seconds
-            )
+            candidates, diagnostics = _standing_candidates(state, brain, inputs, rngs, exposure_seconds)
         elif state.phase is Phase.GROUND:
-            candidates, diagnostics = _ground_candidates(
-                state, brain, rngs, resolver, burst_remaining, exposure_seconds
-            )
+            candidates, diagnostics = _ground_candidates(state, brain, rngs, resolver, burst_remaining, exposure_seconds)
         else:
-            candidates, diagnostics = _clinch_candidates(
-                state, brain, inputs, rngs, exposure_seconds
-            )
+            candidates, diagnostics = _clinch_candidates(state, brain, inputs, rngs, exposure_seconds)
 
         chosen = None
         if candidates:
             _collision_policy_weights(state, brain, inputs, candidates)
-            probabilities = np.asarray(
-                [row["collision_probability"] for row in candidates], dtype=float
-            )
+            probabilities = np.asarray([row["collision_probability"] for row in candidates], dtype=float)
             probabilities /= probabilities.sum()
-            chosen_index = int(competition_rng.choice(len(candidates), p=probabilities))
-            chosen = candidates[chosen_index]
+            chosen = candidates[int(competition_rng.choice(len(candidates), p=probabilities))]
 
-        _append_tick_trace(
-            brain, state, diagnostics, candidates, chosen, exposure_seconds
-        )
+        _append_tick_trace(brain, state, diagnostics, candidates, chosen, exposure_seconds, ko_trace, None)
 
         if chosen is not None:
-            actor = chosen["actor"]
-            selected = chosen["action"]
+            actor, selected = chosen["actor"], chosen["action"]
             fighter = inputs.fighter(actor)
             context = decision_context(state, actor, fighter.decision_context, effective_horizon)
             _append_trace_decision(brain, state, actor, context, candidates, selected)
-
             burst_key = chosen.get("burst_key")
             if burst_key is not None:
                 burst_remaining[burst_key] = max(0, int(burst_remaining.get(burst_key, 0)) - 1)
-
             event = ActionEvent(float(state.fight_time_seconds), actor, selected, state.phase)
-            resolution = functions.mechanics_resolver(
-                event,
-                state,
-                inputs.mechanics_inputs,
-                rngs.mechanics,
-                inputs.mechanics_placeholders,
-                rngs.ko_kd,
-                rngs.submission,
-            )
-            state = apply_action_consequence(
-                state,
-                actor,
-                selected,
-                resolution.consequence,
-                fighter.mechanics,
-                inputs.mechanics_calibration,
-            )
+            resolution = functions.mechanics_resolver(event, state, inputs.mechanics_inputs, rngs.mechanics, inputs.mechanics_placeholders, rngs.ko_kd, rngs.submission)
+            state = apply_action_consequence(state, actor, selected, resolution.consequence, fighter.mechanics, inputs.mechanics_calibration)
             if resolution.transition is not None:
-                state = apply_transition_request(
-                    state, timeline, resolution.transition, float(state.fight_time_seconds)
-                )
-            state = replace(
-                state, memory=update_memory(state.memory, resolution, config.memory_config)
-            )
-
+                state = apply_transition_request(state, timeline, resolution.transition, float(state.fight_time_seconds))
+            state = replace(state, memory=update_memory(state.memory, resolution, config.memory_config))
             requested_termination = (
-                resolution.consequence
-                if isinstance(resolution.consequence, FightTerminationRequest)
-                else (
-                    resolution.consequence.termination
-                    if isinstance(resolution.consequence, (StrikeConsequence, SubmissionConsequence))
-                    else None
-                )
+                resolution.consequence if isinstance(resolution.consequence, FightTerminationRequest)
+                else resolution.consequence.termination if isinstance(resolution.consequence, (StrikeConsequence, SubmissionConsequence))
+                else None
             )
             if requested_termination is not None:
                 termination = requested_termination
-                state = replace(
-                    state,
-                    finished=True,
-                    winner=termination.winner,
-                    finish_method=termination.finish_method.value,
-                )
-
+                state = replace(state, finished=True, winner=termination.winner, finish_method=termination.finish_method.value)
             events.append(CausalEventRecord(
                 float(event.timestamp_seconds), actor, event.source_phase, selected,
-                resolution.outcome,
-                resolution.transition.kind if resolution.transition else None,
+                resolution.outcome, resolution.transition.kind if resolution.transition else None,
                 state.phase, _controller(state), context, state.memory.fighter(actor),
                 resolution.consequence.impact if isinstance(resolution.consequence, StrikeConsequence) else 0.0,
                 resolution.consequence.knockdown if isinstance(resolution.consequence, StrikeConsequence) else False,
@@ -551,16 +483,12 @@ def run_causal_path(
 
         if state.finished:
             break
-
         if at_round_end:
             if state.round_number >= config.number_of_rounds:
                 break
             state = start_next_round(state, timeline, round_end)
             state = recover_round(state, inputs.mechanics_calibration)
-            state = replace(
-                state,
-                memory=decay_memory(state.memory, round_end, config.memory_config),
-            )
+            state = replace(state, memory=decay_memory(state.memory, round_end, config.memory_config))
             boundaries.append(RoundBoundaryRecord(round_end, state.round_number))
             burst_remaining.clear()
 
@@ -569,25 +497,10 @@ def run_causal_path(
     timeline_segments = timeline.segments_through(reported_through)
     timeline.validate()
     decision = None
-    if reached_scheduled_horizon and math.isclose(
-        effective_horizon, config.round_length_seconds * config.number_of_rounds
-    ):
-        decision = score_decision(
-            events,
-            timeline_segments,
-            rounds=config.number_of_rounds,
-            round_length=config.round_length_seconds,
-            model=inputs.judge_model,
-            rng=rngs.judging,
-        )
+    if reached_scheduled_horizon and math.isclose(effective_horizon, config.round_length_seconds * config.number_of_rounds):
+        decision = score_decision(events, timeline_segments, rounds=config.number_of_rounds, round_length=config.round_length_seconds, model=inputs.judge_model, rng=rngs.judging)
         termination = FightTerminationRequest(decision.winner, FinishMethod.DECISION)
-        state = replace(
-            state,
-            fight_time_seconds=effective_horizon,
-            finished=True,
-            winner=decision.winner,
-            finish_method=decision.classification,
-        )
+        state = replace(state, fight_time_seconds=effective_horizon, finished=True, winner=decision.winner, finish_method=decision.classification)
 
     return CausalPathResult(
         final_state=state,
@@ -601,3 +514,6 @@ def run_causal_path(
         final_pending_actions=tuple(),
         decision=decision,
     )
+
+
+run_causal_path.embedded_ko_clock = True
