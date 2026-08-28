@@ -1,0 +1,283 @@
+name: Wire SUB finish clock into locked Brain
+
+on:
+  push:
+    branches:
+      - research/ko-system-v3-from-scratch-20260826
+    paths:
+      - .github/requests/wire-sub-finish-clock-locked.request
+
+permissions:
+  contents: write
+
+jobs:
+  wire:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ko-system-v3-from-scratch-20260826
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Patch locked clock and harness
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          tick_path = Path('pipeline/research/locked_brain_tick_clock.py')
+          s = tick_path.read_text()
+
+          s = s.replace(
+              'Every tick first evaluates the validated time-survival KO/TKO competing risk, then,\nif the fight survives, evaluates the currently admissible Brain actions.',
+              'Every tick first evaluates the validated KO/TKO and submission time-survival competing risks, then,\nif the fight survives, evaluates the currently admissible Brain actions.'
+          )
+          s = s.replace(
+              'KO_HAZARDS_BY_SIDE: dict[Side, np.ndarray] = {}\nKO_FIGHTER_NAMES_BY_SIDE: dict[Side, str] = {}',
+              'KO_HAZARDS_BY_SIDE: dict[Side, np.ndarray] = {}\nSUB_HAZARDS_BY_SIDE: dict[Side, np.ndarray] = {}\nKO_FIGHTER_NAMES_BY_SIDE: dict[Side, str] = {}\nSUB_FIGHTER_NAMES_BY_SIDE: dict[Side, str] = {}'
+          )
+          s = s.replace(
+              '    ko_hazards_by_side=None,\n    ko_fighter_names_by_side=None,\n):\n    global STANDING_RATE_FN, GROUND_RATE_BY_SIDE, GROUND_BURST_BY_SIDE\n    global KO_HAZARDS_BY_SIDE, KO_FIGHTER_NAMES_BY_SIDE',
+              '    ko_hazards_by_side=None,\n    ko_fighter_names_by_side=None,\n    sub_hazards_by_side=None,\n    sub_fighter_names_by_side=None,\n):\n    global STANDING_RATE_FN, GROUND_RATE_BY_SIDE, GROUND_BURST_BY_SIDE\n    global KO_HAZARDS_BY_SIDE, SUB_HAZARDS_BY_SIDE, KO_FIGHTER_NAMES_BY_SIDE, SUB_FIGHTER_NAMES_BY_SIDE'
+          )
+          s = s.replace(
+              '    KO_FIGHTER_NAMES_BY_SIDE = {\n        side: str(value) for side, value in (ko_fighter_names_by_side or {}).items()\n    }',
+              '    KO_FIGHTER_NAMES_BY_SIDE = {\n        side: str(value) for side, value in (ko_fighter_names_by_side or {}).items()\n    }\n    SUB_HAZARDS_BY_SIDE = {\n        side: np.asarray(value, dtype=float)\n        for side, value in (sub_hazards_by_side or {}).items()\n    }\n    SUB_FIGHTER_NAMES_BY_SIDE = {\n        side: str(value) for side, value in (sub_fighter_names_by_side or {}).items()\n    }'
+          )
+
+          start = s.index('def _ko_tick_probability(')
+          end = s.index('\ndef _collision_policy_weights', start)
+          new_finish = '''def _finish_tick_probability(tick_end: float, exposure_seconds: float, rng):
+    if not KO_HAZARDS_BY_SIDE or not SUB_HAZARDS_BY_SIDE:
+        return None, None, None
+    if set(KO_HAZARDS_BY_SIDE) != {Side.RED, Side.BLUE}:
+        raise RuntimeError("embedded KO clock requires hazards for both sides")
+    if set(SUB_HAZARDS_BY_SIDE) != {Side.RED, Side.BLUE}:
+        raise RuntimeError("embedded SUB clock requires hazards for both sides")
+
+    cause_hazards = {}
+    for method, source in ((FinishMethod.KO_TKO, KO_HAZARDS_BY_SIDE), (FinishMethod.SUBMISSION, SUB_HAZARDS_BY_SIDE)):
+        for side in Side:
+            pieces = source[side]
+            if pieces.size < 1:
+                raise RuntimeError(f"empty {method.value} hazard vector for {side.value}")
+            cause_hazards[(method, side)] = max(float(pieces[_ko_piece_index(tick_end, len(pieces))]), 0.0)
+
+    total_hazard = float(sum(cause_hazards.values()))
+    exposure = max(float(exposure_seconds), 0.0)
+    any_probability = float(1.0 - math.exp(-total_hazard * exposure)) if total_hazard > 0 else 0.0
+    any_draw = float(rng.random())
+    winner = None
+    finish_method = None
+    cause_draw = None
+    if any_draw < any_probability:
+        cause_draw = float(rng.random())
+        threshold = cause_draw * total_hazard
+        cumulative = 0.0
+        for method, side in (
+            (FinishMethod.KO_TKO, Side.RED),
+            (FinishMethod.KO_TKO, Side.BLUE),
+            (FinishMethod.SUBMISSION, Side.RED),
+            (FinishMethod.SUBMISSION, Side.BLUE),
+        ):
+            cumulative += cause_hazards[(method, side)]
+            if threshold <= cumulative:
+                winner = side
+                finish_method = method
+                break
+
+    trace = {"ko": {}, "sub": {}, "any_finish_probability_in_interval": any_probability, "any_finish_draw": any_draw, "cause_draw_if_finish": cause_draw}
+    for method, label, names in (
+        (FinishMethod.KO_TKO, "ko", KO_FIGHTER_NAMES_BY_SIDE),
+        (FinishMethod.SUBMISSION, "sub", SUB_FIGHTER_NAMES_BY_SIDE),
+    ):
+        for side in Side:
+            hazard = cause_hazards[(method, side)]
+            cause_probability = any_probability * hazard / total_hazard if total_hazard > 0 else 0.0
+            trace[label][side.value] = {
+                "fighter": names.get(side),
+                "hazard_per_second": hazard,
+                "exposure_seconds": exposure,
+                "probability_in_interval": cause_probability,
+                "probability_next_1s": ((1.0 - math.exp(-total_hazard)) * hazard / total_hazard if total_hazard > 0 else 0.0),
+                "any_finish_probability_in_interval": any_probability,
+                "any_finish_draw": any_draw,
+                "cause_draw_if_finish": cause_draw,
+                "sampled_clock_time": float(tick_end) if winner is side and finish_method is method else None,
+                "fires_in_this_tick_interval": winner is side and finish_method is method,
+            }
+    return winner, finish_method, trace
+
+'''
+          s = s[:start] + new_finish + s[end+1:]
+
+          start = s.index('def _append_tick_trace(')
+          end = s.index('\ndef _append_trace_decision', start)
+          new_trace = '''def _append_tick_trace(brain, state, diagnostics, candidates, selected, exposure_seconds, finish_trace=None, finish_winner=None, finish_method=None):
+    if brain is None:
+        return
+    if not hasattr(brain, "tick_trace"):
+        brain.tick_trace = []
+    candidate_lookup = {(row["actor"].value, row["action"].value): row for row in candidates}
+    traced_options = []
+    for diagnostic in diagnostics:
+        row = dict(diagnostic)
+        candidate = candidate_lookup.get((row.get("actor"), row.get("action")))
+        row["collision_weight"] = None if candidate is None else candidate.get("collision_weight")
+        row["selection_probability_given_available"] = None if candidate is None else candidate.get("collision_probability")
+        traced_options.append(row)
+    finish_event = finish_winner is not None
+    finish_action = None if not finish_event else ("ko_clock" if finish_method is FinishMethod.KO_TKO else "sub_clock")
+    finish_trace = finish_trace or {}
+    brain.tick_trace.append({
+        "tick": len(brain.tick_trace) + 1,
+        "timestamp": float(state.fight_time_seconds),
+        "exposure_seconds": float(exposure_seconds),
+        "round": int(state.round_number),
+        "phase": state.phase.value,
+        "ground_controller": None if state.ground_controller is None else state.ground_controller.value,
+        "clinch_controller": None if state.clinch_controller is None else state.clinch_controller.value,
+        "options": traced_options,
+        "available_count": len(candidates),
+        "collision": len(candidates) > 1,
+        "collision_rule": "embedded_finish_competing_risk_first_then_brain_policy_weights_among_available",
+        "selected_actor": finish_winner.value if finish_event else (None if selected is None else selected["actor"].value),
+        "selected_action": finish_action if finish_event else (None if selected is None else selected["action"].value),
+        "selected_probability_given_available": 1.0 if finish_event else (None if selected is None else float(selected["collision_probability"])),
+        "finish_clock_event": finish_event,
+        "finish_clock_method": None if finish_method is None else finish_method.value,
+        "ko_clock_event": finish_event and finish_method is FinishMethod.KO_TKO,
+        "sub_clock_event": finish_event and finish_method is FinishMethod.SUBMISSION,
+        "any_finish_probability_in_interval": finish_trace.get("any_finish_probability_in_interval"),
+        "any_finish_draw": finish_trace.get("any_finish_draw"),
+        "cause_draw_if_finish": finish_trace.get("cause_draw_if_finish"),
+        "ko": finish_trace.get("ko", {}),
+        "sub": finish_trace.get("sub", {}),
+    })
+
+'''
+          s = s[:start] + new_trace + s[end+1:]
+
+          old = '        return resolve_action(event, state, inputs, rng, placeholders, ko_kd_rng, submission_rng)'
+          new = '''        resolved = resolve_action(event, state, inputs, rng, placeholders, ko_kd_rng, submission_rng)
+        if event.action_family is ActionFamily.SUBMISSION_ATTACK and isinstance(resolved.consequence, SubmissionConsequence):
+            return ActionResolution(
+                event,
+                ActionOutcome.FAILURE,
+                consequence=SubmissionConsequence(
+                    attempted=True,
+                    conversion_probability=float(resolved.consequence.conversion_probability),
+                    success=False,
+                    termination=None,
+                ),
+            )
+        return resolved'''
+          if old not in s:
+              raise SystemExit('resolver patch anchor missing')
+          s = s.replace(old, new, 1)
+          s = s.replace(
+              '    ko_rng = np.random.default_rng((int(seed) ^ 0x4B4F425241494E) & ((1 << 63) - 1))',
+              '    finish_rng = np.random.default_rng((int(seed) ^ 0x46494E495348) & ((1 << 63) - 1))'
+          )
+          s = s.replace(
+              '        ko_winner, ko_trace = _ko_tick_probability(next_tick, exposure_seconds, ko_rng)',
+              '        finish_winner, finish_method, finish_trace = _finish_tick_probability(next_tick, exposure_seconds, finish_rng)'
+          )
+          old_block = '''        if ko_winner is not None:
+            termination = FightTerminationRequest(ko_winner, FinishMethod.KO_TKO)
+            state = replace(state, finished=True, winner=ko_winner, finish_method=FinishMethod.KO_TKO.value)
+            _append_tick_trace(brain, state, [], [], None, exposure_seconds, ko_trace, ko_winner)
+            break'''
+          new_block = '''        if finish_winner is not None:
+            termination = FightTerminationRequest(finish_winner, finish_method)
+            state = replace(state, finished=True, winner=finish_winner, finish_method=finish_method.value)
+            _append_tick_trace(brain, state, [], [], None, exposure_seconds, finish_trace, finish_winner, finish_method)
+            break'''
+          if old_block not in s:
+              raise SystemExit('finish termination patch anchor missing')
+          s = s.replace(old_block, new_block, 1)
+          s = s.replace(
+              '_append_tick_trace(brain, state, diagnostics, candidates, chosen, exposure_seconds, ko_trace, None)',
+              '_append_tick_trace(brain, state, diagnostics, candidates, chosen, exposure_seconds, finish_trace, None, None)'
+          )
+          s = s.replace('run_causal_path.embedded_ko_clock = True', 'run_causal_path.embedded_ko_clock = True\nrun_causal_path.embedded_sub_clock = True\nrun_causal_path.embedded_finish_clock = True')
+          tick_path.write_text(s)
+
+          harness = Path('pipeline/research/locked_brain_mc.py')
+          s = harness.read_text()
+          s = s.replace(
+              'KO/TKO time-survival hazard is evaluated inside that clock before ordinary Brain\nactions.',
+              'KO/TKO and submission time-survival hazards are evaluated together inside that clock before ordinary Brain\nactions.'
+          )
+          s = s.replace(
+              'from pipeline.research import locked_brain_tick_clock as tick_clock',
+              'from pipeline.research import locked_brain_tick_clock as tick_clock\nfrom pipeline.research import sub_time_survival_locked_clock as sub_time_clock'
+          )
+          s = s.replace(
+              '    "pipeline/research/allen_shahbazyan_decision_scored_outputs_2000.py": "6c23e1765b941c082c535588bf7a41b53fc6516d",',
+              '    "pipeline/research/allen_shahbazyan_decision_scored_outputs_2000.py": "6c23e1765b941c082c535588bf7a41b53fc6516d",\n    "pipeline/research/sub_time_survival_oos.py": "0738ddb476266cc63cb5b1e17eb115d13ce84e6c",\n    "pipeline/research/sub_time_survival_locked_clock.py": "49daf21287988a28c1e1ca2e8ebe4d1e21f34ded",'
+          )
+          anchor = '''            _, _, _, ko_clock = time_ko._time_clock_inputs()
+            ko_hazards = {side: np.asarray(ko_clock[names[side]]["hazards_per_second"], dtype=float) for side in Side}
+            tick_clock.configure('''
+          repl = '''            _, _, _, ko_clock = time_ko._time_clock_inputs()
+            ko_hazards = {side: np.asarray(ko_clock[names[side]]["hazards_per_second"], dtype=float) for side in Side}
+            sub_cutoff, sub_p0, sub_baseline_piece, sub_clock = sub_time_clock.time_clock_inputs(fight_id)
+            sub_hazards = {side: np.asarray(sub_clock[names[side]]["hazards_per_second"], dtype=float) for side in Side}
+            tick_clock.configure('''
+          if anchor not in s:
+              raise SystemExit('harness hazard anchor missing')
+          s = s.replace(anchor, repl, 1)
+          s = s.replace(
+              '                ko_fighter_names_by_side=names,\n            )',
+              '                ko_fighter_names_by_side=names,\n                sub_hazards_by_side=sub_hazards,\n                sub_fighter_names_by_side=names,\n            )',
+              1,
+          )
+          s = s.replace(
+              '"clock_architecture": "one global 1-second probability clock with embedded KO competing risk plus state-legal action availability",',
+              '"clock_architecture": "one global 1-second probability clock with embedded KO/TKO + submission four-cause competing risk plus state-legal action availability",'
+          )
+          s = s.replace(
+              '                "ko_hazards_per_second": {names[side]: ko_hazards[side].tolist() for side in Side},\n                "kd": "OOS-selected static prefight KD hazard; no within-fight KD escalation",\n                "submission": "OOS-selected fighter-level submission attempt rate mapped to relevant ground opportunity; conversion unchanged",',
+              '                "ko_hazards_per_second": {names[side]: ko_hazards[side].tolist() for side in Side},\n                "submission_finish_clock": "OOS-selected fighter piecewise-round time-survival hazard, prior_events=1.0, embedded as terminal competing risk independent of phase/ground time",\n                "submission_finish_cutoff": str(sub_cutoff.date()),\n                "submission_population_hazard_per_second": sub_p0,\n                "submission_baseline_hazard_per_second": sub_baseline_piece.tolist(),\n                "submission_hazards_per_second": {names[side]: sub_hazards[side].tolist() for side in Side},\n                "submission_matchup_inputs": {names[side]: sub_clock[names[side]] for side in Side},\n                "kd": "OOS-selected static prefight KD hazard; no within-fight KD escalation",\n                "submission": "ground submission attacks remain Brain/scoring attempts only; they cannot terminate; submission finish comes only from embedded survival clock",'
+          )
+          s = s.replace(
+              '            validated_kd.main()\n            _mark_embedded_ko_outputs(outdir, fight)',
+              '            validated_kd.main()\n            _mark_embedded_ko_outputs(outdir, fight)'
+          )
+          harness.write_text(s)
+
+          # Reporting: extend legacy embedded clock marker to submissions without changing outcome mechanics.
+          s = harness.read_text()
+          s = s.replace(
+              '    embedded = paths["base_method"].astype(str).eq("ko_tko")\n    paths.loc[embedded, "clock_triggered"] = True',
+              '    methods = paths["base_method"].astype(str)\n    embedded_ko = methods.eq("ko_tko")\n    embedded_sub = methods.eq("submission")\n    embedded = embedded_ko | embedded_sub\n    paths.loc[embedded, "clock_triggered"] = True\n    paths["finish_clock_triggered"] = embedded\n    paths["finish_clock_method"] = methods.where(embedded, None)'
+          )
+          s = s.replace(
+              '        mask = embedded & paths["base_winner"].astype(str).eq(names[side])',
+              '        mask = embedded_ko & paths["base_winner"].astype(str).eq(names[side])'
+          )
+          s = s.replace(
+              '        if "ko_tko_wins" in summary.columns:\n            summary["ko_clock_triggered_wins"] = summary["ko_tko_wins"]',
+              '        if "ko_tko_wins" in summary.columns:\n            summary["ko_clock_triggered_wins"] = summary["ko_tko_wins"]\n        if "submission_wins" in summary.columns:\n            summary["sub_clock_triggered_wins"] = summary["submission_wins"]'
+          )
+          s = s.replace(
+              '        payload["ko_architecture"] = "validated piecewise time-survival hazard embedded directly in global 1-second Brain probability clock"\n        payload["posthoc_ko_override"] = False',
+              '        payload["ko_architecture"] = "validated piecewise time-survival hazard embedded directly in global 1-second Brain probability clock"\n        payload["submission_architecture"] = "validated piecewise time-survival hazard embedded directly in same global 1-second four-cause competing-risk clock; ground attempts are non-terminal scoring events"\n        payload["posthoc_ko_override"] = False\n        payload["posthoc_submission_override"] = False'
+          )
+          harness.write_text(s)
+          PY
+
+      - name: Syntax check
+        run: |
+          python -m py_compile pipeline/research/locked_brain_tick_clock.py pipeline/research/locked_brain_mc.py pipeline/research/sub_time_survival_locked_clock.py
+      - name: Commit wiring
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add pipeline/research/locked_brain_tick_clock.py pipeline/research/locked_brain_mc.py
+          git commit -m "Wire validated SUB survival clock into locked Brain" || exit 0
+          git push origin HEAD:research/ko-system-v3-from-scratch-20260826
