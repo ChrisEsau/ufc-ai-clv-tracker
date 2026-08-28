@@ -1,4 +1,4 @@
-name: LOCKED Brain MC Kape Horiguchi TD Clock Fix
+name: LOCKED Brain MC Runner
 
 on:
   push:
@@ -8,6 +8,12 @@ on:
       - pipeline/research/locked_brain_mc_allen_shahbazyan.py
       - .github/workflows/locked-brain-mc-allen-shahbazyan.yml
   workflow_dispatch:
+    inputs:
+      paths:
+        description: Number of locked Brain paths
+        required: false
+        default: '1'
+        type: string
 
 permissions:
   contents: read
@@ -16,6 +22,8 @@ permissions:
 jobs:
   run:
     runs-on: ubuntu-24.04
+    env:
+      RUN_PATHS: ${{ inputs.paths || '1' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -33,228 +41,15 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
-      - name: Run locked Kape Horiguchi with phase-exposure clock fix
+      - name: Run locked Brain harness
         run: |
           set -euo pipefail
           cp -a restored/canonical-weight-class-state/. data/
-          python - <<'PY' | tee locked-brain-mc-kape-horiguchi.txt
-          from pathlib import Path
-          import pandas as pd
-          from pipeline.research import locked_brain_mc_allen_shahbazyan as harness
-          from pipeline.simulation.event_clock_mc_v2.causal.events import ActionFamily
-          from pipeline.simulation.event_clock_mc_v2.causal.state import Phase, Side
-
-          event_date = pd.Timestamp('2026-06-20')
-          fighter_a = 'Manel Kape'
-          fighter_b = 'Kyoji Horiguchi'
-          master = pd.read_parquet('data/master/ufc_master.parquet').copy()
-          master['date'] = pd.to_datetime(master['date']).dt.normalize()
-          same_day = master.loc[master['date'].eq(event_date)].copy()
-          mask = (
-              (same_day['r_name'].astype(str).eq(fighter_a) & same_day['b_name'].astype(str).eq(fighter_b))
-              | (same_day['r_name'].astype(str).eq(fighter_b) & same_day['b_name'].astype(str).eq(fighter_a))
-          )
-          rows = same_day.loc[mask]
-          if len(rows) != 1:
-              raise RuntimeError(f'expected one Kape-Horiguchi fight row, found {len(rows)}')
-          fight_id = str(rows.iloc[0]['fight_id'])
-          print('LOCKED_TARGET_OVERRIDE', {
-              'fight_id': fight_id,
-              'event_date': str(event_date.date()),
-              'fighters': [fighter_a, fighter_b],
-              'production_changed': False,
-              'research_mechanics_changed': True,
-              'phase_exposure_clock_fix': True,
-          })
-
-          harness.validated_kd.base_trace.FIGHT_ID = fight_id
-          harness.time_ko.base_trace.FIGHT_ID = fight_id
-          harness.scored.base_trace.FIGHT_ID = fight_id
-          harness.timing.base_trace.FIGHT_ID = fight_id
-          harness.timing.target.FIGHT_ID = fight_id
-          harness.scored.pressure_mod.FIGHT_ID = fight_id
-
-          # Research-only timing correction. The production causal engine redraws
-          # both fighters' readiness timers after every material phase transition.
-          # That repeatedly cancels long standing waits and violates the absolute
-          # per-15-minute TD hazard. This TraceBrain subclass treats readiness as
-          # phase-exposure time: a residual timer pauses when its phase ends and
-          # resumes if that phase returns. A timer that actually fires is consumed.
-          # Round boundaries intentionally reset all phase timers.
-          original_trace_brain = harness.scored.base_trace.TraceBrain
-
-          class PhaseExposureClockTraceBrain(original_trace_brain):
-              def __init__(self, inputs, priors, horizon):
-                  super().__init__(inputs, priors, horizon)
-                  self._phase_residual = {side: {} for side in Side}
-                  self._last_timer = {side: None for side in Side}
-                  self._last_round = {side: None for side in Side}
-
-              def timing_sampler(self, state, timing_context, rng, timing_config):
-                  side = self.side_by_timing_context_id[id(timing_context)]
-                  now = float(state.fight_time_seconds)
-                  rnd = int(state.round_number)
-                  phase = state.phase
-
-                  if self._last_round[side] is not None and self._last_round[side] != rnd:
-                      self._phase_residual[side].clear()
-                      self._last_timer[side] = None
-                  self._last_round[side] = rnd
-
-                  prior = self._last_timer[side]
-                  if prior is not None:
-                      elapsed = max(0.0, now - float(prior['sampled_at']))
-                      prior_delay = float(prior['delay'])
-                      prior_phase = prior['phase']
-                      if elapsed + 1e-9 < prior_delay:
-                          self._phase_residual[side][prior_phase] = prior_delay - elapsed
-                      else:
-                          self._phase_residual[side].pop(prior_phase, None)
-
-                  residual = self._phase_residual[side].pop(phase, None)
-                  if residual is not None and float(residual) > 1e-9:
-                      delay = float(residual)
-                  else:
-                      delay = float(super().timing_sampler(state, timing_context, rng, timing_config))
-
-                  self._last_timer[side] = {
-                      'sampled_at': now,
-                      'delay': delay,
-                      'phase': phase,
-                  }
-                  return delay
-
-          harness.scored.base_trace.TraceBrain = PhaseExposureClockTraceBrain
-          if harness.time_ko.base_trace is not harness.scored.base_trace:
-              raise RuntimeError('time_ko/scored base_trace modules are not shared')
-          print('PENDING_CLOCK_INTERVENTION', {
-              'semantics': 'phase-exposure residual readiness clocks; pause/resume across phase changes; reset at round boundary',
-              'production_changed': False,
-              'research_only': True,
-          })
-
-          original_round_stats = harness.scored.round_absolute_stats
-          td_rows = []
-          last_out = [None]
-
-          fight, _, _, _, _ = harness.scored.pressure_mod.build_setup()
-          names = {Side.RED: str(fight.r_name), Side.BLUE: str(fight.b_name)}
-          if set(names.values()) != {fighter_a, fighter_b}:
-              raise RuntimeError(f'observer target mismatch: {names}')
-
-          def observed_round_stats(out, round_number, round_length=300.0):
-              result = original_round_stats(out, round_number, round_length)
-              if out is not last_out[0]:
-                  last_out[0] = out
-                  standing_seconds = sum(
-                      float(seg.duration) for seg in out.timeline_segments
-                      if seg.phase is Phase.STANDING
-                  )
-                  material_transitions = sum(
-                      int(event.transition_kind is not None) for event in out.events
-                  )
-                  standing_reentries = sum(
-                      int(event.transition_kind is not None and event.resulting_phase is Phase.STANDING)
-                      for event in out.events
-                  )
-                  row = {
-                      'observed_decision_path_index': len(td_rows),
-                      'decision_winner': names[out.termination.winner],
-                      'fight_seconds': float(out.reported_through_seconds),
-                      'standing_seconds': standing_seconds,
-                      'material_transition_count': material_transitions,
-                      'standing_reentry_count': standing_reentries,
-                  }
-                  for side in (Side.RED, Side.BLUE):
-                      prefix = 'kape' if names[side] == fighter_a else 'horiguchi'
-                      direct_attempts = direct_completions = 0
-                      clinch_attempts = clinch_completions = 0
-                      direct_attempt_elapsed = []
-                      for event in out.events:
-                          if event.actor is not side:
-                              continue
-                          if event.selected_action is ActionFamily.TAKEDOWN_ENTRY:
-                              direct_attempts += 1
-                              direct_completions += int(event.transition_kind is not None)
-                              seg = next((
-                                  s for s in out.timeline_segments
-                                  if s.phase is Phase.STANDING
-                                  and float(s.start_time) <= float(event.timestamp_seconds) <= float(s.end_time) + 1e-9
-                              ), None)
-                              if seg is not None:
-                                  direct_attempt_elapsed.append(float(event.timestamp_seconds) - float(seg.start_time))
-                          elif event.selected_action is ActionFamily.CLINCH_TAKEDOWN:
-                              clinch_attempts += 1
-                              clinch_completions += int(event.transition_kind is not None)
-                      ctrl = sum(float(seg.duration) for seg in out.timeline_segments if seg.controller is side)
-                      row[f'{prefix}_direct_td_attempts'] = direct_attempts
-                      row[f'{prefix}_direct_td_completions'] = direct_completions
-                      row[f'{prefix}_clinch_td_attempts'] = clinch_attempts
-                      row[f'{prefix}_clinch_td_completions'] = clinch_completions
-                      row[f'{prefix}_total_td_attempts'] = direct_attempts + clinch_attempts
-                      row[f'{prefix}_total_td_completions'] = direct_completions + clinch_completions
-                      row[f'{prefix}_control_seconds'] = ctrl
-                      row[f'{prefix}_direct_td_attempts_per_15m_standing'] = (
-                          direct_attempts * 900.0 / standing_seconds if standing_seconds > 0 else 0.0
-                      )
-                      row[f'{prefix}_mean_seconds_from_standing_entry_to_direct_td'] = (
-                          sum(direct_attempt_elapsed) / len(direct_attempt_elapsed)
-                          if direct_attempt_elapsed else float('nan')
-                      )
-                      row[f'{prefix}_direct_td_within_15s_of_standing_entry'] = sum(
-                          int(x <= 15.0) for x in direct_attempt_elapsed
-                      )
-                  td_rows.append(row)
-              return result
-
-          harness.scored.round_absolute_stats = observed_round_stats
-          try:
-              harness.main()
-          finally:
-              harness.scored.round_absolute_stats = original_round_stats
-              harness.scored.base_trace.TraceBrain = original_trace_brain
-
-          outdir = Path('data/research/locked_brain_mc_allen_shahbazyan')
-          detail = pd.DataFrame(td_rows)
-          required = [
-              'kape_direct_td_attempts', 'kape_clinch_td_attempts',
-              'horiguchi_direct_td_attempts', 'horiguchi_clinch_td_attempts',
-              'standing_seconds', 'material_transition_count', 'standing_reentry_count'
-          ]
-          missing = [c for c in required if c not in detail.columns]
-          if missing:
-              raise RuntimeError(f'TD observer produced no usable rows; missing={missing}, rows={len(detail)}')
-          detail.to_csv(outdir / 'td_clock_fix_decision_paths.csv', index=False)
-
-          summary_rows = []
-          for winner, g in detail.groupby('decision_winner'):
-              r = {
-                  'decision_winner': winner,
-                  'paths': int(len(g)),
-                  'mean_standing_seconds': float(g['standing_seconds'].mean()),
-                  'mean_material_transition_count': float(g['material_transition_count'].mean()),
-                  'mean_standing_reentry_count': float(g['standing_reentry_count'].mean()),
-              }
-              for fighter in ('kape', 'horiguchi'):
-                  for metric in (
-                      'direct_td_attempts', 'direct_td_completions',
-                      'clinch_td_attempts', 'clinch_td_completions',
-                      'total_td_attempts', 'total_td_completions', 'control_seconds',
-                      'direct_td_attempts_per_15m_standing',
-                      'mean_seconds_from_standing_entry_to_direct_td',
-                      'direct_td_within_15s_of_standing_entry'
-                  ):
-                      r[f'mean_{fighter}_{metric}'] = float(g[f'{fighter}_{metric}'].mean())
-              summary_rows.append(r)
-          summary = pd.DataFrame(summary_rows)
-          summary.to_csv(outdir / 'td_clock_fix_summary.csv', index=False)
-          print('TD_CLOCK_FIX_SUMMARY')
-          print(summary.to_string(index=False))
-          PY
+          python -m pipeline.research.locked_brain_mc_allen_shahbazyan --paths "$RUN_PATHS" | tee locked-brain-mc.txt
       - name: Upload locked outputs
         uses: actions/upload-artifact@v4
         with:
-          name: locked-brain-mc-kape-horiguchi-td-clock-fix-${{ github.run_id }}
+          name: locked-brain-mc-${{ github.run_id }}-paths-${{ env.RUN_PATHS }}
           path: |
-            locked-brain-mc-kape-horiguchi.txt
+            locked-brain-mc.txt
             data/research/locked_brain_mc_allen_shahbazyan/
