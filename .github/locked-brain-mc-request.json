@@ -2,5 +2,5 @@
   "fight_id": "419fff06f338f5c6",
   "paths": 1,
   "requested_by": "locked_brain_mc_request",
-  "notes": "Allen-Shahbazyan one-path validation of global 1-second rate-driven availability clock after observer-safe escape fix"
+  "notes": "Allen-Shahbazyan validation after collision, round-boundary, KO reconciliation, and every-second trace fixes"
 }
