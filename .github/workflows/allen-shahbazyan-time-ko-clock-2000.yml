@@ -22,6 +22,7 @@ jobs:
           fetch-depth: 1
           sparse-checkout: |
             pipeline
+            config
             data/master
             data/fight_details
       - uses: actions/setup-python@v5
