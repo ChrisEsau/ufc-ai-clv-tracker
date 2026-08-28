@@ -2,9 +2,9 @@
 
 THIS FILE IS THE ONLY APPROVED ENTRY POINT FOR THIS RESEARCH LINE.
 Do not bypass it with ad-hoc Python or alternate runners. Any change to the
-mechanics stack, recency construction, path count, standing scale, KO/KD model,
-submission model, control-budget semantics, or dependency lock requires explicit
-user approval first.
+mechanics stack, recency construction, standing scale, KO/KD model, submission
+model, control-budget semantics, or dependency lock requires explicit user
+approval first.
 
 Frozen condition:
 - target: Brendan Allen vs Edmen Shahbazyan, fight id from the existing trace
@@ -16,7 +16,8 @@ Frozen condition:
 - piecewise time-based KO competing clock
 - OOS-selected static prefight KD hazard, no within-fight KD escalation
 - matched standard Brain seeds
-- 500 paths
+- default 500 paths; CLI --paths overrides research path count
+- --paths 1 automatically writes a detailed event report
 - exact judge-scored output dump
 - canonical FSR V3 snapshot restored byte-for-byte in finally
 
@@ -25,6 +26,7 @@ have drifted from the frozen base commit.
 """
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import shutil
@@ -42,7 +44,8 @@ from pipeline.research import allen_shahbazyan_time_ko_clock_2000 as time_ko
 from pipeline.research import allen_shahbazyan_time_ko_validated_kd_2000 as validated_kd
 from pipeline.research import allen_shahbazyan_decision_scored_outputs_2000 as scored
 from pipeline.simulation.event_clock_mc_v2.causal.events import ActionFamily
-from pipeline.simulation.event_clock_mc_v2.causal.state import Phase
+from pipeline.simulation.event_clock_mc_v2.causal.state import Phase, Side
+from pipeline.simulation.event_clock_mc_v2.engine import EngineFunctions
 from pipeline.simulation.event_clock_mc_v2.mechanics.resolver import resolve_action
 from pipeline.simulation.event_clock_mc_v2.mechanics.resolution import (
     ActionOutcome,
@@ -96,6 +99,24 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
+def _enum(value):
+    return None if value is None else getattr(value, "value", str(value))
+
+
+def _parse_args(argv=None):
+    parser = argparse.ArgumentParser(description="Run the locked Brain MC research harness")
+    parser.add_argument(
+        "--paths",
+        type=int,
+        default=LOCKED_PATHS,
+        help=f"number of matched-seed paths to run (default: {LOCKED_PATHS}); --paths 1 also writes event_report.json/csv",
+    )
+    args = parser.parse_args(argv)
+    if args.paths < 1:
+        parser.error("--paths must be >= 1")
+    return args
+
+
 def assert_locked_sources() -> dict:
     failures: list[str] = []
     blobs: dict[str, str] = {}
@@ -130,13 +151,7 @@ def _scaled_standing_rates(original):
 
 
 def _round_budget_resolver_class(original_cls):
-    """Adapt the validated round-total control target to round-budget semantics.
-
-    The source model predicts fighter-round total control seconds conditional on
-    >=1 landed takedown.  The old research resolver incorrectly sampled that
-    round-total target again for every new ground spell.  This wrapper samples
-    one budget per controller per round and deducts completed spell time from it.
-    """
+    """Adapt the validated round-total control target to round-budget semantics."""
 
     class RoundBudgetEscapeResolver(original_cls):
         def __init__(self, model, seed):
@@ -235,7 +250,173 @@ def _round_budget_resolver_class(original_cls):
     return RoundBudgetEscapeResolver
 
 
-def main() -> None:
+def _primary_mechanic_probability(event, state, inputs, placeholders) -> dict:
+    fighter = inputs.fighter(event.actor)
+    family = event.action_family
+    if family in {ActionFamily.STAND_ATTACK, ActionFamily.STAND_COUNTER}:
+        return {"mechanic": "standing_strike_landing", "probability": float(fighter.standing_strike_landing_probability)}
+    if family is ActionFamily.CLINCH_ENTRY:
+        return {"mechanic": "clinch_entry_success", "probability": float(placeholders.clinch_entry_success_probability)}
+    if family in {ActionFamily.TAKEDOWN_ENTRY, ActionFamily.CLINCH_TAKEDOWN}:
+        return {"mechanic": "takedown_completion", "probability": float(fighter.takedown_completion_probability)}
+    if family is ActionFamily.CLINCH_STRIKE:
+        return {"mechanic": "clinch_strike_landing", "probability": float(placeholders.clinch_strike_landing_probability)}
+    if family is ActionFamily.BREAK_CLINCH:
+        return {"mechanic": "break_clinch_success", "probability": float(placeholders.break_clinch_success_probability)}
+    if family in {ActionFamily.GROUND_STRIKE, ActionFamily.BOTTOM_STRIKE}:
+        return {"mechanic": "ground_strike_landing", "probability": float(fighter.ground_strike_landing_probability)}
+    if family is ActionFamily.REVERSAL:
+        return {"mechanic": "ground_reversal", "probability": float(fighter.ground_reversal_probability)}
+    if family is ActionFamily.ESCAPE_STAND:
+        return {"mechanic": "round_control_budget_escape_threshold", "probability": None}
+    if family is ActionFamily.SUBMISSION_ATTACK:
+        return {"mechanic": "submission_conversion", "probability": None}
+    return {"mechanic": "deterministic_or_tactical", "probability": 1.0}
+
+
+def _event_report_observer(original_run):
+    captured: dict = {}
+
+    def observed_run(inputs, *, seed, horizon_seconds, initial_state=None, config=None, functions=None):
+        pre_mechanics = []
+        original_functions = functions or EngineFunctions()
+        original_resolver = original_functions.mechanics_resolver
+
+        def observed_resolver(event, state, mechanics_inputs, rng, placeholders, ko_kd_rng=None, submission_rng=None):
+            pre_mechanics.append({
+                "timestamp": float(event.timestamp_seconds),
+                "actor": event.actor.value,
+                "action": event.action_family.value,
+                **_primary_mechanic_probability(event, state, mechanics_inputs, placeholders),
+            })
+            return original_resolver(
+                event,
+                state,
+                mechanics_inputs,
+                rng,
+                placeholders,
+                ko_kd_rng,
+                submission_rng,
+            )
+
+        observed_functions = EngineFunctions(
+            timing_sampler=original_functions.timing_sampler,
+            action_chooser=original_functions.action_chooser,
+            mechanics_resolver=observed_resolver,
+        )
+        kwargs = {
+            "seed": seed,
+            "horizon_seconds": horizon_seconds,
+            "functions": observed_functions,
+        }
+        if initial_state is not None:
+            kwargs["initial_state"] = initial_state
+        if config is not None:
+            kwargs["config"] = config
+        out = original_run(inputs, **kwargs)
+
+        brain = getattr(original_functions.action_chooser, "__self__", None)
+        decisions = list(getattr(brain, "decisions", []))
+        if len(decisions) != len(out.events):
+            raise RuntimeError(
+                f"event-report decision/event mismatch: {len(decisions)} != {len(out.events)}"
+            )
+        if len(pre_mechanics) != len(out.events):
+            raise RuntimeError(
+                f"event-report mechanics/event mismatch: {len(pre_mechanics)} != {len(out.events)}"
+            )
+
+        escape_checks = list(getattr(original_resolver, "escape_checks", []))
+        escape_by_key = {
+            (round(float(x["timestamp"]), 9), str(x["actor"])): x
+            for x in escape_checks
+        }
+        rows = []
+        previous_timestamp = 0.0
+        for index, (decision, event, mechanic) in enumerate(
+            zip(decisions, out.events, pre_mechanics, strict=True)
+        ):
+            key = (round(float(event.timestamp_seconds), 9), event.actor.value)
+            primary_probability = mechanic["probability"]
+            if event.selected_action is ActionFamily.SUBMISSION_ATTACK:
+                primary_probability = float(event.submission_probability)
+            rows.append({
+                "event_index": index,
+                "event_timestamp": float(event.timestamp_seconds),
+                "seconds_since_prior_event": float(event.timestamp_seconds) - previous_timestamp,
+                "round": int(decision["round"]),
+                "phase": decision["phase"],
+                "actor": event.actor.value,
+                "selected_action": event.selected_action.value,
+                "brain_options": decision["brain_options"],
+                "brain_selected_probability": next(
+                    (
+                        float(x["probability"])
+                        for x in decision["brain_options"]
+                        if x["action"] == event.selected_action.value
+                    ),
+                    None,
+                ),
+                "dynamic_pressure": decision.get("dynamic_pressure"),
+                "mechanic": mechanic["mechanic"],
+                "mechanic_probability": primary_probability,
+                "outcome": event.outcome.value,
+                "transition_kind": _enum(event.transition_kind),
+                "resulting_phase": event.resulting_phase.value,
+                "resulting_controller": _enum(event.resulting_controller),
+                "escape_model": escape_by_key.get(key),
+                "impact": float(event.impact),
+                "kd_probability": float(event.kd_probability),
+                "knockdown": bool(event.knockdown),
+                "ko_probability": float(event.ko_probability),
+                "ko_tko": bool(event.ko_tko),
+                "submission_attempt": bool(event.submission_attempt),
+                "submission_probability": float(event.submission_probability),
+                "submission_success": bool(event.submission_success),
+            })
+            previous_timestamp = float(event.timestamp_seconds)
+
+        captured["seed"] = int(seed)
+        captured["reported_through_seconds"] = float(out.reported_through_seconds)
+        captured["termination"] = None if out.termination is None else {
+            "winner_side": out.termination.winner.value,
+            "method": out.termination.finish_method.value,
+        }
+        captured["events"] = rows
+        return out
+
+    return observed_run, captured
+
+
+def _write_event_report(captured: dict, target_fight_id: str) -> None:
+    if not captured:
+        raise RuntimeError("--paths 1 requested event report but no path was captured")
+    payload = {
+        "study": "locked Brain MC one-path event report",
+        "production_changed": False,
+        "fight_id": target_fight_id,
+        "paths": 1,
+        "seed": captured["seed"],
+        "reported_through_seconds": captured["reported_through_seconds"],
+        "termination": captured["termination"],
+        "events": captured["events"],
+    }
+    (OUTDIR / "event_report.json").write_text(json.dumps(payload, indent=2) + "\n")
+    flat_rows = []
+    for row in captured["events"]:
+        flat = dict(row)
+        flat["brain_options"] = json.dumps(flat["brain_options"], separators=(",", ":"))
+        flat["escape_model"] = json.dumps(flat["escape_model"], separators=(",", ":")) if flat["escape_model"] is not None else None
+        flat_rows.append(flat)
+    pd.DataFrame(flat_rows).to_csv(OUTDIR / "event_report.csv", index=False)
+    print("LOCKED_ONE_PATH_EVENT_REPORT")
+    print(json.dumps(payload, indent=2))
+
+
+def main(paths: int = LOCKED_PATHS) -> None:
+    if isinstance(paths, bool) or not isinstance(paths, int) or paths < 1:
+        raise ValueError("paths must be an integer >= 1")
+
     OUTDIR.mkdir(parents=True, exist_ok=True)
     verified_blobs = assert_locked_sources()
 
@@ -255,6 +436,8 @@ def main() -> None:
         original_time_paths = time_ko.PATHS
         original_scored_paths = scored.PATHS
         original_validated_out = validated_kd.OUTDIR
+        original_time_run = time_ko.run_causal_path
+        event_capture = None
 
         try:
             canonical = pd.read_parquet(snapshot_path).copy()
@@ -262,7 +445,6 @@ def main() -> None:
             canonical["fight_id"] = canonical["fight_id"].astype(str)
             canonical["fighter_id"] = canonical["fighter_id"].astype(str)
 
-            # Exact historical recency builder; PURE EWM means zero canonical blend.
             recency.EWM_DECAY = LOCKED_EWM_DECAY
             recency.EWM_CANONICAL_BLEND = LOCKED_EWM_CANONICAL_BLEND
             ewm = recency.build_variant(canonical, "ewm")
@@ -274,25 +456,28 @@ def main() -> None:
                 raise RuntimeError(f"expected 2 PURE EWM target rows, found {len(target)}")
             target.to_csv(OUTDIR / "pure_ewm05_target_fsr_rows.csv", index=False)
 
-            # One and only one standing cadence intervention: calibrated research 0.25.
             timing._new_timing_rates = _scaled_standing_rates(original_timing)
-
-            # Correct semantic unit: one sampled control target per controller per round.
             timing.target.ExpectedControlEscapeResolver = _round_budget_resolver_class(
                 original_escape_resolver
             )
 
-            # Fixed matched-seed path count for this locked harness.
-            time_ko.PATHS = LOCKED_PATHS
-            scored.PATHS = LOCKED_PATHS
+            time_ko.PATHS = paths
+            scored.PATHS = paths
             validated_kd.OUTDIR = OUTDIR / "run"
+
+            if paths == 1:
+                observed_run, event_capture = _event_report_observer(original_time_run)
+                time_ko.run_causal_path = observed_run
 
             manifest = {
                 "entry_point": "pipeline.research.locked_brain_mc_allen_shahbazyan",
                 "locked_base_commit": LOCKED_BASE_COMMIT,
                 "verified_blobs": verified_blobs,
                 "fight_id": target_fight_id,
-                "paths": LOCKED_PATHS,
+                "paths": paths,
+                "paths_source": "CLI --paths or locked default",
+                "event_report": paths == 1,
+                "event_report_files": ["event_report.json", "event_report.csv"] if paths == 1 else [],
                 "ewm_decay": LOCKED_EWM_DECAY,
                 "ewm_canonical_blend": LOCKED_EWM_CANONICAL_BLEND,
                 "standing_attempt_scale": LOCKED_STANDING_ATTEMPT_SCALE,
@@ -310,8 +495,9 @@ def main() -> None:
             print("LOCKED_BRAIN_MC_MANIFEST")
             print(json.dumps(manifest, indent=2))
 
-            # Exact existing validated-KD wrapper; it calls the locked time-KO and scored runners.
             validated_kd.main()
+            if paths == 1:
+                _write_event_report(event_capture, target_fight_id)
         finally:
             recency.EWM_DECAY = original_decay
             recency.EWM_CANONICAL_BLEND = original_blend
@@ -320,6 +506,7 @@ def main() -> None:
             time_ko.PATHS = original_time_paths
             scored.PATHS = original_scored_paths
             validated_kd.OUTDIR = original_validated_out
+            time_ko.run_causal_path = original_time_run
             shutil.copy2(backup, snapshot_path)
 
     restored_sha256 = _sha256(snapshot_path)
@@ -340,4 +527,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    args = _parse_args()
+    main(paths=args.paths)
