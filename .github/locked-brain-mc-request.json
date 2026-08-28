@@ -1,6 +1,6 @@
 {
   "fight_id": "419fff06f338f5c6",
-  "paths": 1,
+  "paths": 500,
   "requested_by": "locked_brain_mc_request",
-  "notes": "Allen-Shahbazyan one-path validation with KO embedded in global Brain probability clock and seed path offset +1"
+  "notes": "Allen-Shahbazyan 500-path validation using single approved locked Brain harness with embedded 1-second KO probability clock"
 }
