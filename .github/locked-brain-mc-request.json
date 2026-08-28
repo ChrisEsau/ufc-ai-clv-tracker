@@ -1,6 +1,7 @@
 {
-  "fight_id": "33afdd7ad43a2756",
+  "fight_id": "",
   "paths": 500,
+  "build_bundle": true,
   "requested_by": "locked_brain_mc_request",
-  "notes": "500-path locked Brain validation for Manel Kape vs Kyoji Horiguchi with embedded OOS KO and submission competing-risk clocks"
+  "notes": "Build reusable historical databases once for bundle-backed locked Brain runs"
 }
