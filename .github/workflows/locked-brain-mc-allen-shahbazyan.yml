@@ -72,21 +72,20 @@ jobs:
           harness.timing.base_trace.FIGHT_ID = fight_id
           harness.timing.target.FIGHT_ID = fight_id
 
-          # Observer only: original scored.main calls round_absolute_stats(out, ...)
-          # on each decision path. Inspect each existing `out` once; no RNG calls,
-          # no state mutation, and return the original scorer result unchanged.
           original_round_stats = harness.scored.round_absolute_stats
-          seen = set()
           td_rows = []
+          last_out = [None]
 
           fight, _, _, _, _ = harness.scored.pressure_mod.build_setup()
           names = {Side.RED: str(fight.r_name), Side.BLUE: str(fight.b_name)}
 
           def observed_round_stats(out, round_number, round_length=300.0):
               result = original_round_stats(out, round_number, round_length)
-              key = id(out)
-              if key not in seen:
-                  seen.add(key)
+              # scored.main calls this sequentially for rounds 1..N of each path.
+              # Keep the previous object itself alive and compare identity, avoiding
+              # Python id() reuse after garbage collection.
+              if out is not last_out[0]:
+                  last_out[0] = out
                   row = {
                       'observed_decision_path_index': len(td_rows),
                       'decision_winner': names[out.termination.winner],
@@ -105,10 +104,7 @@ jobs:
                           elif event.selected_action is ActionFamily.CLINCH_TAKEDOWN:
                               clinch_attempts += 1
                               clinch_completions += int(event.transition_kind is not None)
-                      ctrl = 0.0
-                      for seg in out.timeline_segments:
-                          if seg.controller is side:
-                              ctrl += float(seg.duration)
+                      ctrl = sum(float(seg.duration) for seg in out.timeline_segments if seg.controller is side)
                       row[f'{prefix}_direct_td_attempts'] = direct_attempts
                       row[f'{prefix}_direct_td_completions'] = direct_completions
                       row[f'{prefix}_clinch_td_attempts'] = clinch_attempts
@@ -127,6 +123,13 @@ jobs:
 
           outdir = Path('data/research/locked_brain_mc_allen_shahbazyan')
           detail = pd.DataFrame(td_rows)
+          required = [
+              'kape_direct_td_attempts', 'kape_clinch_td_attempts',
+              'horiguchi_direct_td_attempts', 'horiguchi_clinch_td_attempts'
+          ]
+          missing = [c for c in required if c not in detail.columns]
+          if missing:
+              raise RuntimeError(f'TD observer produced no usable rows; missing={missing}, rows={len(detail)}')
           detail.to_csv(outdir / 'td_channel_decision_paths.csv', index=False)
 
           summary_rows = []
