@@ -71,6 +71,7 @@ jobs:
           harness.scored.base_trace.FIGHT_ID = fight_id
           harness.timing.base_trace.FIGHT_ID = fight_id
           harness.timing.target.FIGHT_ID = fight_id
+          harness.scored.pressure_mod.FIGHT_ID = fight_id
 
           original_round_stats = harness.scored.round_absolute_stats
           td_rows = []
@@ -78,12 +79,11 @@ jobs:
 
           fight, _, _, _, _ = harness.scored.pressure_mod.build_setup()
           names = {Side.RED: str(fight.r_name), Side.BLUE: str(fight.b_name)}
+          if set(names.values()) != {fighter_a, fighter_b}:
+              raise RuntimeError(f'observer target mismatch: {names}')
 
           def observed_round_stats(out, round_number, round_length=300.0):
               result = original_round_stats(out, round_number, round_length)
-              # scored.main calls this sequentially for rounds 1..N of each path.
-              # Keep the previous object itself alive and compare identity, avoiding
-              # Python id() reuse after garbage collection.
               if out is not last_out[0]:
                   last_out[0] = out
                   row = {
