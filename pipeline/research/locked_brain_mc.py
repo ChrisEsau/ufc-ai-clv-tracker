@@ -8,6 +8,10 @@ monkeypatch runners.
 This file contains the locked implementation itself. There is no second harness
 underneath it.
 
+Standing intent has one source of truth in this harness: ``locked_standing_rates``.
+The standing timing sampler and standing action chooser are both wired to the
+exact same callable for every locked run.
+
 CLI examples:
 
     python -m pipeline.research.locked_brain_mc --fight-id 419fff06f338f5c6 --paths 500
@@ -41,6 +45,7 @@ from pipeline.research import allen_shahbazyan_decision_scored_outputs_2000 as s
 from pipeline.simulation.event_clock_mc_v2.causal.events import ActionFamily
 from pipeline.simulation.event_clock_mc_v2.causal.state import Phase
 from pipeline.simulation.event_clock_mc_v2.engine import EngineFunctions
+from pipeline.simulation.event_clock_mc_v2.diagnostics import leavitt_brito_intent_rate_shadow as intent_mod
 from pipeline.simulation.event_clock_mc_v2.mechanics.resolver import resolve_action
 from pipeline.simulation.event_clock_mc_v2.mechanics.resolution import (
     ActionOutcome,
@@ -60,6 +65,7 @@ LOCKED_PATHS = 500
 LOCKED_EWM_DECAY = 0.50
 LOCKED_EWM_CANONICAL_BLEND = 0.0
 LOCKED_STANDING_ATTEMPT_SCALE = 0.25
+EPS = 1e-12
 CANONICAL_ARTIFACT_ID = 9494902022
 CANONICAL_SOURCE_RUN_ID = 32645607979
 CANONICAL_ARTIFACT_DIGEST = "sha256:a6abd062322eaf0c4a47997f215d7fa82c01c7db2755089fad1a30420da7d639"
@@ -146,13 +152,29 @@ def assert_locked_sources() -> dict:
     return blobs
 
 
-def _scaled_standing_rates(original):
-    def locked_scaled_rates(state, actor, capabilities, context, priors, config):
-        rates, pressure = original(state, actor, capabilities, context, priors, config)
-        rates = dict(rates)
-        rates[ActionFamily.STAND_ATTACK] = float(rates[ActionFamily.STAND_ATTACK]) * LOCKED_STANDING_ATTEMPT_SCALE
-        return rates, pressure
-    return locked_scaled_rates
+def locked_standing_rates(state, actor, capabilities, context, priors, config):
+    """Single source of truth for all locked standing intent rates.
+
+    Timing and selection must both call this exact function. The rates are:
+    research-scaled matchup-effective standing attempts, matchup-effective TD
+    attempts with the frozen TD scale, and the calibrated matchup clinch rate.
+    No RESET_RANGE or live context multiplier is present.
+    """
+    del state, capabilities, context, config
+    return {
+        ActionFamily.STAND_ATTACK: max(
+            float(priors.standing_attempt_rate_15m) * LOCKED_STANDING_ATTEMPT_SCALE,
+            EPS,
+        ),
+        ActionFamily.TAKEDOWN_ENTRY: max(
+            float(priors.takedown_attempt_rate_15m) * float(timing.TD_SCALE),
+            EPS,
+        ),
+        ActionFamily.CLINCH_ENTRY: max(
+            float(timing.CLINCH_RATE_BY_SIDE[actor]),
+            EPS,
+        ),
+    }, 0.0
 
 
 def _round_budget_resolver_class(original_cls):
@@ -324,6 +346,9 @@ def main(*, fight_id: str, paths: int = LOCKED_PATHS) -> None:
         original_decay = recency.EWM_DECAY
         original_blend = recency.EWM_CANONICAL_BLEND
         original_timing = timing._new_timing_rates
+        original_intent_rates = intent_mod._standing_rates
+        original_base_trace_rates = timing.base_trace._standing_rates_no_reset
+        original_target_rates = timing.target._standing_rates_no_reset
         original_escape_resolver = timing.target.ExpectedControlEscapeResolver
         original_time_paths = time_ko.PATHS
         original_scored_paths = scored.PATHS
@@ -344,7 +369,17 @@ def main(*, fight_id: str, paths: int = LOCKED_PATHS) -> None:
             if len(target) != 2:
                 raise RuntimeError(f"expected 2 PURE EWM target rows for {fight_id}, found {len(target)}")
             target.to_csv(outdir / "pure_ewm05_target_fsr_rows.csv", index=False)
-            timing._new_timing_rates = _scaled_standing_rates(original_timing)
+
+            # ONE standing-rate source of truth. IntentRateBrain.timing_sampler
+            # resolves intent_mod._standing_rates at call time, while TraceBrain's
+            # chooser resolves base_trace._standing_rates_no_reset. Both point to
+            # the exact same callable, and time_ko.main also propagates
+            # timing._new_timing_rates into its chooser seams.
+            timing._new_timing_rates = locked_standing_rates
+            intent_mod._standing_rates = locked_standing_rates
+            timing.base_trace._standing_rates_no_reset = locked_standing_rates
+            timing.target._standing_rates_no_reset = locked_standing_rates
+
             timing.target.ExpectedControlEscapeResolver = _round_budget_resolver_class(original_escape_resolver)
             time_ko.PATHS = paths
             scored.PATHS = paths
@@ -361,6 +396,8 @@ def main(*, fight_id: str, paths: int = LOCKED_PATHS) -> None:
                 "single_path_aggregate_scorer_skipped": paths == 1,
                 "ewm_decay": LOCKED_EWM_DECAY, "ewm_canonical_blend": LOCKED_EWM_CANONICAL_BLEND,
                 "standing_attempt_scale": LOCKED_STANDING_ATTEMPT_SCALE,
+                "standing_rate_source": "pipeline.research.locked_brain_mc.locked_standing_rates",
+                "standing_timing_and_chooser_share_exact_callable": True,
                 "control_duration_semantics": "one sampled round-total control budget per controller per round; re-entries consume remaining budget",
                 "ko": "piecewise time-based competing clock from allen_shahbazyan_time_ko_clock_2000",
                 "kd": "OOS-selected static prefight KD hazard; no within-fight KD escalation",
@@ -379,6 +416,9 @@ def main(*, fight_id: str, paths: int = LOCKED_PATHS) -> None:
             recency.EWM_DECAY = original_decay
             recency.EWM_CANONICAL_BLEND = original_blend
             timing._new_timing_rates = original_timing
+            intent_mod._standing_rates = original_intent_rates
+            timing.base_trace._standing_rates_no_reset = original_base_trace_rates
+            timing.target._standing_rates_no_reset = original_target_rates
             timing.target.ExpectedControlEscapeResolver = original_escape_resolver
             time_ko.PATHS = original_time_paths
             scored.PATHS = original_scored_paths
