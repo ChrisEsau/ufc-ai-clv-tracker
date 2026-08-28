@@ -4,11 +4,12 @@ This module is not an executable runner. It is a scheduler implementation used o
 by pipeline.research.locked_brain_mc. Production Event Clock V2 mechanics remain
 unchanged.
 
-At every whole-second tick each currently admissible action receives an independent
-rate-driven availability draw. If no action is available the fight advances one
-second. If one or more actions are available, one event is selected from the
-available set using their hazard weights. The same per-15 rate therefore drives
-both availability and same-tick competition.
+At every one-second interval each currently admissible action receives an independent
+rate-driven availability draw. Rate controls availability exactly once. If no action
+is available the fight advances one second. If one action is available it is selected
+with probability 1. If multiple independently available actions collide in the same
+one-second interval, the collision is resolved uniformly; no rate, capability,
+completion probability, or conversion signal is applied a second time.
 
 Standing actions:
   STAND_ATTACK, TAKEDOWN_ENTRY, CLINCH_ENTRY for each fighter.
@@ -20,7 +21,7 @@ DISENGAGE, IMPROVE_POSITION and ADVANCE_POSITION.
 
 Clinch remains mechanically frozen; its existing mean timing is converted to a
 one-second availability probability and its existing intent-prior chooser supplies
-the selected clinch action.
+the selected clinch action after a clinch opportunity becomes available.
 """
 from __future__ import annotations
 
@@ -112,19 +113,54 @@ def _escape_mean_seconds(controller: Side, resolver=None) -> float:
     raise RuntimeError("escape mean unavailable for locked tick clock")
 
 
+def _trace_option(actor, action, rate_15m, probability, draw, available, *, source="rate"):
+    return {
+        "actor": actor.value,
+        "action": None if action is None else action.value,
+        "rate_15m": float(rate_15m),
+        "availability_probability_1s": float(probability),
+        "availability_draw": None if draw is None else float(draw),
+        "available": bool(available),
+        "source": source,
+    }
+
+
+def _append_tick_trace(brain, state, diagnostics, candidates, selected):
+    if brain is None:
+        return
+    if not hasattr(brain, "tick_trace"):
+        brain.tick_trace = []
+    brain.tick_trace.append({
+        "tick": len(brain.tick_trace) + 1,
+        "timestamp": float(state.fight_time_seconds),
+        "round": int(state.round_number),
+        "phase": state.phase.value,
+        "ground_controller": None if state.ground_controller is None else state.ground_controller.value,
+        "clinch_controller": None if state.clinch_controller is None else state.clinch_controller.value,
+        "options": diagnostics,
+        "available_count": len(candidates),
+        "collision": len(candidates) > 1,
+        "collision_rule": "uniform_among_available",
+        "selected_actor": None if selected is None else selected["actor"].value,
+        "selected_action": None if selected is None else selected["action"].value,
+        "selected_probability_given_available": (
+            None if selected is None else 1.0 / float(len(candidates))
+        ),
+    })
+
+
 def _append_trace_decision(brain, state, actor, context, options, selected):
     if brain is None or not hasattr(brain, "decisions"):
         return
-    total = sum(max(float(row["weight"]), 0.0) for row in options)
+    probability = 1.0 / float(len(options))
     rows = []
     for row in options:
-        weight = max(float(row["weight"]), 0.0)
         rows.append({
             "action": row["action"].value,
             "actor": row["actor"].value,
             "rate_15m": float(row.get("rate_15m", 0.0)),
             "availability_probability_1s": float(row.get("availability_probability", 0.0)),
-            "probability": weight / total if total > 0 else 0.0,
+            "probability": probability,
         })
     brain.decisions.append({
         "decision_index": len(brain.decisions),
@@ -143,6 +179,7 @@ def _append_trace_decision(brain, state, actor, context, options, selected):
         "brain_options": rows,
         "selected_action": selected.value,
         "global_tick_seconds": TICK_SECONDS,
+        "collision_rule": "uniform_among_available",
         "dynamic_pressure": 0.0,
     })
 
@@ -183,9 +220,11 @@ class AlwaysEscapeResolver:
 
 
 def _ground_candidates(state, brain, rngs, resolver, burst_remaining):
+    del brain
     controller = state.ground_controller
     bottom = controller.opponent
     out = []
+    diagnostics = []
     burst_key = (int(state.round_number), controller, round(float(state.phase_started_at), 9))
     remaining = burst_remaining.get(burst_key)
     if remaining is None:
@@ -194,47 +233,69 @@ def _ground_candidates(state, brain, rngs, resolver, burst_remaining):
 
     strike_rate = max(GROUND_RATE_BY_SIDE.get(controller, 0.0), 0.0)
     strike_p = _availability_probability(strike_rate)
-    strike_available = remaining > 0 or rngs.selection(controller).random() < strike_p
+    if remaining > 0:
+        strike_draw = None
+        strike_available = True
+        effective_p = 1.0
+        source = "burst"
+    else:
+        strike_draw = float(rngs.selection(controller).random())
+        strike_available = strike_draw < strike_p
+        effective_p = strike_p
+        source = "rate"
+    diagnostics.append(_trace_option(
+        controller, ActionFamily.GROUND_STRIKE, strike_rate, effective_p,
+        strike_draw, strike_available, source=source,
+    ))
     if strike_available:
         out.append({
             "actor": controller,
             "action": ActionFamily.GROUND_STRIKE,
             "rate_15m": strike_rate,
-            "availability_probability": 1.0 if remaining > 0 else strike_p,
-            "weight": max(strike_rate, EPS),
+            "availability_probability": effective_p,
             "burst_key": burst_key if remaining > 0 else None,
         })
 
     for side in (controller, bottom):
         sub_rate = _submission_ground_rate(side)
         p = _availability_probability(sub_rate)
-        if rngs.selection(side).random() < p:
+        draw = float(rngs.selection(side).random())
+        available = draw < p
+        diagnostics.append(_trace_option(
+            side, ActionFamily.SUBMISSION_ATTACK, sub_rate, p, draw, available
+        ))
+        if available:
             out.append({
                 "actor": side,
                 "action": ActionFamily.SUBMISSION_ATTACK,
                 "rate_15m": sub_rate,
                 "availability_probability": p,
-                "weight": max(sub_rate, EPS),
             })
 
     mean_escape = _escape_mean_seconds(controller, resolver)
     escape_rate = 900.0 / mean_escape
     p_escape = _availability_probability(escape_rate)
-    if rngs.selection(bottom).random() < p_escape:
+    escape_draw = float(rngs.selection(bottom).random())
+    escape_available = escape_draw < p_escape
+    diagnostics.append(_trace_option(
+        bottom, ActionFamily.ESCAPE_STAND, escape_rate, p_escape,
+        escape_draw, escape_available
+    ))
+    if escape_available:
         out.append({
             "actor": bottom,
             "action": ActionFamily.ESCAPE_STAND,
             "rate_15m": escape_rate,
             "availability_probability": p_escape,
-            "weight": max(escape_rate, EPS),
         })
-    return out
+    return out, diagnostics
 
 
 def _standing_candidates(state, brain, inputs, rngs):
     if STANDING_RATE_FN is None:
         raise RuntimeError("locked tick clock not configured with standing_rate_fn")
     out = []
+    diagnostics = []
     for side in Side:
         fighter = inputs.fighter(side)
         context = decision_context(state, side, fighter.decision_context, math.inf)
@@ -243,25 +304,33 @@ def _standing_candidates(state, brain, inputs, rngs):
         )
         for action, rate in rates.items():
             p = _availability_probability(rate)
-            if rngs.selection(side).random() < p:
+            draw = float(rngs.selection(side).random())
+            available = draw < p
+            diagnostics.append(_trace_option(side, action, rate, p, draw, available))
+            if available:
                 out.append({
                     "actor": side,
                     "action": action,
                     "rate_15m": float(rate),
                     "availability_probability": p,
-                    "weight": max(float(rate), EPS),
                 })
-    return out
+    return out, diagnostics
 
 
 def _clinch_candidates(state, brain, inputs, rngs):
     out = []
+    diagnostics = []
     for side in Side:
         fighter = inputs.fighter(side)
         mean = expected_action_delay(state, fighter.timing_context, inputs.timing_config)
         total_rate = 900.0 / max(mean, EPS)
         p = _availability_probability(total_rate)
-        if rngs.selection(side).random() >= p:
+        draw = float(rngs.selection(side).random())
+        available = draw < p
+        if not available:
+            diagnostics.append(_trace_option(
+                side, None, total_rate, p, draw, False, source="clinch_opportunity"
+            ))
             continue
         context = decision_context(state, side, fighter.decision_context, math.inf)
         rows = action_probabilities_with_intent_priors(
@@ -270,14 +339,16 @@ def _clinch_candidates(state, brain, inputs, rngs):
         probs = np.asarray([row.probability for row in rows], float)
         probs /= probs.sum()
         selected = rows[int(rngs.selection(side).choice(len(rows), p=probs))].action_family
+        diagnostics.append(_trace_option(
+            side, selected, total_rate, p, draw, True, source="clinch_opportunity"
+        ))
         out.append({
             "actor": side,
             "action": selected,
             "rate_15m": total_rate,
             "availability_probability": p,
-            "weight": max(total_rate, EPS),
         })
-    return out
+    return out, diagnostics
 
 
 def run_causal_path(
@@ -300,6 +371,7 @@ def run_causal_path(
     brain = getattr(functions.action_chooser, "__self__", None)
     if brain is None or not hasattr(brain, "priors"):
         raise RuntimeError("locked tick clock requires the locked TraceBrain bound chooser")
+    brain.tick_trace = []
     resolver = functions.mechanics_resolver
 
     events = []
@@ -310,9 +382,106 @@ def run_causal_path(
     while not state.finished and state.fight_time_seconds < effective_horizon:
         round_end = state.round_number * config.round_length_seconds
         next_tick = min(state.fight_time_seconds + TICK_SECONDS, effective_horizon, round_end)
+        at_round_end = next_tick >= round_end - 1e-12
 
-        if next_tick >= round_end - 1e-12:
-            state = advance_physiology(state, round_end, inputs.mechanics_calibration)
+        state = advance_physiology(state, next_tick, inputs.mechanics_calibration)
+        state = replace(
+            state, memory=decay_memory(state.memory, next_tick, config.memory_config)
+        )
+
+        if state.phase is Phase.STANDING:
+            candidates, diagnostics = _standing_candidates(state, brain, inputs, rngs)
+        elif state.phase is Phase.GROUND:
+            candidates, diagnostics = _ground_candidates(state, brain, rngs, resolver, burst_remaining)
+        else:
+            candidates, diagnostics = _clinch_candidates(state, brain, inputs, rngs)
+
+        chosen = None
+        if candidates:
+            # Availability already contains the rate signal. A collision is a
+            # one-second discretization artifact, so resolve it without reusing
+            # rate/capability/conversion information.
+            chosen_index = int(competition_rng.integers(len(candidates)))
+            chosen = candidates[chosen_index]
+
+        _append_tick_trace(brain, state, diagnostics, candidates, chosen)
+
+        if chosen is not None:
+            actor = chosen["actor"]
+            selected = chosen["action"]
+            fighter = inputs.fighter(actor)
+            context = decision_context(state, actor, fighter.decision_context, effective_horizon)
+            _append_trace_decision(brain, state, actor, context, candidates, selected)
+
+            burst_key = chosen.get("burst_key")
+            if burst_key is not None:
+                burst_remaining[burst_key] = max(0, int(burst_remaining.get(burst_key, 0)) - 1)
+
+            event = ActionEvent(float(state.fight_time_seconds), actor, selected, state.phase)
+            resolution = functions.mechanics_resolver(
+                event,
+                state,
+                inputs.mechanics_inputs,
+                rngs.mechanics,
+                inputs.mechanics_placeholders,
+                rngs.ko_kd,
+                rngs.submission,
+            )
+            state = apply_action_consequence(
+                state,
+                actor,
+                selected,
+                resolution.consequence,
+                fighter.mechanics,
+                inputs.mechanics_calibration,
+            )
+            if resolution.transition is not None:
+                state = apply_transition_request(
+                    state, timeline, resolution.transition, float(state.fight_time_seconds)
+                )
+            state = replace(
+                state, memory=update_memory(state.memory, resolution, config.memory_config)
+            )
+
+            requested_termination = (
+                resolution.consequence
+                if isinstance(resolution.consequence, FightTerminationRequest)
+                else (
+                    resolution.consequence.termination
+                    if isinstance(resolution.consequence, (StrikeConsequence, SubmissionConsequence))
+                    else None
+                )
+            )
+            if requested_termination is not None:
+                termination = requested_termination
+                state = replace(
+                    state,
+                    finished=True,
+                    winner=termination.winner,
+                    finish_method=termination.finish_method.value,
+                )
+
+            events.append(CausalEventRecord(
+                float(event.timestamp_seconds), actor, event.source_phase, selected,
+                resolution.outcome,
+                resolution.transition.kind if resolution.transition else None,
+                state.phase, _controller(state), context, state.memory.fighter(actor),
+                resolution.consequence.impact if isinstance(resolution.consequence, StrikeConsequence) else 0.0,
+                resolution.consequence.knockdown if isinstance(resolution.consequence, StrikeConsequence) else False,
+                resolution.consequence.ko_probability if isinstance(resolution.consequence, StrikeConsequence) else 0.0,
+                resolution.consequence.knockdown_probability if isinstance(resolution.consequence, StrikeConsequence) else 0.0,
+                resolution.consequence.prior_defender_kds if isinstance(resolution.consequence, StrikeConsequence) else 0,
+                bool(isinstance(resolution.consequence, StrikeConsequence) and resolution.consequence.termination is not None and resolution.consequence.termination.finish_method is FinishMethod.KO_TKO),
+                resolution.consequence.ko_kd_architecture if isinstance(resolution.consequence, StrikeConsequence) else None,
+                isinstance(resolution.consequence, SubmissionConsequence),
+                resolution.consequence.conversion_probability if isinstance(resolution.consequence, SubmissionConsequence) else 0.0,
+                bool(isinstance(resolution.consequence, SubmissionConsequence) and resolution.consequence.success),
+            ))
+
+        if state.finished:
+            break
+
+        if at_round_end:
             if state.round_number >= config.number_of_rounds:
                 break
             state = start_next_round(state, timeline, round_end)
@@ -323,97 +492,6 @@ def run_causal_path(
             )
             boundaries.append(RoundBoundaryRecord(round_end, state.round_number))
             burst_remaining.clear()
-            continue
-
-        state = advance_physiology(state, next_tick, inputs.mechanics_calibration)
-        state = replace(
-            state, memory=decay_memory(state.memory, next_tick, config.memory_config)
-        )
-
-        if state.phase is Phase.STANDING:
-            candidates = _standing_candidates(state, brain, inputs, rngs)
-        elif state.phase is Phase.GROUND:
-            candidates = _ground_candidates(state, brain, rngs, resolver, burst_remaining)
-        else:
-            candidates = _clinch_candidates(state, brain, inputs, rngs)
-
-        if not candidates:
-            continue
-
-        weights = np.asarray([max(float(row["weight"]), EPS) for row in candidates], float)
-        weights /= weights.sum()
-        chosen_index = int(competition_rng.choice(len(candidates), p=weights))
-        chosen = candidates[chosen_index]
-        actor = chosen["actor"]
-        selected = chosen["action"]
-        fighter = inputs.fighter(actor)
-        context = decision_context(state, actor, fighter.decision_context, effective_horizon)
-        _append_trace_decision(brain, state, actor, context, candidates, selected)
-
-        burst_key = chosen.get("burst_key")
-        if burst_key is not None:
-            burst_remaining[burst_key] = max(0, int(burst_remaining.get(burst_key, 0)) - 1)
-
-        event = ActionEvent(float(state.fight_time_seconds), actor, selected, state.phase)
-        resolution = functions.mechanics_resolver(
-            event,
-            state,
-            inputs.mechanics_inputs,
-            rngs.mechanics,
-            inputs.mechanics_placeholders,
-            rngs.ko_kd,
-            rngs.submission,
-        )
-        state = apply_action_consequence(
-            state,
-            actor,
-            selected,
-            resolution.consequence,
-            fighter.mechanics,
-            inputs.mechanics_calibration,
-        )
-        if resolution.transition is not None:
-            state = apply_transition_request(
-                state, timeline, resolution.transition, float(state.fight_time_seconds)
-            )
-        state = replace(
-            state, memory=update_memory(state.memory, resolution, config.memory_config)
-        )
-
-        requested_termination = (
-            resolution.consequence
-            if isinstance(resolution.consequence, FightTerminationRequest)
-            else (
-                resolution.consequence.termination
-                if isinstance(resolution.consequence, (StrikeConsequence, SubmissionConsequence))
-                else None
-            )
-        )
-        if requested_termination is not None:
-            termination = requested_termination
-            state = replace(
-                state,
-                finished=True,
-                winner=termination.winner,
-                finish_method=termination.finish_method.value,
-            )
-
-        events.append(CausalEventRecord(
-            float(event.timestamp_seconds), actor, event.source_phase, selected,
-            resolution.outcome,
-            resolution.transition.kind if resolution.transition else None,
-            state.phase, _controller(state), context, state.memory.fighter(actor),
-            resolution.consequence.impact if isinstance(resolution.consequence, StrikeConsequence) else 0.0,
-            resolution.consequence.knockdown if isinstance(resolution.consequence, StrikeConsequence) else False,
-            resolution.consequence.ko_probability if isinstance(resolution.consequence, StrikeConsequence) else 0.0,
-            resolution.consequence.knockdown_probability if isinstance(resolution.consequence, StrikeConsequence) else 0.0,
-            resolution.consequence.prior_defender_kds if isinstance(resolution.consequence, StrikeConsequence) else 0,
-            bool(isinstance(resolution.consequence, StrikeConsequence) and resolution.consequence.termination is not None and resolution.consequence.termination.finish_method is FinishMethod.KO_TKO),
-            resolution.consequence.ko_kd_architecture if isinstance(resolution.consequence, StrikeConsequence) else None,
-            isinstance(resolution.consequence, SubmissionConsequence),
-            resolution.consequence.conversion_probability if isinstance(resolution.consequence, SubmissionConsequence) else 0.0,
-            bool(isinstance(resolution.consequence, SubmissionConsequence) and resolution.consequence.success),
-        ))
 
     reached_scheduled_horizon = not state.finished
     reported_through = state.fight_time_seconds if state.finished else effective_horizon
