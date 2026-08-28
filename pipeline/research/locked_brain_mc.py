@@ -6,7 +6,7 @@ ad-hoc fight scripts, alternate harnesses, wrapper runners, or workflow
 monkeypatch runners.
 
 Brain event generation uses one global 1-second probability clock. The validated
-KO/TKO time-survival hazard is evaluated inside that clock before ordinary Brain
+KO/TKO and submission time-survival hazards are evaluated together inside that clock before ordinary Brain
 actions. Action rates control availability once; simultaneous available actions are
 resolved by conditional Brain chooser weights across only those available actions.
 """
@@ -31,6 +31,7 @@ from pipeline.research import allen_shahbazyan_time_ko_clock_2000 as time_ko
 from pipeline.research import allen_shahbazyan_time_ko_validated_kd_2000 as validated_kd
 from pipeline.research import allen_shahbazyan_decision_scored_outputs_2000 as scored
 from pipeline.research import locked_brain_tick_clock as tick_clock
+from pipeline.research import sub_time_survival_locked_clock as sub_time_clock
 from pipeline.simulation.event_clock_mc_v2.causal.events import ActionFamily
 from pipeline.simulation.event_clock_mc_v2.causal.state import Phase, Side
 from pipeline.simulation.event_clock_mc_v2.engine import EngineFunctions
@@ -60,6 +61,8 @@ LOCKED_BLOBS = {
     "pipeline/research/allen_shahbazyan_time_ko_clock_2000.py": "edc24423d5549e0e706e17ee14459ec187a52542",
     "pipeline/research/allen_shahbazyan_time_ko_validated_kd_2000.py": "a333689887bb9a54cadfff2a9ac05a70ee844f64",
     "pipeline/research/allen_shahbazyan_decision_scored_outputs_2000.py": "6c23e1765b941c082c535588bf7a41b53fc6516d",
+    "pipeline/research/sub_time_survival_oos.py": "0738ddb476266cc63cb5b1e17eb115d13ce84e6c",
+    "pipeline/research/sub_time_survival_locked_clock.py": "49daf21287988a28c1e1ca2e8ebe4d1e21f34ded",
 }
 
 LOCKED_CORE_PATHS = (
@@ -468,12 +471,16 @@ def main(*, fight_id: str, paths: int = LOCKED_PATHS) -> None:
             }
             _, _, _, ko_clock = time_ko._time_clock_inputs()
             ko_hazards = {side: np.asarray(ko_clock[names[side]]["hazards_per_second"], dtype=float) for side in Side}
+            sub_cutoff, sub_p0, sub_baseline_piece, sub_clock = sub_time_clock.time_clock_inputs(fight_id)
+            sub_hazards = {side: np.asarray(sub_clock[names[side]]["hazards_per_second"], dtype=float) for side in Side}
             tick_clock.configure(
                 standing_rate_fn=locked_standing_rates,
                 ground_rate_by_side=ground_rates,
                 ground_burst_by_side=ground_bursts,
                 ko_hazards_by_side=ko_hazards,
                 ko_fighter_names_by_side=names,
+                sub_hazards_by_side=sub_hazards,
+                sub_fighter_names_by_side=names,
             )
 
             timing.target.ExpectedControlEscapeResolver = tick_clock.AlwaysEscapeResolver
@@ -501,7 +508,7 @@ def main(*, fight_id: str, paths: int = LOCKED_PATHS) -> None:
                 "event_report_files": ["event_report.json", "event_report.csv", "tick_report.json", "tick_report.csv"] if paths == 1 else [],
                 "ewm_decay": LOCKED_EWM_DECAY,
                 "ewm_canonical_blend": LOCKED_EWM_CANONICAL_BLEND,
-                "clock_architecture": "one global 1-second probability clock with embedded KO competing risk plus state-legal action availability",
+                "clock_architecture": "one global 1-second probability clock with embedded KO/TKO + submission four-cause competing risk plus state-legal action availability",
                 "tick_interval_semantics": "300 one-second probability intervals per 5-minute round including interval ending at horn",
                 "collision_semantics": "rate determines action availability once; simultaneous available actions are normalized by conditional Brain policy weights",
                 "standing_attempt_scale": LOCKED_STANDING_ATTEMPT_SCALE,
@@ -516,8 +523,14 @@ def main(*, fight_id: str, paths: int = LOCKED_PATHS) -> None:
                 "escape_semantics": "rate-driven escape event; matchup expected control seconds become mean escape time; selected escape succeeds",
                 "ko": "validated piecewise time-survival competing risk converted to per-tick Brain-clock probabilities; no post-hoc KO sampler",
                 "ko_hazards_per_second": {names[side]: ko_hazards[side].tolist() for side in Side},
+                "submission_finish_clock": "OOS-selected fighter piecewise-round time-survival hazard, prior_events=1.0, embedded as terminal competing risk independent of phase/ground time",
+                "submission_finish_cutoff": str(sub_cutoff.date()),
+                "submission_population_hazard_per_second": sub_p0,
+                "submission_baseline_hazard_per_second": sub_baseline_piece.tolist(),
+                "submission_hazards_per_second": {names[side]: sub_hazards[side].tolist() for side in Side},
+                "submission_matchup_inputs": {names[side]: sub_clock[names[side]] for side in Side},
                 "kd": "OOS-selected static prefight KD hazard; no within-fight KD escalation",
-                "submission": "OOS-selected fighter-level submission attempt rate mapped to relevant ground opportunity; conversion unchanged",
+                "submission": "ground submission attacks remain Brain/scoring attempts only; they cannot terminate; submission finish comes only from embedded survival clock",
                 "canonical_artifact_id": CANONICAL_ARTIFACT_ID,
                 "canonical_source_run_id": CANONICAL_SOURCE_RUN_ID,
                 "canonical_artifact_digest": CANONICAL_ARTIFACT_DIGEST,

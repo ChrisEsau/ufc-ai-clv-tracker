@@ -3,7 +3,7 @@
 This module is not an executable runner. It is used only by
 pipeline.research.locked_brain_mc; production Event Clock V2 remains unchanged.
 
-Every tick first evaluates the validated time-survival KO/TKO competing risk, then,
+Every tick first evaluates the validated KO/TKO and submission time-survival competing risks, then,
 if the fight survives, evaluates the currently admissible Brain actions. Action rates
 control availability exactly once. Simultaneous available actions are resolved by
 conditional Brain chooser weights across only those available actions.
@@ -59,7 +59,9 @@ GROUND_RATE_BY_SIDE: dict[Side, float] = {}
 GROUND_BURST_BY_SIDE: dict[Side, float] = {}
 ESCAPE_MEAN_SECONDS_BY_CONTROLLER: dict[Side, float] = {}
 KO_HAZARDS_BY_SIDE: dict[Side, np.ndarray] = {}
+SUB_HAZARDS_BY_SIDE: dict[Side, np.ndarray] = {}
 KO_FIGHTER_NAMES_BY_SIDE: dict[Side, str] = {}
+SUB_FIGHTER_NAMES_BY_SIDE: dict[Side, str] = {}
 STANDING_RATE_FN = None
 
 REMOVED_GROUND_ACTIONS = {
@@ -79,9 +81,11 @@ def configure(
     ground_burst_by_side,
     ko_hazards_by_side=None,
     ko_fighter_names_by_side=None,
+    sub_hazards_by_side=None,
+    sub_fighter_names_by_side=None,
 ):
     global STANDING_RATE_FN, GROUND_RATE_BY_SIDE, GROUND_BURST_BY_SIDE
-    global KO_HAZARDS_BY_SIDE, KO_FIGHTER_NAMES_BY_SIDE
+    global KO_HAZARDS_BY_SIDE, SUB_HAZARDS_BY_SIDE, KO_FIGHTER_NAMES_BY_SIDE, SUB_FIGHTER_NAMES_BY_SIDE
     STANDING_RATE_FN = standing_rate_fn
     GROUND_RATE_BY_SIDE = {side: float(value) for side, value in ground_rate_by_side.items()}
     GROUND_BURST_BY_SIDE = {side: float(value) for side, value in ground_burst_by_side.items()}
@@ -91,6 +95,12 @@ def configure(
     }
     KO_FIGHTER_NAMES_BY_SIDE = {
         side: str(value) for side, value in (ko_fighter_names_by_side or {}).items()
+    }
+    SUB_HAZARDS_BY_SIDE = {
+        side: np.asarray(value, dtype=float) for side, value in (sub_hazards_by_side or {}).items()
+    }
+    SUB_FIGHTER_NAMES_BY_SIDE = {
+        side: str(value) for side, value in (sub_fighter_names_by_side or {}).items()
     }
 
 
@@ -132,53 +142,51 @@ def _ko_piece_index(timestamp: float, pieces: int) -> int:
     return min(max(int(math.ceil(max(float(timestamp), EPS) / 300.0)) - 1, 0), pieces - 1)
 
 
-def _ko_tick_probability(tick_end: float, exposure_seconds: float, rng):
-    if not KO_HAZARDS_BY_SIDE:
-        return None, None
-    if set(KO_HAZARDS_BY_SIDE) != {Side.RED, Side.BLUE}:
-        raise RuntimeError("embedded KO clock requires hazards for both sides")
-
-    hazards = {}
-    for side in Side:
-        pieces = KO_HAZARDS_BY_SIDE[side]
-        if pieces.size < 1:
-            raise RuntimeError(f"empty KO hazard vector for {side.value}")
-        hazards[side] = max(float(pieces[_ko_piece_index(tick_end, len(pieces))]), 0.0)
-
-    total_hazard = float(hazards[Side.RED] + hazards[Side.BLUE])
+def _finish_tick_probability(tick_end: float, exposure_seconds: float, rng):
+    if not KO_HAZARDS_BY_SIDE or not SUB_HAZARDS_BY_SIDE:
+        return None, None, None
+    if set(KO_HAZARDS_BY_SIDE) != {Side.RED, Side.BLUE} or set(SUB_HAZARDS_BY_SIDE) != {Side.RED, Side.BLUE}:
+        raise RuntimeError("embedded finish clock requires KO and SUB hazards for both sides")
+    cause_hazards = {}
+    for method, source in ((FinishMethod.KO_TKO, KO_HAZARDS_BY_SIDE), (FinishMethod.SUBMISSION, SUB_HAZARDS_BY_SIDE)):
+        for side in Side:
+            pieces = source[side]
+            if pieces.size < 1:
+                raise RuntimeError(f"empty {method.value} hazard vector for {side.value}")
+            cause_hazards[(method, side)] = max(float(pieces[_ko_piece_index(tick_end, len(pieces))]), 0.0)
+    total_hazard = float(sum(cause_hazards.values()))
     exposure = max(float(exposure_seconds), 0.0)
     any_probability = float(1.0 - math.exp(-total_hazard * exposure)) if total_hazard > 0 else 0.0
     any_draw = float(rng.random())
-    fires = any_draw < any_probability
     winner = None
+    finish_method = None
     cause_draw = None
-    if fires:
+    if any_draw < any_probability:
         cause_draw = float(rng.random())
-        red_share = hazards[Side.RED] / total_hazard if total_hazard > 0 else 0.5
-        winner = Side.RED if cause_draw < red_share else Side.BLUE
-
-    ko = {}
-    for side in Side:
-        cause_probability = (
-            any_probability * hazards[side] / total_hazard if total_hazard > 0 else 0.0
-        )
-        ko[side.value] = {
-            "fighter": KO_FIGHTER_NAMES_BY_SIDE.get(side),
-            "hazard_per_second": hazards[side],
-            "exposure_seconds": exposure,
-            "probability_in_interval": cause_probability,
-            "probability_next_1s": (
-                (1.0 - math.exp(-total_hazard)) * hazards[side] / total_hazard
-                if total_hazard > 0 else 0.0
-            ),
-            "any_ko_probability_in_interval": any_probability,
-            "any_ko_draw": any_draw,
-            "cause_draw_if_ko": cause_draw,
-            "sampled_clock_time": float(tick_end) if winner is side else None,
-            "fires_in_this_tick_interval": winner is side,
-        }
-    return winner, ko
-
+        threshold = cause_draw * total_hazard
+        cumulative = 0.0
+        for method, side in ((FinishMethod.KO_TKO, Side.RED), (FinishMethod.KO_TKO, Side.BLUE), (FinishMethod.SUBMISSION, Side.RED), (FinishMethod.SUBMISSION, Side.BLUE)):
+            cumulative += cause_hazards[(method, side)]
+            if threshold <= cumulative:
+                winner, finish_method = side, method
+                break
+    trace = {"ko": {}, "sub": {}, "any_finish_probability_in_interval": any_probability, "any_finish_draw": any_draw, "cause_draw_if_finish": cause_draw}
+    for method, label, names in ((FinishMethod.KO_TKO, "ko", KO_FIGHTER_NAMES_BY_SIDE), (FinishMethod.SUBMISSION, "sub", SUB_FIGHTER_NAMES_BY_SIDE)):
+        for side in Side:
+            hazard = cause_hazards[(method, side)]
+            trace[label][side.value] = {
+                "fighter": names.get(side),
+                "hazard_per_second": hazard,
+                "exposure_seconds": exposure,
+                "probability_in_interval": any_probability * hazard / total_hazard if total_hazard > 0 else 0.0,
+                "probability_next_1s": (1.0 - math.exp(-total_hazard)) * hazard / total_hazard if total_hazard > 0 else 0.0,
+                "any_finish_probability_in_interval": any_probability,
+                "any_finish_draw": any_draw,
+                "cause_draw_if_finish": cause_draw,
+                "sampled_clock_time": float(tick_end) if winner is side and finish_method is method else None,
+                "fires_in_this_tick_interval": winner is side and finish_method is method,
+            }
+    return winner, finish_method, trace
 
 def _collision_policy_weights(state, brain, inputs, candidates):
     if not candidates:
@@ -210,7 +218,7 @@ def _collision_policy_weights(state, brain, inputs, candidates):
             candidate["collision_weight_fallback"] = False
 
 
-def _append_tick_trace(brain, state, diagnostics, candidates, selected, exposure_seconds, ko=None, ko_winner=None):
+def _append_tick_trace(brain, state, diagnostics, candidates, selected, exposure_seconds, finish_trace=None, finish_winner=None, finish_method=None):
     if brain is None:
         return
     if not hasattr(brain, "tick_trace"):
@@ -223,7 +231,9 @@ def _append_tick_trace(brain, state, diagnostics, candidates, selected, exposure
         row["collision_weight"] = None if candidate is None else candidate.get("collision_weight")
         row["selection_probability_given_available"] = None if candidate is None else candidate.get("collision_probability")
         traced_options.append(row)
-    ko_event = ko_winner is not None
+    finish_event = finish_winner is not None
+    finish_action = None if not finish_event else ("ko_clock" if finish_method is FinishMethod.KO_TKO else "sub_clock")
+    finish_trace = finish_trace or {}
     brain.tick_trace.append({
         "tick": len(brain.tick_trace) + 1,
         "timestamp": float(state.fight_time_seconds),
@@ -235,14 +245,20 @@ def _append_tick_trace(brain, state, diagnostics, candidates, selected, exposure
         "options": traced_options,
         "available_count": len(candidates),
         "collision": len(candidates) > 1,
-        "collision_rule": "embedded_ko_first_then_brain_policy_weights_among_available",
-        "selected_actor": ko_winner.value if ko_event else (None if selected is None else selected["actor"].value),
-        "selected_action": "ko_clock" if ko_event else (None if selected is None else selected["action"].value),
-        "selected_probability_given_available": 1.0 if ko_event else (None if selected is None else float(selected["collision_probability"])),
-        "ko_clock_event": ko_event,
-        "ko": ko or {},
+        "collision_rule": "embedded_finish_competing_risk_first_then_brain_policy_weights_among_available",
+        "selected_actor": finish_winner.value if finish_event else (None if selected is None else selected["actor"].value),
+        "selected_action": finish_action if finish_event else (None if selected is None else selected["action"].value),
+        "selected_probability_given_available": 1.0 if finish_event else (None if selected is None else float(selected["collision_probability"])),
+        "finish_clock_event": finish_event,
+        "finish_clock_method": None if finish_method is None else finish_method.value,
+        "ko_clock_event": finish_event and finish_method is FinishMethod.KO_TKO,
+        "sub_clock_event": finish_event and finish_method is FinishMethod.SUBMISSION,
+        "any_finish_probability_in_interval": finish_trace.get("any_finish_probability_in_interval"),
+        "any_finish_draw": finish_trace.get("any_finish_draw"),
+        "cause_draw_if_finish": finish_trace.get("cause_draw_if_finish"),
+        "ko": finish_trace.get("ko", {}),
+        "sub": finish_trace.get("sub", {}),
     })
-
 
 def _append_trace_decision(brain, state, actor, context, options, selected):
     if brain is None or not hasattr(brain, "decisions"):
@@ -301,7 +317,10 @@ class AlwaysEscapeResolver:
                 "tick_hazard_semantics": True,
             })
             return ActionResolution(event, ActionOutcome.ESCAPED, TransitionRequest(TransitionKind.ESCAPE_GROUND, Phase.GROUND, Phase.STANDING))
-        return resolve_action(event, state, inputs, rng, placeholders, ko_kd_rng, submission_rng)
+        resolved = resolve_action(event, state, inputs, rng, placeholders, ko_kd_rng, submission_rng)
+        if event.action_family is ActionFamily.SUBMISSION_ATTACK and isinstance(resolved.consequence, SubmissionConsequence):
+            return ActionResolution(event, ActionOutcome.FAILURE, consequence=SubmissionConsequence(attempted=True, conversion_probability=float(resolved.consequence.conversion_probability), success=False, termination=None))
+        return resolved
 
 
 def _ground_candidates(state, brain, rngs, resolver, burst_remaining, exposure_seconds):
@@ -398,7 +417,7 @@ def run_causal_path(
     timeline = PhaseTimeline.from_state(state)
     rngs = EngineRNGs.from_seed(seed)
     competition_rng = np.random.default_rng((int(seed) ^ 0x31434C4F434B) & ((1 << 63) - 1))
-    ko_rng = np.random.default_rng((int(seed) ^ 0x4B4F425241494E) & ((1 << 63) - 1))
+    finish_rng = np.random.default_rng((int(seed) ^ 0x46494E495348) & ((1 << 63) - 1))
     brain = getattr(functions.action_chooser, "__self__", None)
     if brain is None or not hasattr(brain, "priors"):
         raise RuntimeError("locked tick clock requires the locked TraceBrain bound chooser")
@@ -417,14 +436,14 @@ def run_causal_path(
             raise RuntimeError(f"non-positive tick exposure at t={tick_start} round={state.round_number}")
         at_round_end = next_tick >= round_end - 1e-12
 
-        ko_winner, ko_trace = _ko_tick_probability(next_tick, exposure_seconds, ko_rng)
+        finish_winner, finish_method, finish_trace = _finish_tick_probability(next_tick, exposure_seconds, finish_rng)
         state = advance_physiology(state, next_tick, inputs.mechanics_calibration)
         state = replace(state, memory=decay_memory(state.memory, next_tick, config.memory_config))
 
-        if ko_winner is not None:
-            termination = FightTerminationRequest(ko_winner, FinishMethod.KO_TKO)
-            state = replace(state, finished=True, winner=ko_winner, finish_method=FinishMethod.KO_TKO.value)
-            _append_tick_trace(brain, state, [], [], None, exposure_seconds, ko_trace, ko_winner)
+        if finish_winner is not None:
+            termination = FightTerminationRequest(finish_winner, finish_method)
+            state = replace(state, finished=True, winner=finish_winner, finish_method=finish_method.value)
+            _append_tick_trace(brain, state, [], [], None, exposure_seconds, finish_trace, finish_winner, finish_method)
             break
 
         if state.phase is Phase.STANDING:
@@ -441,7 +460,7 @@ def run_causal_path(
             probabilities /= probabilities.sum()
             chosen = candidates[int(competition_rng.choice(len(candidates), p=probabilities))]
 
-        _append_tick_trace(brain, state, diagnostics, candidates, chosen, exposure_seconds, ko_trace, None)
+        _append_tick_trace(brain, state, diagnostics, candidates, chosen, exposure_seconds, finish_trace, None, None)
 
         if chosen is not None:
             actor, selected = chosen["actor"], chosen["action"]
@@ -517,3 +536,5 @@ def run_causal_path(
 
 
 run_causal_path.embedded_ko_clock = True
+run_causal_path.embedded_sub_clock = True
+run_causal_path.embedded_finish_clock = True
