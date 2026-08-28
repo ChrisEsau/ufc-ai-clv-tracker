@@ -1,18 +1,16 @@
 name: LOCKED Brain MC Runner
 
 on:
-  push:
-    branches:
-      - research/ko-system-v3-from-scratch-20260826
-    paths:
-      - pipeline/research/locked_brain_mc_allen_shahbazyan.py
-      - .github/workflows/locked-brain-mc-allen-shahbazyan.yml
   workflow_dispatch:
     inputs:
+      fight_id:
+        description: Target fight_id
+        required: true
+        type: string
       paths:
         description: Number of locked Brain paths
         required: false
-        default: '1'
+        default: '500'
         type: string
 
 permissions:
@@ -23,7 +21,8 @@ jobs:
   run:
     runs-on: ubuntu-24.04
     env:
-      RUN_PATHS: ${{ inputs.paths || '1' }}
+      RUN_FIGHT_ID: ${{ inputs.fight_id }}
+      RUN_PATHS: ${{ inputs.paths || '500' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -41,15 +40,17 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
-      - name: Run locked Brain harness
+      - name: Run single approved locked Brain harness
         run: |
           set -euo pipefail
           cp -a restored/canonical-weight-class-state/. data/
-          python -m pipeline.research.locked_brain_mc_allen_shahbazyan --paths "$RUN_PATHS" | tee locked-brain-mc.txt
+          python -m pipeline.research.locked_brain_mc \
+            --fight-id "$RUN_FIGHT_ID" \
+            --paths "$RUN_PATHS" | tee locked-brain-mc.txt
       - name: Upload locked outputs
         uses: actions/upload-artifact@v4
         with:
-          name: locked-brain-mc-${{ github.run_id }}-paths-${{ env.RUN_PATHS }}
+          name: locked-brain-mc-${{ env.RUN_FIGHT_ID }}-${{ github.run_id }}-paths-${{ env.RUN_PATHS }}
           path: |
             locked-brain-mc.txt
-            data/research/locked_brain_mc_allen_shahbazyan/
+            data/research/locked_brain_mc/${{ env.RUN_FIGHT_ID }}/
