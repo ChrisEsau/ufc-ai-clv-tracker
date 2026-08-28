@@ -3,5 +3,5 @@
   "paths": 500,
   "build_bundle": false,
   "requested_by": "locked_brain_mc_request",
-  "notes": "Verify 500-path Kape-Horiguchi run uses persistent locked historical bundle only"
+  "notes": "Retry bundle-backed Kape-Horiguchi 500 paths after restoring frozen runtime model dependency"
 }
