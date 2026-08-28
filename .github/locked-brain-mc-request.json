@@ -1,6 +1,6 @@
 {
   "fight_id": "419fff06f338f5c6",
-  "paths": 1,
+  "paths": 500,
   "requested_by": "locked_brain_mc_request",
-  "notes": "Retry one-path locked Brain SUB-clock smoke test after manifest ndarray serialization fix"
+  "notes": "500-path locked Brain validation with embedded OOS submission survival competing-risk clock"
 }
