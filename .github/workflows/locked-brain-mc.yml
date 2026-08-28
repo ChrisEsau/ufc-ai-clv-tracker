@@ -12,6 +12,11 @@ on:
         required: false
         default: '500'
         type: string
+  push:
+    branches:
+      - research/ko-system-v3-from-scratch-20260826
+    paths:
+      - .github/locked-brain-mc-request.json
 
 permissions:
   contents: read
@@ -20,9 +25,6 @@ permissions:
 jobs:
   run:
     runs-on: ubuntu-24.04
-    env:
-      RUN_FIGHT_ID: ${{ inputs.fight_id }}
-      RUN_PATHS: ${{ inputs.paths || '500' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -40,17 +42,47 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
+      - name: Resolve locked run request
+        id: request
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            fight_id='${{ inputs.fight_id }}'
+            paths='${{ inputs.paths || '500' }}'
+          else
+            readarray -t values < <(python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('.github/locked-brain-mc-request.json')
+          obj = json.loads(p.read_text())
+          fight_id = str(obj['fight_id']).strip()
+          paths = int(obj.get('paths', 500))
+          if not fight_id:
+              raise SystemExit('fight_id must be non-empty')
+          if paths < 1:
+              raise SystemExit('paths must be >= 1')
+          print(fight_id)
+          print(paths)
+          PY
+            )
+            fight_id="${values[0]}"
+            paths="${values[1]}"
+          fi
+          echo "fight_id=$fight_id" >> "$GITHUB_OUTPUT"
+          echo "paths=$paths" >> "$GITHUB_OUTPUT"
+          echo "LOCKED_RUN_REQUEST fight_id=$fight_id paths=$paths event=${{ github.event_name }}"
       - name: Run single approved locked Brain harness
         run: |
           set -euo pipefail
           cp -a restored/canonical-weight-class-state/. data/
           python -m pipeline.research.locked_brain_mc \
-            --fight-id "$RUN_FIGHT_ID" \
-            --paths "$RUN_PATHS" | tee locked-brain-mc.txt
+            --fight-id "${{ steps.request.outputs.fight_id }}" \
+            --paths "${{ steps.request.outputs.paths }}" | tee locked-brain-mc.txt
       - name: Upload locked outputs
         uses: actions/upload-artifact@v4
         with:
-          name: locked-brain-mc-${{ env.RUN_FIGHT_ID }}-${{ github.run_id }}-paths-${{ env.RUN_PATHS }}
+          name: locked-brain-mc-${{ steps.request.outputs.fight_id }}-${{ github.run_id }}-paths-${{ steps.request.outputs.paths }}
           path: |
             locked-brain-mc.txt
-            data/research/locked_brain_mc/${{ env.RUN_FIGHT_ID }}/
+            data/research/locked_brain_mc/${{ steps.request.outputs.fight_id }}/
