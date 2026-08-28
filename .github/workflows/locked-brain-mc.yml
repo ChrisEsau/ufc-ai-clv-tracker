@@ -75,14 +75,15 @@ jobs:
           echo "build_bundle=$build_bundle" >> "$GITHUB_OUTPUT"
           echo "LOCKED_RUN_REQUEST fight_id=$fight_id paths=$paths build_bundle=$build_bundle event=${{ github.event_name }}"
 
-      - name: Restore locked historical bundle cache
+      - name: Restore locked Brain bundle cache
         id: bundle-cache
         uses: actions/cache@v4
         with:
           path: data/research/locked_brain_bundle
-          key: locked-brain-bundle-v1-${{ hashFiles('pipeline/research/locked_brain_bundle.py', 'pipeline/research/fsr_recency_cohort_shadow.py', 'pipeline/research/ko_time_survival_oos.py', 'pipeline/research/sub_time_survival_oos.py') }}
+          key: locked-brain-bundle-v2-${{ hashFiles('pipeline/research/locked_brain_bundle.py', 'pipeline/research/fsr_recency_cohort_shadow.py', 'pipeline/research/ko_time_survival_oos.py', 'pipeline/research/sub_time_survival_oos.py') }}
 
-      - name: Restore canonical frozen runtime artifact
+      - name: Restore canonical source artifact for one-time bundle build
+        if: steps.request.outputs.build_bundle == 'true'
         uses: actions/download-artifact@v4
         with:
           artifact-ids: 9494902022
@@ -91,7 +92,7 @@ jobs:
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
 
-      - name: Build reusable locked historical bundle
+      - name: Build reusable locked Brain bundle
         if: steps.request.outputs.build_bundle == 'true'
         shell: bash
         run: |
@@ -102,22 +103,10 @@ jobs:
       - name: Require bundle for normal runs
         if: steps.request.outputs.build_bundle != 'true' && steps.bundle-cache.outputs.cache-hit != 'true'
         run: |
-          echo 'LOCKED Brain historical bundle is missing. Run once with build_bundle=true.' >&2
+          echo 'LOCKED Brain bundle is missing. Run once with build_bundle=true.' >&2
           exit 1
 
-      - name: Restore frozen simulator runtime dependency
-        if: steps.request.outputs.build_bundle != 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          src='restored/canonical-weight-class-state/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib'
-          dst='data/models/event_clock_mc_v2/event_clock_v2_fsr_v3_bundle.joblib'
-          test -f "$src"
-          mkdir -p "$(dirname "$dst")"
-          cp "$src" "$dst"
-          echo "LOCKED_RUNTIME_MODEL_RESTORED $dst"
-
-      - name: Run single approved locked Brain harness from bundle
+      - name: Run single approved locked Brain harness from bundle only
         if: steps.request.outputs.build_bundle != 'true'
         run: |
           set -euo pipefail
