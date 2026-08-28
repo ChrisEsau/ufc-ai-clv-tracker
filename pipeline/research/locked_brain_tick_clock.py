@@ -8,8 +8,9 @@ At every one-second interval each currently admissible action receives an indepe
 rate-driven availability draw. Rate controls availability exactly once. If no action
 is available the fight advances one second. If one action is available it is selected
 with probability 1. If multiple independently available actions collide in the same
-one-second interval, the collision is resolved uniformly; no rate, capability,
-completion probability, or conversion signal is applied a second time.
+one-second interval, the locked Brain policy supplies conditional chooser weights
+across only those available actions. Those chooser weights resolve the collision but
+do not create additional action opportunities or alter the availability cadence.
 
 Standing actions:
   STAND_ATTACK, TAKEDOWN_ENTRY, CLINCH_ENTRY for each fighter.
@@ -92,9 +93,10 @@ def configure(*, standing_rate_fn, ground_rate_by_side, ground_burst_by_side):
     GROUND_BURST_BY_SIDE = {side: float(value) for side, value in ground_burst_by_side.items()}
 
 
-def _availability_probability(rate_15m: float) -> float:
+def _availability_probability(rate_15m: float, exposure_seconds: float = TICK_SECONDS) -> float:
     rate = max(float(rate_15m), 0.0)
-    return float(1.0 - math.exp(-rate * TICK_SECONDS / 900.0))
+    exposure = max(float(exposure_seconds), 0.0)
+    return float(1.0 - math.exp(-rate * exposure / 900.0))
 
 
 def _submission_ground_rate(side: Side) -> float:
@@ -125,26 +127,79 @@ def _trace_option(actor, action, rate_15m, probability, draw, available, *, sour
     }
 
 
-def _append_tick_trace(brain, state, diagnostics, candidates, selected):
+def _collision_policy_weights(state, brain, inputs, candidates):
+    """Attach conditional Brain chooser weights without reusing the rate signal."""
+    if not candidates:
+        return
+    policy_by_side = {}
+    for side in {row["actor"] for row in candidates}:
+        fighter = inputs.fighter(side)
+        context = decision_context(state, side, fighter.decision_context, math.inf)
+        rows = action_probabilities_with_intent_priors(
+            state,
+            side,
+            fighter.capabilities,
+            context,
+            brain.priors[side],
+            inputs.policy_config,
+        )
+        policy_by_side[side] = {
+            row.action_family: max(float(row.probability), 0.0) for row in rows
+        }
+
+    weights = []
+    for candidate in candidates:
+        weight = float(
+            policy_by_side.get(candidate["actor"], {}).get(candidate["action"], 0.0)
+        )
+        candidate["collision_weight"] = weight
+        weights.append(weight)
+
+    total = float(sum(weights))
+    if total <= EPS:
+        probability = 1.0 / float(len(candidates))
+        for candidate in candidates:
+            candidate["collision_probability"] = probability
+            candidate["collision_weight_fallback"] = True
+    else:
+        for candidate in candidates:
+            candidate["collision_probability"] = float(candidate["collision_weight"] / total)
+            candidate["collision_weight_fallback"] = False
+
+
+def _append_tick_trace(brain, state, diagnostics, candidates, selected, exposure_seconds):
     if brain is None:
         return
     if not hasattr(brain, "tick_trace"):
         brain.tick_trace = []
+    candidate_lookup = {
+        (row["actor"].value, row["action"].value): row for row in candidates
+    }
+    traced_options = []
+    for diagnostic in diagnostics:
+        row = dict(diagnostic)
+        candidate = candidate_lookup.get((row.get("actor"), row.get("action")))
+        row["collision_weight"] = None if candidate is None else candidate.get("collision_weight")
+        row["selection_probability_given_available"] = (
+            None if candidate is None else candidate.get("collision_probability")
+        )
+        traced_options.append(row)
     brain.tick_trace.append({
         "tick": len(brain.tick_trace) + 1,
         "timestamp": float(state.fight_time_seconds),
+        "exposure_seconds": float(exposure_seconds),
         "round": int(state.round_number),
         "phase": state.phase.value,
         "ground_controller": None if state.ground_controller is None else state.ground_controller.value,
         "clinch_controller": None if state.clinch_controller is None else state.clinch_controller.value,
-        "options": diagnostics,
+        "options": traced_options,
         "available_count": len(candidates),
         "collision": len(candidates) > 1,
-        "collision_rule": "uniform_among_available",
+        "collision_rule": "brain_policy_weights_among_available",
         "selected_actor": None if selected is None else selected["actor"].value,
         "selected_action": None if selected is None else selected["action"].value,
         "selected_probability_given_available": (
-            None if selected is None else 1.0 / float(len(candidates))
+            None if selected is None else float(selected["collision_probability"])
         ),
     })
 
@@ -152,7 +207,6 @@ def _append_tick_trace(brain, state, diagnostics, candidates, selected):
 def _append_trace_decision(brain, state, actor, context, options, selected):
     if brain is None or not hasattr(brain, "decisions"):
         return
-    probability = 1.0 / float(len(options))
     rows = []
     for row in options:
         rows.append({
@@ -160,7 +214,8 @@ def _append_trace_decision(brain, state, actor, context, options, selected):
             "actor": row["actor"].value,
             "rate_15m": float(row.get("rate_15m", 0.0)),
             "availability_probability_1s": float(row.get("availability_probability", 0.0)),
-            "probability": probability,
+            "collision_weight": float(row.get("collision_weight", 0.0)),
+            "probability": float(row.get("collision_probability", 0.0)),
         })
     brain.decisions.append({
         "decision_index": len(brain.decisions),
@@ -179,7 +234,7 @@ def _append_trace_decision(brain, state, actor, context, options, selected):
         "brain_options": rows,
         "selected_action": selected.value,
         "global_tick_seconds": TICK_SECONDS,
-        "collision_rule": "uniform_among_available",
+        "collision_rule": "brain_policy_weights_among_available",
         "dynamic_pressure": 0.0,
     })
 
@@ -219,7 +274,7 @@ class AlwaysEscapeResolver:
         )
 
 
-def _ground_candidates(state, brain, rngs, resolver, burst_remaining):
+def _ground_candidates(state, brain, rngs, resolver, burst_remaining, exposure_seconds):
     del brain
     controller = state.ground_controller
     bottom = controller.opponent
@@ -232,7 +287,7 @@ def _ground_candidates(state, brain, rngs, resolver, burst_remaining):
         burst_remaining[burst_key] = remaining
 
     strike_rate = max(GROUND_RATE_BY_SIDE.get(controller, 0.0), 0.0)
-    strike_p = _availability_probability(strike_rate)
+    strike_p = _availability_probability(strike_rate, exposure_seconds)
     if remaining > 0:
         strike_draw = None
         strike_available = True
@@ -258,7 +313,7 @@ def _ground_candidates(state, brain, rngs, resolver, burst_remaining):
 
     for side in (controller, bottom):
         sub_rate = _submission_ground_rate(side)
-        p = _availability_probability(sub_rate)
+        p = _availability_probability(sub_rate, exposure_seconds)
         draw = float(rngs.selection(side).random())
         available = draw < p
         diagnostics.append(_trace_option(
@@ -274,7 +329,7 @@ def _ground_candidates(state, brain, rngs, resolver, burst_remaining):
 
     mean_escape = _escape_mean_seconds(controller, resolver)
     escape_rate = 900.0 / mean_escape
-    p_escape = _availability_probability(escape_rate)
+    p_escape = _availability_probability(escape_rate, exposure_seconds)
     escape_draw = float(rngs.selection(bottom).random())
     escape_available = escape_draw < p_escape
     diagnostics.append(_trace_option(
@@ -291,7 +346,7 @@ def _ground_candidates(state, brain, rngs, resolver, burst_remaining):
     return out, diagnostics
 
 
-def _standing_candidates(state, brain, inputs, rngs):
+def _standing_candidates(state, brain, inputs, rngs, exposure_seconds):
     if STANDING_RATE_FN is None:
         raise RuntimeError("locked tick clock not configured with standing_rate_fn")
     out = []
@@ -303,7 +358,7 @@ def _standing_candidates(state, brain, inputs, rngs):
             state, side, fighter.capabilities, context, brain.priors[side], inputs.policy_config
         )
         for action, rate in rates.items():
-            p = _availability_probability(rate)
+            p = _availability_probability(rate, exposure_seconds)
             draw = float(rngs.selection(side).random())
             available = draw < p
             diagnostics.append(_trace_option(side, action, rate, p, draw, available))
@@ -317,14 +372,14 @@ def _standing_candidates(state, brain, inputs, rngs):
     return out, diagnostics
 
 
-def _clinch_candidates(state, brain, inputs, rngs):
+def _clinch_candidates(state, brain, inputs, rngs, exposure_seconds):
     out = []
     diagnostics = []
     for side in Side:
         fighter = inputs.fighter(side)
         mean = expected_action_delay(state, fighter.timing_context, inputs.timing_config)
         total_rate = 900.0 / max(mean, EPS)
-        p = _availability_probability(total_rate)
+        p = _availability_probability(total_rate, exposure_seconds)
         draw = float(rngs.selection(side).random())
         available = draw < p
         if not available:
@@ -381,7 +436,13 @@ def run_causal_path(
 
     while not state.finished and state.fight_time_seconds < effective_horizon:
         round_end = state.round_number * config.round_length_seconds
-        next_tick = min(state.fight_time_seconds + TICK_SECONDS, effective_horizon, round_end)
+        tick_start = float(state.fight_time_seconds)
+        next_tick = min(tick_start + TICK_SECONDS, effective_horizon, round_end)
+        exposure_seconds = max(float(next_tick - tick_start), 0.0)
+        if exposure_seconds <= EPS:
+            raise RuntimeError(
+                f"non-positive tick exposure at t={tick_start} round={state.round_number}"
+            )
         at_round_end = next_tick >= round_end - 1e-12
 
         state = advance_physiology(state, next_tick, inputs.mechanics_calibration)
@@ -390,21 +451,31 @@ def run_causal_path(
         )
 
         if state.phase is Phase.STANDING:
-            candidates, diagnostics = _standing_candidates(state, brain, inputs, rngs)
+            candidates, diagnostics = _standing_candidates(
+                state, brain, inputs, rngs, exposure_seconds
+            )
         elif state.phase is Phase.GROUND:
-            candidates, diagnostics = _ground_candidates(state, brain, rngs, resolver, burst_remaining)
+            candidates, diagnostics = _ground_candidates(
+                state, brain, rngs, resolver, burst_remaining, exposure_seconds
+            )
         else:
-            candidates, diagnostics = _clinch_candidates(state, brain, inputs, rngs)
+            candidates, diagnostics = _clinch_candidates(
+                state, brain, inputs, rngs, exposure_seconds
+            )
 
         chosen = None
         if candidates:
-            # Availability already contains the rate signal. A collision is a
-            # one-second discretization artifact, so resolve it without reusing
-            # rate/capability/conversion information.
-            chosen_index = int(competition_rng.integers(len(candidates)))
+            _collision_policy_weights(state, brain, inputs, candidates)
+            probabilities = np.asarray(
+                [row["collision_probability"] for row in candidates], dtype=float
+            )
+            probabilities /= probabilities.sum()
+            chosen_index = int(competition_rng.choice(len(candidates), p=probabilities))
             chosen = candidates[chosen_index]
 
-        _append_tick_trace(brain, state, diagnostics, candidates, chosen)
+        _append_tick_trace(
+            brain, state, diagnostics, candidates, chosen, exposure_seconds
+        )
 
         if chosen is not None:
             actor = chosen["actor"]
