@@ -1,4 +1,4 @@
-name: LOCKED Brain MC Kape Horiguchi TD Audit
+name: LOCKED Brain MC Kape Horiguchi TD Clock Fix
 
 on:
   push:
@@ -33,7 +33,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
-      - name: Run locked Kape Horiguchi with TD timing observer
+      - name: Run locked Kape Horiguchi with phase-exposure clock fix
         run: |
           set -euo pipefail
           cp -a restored/canonical-weight-class-state/. data/
@@ -62,8 +62,9 @@ jobs:
               'fight_id': fight_id,
               'event_date': str(event_date.date()),
               'fighters': [fighter_a, fighter_b],
-              'mechanics_changed': False,
-              'instrumentation_only': True,
+              'production_changed': False,
+              'research_mechanics_changed': True,
+              'phase_exposure_clock_fix': True,
           })
 
           harness.validated_kd.base_trace.FIGHT_ID = fight_id
@@ -72,6 +73,65 @@ jobs:
           harness.timing.base_trace.FIGHT_ID = fight_id
           harness.timing.target.FIGHT_ID = fight_id
           harness.scored.pressure_mod.FIGHT_ID = fight_id
+
+          # Research-only timing correction. The production causal engine redraws
+          # both fighters' readiness timers after every material phase transition.
+          # That repeatedly cancels long standing waits and violates the absolute
+          # per-15-minute TD hazard. This TraceBrain subclass treats readiness as
+          # phase-exposure time: a residual timer pauses when its phase ends and
+          # resumes if that phase returns. A timer that actually fires is consumed.
+          # Round boundaries intentionally reset all phase timers.
+          original_trace_brain = harness.scored.base_trace.TraceBrain
+
+          class PhaseExposureClockTraceBrain(original_trace_brain):
+              def __init__(self, inputs, priors, horizon):
+                  super().__init__(inputs, priors, horizon)
+                  self._phase_residual = {side: {} for side in Side}
+                  self._last_timer = {side: None for side in Side}
+                  self._last_round = {side: None for side in Side}
+
+              def timing_sampler(self, state, timing_context, rng, timing_config):
+                  side = self.side_by_timing_context_id[id(timing_context)]
+                  now = float(state.fight_time_seconds)
+                  rnd = int(state.round_number)
+                  phase = state.phase
+
+                  if self._last_round[side] is not None and self._last_round[side] != rnd:
+                      self._phase_residual[side].clear()
+                      self._last_timer[side] = None
+                  self._last_round[side] = rnd
+
+                  prior = self._last_timer[side]
+                  if prior is not None:
+                      elapsed = max(0.0, now - float(prior['sampled_at']))
+                      prior_delay = float(prior['delay'])
+                      prior_phase = prior['phase']
+                      if elapsed + 1e-9 < prior_delay:
+                          self._phase_residual[side][prior_phase] = prior_delay - elapsed
+                      else:
+                          self._phase_residual[side].pop(prior_phase, None)
+
+                  residual = self._phase_residual[side].pop(phase, None)
+                  if residual is not None and float(residual) > 1e-9:
+                      delay = float(residual)
+                  else:
+                      delay = float(super().timing_sampler(state, timing_context, rng, timing_config))
+
+                  self._last_timer[side] = {
+                      'sampled_at': now,
+                      'delay': delay,
+                      'phase': phase,
+                  }
+                  return delay
+
+          harness.scored.base_trace.TraceBrain = PhaseExposureClockTraceBrain
+          if harness.time_ko.base_trace is not harness.scored.base_trace:
+              raise RuntimeError('time_ko/scored base_trace modules are not shared')
+          print('PENDING_CLOCK_INTERVENTION', {
+              'semantics': 'phase-exposure residual readiness clocks; pause/resume across phase changes; reset at round boundary',
+              'production_changed': False,
+              'research_only': True,
+          })
 
           original_round_stats = harness.scored.round_absolute_stats
           td_rows = []
@@ -152,6 +212,7 @@ jobs:
               harness.main()
           finally:
               harness.scored.round_absolute_stats = original_round_stats
+              harness.scored.base_trace.TraceBrain = original_trace_brain
 
           outdir = Path('data/research/locked_brain_mc_allen_shahbazyan')
           detail = pd.DataFrame(td_rows)
@@ -163,8 +224,7 @@ jobs:
           missing = [c for c in required if c not in detail.columns]
           if missing:
               raise RuntimeError(f'TD observer produced no usable rows; missing={missing}, rows={len(detail)}')
-          detail.to_csv(outdir / 'td_channel_decision_paths.csv', index=False)
-          detail.to_csv(outdir / 'td_timing_reset_decision_paths.csv', index=False)
+          detail.to_csv(outdir / 'td_clock_fix_decision_paths.csv', index=False)
 
           summary_rows = []
           for winner, g in detail.groupby('decision_winner'):
@@ -187,15 +247,14 @@ jobs:
                       r[f'mean_{fighter}_{metric}'] = float(g[f'{fighter}_{metric}'].mean())
               summary_rows.append(r)
           summary = pd.DataFrame(summary_rows)
-          summary.to_csv(outdir / 'td_channel_summary.csv', index=False)
-          summary.to_csv(outdir / 'td_timing_reset_summary.csv', index=False)
-          print('TD_TIMING_RESET_SUMMARY')
+          summary.to_csv(outdir / 'td_clock_fix_summary.csv', index=False)
+          print('TD_CLOCK_FIX_SUMMARY')
           print(summary.to_string(index=False))
           PY
       - name: Upload locked outputs
         uses: actions/upload-artifact@v4
         with:
-          name: locked-brain-mc-kape-horiguchi-td-timing-audit-${{ github.run_id }}
+          name: locked-brain-mc-kape-horiguchi-td-clock-fix-${{ github.run_id }}
           path: |
             locked-brain-mc-kape-horiguchi.txt
             data/research/locked_brain_mc_allen_shahbazyan/
