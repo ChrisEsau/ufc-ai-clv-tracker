@@ -1,4 +1,4 @@
-name: LOCKED Brain MC Allen Shahbazyan
+name: LOCKED Brain MC Kape Horiguchi
 
 on:
   push:
@@ -33,15 +33,50 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
-      - name: Run ONLY locked Brain MC harness
+      - name: Run ONLY locked Brain MC harness for Kape Horiguchi
         run: |
           set -euo pipefail
           cp -a restored/canonical-weight-class-state/. data/
-          python -m pipeline.research.locked_brain_mc_allen_shahbazyan | tee locked-brain-mc-allen-shahbazyan.txt
+          python - <<'PY' | tee locked-brain-mc-kape-horiguchi.txt
+          import pandas as pd
+          from pipeline.research import locked_brain_mc_allen_shahbazyan as harness
+
+          event_date = pd.Timestamp('2026-06-20')
+          fighter_a = 'Manel Kape'
+          fighter_b = 'Kyoji Horiguchi'
+          master = pd.read_parquet('data/master/ufc_master.parquet').copy()
+          master['date'] = pd.to_datetime(master['date']).dt.normalize()
+          same_day = master.loc[master['date'].eq(event_date)].copy()
+          mask = (
+              (same_day['r_name'].astype(str).eq(fighter_a) & same_day['b_name'].astype(str).eq(fighter_b))
+              | (same_day['r_name'].astype(str).eq(fighter_b) & same_day['b_name'].astype(str).eq(fighter_a))
+          )
+          rows = same_day.loc[mask]
+          if len(rows) != 1:
+              raise RuntimeError(f'expected one Kape-Horiguchi fight row, found {len(rows)}')
+          fight_id = str(rows.iloc[0]['fight_id'])
+          print('LOCKED_TARGET_OVERRIDE', {
+              'fight_id': fight_id,
+              'event_date': str(event_date.date()),
+              'fighters': [fighter_a, fighter_b],
+              'mechanics_changed': False,
+          })
+
+          # Target override only. These module references share the same imported
+          # one-path trace object; assigning all explicit references keeps the
+          # target switch auditable while leaving every locked mechanic unchanged.
+          harness.validated_kd.base_trace.FIGHT_ID = fight_id
+          harness.time_ko.base_trace.FIGHT_ID = fight_id
+          harness.scored.base_trace.FIGHT_ID = fight_id
+          harness.timing.base_trace.FIGHT_ID = fight_id
+          harness.timing.target.FIGHT_ID = fight_id
+
+          harness.main()
+          PY
       - name: Upload locked outputs
         uses: actions/upload-artifact@v4
         with:
-          name: locked-brain-mc-allen-shahbazyan-${{ github.run_id }}
+          name: locked-brain-mc-kape-horiguchi-${{ github.run_id }}
           path: |
-            locked-brain-mc-allen-shahbazyan.txt
+            locked-brain-mc-kape-horiguchi.txt
             data/research/locked_brain_mc_allen_shahbazyan/
