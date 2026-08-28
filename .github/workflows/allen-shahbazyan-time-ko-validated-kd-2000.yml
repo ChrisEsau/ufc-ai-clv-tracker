@@ -1,0 +1,50 @@
+name: Allen Shahbazyan Time KO Validated KD 2000
+
+on:
+  push:
+    branches:
+      - research/ko-system-v3-from-scratch-20260826
+    paths:
+      - pipeline/research/allen_shahbazyan_time_ko_validated_kd_2000.py
+      - .github/workflows/allen-shahbazyan-time-ko-validated-kd-2000.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  run:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            pipeline
+            config
+            configs
+            data/master
+            data/fight_details
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install numpy pandas pyarrow scipy scikit-learn pyyaml
+      - uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: restored
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ChrisEsau/ufc-ai-clv-tracker
+          run-id: 32645607979
+      - name: Run validated KD shadow
+        run: |
+          set -euo pipefail
+          cp -a restored/canonical-weight-class-state/. data/
+          python -m pipeline.research.allen_shahbazyan_time_ko_validated_kd_2000 | tee allen-shahbazyan-time-ko-validated-kd-2000.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: allen-shahbazyan-time-ko-validated-kd-2000-${{ github.run_id }}
+          path: |
+            allen-shahbazyan-time-ko-validated-kd-2000.txt
+            data/research/allen_shahbazyan_time_ko_validated_kd_2000/
