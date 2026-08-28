@@ -1,4 +1,4 @@
-name: LOCKED Brain MC Kape Horiguchi
+name: LOCKED Brain MC Kape Horiguchi TD Audit
 
 on:
   push:
@@ -33,13 +33,16 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ChrisEsau/ufc-ai-clv-tracker
           run-id: 32645607979
-      - name: Run ONLY locked Brain MC harness for Kape Horiguchi
+      - name: Run locked Kape Horiguchi with TD-channel observer
         run: |
           set -euo pipefail
           cp -a restored/canonical-weight-class-state/. data/
           python - <<'PY' | tee locked-brain-mc-kape-horiguchi.txt
+          from pathlib import Path
           import pandas as pd
           from pipeline.research import locked_brain_mc_allen_shahbazyan as harness
+          from pipeline.simulation.event_clock_mc_v2.causal.events import ActionFamily
+          from pipeline.simulation.event_clock_mc_v2.causal.state import Side
 
           event_date = pd.Timestamp('2026-06-20')
           fighter_a = 'Manel Kape'
@@ -60,23 +63,92 @@ jobs:
               'event_date': str(event_date.date()),
               'fighters': [fighter_a, fighter_b],
               'mechanics_changed': False,
+              'instrumentation_only': True,
           })
 
-          # Target override only. These module references share the same imported
-          # one-path trace object; assigning all explicit references keeps the
-          # target switch auditable while leaving every locked mechanic unchanged.
           harness.validated_kd.base_trace.FIGHT_ID = fight_id
           harness.time_ko.base_trace.FIGHT_ID = fight_id
           harness.scored.base_trace.FIGHT_ID = fight_id
           harness.timing.base_trace.FIGHT_ID = fight_id
           harness.timing.target.FIGHT_ID = fight_id
 
-          harness.main()
+          # Observer only: original scored.main calls round_absolute_stats(out, ...)
+          # on each decision path. Inspect each existing `out` once; no RNG calls,
+          # no state mutation, and return the original scorer result unchanged.
+          original_round_stats = harness.scored.round_absolute_stats
+          seen = set()
+          td_rows = []
+
+          fight, _, _, _, _ = harness.scored.pressure_mod.build_setup()
+          names = {Side.RED: str(fight.r_name), Side.BLUE: str(fight.b_name)}
+
+          def observed_round_stats(out, round_number, round_length=300.0):
+              result = original_round_stats(out, round_number, round_length)
+              key = id(out)
+              if key not in seen:
+                  seen.add(key)
+                  row = {
+                      'observed_decision_path_index': len(td_rows),
+                      'decision_winner': names[out.termination.winner],
+                      'fight_seconds': float(out.reported_through_seconds),
+                  }
+                  for side in (Side.RED, Side.BLUE):
+                      prefix = 'kape' if names[side] == fighter_a else 'horiguchi'
+                      direct_attempts = direct_completions = 0
+                      clinch_attempts = clinch_completions = 0
+                      for event in out.events:
+                          if event.actor is not side:
+                              continue
+                          if event.selected_action is ActionFamily.TAKEDOWN_ENTRY:
+                              direct_attempts += 1
+                              direct_completions += int(event.transition_kind is not None)
+                          elif event.selected_action is ActionFamily.CLINCH_TAKEDOWN:
+                              clinch_attempts += 1
+                              clinch_completions += int(event.transition_kind is not None)
+                      ctrl = 0.0
+                      for seg in out.timeline_segments:
+                          if seg.controller is side:
+                              ctrl += float(seg.duration)
+                      row[f'{prefix}_direct_td_attempts'] = direct_attempts
+                      row[f'{prefix}_direct_td_completions'] = direct_completions
+                      row[f'{prefix}_clinch_td_attempts'] = clinch_attempts
+                      row[f'{prefix}_clinch_td_completions'] = clinch_completions
+                      row[f'{prefix}_total_td_attempts'] = direct_attempts + clinch_attempts
+                      row[f'{prefix}_total_td_completions'] = direct_completions + clinch_completions
+                      row[f'{prefix}_control_seconds'] = ctrl
+                  td_rows.append(row)
+              return result
+
+          harness.scored.round_absolute_stats = observed_round_stats
+          try:
+              harness.main()
+          finally:
+              harness.scored.round_absolute_stats = original_round_stats
+
+          outdir = Path('data/research/locked_brain_mc_allen_shahbazyan')
+          detail = pd.DataFrame(td_rows)
+          detail.to_csv(outdir / 'td_channel_decision_paths.csv', index=False)
+
+          summary_rows = []
+          for winner, g in detail.groupby('decision_winner'):
+              r = {'decision_winner': winner, 'paths': int(len(g))}
+              for fighter in ('kape', 'horiguchi'):
+                  for metric in (
+                      'direct_td_attempts', 'direct_td_completions',
+                      'clinch_td_attempts', 'clinch_td_completions',
+                      'total_td_attempts', 'total_td_completions', 'control_seconds'
+                  ):
+                      r[f'mean_{fighter}_{metric}'] = float(g[f'{fighter}_{metric}'].mean())
+              summary_rows.append(r)
+          summary = pd.DataFrame(summary_rows)
+          summary.to_csv(outdir / 'td_channel_summary.csv', index=False)
+          print('TD_CHANNEL_SUMMARY')
+          print(summary.to_string(index=False))
           PY
       - name: Upload locked outputs
         uses: actions/upload-artifact@v4
         with:
-          name: locked-brain-mc-kape-horiguchi-${{ github.run_id }}
+          name: locked-brain-mc-kape-horiguchi-td-audit-${{ github.run_id }}
           path: |
             locked-brain-mc-kape-horiguchi.txt
             data/research/locked_brain_mc_allen_shahbazyan/
