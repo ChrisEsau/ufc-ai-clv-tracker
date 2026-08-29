@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import shutil
 import subprocess
 from pathlib import Path
@@ -22,6 +21,7 @@ from pipeline.common.paths import MASTER_PATH
 from pipeline.research.locked_brain_bundle import DEFAULT_BUNDLE_DIR, FILES
 
 OUT = Path("data/diagnostics/locked_brain_large_cohort_accuracy")
+MATCHUP_INPUTS = "fsr_v3_matchup_inputs.csv"
 
 
 def norm_method(x: object) -> str | None:
@@ -39,12 +39,20 @@ def supported_fights(bundle: Path, n: int) -> pd.DataFrame:
     ewm = pd.read_parquet(bundle / FILES["ewm_fsr"])
     ko = pd.read_parquet(bundle / FILES["ko_prefight"])
     sub = pd.read_parquet(bundle / FILES["sub_prefight"])
-    for x in (ewm, ko, sub):
+    matchup_path = bundle / MATCHUP_INPUTS
+    if not matchup_path.is_file():
+        raise FileNotFoundError(
+            f"locked Brain matchup inputs missing: {matchup_path}; refusing to rebuild bundle"
+        )
+    matchup = pd.read_csv(matchup_path)
+
+    for x in (ewm, ko, sub, matchup):
         x["fight_id"] = x["fight_id"].astype(str)
     e_ok = set(ewm.groupby("fight_id").size().loc[lambda s: s.eq(2)].index)
     k_ok = set(ko.groupby("fight_id").size().loc[lambda s: s.eq(2)].index)
     s_ok = set(sub.groupby("fight_id").size().loc[lambda s: s.eq(2)].index)
-    ids = e_ok & k_ok & s_ok
+    m_ok = set(matchup.groupby("fight_id").size().loc[lambda s: s.eq(2)].index)
+    ids = e_ok & k_ok & s_ok & m_ok
 
     m = pd.read_parquet(MASTER_PATH).drop_duplicates("fight_id").copy()
     m["fight_id"] = m["fight_id"].astype(str)
@@ -56,6 +64,10 @@ def supported_fights(bundle: Path, n: int) -> pd.DataFrame:
     m = m[m["winner_id"].notna()].copy()
     # Exclude draws/NCs implicitly because no recognized winner/method combination remains.
     m = m.sort_values([date_col, "fight_id"], ascending=[False, False]).head(n).copy()
+    print(
+        f"Eligible locked fights after EWM/KO/SUB/FSR-matchup intersection: {len(ids)}; selected: {len(m)}",
+        flush=True,
+    )
     return m
 
 
