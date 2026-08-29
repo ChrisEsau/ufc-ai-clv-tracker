@@ -7,6 +7,7 @@ on:
     paths:
       - 'pipeline/research/standalone_glicko_six_way.py'
       - 'pipeline/research/standalone_glicko_six_way_gated.py'
+      - 'pipeline/research/standalone_glicko_six_way_partial_sweep.py'
       - '.github/workflows/research-standalone-glicko-six-way.yml'
   workflow_dispatch:
 
@@ -20,9 +21,9 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: pip install numpy pandas pyarrow
-      - name: Run evidence-gated Glicko six-way benchmark
-        run: python -m pipeline.research.standalone_glicko_six_way_gated --holdout-from 2025-01-01
+      - name: Run partial negative-evidence Glicko six-way sweep
+        run: python -m pipeline.research.standalone_glicko_six_way_partial_sweep --holdout-from 2025-01-01
       - uses: actions/upload-artifact@v4
         with:
-          name: standalone-glicko-six-way-gated
-          path: data/diagnostics/standalone_glicko_six_way_gated/
+          name: standalone-glicko-six-way-partial-sweep
+          path: data/diagnostics/standalone_glicko_six_way_partial_sweep/
