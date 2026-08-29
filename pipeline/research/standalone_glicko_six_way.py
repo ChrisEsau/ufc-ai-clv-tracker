@@ -1,26 +1,25 @@
 #!/usr/bin/env python3
-"""Standalone direct six-way Glicko UFC benchmark.
+"""Standalone hybrid direct six-way Glicko UFC benchmark.
 
 Research-only. No Brain, FSR, or market inputs.
 
-This is intentionally NOT winner x conditional method. It predicts the six
-mutually-exclusive outcomes directly:
+This ablation preserves the validated FightMatrix-style graded winner Glicko
+as a side-strength signal, while retaining method-specific offense/defense
+Glicko coordinates. All six outcomes still compete in one joint softmax:
 
     red KO/TKO, red SUB, red DEC,
     blue KO/TKO, blue SUB, blue DEC.
 
-Architecture
-------------
-For each method family (KO, SUB, DEC), every fighter has separate offensive
-and defensive Glicko states. A class-specific prefight signal is produced by
-matching the candidate winner's method offense against the candidate loser's
-method defense. The six class signals are combined in one softmax, with a
-strictly pre-bout online method-frequency intercept.
+For each class, the score is:
 
-After the bout, each of the six class matchups receives a one-vs-rest binary
-Glicko update (1 only for the observed class, 0 for the other five). Updates
-are computed from the frozen prefight states; no same-bout update can leak
-into another class prediction or update.
+    log(prefight side win probability)
+    + log(prefight method prior)
+    + method offense-vs-defense Glicko log-odds
+
+This is not P(win) x normalized P(method|win): method matchup partition sums
+are not normalized within side before the six-way softmax. The graded winner
+Glicko simply contributes a shared side-strength term to each of that side's
+three class logits.
 
 All predictions are captured pre-bout; updates happen only after the bout.
 """
@@ -40,6 +39,7 @@ from pipeline.research.prefight_strength_fightmatrix_glicko import (
     State,
     expected,
     inflate_rd,
+    outcome_scores,
     update,
 )
 
@@ -80,20 +80,16 @@ def method_priors(method_counts: dict[str, float]) -> dict[str, float]:
     return {m: float(method_counts[m]) / total for m in METHODS}
 
 
-def class_signal(
+def method_signal(
     offense: State,
     defense: State,
     now: pd.Timestamp,
-    method_prior: float,
 ) -> tuple[float, float]:
-    """Return direct class logit and underlying Glicko matchup probability."""
+    """Return method matchup log-odds and underlying Glicko probability."""
     inflate_rd(offense, now)
     inflate_rd(defense, now)
     q = expected(offense.rating, defense.rating, defense.rd)
-    # Method prior is an online intercept. The fighter matchup contribution is
-    # the Glicko log-odds. All six logits compete in one joint softmax.
-    score = math.log(max(EPS, method_prior)) + logit(q)
-    return score, q
+    return logit(q), q
 
 
 def six_metrics(df: pd.DataFrame) -> dict:
@@ -162,12 +158,9 @@ def share_metrics(df: pd.DataFrame) -> dict:
 
 
 def run(bouts: pd.DataFrame) -> pd.DataFrame:
-    # Separate method offense and method defense Glicko coordinates.
+    winner_states = defaultdict(State)
     offense = {m: defaultdict(State) for m in METHODS}
     defense = {m: defaultdict(State) for m in METHODS}
-
-    # Laplace seed only; by the holdout this is dominated by historical bouts.
-    # Counts are updated after each bout, so the intercept is always prefight.
     method_counts = {m: 1.0 for m in METHODS}
 
     rows: list[dict] = []
@@ -176,19 +169,34 @@ def run(bouts: pd.DataFrame) -> pd.DataFrame:
         r, bl = b.red_fighter, b.blue_fighter
         priors = method_priors(method_counts)
 
+        # Validated graded winner Glicko, frozen prefight.
+        sr, sb = winner_states[r], winner_states[bl]
+        inflate_rd(sr, b.date)
+        inflate_rd(sb, b.date)
+        p_r_base = expected(sr.rating, sb.rating, sb.rd)
+        p_b_base = 1.0 - p_r_base
+
         scores: list[float] = []
         q_values: dict[str, float] = {}
 
-        # Freeze all class signals before any update from this bout.
-        for side, winner, loser in (("R", r, bl), ("B", bl, r)):
+        # Shared side term + method-specific matchup term. No within-side
+        # normalization occurs before the single six-way softmax.
+        for side, winner, loser, side_p in (
+            ("R", r, bl, p_r_base),
+            ("B", bl, r, p_b_base),
+        ):
             for meth in METHODS:
                 so = offense[meth][winner]
                 sd = defense[meth][loser]
-                score, q = class_signal(so, sd, b.date, priors[meth])
+                matchup_logodds, q = method_signal(so, sd, b.date)
+                score = (
+                    math.log(max(EPS, side_p))
+                    + math.log(max(EPS, priors[meth]))
+                    + matchup_logodds
+                )
                 scores.append(score)
                 q_values[f"q_{side.lower()}_{meth.lower()}"] = q
 
-        # scores were appended R KO/SUB/DEC then B KO/SUB/DEC.
         p = softmax(scores)
         probs = dict(zip(SIX_COLS, p.tolist()))
 
@@ -209,6 +217,8 @@ def run(bouts: pd.DataFrame) -> pd.DataFrame:
             "method": getattr(b, "method", ""),
             "p_red_win": p_red_win,
             "p_blue_win": p_blue_win,
+            "p_red_win_base_glicko": p_r_base,
+            "p_blue_win_base_glicko": p_b_base,
             **probs,
             "p_method_ko": probs["p_red_ko"] + probs["p_blue_ko"],
             "p_method_sub": probs["p_red_sub"] + probs["p_blue_sub"],
@@ -222,12 +232,20 @@ def run(bouts: pd.DataFrame) -> pd.DataFrame:
         }
         rows.append(row)
 
+        if b.winner is None:
+            continue
+
+        # Preserve exact graded winner update used by the validated benchmark.
+        rs, bs = outcome_scores(getattr(b, "method", ""), b.winner == r)
+        nr, nrr = update(sr.rating, sr.rd, sb.rating, sb.rd, rs)
+        nb, nbr = update(sb.rating, sb.rd, sr.rating, sr.rd, bs)
+        sr.rating, sr.rd, sr.last_date = nr, nrr, b.date
+        sb.rating, sb.rd, sb.last_date = nb, nbr, b.date
+
         if actual_six is None:
             continue
 
-        # Compute every one-vs-rest class update from the same prefight states.
-        # Each offense/defense coordinate appears in exactly one orientation per
-        # method, so these six binary updates are independent within the bout.
+        # Method offense/defense one-vs-rest updates from frozen prefight states.
         pending = []
         for side, winner, loser in (("R", r, bl), ("B", bl, r)):
             for meth in METHODS:
@@ -267,10 +285,12 @@ def main() -> None:
 
     summary = {
         "architecture": (
-            "direct joint Glicko-6: method-specific offense/defense Glicko "
-            "coordinates + online method intercept + single six-class softmax"
+            "hybrid direct joint Glicko-6: validated graded winner side-strength "
+            "+ method offense/defense Glicko + online method intercept + single "
+            "six-class softmax"
         ),
         "hierarchical_winner_x_method": False,
+        "winner_signal": "validated FightMatrix-style graded Glicko",
         "no_brain": True,
         "no_fsr": True,
         "no_market": True,
