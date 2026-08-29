@@ -1,0 +1,29 @@
+name: Research Finish Hazard WHR OOS
+
+on:
+  push:
+    branches:
+      - research/ko-system-v3-from-scratch-20260826
+    paths:
+      - pipeline/research/finish_hazard_whr_oos.py
+      - .github/workflows/research-finish-hazard-whr-oos.yml
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run KO SUB hazard WHR OOS
+        run: python -m pipeline.research.finish_hazard_whr_oos
+      - uses: actions/upload-artifact@v4
+        with:
+          name: finish-hazard-whr-oos
+          path: data/diagnostics/finish_hazard_whr_oos/
