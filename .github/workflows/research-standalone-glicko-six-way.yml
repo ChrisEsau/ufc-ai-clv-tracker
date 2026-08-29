@@ -5,9 +5,7 @@ on:
     branches:
       - research/ko-system-v3-from-scratch-20260826
     paths:
-      - 'pipeline/research/submission_stat_auc_screen.py'
-      - 'pipeline/research/submission_stat_auc_screen_v2.py'
-      - 'pipeline/research/submission_stat_auc_screen_v3.py'
+      - 'pipeline/research/submission_physical_delta_auc.py'
       - '.github/workflows/research-standalone-glicko-six-way.yml'
   workflow_dispatch:
 
@@ -21,9 +19,9 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: pip install numpy pandas pyarrow
-      - name: Run leakage-safe submission stat AUC screen
-        run: python -m pipeline.research.submission_stat_auc_screen_v3 --holdout-from 2025-01-01
+      - name: Run submission physical-delta AUC diagnostic
+        run: python -m pipeline.research.submission_physical_delta_auc --holdout-from 2025-01-01
       - uses: actions/upload-artifact@v4
         with:
-          name: submission-stat-auc-screen
-          path: data/diagnostics/submission_stat_auc_screen/
+          name: submission-physical-delta-auc
+          path: data/diagnostics/submission_physical_delta_auc/
