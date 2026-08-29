@@ -5,7 +5,7 @@ on:
     branches:
       - research/ko-system-v3-from-scratch-20260826
     paths:
-      - 'pipeline/research/submission_incremental_signal_test.py'
+      - 'pipeline/research/submission_td_control_incremental_test.py'
       - '.github/workflows/research-standalone-glicko-six-way.yml'
   workflow_dispatch:
 
@@ -19,9 +19,9 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: pip install numpy pandas pyarrow
-      - name: Run incremental submission signal test
-        run: python -m pipeline.research.submission_incremental_signal_test --holdout-from 2025-01-01
+      - name: Run TD control incremental submission test
+        run: python -m pipeline.research.submission_td_control_incremental_test --holdout-from 2025-01-01
       - uses: actions/upload-artifact@v4
         with:
-          name: submission-incremental-signal
-          path: data/diagnostics/submission_incremental_signal/
+          name: submission-td-control-incremental
+          path: data/diagnostics/submission_td_control_incremental/
