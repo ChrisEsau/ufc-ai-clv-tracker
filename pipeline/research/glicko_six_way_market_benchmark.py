@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 SIX=['R_KO','R_SUB','R_DEC','B_KO','B_SUB','B_DEC']
-PCOLS=['p_r_ko','p_r_sub','p_r_dec','p_b_ko','p_b_sub','p_b_dec']
+PCOLS=['p_red_ko','p_red_sub','p_red_dec','p_blue_ko','p_blue_sub','p_blue_dec']
 METHOD_MAP={'win_by_ko_tko_dq':'KO','win_by_submission':'SUB','win_by_decision':'DEC'}
 EPS=1e-12
 
@@ -64,7 +64,7 @@ def main():
 
     key='bout_id' if 'bout_id' in g.columns else ('fight_id' if 'fight_id' in g.columns else None)
     if key is None: raise RuntimeError(f'No fight key in Glicko predictions: {list(g.columns)}')
-    g=g.rename(columns={key:'fight_id'})
+    if key != 'fight_id': g=g.rename(columns={key:'fight_id'})
     rename={p:f'glicko_{s}' for p,s in zip(PCOLS,SIX)}
     missing=[p for p in PCOLS if p not in g.columns]
     if missing: raise RuntimeError(f'Missing Glicko probability columns {missing}; cols={list(g.columns)}')
