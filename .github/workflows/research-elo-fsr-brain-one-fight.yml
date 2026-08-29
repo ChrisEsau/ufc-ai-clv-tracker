@@ -9,16 +9,36 @@ on:
       - pipeline/research/elo_fsr_brain_one_fight_shadow.py
       - .github/workflows/research-elo-fsr-brain-one-fight.yml
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   run:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
       - name: Install dependencies
-        run: python -m pip install --upgrade pandas pyarrow numpy scipy joblib pyyaml
+        run: python -m pip install numpy pandas pyarrow scipy scikit-learn pyyaml joblib
+
+      - name: Restore locked Brain bundle cache
+        id: bundle-cache
+        uses: actions/cache@v4
+        with:
+          path: data/research/locked_brain_bundle
+          key: locked-brain-bundle-v2-${{ hashFiles('pipeline/research/locked_brain_bundle.py', 'pipeline/research/fsr_recency_cohort_shadow.py', 'pipeline/research/ko_time_survival_oos.py', 'pipeline/research/sub_time_survival_oos.py') }}
+
+      - name: Require locked Brain bundle
+        if: steps.bundle-cache.outputs.cache-hit != 'true'
+        run: |
+          echo 'LOCKED Brain bundle cache is missing. Build it with the canonical locked-brain workflow first.' >&2
+          exit 1
+
       - name: Run Asu Almabayev vs Charles Johnson Elo-FSR shadow
         run: |
           python -m pipeline.research.elo_fsr_brain_one_fight_shadow \
@@ -30,8 +50,10 @@ jobs:
             --paths 500 \
             --points-per-100-elo 1.0 \
             --max-fsr-shift 2.0
+
       - name: Show summary
         run: cat data/diagnostics/elo_fsr_brain_one_fight_shadow/summary.json
+
       - uses: actions/upload-artifact@v4
         with:
           name: elo-fsr-brain-one-fight-shadow
