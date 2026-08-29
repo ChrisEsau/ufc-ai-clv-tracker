@@ -5,7 +5,7 @@ on:
     branches:
       - research/ko-system-v3-from-scratch-20260826
     paths:
-      - 'pipeline/research/inspect_clv_method_schema.py'
+      - 'pipeline/research/inspect_dev_ufc_market_odds.py'
       - '.github/workflows/research-standalone-glicko-six-way.yml'
   workflow_dispatch:
 
@@ -19,5 +19,7 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: pip install pandas pyarrow
-      - name: Inspect CLV method market schema
-        run: python -m pipeline.research.inspect_clv_method_schema
+      - name: Download dev historical market odds parquet
+        run: curl -L 'https://raw.githubusercontent.com/ChrisEsau/ufc-ai-clv-tracker/dev/data/market/ufc_market_odds.parquet' -o /tmp/ufc_market_odds.parquet
+      - name: Inspect dev UFC market odds schema
+        run: python -m pipeline.research.inspect_dev_ufc_market_odds
