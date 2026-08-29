@@ -1,0 +1,48 @@
+name: Research Domain Hazard Glicko Brain 10 Fight
+
+on:
+  push:
+    branches:
+      - research/ko-system-v3-from-scratch-20260826
+    paths:
+      - 'pipeline/research/domain_hazard_glicko_brain_10fight_shadow.py'
+      - '.github/workflows/research-domain-hazard-glicko-brain-10-fight.yml'
+  workflow_dispatch:
+
+jobs:
+  run:
+    strategy:
+      fail-fast: false
+      matrix:
+        fight_id:
+          - 419fff06f338f5c6
+          - 58ffa2dac4f2e7d0
+          - 5c69b019e6deee41
+          - 5d2eedd05081ed23
+          - 20d74ed23d3e9b3a
+          - 44cfbb8c3c356c65
+          - b0474597b2c60482
+          - b23a1a5d35eb438a
+          - 33afdd7ad43a2756
+          - 7208e40818401e88
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Restore locked Brain bundle cache
+        uses: actions/cache/restore@v4
+        with:
+          path: data/research/locked_brain_bundle
+          key: locked-brain-bundle-v2
+      - name: Require locked Brain bundle
+        run: test -f data/research/locked_brain_bundle/manifest.json
+      - name: Run KO/SUB domain hazard Glicko shadow
+        run: python -m pipeline.research.domain_hazard_glicko_brain_10fight_shadow --fight-id ${{ matrix.fight_id }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: domain-hazard-glicko-${{ matrix.fight_id }}
+          path: data/diagnostics/domain_hazard_glicko_brain_10fight_shadow/${{ matrix.fight_id }}
