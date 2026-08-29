@@ -6,6 +6,7 @@ on:
       - research/ko-system-v3-from-scratch-20260826
     paths:
       - 'pipeline/research/glicko_six_way_market_benchmark.py'
+      - 'pipeline/research/glicko_winner_market490_benchmark.py'
       - 'pipeline/research/standalone_glicko_six_way_enhanced_sub.py'
       - '.github/workflows/research-standalone-glicko-six-way.yml'
   workflow_dispatch:
@@ -26,8 +27,12 @@ jobs:
         run: curl -L 'https://raw.githubusercontent.com/ChrisEsau/ufc-ai-clv-tracker/dev/data/market/historical_market_outcomes.parquet' -o /tmp/historical_market_outcomes.parquet
       - name: Compare enhanced Glicko-6 with no-vig market
         run: python -m pipeline.research.glicko_six_way_market_benchmark
+      - name: Run standalone winner Glicko on matched market cohort
+        run: python -m pipeline.research.glicko_winner_market490_benchmark
       - name: Upload benchmark artifact
         uses: actions/upload-artifact@v4
         with:
           name: glicko-six-way-market-benchmark
-          path: data/diagnostics/glicko_six_way_market_benchmark/
+          path: |
+            data/diagnostics/glicko_six_way_market_benchmark/
+            data/diagnostics/glicko_winner_market490/
