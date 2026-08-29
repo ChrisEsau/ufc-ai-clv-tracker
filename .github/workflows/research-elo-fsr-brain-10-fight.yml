@@ -15,6 +15,20 @@ permissions:
 
 jobs:
   run:
+    strategy:
+      fail-fast: false
+      matrix:
+        fight_id:
+          - 419fff06f338f5c6
+          - 58ffa2dac4f2e7d0
+          - 5c69b019e6deee41
+          - 5d2eedd05081ed23
+          - 20d74ed23d3e9b3a
+          - 44cfbb8c3c356c65
+          - b0474597b2c60482
+          - b23a1a5d35eb438a
+          - 33afdd7ad43a2756
+          - 7208e40818401e88
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -39,14 +53,11 @@ jobs:
           echo 'LOCKED Brain bundle cache is missing.' >&2
           exit 1
 
-      - name: Run 10-fight adjusted-only Elo shadow
-        run: python -m pipeline.research.elo_fsr_brain_10_fight_shadow
-
-      - name: Show summary
-        run: cat data/diagnostics/elo_fsr_brain_10_fight_shadow/summary.json
+      - name: Run adjusted-only Elo shadow
+        run: python -m pipeline.research.elo_fsr_brain_10_fight_shadow --fight-id ${{ matrix.fight_id }}
 
       - uses: actions/upload-artifact@v4
         with:
-          name: elo-fsr-brain-10-fight-shadow
-          path: data/diagnostics/elo_fsr_brain_10_fight_shadow/
+          name: elo-fsr-brain-${{ matrix.fight_id }}
+          path: data/diagnostics/elo_fsr_brain_10_fight_shadow/${{ matrix.fight_id }}/
           if-no-files-found: error
