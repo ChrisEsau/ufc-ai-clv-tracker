@@ -26,7 +26,6 @@ jobs:
       - name: Install dependencies
         run: python -m pip install numpy pandas pyarrow scipy scikit-learn pyyaml joblib
 
-      # The locked Brain import chain reaches sklearn through Event Clock diagnostics.
       - name: Restore locked Brain bundle cache
         id: bundle-cache
         uses: actions/cache@v4
@@ -40,7 +39,7 @@ jobs:
           echo 'LOCKED Brain bundle cache is missing. Build it with the canonical locked-brain workflow first.' >&2
           exit 1
 
-      - name: Run Asu Almabayev vs Charles Johnson Elo-FSR shadow
+      - name: Run Asu Almabayev vs Charles Johnson full active-state Elo shadow
         run: |
           python -m pipeline.research.elo_fsr_brain_one_fight_shadow \
             --fight-id 81cde317c156723b \
@@ -49,8 +48,7 @@ jobs:
             --elo-a 1310.0 \
             --elo-b 1155.7 \
             --paths 500 \
-            --points-per-100-elo 1.0 \
-            --max-fsr-shift 2.0
+            --domain-share 0.20
 
       - name: Show summary
         run: cat data/diagnostics/elo_fsr_brain_one_fight_shadow/summary.json
