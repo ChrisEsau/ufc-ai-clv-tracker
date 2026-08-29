@@ -1,0 +1,43 @@
+name: Research Locked Brain Large Cohort
+
+on:
+  push:
+    branches:
+      - research/ko-system-v3-from-scratch-20260826
+    paths:
+      - 'pipeline/research/locked_brain_large_cohort_accuracy.py'
+      - '.github/workflows/research-locked-brain-large-cohort.yml'
+  workflow_dispatch:
+    inputs:
+      fights:
+        description: 'Number of fights'
+        required: false
+        default: '200'
+      paths:
+        description: 'Paths per fight'
+        required: false
+        default: '100'
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run broad locked Brain accuracy cohort
+        env:
+          FIGHTS: ${{ github.event.inputs.fights || '200' }}
+          PATHS: ${{ github.event.inputs.paths || '100' }}
+        run: |
+          python -m pipeline.research.locked_brain_large_cohort_accuracy --fights "$FIGHTS" --paths "$PATHS"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: locked-brain-large-cohort-accuracy
+          path: data/diagnostics/locked_brain_large_cohort_accuracy/
