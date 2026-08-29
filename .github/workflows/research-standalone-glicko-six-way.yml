@@ -5,7 +5,7 @@ on:
     branches:
       - research/ko-system-v3-from-scratch-20260826
     paths:
-      - 'pipeline/research/inspect_dev_ufc_market_odds.py'
+      - 'pipeline/research/inspect_dev_historical_market_outcomes.py'
       - '.github/workflows/research-standalone-glicko-six-way.yml'
   workflow_dispatch:
 
@@ -19,7 +19,7 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: pip install pandas pyarrow
-      - name: Download dev historical market odds parquet
-        run: curl -L 'https://raw.githubusercontent.com/ChrisEsau/ufc-ai-clv-tracker/dev/data/market/ufc_market_odds.parquet' -o /tmp/ufc_market_odds.parquet
-      - name: Inspect dev UFC market odds schema
-        run: python -m pipeline.research.inspect_dev_ufc_market_odds
+      - name: Download dev historical market outcomes parquet
+        run: curl -L 'https://raw.githubusercontent.com/ChrisEsau/ufc-ai-clv-tracker/dev/data/market/historical_market_outcomes.parquet' -o /tmp/historical_market_outcomes.parquet
+      - name: Inspect dev historical market outcomes schema
+        run: python -m pipeline.research.inspect_dev_historical_market_outcomes
