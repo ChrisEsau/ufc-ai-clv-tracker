@@ -25,8 +25,6 @@ from pipeline.research.locked_brain_bundle import DEFAULT_BUNDLE_DIR, FILES
 ELIGIBLE_FSR_RATING_TRAITS = (
     "damage_durability",
     "stamina_depletion_resistance",
-    "submission_offense",
-    "submission_defense",
 )
 
 
@@ -73,7 +71,6 @@ def main() -> None:
         shutil.rmtree(adjusted_bundle)
     shutil.copytree(baseline_bundle, adjusted_bundle)
 
-    # Symmetric matchup adjustment: each side moves half the Elo-implied FSR spread.
     elo_delta = args.elo_a - args.elo_b
     total_spread = (elo_delta / 100.0) * args.points_per_100_elo
     shift_a = max(-args.max_fsr_shift, min(args.max_fsr_shift, total_spread / 2.0))
@@ -94,7 +91,6 @@ def main() -> None:
         if vals.isna().any() or not ((vals >= 0.0) & (vals <= 100.0)).all():
             raise RuntimeError(f"Elo-shadow trait is not a valid 0-100 rating for target rows: {c}")
 
-    # Match names if present, otherwise preserve row order deterministically.
     name_col = next((c for c in ("fighter_name", "name", "fighter") if c in ewm.columns), None)
     idxs = list(target.index)
     if name_col:
@@ -131,8 +127,9 @@ def main() -> None:
         "adjusted_traits": trait_cols,
         "excluded_by_design": [
             "striking_power_v3", "knockdown_resistance_v3", "stamina_capacity",
-            "submission_conversion_baseline", "all probabilities", "all rates",
-            "all tendencies/suppression multipliers", "all hazards", "physical/context fields"
+            "submission_conversion_baseline", "submission_offense", "submission_defense",
+            "all probabilities", "all rates", "all tendencies/suppression multipliers",
+            "all hazards", "physical/context fields"
         ],
     }
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
