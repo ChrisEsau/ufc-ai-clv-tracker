@@ -33,7 +33,7 @@ jobs:
 
       - name: Build quality-performance diagnostic
         run: |
-          python pipeline/research/prefight_strength_quality.py \
+          python -m pipeline.research.prefight_strength_quality \
             --input data/master/ufc_master.parquet \
             --output-dir data/diagnostics/prefight_strength_quality \
             --k-factor 170
