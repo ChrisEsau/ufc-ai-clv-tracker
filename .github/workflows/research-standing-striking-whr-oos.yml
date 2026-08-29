@@ -1,0 +1,29 @@
+name: Research Standing Striking WHR OOS
+
+on:
+  push:
+    branches:
+      - research/ko-system-v3-from-scratch-20260826
+    paths:
+      - pipeline/research/standing_striking_whr_oos.py
+      - .github/workflows/research-standing-striking-whr-oos.yml
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run standing striking WHR OOS prototypes
+        run: python -m pipeline.research.standing_striking_whr_oos
+      - uses: actions/upload-artifact@v4
+        with:
+          name: standing-striking-whr-oos
+          path: data/diagnostics/standing_striking_whr_oos/
