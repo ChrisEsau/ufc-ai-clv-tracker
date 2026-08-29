@@ -1,0 +1,43 @@
+name: Research Causal WHR
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research/ko-system-v3-from-scratch-20260826
+    paths:
+      - pipeline/research/prefight_strength_whr_causal.py
+      - .github/workflows/research-causal-whr.yml
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install research dependencies
+        run: python -m pip install --upgrade pandas pyarrow numpy scipy
+
+      - name: Validate causal WHR invariants
+        run: python -m pipeline.research.prefight_strength_whr_causal --self-test
+
+      - name: Build causal WHR holdout
+        run: |
+          python -m pipeline.research.prefight_strength_whr_causal \
+            --input data/master/ufc_master.parquet \
+            --output-dir data/diagnostics/prefight_strength_whr_causal \
+            --holdout-from 2025-01-01 \
+            --w 2.75
+
+      - name: Show summary
+        run: cat data/diagnostics/prefight_strength_whr_causal/summary.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prefight-strength-causal-whr-w-2-75
+          path: data/diagnostics/prefight_strength_whr_causal/
+          if-no-files-found: error
