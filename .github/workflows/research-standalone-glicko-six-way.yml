@@ -5,10 +5,7 @@ on:
     branches:
       - research/ko-system-v3-from-scratch-20260826
     paths:
-      - 'pipeline/research/standalone_glicko_six_way.py'
-      - 'pipeline/research/standalone_glicko_six_way_gated.py'
-      - 'pipeline/research/standalone_glicko_six_way_partial_sweep.py'
-      - 'pipeline/research/standalone_glicko_six_way_sub_propensity.py'
+      - 'pipeline/research/submission_stat_auc_screen.py'
       - '.github/workflows/research-standalone-glicko-six-way.yml'
   workflow_dispatch:
 
@@ -22,9 +19,9 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: pip install numpy pandas pyarrow
-      - name: Run fight-level SUB propensity Glicko six-way benchmark
-        run: python -m pipeline.research.standalone_glicko_six_way_sub_propensity --holdout-from 2025-01-01
+      - name: Run leakage-safe submission stat AUC screen
+        run: python -m pipeline.research.submission_stat_auc_screen --holdout-from 2025-01-01
       - uses: actions/upload-artifact@v4
         with:
-          name: standalone-glicko-six-way-sub-propensity
-          path: data/diagnostics/standalone_glicko_six_way_sub_propensity/
+          name: submission-stat-auc-screen
+          path: data/diagnostics/submission_stat_auc_screen/
