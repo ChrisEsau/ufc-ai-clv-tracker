@@ -7,7 +7,7 @@ on:
       - research/ko-system-v3-from-scratch-20260826
     paths:
       - pipeline/research/prefight_strength_elo.py
-      - pipeline/research/prefight_strength_result_quality.py
+      - pipeline/research/prefight_strength_inactivity.py
       - .github/workflows/research-prefight-strength.yml
 
 jobs:
@@ -31,11 +31,11 @@ jobs:
             --k-factor 170 \
             --base-rating 1000
 
-      - name: Build result-quality-weighted Elo experiment
+      - name: Build inactivity-adjusted Elo experiment
         run: |
-          python -m pipeline.research.prefight_strength_result_quality \
+          python -m pipeline.research.prefight_strength_inactivity \
             --input data/master/ufc_master.parquet \
-            --output-dir data/diagnostics/prefight_strength_result_quality \
+            --output-dir data/diagnostics/prefight_strength_inactivity \
             --train-before 2025-01-01 \
             --k-factor 170 \
             --base-rating 1000
@@ -44,12 +44,12 @@ jobs:
         run: |
           cat data/diagnostics/prefight_strength/summary.json
           echo
-          cat data/diagnostics/prefight_strength_result_quality/summary.json
+          cat data/diagnostics/prefight_strength_inactivity/summary.json
 
       - uses: actions/upload-artifact@v4
         with:
-          name: prefight-strength-result-quality
+          name: prefight-strength-inactivity
           path: |
             data/diagnostics/prefight_strength/
-            data/diagnostics/prefight_strength_result_quality/
+            data/diagnostics/prefight_strength_inactivity/
           if-no-files-found: error
