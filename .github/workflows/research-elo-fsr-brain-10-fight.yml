@@ -50,3 +50,5 @@ jobs:
           name: elo-fsr-brain-10-fight-shadow
           path: data/diagnostics/elo_fsr_brain_10_fight_shadow/
           if-no-files-found: error
+
+# trigger: adjusted-only Elo 10-fight pilot
