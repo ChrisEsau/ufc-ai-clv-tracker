@@ -7,6 +7,7 @@ on:
       - research/ko-system-v3-from-scratch-20260826
     paths:
       - pipeline/research/prefight_strength_elo.py
+      - pipeline/research/prefight_strength_quality.py
       - .github/workflows/research-prefight-strength.yml
 
 jobs:
@@ -30,14 +31,23 @@ jobs:
             --k-factor 170 \
             --base-rating 1000
 
-      - name: Show summary
+      - name: Build quality-performance diagnostic
+        run: |
+          python pipeline/research/prefight_strength_quality.py \
+            --input data/master/ufc_master.parquet \
+            --output-dir data/diagnostics/prefight_strength_quality \
+            --k-factor 170
+
+      - name: Show summaries
         run: |
           cat data/diagnostics/prefight_strength/summary.json
           echo
-          head -n 20 data/diagnostics/prefight_strength/fight_prefight_strength.csv
+          cat data/diagnostics/prefight_strength_quality/summary.json
 
       - uses: actions/upload-artifact@v4
         with:
-          name: prefight-strength-elo
-          path: data/diagnostics/prefight_strength/
+          name: prefight-strength-research
+          path: |
+            data/diagnostics/prefight_strength/
+            data/diagnostics/prefight_strength_quality/
           if-no-files-found: error
