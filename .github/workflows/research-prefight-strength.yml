@@ -9,6 +9,7 @@ on:
       - pipeline/research/prefight_strength_elo.py
       - pipeline/research/prefight_strength_fightmatrix_modified_elo.py
       - pipeline/research/prefight_strength_fightmatrix_glicko.py
+      - pipeline/research/prefight_strength_fightmatrix_whr.py
       - .github/workflows/research-prefight-strength.yml
 
 jobs:
@@ -22,7 +23,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install research dependencies
-        run: python -m pip install --upgrade pandas pyarrow numpy
+        run: python -m pip install --upgrade pandas pyarrow numpy scipy
 
       - name: Build plain leakage-safe Elo baseline
         run: |
@@ -46,6 +47,14 @@ jobs:
             --output-dir data/diagnostics/prefight_strength_fightmatrix_glicko \
             --holdout-from 2025-01-01
 
+      - name: Build FightMatrix-style WHR benchmark
+        run: |
+          python -m pipeline.research.prefight_strength_fightmatrix_whr \
+            --input data/master/ufc_master.parquet \
+            --output-dir data/diagnostics/prefight_strength_fightmatrix_whr \
+            --holdout-from 2025-01-01 \
+            --w2 42
+
       - name: Show summaries
         run: |
           cat data/diagnostics/prefight_strength/summary.json
@@ -53,12 +62,15 @@ jobs:
           cat data/diagnostics/prefight_strength_fightmatrix_modified_elo/summary.json
           echo
           cat data/diagnostics/prefight_strength_fightmatrix_glicko/summary.json
+          echo
+          cat data/diagnostics/prefight_strength_fightmatrix_whr/summary.json
 
       - uses: actions/upload-artifact@v4
         with:
-          name: prefight-strength-fightmatrix-glicko
+          name: prefight-strength-fightmatrix-whr
           path: |
             data/diagnostics/prefight_strength/
             data/diagnostics/prefight_strength_fightmatrix_modified_elo/
             data/diagnostics/prefight_strength_fightmatrix_glicko/
+            data/diagnostics/prefight_strength_fightmatrix_whr/
           if-no-files-found: error
