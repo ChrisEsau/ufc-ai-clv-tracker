@@ -6,6 +6,7 @@ on:
       - research/ko-system-v3-from-scratch-20260826
     paths:
       - pipeline/research/td_effectiveness_whr_oos.py
+      - pipeline/research/td_effectiveness_whr_oos_v2.py
       - .github/workflows/research-td-effectiveness-whr-oos.yml
 
 jobs:
@@ -22,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
       - name: Run TD WHR OOS prototype
-        run: python -m pipeline.research.td_effectiveness_whr_oos
+        run: python -m pipeline.research.td_effectiveness_whr_oos_v2
       - uses: actions/upload-artifact@v4
         with:
           name: td-effectiveness-whr-oos
