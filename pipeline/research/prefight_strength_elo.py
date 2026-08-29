@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 """Standalone leakage-safe prefight fighter-strength research tool.
 
-Reads the master UFC round parquet, collapses it to one row per bout, processes
-bouts strictly chronologically, and emits prefight Elo plus simple recent-form
-and recent-schedule diagnostics. It has no dependency on Brain MC, FSR, market
-odds, or production simulation code.
+Step 1: chronological UFC-only Elo.
+Step 2: recent-form / trajectory diagnostics that are opponent-adjusted by the
+fighter's pre-bout Elo expectation.  All exported features are captured before
+the current bout updates either fighter.
 
-Version 1 is intentionally simple and auditable. The goal is to establish
-whether opponent-adjusted competitive strength contains OOS signal before any
-more complex CIRRS-like mechanics are considered.
+This module has no dependency on Brain MC, FSR, market odds, or production
+simulation code.
 """
 
 from __future__ import annotations
@@ -23,7 +22,6 @@ from typing import Any, Iterable
 
 import numpy as np
 import pandas as pd
-
 
 DATE_CANDIDATES = ("date", "event_date", "fight_date", "bout_date")
 BOUT_CANDIDATES = ("bout_id", "fight_id", "bout", "fight")
@@ -67,18 +65,14 @@ def _parse_winner(raw: Any, red: str, blue: str) -> str | None:
         return red
     if sl in {"b", "blue", "blue_fighter"}:
         return blue
-    if sl in {red.lower(), _clean_name(red).lower()}:
+    if sl == red.lower():
         return red
-    if sl in {blue.lower(), _clean_name(blue).lower()}:
+    if sl == blue.lower():
         return blue
     if red.lower() in sl and blue.lower() not in sl:
         return red
     if blue.lower() in sl and red.lower() not in sl:
         return blue
-    # Common encoded outcomes.
-    if sl in {"w", "win"}:
-        # Ambiguous in a bout-level row; do not guess.
-        return None
     return None
 
 
@@ -109,52 +103,69 @@ def _record_string(results: deque[float], n: int) -> str:
 
 def _recent_rate(results: deque[float], n: int) -> float | None:
     vals = list(results)[-n:]
-    if not vals:
-        return None
-    return float(np.mean(vals))
+    return float(np.mean(vals)) if vals else None
 
 
 def _recent_mean(values: deque[float], n: int) -> float | None:
     vals = list(values)[-n:]
-    if not vals:
+    return float(np.mean(vals)) if vals else None
+
+
+def _weighted_recent(values: deque[float], n: int) -> float | None:
+    """Linear recency weighting: oldest=1 ... newest=m within the window."""
+    vals = np.asarray(list(values)[-n:], dtype=float)
+    if len(vals) == 0:
         return None
-    return float(np.mean(vals))
+    weights = np.arange(1.0, len(vals) + 1.0)
+    return float(np.average(vals, weights=weights))
 
 
-def build_bouts(rounds: pd.DataFrame) -> pd.DataFrame:
-    date_col = _resolve(rounds.columns, DATE_CANDIDATES)
-    bout_col = _resolve(rounds.columns, BOUT_CANDIDATES)
-    red_col = _resolve(rounds.columns, RED_NAME_CANDIDATES)
-    blue_col = _resolve(rounds.columns, BLUE_NAME_CANDIDATES)
-    winner_col = _resolve(rounds.columns, WINNER_CANDIDATES)
-    method_col = _resolve(rounds.columns, METHOD_CANDIDATES, required=False)
-    round_col = _resolve(rounds.columns, ROUND_CANDIDATES, required=False)
-    time_col = _resolve(rounds.columns, TIME_CANDIDATES, required=False)
+def _recent_slope(values: deque[float], n: int) -> float | None:
+    """OLS slope across recent performances; positive means improving."""
+    vals = np.asarray(list(values)[-n:], dtype=float)
+    if len(vals) < 2:
+        return None
+    x = np.arange(len(vals), dtype=float)
+    return float(np.polyfit(x, vals, 1)[0])
+
+
+def _pick_from_metric(red: str, blue: str, red_value: float | None, blue_value: float | None) -> str | None:
+    if red_value is None or blue_value is None:
+        return None
+    if not np.isfinite(red_value) or not np.isfinite(blue_value) or abs(red_value - blue_value) < 1e-12:
+        return None
+    return red if red_value > blue_value else blue
+
+
+def build_bouts(source: pd.DataFrame) -> pd.DataFrame:
+    date_col = _resolve(source.columns, DATE_CANDIDATES)
+    bout_col = _resolve(source.columns, BOUT_CANDIDATES)
+    red_col = _resolve(source.columns, RED_NAME_CANDIDATES)
+    blue_col = _resolve(source.columns, BLUE_NAME_CANDIDATES)
+    winner_col = _resolve(source.columns, WINNER_CANDIDATES)
+    method_col = _resolve(source.columns, METHOD_CANDIDATES, required=False)
+    round_col = _resolve(source.columns, ROUND_CANDIDATES, required=False)
+    time_col = _resolve(source.columns, TIME_CANDIDATES, required=False)
 
     keep = [date_col, bout_col, red_col, blue_col, winner_col]
     for optional in (method_col, round_col, time_col):
         if optional and optional not in keep:
             keep.append(optional)
 
-    df = rounds[keep].copy()
+    df = source[keep].copy()
     df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
     if df[date_col].isna().all():
         raise ValueError(f"Date column {date_col!r} could not be parsed")
-
-    # A round parquet normally has several rows per bout. Bout-level metadata
-    # should be constant, so keep the first non-null bout row.
     df = df.sort_values([date_col, bout_col], kind="stable")
     bouts = df.groupby(bout_col, as_index=False, sort=False).first()
 
-    out = pd.DataFrame(
-        {
-            "date": bouts[date_col],
-            "bout_id": bouts[bout_col].astype(str),
-            "red_fighter": bouts[red_col].map(_clean_name),
-            "blue_fighter": bouts[blue_col].map(_clean_name),
-            "winner_raw": bouts[winner_col],
-        }
-    )
+    out = pd.DataFrame({
+        "date": bouts[date_col],
+        "bout_id": bouts[bout_col].astype(str),
+        "red_fighter": bouts[red_col].map(_clean_name),
+        "blue_fighter": bouts[blue_col].map(_clean_name),
+        "winner_raw": bouts[winner_col],
+    })
     out["winner"] = [
         _parse_winner(raw, red, blue)
         for raw, red, blue in zip(out["winner_raw"], out["red_fighter"], out["blue_fighter"])
@@ -167,36 +178,39 @@ def build_bouts(rounds: pd.DataFrame) -> pd.DataFrame:
         out["finish_time"] = bouts[time_col]
 
     out = out[(out["red_fighter"] != "") & (out["blue_fighter"] != "")].copy()
-    out = out.sort_values(["date", "bout_id"], kind="stable").reset_index(drop=True)
-    return out
+    return out.sort_values(["date", "bout_id"], kind="stable").reset_index(drop=True)
 
 
 def run_elo(bouts: pd.DataFrame, *, base_rating: float, k_factor: float) -> tuple[pd.DataFrame, pd.DataFrame]:
     states: dict[str, FighterState] = defaultdict(lambda: FighterState(base_rating))
     recent_results: dict[str, deque[float]] = defaultdict(lambda: deque(maxlen=20))
     recent_opp_ratings: dict[str, deque[float]] = defaultdict(lambda: deque(maxlen=20))
+    # Actual result minus Elo expectation at that historical fight. This is the
+    # Step-2 opponent-adjusted performance residual.
+    recent_residuals: dict[str, deque[float]] = defaultdict(lambda: deque(maxlen=20))
     rows: list[dict[str, Any]] = []
 
-    scored = 0
-    skipped = 0
-
     for bout in bouts.itertuples(index=False):
-        red = bout.red_fighter
-        blue = bout.blue_fighter
-        sr = states[red]
-        sb = states[blue]
-
-        red_pre = float(sr.rating)
-        blue_pre = float(sb.rating)
+        red, blue = bout.red_fighter, bout.blue_fighter
+        sr, sb = states[red], states[blue]
+        red_pre, blue_pre = float(sr.rating), float(sb.rating)
         red_expected = _expected(red_pre, blue_pre)
+        blue_expected = 1.0 - red_expected
 
         winner = bout.winner
-        if winner == red:
-            red_score = 1.0
-        elif winner == blue:
-            red_score = 0.0
-        else:
-            red_score = None
+        red_score = 1.0 if winner == red else (0.0 if winner == blue else None)
+
+        r3_adj = _weighted_recent(recent_residuals[red], 3)
+        b3_adj = _weighted_recent(recent_residuals[blue], 3)
+        r5_adj = _weighted_recent(recent_residuals[red], 5)
+        b5_adj = _weighted_recent(recent_residuals[blue], 5)
+        r5_slope = _recent_slope(recent_residuals[red], 5)
+        b5_slope = _recent_slope(recent_residuals[blue], 5)
+        trajectory_pick = _pick_from_metric(red, blue, r5_adj, b5_adj)
+
+        elo_pick = None
+        if abs(red_expected - 0.5) >= 1e-12:
+            elo_pick = red if red_expected > 0.5 else blue
 
         row = {
             "date": bout.date,
@@ -208,7 +222,7 @@ def run_elo(bouts: pd.DataFrame, *, base_rating: float, k_factor: float) -> tupl
             "blue_pre_rating": blue_pre,
             "red_rating_edge": red_pre - blue_pre,
             "red_elo_win_prob": red_expected,
-            "blue_elo_win_prob": 1.0 - red_expected,
+            "blue_elo_win_prob": blue_expected,
             "red_prior_fights": sr.prior_fights,
             "blue_prior_fights": sb.prior_fights,
             "red_last3_record": _record_string(recent_results[red], 3),
@@ -219,113 +233,138 @@ def run_elo(bouts: pd.DataFrame, *, base_rating: float, k_factor: float) -> tupl
             "blue_last3_result_rate": _recent_rate(recent_results[blue], 3),
             "red_last5_result_rate": _recent_rate(recent_results[red], 5),
             "blue_last5_result_rate": _recent_rate(recent_results[blue], 5),
+            "red_last3_opp_pre_rating": _recent_mean(recent_opp_ratings[red], 3),
+            "blue_last3_opp_pre_rating": _recent_mean(recent_opp_ratings[blue], 3),
             "red_last5_opp_pre_rating": _recent_mean(recent_opp_ratings[red], 5),
             "blue_last5_opp_pre_rating": _recent_mean(recent_opp_ratings[blue], 5),
+            "red_last3_adj_form": r3_adj,
+            "blue_last3_adj_form": b3_adj,
+            "red_last5_adj_form": r5_adj,
+            "blue_last5_adj_form": b5_adj,
+            "red_last5_adj_form_slope": r5_slope,
+            "blue_last5_adj_form_slope": b5_slope,
+            "adj_form_edge_last5": (r5_adj - b5_adj) if r5_adj is not None and b5_adj is not None else np.nan,
+            "trajectory_pick": trajectory_pick,
+            "trajectory_pick_correct": (bool(trajectory_pick == winner) if trajectory_pick and winner else np.nan),
+            "elo_pick": elo_pick,
+            "elo_pick_correct": (bool(elo_pick == winner) if elo_pick and winner else np.nan),
             "cold_start_either_le2": bool(sr.prior_fights <= 2 or sb.prior_fights <= 2),
         }
 
         if red_score is None:
             row["red_post_rating"] = red_pre
             row["blue_post_rating"] = blue_pre
-            row["elo_pick"] = red if red_expected > 0.5 else blue
-            row["elo_pick_correct"] = np.nan
-            skipped += 1
             rows.append(row)
             continue
 
         delta = k_factor * (red_score - red_expected)
         sr.rating = red_pre + delta
         sb.rating = blue_pre - delta
+        blue_score = 1.0 - red_score
 
-        red_result = red_score
-        blue_result = 1.0 - red_score
-        recent_results[red].append(red_result)
-        recent_results[blue].append(blue_result)
+        recent_results[red].append(red_score)
+        recent_results[blue].append(blue_score)
         recent_opp_ratings[red].append(blue_pre)
         recent_opp_ratings[blue].append(red_pre)
+        recent_residuals[red].append(red_score - red_expected)
+        recent_residuals[blue].append(blue_score - blue_expected)
 
         sr.prior_fights += 1
         sb.prior_fights += 1
         if red_score == 1.0:
             sr.prior_wins += 1
             sb.prior_losses += 1
-        elif red_score == 0.0:
+        else:
             sr.prior_losses += 1
             sb.prior_wins += 1
-        else:
-            sr.prior_draws += 1
-            sb.prior_draws += 1
 
-        pick = red if red_expected > 0.5 else blue
         row["red_post_rating"] = float(sr.rating)
         row["blue_post_rating"] = float(sb.rating)
-        row["elo_pick"] = pick
-        row["elo_pick_correct"] = bool(pick == winner)
-        scored += 1
         rows.append(row)
 
     fights = pd.DataFrame(rows)
     fighter_rows = []
     for fighter, state in states.items():
-        fighter_rows.append(
-            {
-                "fighter": fighter,
-                "rating": float(state.rating),
-                "elo_implied_vs_1000": _prob_from_diff(float(state.rating) - base_rating),
-                "fights": state.prior_fights,
-                "wins": state.prior_wins,
-                "losses": state.prior_losses,
-                "draws": state.prior_draws,
-                "last3_record": _record_string(recent_results[fighter], 3),
-                "last5_record": _record_string(recent_results[fighter], 5),
-                "last5_opp_pre_rating": _recent_mean(recent_opp_ratings[fighter], 5),
-            }
-        )
+        fighter_rows.append({
+            "fighter": fighter,
+            "rating": float(state.rating),
+            "elo_implied_vs_1000": _prob_from_diff(float(state.rating) - base_rating),
+            "fights": state.prior_fights,
+            "wins": state.prior_wins,
+            "losses": state.prior_losses,
+            "draws": state.prior_draws,
+            "last3_record": _record_string(recent_results[fighter], 3),
+            "last5_record": _record_string(recent_results[fighter], 5),
+            "last3_opp_pre_rating": _recent_mean(recent_opp_ratings[fighter], 3),
+            "last5_opp_pre_rating": _recent_mean(recent_opp_ratings[fighter], 5),
+            "last3_adj_form": _weighted_recent(recent_residuals[fighter], 3),
+            "last5_adj_form": _weighted_recent(recent_residuals[fighter], 5),
+            "last5_adj_form_slope": _recent_slope(recent_residuals[fighter], 5),
+        })
     fighters = pd.DataFrame(fighter_rows).sort_values("rating", ascending=False).reset_index(drop=True)
-    fights.attrs["scored"] = scored
-    fights.attrs["skipped"] = skipped
     return fights, fighters
+
+
+def _accuracy(df: pd.DataFrame, col: str) -> float | None:
+    vals = df[col].dropna()
+    return float(vals.astype(bool).mean()) if len(vals) else None
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--input", type=Path, default=Path("data/fight_details/ufc_round_stats.parquet"))
+    parser.add_argument("--input", type=Path, default=Path("data/master/ufc_master.parquet"))
     parser.add_argument("--output-dir", type=Path, default=Path("data/diagnostics/prefight_strength"))
     parser.add_argument("--base-rating", type=float, default=1000.0)
     parser.add_argument("--k-factor", type=float, default=170.0)
     args = parser.parse_args()
 
-    rounds = pd.read_parquet(args.input)
-    bouts = build_bouts(rounds)
+    source = pd.read_parquet(args.input)
+    bouts = build_bouts(source)
     fights, fighters = run_elo(bouts, base_rating=args.base_rating, k_factor=args.k_factor)
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     fights_path = args.output_dir / "fight_prefight_strength.csv"
     fighters_path = args.output_dir / "fighter_current_strength.csv"
     summary_path = args.output_dir / "summary.json"
-
     fights.to_csv(fights_path, index=False)
     fighters.to_csv(fighters_path, index=False)
 
-    scored_mask = fights["elo_pick_correct"].notna()
-    scored = fights.loc[scored_mask]
+    scored = fights[fights["winner"].notna()].copy()
     cold = scored[scored["cold_start_either_le2"]]
     established = scored[~scored["cold_start_either_le2"]]
+    trajectory_eligible = scored[
+        (scored["red_prior_fights"] >= 3)
+        & (scored["blue_prior_fights"] >= 3)
+        & scored["trajectory_pick"].notna()
+    ]
+
+    conflicts = trajectory_eligible[
+        trajectory_eligible["elo_pick"].notna()
+        & (trajectory_eligible["elo_pick"] != trajectory_eligible["trajectory_pick"])
+    ]
+    elo_wrong_conflicts = conflicts[conflicts["elo_pick_correct"] == False]
 
     summary = {
         "source": str(args.input),
-        "round_rows": int(len(rounds)),
+        "source_rows": int(len(source)),
         "bouts": int(len(bouts)),
         "scored_bouts": int(len(scored)),
         "unscored_or_unresolved_bouts": int(len(fights) - len(scored)),
         "fighters": int(len(fighters)),
         "base_rating": args.base_rating,
         "k_factor": args.k_factor,
-        "elo_pick_accuracy_all": float(scored["elo_pick_correct"].mean()) if len(scored) else None,
-        "elo_pick_accuracy_cold_start": float(cold["elo_pick_correct"].mean()) if len(cold) else None,
-        "elo_pick_accuracy_established": float(established["elo_pick_correct"].mean()) if len(established) else None,
+        "elo_pick_accuracy_all_non_ties": _accuracy(scored, "elo_pick_correct"),
+        "elo_pick_accuracy_cold_start_non_ties": _accuracy(cold, "elo_pick_correct"),
+        "elo_pick_accuracy_established_non_ties": _accuracy(established, "elo_pick_correct"),
+        "trajectory_definition": "linear-recency-weighted mean of (actual result - prefight Elo expectation) over prior 5 UFC fights",
+        "trajectory_slope_definition": "OLS slope of opponent-adjusted performance residual over prior 5 UFC fights",
+        "trajectory_eligible_bouts_both_ge3_prior": int(len(trajectory_eligible)),
+        "trajectory_pick_accuracy": _accuracy(trajectory_eligible, "trajectory_pick_correct"),
+        "elo_trajectory_conflicts": int(len(conflicts)),
+        "trajectory_correct_when_elo_wrong_in_conflicts": int((elo_wrong_conflicts["trajectory_pick_correct"] == True).sum()),
+        "elo_wrong_conflicts": int(len(elo_wrong_conflicts)),
         "cold_start_definition": "either fighter has <=2 prior UFC fights at cutoff",
-        "leakage_rule": "all exported fight features are captured before the current bout updates either fighter",
+        "leakage_rule": "all exported fight and trajectory features are captured before the current bout updates either fighter",
     }
     summary_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
 
