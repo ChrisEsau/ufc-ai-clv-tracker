@@ -14,7 +14,9 @@ For consecutive fighter states separated by ``dt_days``:
 
     r_i(t+1) - r_i(t) ~ Normal(0, w^2 * dt_days)
 
-The prediction-tuned research setting is ``w = 2.75`` (``w^2 = 7.5625``).
+The previously prediction-tuned setting was ``w = 2.75`` in the repo's Elo-like
+rating units. Because this module represents r on the natural-log odds scale,
+that drift must be transformed by ln(10)/400 before entering the temporal prior.
 
 Leakage rule
 ------------
@@ -35,6 +37,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -44,7 +47,9 @@ from scipy.optimize import minimize
 
 from pipeline.research.prefight_strength_elo import build_bouts
 
-W_DEFAULT = 2.75
+ELO_TO_LOG_ODDS = math.log(10.0) / 400.0
+W_SOURCE_ELO_DEFAULT = 2.75
+W_DEFAULT = W_SOURCE_ELO_DEFAULT * ELO_TO_LOG_ODDS
 W2_DEFAULT = W_DEFAULT * W_DEFAULT
 INITIAL_PRIOR_WINS_DEFAULT = 1.0
 
@@ -176,8 +181,6 @@ def _fit(
             np.add.at(g, trans_i1, td)
             np.add.at(g, trans_i0, -td)
 
-        # Coulom-style first-state prior: one virtual win and one virtual loss
-        # (scaled by initial_prior_wins) versus a zero-rated virtual opponent.
         first_r = x[first_nodes]
         nll += float(initial_prior_wins * np.sum(_softplus(-first_r) + _softplus(first_r)))
         prior_grad = initial_prior_wins * (2.0 * _sigmoid(first_r) - 1.0)
@@ -262,8 +265,9 @@ def causal_predict_games(
                     "WHR_delta": delta,
                     "WHR_P_red": p_red,
                     "WHR_P_blue": 1.0 - p_red,
-                    "WHR_w": float(w),
-                    "WHR_w2": w2,
+                    "WHR_w_log_odds": float(w),
+                    "WHR_w2_log_odds": w2,
+                    "WHR_source_w_elo": float(w / ELO_TO_LOG_ODDS),
                     "history_bouts": int(len(hist)),
                     "solver_success": bool(res.success) if res is not None else True,
                     "solver_iterations": int(res.nit) if res is not None else 0,
@@ -290,8 +294,10 @@ def run(source: pd.DataFrame, holdout_from: str, w: float = W_DEFAULT):
         "holdout_from": str(cutoff.date()),
         "rating_scale": "natural_log_odds",
         "time_unit": "day",
-        "w": float(w),
-        "w2": float(w * w),
+        "source_w_elo": float(w / ELO_TO_LOG_ODDS),
+        "w_log_odds": float(w),
+        "w2_log_odds": float(w * w),
+        "elo_to_log_odds": ELO_TO_LOG_ODDS,
         "initial_prior": {
             "type": "Coulom symmetric virtual games at first state",
             "virtual_wins_vs_zero": INITIAL_PRIOR_WINS_DEFAULT,
@@ -307,7 +313,6 @@ def run(source: pd.DataFrame, holdout_from: str, w: float = W_DEFAULT):
 
 
 def _self_test() -> None:
-    """Fast deterministic tests for equations and own-fight leakage."""
     dates = pd.to_datetime([
         "2024-01-01", "2024-02-01", "2024-03-01", "2024-04-01", "2024-05-01"
     ])
@@ -365,7 +370,12 @@ def main() -> None:
     ap.add_argument("--input", type=Path, default=Path("data/master/ufc_master.parquet"))
     ap.add_argument("--output-dir", type=Path, default=Path("data/diagnostics/prefight_strength_whr_causal"))
     ap.add_argument("--holdout-from", default="2025-01-01")
-    ap.add_argument("--w", type=float, default=W_DEFAULT)
+    ap.add_argument(
+        "--w",
+        type=float,
+        default=W_SOURCE_ELO_DEFAULT,
+        help="Prediction-tuned drift in legacy Elo-like units; converted to natural-log odds internally.",
+    )
     ap.add_argument("--self-test", action="store_true")
     args = ap.parse_args()
 
@@ -374,7 +384,8 @@ def main() -> None:
         return
 
     source = pd.read_parquet(args.input)
-    preds, summary = run(source, args.holdout_from, args.w)
+    w_log_odds = float(args.w) * ELO_TO_LOG_ODDS
+    preds, summary = run(source, args.holdout_from, w_log_odds)
     args.output_dir.mkdir(parents=True, exist_ok=True)
     preds.to_csv(args.output_dir / "fight_whr_holdout.csv", index=False)
     (args.output_dir / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
