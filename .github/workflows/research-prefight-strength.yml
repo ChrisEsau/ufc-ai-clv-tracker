@@ -25,7 +25,7 @@ jobs:
       - name: Build leakage-safe prefight strength ratings
         run: |
           python pipeline/research/prefight_strength_elo.py \
-            --input data/fight_details/ufc_round_stats.parquet \
+            --input data/master/ufc_master.parquet \
             --output-dir data/diagnostics/prefight_strength \
             --k-factor 170 \
             --base-rating 1000
