@@ -8,6 +8,7 @@ on:
     paths:
       - pipeline/research/prefight_strength_elo.py
       - pipeline/research/prefight_strength_quality.py
+      - pipeline/research/prefight_strength_elo_qp_adjusted.py
       - .github/workflows/research-prefight-strength.yml
 
 jobs:
@@ -38,11 +39,20 @@ jobs:
             --output-dir data/diagnostics/prefight_strength_quality \
             --k-factor 170
 
+      - name: Fit frozen Elo plus QP adjustment
+        run: |
+          python -m pipeline.research.prefight_strength_elo_qp_adjusted \
+            --quality-csv data/diagnostics/prefight_strength_quality/fight_quality_performance.csv \
+            --output-dir data/diagnostics/prefight_strength_elo_qp \
+            --train-before 2025-01-01
+
       - name: Show summaries
         run: |
           cat data/diagnostics/prefight_strength/summary.json
           echo
           cat data/diagnostics/prefight_strength_quality/summary.json
+          echo
+          cat data/diagnostics/prefight_strength_elo_qp/summary.json
 
       - uses: actions/upload-artifact@v4
         with:
@@ -50,4 +60,5 @@ jobs:
           path: |
             data/diagnostics/prefight_strength/
             data/diagnostics/prefight_strength_quality/
+            data/diagnostics/prefight_strength_elo_qp/
           if-no-files-found: error
