@@ -5,7 +5,8 @@ on:
     branches:
       - research/ko-system-v3-from-scratch-20260826
     paths:
-      - 'pipeline/research/inspect_dev_historical_market_outcomes.py'
+      - 'pipeline/research/glicko_six_way_market_benchmark.py'
+      - 'pipeline/research/standalone_glicko_six_way_enhanced_sub.py'
       - '.github/workflows/research-standalone-glicko-six-way.yml'
   workflow_dispatch:
 
@@ -18,8 +19,15 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install dependencies
-        run: pip install pandas pyarrow
-      - name: Download dev historical market outcomes parquet
+        run: pip install pandas pyarrow scipy scikit-learn
+      - name: Run enhanced Glicko-6 holdout
+        run: python -m pipeline.research.standalone_glicko_six_way_enhanced_sub
+      - name: Download historical six-way market outcomes from dev
         run: curl -L 'https://raw.githubusercontent.com/ChrisEsau/ufc-ai-clv-tracker/dev/data/market/historical_market_outcomes.parquet' -o /tmp/historical_market_outcomes.parquet
-      - name: Inspect dev historical market outcomes schema
-        run: python -m pipeline.research.inspect_dev_historical_market_outcomes
+      - name: Compare enhanced Glicko-6 with no-vig market
+        run: python -m pipeline.research.glicko_six_way_market_benchmark
+      - name: Upload benchmark artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: glicko-six-way-market-benchmark
+          path: data/diagnostics/glicko_six_way_market_benchmark/
