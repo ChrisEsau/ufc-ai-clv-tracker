@@ -1,0 +1,32 @@
+name: Research Standalone Glicko Six-Way
+
+on:
+  push:
+    branches:
+      - research/ko-system-v3-from-scratch-20260826
+    paths:
+      - pipeline/research/standalone_glicko_sixway.py
+      - .github/workflows/research-standalone-glicko-sixway.yml
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install numpy pandas pyarrow scikit-learn
+      - name: Run standalone Glicko-6 OOS model
+        run: |
+          python -m pipeline.research.standalone_glicko_sixway \
+            --holdout-from 2025-01-01 \
+            --output-dir data/research/standalone_glicko_sixway
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: standalone-glicko-sixway
+          path: data/research/standalone_glicko_sixway/
