@@ -26,6 +26,7 @@ jobs:
       - name: Install dependencies
         run: python -m pip install numpy pandas pyarrow scipy scikit-learn pyyaml joblib
 
+      # The locked Brain import chain reaches sklearn through Event Clock diagnostics.
       - name: Restore locked Brain bundle cache
         id: bundle-cache
         uses: actions/cache@v4
