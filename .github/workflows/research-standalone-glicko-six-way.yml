@@ -6,6 +6,7 @@ on:
       - research/ko-system-v3-from-scratch-20260826
     paths:
       - 'pipeline/research/standalone_glicko_six_way.py'
+      - 'pipeline/research/standalone_glicko_six_way_gated.py'
       - '.github/workflows/research-standalone-glicko-six-way.yml'
   workflow_dispatch:
 
@@ -19,9 +20,9 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: pip install numpy pandas pyarrow
-      - name: Run standalone Glicko six-way benchmark
-        run: python -m pipeline.research.standalone_glicko_six_way --holdout-from 2025-01-01
+      - name: Run evidence-gated Glicko six-way benchmark
+        run: python -m pipeline.research.standalone_glicko_six_way_gated --holdout-from 2025-01-01
       - uses: actions/upload-artifact@v4
         with:
-          name: standalone-glicko-six-way
-          path: data/diagnostics/standalone_glicko_six_way/
+          name: standalone-glicko-six-way-gated
+          path: data/diagnostics/standalone_glicko_six_way_gated/
