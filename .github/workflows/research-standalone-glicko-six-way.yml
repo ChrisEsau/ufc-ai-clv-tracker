@@ -7,6 +7,7 @@ on:
     paths:
       - 'pipeline/research/submission_stat_auc_screen.py'
       - 'pipeline/research/submission_stat_auc_screen_v2.py'
+      - 'pipeline/research/submission_stat_auc_screen_v3.py'
       - '.github/workflows/research-standalone-glicko-six-way.yml'
   workflow_dispatch:
 
@@ -21,7 +22,7 @@ jobs:
       - name: Install dependencies
         run: pip install numpy pandas pyarrow
       - name: Run leakage-safe submission stat AUC screen
-        run: python -m pipeline.research.submission_stat_auc_screen_v2 --holdout-from 2025-01-01
+        run: python -m pipeline.research.submission_stat_auc_screen_v3 --holdout-from 2025-01-01
       - uses: actions/upload-artifact@v4
         with:
           name: submission-stat-auc-screen
