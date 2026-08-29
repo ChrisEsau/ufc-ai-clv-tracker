@@ -1,26 +1,20 @@
 #!/usr/bin/env python3
-"""Standalone Step 4: result-quality-weighted Elo research.
+"""Standalone Step 4: constrained result-quality-weighted Elo research.
 
-Research-only. No Brain, FSR, market, or production dependencies.
+Research-only. No Brain, FSR, market, or QP dependencies.
+Candidate multipliers are selected strictly on fights before the cutoff, then
+frozen and evaluated on untouched fights on/after the cutoff.
 
-The experiment asks whether Elo improves when the rating update magnitude depends
-on result type. Candidate multipliers are selected using fights strictly before a
-training cutoff, then frozen and evaluated on untouched fights on/after the cutoff.
-
-Supported result classes from the master data:
-- KO/TKO
-- Submission
-- Standard decision
-- Close decision (split/majority)
-
-Because the current master bout layer does not expose trustworthy scorecard margin
-for every historical fight, we do not invent a separate "dominant decision" class.
+Constrained grid:
+- KO/TKO: 1.0, 1.1, 1.2, 1.3
+- Submission: 1.0, 1.1, 1.2, 1.3
+- Standard decision: 1.0
+- Split/majority decision: 0.4, 0.5, 0.6, 0.7, 0.8
 """
 from __future__ import annotations
 
 import argparse
 import json
-import math
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -98,15 +92,12 @@ def main() -> None:
     ap.add_argument("--base-rating", type=float, default=1000.0)
     args = ap.parse_args()
 
-    src = pd.read_parquet(args.input)
-    bouts = build_bouts(src)
+    bouts = build_bouts(pd.read_parquet(args.input))
     cutoff = pd.Timestamp(args.train_before)
 
-    # Small interpretable grid. Standard decision remains anchor at 1.0.
-    # We test whether decisive finishes should update more and close decisions less.
-    ko_vals = [0.9, 1.0, 1.1, 1.2]
-    sub_vals = [0.9, 1.0, 1.1, 1.2]
-    close_vals = [0.5, 0.65, 0.8, 1.0]
+    ko_vals = [1.0, 1.1, 1.2, 1.3]
+    sub_vals = [1.0, 1.1, 1.2, 1.3]
+    close_vals = [0.4, 0.5, 0.6, 0.7, 0.8]
 
     candidates = []
     for ko in ko_vals:
@@ -137,6 +128,7 @@ def main() -> None:
     summary = {
         "source": str(args.input),
         "train_before": str(cutoff.date()),
+        "grid_constraint": "KO/SUB >= standard decision; decision fixed 1.0; close decisions discounted",
         "selection_metric": "pre-2025 train log loss, then Brier",
         "selected_multipliers": selected,
         "candidate_count": int(len(cand)),
@@ -145,7 +137,6 @@ def main() -> None:
         "holdout_baseline": _metrics(hold, "baseline_red_win_prob"),
         "holdout_result_quality": _metrics(hold, "rq_red_win_prob"),
         "scope": "research-only; QP excluded; no Brain/FSR/market dependency",
-        "dominant_decision_note": "not separately modeled because universal trustworthy scorecard margin is not available in this bout layer",
         "leakage_rule": "multipliers selected only on fights before cutoff, then frozen for holdout",
     }
 
@@ -154,6 +145,7 @@ def main() -> None:
     merged.to_csv(args.output_dir / "fight_result_quality_elo.csv", index=False)
     (args.output_dir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
     print(json.dumps(summary, indent=2))
+
 
 if __name__ == "__main__":
     main()
