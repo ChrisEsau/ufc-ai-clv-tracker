@@ -7,7 +7,7 @@ on:
       - research/ko-system-v3-from-scratch-20260826
     paths:
       - pipeline/research/prefight_strength_elo.py
-      - pipeline/research/prefight_strength_close_loss.py
+      - pipeline/research/prefight_strength_fightmatrix_modified_elo.py
       - .github/workflows/research-prefight-strength.yml
 
 jobs:
@@ -31,25 +31,23 @@ jobs:
             --k-factor 170 \
             --base-rating 1000
 
-      - name: Build close-loss Elo experiment
+      - name: Build FightMatrix Modified Elo benchmark
         run: |
-          python -m pipeline.research.prefight_strength_close_loss \
+          python -m pipeline.research.prefight_strength_fightmatrix_modified_elo \
             --input data/master/ufc_master.parquet \
-            --output-dir data/diagnostics/prefight_strength_close_loss \
-            --train-before 2025-01-01 \
-            --k-factor 170 \
-            --base-rating 1000
+            --output-dir data/diagnostics/prefight_strength_fightmatrix_modified_elo \
+            --holdout-from 2025-01-01
 
       - name: Show summaries
         run: |
           cat data/diagnostics/prefight_strength/summary.json
           echo
-          cat data/diagnostics/prefight_strength_close_loss/summary.json
+          cat data/diagnostics/prefight_strength_fightmatrix_modified_elo/summary.json
 
       - uses: actions/upload-artifact@v4
         with:
-          name: prefight-strength-close-loss
+          name: prefight-strength-fightmatrix-modified-elo
           path: |
             data/diagnostics/prefight_strength/
-            data/diagnostics/prefight_strength_close_loss/
+            data/diagnostics/prefight_strength_fightmatrix_modified_elo/
           if-no-files-found: error
