@@ -1,0 +1,39 @@
+name: Research Elo FSR Brain One Fight
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research/ko-system-v3-from-scratch-20260826
+    paths:
+      - pipeline/research/elo_fsr_brain_one_fight_shadow.py
+      - .github/workflows/research-elo-fsr-brain-one-fight.yml
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: python -m pip install --upgrade pandas pyarrow numpy scipy joblib pyyaml
+      - name: Run Asu Almabayev vs Charles Johnson Elo-FSR shadow
+        run: |
+          python -m pipeline.research.elo_fsr_brain_one_fight_shadow \
+            --fight-id 81cde317c156723b \
+            --fighter-a "Asu Almabayev" \
+            --fighter-b "Charles Johnson" \
+            --elo-a 1310.0 \
+            --elo-b 1155.7 \
+            --paths 500 \
+            --points-per-100-elo 1.0 \
+            --max-fsr-shift 2.0
+      - name: Show summary
+        run: cat data/diagnostics/elo_fsr_brain_one_fight_shadow/summary.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: elo-fsr-brain-one-fight-shadow
+          path: data/diagnostics/elo_fsr_brain_one_fight_shadow/
+          if-no-files-found: error
