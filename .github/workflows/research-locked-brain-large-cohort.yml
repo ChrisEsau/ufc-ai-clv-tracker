@@ -18,6 +18,10 @@ on:
         required: false
         default: '100'
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   run:
     runs-on: ubuntu-latest
@@ -31,6 +35,17 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: pip install -r requirements.txt
+      - name: Restore locked Brain bundle cache
+        id: bundle-cache
+        uses: actions/cache@v4
+        with:
+          path: data/research/locked_brain_bundle
+          key: locked-brain-bundle-v2-${{ hashFiles('pipeline/research/locked_brain_bundle.py', 'pipeline/research/fsr_recency_cohort_shadow.py', 'pipeline/research/ko_time_survival_oos.py', 'pipeline/research/sub_time_survival_oos.py') }}
+      - name: Require cached locked Brain bundle
+        if: steps.bundle-cache.outputs.cache-hit != 'true'
+        run: |
+          echo 'LOCKED Brain bundle cache is missing; refusing to rebuild automatically.' >&2
+          exit 1
       - name: Run broad locked Brain accuracy cohort
         env:
           FIGHTS: ${{ github.event.inputs.fights || '200' }}
@@ -41,3 +56,4 @@ jobs:
         with:
           name: locked-brain-large-cohort-accuracy
           path: data/diagnostics/locked_brain_large_cohort_accuracy/
+          if-no-files-found: error
