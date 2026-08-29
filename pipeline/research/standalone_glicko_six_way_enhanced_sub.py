@@ -27,7 +27,7 @@ from pipeline.research.standalone_glicko_six_way_partial_sweep import run as run
 from pipeline.research.submission_incremental_signal_test import (
     logit, fit_logistic, predict_logistic, binary_metrics, build_opportunity, add_age,
 )
-from pipeline.research.submission_td_control_incremental_test import build_td_ctrl_opportunity
+from pipeline.research.submission_td_control_incremental_test import build_td_control_opportunity
 from pipeline.research.submission_stat_auc_screen import method_family
 
 EPS=1e-12
@@ -46,11 +46,6 @@ def make_side_frame(pred, opp, age, tc):
         rows.append({'date':b.date,'bout_id':b.bout_id,'side':'B','y':int(am=='SUB' and b.winner==b.blue_fighter),
                      'od':float(logit(b.q_b_sub)),'opp':b.b_subopp,'age':-b.age_delta,'td':b.b_tdopp,'ctrl':b.b_ctrlopp})
     return pd.DataFrame(rows), d
-
-
-def impute_with_train_means(train, frame, cols):
-    means=train[cols].mean()
-    return frame[cols].fillna(means).to_numpy(float), means
 
 
 def six_metrics(df, P):
@@ -75,24 +70,20 @@ def main():
     pred=run_glicko(bouts,0.25)
     opp=build_opportunity(bouts,Path('data/fight_details/ufc_round_stats.parquet'))
     age=add_age(bouts)
-    tc=build_td_ctrl_opportunity(bouts,Path('data/fight_details/ufc_round_stats.parquet'))
+    tc=build_td_control_opportunity(bouts)
     side,fights=make_side_frame(pred,opp,age,tc); side['date']=pd.to_datetime(side.date)
 
     tr=side[side.date<cutoff].copy(); ho=side[side.date>=cutoff].copy()
     tr_complete=tr.dropna(subset=FEATURES).copy()
     model=fit_logistic(tr_complete[FEATURES].to_numpy(),tr_complete.y.to_numpy(),l2=1.0)
-    Xho=ho[FEATURES].copy()
     train_means=tr_complete[FEATURES].mean()
-    Xho_imp=Xho.fillna(train_means).to_numpy(float)
-    p_side=predict_logistic(model,Xho_imp)
+    p_side=predict_logistic(model,ho[FEATURES].fillna(train_means).to_numpy(float))
     side_metrics=binary_metrics(ho.y.to_numpy(),p_side)
 
-    # OD-only reference model fit on same training rows for incremental logit delta.
     od_model=fit_logistic(tr_complete[['od']].to_numpy(),tr_complete.y.to_numpy(),l2=1.0)
 
     h=fights[pd.to_datetime(fights.date)>=cutoff].copy().reset_index(drop=True)
     P0=h[list(SIX_COLS)].to_numpy(float)
-    # Build side feature matrices in exact fight order.
     r=pd.DataFrame({'od':logit(h.q_r_sub.to_numpy()),'opp':h.r_subopp,'age':h.age_delta,'td':h.r_tdopp,'ctrl':h.r_ctrlopp})
     b=pd.DataFrame({'od':logit(h.q_b_sub.to_numpy()),'opp':h.b_subopp,'age':-h.age_delta,'td':h.b_tdopp,'ctrl':h.b_ctrlopp})
     rimp=r.fillna(train_means).to_numpy(float); bimp=b.fillna(train_means).to_numpy(float)
