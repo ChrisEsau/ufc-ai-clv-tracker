@@ -7,6 +7,7 @@ on:
       - research/ko-system-v3-from-scratch-20260826
     paths:
       - pipeline/research/prefight_strength_elo.py
+      - pipeline/research/prefight_strength_schedule.py
       - .github/workflows/research-prefight-strength.yml
 
 jobs:
@@ -30,11 +31,25 @@ jobs:
             --k-factor 170 \
             --base-rating 1000
 
-      - name: Show summary
-        run: cat data/diagnostics/prefight_strength/summary.json
+      - name: Build opponent-strength Elo experiment
+        run: |
+          python -m pipeline.research.prefight_strength_schedule \
+            --input data/master/ufc_master.parquet \
+            --output-dir data/diagnostics/prefight_strength_schedule \
+            --train-before 2025-01-01 \
+            --k-factor 170 \
+            --base-rating 1000
+
+      - name: Show summaries
+        run: |
+          cat data/diagnostics/prefight_strength/summary.json
+          echo
+          cat data/diagnostics/prefight_strength_schedule/summary.json
 
       - uses: actions/upload-artifact@v4
         with:
-          name: prefight-strength-elo
-          path: data/diagnostics/prefight_strength/
+          name: prefight-strength-schedule
+          path: |
+            data/diagnostics/prefight_strength/
+            data/diagnostics/prefight_strength_schedule/
           if-no-files-found: error
