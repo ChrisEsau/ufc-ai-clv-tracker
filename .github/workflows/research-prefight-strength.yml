@@ -7,8 +7,7 @@ on:
       - research/ko-system-v3-from-scratch-20260826
     paths:
       - pipeline/research/prefight_strength_elo.py
-      - pipeline/research/prefight_strength_quality.py
-      - pipeline/research/prefight_strength_elo_qp_adjusted.py
+      - pipeline/research/prefight_strength_result_quality.py
       - .github/workflows/research-prefight-strength.yml
 
 jobs:
@@ -24,7 +23,7 @@ jobs:
       - name: Install research dependencies
         run: python -m pip install --upgrade pandas pyarrow numpy
 
-      - name: Build leakage-safe prefight strength ratings
+      - name: Build plain leakage-safe Elo baseline
         run: |
           python pipeline/research/prefight_strength_elo.py \
             --input data/master/ufc_master.parquet \
@@ -32,33 +31,25 @@ jobs:
             --k-factor 170 \
             --base-rating 1000
 
-      - name: Build quality-performance diagnostic
+      - name: Build result-quality-weighted Elo experiment
         run: |
-          python -m pipeline.research.prefight_strength_quality \
+          python -m pipeline.research.prefight_strength_result_quality \
             --input data/master/ufc_master.parquet \
-            --output-dir data/diagnostics/prefight_strength_quality \
-            --k-factor 170
-
-      - name: Fit frozen Elo plus QP adjustment
-        run: |
-          python -m pipeline.research.prefight_strength_elo_qp_adjusted \
-            --quality-csv data/diagnostics/prefight_strength_quality/fight_quality_performance.csv \
-            --output-dir data/diagnostics/prefight_strength_elo_qp \
-            --train-before 2025-01-01
+            --output-dir data/diagnostics/prefight_strength_result_quality \
+            --train-before 2025-01-01 \
+            --k-factor 170 \
+            --base-rating 1000
 
       - name: Show summaries
         run: |
           cat data/diagnostics/prefight_strength/summary.json
           echo
-          cat data/diagnostics/prefight_strength_quality/summary.json
-          echo
-          cat data/diagnostics/prefight_strength_elo_qp/summary.json
+          cat data/diagnostics/prefight_strength_result_quality/summary.json
 
       - uses: actions/upload-artifact@v4
         with:
-          name: prefight-strength-research
+          name: prefight-strength-result-quality
           path: |
             data/diagnostics/prefight_strength/
-            data/diagnostics/prefight_strength_quality/
-            data/diagnostics/prefight_strength_elo_qp/
+            data/diagnostics/prefight_strength_result_quality/
           if-no-files-found: error
