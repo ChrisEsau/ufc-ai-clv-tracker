@@ -19,6 +19,16 @@ import pandas as pd
 
 from pipeline.research.locked_brain_bundle import DEFAULT_BUNDLE_DIR, FILES
 
+# Explicit research-only allowlist. These are direct 0-100 rating traits consumed
+# by the locked Brain physiology layer. Do NOT adjust latent V3 coordinates,
+# probabilities, rates, multipliers, capacities, physical traits, or hazards.
+ELIGIBLE_FSR_RATING_TRAITS = (
+    "damage_durability",
+    "stamina_depletion_resistance",
+    "submission_offense",
+    "submission_defense",
+)
+
 
 def sha256(path: Path) -> str:
     h = hashlib.sha256()
@@ -75,25 +85,14 @@ def main() -> None:
     if len(target) != 2:
         raise RuntimeError(f"expected 2 target FSR rows, found {len(target)}")
 
-    # FSR trait columns are numeric 0-100 rating-like fields. Exclude identifiers,
-    # raw physical/context/exposure fields, dates, and counts. This is intentionally
-    # broad for the first sensitivity pilot; exact columns are exported for audit.
-    excluded_tokens = (
-        "id", "date", "age", "height", "reach", "weight", "seconds", "count",
-        "fight", "bout", "prior", "experience", "sample", "year", "round",
-    )
-    trait_cols = []
-    for c in ewm.columns:
-        if not pd.api.types.is_numeric_dtype(ewm[c]):
-            continue
-        lc = c.lower()
-        if any(tok in lc for tok in excluded_tokens):
-            continue
+    missing = [c for c in ELIGIBLE_FSR_RATING_TRAITS if c not in ewm.columns]
+    if missing:
+        raise RuntimeError(f"missing required Elo-shadow rating traits: {missing}")
+    trait_cols = list(ELIGIBLE_FSR_RATING_TRAITS)
+    for c in trait_cols:
         vals = pd.to_numeric(target[c], errors="coerce")
-        if vals.notna().all() and ((vals >= 0) & (vals <= 100)).all():
-            trait_cols.append(c)
-    if not trait_cols:
-        raise RuntimeError("no eligible 0-100 FSR trait columns found")
+        if vals.isna().any() or not ((vals >= 0.0) & (vals <= 100.0)).all():
+            raise RuntimeError(f"Elo-shadow trait is not a valid 0-100 rating for target rows: {c}")
 
     # Match names if present, otherwise preserve row order deterministically.
     name_col = next((c for c in ("fighter_name", "name", "fighter") if c in ewm.columns), None)
@@ -120,7 +119,7 @@ def main() -> None:
     manifest = json.loads(manifest_path.read_text())
     manifest["files"]["ewm_fsr"]["sha256"] = sha256(ewm_path)
     manifest["research_shadow"] = {
-        "type": "symmetric_elo_fsr_offset",
+        "type": "symmetric_elo_fsr_offset_explicit_rating_traits",
         "fight_id": args.fight_id,
         "fighter_a": args.fighter_a,
         "fighter_b": args.fighter_b,
@@ -130,6 +129,11 @@ def main() -> None:
         "shift_a": shift_a,
         "shift_b": shift_b,
         "adjusted_traits": trait_cols,
+        "excluded_by_design": [
+            "striking_power_v3", "knockdown_resistance_v3", "stamina_capacity",
+            "submission_conversion_baseline", "all probabilities", "all rates",
+            "all tendencies/suppression multipliers", "all hazards", "physical/context fields"
+        ],
     }
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
 
