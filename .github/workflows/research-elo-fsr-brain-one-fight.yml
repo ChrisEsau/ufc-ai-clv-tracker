@@ -58,3 +58,5 @@ jobs:
           name: elo-fsr-brain-one-fight-shadow
           path: data/diagnostics/elo_fsr_brain_one_fight_shadow/
           if-no-files-found: error
+
+# trigger: full active-state Elo shadow
