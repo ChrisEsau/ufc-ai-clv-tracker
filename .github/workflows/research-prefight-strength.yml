@@ -8,6 +8,7 @@ on:
     paths:
       - pipeline/research/prefight_strength_elo.py
       - pipeline/research/prefight_strength_fightmatrix_modified_elo.py
+      - pipeline/research/prefight_strength_fightmatrix_glicko.py
       - .github/workflows/research-prefight-strength.yml
 
 jobs:
@@ -38,16 +39,26 @@ jobs:
             --output-dir data/diagnostics/prefight_strength_fightmatrix_modified_elo \
             --holdout-from 2025-01-01
 
+      - name: Build FightMatrix-style Glicko benchmark
+        run: |
+          python -m pipeline.research.prefight_strength_fightmatrix_glicko \
+            --input data/master/ufc_master.parquet \
+            --output-dir data/diagnostics/prefight_strength_fightmatrix_glicko \
+            --holdout-from 2025-01-01
+
       - name: Show summaries
         run: |
           cat data/diagnostics/prefight_strength/summary.json
           echo
           cat data/diagnostics/prefight_strength_fightmatrix_modified_elo/summary.json
+          echo
+          cat data/diagnostics/prefight_strength_fightmatrix_glicko/summary.json
 
       - uses: actions/upload-artifact@v4
         with:
-          name: prefight-strength-fightmatrix-modified-elo
+          name: prefight-strength-fightmatrix-glicko
           path: |
             data/diagnostics/prefight_strength/
             data/diagnostics/prefight_strength_fightmatrix_modified_elo/
+            data/diagnostics/prefight_strength_fightmatrix_glicko/
           if-no-files-found: error
