@@ -1,0 +1,39 @@
+name: Research UFC 324 Web ML + Method V2
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-ufc-324-web-both-v2.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  score:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas pyarrow numpy scikit-learn xgboost requests beautifulsoup4 lxml
+      - name: Run UFC 324 scorer against full archive
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+          src=Path('.github/workflows/research-ufc-324-web-both-v1.yml').read_text()
+          m=re.search(r"python - <<'PY'\n(.*?)\n          PY",src,re.S)
+          if not m: raise RuntimeError('Could not extract UFC 324 scorer')
+          code='\n'.join(line[10:] if line.startswith('          ') else line for line in m.group(1).splitlines())
+          code=code.replace('https://www.bestfightodds.com/events/ufc-324-3973','https://www.bestfightodds.com/events/ufc-3970')
+          exec(compile(code,'<ufc324_full_archive>','exec'),{})
+          PY
+      - name: Commit UFC 324 scores
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -f data/research/prop_mispricing/ufc_324_*_v1.csv
+          git commit -m 'research: add UFC 324 scores from full BFO archive' || echo No-changes
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
