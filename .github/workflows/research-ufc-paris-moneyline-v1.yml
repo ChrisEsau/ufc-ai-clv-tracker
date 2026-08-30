@@ -1,4 +1,4 @@
-name: Research UFC Paris Moneyline V1
+name: Research UFC Paris Moneyline V2
 on:
   push:
     branches: [research/ufc-prop-mispricing-xgboost-20260829]
@@ -17,20 +17,21 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install pandas pyarrow numpy scikit-learn xgboost
-      - name: Score UFC Paris moneylines
+      - name: Score UFC Paris from latest prefight fighter states
         run: |
           python - <<'PY'
           import unicodedata
           from pathlib import Path
           import numpy as np, pandas as pd
           from xgboost import XGBClassifier
+          from pipeline.features.views.moneyline import build_moneyline_feature_view, STATE_CONTEXT_COLUMNS
 
           OUT=Path('data/research/prop_mispricing'); OUT.mkdir(parents=True,exist_ok=True)
-          m=pd.read_parquet('data/market/historical_market_outcomes.parquet').copy()
-          m=m[(m.bookmaker=='legacy_consensus')&(m.result_status=='graded')&m.won.notna()&(m.market_key=='moneyline')].copy()
-          m['date']=pd.to_datetime(m.date); m['won']=m.won.astype(bool).astype(int)
-          good=m.groupby('fight_id').size(); good=good[good==2].index; m=m[m.fight_id.isin(good)].copy()
-          m['market_overround']=m.groupby('fight_id').implied_probability.transform('sum'); m['fair_market_p']=m.implied_probability/m.market_overround
+          hist=pd.read_parquet('data/market/historical_market_outcomes.parquet').copy()
+          hist=hist[(hist.bookmaker=='legacy_consensus')&(hist.result_status=='graded')&hist.won.notna()&(hist.market_key=='moneyline')].copy()
+          hist['date']=pd.to_datetime(hist.date); hist['won']=hist.won.astype(bool).astype(int)
+          good=hist.groupby('fight_id').size(); hist=hist[hist.fight_id.isin(good[good==2].index)].copy()
+          hist['market_overround']=hist.groupby('fight_id').implied_probability.transform('sum'); hist['fair_market_p']=hist.implied_probability/hist.market_overround
           fv=pd.read_parquet('data/features/moneyline_feature_view.parquet').copy(); fv['date']=pd.to_datetime(fv.date)
           def pc(df):
             z=[]
@@ -40,36 +41,52 @@ jobs:
               if allow and not deny:z.append(c)
             return sorted(set(z))
           cols=pc(fv); diffs=[c for c in cols if c.endswith('_diff')]
-          d=m.merge(fv[['fight_id']+cols],on='fight_id',how='inner'); blue=d.outcome_side.astype(str).eq('blue'); d.loc[blue,diffs]=-d.loc[blue,diffs]
+          d=hist.merge(fv[['fight_id']+cols],on='fight_id',how='inner'); blue=d.outcome_side.astype(str).eq('blue'); d.loc[blue,diffs]=-d.loc[blue,diffs]
           fc=cols+['fair_market_p','market_overround']; X=d[fc].replace([np.inf,-np.inf],np.nan); valid=[c for c in fc if X[c].notna().any()]
           tr=d.date<='2022-12-31'; va=(d.date>='2023-01-01')&(d.date<='2024-12-31'); med=X.loc[tr,valid].median(numeric_only=True); X=X[valid].fillna(med).fillna(0)
           model=XGBClassifier(n_estimators=350,max_depth=3,learning_rate=.03,subsample=.8,colsample_bytree=.7,min_child_weight=8,reg_lambda=5,reg_alpha=.5,objective='binary:logistic',eval_metric='logloss',random_state=42,n_jobs=2)
           model.fit(X.loc[tr],d.loc[tr,'won'],eval_set=[(X.loc[va],d.loc[va,'won'])],verbose=False)
 
-          odds={
-            'Dan Hooker':375,'Salahdine Parnasse':-500,
-            'Fares Ziam':-150,'Axel Sola':125,
-            'Michael Page':-200,'Nursulton Ruziboev':165,
-            'Daniil Donchenko':-215,'Punahele Soriano':172,
-            'Morgan Charriere':170,'Felipe Lima':-205,
-            'Losene Keita':-300,'Muhammad Naimov':240,
-            'Mario Pinto':-260,'Ryan Spann':210,
-            'Kurtis Campbell':-340,'Trevor Peek':270,
-            'Oumar Sy':-185,'Modestas Bukauskas':155,
-            'Nathaniel Wood':108,'Mairon Santos':-134,
-            'Michael Aljarouj':-155,'Fabia Sintes':130,
-            'Nora Cornolle':-130,'Klaudia Sygula':110,
-            'Matthieu Letho Duclos':100,'Luis Felipe Dias':-120,
-            'Delphine Benouaich':-160,'Sofia Montenegro':135,
-          }
+          odds={'Dan Hooker':375,'Salahdine Parnasse':-500,'Fares Ziam':-150,'Axel Sola':125,'Michael Page':-200,'Nursulton Ruziboev':165,'Daniil Donchenko':-215,'Punahele Soriano':172,'Morgan Charriere':170,'Felipe Lima':-205,'Losene Keita':-300,'Muhammad Naimov':240,'Mario Pinto':-260,'Ryan Spann':210,'Kurtis Campbell':-340,'Trevor Peek':270,'Oumar Sy':-185,'Modestas Bukauskas':155,'Nathaniel Wood':108,'Mairon Santos':-134,'Michael Aljarouj':-155,'Fabia Sintes':130,'Nora Cornolle':-130,'Klaudia Sygula':110,'Matthieu Letho Duclos':100,'Luis Felipe Dias':-120,'Delphine Benouaich':-160,'Sofia Montenegro':135}
           source={k:('UFC' if k not in {'Daniil Donchenko','Punahele Soriano','Nathaniel Wood','Mairon Santos'} else ('Oddschecker' if k in {'Daniil Donchenko','Punahele Soriano'} else 'BestFightOdds')) for k in odds}
-          def norm(s):return ''.join(ch for ch in unicodedata.normalize('NFKD',str(s)) if not unicodedata.combining(ch)).replace('’',"'").lower().strip()
+          def norm(s): return ''.join(ch for ch in unicodedata.normalize('NFKD',str(s)) if not unicodedata.combining(ch)).replace('’',"'").lower().strip()
           od={norm(k):(k,v,source[k]) for k,v in odds.items()}
-          event=fv[fv.date.dt.strftime('%Y-%m-%d').eq('2026-09-05')].copy()
-          if event.empty:
-            names=set(od); event=fv[fv.r_name.map(norm).isin(names)|fv.b_name.map(norm).isin(names)].copy()
+
+          up=pd.read_parquet('data/cards/ufcstats_upcoming_fights.parquet').copy()
+          print('UPCOMING_COLUMNS',list(up.columns))
+          # Resolve common schema aliases.
+          def pick(cands):
+            for c in cands:
+              if c in up.columns:return c
+            return None
+          rc=pick(['r_name','red_name','red_fighter_name','fighter_1_name']); bc=pick(['b_name','blue_name','blue_fighter_name','fighter_2_name'])
+          rid=pick(['r_id','red_id','red_fighter_id','fighter_1_id']); bid=pick(['b_id','blue_id','blue_fighter_id','fighter_2_id']); fid=pick(['fight_id']); dc=pick(['date','event_date'])
+          if not all([rc,bc,rid,bid,fid]): raise RuntimeError(f'Unsupported upcoming schema: {list(up.columns)}')
+          mask=up[rc].map(norm).isin(od)|up[bc].map(norm).isin(od)
+          if dc:
+            dd=pd.to_datetime(up[dc],errors='coerce'); mask &= dd.dt.strftime('%Y-%m-%d').eq('2026-09-05')
+          live=up.loc[mask].copy()
+          print('MATCHED_UPCOMING',len(live)); print(live[[fid,rc,bc,rid,bid]].to_string(index=False))
+          prep=pd.DataFrame({'fight_id':live[fid].astype(str),'r_id':live[rid].astype(str),'b_id':live[bid].astype(str),'r_name':live[rc],'b_name':live[bc],'date':pd.Timestamp('2026-09-05')})
+          for c in ['title_fight','total_rounds','division']:
+            if c in live.columns: prep[c]=live[c].values
+
+          latest=pd.read_parquet('data/features/latest_fighter_state.parquet').copy()
+          latest['fighter_id']=latest['fighter_id'].astype(str)
+          state_feature_cols=[c for c in latest.columns if c not in STATE_CONTEXT_COLUMNS]
           rows=[]
-          for _,r in event.iterrows():
+          for _,r in prep.iterrows():
+            for side in ['r','b']:
+              fighter_id=str(r[f'{side}_id']); hit=latest[latest.fighter_id.eq(fighter_id)]
+              if len(hit): rec=hit.iloc[-1].to_dict()
+              else:
+                rec={c:np.nan for c in latest.columns}; rec['fighter_id']=fighter_id
+              rec['fight_id']=str(r['fight_id']); rows.append(rec)
+          state_live=pd.DataFrame(rows)
+          livefv=build_moneyline_feature_view(prepared_fights_df=prep,fighter_state_history_df=state_live)
+
+          outrows=[]
+          for _,r in livefv.iterrows():
             rn,bn=norm(r.r_name),norm(r.b_name)
             if rn not in od or bn not in od: continue
             pair=[]
@@ -77,18 +94,19 @@ jobs:
               label,ao,src=od[nm]; ip=100/(ao+100) if ao>0 else (-ao)/((-ao)+100); pair.append((side,label,ao,src,ip))
             over=sum(x[4] for x in pair)
             for side,label,ao,src,ip in pair:
-              rec={c:r[c] for c in cols}
+              vals={c:(r[c] if c in livefv.columns else np.nan) for c in valid}; vals['fair_market_p']=ip/over; vals['market_overround']=over
               if side=='blue':
-                for c in diffs: rec[c]=-rec[c]
-              rec.update({'fight_id':r.fight_id,'date':str(r.date.date()),'fighter':label,'side':side,'american_odds':ao,'market_source':src,'market_overround':over,'fair_market_p':ip/over})
-              XS=pd.DataFrame([rec])[valid].replace([np.inf,-np.inf],np.nan).fillna(med).fillna(0)
-              rec['model_p']=float(model.predict_proba(XS)[0,1]); rec['edge']=rec['model_p']-rec['fair_market_p']; rows.append(rec)
-          out=pd.DataFrame(rows); keep=['fight_id','date','fighter','side','american_odds','market_source','fair_market_p','model_p','edge','market_overround']; out[keep].sort_values(['fight_id','side']).to_csv(OUT/'ufc_paris_moneyline_v1.csv',index=False); print(out[keep].sort_values(['fight_id','side']).to_string(index=False)); print('matched_fights',out.fight_id.nunique())
+                for c in [x for x in valid if x.endswith('_diff') and x in vals and pd.notna(vals[x])]: vals[c]=-vals[c]
+              XS=pd.DataFrame([vals],columns=valid).replace([np.inf,-np.inf],np.nan).fillna(med).fillna(0)
+              p=float(model.predict_proba(XS)[0,1]); outrows.append({'fight_id':r.fight_id,'fighter':label,'side':side,'american_odds':ao,'market_source':src,'fair_market_p':ip/over,'model_p':p,'edge':p-ip/over,'market_overround':over})
+          out=pd.DataFrame(outrows)
+          out.sort_values(['fight_id','side']).to_csv(OUT/'ufc_paris_moneyline_v1.csv',index=False)
+          print(out.sort_values(['fight_id','side']).to_string(index=False)); print('matched_fights',out.fight_id.nunique())
           PY
       - name: Commit
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add -f data/research/prop_mispricing/ufc_paris_moneyline_v1.csv
-          git commit -m 'Add UFC Paris V1 moneyline scores' || echo No-changes
+          git commit -m 'Fix UFC Paris live prefight moneyline scores' || echo No-changes
           git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
