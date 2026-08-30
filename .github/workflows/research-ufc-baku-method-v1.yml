@@ -29,6 +29,7 @@ jobs:
           m=m[(m.bookmaker=='legacy_consensus')&(m.result_status=='graded')&m.won.notna()].copy(); m['date']=pd.to_datetime(m.date); m['won']=m.won.astype(bool).astype(int)
           keys=['win_by_decision','win_by_ko_tko_dq','win_by_submission']; mm=m[m.market_key.isin(keys)].copy(); good=mm.groupby('fight_id').size(); good=good[good==6].index; mm=mm[mm.fight_id.isin(good)].copy(); mm['market_overround']=mm.groupby('fight_id').implied_probability.transform('sum'); mm['fair_market_p']=mm.implied_probability/mm.market_overround
           fv=pd.read_parquet('data/features/prop_method_of_victory_feature_view.parquet').copy(); fv['date']=pd.to_datetime(fv.date)
+          latest=pd.read_parquet('data/features/latest_fighter_state.parquet').copy(); latest['date']=pd.to_datetime(latest.date)
           def pc(df):
             z=[]
             for c in df.columns:
@@ -48,35 +49,94 @@ jobs:
           actual={('Rafael Fiziev','win_by_ko_tko_dq'),('Shara Magomedov','win_by_decision'),('Matheus Camilo','win_by_ko_tko_dq')}
           def norm(s):return ''.join(ch for ch in unicodedata.normalize('NFKD',str(s)) if not unicodedata.combining(ch)).replace('’',"'").lower().strip()
           wanted={frozenset((norm(a),norm(b))) for a,b in boards}
-          event=fv[fv.apply(lambda r: frozenset((norm(r.r_name),norm(r.b_name))) in wanted,axis=1)].copy()
-          print('matched rows:',len(event),[(r.r_name,r.b_name,str(r.date.date())) for _,r in event.iterrows()])
+          event=latest[(latest.date.dt.strftime('%Y-%m-%d')=='2026-06-27') & latest.apply(lambda r: frozenset((norm(r.fighter_name),norm(r.opponent_name))) in wanted,axis=1)].copy()
+          print('latest state rows:',len(event),[(r.fighter_name,r.opponent_name,r.corner,r.fight_id) for _,r in event.iterrows()])
+          fights=[]
+          for fid,g in event.groupby('fight_id'):
+            if len(g)<2: continue
+            red=g[g.corner.astype(str).str.lower().eq('red')]
+            blue=g[g.corner.astype(str).str.lower().eq('blue')]
+            if red.empty or blue.empty: continue
+            fights.append((red.iloc[0],blue.iloc[0]))
+          def state_value(s,col):
+            # exact global fight fields
+            if col in {'title_fight','total_rounds'}: return s.get(col,np.nan)
+            # corner-specific prefight fields
+            for pref in ('r_pre_','b_pre_'):
+              if col.startswith(pref):
+                base=col[len(pref):]
+                return s.get(base,np.nan)
+            for pref in ('r_ewm_','b_ewm_'):
+              if col.startswith(pref):
+                base=col[len(pref):]
+                return s.get('ewm_'+base,np.nan)
+            for pref in ('r_recent_form_','b_recent_form_'):
+              if col.startswith(pref):
+                base=col[len(pref):]
+                return s.get('form_delta_'+base,np.nan)
+            return np.nan
+          def build_feature_row(red,blue):
+            rec={}
+            mapped=0
+            for c in cols:
+              if c in {'title_fight','total_rounds'}:
+                rec[c]=red.get(c,np.nan); mapped += int(pd.notna(rec[c])); continue
+              if c.startswith('r_pre_') or c.startswith('r_ewm_') or c.startswith('r_recent_form_'):
+                rec[c]=state_value(red,c); mapped += int(pd.notna(rec[c])); continue
+              if c.startswith('b_pre_') or c.startswith('b_ewm_') or c.startswith('b_recent_form_'):
+                rec[c]=state_value(blue,c); mapped += int(pd.notna(rec[c])); continue
+              if c=='older_fighter_age':
+                rec[c]=max(red.get('age',np.nan),blue.get('age',np.nan)); mapped += int(pd.notna(rec[c])); continue
+              if c=='reach_mismatch_abs':
+                rec[c]=abs(red.get('reach',np.nan)-blue.get('reach',np.nan)); mapped += int(pd.notna(rec[c])); continue
+              if c=='height_mismatch_abs':
+                rec[c]=abs(red.get('height',np.nan)-blue.get('height',np.nan)); mapped += int(pd.notna(rec[c])); continue
+              if c.endswith('_diff'):
+                stem=c[:-5]
+                candidates=[stem,'ewm_'+stem,'form_delta_'+stem]
+                val=np.nan
+                for base in candidates:
+                  if base in red.index and base in blue.index and pd.notna(red.get(base)) and pd.notna(blue.get(base)):
+                    val=red.get(base)-blue.get(base); break
+                rec[c]=val; mapped += int(pd.notna(val)); continue
+              if c.startswith('combined_'):
+                stem=c[len('combined_'):]
+                val=np.nan
+                for base in [stem,'ewm_'+stem,'form_delta_'+stem]:
+                  if base in red.index and base in blue.index and pd.notna(red.get(base)) and pd.notna(blue.get(base)):
+                    val=(red.get(base)+blue.get(base))/2; break
+                rec[c]=val; mapped += int(pd.notna(val)); continue
+              rec[c]=np.nan
+            return rec,mapped
           rows=[]
-          for _,r in event.iterrows():
-            rn,bn=norm(r.r_name),norm(r.b_name); board=None
-            for pair,b in boards.items():
-              if {rn,bn}=={norm(pair[0]),norm(pair[1])}: board=b; break
+          for red,blue in fights:
+            pair=frozenset((norm(red.fighter_name),norm(blue.fighter_name)))
+            board=next((b for p,b in boards.items() if frozenset((norm(p[0]),norm(p[1])))==pair),None)
             if board is None: continue
+            feat,mapped=build_feature_row(red,blue)
+            print('bridge',red.fighter_name,'vs',blue.fighter_name,'mapped',mapped,'of',len(cols),'predictors')
             tmp=[]
-            for side,name in [('red',r.r_name),('blue',r.b_name)]:
-              canon=next((x for x in board if norm(x)==norm(name)),None)
-              if canon is None: continue
+            for side,s in [('red',red),('blue',blue)]:
+              canon=next((x for x in board if norm(x)==norm(s.fighter_name)),None)
               for key,ao in board[canon].items():
                 ip=100/(ao+100) if ao>0 else (-ao)/((-ao)+100); tmp.append((side,canon,key,ao,ip))
             over=sum(x[4] for x in tmp)
             for side,name,key,ao,ip in tmp:
-              model,valid,med=models[key]; rec={c:r[c] for c in cols}
+              model,valid,med=models[key]; rec=dict(feat)
               if side=='blue':
-                for c in diffs: rec[c]=-rec[c]
-              rec.update({'fight_id':r.fight_id,'fighter':name,'side':side,'market_key':key,'american_odds':ao,'raw_implied_p':ip,'market_overround':over,'fair_market_p':ip/over,'actual_hit':int((name,key) in actual)})
-              X=pd.DataFrame([rec])[valid].replace([np.inf,-np.inf],np.nan).fillna(med).fillna(0); rec['model_p']=float(model.predict_proba(X)[0,1]); rec['edge']=rec['model_p']-rec['fair_market_p']; rows.append(rec)
-          if not rows: raise RuntimeError('No Baku matchup rows matched feature view')
-          out=pd.DataFrame(rows); keep=['fight_id','fighter','side','market_key','american_odds','fair_market_p','model_p','edge','actual_hit']; out[keep].to_csv(OUT/'ufc_baku_method_v1.csv',index=False); print(out[keep].sort_values('edge',ascending=False).to_string(index=False))
+                for c in diffs:
+                  if pd.notna(rec.get(c)): rec[c]=-rec[c]
+              rec.update({'fight_id':red.fight_id,'fighter':name,'side':side,'market_key':key,'american_odds':ao,'market_overround':over,'fair_market_p':ip/over,'actual_hit':int((name,key) in actual),'mapped_predictors':mapped,'total_predictors':len(cols)})
+              X=pd.DataFrame([rec]).reindex(columns=valid).replace([np.inf,-np.inf],np.nan).fillna(med).fillna(0)
+              rec['model_p']=float(model.predict_proba(X)[0,1]); rec['edge']=rec['model_p']-rec['fair_market_p']; rows.append(rec)
+          if not rows: raise RuntimeError('No Baku rows built from latest fighter state')
+          out=pd.DataFrame(rows); keep=['fight_id','fighter','side','market_key','american_odds','fair_market_p','model_p','edge','actual_hit','mapped_predictors','total_predictors']; out[keep].to_csv(OUT/'ufc_baku_method_v1.csv',index=False); print(out[keep].sort_values('edge',ascending=False).to_string(index=False))
           PY
       - name: Commit
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add -f data/research/prop_mispricing/ufc_baku_method_v1.csv
-          git commit -m 'Add UFC Baku method scores' || echo No-changes
+          git commit -m 'Add UFC Baku method scores from latest fighter state' || echo No-changes
           git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
           git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
