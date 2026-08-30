@@ -1,0 +1,93 @@
+name: Research XGBoost V5 Exact Reproduction
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - .github/workflows/research-xgboost-v5-exact-reproduction.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  reproduce-v5:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout research branch
+        uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+          fetch-depth: 0
+
+      - name: Set up exact Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.16"
+
+      - name: Install exact V5 packages
+        run: |
+          python -m pip install --upgrade pip==26.2.1
+          pip install \
+            pandas==3.0.5 \
+            pyarrow==25.0.1 \
+            numpy==2.4.6 \
+            scikit-learn==1.9.0 \
+            scipy==1.17.1 \
+            xgboost==3.2.0 \
+            joblib==1.5.3 \
+            threadpoolctl==3.6.0 \
+            python-dateutil==2.9.0.post0
+
+      - name: Restore exact V5 data snapshot
+        run: |
+          git checkout 7df1b61126be1f4e036b256d1c774c531b8a281f -- \
+            data/market/historical_market_outcomes.parquet \
+            data/features/moneyline_feature_view.parquet
+
+      - name: Run exact V5 code under pinned environment
+        run: |
+          python - <<'PY'
+          import json, subprocess, textwrap
+          from pathlib import Path
+
+          sha='7df1b61126be1f4e036b256d1c774c531b8a281f'
+          path='.github/workflows/research-xgboost-market-offset-v5-feature-reduction.yml'
+          s=subprocess.check_output(['git','show',f'{sha}:{path}'], text=True)
+          marker="          python - <<'PY'\n"
+          start=s.index(marker)+len(marker)
+          end=s.index("\n          PY", start)
+          code=textwrap.dedent(s[start:end])
+
+          code=code.replace("xgboost_market_offset_v5_feature_reduction_summary.json","xgboost_v5_exact_reproduction_summary.json")
+          code=code.replace("xgboost_market_offset_v5_feature_reduction_test_predictions.csv","xgboost_v5_exact_reproduction_test_predictions.csv")
+          code=code.replace("xgboost_market_offset_v5_selected_oof.csv","xgboost_v5_exact_reproduction_selected_oof.csv")
+          code += "\n"
+          code += "expected=0.600822510744624\n"
+          code += "actual=float(summary['candidates']['top_50_pre2021_gain']['oof']['log_loss'])\n"
+          code += "summary['reproduction_control']={'expected_v5_oof_log_loss':expected,'actual_v5_oof_log_loss':actual,'abs_error':abs(actual-expected),'exact_within_1e_12':abs(actual-expected)<=1e-12}\n"
+          code += "with open(OUT/'xgboost_v5_exact_reproduction_summary.json','w',encoding='utf-8') as f: json.dump(summary,f,indent=2)\n"
+          code += "print(json.dumps(summary['reproduction_control'],indent=2))\n"
+          code += "assert abs(actual-expected)<=1e-12, f'V5 reproduction mismatch: {actual} vs {expected}'\n"
+          exec(compile(code,'v5_exact_reproduction.py','exec'),{})
+          PY
+
+      - name: Commit reproduction outputs safely
+        run: |
+          git restore --source=HEAD -- data/market/historical_market_outcomes.parquet data/features/moneyline_feature_view.parquet
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f \
+            data/research/prop_mispricing/xgboost_v5_exact_reproduction_summary.json \
+            data/research/prop_mispricing/xgboost_v5_exact_reproduction_test_predictions.csv \
+            data/research/prop_mispricing/xgboost_v5_exact_reproduction_selected_oof.csv
+          git diff --cached --quiet && exit 0
+          git commit -m "Add exact V5 reproduction control outputs"
+          for i in 1 2 3 4 5; do
+            git fetch origin research/ufc-prop-mispricing-xgboost-20260829
+            git rebase origin/research/ufc-prop-mispricing-xgboost-20260829 || { git rebase --abort; sleep 2; continue; }
+            git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829 && exit 0
+            sleep 3
+          done
+          exit 1
