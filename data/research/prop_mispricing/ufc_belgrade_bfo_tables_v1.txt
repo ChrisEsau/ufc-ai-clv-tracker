@@ -1,0 +1,20 @@
+TABLE 0 class=['odds-table', 'odds-table-responsive-header'] id=None numeric_cells=0
+ parent1 tag=div class=['table-div'] id=event4285
+ parent2 tag=div class=['table-outer-wrapper'] id=None
+ parent3 tag=div class=['rd-content'] id=None
+Rodriguez wins by TKO/KO | 
+Medic wins by TKO/KO | 
+Rodriguez wins by submission | 
+Medic wins by submission | 
+Rodriguez wins by decision | 
+Medic wins by decision | 
+TABLE 1 class=['odds-table'] id=None numeric_cells=2778
+ parent1 tag=div class=['table-scroller'] id=None
+ parent2 tag=div class=['table-inner-wrapper'] id=None
+ parent3 tag=div class=['table-div'] id=event4285
+Rodriguez wins by TKO/KO | 21:+500 25:+525 20:+500 26:+525
+Medic wins by TKO/KO | 21:-250 20:-250 26:-278
+Rodriguez wins by submission | 21:+1500 25:+1200 20:+1400 26:+1200
+Medic wins by submission | 21:+1200 20:+700 26:+1050
+Rodriguez wins by decision | 21:+2200 25:+2200 20:+1200 26:+2200
+Medic wins by decision | 21:+1800 20:+900 26:+2000
