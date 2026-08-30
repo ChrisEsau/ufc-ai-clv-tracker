@@ -91,11 +91,11 @@ jobs:
                 elif label.endswith(' wins by submission'):lk='sub'
                 elif label.endswith(' wins by decision'):lk='dec'
                 if not lk:continue
-                prefix=label.rsplit(' wins by ',1)[0]
-                if norm(prefix).startswith('either fighter'):continue
-                s1=SequenceMatcher(None,norm(prefix),norm(f1)).ratio(); s2=SequenceMatcher(None,norm(prefix),norm(f2)).ratio()
-                if max(s1,s2)<0.55:continue
-                side=1 if s1>=s2 else 2
+                prefix=norm(label.rsplit(' wins by ',1)[0])
+                n1,n2=norm(f1),norm(f2)
+                if prefix and prefix in n1 and prefix not in n2:side=1
+                elif prefix and prefix in n2 and prefix not in n1:side=2
+                else:continue
                 for td in tr.find_all('td'):
                   b=cell_book(td); o=odd_from_cell(td)
                   if b is not None and o is not None:props[(b,side,lk)]=o
@@ -160,6 +160,6 @@ jobs:
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add -f data/research/prop_mispricing/ufc_belgrade_*_v1.csv
-          git commit -m 'research: correct generic-market overwrite in UFC Belgrade boards' || echo No-changes
+          git commit -m 'research: correct BFO fighter-method matching for UFC Belgrade' || echo No-changes
           git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
           git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
