@@ -1,0 +1,63 @@
+name: Research 2026 Restart Ledger V1
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-2026-restart-ledger-v1.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  ledger:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas numpy
+      - name: Reset ledger to UFC 324 only
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import pandas as pd, numpy as np
+          ROOT=Path('data/research/prop_mispricing'); OUT=ROOT/'running_ledgers'; OUT.mkdir(parents=True,exist_ok=True)
+          ml=pd.read_csv(ROOT/'ufc_324_moneyline_freshrolling_v1.csv'); me=pd.read_csv(ROOT/'ufc_324_method_freshrolling_v1.csv')
+          ml['card']='UFC 324'; ml['date']='2026-01-24'; me['card']='UFC 324'; me['date']='2026-01-24'
+          # Current rules: ML >=7.5% edge; method fighter must be ML model predicted winner, method thresholds tracked unchanged.
+          winners=ml.loc[ml.groupby('fight_id').model_p.idxmax(),['fight_id','fighter','model_p']].rename(columns={'fighter':'ml_predicted_winner','model_p':'ml_winner_p'})
+          me=me.merge(winners,on='fight_id',how='left'); me['ml_winner_match']=me.fighter.eq(me.ml_predicted_winner)
+          def pm(o): return o/100 if o>0 else 100/abs(o)
+          def kelly(p,o):
+            b=pm(o); return max(0.0,(b*p-(1-p))/b)
+          rows=[]
+          # Canonical ML rule
+          for _,r in ml[(~ml.cold_start.astype(bool))&(ml.edge>=.075)].iterrows():
+            fs=10.; q=500*.25*kelly(float(r.model_p),float(r.american_odds)); won=int(r.actual_win)
+            rows.append({'market_type':'moneyline','threshold':.075,'card':'UFC 324','date':'2026-01-24','fight_id':r.fight_id,'fighter':r.fighter,'market_key':'moneyline','odds':r.american_odds,'fair_market_p':r.fair_market_p,'model_p':r.model_p,'edge':r.edge,'won':won,'ml_predicted_winner':winners.loc[winners.fight_id.eq(r.fight_id),'ml_predicted_winner'].iloc[0],'flat_stake':fs,'flat_pnl':fs*pm(r.american_odds) if won else -fs,'kelly_stake':q,'kelly_pnl':q*pm(r.american_odds) if won else -q})
+          # Method agreement filter, all locked thresholds
+          for th in [.02,.03,.05,.075,.10]:
+            d=me[(~me.cold_start.astype(bool))&me.ml_winner_match&(me.edge>=th)]
+            for _,r in d.iterrows():
+              fs=10.; q=500*.25*kelly(float(r.model_p),float(r.american_odds)); won=int(r.actual_hit)
+              rows.append({'market_type':'method','threshold':th,'card':'UFC 324','date':'2026-01-24','fight_id':r.fight_id,'fighter':r.fighter,'market_key':r.market_key,'odds':r.american_odds,'fair_market_p':r.fair_market_p,'model_p':r.model_p,'edge':r.edge,'won':won,'ml_predicted_winner':r.ml_predicted_winner,'flat_stake':fs,'flat_pnl':fs*pm(r.american_odds) if won else -fs,'kelly_stake':q,'kelly_pnl':q*pm(r.american_odds) if won else -q})
+          bets=pd.DataFrame(rows); bets.to_csv(OUT/'restart_2026_bet_ledger_v1.csv',index=False)
+          sums=[]
+          for market,ths in [('moneyline',[.075]),('method',[.02,.03,.05,.075,.10])]:
+            for th in ths:
+              d=bets[(bets.market_type==market)&(bets.threshold==th)] if len(bets) else pd.DataFrame()
+              risk=float(d.flat_stake.sum()) if len(d) else 0.; profit=float(d.flat_pnl.sum()) if len(d) else 0.; kr=float(d.kelly_stake.sum()) if len(d) else 0.; kp=float(d.kelly_pnl.sum()) if len(d) else 0.
+              sums.append({'market_type':market,'threshold':th,'cards':1,'bets':len(d),'wins':int(d.won.sum()) if len(d) else 0,'losses':int(len(d)-d.won.sum()) if len(d) else 0,'flat_risk':risk,'flat_profit':profit,'flat_roi':profit/risk if risk else np.nan,'flat_end_bankroll':500+profit,'kelly_risk':kr,'kelly_profit':kp,'kelly_roi_on_staked':kp/kr if kr else np.nan,'kelly_end_bankroll':500+kp,'kelly_return_on_start_bankroll':kp/500})
+          s=pd.DataFrame(sums); s.to_csv(OUT/'restart_2026_summary_v1.csv',index=False)
+          cold=ml.groupby('fight_id').agg(cold_start=('cold_start','first'),r_pre_fights=('r_pre_fights','first'),b_pre_fights=('b_pre_fights','first')).reset_index(); cold=cold[cold.cold_start.astype(bool)]; cold.to_csv(OUT/'restart_2026_cold_start_fights_v1.csv',index=False)
+          print('\nBETS\n',bets.to_string(index=False)); print('\nSUMMARY\n',s.to_string(index=False)); print('\nCOLD\n',cold.to_string(index=False))
+          PY
+      - name: Commit restarted ledger
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -f data/research/prop_mispricing/running_ledgers/restart_2026_*_v1.csv
+          git commit -m 'research: reset ledger at UFC 324' || echo No-changes
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
