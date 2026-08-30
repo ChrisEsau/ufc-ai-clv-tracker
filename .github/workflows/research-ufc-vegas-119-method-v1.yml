@@ -1,0 +1,82 @@
+name: Research UFC Vegas 119 Method V1
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-ufc-vegas-119-method-v1.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  score:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas pyarrow numpy scikit-learn xgboost
+      - name: Score UFC Vegas 119 archived method props
+        run: |
+          python - <<'PY'
+          import unicodedata
+          from pathlib import Path
+          import numpy as np, pandas as pd
+          from xgboost import XGBClassifier
+          OUT=Path('data/research/prop_mispricing'); OUT.mkdir(parents=True,exist_ok=True)
+          m=pd.read_parquet('data/market/historical_market_outcomes.parquet').copy()
+          m=m[(m.bookmaker=='legacy_consensus')&(m.result_status=='graded')&m.won.notna()].copy(); m['date']=pd.to_datetime(m.date); m['won']=m.won.astype(bool).astype(int)
+          keys=['win_by_decision','win_by_ko_tko_dq','win_by_submission']; mm=m[m.market_key.isin(keys)].copy(); good=mm.groupby('fight_id').size(); good=good[good==6].index; mm=mm[mm.fight_id.isin(good)].copy(); mm['market_overround']=mm.groupby('fight_id').implied_probability.transform('sum'); mm['fair_market_p']=mm.implied_probability/mm.market_overround
+          fv=pd.read_parquet('data/features/prop_method_of_victory_feature_view.parquet').copy(); fv['date']=pd.to_datetime(fv.date)
+          def pc(df):
+            z=[]
+            for c in df.columns:
+              if not pd.api.types.is_numeric_dtype(df[c]): continue
+              l=c.lower(); allow=('_pre_' in l or l.startswith('pre_') or 'ewm_' in l or 'recent_form_' in l or l.endswith('_diff') or l.startswith('combined_') or l in {'older_fighter_age','reach_mismatch_abs','height_mismatch_abs','title_fight','total_rounds'}); deny=any(x in l for x in ['winner','result','target','label','finish_round','match_time_sec','profit','odds','implied','market','actual','post_'])
+              if allow and not deny:z.append(c)
+            return sorted(set(z))
+          cols=pc(fv); diffs=[c for c in cols if c.endswith('_diff')]
+          def train(key):
+            d=mm[mm.market_key==key].merge(fv[['fight_id']+cols],on='fight_id',how='inner'); blue=d.outcome_side.astype(str).eq('blue'); d.loc[blue,diffs]=-d.loc[blue,diffs]; fc=cols+['fair_market_p','market_overround']; X=d[fc].replace([np.inf,-np.inf],np.nan); valid=[c for c in fc if X[c].notna().any()]; tr=d.date<='2022-12-31'; va=(d.date>='2023-01-01')&(d.date<='2024-12-31'); med=X.loc[tr,valid].median(numeric_only=True); X=X[valid].fillna(med).fillna(0); model=XGBClassifier(n_estimators=350,max_depth=3,learning_rate=.03,subsample=.8,colsample_bytree=.7,min_child_weight=8,reg_lambda=5,reg_alpha=.5,objective='binary:logistic',eval_metric='logloss',random_state=42,n_jobs=2); model.fit(X.loc[tr],d.loc[tr,'won'],eval_set=[(X.loc[va],d.loc[va,'won'])],verbose=False); return model,valid,med
+          models={k:train(k) for k in keys}
+          boards={
+            ('Manel Kape','Kyoji Horiguchi'):{'Manel Kape':{'win_by_ko_tko_dq':180,'win_by_submission':1550,'win_by_decision':260},'Kyoji Horiguchi':{'win_by_ko_tko_dq':675,'win_by_submission':790,'win_by_decision':325}},
+            ('Ion Cutelaba','Navajo Stirling'):{'Ion Cutelaba':{'win_by_ko_tko_dq':675,'win_by_submission':1100,'win_by_decision':790},'Navajo Stirling':{'win_by_ko_tko_dq':105,'win_by_submission':900,'win_by_decision':255}},
+            ('Andre Lima','Kevin Borjas'):{'Andre Lima':{'win_by_ko_tko_dq':260,'win_by_submission':410,'win_by_decision':112},'Kevin Borjas':{'win_by_ko_tko_dq':900,'win_by_submission':2900,'win_by_decision':1175}},
+            ('Gaston Bolanos','Michael Aswell Jr.'):{'Gaston Bolanos':{'win_by_ko_tko_dq':850,'win_by_submission':2800,'win_by_decision':700},'Michael Aswell Jr.':{'win_by_ko_tko_dq':190,'win_by_submission':900,'win_by_decision':125}},
+            ('Allan Nascimento','Mitch Raposo'):{'Allan Nascimento':{'win_by_ko_tko_dq':1000,'win_by_submission':280,'win_by_decision':200},'Mitch Raposo':{'win_by_ko_tko_dq':900,'win_by_submission':1400,'win_by_decision':260}},
+          }
+          actual={
+            ('Manel Kape','win_by_ko_tko_dq'),('Navajo Stirling','win_by_ko_tko_dq'),('Kevin Borjas','win_by_decision'),('Gaston Bolanos','win_by_decision'),('Mitch Raposo','win_by_decision')
+          }
+          def norm(s):return ''.join(ch for ch in unicodedata.normalize('NFKD',str(s)) if not unicodedata.combining(ch)).replace('’',"'").lower().strip()
+          event=fv[fv.date.dt.strftime('%Y-%m-%d').eq('2026-06-20')].copy(); rows=[]
+          for _,r in event.iterrows():
+            rn,bn=norm(r.r_name),norm(r.b_name); board=None
+            for pair,b in boards.items():
+              if {rn,bn}=={norm(pair[0]),norm(pair[1])}: board=b; break
+            if board is None: continue
+            tmp=[]
+            for side,name in [('red',r.r_name),('blue',r.b_name)]:
+              canon=next((x for x in board if norm(x)==norm(name)),None)
+              if canon is None: continue
+              for key,ao in board[canon].items():
+                ip=100/(ao+100) if ao>0 else (-ao)/((-ao)+100); tmp.append((side,canon,key,ao,ip))
+            over=sum(x[4] for x in tmp)
+            for side,name,key,ao,ip in tmp:
+              model,valid,med=models[key]; rec={c:r[c] for c in cols}
+              if side=='blue':
+                for c in diffs: rec[c]=-rec[c]
+              rec.update({'fight_id':r.fight_id,'fighter':name,'side':side,'market_key':key,'american_odds':ao,'raw_implied_p':ip,'market_overround':over,'fair_market_p':ip/over,'actual_hit':int((name,key) in actual)})
+              X=pd.DataFrame([rec])[valid].replace([np.inf,-np.inf],np.nan).fillna(med).fillna(0); rec['model_p']=float(model.predict_proba(X)[0,1]); rec['edge']=rec['model_p']-rec['fair_market_p']; rows.append(rec)
+          out=pd.DataFrame(rows); keep=['fight_id','fighter','side','market_key','american_odds','fair_market_p','model_p','edge','actual_hit']; out[keep].to_csv(OUT/'ufc_vegas_119_method_v1.csv',index=False); print(out[keep].sort_values('edge',ascending=False).to_string(index=False))
+          PY
+      - name: Commit
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add -f data/research/prop_mispricing/ufc_vegas_119_method_v1.csv
+          git commit -m 'Add UFC Vegas 119 method scores' || echo No-changes
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
