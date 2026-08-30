@@ -1,0 +1,174 @@
+name: Research XGBoost Market Offset V10 Event Environment
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - .github/workflows/research-xgboost-market-offset-v10-event-environment.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  v10-event-environment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout research branch
+        uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas pyarrow numpy scikit-learn xgboost requests beautifulsoup4
+      - name: Run V10 event environment interaction experiment
+        run: |
+          python - <<'PY'
+          import json, re, time
+          from pathlib import Path
+          import numpy as np
+          import pandas as pd
+          import requests
+          from bs4 import BeautifulSoup
+          from sklearn.metrics import log_loss, brier_score_loss, roc_auc_score
+          import xgboost as xgb
+
+          OUT=Path('data/research/prop_mispricing'); OUT.mkdir(parents=True,exist_ok=True)
+          with open(OUT/'xgboost_market_offset_v5_feature_reduction_summary.json','r',encoding='utf-8') as f:
+              v5=json.load(f)
+          core=[c for c in v5['selected_features'] if c!='market_overround']
+
+          def norm(s):
+              s=str(s or '').lower().replace('–','-').replace('—','-')
+              s=re.sub(r'[^a-z0-9]+',' ',s)
+              return ' '.join(s.split())
+
+          # Authoritative historical event locations from UFCStats completed-event listing.
+          url='https://ufcstats.com/statistics/events/completed?page=all'
+          r=requests.get(url,headers={'User-Agent':'Mozilla/5.0 UFC research'},timeout=30); r.raise_for_status()
+          soup=BeautifulSoup(r.text,'html.parser')
+          events=[]
+          for row in soup.select('tr.b-statistics__table-row'):
+              link=row.select_one('a.b-link.b-link_style_black')
+              cols=row.select('td.b-statistics__table-col')
+              if not link or len(cols)<2: continue
+              name=link.get_text(' ',strip=True)
+              date_el=row.select_one('.b-statistics__date')
+              date=pd.to_datetime(date_el.get_text(' ',strip=True) if date_el else None,errors='coerce')
+              location=cols[-1].get_text(' ',strip=True)
+              if pd.notna(date) and name and location:
+                  events.append({'event_name_ufcstats':name,'date':date.normalize(),'location':location,'event_norm':norm(name)})
+          ev=pd.DataFrame(events).drop_duplicates(['date','event_norm'])
+          if ev.empty: raise RuntimeError('No UFCStats event locations parsed')
+
+          def env_flags(loc):
+              s=str(loc); sl=s.lower()
+              us=sl.endswith('usa')
+              return {
+                'international':int(not us),
+                'las_vegas':int('las vegas' in sl),
+                'abu_dhabi':int('abu dhabi' in sl or 'yas island' in sl),
+                'high_altitude':int(any(x in sl for x in ['mexico city','denver','salt lake city','broomfield','calgary','colorado springs'])),
+                'europe':int(any(x in sl for x in ['united kingdom','england','scotland','ireland','france','germany','sweden','poland','czech','netherlands','croatia','russia'])),
+                'oceania':int(any(x in sl for x in ['australia','new zealand'])),
+                'asia_mideast':int(any(x in sl for x in ['united arab emirates','china','japan','singapore','south korea','saudi arabia','qatar','macau'])),
+                'latin_america':int(any(x in sl for x in ['mexico','brazil','chile','argentina','uruguay'])),
+                'canada':int('canada' in sl),
+              }
+          ef=pd.DataFrame([{'date':r.date,'event_norm':r.event_norm,'location':r.location,**env_flags(r.location)} for r in ev.itertuples(index=False)])
+
+          market=pd.read_parquet('data/market/historical_market_outcomes.parquet').copy()
+          market=market[(market['bookmaker']=='legacy_consensus')&(market['result_status']=='graded')&market['won'].notna()&(market['market_key']=='moneyline')].copy()
+          market['date']=pd.to_datetime(market['date'],errors='coerce').dt.normalize(); market['won']=market['won'].astype(bool).astype(int)
+          market['implied_probability']=pd.to_numeric(market['implied_probability'],errors='coerce')
+          good=market.groupby('fight_id').size(); good=good[good==2].index; market=market[market.fight_id.isin(good)].copy()
+          market['market_overround']=market.groupby('fight_id')['implied_probability'].transform('sum'); market['fair_market_p']=market['implied_probability']/market['market_overround']
+          red=market[market['outcome_side'].astype(str).eq('red')].copy()
+
+          fv=pd.read_parquet('data/features/moneyline_feature_view.parquet').copy(); fv['date']=pd.to_datetime(fv['date'],errors='coerce').dt.normalize(); fv['event_norm']=fv['event_name'].map(norm)
+          need=['fight_id','date','event_name','event_norm']+[c for c in core if c in fv.columns]
+          df=red.merge(fv[need],on='fight_id',how='inner',suffixes=('','_fv'))
+          # Primary exact event-name/date match, then date-only fallback when UFCStats has one event that date.
+          df=df.merge(ef,on=['date','event_norm'],how='left')
+          date_unique=ef.groupby('date').filter(lambda g: len(g)==1).drop_duplicates('date').set_index('date')
+          for c in ['location','international','las_vegas','abu_dhabi','high_altitude','europe','oceania','asia_mideast','latin_america','canada']:
+              miss=df[c].isna(); df.loc[miss,c]=df.loc[miss,'date'].map(date_unique[c])
+          env_cols=['international','las_vegas','abu_dhabi','high_altitude','europe','oceania','asia_mideast','latin_america','canada']
+          matched=df['location'].notna()
+          coverage={'fight_rows':int(len(df)),'matched_location_rows':int(matched.sum()),'coverage':float(matched.mean()),'events_scraped':int(len(ev))}
+          # Missing location => no interaction, preserving V5 exactly.
+          for e in env_cols: df[e]=pd.to_numeric(df[e],errors='coerce').fillna(0).astype(float)
+
+          interactions=[]
+          for e in env_cols:
+              for c in core:
+                  if c not in df.columns: continue
+                  name=f'env_{e}__x__{c}'
+                  df[name]=pd.to_numeric(df[c],errors='coerce')*df[e]
+                  interactions.append(name)
+
+          def clip(p): return np.clip(np.asarray(p,float),1e-6,1-1e-6)
+          def logit(p): p=clip(p); return np.log(p/(1-p))
+          def sigmoid(z): z=np.clip(np.asarray(z,float),-30,30); return 1/(1+np.exp(-z))
+          def metrics(y,p):
+              y=np.asarray(y,int); p=clip(p)
+              return {'n':int(len(y)),'log_loss':float(log_loss(y,p,labels=[0,1])),'brier':float(brier_score_loss(y,p)),'auc':float(roc_auc_score(y,p)) if len(np.unique(y))==2 else None}
+          params={'max_depth':1,'eta':0.03,'subsample':0.8,'colsample_bytree':0.7,'min_child_weight':10,'lambda':8.0,'alpha':1.0,'objective':'binary:logistic','eval_metric':'logloss','seed':42,'nthread':2}
+          rounds=300
+          base=list(dict.fromkeys(core+['market_overround']))
+
+          # Rank environment interactions ONLY using fights through 2020 with frozen V5 core present.
+          pre=df['date']<='2020-12-31'; rank_cols=base+interactions
+          raw=df[rank_cols].replace([np.inf,-np.inf],np.nan); med=raw.loc[pre].median(numeric_only=True)
+          valid=[c for c in rank_cols if raw.loc[pre,c].notna().any()]
+          X=raw.loc[pre,valid].fillna(med).fillna(0.0); y=df.loc[pre,'won'].astype(int).to_numpy(); m=logit(df.loc[pre,'fair_market_p'])
+          booster=xgb.train(params,xgb.DMatrix(X,label=y,base_margin=m,feature_names=valid),num_boost_round=rounds,verbose_eval=False)
+          gain=booster.get_score(importance_type='gain')
+          ranked=sorted(interactions,key=lambda c:gain.get(c,0.0),reverse=True)
+          ranked_rows=[{'feature':c,'gain':float(gain.get(c,0.0))} for c in ranked]
+
+          candidates={'v5_core':base}
+          for k in [3,5,10,20,40]: candidates[f'v5_plus_top_{k}_environment_interactions_pre2021_gain']=base+ranked[:k]
+          folds=[('2021','2020-12-31','2021-01-01','2021-12-31'),('2022','2021-12-31','2022-01-01','2022-12-31'),('2023','2022-12-31','2023-01-01','2023-12-31'),('2024','2023-12-31','2024-01-01','2024-12-31')]
+          summary={'design':{'name':'market_offset_v10_event_environment','base':'frozen V5','architecture':'frozen depth1 market-offset','environment_source':url,'environment_usage':'interaction-only; raw event flags excluded to avoid red-corner intercept bias','ranking':'through 2020 only','selection':'pooled 2021-2024 OOF log loss only','2025_plus':'sealed until selection'},'coverage':coverage,'environment_flags':env_cols,'interaction_count':len(interactions),'pre2021_ranked_interactions':ranked_rows,'candidates':{}}
+          for cname,cols in candidates.items():
+              parts=[]; fr=[]; raw=df[cols].replace([np.inf,-np.inf],np.nan)
+              for fold,te,vs,ve in folds:
+                  tr=df.date<=te; va=(df.date>=vs)&(df.date<=ve); valid=[c for c in cols if raw.loc[tr,c].notna().any()]
+                  med=raw.loc[tr,valid].median(numeric_only=True); Xtr=raw.loc[tr,valid].fillna(med).fillna(0); Xv=raw.loc[va,valid].fillna(med).fillna(0)
+                  yt=df.loc[tr,'won'].astype(int).to_numpy(); yv=df.loc[va,'won'].astype(int).to_numpy(); mt=logit(df.loc[tr,'fair_market_p']); mv=logit(df.loc[va,'fair_market_p'])
+                  b=xgb.train(params,xgb.DMatrix(Xtr,label=yt,base_margin=mt,feature_names=valid),num_boost_round=rounds,verbose_eval=False)
+                  p=sigmoid(b.predict(xgb.DMatrix(Xv,base_margin=mv,feature_names=valid),output_margin=True)); pm=sigmoid(mv); mm=metrics(yv,pm); mx=metrics(yv,p)
+                  fr.append({'fold':fold,'market':mm,'model':mx,'delta_log_loss_vs_market':mx['log_loss']-mm['log_loss'],'delta_brier_vs_market':mx['brier']-mm['brier']}); parts.append(pd.DataFrame({'y':yv,'market':pm,'model':p}))
+              oo=pd.concat(parts); mm=metrics(oo.y,oo.market); mx=metrics(oo.y,oo.model)
+              summary['candidates'][cname]={'feature_count':len(cols),'folds':fr,'oof':mx,'delta_log_loss_vs_market':mx['log_loss']-mm['log_loss'],'delta_brier_vs_market':mx['brier']-mm['brier']}
+          selected=min(summary['candidates'],key=lambda k:summary['candidates'][k]['oof']['log_loss']); summary['selected_candidate']=selected; summary['selected_environment_interactions']=[c for c in candidates[selected] if c.startswith('env_')]; summary['selected_feature_count']=len(candidates[selected])
+
+          # Untouched 2025+ after candidate frozen.
+          cols=candidates[selected]; raw=df[cols].replace([np.inf,-np.inf],np.nan); tr=df.date<='2024-12-31'; te=df.date>='2025-01-01'; valid=[c for c in cols if raw.loc[tr,c].notna().any()]; med=raw.loc[tr,valid].median(numeric_only=True)
+          Xtr=raw.loc[tr,valid].fillna(med).fillna(0); Xt=raw.loc[te,valid].fillna(med).fillna(0); yt=df.loc[tr,'won'].astype(int).to_numpy(); ye=df.loc[te,'won'].astype(int).to_numpy(); mt=logit(df.loc[tr,'fair_market_p']); me=logit(df.loc[te,'fair_market_p'])
+          b=xgb.train(params,xgb.DMatrix(Xtr,label=yt,base_margin=mt,feature_names=valid),num_boost_round=rounds,verbose_eval=False); p=sigmoid(b.predict(xgb.DMatrix(Xt,base_margin=me,feature_names=valid),output_margin=True)); pm=sigmoid(me)
+          summary['final_test']={'market':metrics(ye,pm),'v10':metrics(ye,p),'delta_log_loss_vs_market':metrics(ye,p)['log_loss']-metrics(ye,pm)['log_loss'],'delta_brier_vs_market':metrics(ye,p)['brier']-metrics(ye,pm)['brier']}
+          with open(OUT/'xgboost_market_offset_v10_event_environment_summary.json','w') as f: json.dump(summary,f,indent=2)
+          print(json.dumps(summary,indent=2))
+          PY
+      - name: Commit research outputs safely
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/research/prop_mispricing/xgboost_market_offset_v10_event_environment_summary.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Add V10 event environment research outputs"
+          for i in 1 2 3 4 5; do
+            git fetch origin research/ufc-prop-mispricing-xgboost-20260829
+            git rebase origin/research/ufc-prop-mispricing-xgboost-20260829 || { git rebase --abort; sleep 2; continue; }
+            git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829 && exit 0
+            sleep 3
+          done
+          exit 1
