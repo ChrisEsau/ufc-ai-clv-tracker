@@ -1,0 +1,151 @@
+name: Research UFC Belgrade Web ML + Method V1
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-ufc-belgrade-web-both-v1.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  score:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas pyarrow numpy scikit-learn xgboost requests beautifulsoup4 lxml
+      - name: Build archived Belgrade board and run frozen scorer
+        run: |
+          python - <<'PY'
+          import ast, json, re, unicodedata
+          from pathlib import Path
+          from difflib import SequenceMatcher
+          import requests
+          from bs4 import BeautifulSoup
+
+          DATE='2026-08-01'
+          URL='https://www.bestfightodds.com/events/ufc-belgrade-4285'
+          OUT=Path('data/research/prop_mispricing'); OUT.mkdir(parents=True,exist_ok=True)
+          BOOK_NAMES={21:'FanDuel',24:'Caesars',25:'BetRivers',20:'BetWay',26:'Unibet'}
+          RESULTS={
+            'uros medic':('Uros Medic','win_by_ko_tko_dq'),
+            'navajo stirling':('Navajo Stirling','win_by_ko_tko_dq'),
+            'aleksandar rakic':('Aleksandar Rakic','win_by_decision'),
+            'robert valentin':('Robert Valentin','win_by_submission'),
+            'gilbert urbina':('Gilbert Urbina','win_by_ko_tko_dq'),
+            'noah gugnon':('Noah Gugnon','win_by_submission'),
+            'tofiq musayev':('Tofiq Musayev','win_by_ko_tko_dq'),
+            'michael oliveira':('Michael Oliveira','win_by_ko_tko_dq'),
+            'borislav nikolic':('Borislav Nikolic','win_by_decision'),
+            'bogdan grad':('Bogdan Grad','win_by_submission'),
+            'mateusz rebecki':('Mateusz Rebecki','win_by_ko_tko_dq'),
+            'nina milosevic':('Nina Milosevic','win_by_ko_tko_dq'),
+            'jovan leka':('Jovan Leka','win_by_ko_tko_dq'),
+            'stephanie luciano':('Stephanie Luciano','win_by_submission'),
+          }
+          def norm(s):
+            return ''.join(ch for ch in unicodedata.normalize('NFKD',str(s)) if not unicodedata.combining(ch)).lower().replace('’',"'").strip()
+          def odd_from_cell(td):
+            sp=td.find('span')
+            if not sp:return None
+            t=sp.get_text(strip=True).replace('−','-')
+            return int(t) if re.fullmatch(r'[+-]\d+',t) else None
+          def cell_book(td):
+            x=td.get('data-li')
+            if not x:return None
+            try:return int(json.loads(x)[0])
+            except Exception:return None
+          html=requests.get(URL,headers={'User-Agent':'Mozilla/5.0'},timeout=30).text
+          soup=BeautifulSoup(html,'lxml')
+          rows=soup.find_all('tr')
+          bouts=[]; current=None; pending_first=None
+          for tr in rows:
+            fighter_links=[a for a in tr.find_all('a',href=True) if '/fighters/' in a['href']]
+            if fighter_links and 'pr' not in (tr.get('class') or []):
+              name=' '.join(fighter_links[-1].get_text(' ',strip=True).split())
+              if pending_first is None:
+                pending_first=(name,tr)
+              else:
+                f1,r1=pending_first; f2=name; r2=tr; pending_first=None
+                def mlrow(rr):
+                  z={}
+                  for td in rr.find_all('td'):
+                    b=cell_book(td); o=odd_from_cell(td)
+                    if b is not None and o is not None:z[b]=o
+                  return z
+                current={'f1':f1,'f2':f2,'ml1':mlrow(r1),'ml2':mlrow(r2),'props':{}}
+                bouts.append(current)
+              continue
+            if current is None or 'pr' not in (tr.get('class') or []):continue
+            th=tr.find('th')
+            if not th:continue
+            label=' '.join(th.get_text(' ',strip=True).split())
+            lk=None
+            if label.endswith(' wins by TKO/KO'):lk='ko'
+            elif label.endswith(' wins by submission'):lk='sub'
+            elif label.endswith(' wins by decision'):lk='dec'
+            if not lk:continue
+            prefix=label.rsplit(' wins by ',1)[0]
+            s1=SequenceMatcher(None,norm(prefix),norm(current['f1'])).ratio(); s2=SequenceMatcher(None,norm(prefix),norm(current['f2'])).ratio()
+            side=1 if s1>=s2 else 2
+            for td in tr.find_all('td'):
+              b=cell_book(td); o=odd_from_cell(td)
+              if b is not None and o is not None:current['props'][(b,side,lk)]=o
+
+          clean=[]
+          for b in bouts:
+            if not b['ml1'] or not b['ml2']:continue
+            complete=[]
+            for book in set(b['ml1']) & set(b['ml2']):
+              if all((book,side,k) in b['props'] for side in [1,2] for k in ['ko','sub','dec']):complete.append(book)
+            if complete:b['complete']=complete; clean.append(b)
+          if len(clean)!=14:
+            raise RuntimeError(f'Expected 14 complete Belgrade bouts, found {len(clean)}: '+str([(x['f1'],x['f2'],x.get('complete')) for x in clean]))
+          global_books=set(clean[0]['complete'])
+          for b in clean[1:]:global_books &= set(b['complete'])
+          preferred=[21,24,25,20,26]
+          global_book=next((x for x in preferred if x in global_books),None)
+          boards={}; source_rows=[]
+          for b in clean:
+            book=global_book or next((x for x in preferred if x in b['complete']),b['complete'][0])
+            pair=(b['f1'],b['f2'])
+            win=None
+            for fighter in pair:
+              n=norm(fighter)
+              best=max(RESULTS,key=lambda x:SequenceMatcher(None,n,x).ratio())
+              if SequenceMatcher(None,n,best).ratio()>.78:
+                candidate=RESULTS[best]
+                if norm(candidate[0])==norm(fighter) or SequenceMatcher(None,n,norm(candidate[0])).ratio()>.86: win=candidate
+            if win is None:raise RuntimeError('No result match for '+str(pair))
+            boards[pair]={'ml':{b['f1']:b['ml1'][book],b['f2']:b['ml2'][book]},
+                          'm':{b['f1']:[b['props'][(book,1,'ko')],b['props'][(book,1,'sub')],b['props'][(book,1,'dec')]],
+                               b['f2']:[b['props'][(book,2,'ko')],b['props'][(book,2,'sub')],b['props'][(book,2,'dec')]]},
+                          'win':win}
+            source_rows.append({'fighter_a':b['f1'],'fighter_b':b['f2'],'book_id':book,'book':BOOK_NAMES.get(book,f'BFO_book_{book}'),'source_url':URL})
+          Path(OUT/'ufc_belgrade_market_sources_v1.csv').write_text('fighter_a,fighter_b,book_id,book,source_url\n'+'\n'.join(','.join(map(str,r.values())) for r in source_rows)+'\n')
+          print('GLOBAL COMPLETE BOOK',global_book,BOOK_NAMES.get(global_book))
+          print('BOARDS',len(boards))
+          for p,v in boards.items():print(p,v)
+
+          # Reuse the exact frozen Abu Dhabi scorer body, changing only date, board literal and output names.
+          src=Path('.github/workflows/research-ufc-abu-dhabi-web-both-v1.yml').read_text()
+          m=re.search(r"python - <<'PY'\n(.*?)\n          PY",src,re.S)
+          if not m:raise RuntimeError('Could not extract frozen scorer')
+          code='\n'.join(line[10:] if line.startswith('          ') else line for line in m.group(1).splitlines())
+          code=code.replace("DATE='2026-07-25'",f"DATE='{DATE}'")
+          code=re.sub(r"boards=\{.*?\n\}\ndef imp",'boards='+repr(boards)+'\ndef imp',code,count=1,flags=re.S)
+          code=code.replace('ufc_abu_dhabi_moneyline_web_v1.csv','ufc_belgrade_moneyline_web_v1.csv')
+          code=code.replace('ufc_abu_dhabi_method_web_v1.csv','ufc_belgrade_method_web_v1.csv')
+          exec(compile(code,'<frozen_belgrade_scorer>','exec'),{})
+          PY
+      - name: Commit Belgrade scores
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -f data/research/prop_mispricing/ufc_belgrade_*_v1.csv
+          git commit -m 'research: add UFC Belgrade frozen XGB scores' || echo No-changes
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
