@@ -1,0 +1,80 @@
+name: Research Baku Feature Bridge
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-baku-feature-bridge.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas pyarrow numpy
+      - name: Inspect latest-state bridge
+        run: |
+          python - <<'PY'
+          import json, unicodedata
+          from pathlib import Path
+          import pandas as pd, numpy as np
+          out=Path('data/research/prop_mispricing'); out.mkdir(parents=True,exist_ok=True)
+          latest=pd.read_parquet('data/features/latest_fighter_state.parquet')
+          hist=pd.read_parquet('data/features/fighter_state_history.parquet')
+          mov=pd.read_parquet('data/features/prop_method_of_victory_feature_view.parquet')
+          def norm(s):
+              return ''.join(ch for ch in unicodedata.normalize('NFKD',str(s)) if not unicodedata.combining(ch)).replace('’',"'").lower().strip()
+          targets=['Rafael Fiziev','Manuel Torres','Shara Magomedov','Michel Pereira','Nazim Sadykhov','Matheus Camilo']
+          info={
+            'latest_shape': list(latest.shape),
+            'hist_shape': list(hist.shape),
+            'mov_shape': list(mov.shape),
+            'latest_columns': latest.columns.tolist(),
+            'mov_columns': mov.columns.tolist(),
+          }
+          # identify likely fighter-name columns and dump matched records compactly
+          name_cols=[c for c in latest.columns if any(x in c.lower() for x in ['name','fighter'])]
+          info['latest_name_columns']=name_cols
+          matches=[]
+          for c in name_cols:
+              try:
+                  mask=latest[c].astype(str).map(norm).isin([norm(x) for x in targets])
+                  if mask.any():
+                      for _,r in latest[mask].iterrows():
+                          rec={'match_column':c,'matched_value':str(r[c])}
+                          for k,v in r.items():
+                              if pd.isna(v): continue
+                              if isinstance(v,(np.integer,np.floating)): v=v.item()
+                              rec[str(k)]=v if isinstance(v,(str,int,float,bool)) else str(v)
+                          matches.append(rec)
+              except Exception:
+                  pass
+          info['latest_matches']=matches
+          # show one representative method row for schema mapping
+          sample=mov.iloc[-1].to_dict()
+          clean={}
+          for k,v in sample.items():
+              if pd.isna(v): continue
+              if isinstance(v,(np.integer,np.floating)): v=v.item()
+              clean[str(k)]=v if isinstance(v,(str,int,float,bool)) else str(v)
+          info['mov_sample']=clean
+          (out/'baku_feature_bridge.json').write_text(json.dumps(info,indent=2,default=str))
+          print('matched latest state records:',len(matches))
+          print('latest columns:',latest.columns.tolist())
+          print('MOV columns:',mov.columns.tolist())
+          for r in matches:
+              print('MATCH',r.get('matched_value'),{k:r[k] for k in list(r)[:12]})
+          PY
+      - name: Commit
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add -f data/research/prop_mispricing/baku_feature_bridge.json
+          git commit -m 'Add Baku feature bridge inspection' || echo No-changes
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
