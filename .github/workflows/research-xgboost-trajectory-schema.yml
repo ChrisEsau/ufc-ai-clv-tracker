@@ -1,0 +1,38 @@
+name: Research XGBoost Trajectory Schema
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - .github/workflows/research-xgboost-trajectory-schema.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  trajectory-schema:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pandas pyarrow
+      - name: Inspect trajectory-capable columns
+        run: |
+          python - <<'PY'
+          import pandas as pd
+          p='data/features/moneyline_feature_view.parquet'
+          df=pd.read_parquet(p)
+          cols=list(df.columns)
+          needles=['recent_form','ewm_','pre_','elo','sapm','splm','td_','ctrl','kd_','finish','win_pct','avg_fight_time','opponent_elo']
+          keep=[c for c in cols if any(n in c.lower() for n in needles)]
+          print('N_COLUMNS',len(cols))
+          print('MATCHING',len(keep))
+          for c in keep:
+              print(c)
+          PY
