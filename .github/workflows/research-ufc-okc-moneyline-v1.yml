@@ -47,7 +47,7 @@ jobs:
             ('Chase Hooper','Mitch Ramirez'):{'Chase Hooper':-375,'Mitch Ramirez':295},
             ('Tabatha Ricci','Fatima Kline'):{'Tabatha Ricci':360,'Fatima Kline':-470},
             ('Tommy McMillen','Alberto Montes'):{'Tommy McMillen':-175,'Alberto Montes':145},
-            ('Austin Bashi','Jose Miguel Delgado'):{'Austin Bashi':-125,'Jose Miguel Delgado':105},
+            ('Austin Bashi','Jose Delgado'):{'Austin Bashi':-125,'Jose Delgado':105},
             ('Jean-Paul Lebosnoyani','Seokhyeon Ko'):{'Jean-Paul Lebosnoyani':150,'Seokhyeon Ko':-180},
             ('Levi Rodrigues Jr.','Felipe Franco'):{'Levi Rodrigues Jr.':-142,'Felipe Franco':120},
             ('Alden Coria','Stewart Nicoll'):{'Alden Coria':-1050,'Stewart Nicoll':675},
@@ -55,7 +55,7 @@ jobs:
             ('Anna Melisano','Dione Barbosa'):{'Anna Melisano':455,'Dione Barbosa':-625},
             ('Ezra Elliott','Damien Anderson'):{'Ezra Elliott':110,'Damien Anderson':-130},
           }
-          actual={'Dricus Du Plessis','Christian Leroy Duncan','Chase Hooper','Fatima Kline','Tommy McMillen','Jose Miguel Delgado','Jean-Paul Lebosnoyani','Felipe Franco','Alden Coria','RJ Harris','Dione Barbosa','Ezra Elliott'}
+          actual={'Dricus Du Plessis','Christian Leroy Duncan','Chase Hooper','Fatima Kline','Tommy McMillen','Jose Delgado','Jean-Paul Lebosnoyani','Felipe Franco','Alden Coria','RJ Harris','Dione Barbosa','Ezra Elliott'}
           def norm(s): return ''.join(ch for ch in unicodedata.normalize('NFKD',str(s)) if not unicodedata.combining(ch)).replace('’',"'").lower().strip()
           wanted={frozenset((norm(a),norm(b))):(a,b) for a,b in odds}
           event=latest[latest.date.dt.strftime('%Y-%m-%d').eq('2026-07-18')].copy()
@@ -107,7 +107,7 @@ jobs:
                   if pd.notna(rec.get(c)): rec[c]=-rec[c]
               rec.update({'fight_id':red.fight_id,'fighter':name,'side':side,'american_odds':ao,'market_overround':over,'fair_market_p':ip/over,'actual_win':int(name in actual),'mapped_predictors':mapped,'total_predictors':len(cols)})
               XS=pd.DataFrame([rec]).reindex(columns=valid).replace([np.inf,-np.inf],np.nan).fillna(med).fillna(0); rec['model_p']=float(model.predict_proba(XS)[0,1]); rec['edge']=rec['model_p']-rec['fair_market_p']; rows.append(rec)
-          out=pd.DataFrame(rows); keep=['fight_id','fighter','side','american_odds','fair_market_p','model_p','edge','actual_win','mapped_predictors','total_predictors']; out[keep].to_csv(OUT/'ufc_okc_moneyline_v1.csv',index=False); print(out[keep].sort_values('edge',ascending=False).to_string(index=False)); print('scored fights',out.fight_id.nunique())
+          out=pd.DataFrame(rows); keep=['fight_id','fighter','side','american_odds','fair_market_p','model_p','edge','actual_win','mapped_predictors','total_predictors']; out[keep].to_csv(OUT/'ufc_okc_moneyline_v1.csv',index=False); print(out[keep].sort_values('edge',ascending=False).to_string(index=False)); print('scored fights',out.fight_id.nunique()); assert out.fight_id.nunique()==12
           PY
       - name: Commit
         run: |
