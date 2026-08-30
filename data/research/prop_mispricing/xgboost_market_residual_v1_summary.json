@@ -1,0 +1,510 @@
+{
+  "split": {
+    "train_end": "2022-12-31",
+    "validation": "2023-01-01..2024-12-31",
+    "test": "2025-01-01..2026-03-28"
+  },
+  "markets": {
+    "moneyline": {
+      "rows_total": 12934,
+      "feature_count": 434,
+      "train_n": 10332,
+      "validation_n": 1592,
+      "test_n": 1010,
+      "test_market": {
+        "n": 1010,
+        "brier": 0.19507775170005373,
+        "log_loss": 0.5727560248220686,
+        "auc": 0.7722321341044996
+      },
+      "test_xgboost": {
+        "n": 1010,
+        "brier": 0.1929606820099896,
+        "log_loss": 0.5679598155061069,
+        "auc": 0.7778688363885894
+      },
+      "test_delta_log_loss": -0.004796209315961697,
+      "test_delta_brier": -0.002117069690064144,
+      "edge_buckets": [
+        {
+          "min_edge": 0.0,
+          "n_bets": 489,
+          "win_rate": 0.5480572597137015,
+          "avg_edge": 0.04293435024177562,
+          "roi": 0.010413027835851803
+        },
+        {
+          "min_edge": 0.02,
+          "n_bets": 356,
+          "win_rate": 0.5702247191011236,
+          "avg_edge": 0.055515111024861404,
+          "roi": 0.08819528839432131
+        },
+        {
+          "min_edge": 0.05,
+          "n_bets": 161,
+          "win_rate": 0.5217391304347826,
+          "avg_edge": 0.08256454926815876,
+          "roi": 0.06840639701551851
+        },
+        {
+          "min_edge": 0.075,
+          "n_bets": 74,
+          "win_rate": 0.5,
+          "avg_edge": 0.1068727963164423,
+          "roi": 0.010752215805219723
+        },
+        {
+          "min_edge": 0.1,
+          "n_bets": 39,
+          "win_rate": 0.5128205128205128,
+          "avg_edge": 0.1272229471721069,
+          "roi": 0.11981433361893919
+        },
+        {
+          "min_edge": 0.15,
+          "n_bets": 7,
+          "win_rate": 0.14285714285714285,
+          "avg_edge": 0.1631873684538741,
+          "roi": -0.6657142857142857
+        }
+      ],
+      "top_features": [
+        {
+          "feature": "fair_market_p",
+          "importance": 0.0241848137229681
+        },
+        {
+          "feature": "style_control_wrestler_score_abs_diff",
+          "importance": 0.014775805175304413
+        },
+        {
+          "feature": "style_decision_technician_score_abs_diff",
+          "importance": 0.013317308388650417
+        },
+        {
+          "feature": "style_ko_finisher_score_abs_diff",
+          "importance": 0.012573767453432083
+        },
+        {
+          "feature": "reach_diff",
+          "importance": 0.011270332150161266
+        },
+        {
+          "feature": "age_diff",
+          "importance": 0.009845437481999397
+        },
+        {
+          "feature": "reach_mismatch_abs",
+          "importance": 0.008189260959625244
+        },
+        {
+          "feature": "aggression_index_diff",
+          "importance": 0.007643855642527342
+        },
+        {
+          "feature": "age_squared_diff",
+          "importance": 0.007297218777239323
+        },
+        {
+          "feature": "b_pre_reach",
+          "importance": 0.006977981422096491
+        },
+        {
+          "feature": "recent_form_wins_diff",
+          "importance": 0.006423531100153923
+        },
+        {
+          "feature": "recent_form_elo_diff",
+          "importance": 0.0060785068199038506
+        },
+        {
+          "feature": "b_pre_win_pct",
+          "importance": 0.004728037863969803
+        },
+        {
+          "feature": "r_pre_decision_loss_rate",
+          "importance": 0.0046528843231499195
+        },
+        {
+          "feature": "b_ewm_td_avg",
+          "importance": 0.004504899028688669
+        },
+        {
+          "feature": "b_recent_form_best_win_elo",
+          "importance": 0.004451104439795017
+        },
+        {
+          "feature": "recent_form_avg_fight_time_diff",
+          "importance": 0.004374073352664709
+        },
+        {
+          "feature": "b_pre_str_acc",
+          "importance": 0.004242269787937403
+        },
+        {
+          "feature": "b_ewm_kd_absorbed_avg",
+          "importance": 0.004175963811576366
+        },
+        {
+          "feature": "b_pre_kd_avg",
+          "importance": 0.004165200050920248
+        },
+        {
+          "feature": "r_pre_win_pct",
+          "importance": 0.00414532795548439
+        },
+        {
+          "feature": "b_ewm_recent_avg_fight_time",
+          "importance": 0.004136016126722097
+        },
+        {
+          "feature": "b_pre_days_since_last_fight",
+          "importance": 0.004135978873819113
+        },
+        {
+          "feature": "ewm_recent_finish_rate_diff",
+          "importance": 0.004112676251679659
+        },
+        {
+          "feature": "ewm_sapm_diff",
+          "importance": 0.004105147905647755
+        }
+      ]
+    },
+    "ko": {
+      "rows_total": 10530,
+      "feature_count": 401,
+      "train_n": 8112,
+      "validation_n": 1440,
+      "test_n": 978,
+      "test_market": {
+        "n": 978,
+        "brier": 0.1301398773817837,
+        "log_loss": 0.42322733135983703,
+        "auc": 0.6958109074485302
+      },
+      "test_xgboost": {
+        "n": 978,
+        "brier": 0.1288269648513461,
+        "log_loss": 0.41707776353827747,
+        "auc": 0.6996198577289322
+      },
+      "test_delta_log_loss": -0.006149567821559565,
+      "test_delta_brier": -0.00131291253043761,
+      "edge_buckets": [
+        {
+          "min_edge": 0.0,
+          "n_bets": 604,
+          "win_rate": 0.14735099337748345,
+          "avg_edge": 0.03573694907612378,
+          "roi": 0.9624886120747048
+        },
+        {
+          "min_edge": 0.02,
+          "n_bets": 400,
+          "win_rate": 0.1625,
+          "avg_edge": 0.04885969853193426,
+          "roi": 1.170024470899471
+        },
+        {
+          "min_edge": 0.05,
+          "n_bets": 127,
+          "win_rate": 0.25196850393700787,
+          "avg_edge": 0.08252163876599822,
+          "roi": 1.971259842519685
+        },
+        {
+          "min_edge": 0.075,
+          "n_bets": 55,
+          "win_rate": 0.34545454545454546,
+          "avg_edge": 0.1117186535417297,
+          "roi": 2.5745454545454542
+        },
+        {
+          "min_edge": 0.1,
+          "n_bets": 28,
+          "win_rate": 0.2857142857142857,
+          "avg_edge": 0.1361756734772652,
+          "roi": 0.7678571428571429
+        },
+        {
+          "min_edge": 0.15,
+          "n_bets": 8,
+          "win_rate": 0.25,
+          "avg_edge": 0.1778982945288579,
+          "roi": 1.25
+        }
+      ],
+      "top_features": [
+        {
+          "feature": "fair_market_p",
+          "importance": 0.01684585213661194
+        },
+        {
+          "feature": "age_x_career_ko_losses_diff",
+          "importance": 0.012332506477832794
+        },
+        {
+          "feature": "b_pre_weight",
+          "importance": 0.011812565848231316
+        },
+        {
+          "feature": "b_pre_height",
+          "importance": 0.00685330294072628
+        },
+        {
+          "feature": "b_recent_form_win_streak",
+          "importance": 0.005730507429689169
+        },
+        {
+          "feature": "kd_avg_diff",
+          "importance": 0.004860104061663151
+        },
+        {
+          "feature": "age_squared_diff",
+          "importance": 0.004720037337392569
+        },
+        {
+          "feature": "style_all_round_finisher_score_diff",
+          "importance": 0.00465196929872036
+        },
+        {
+          "feature": "r_pre_win_pct",
+          "importance": 0.004574698396027088
+        },
+        {
+          "feature": "ko_rate_diff",
+          "importance": 0.004515628330409527
+        },
+        {
+          "feature": "r_ewm_losses",
+          "importance": 0.004386379383504391
+        },
+        {
+          "feature": "r_ewm_elo",
+          "importance": 0.004316141363233328
+        },
+        {
+          "feature": "r_pre_reach",
+          "importance": 0.00429129134863615
+        },
+        {
+          "feature": "r_pre_style_ko_finisher_score",
+          "importance": 0.004281671717762947
+        },
+        {
+          "feature": "r_pre_avg_fight_time",
+          "importance": 0.004281140398234129
+        },
+        {
+          "feature": "b_ewm_splm",
+          "importance": 0.004273083992302418
+        },
+        {
+          "feature": "b_pre_reach",
+          "importance": 0.004260918591171503
+        },
+        {
+          "feature": "r_recent_form_finish_rate",
+          "importance": 0.0042393687181174755
+        },
+        {
+          "feature": "b_pre_recent_avg_fight_time",
+          "importance": 0.00412590941414237
+        },
+        {
+          "feature": "b_pre_style_all_round_finisher_score",
+          "importance": 0.0041099125519394875
+        },
+        {
+          "feature": "r_ewm_decision_loss_rate",
+          "importance": 0.004085030406713486
+        },
+        {
+          "feature": "b_recent_form_sub_avg",
+          "importance": 0.004080716520547867
+        },
+        {
+          "feature": "ewm_loss_streak_diff",
+          "importance": 0.0040607815608382225
+        },
+        {
+          "feature": "b_pre_sub_win_rate",
+          "importance": 0.004043924622237682
+        },
+        {
+          "feature": "pressure_striking_adv_diff",
+          "importance": 0.004028062801808119
+        }
+      ]
+    },
+    "submission": {
+      "rows_total": 10530,
+      "feature_count": 401,
+      "train_n": 8112,
+      "validation_n": 1440,
+      "test_n": 978,
+      "test_market": {
+        "n": 978,
+        "brier": 0.06294464994258334,
+        "log_loss": 0.23630140749336406,
+        "auc": 0.7254064630339923
+      },
+      "test_xgboost": {
+        "n": 978,
+        "brier": 0.06320722882452377,
+        "log_loss": 0.2400098096874694,
+        "auc": 0.7199869559140953
+      },
+      "test_delta_log_loss": 0.0037084021941053424,
+      "test_delta_brier": 0.00026257888194043677,
+      "edge_buckets": [
+        {
+          "min_edge": 0.0,
+          "n_bets": 132,
+          "win_rate": 0.09090909090909091,
+          "avg_edge": 0.027589102759948955,
+          "roi": -0.31975436179981626
+        },
+        {
+          "min_edge": 0.02,
+          "n_bets": 52,
+          "win_rate": 0.1346153846153846,
+          "avg_edge": 0.05886636667519038,
+          "roi": 0.00850815850815851
+        },
+        {
+          "min_edge": 0.05,
+          "n_bets": 21,
+          "win_rate": 0.14285714285714285,
+          "avg_edge": 0.10178588110349758,
+          "roi": -0.6455988455988456
+        },
+        {
+          "min_edge": 0.075,
+          "n_bets": 12,
+          "win_rate": 0.16666666666666666,
+          "avg_edge": 0.1324089139899446,
+          "roi": -0.5325757575757576
+        },
+        {
+          "min_edge": 0.1,
+          "n_bets": 8,
+          "win_rate": 0.25,
+          "avg_edge": 0.15734816413326436,
+          "roi": -0.2988636363636364
+        },
+        {
+          "min_edge": 0.15,
+          "n_bets": 6,
+          "win_rate": 0.3333333333333333,
+          "avg_edge": 0.17400414458239968,
+          "roi": -0.06515151515151515
+        }
+      ],
+      "top_features": [
+        {
+          "feature": "fair_market_p",
+          "importance": 0.015579598024487495
+        },
+        {
+          "feature": "ewm_sub_avg_diff",
+          "importance": 0.007432470563799143
+        },
+        {
+          "feature": "sub_avg_diff",
+          "importance": 0.006916034035384655
+        },
+        {
+          "feature": "b_pre_sub_avg",
+          "importance": 0.005421931389719248
+        },
+        {
+          "feature": "r_pre_recent_ko_losses_3",
+          "importance": 0.005281335208564997
+        },
+        {
+          "feature": "r_pre_finish_loss_rate",
+          "importance": 0.0051624951884150505
+        },
+        {
+          "feature": "sub_win_rate_diff",
+          "importance": 0.005020435433834791
+        },
+        {
+          "feature": "finish_loss_rate_diff",
+          "importance": 0.004980080295354128
+        },
+        {
+          "feature": "r_recent_form_kd_absorbed_avg",
+          "importance": 0.004899255000054836
+        },
+        {
+          "feature": "r_pre_days_since_last_ko_loss",
+          "importance": 0.0048447041772305965
+        },
+        {
+          "feature": "ewm_wins_diff",
+          "importance": 0.004590773954987526
+        },
+        {
+          "feature": "r_recent_form_td_avg",
+          "importance": 0.004553864244371653
+        },
+        {
+          "feature": "r_ewm_finish_loss_rate",
+          "importance": 0.004364434164017439
+        },
+        {
+          "feature": "ewm_win_pct_diff",
+          "importance": 0.004355621058493853
+        },
+        {
+          "feature": "r_pre_sub_win_rate",
+          "importance": 0.004291323479264975
+        },
+        {
+          "feature": "ewm_str_acc_diff",
+          "importance": 0.0042455666698515415
+        },
+        {
+          "feature": "win_pct_diff",
+          "importance": 0.00406681327149272
+        },
+        {
+          "feature": "b_recent_form_avg_fight_time",
+          "importance": 0.004060798790305853
+        },
+        {
+          "feature": "r_pre_best_win_elo",
+          "importance": 0.004038055427372456
+        },
+        {
+          "feature": "ewm_kd_avg_diff",
+          "importance": 0.00398425804451108
+        },
+        {
+          "feature": "b_pre_ctrl_against_per_min",
+          "importance": 0.003971779253333807
+        },
+        {
+          "feature": "splm_diff",
+          "importance": 0.003946990706026554
+        },
+        {
+          "feature": "b_pre_td_def",
+          "importance": 0.003938831388950348
+        },
+        {
+          "feature": "decision_win_rate_diff",
+          "importance": 0.003932618070393801
+        },
+        {
+          "feature": "r_pre_avg_opponent_elo",
+          "importance": 0.003892499255016446
+        }
+      ]
+    }
+  }
+}
