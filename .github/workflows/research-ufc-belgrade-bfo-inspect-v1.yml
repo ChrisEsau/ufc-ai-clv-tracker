@@ -24,26 +24,22 @@ jobs:
           import requests
           from bs4 import BeautifulSoup
           url='https://www.bestfightodds.com/events/ufc-belgrade-4285'
-          r=requests.get(url,headers={'User-Agent':'Mozilla/5.0'},timeout=30)
-          r.raise_for_status()
+          r=requests.get(url,headers={'User-Agent':'Mozilla/5.0'},timeout=30); r.raise_for_status()
           soup=BeautifulSoup(r.text,'lxml')
-          out=[]
-          out.append(f'URL\t{url}')
-          out.append(f'STATUS\t{r.status_code}\tBYTES\t{len(r.content)}')
+          out=[f'URL\t{url}',f'STATUS\t{r.status_code}\tBYTES\t{len(r.content)}']
+          targets=['Rodriguez wins by TKO/KO','Medic wins by TKO/KO','Rodriguez wins by submission','Medic wins by submission','Rodriguez wins by decision','Medic wins by decision']
           for i,tr in enumerate(soup.find_all('tr')):
-              cells=[' '.join(x.get_text(' ',strip=True).split()) for x in tr.find_all(['th','td'])]
-              if cells:
-                  out.append(str(i)+'\t'+'\t'.join(cells))
-          p=Path('data/research/prop_mispricing/ufc_belgrade_bfo_rows_v1.txt')
-          p.parent.mkdir(parents=True,exist_ok=True)
-          p.write_text('\n'.join(out),encoding='utf-8')
-          print('\n'.join(out[:80]))
-          print('rows',len(out))
+              txt=' '.join(tr.get_text(' ',strip=True).split())
+              if any(t==txt for t in targets) or any(t in txt for t in targets):
+                  out.append(f'ROW {i} TEXT {txt}')
+                  out.append(str(tr))
+          p=Path('data/research/prop_mispricing/ufc_belgrade_bfo_target_html_v1.txt'); p.parent.mkdir(parents=True,exist_ok=True); p.write_text('\n'.join(out),encoding='utf-8')
+          print('\n'.join(out[:20]))
           PY
       - name: Commit inspection output
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add data/research/prop_mispricing/ufc_belgrade_bfo_rows_v1.txt
-          git diff --cached --quiet || git commit -m 'research: capture UFC Belgrade BFO archived rows'
+          git add data/research/prop_mispricing/ufc_belgrade_bfo_target_html_v1.txt
+          git diff --cached --quiet || git commit -m 'research: capture UFC Belgrade BFO price-cell HTML'
           git push
