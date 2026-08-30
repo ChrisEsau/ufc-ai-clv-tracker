@@ -65,7 +65,17 @@ jobs:
           fights=[]
           for fid,g in event.groupby('fight_id'):
             red=g[g.corner.astype(str).str.lower().eq('red')]; blue=g[g.corner.astype(str).str.lower().eq('blue')]
-            if not red.empty and not blue.empty:fights.append((red.iloc[0],blue.iloc[0]))
+            if not red.empty and not blue.empty:
+              fights.append((red.iloc[0],blue.iloc[0],False)); continue
+            if len(g)==1:
+              present=g.iloc[0]; missing=pd.Series({c:np.nan for c in g.columns},dtype=object)
+              for c in ['fight_id','event_id','event_name','date','division','title_fight','total_rounds','fight_date','source_row_index']:
+                if c in g.columns: missing[c]=present.get(c,np.nan)
+              missing['fighter_name']=present.get('opponent_name',np.nan); missing['opponent_name']=present.get('fighter_name',np.nan)
+              pcorn=str(present.get('corner','')).lower(); missing['corner']='blue' if pcorn=='red' else 'red'
+              if pcorn=='red': fights.append((present,missing,True))
+              else: fights.append((missing,present,True))
+              print('one-sided state fallback',present.get('fighter_name'),'vs',present.get('opponent_name'),'present corner',present.get('corner'))
           def state_value(s,col):
             if col in {'title_fight','total_rounds'}: return s.get(col,np.nan)
             for pref in ('r_pre_','b_pre_'):
@@ -75,15 +85,17 @@ jobs:
             for pref in ('r_recent_form_','b_recent_form_'):
               if col.startswith(pref): return s.get('form_delta_'+col[len(pref):],np.nan)
             return np.nan
+          def safe_abs(a,b): return abs(a-b) if pd.notna(a) and pd.notna(b) else np.nan
           def build(red,blue):
             rec={}; mapped=0
             for c in cols:
-              if c in {'title_fight','total_rounds'}: rec[c]=red.get(c,np.nan)
+              if c in {'title_fight','total_rounds'}: rec[c]=red.get(c,np.nan) if pd.notna(red.get(c,np.nan)) else blue.get(c,np.nan)
               elif c.startswith(('r_pre_','r_ewm_','r_recent_form_')): rec[c]=state_value(red,c)
               elif c.startswith(('b_pre_','b_ewm_','b_recent_form_')): rec[c]=state_value(blue,c)
-              elif c=='older_fighter_age': rec[c]=max(red.get('age',np.nan),blue.get('age',np.nan))
-              elif c=='reach_mismatch_abs': rec[c]=abs(red.get('reach',np.nan)-blue.get('reach',np.nan))
-              elif c=='height_mismatch_abs': rec[c]=abs(red.get('height',np.nan)-blue.get('height',np.nan))
+              elif c=='older_fighter_age':
+                vals=[v for v in [red.get('age',np.nan),blue.get('age',np.nan)] if pd.notna(v)]; rec[c]=max(vals) if vals else np.nan
+              elif c=='reach_mismatch_abs': rec[c]=safe_abs(red.get('reach',np.nan),blue.get('reach',np.nan))
+              elif c=='height_mismatch_abs': rec[c]=safe_abs(red.get('height',np.nan),blue.get('height',np.nan))
               elif c.endswith('_diff'):
                 stem=c[:-5]; rec[c]=np.nan
                 for base in [stem,'ewm_'+stem,'form_delta_'+stem]:
@@ -96,7 +108,7 @@ jobs:
               mapped += int(pd.notna(rec[c]))
             return rec,mapped
           rows=[]; used=set()
-          for red,blue in fights:
+          for red,blue,one_sided in fights:
             state_names=[red.fighter_name,blue.fighter_name]
             best=None
             for pair,board0 in odds.items():
@@ -107,7 +119,7 @@ jobs:
               if best is None or score>best[0]: best=(score,pair,board0)
             if best is None or best[0]<0.72: continue
             _,pair,board=best; used.add(pair)
-            print('matched',red.fighter_name,'vs',blue.fighter_name,'->',pair,'score',round(best[0],3))
+            print('matched',red.fighter_name,'vs',blue.fighter_name,'->',pair,'score',round(best[0],3),'one_sided',one_sided)
             feat,mapped=build(red,blue); remaining=set(board); tmp=[]
             for side,s in [('red',red),('blue',blue)]:
               name=max(remaining,key=lambda x:sim(s.fighter_name,x)); remaining.remove(name)
@@ -118,9 +130,9 @@ jobs:
               if side=='blue':
                 for c in diffs:
                   if pd.notna(rec.get(c)): rec[c]=-rec[c]
-              rec.update({'fight_id':red.fight_id,'fighter':name,'side':side,'american_odds':ao,'market_overround':over,'fair_market_p':ip/over,'actual_win':int(name in actual),'mapped_predictors':mapped,'total_predictors':len(cols)})
+              rec.update({'fight_id':red.fight_id,'fighter':name,'side':side,'american_odds':ao,'market_overround':over,'fair_market_p':ip/over,'actual_win':int(name in actual),'mapped_predictors':mapped,'total_predictors':len(cols),'one_sided_state':int(one_sided)})
               XS=pd.DataFrame([rec]).reindex(columns=valid).replace([np.inf,-np.inf],np.nan).fillna(med).fillna(0); rec['model_p']=float(model.predict_proba(XS)[0,1]); rec['edge']=rec['model_p']-rec['fair_market_p']; rows.append(rec)
-          out=pd.DataFrame(rows); keep=['fight_id','fighter','side','american_odds','fair_market_p','model_p','edge','actual_win','mapped_predictors','total_predictors']; out[keep].to_csv(OUT/'ufc_baku_moneyline_full_v1.csv',index=False); print(out[keep].sort_values('edge',ascending=False).to_string(index=False)); print('scored fights',out.fight_id.nunique(),'used boards',len(used))
+          out=pd.DataFrame(rows); keep=['fight_id','fighter','side','american_odds','fair_market_p','model_p','edge','actual_win','mapped_predictors','total_predictors','one_sided_state']; out[keep].to_csv(OUT/'ufc_baku_moneyline_full_v1.csv',index=False); print(out[keep].sort_values('edge',ascending=False).to_string(index=False)); print('scored fights',out.fight_id.nunique(),'used boards',len(used))
           if out.fight_id.nunique()!=13: raise RuntimeError(f'Expected 13 scored fights, got {out.fight_id.nunique()}')
           PY
       - name: Commit
@@ -128,6 +140,6 @@ jobs:
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add -f data/research/prop_mispricing/ufc_baku_moneyline_full_v1.csv
-          git commit -m 'Add complete UFC Baku moneyline scores' || echo No-changes
+          git commit -m 'Add complete UFC Baku moneyline scores including cold-start fight' || echo No-changes
           git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
           git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
