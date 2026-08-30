@@ -1,0 +1,43 @@
+name: Research UFC 324 Web ML + Method V3
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-ufc-324-web-both-v3.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  score:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas pyarrow numpy scikit-learn xgboost requests beautifulsoup4 lxml
+      - name: Run UFC 324 scorer across split BFO archives
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+          src=Path('.github/workflows/research-ufc-324-web-both-v1.yml').read_text()
+          m=re.search(r"python - <<'PY'\n(.*?)\n          PY",src,re.S)
+          if not m: raise RuntimeError('Could not extract UFC 324 scorer')
+          code='\n'.join(line[10:] if line.startswith('          ') else line for line in m.group(1).splitlines())
+          code=code.replace("URL='https://www.bestfightodds.com/events/ufc-324-3973'","URL='https://www.bestfightodds.com/events/ufc-3970 + ufc-324-3973'")
+          old="html=requests.get(URL,headers={'User-Agent':'Mozilla/5.0'},timeout=30).text"
+          new="html=requests.get('https://www.bestfightodds.com/events/ufc-3970',headers={'User-Agent':'Mozilla/5.0'},timeout=30).text + requests.get('https://www.bestfightodds.com/events/ufc-324-3973',headers={'User-Agent':'Mozilla/5.0'},timeout=30).text"
+          if old not in code: raise RuntimeError('Archive fetch line not found')
+          code=code.replace(old,new)
+          exec(compile(code,'<ufc324_split_archives>','exec'),{})
+          PY
+      - name: Commit UFC 324 scores
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -f data/research/prop_mispricing/ufc_324_*_v1.csv
+          git commit -m 'research: add UFC 324 scores from split BFO archives' || echo No-changes
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
