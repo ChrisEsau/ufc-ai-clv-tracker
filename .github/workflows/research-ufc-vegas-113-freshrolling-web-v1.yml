@@ -1,0 +1,52 @@
+name: Research UFC Vegas 113 FreshRolling Web V1
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-ufc-vegas-113-freshrolling-web-v1.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  score:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas pyarrow numpy scikit-learn xgboost pyyaml requests beautifulsoup4 lxml
+      - name: Transform UFC 325 scorer to UFC Vegas 113 and run
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+          src=Path('.github/workflows/research-ufc-325-freshrolling-web-v5.yml').read_text()
+          m=re.search(r"python - <<'PY'\n(.*?)\n          PY",src,re.S)
+          if not m: raise RuntimeError('Could not extract UFC325 scorer')
+          code='\n'.join(line[10:] if line.startswith('          ') else line for line in m.group(1).splitlines())
+          reps=[
+            ("DATE='2026-01-31'","DATE='2026-02-07'"),
+            ("https://www.bestfightodds.com/events/ufc-3971","https://www.bestfightodds.com/events/ufc-vegas-113-4033"),
+            ("{'kim sang wook':'sangwook kim'}","{'kim sang wook':'sangwook kim','michal oleksiejczluk':'michal oleksiejczuk'}"),
+            ("if len(boards)!=13:raise RuntimeError(f'Expected 13 matched boards, got {len(boards)}: {list(boards)}')","if len(boards)!=9:raise RuntimeError(f'Expected 9 matched complete boards, got {len(boards)}: {list(boards)}')"),
+            ("len(card)!=13","len(card)!=9"),
+            ("Expected 13 fresh rolling UFC325 rows","Expected 9 fresh rolling UFC Vegas 113 rows"),
+            ("ufc_325_market_sources_v1.csv","ufc_vegas_113_market_sources_v1.csv"),
+            ("ufc_325_moneyline_freshrolling_v1.csv","ufc_vegas_113_moneyline_freshrolling_v1.csv"),
+            ("ufc_325_method_freshrolling_v1.csv","ufc_vegas_113_method_freshrolling_v1.csv"),
+          ]
+          for old,new in reps:
+            if old not in code: raise RuntimeError('missing transform literal: '+old[:80])
+            code=code.replace(old,new)
+          exec(compile(code,'<ufc_vegas_113_v1>','exec'),{})
+          PY
+      - name: Commit UFC Vegas 113 scores
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -f data/research/prop_mispricing/ufc_vegas_113_*_v1.csv
+          git commit -m 'research: add UFC Vegas 113 authoritative frozen scores' || echo No-changes
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
