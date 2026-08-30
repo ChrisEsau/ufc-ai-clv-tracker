@@ -1,0 +1,272 @@
+{
+  "graded_rows": 57296,
+  "real_market_rows": 45957,
+  "synthetic_rows": 11339,
+  "fight_count": 6511,
+  "date_min": "2010-03-21",
+  "date_max": "2026-03-28",
+  "real_market_metrics": [
+    {
+      "market_key": "moneyline",
+      "n": 12982.0,
+      "mean_implied_p": 0.5177426233561345,
+      "realized_win_rate": 0.5,
+      "calibration_error": -0.017742623356134524,
+      "brier": 0.21048473003089543,
+      "log_loss": 0.6081297553483216,
+      "flat_bet_roi": -0.05286272630219623
+    },
+    {
+      "market_key": "win_by_decision",
+      "n": 11300.0,
+      "mean_implied_p": 0.26563813312378926,
+      "realized_win_rate": 0.24424778761061947,
+      "calibration_error": -0.02139034551316979,
+      "brier": 0.17118820596461465,
+      "log_loss": 0.5190000468631302,
+      "flat_bet_roi": -0.09504459222784437
+    },
+    {
+      "market_key": "win_by_ko_tko_dq",
+      "n": 10838.0,
+      "mean_implied_p": 0.2084389945457987,
+      "realized_win_rate": 0.16599003506181953,
+      "calibration_error": -0.04244895948397917,
+      "brier": 0.13125171290585613,
+      "log_loss": 0.42418679314925833,
+      "flat_bet_roi": -0.14127266765768137
+    },
+    {
+      "market_key": "win_by_submission",
+      "n": 10837.0,
+      "mean_implied_p": 0.12858206262097785,
+      "realized_win_rate": 0.08646304327765987,
+      "calibration_error": -0.04211901934331798,
+      "brier": 0.07391133090726534,
+      "log_loss": 0.2700207385593774,
+      "flat_bet_roi": -0.3936284174036795
+    }
+  ],
+  "largest_real_bucket_miscalibrations_min_n_100": [
+    {
+      "market_key": "win_by_ko_tko_dq",
+      "p_bucket": "60-65%",
+      "n": 127.0,
+      "mean_implied_p": 0.6222474712036208,
+      "realized_win_rate": 0.4409448818897638,
+      "calibration_error": -0.181302589313857,
+      "brier": 0.2805329684645187,
+      "log_loss": 0.7559601846327266,
+      "flat_bet_roi": -0.28967441867478966
+    },
+    {
+      "market_key": "win_by_ko_tko_dq",
+      "p_bucket": "40-45%",
+      "n": 373.0,
+      "mean_implied_p": 0.41921056801138046,
+      "realized_win_rate": 0.2868632707774799,
+      "calibration_error": -0.13234729723390054,
+      "brier": 0.22133255708859428,
+      "log_loss": 0.6352920895260731,
+      "flat_bet_roi": -0.31753351206434316
+    },
+    {
+      "market_key": "win_by_ko_tko_dq",
+      "p_bucket": "45-50%",
+      "n": 245.0,
+      "mean_implied_p": 0.4678719212024633,
+      "realized_win_rate": 0.3551020408163265,
+      "calibration_error": -0.11276988038613678,
+      "brier": 0.24171112578962908,
+      "log_loss": 0.6765388589574622,
+      "flat_bet_roi": -0.24089795918367346
+    },
+    {
+      "market_key": "win_by_ko_tko_dq",
+      "p_bucket": "55-60%",
+      "n": 132.0,
+      "mean_implied_p": 0.5721372734488878,
+      "realized_win_rate": 0.4772727272727273,
+      "calibration_error": -0.09486454617616047,
+      "brier": 0.2593823092639321,
+      "log_loss": 0.7121274835164307,
+      "flat_bet_roi": -0.1642704738091519
+    },
+    {
+      "market_key": "win_by_ko_tko_dq",
+      "p_bucket": "50-55%",
+      "n": 213.0,
+      "mean_implied_p": 0.5217972898276878,
+      "realized_win_rate": 0.43661971830985913,
+      "calibration_error": -0.08517757151782868,
+      "brier": 0.2530640745826651,
+      "log_loss": 0.6992887921927775,
+      "flat_bet_roi": -0.16325484785376573
+    },
+    {
+      "market_key": "win_by_ko_tko_dq",
+      "p_bucket": "30-35%",
+      "n": 526.0,
+      "mean_implied_p": 0.3221060554681041,
+      "realized_win_rate": 0.24524714828897337,
+      "calibration_error": -0.07685890717913074,
+      "brier": 0.19059129597698632,
+      "log_loss": 0.5702618055926506,
+      "flat_bet_roi": -0.24009505703422054
+    },
+    {
+      "market_key": "win_by_submission",
+      "p_bucket": "30-35%",
+      "n": 217.0,
+      "mean_implied_p": 0.322240997162772,
+      "realized_win_rate": 0.2488479262672811,
+      "calibration_error": -0.07339307089549088,
+      "brier": 0.19120913305721918,
+      "log_loss": 0.5714092649460092,
+      "flat_bet_roi": -0.23267281105990784
+    },
+    {
+      "market_key": "win_by_submission",
+      "p_bucket": "20-25%",
+      "n": 723.0,
+      "mean_implied_p": 0.21774257083446047,
+      "realized_win_rate": 0.14661134163208853,
+      "calibration_error": -0.07113122920237194,
+      "brier": 0.13006965124707165,
+      "log_loss": 0.4326077176476508,
+      "flat_bet_roi": -0.3272337482710927
+    },
+    {
+      "market_key": "win_by_ko_tko_dq",
+      "p_bucket": "35-40%",
+      "n": 513.0,
+      "mean_implied_p": 0.36890987554706617,
+      "realized_win_rate": 0.2982456140350877,
+      "calibration_error": -0.07066426151197847,
+      "brier": 0.21413317495678433,
+      "log_loss": 0.6200785014231329,
+      "flat_bet_roi": -0.1917738791423002
+    },
+    {
+      "market_key": "win_by_ko_tko_dq",
+      "p_bucket": "20-25%",
+      "n": 1354.0,
+      "mean_implied_p": 0.21810875551473874,
+      "realized_win_rate": 0.15805022156573117,
+      "calibration_error": -0.060058533949007564,
+      "brier": 0.13645568141595926,
+      "log_loss": 0.4471061176998433,
+      "flat_bet_roi": -0.27636632200886263
+    },
+    {
+      "market_key": "moneyline",
+      "p_bucket": "20-25%",
+      "n": 570.0,
+      "mean_implied_p": 0.22445717270504179,
+      "realized_win_rate": 0.1649122807017544,
+      "calibration_error": -0.059544892003287386,
+      "brier": 0.14182141044904853,
+      "log_loss": 0.4601535930164264,
+      "flat_bet_roi": -0.258859649122807
+    },
+    {
+      "market_key": "win_by_decision",
+      "p_bucket": "35-40%",
+      "n": 1009.0,
+      "mean_implied_p": 0.3697145278598499,
+      "realized_win_rate": 0.3141724479682854,
+      "calibration_error": -0.055542079891564455,
+      "brier": 0.21890256649392548,
+      "log_loss": 0.6298982805724872,
+      "flat_bet_roi": -0.14863230921704657
+    },
+    {
+      "market_key": "win_by_submission",
+      "p_bucket": "15-20%",
+      "n": 1291.0,
+      "mean_implied_p": 0.17058174347546534,
+      "realized_win_rate": 0.11773818745158791,
+      "calibration_error": -0.05284355602387743,
+      "brier": 0.10681122826710997,
+      "log_loss": 0.37358340306578264,
+      "flat_bet_roi": -0.30637490317583266
+    },
+    {
+      "market_key": "win_by_decision",
+      "p_bucket": "45-50%",
+      "n": 395.0,
+      "mean_implied_p": 0.46842527295202635,
+      "realized_win_rate": 0.4177215189873418,
+      "calibration_error": -0.05070375396468457,
+      "brier": 0.24555842468172617,
+      "log_loss": 0.684248090243023,
+      "flat_bet_roi": -0.10853164556962025
+    },
+    {
+      "market_key": "moneyline",
+      "p_bucket": "10-15%",
+      "n": 148.0,
+      "mean_implied_p": 0.12921017677287713,
+      "realized_win_rate": 0.08108108108108109,
+      "calibration_error": -0.04812909569179605,
+      "brier": 0.07754380995798274,
+      "log_loss": 0.2956551549626524,
+      "flat_bet_roi": -0.35439189189189185
+    },
+    {
+      "market_key": "moneyline",
+      "p_bucket": "15-20%",
+      "n": 355.0,
+      "mean_implied_p": 0.1773986072114213,
+      "realized_win_rate": 0.1295774647887324,
+      "calibration_error": -0.04782114242268892,
+      "brier": 0.11516220882831088,
+      "log_loss": 0.3942494091345888,
+      "flat_bet_roi": -0.2665352112676056
+    },
+    {
+      "market_key": "win_by_submission",
+      "p_bucket": "10-15%",
+      "n": 2401.0,
+      "mean_implied_p": 0.12132651270801982,
+      "realized_win_rate": 0.07496876301541025,
+      "calibration_error": -0.04635774969260957,
+      "brier": 0.07135493728529242,
+      "log_loss": 0.2767821498128499,
+      "flat_bet_roi": -0.3847313619325281
+    },
+    {
+      "market_key": "win_by_ko_tko_dq",
+      "p_bucket": "25-30%",
+      "n": 1016.0,
+      "mean_implied_p": 0.2717311329189623,
+      "realized_win_rate": 0.22539370078740156,
+      "calibration_error": -0.04633743213156072,
+      "brier": 0.1769716822627029,
+      "log_loss": 0.5398222355600898,
+      "flat_bet_roi": -0.16766732283464567
+    },
+    {
+      "market_key": "win_by_decision",
+      "p_bucket": "50-55%",
+      "n": 363.0,
+      "mean_implied_p": 0.5196584669020808,
+      "realized_win_rate": 0.4738292011019284,
+      "calibration_error": -0.04582926580015245,
+      "brier": 0.2511170491328634,
+      "log_loss": 0.695385506311891,
+      "flat_bet_roi": -0.08836288979817711
+    },
+    {
+      "market_key": "moneyline",
+      "p_bucket": "60-65%",
+      "n": 1290.0,
+      "mean_implied_p": 0.6218964059083871,
+      "realized_win_rate": 0.5782945736434109,
+      "calibration_error": -0.04360183226497627,
+      "brier": 0.24574177927230362,
+      "log_loss": 0.6847778919443094,
+      "flat_bet_roi": -0.06986918242467888
+    }
+  ]
+}
