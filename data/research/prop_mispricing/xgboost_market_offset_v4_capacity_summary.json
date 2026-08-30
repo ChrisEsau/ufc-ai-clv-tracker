@@ -1,0 +1,784 @@
+{
+  "design": {
+    "name": "market_offset_v4_capacity",
+    "features": "same signed diff set as V3",
+    "market_role": "fair market logit as base_margin",
+    "selection": "candidate tree capacity + shrinkage alpha selected only on pooled 2021-2024 chronological OOF log loss",
+    "final_test": "2025+ untouched until candidate and alpha frozen",
+    "bet_thresholds": "not used for model selection"
+  },
+  "feature_count": 141,
+  "candidates": {
+    "v3_baseline_d3_350": {
+      "config": {
+        "max_depth": 3,
+        "min_child_weight": 8,
+        "lambda": 5.0,
+        "alpha": 0.5,
+        "rounds": 350
+      },
+      "fold_diagnostics": [
+        {
+          "fold": "2021",
+          "train_n": 4220,
+          "validation_n": 469,
+          "raw_correction_mean_abs": 0.28941351619343103,
+          "raw_correction_p95_abs": 0.6854762303990727
+        },
+        {
+          "fold": "2022",
+          "train_n": 4689,
+          "validation_n": 477,
+          "raw_correction_mean_abs": 0.27637673336287194,
+          "raw_correction_p95_abs": 0.6703689596775527
+        },
+        {
+          "fold": "2023",
+          "train_n": 5166,
+          "validation_n": 415,
+          "raw_correction_mean_abs": 0.2566099668223653,
+          "raw_correction_p95_abs": 0.6330369242819528
+        },
+        {
+          "fold": "2024",
+          "train_n": 5581,
+          "validation_n": 381,
+          "raw_correction_mean_abs": 0.2645187788396329,
+          "raw_correction_p95_abs": 0.6148363480744046
+        }
+      ],
+      "alpha_selection": [
+        {
+          "alpha": 0.0,
+          "oof": {
+            "n": 1742,
+            "brier": 0.2083443821629999,
+            "log_loss": 0.6038947379217856,
+            "auc": 0.7285180790171717
+          },
+          "delta_log_loss_vs_market": 0.0,
+          "delta_brier_vs_market": 0.0
+        },
+        {
+          "alpha": 0.1,
+          "oof": {
+            "n": 1742,
+            "brier": 0.20795714176260233,
+            "log_loss": 0.6030374407437861,
+            "auc": 0.7294765300314652
+          },
+          "delta_log_loss_vs_market": -0.0008572971779995386,
+          "delta_brier_vs_market": -0.0003872404003975871
+        },
+        {
+          "alpha": 0.25,
+          "oof": {
+            "n": 1742,
+            "brier": 0.2075926192459963,
+            "log_loss": 0.602228700916184,
+            "auc": 0.7302967171039207
+          },
+          "delta_log_loss_vs_market": -0.0016660370056016394,
+          "delta_brier_vs_market": -0.0007517629170036011
+        },
+        {
+          "alpha": 0.5,
+          "oof": {
+            "n": 1742,
+            "brier": 0.20754277838269286,
+            "log_loss": 0.6021326678001225,
+            "auc": 0.7302094631600424
+          },
+          "delta_log_loss_vs_market": -0.001762070121663073,
+          "delta_brier_vs_market": -0.000801603780307053
+        },
+        {
+          "alpha": 0.75,
+          "oof": {
+            "n": 1742,
+            "brier": 0.20814888255122552,
+            "log_loss": 0.6035604800659554,
+            "auc": 0.7280442229834942
+          },
+          "delta_log_loss_vs_market": -0.00033425785583018897,
+          "delta_brier_vs_market": -0.0001954996117743968
+        },
+        {
+          "alpha": 1.0,
+          "oof": {
+            "n": 1742,
+            "brier": 0.20935281476308518,
+            "log_loss": 0.6064565308290775,
+            "auc": 0.7242721678712185
+          },
+          "delta_log_loss_vs_market": 0.00256179290729186,
+          "delta_brier_vs_market": 0.0010084326000852628
+        }
+      ],
+      "selected_alpha": 0.5,
+      "selected_oof": {
+        "n": 1742,
+        "brier": 0.20754277838269286,
+        "log_loss": 0.6021326678001225,
+        "auc": 0.7302094631600424
+      },
+      "selected_delta_log_loss_vs_market": -0.001762070121663073,
+      "selected_delta_brier_vs_market": -0.000801603780307053
+    },
+    "d2_250_strong": {
+      "config": {
+        "max_depth": 2,
+        "min_child_weight": 12,
+        "lambda": 8.0,
+        "alpha": 1.0,
+        "rounds": 250
+      },
+      "fold_diagnostics": [
+        {
+          "fold": "2021",
+          "train_n": 4220,
+          "validation_n": 469,
+          "raw_correction_mean_abs": 0.18452264583252226,
+          "raw_correction_p95_abs": 0.4490183136068882
+        },
+        {
+          "fold": "2022",
+          "train_n": 4689,
+          "validation_n": 477,
+          "raw_correction_mean_abs": 0.1859695135136546,
+          "raw_correction_p95_abs": 0.43370118878509895
+        },
+        {
+          "fold": "2023",
+          "train_n": 5166,
+          "validation_n": 415,
+          "raw_correction_mean_abs": 0.17587693316920547,
+          "raw_correction_p95_abs": 0.41951255236655316
+        },
+        {
+          "fold": "2024",
+          "train_n": 5581,
+          "validation_n": 381,
+          "raw_correction_mean_abs": 0.18136572506851892,
+          "raw_correction_p95_abs": 0.41932407920792336
+        }
+      ],
+      "alpha_selection": [
+        {
+          "alpha": 0.0,
+          "oof": {
+            "n": 1742,
+            "brier": 0.2083443821629999,
+            "log_loss": 0.6038947379217856,
+            "auc": 0.7285180790171717
+          },
+          "delta_log_loss_vs_market": 0.0,
+          "delta_brier_vs_market": 0.0
+        },
+        {
+          "alpha": 0.1,
+          "oof": {
+            "n": 1742,
+            "brier": 0.20806150688771452,
+            "log_loss": 0.6032777251694769,
+            "auc": 0.7292604087243204
+          },
+          "delta_log_loss_vs_market": -0.0006170127523087432,
+          "delta_brier_vs_market": -0.0002828752752853936
+        },
+        {
+          "alpha": 0.25,
+          "oof": {
+            "n": 1742,
+            "brier": 0.2077348369599735,
+            "log_loss": 0.6025695230477126,
+            "auc": 0.7301785886875933
+          },
+          "delta_log_loss_vs_market": -0.0013252148740729996,
+          "delta_brier_vs_market": -0.0006095452030264181
+        },
+        {
+          "alpha": 0.5,
+          "oof": {
+            "n": 1742,
+            "brier": 0.20744411367023616,
+            "log_loss": 0.6019609398693752,
+            "auc": 0.7307490952437203
+          },
+          "delta_log_loss_vs_market": -0.0019337980524104514,
+          "delta_brier_vs_market": -0.0009002684927637561
+        },
+        {
+          "alpha": 0.75,
+          "oof": {
+            "n": 1742,
+            "brier": 0.20745785056422364,
+            "log_loss": 0.6020527189163335,
+            "auc": 0.7302497342110633
+          },
+          "delta_log_loss_vs_market": -0.0018420190054521113,
+          "delta_brier_vs_market": -0.0008865315987762745
+        },
+        {
+          "alpha": 1.0,
+          "oof": {
+            "n": 1742,
+            "brier": 0.2077595172654613,
+            "log_loss": 0.6028264427593946,
+            "auc": 0.7291852360957485
+          },
+          "delta_log_loss_vs_market": -0.001068295162391042,
+          "delta_brier_vs_market": -0.0005848648975386173
+        }
+      ],
+      "selected_alpha": 0.5,
+      "selected_oof": {
+        "n": 1742,
+        "brier": 0.20744411367023616,
+        "log_loss": 0.6019609398693752,
+        "auc": 0.7307490952437203
+      },
+      "selected_delta_log_loss_vs_market": -0.0019337980524104514,
+      "selected_delta_brier_vs_market": -0.0009002684927637561
+    },
+    "d2_180_stronger": {
+      "config": {
+        "max_depth": 2,
+        "min_child_weight": 16,
+        "lambda": 12.0,
+        "alpha": 1.5,
+        "rounds": 180
+      },
+      "fold_diagnostics": [
+        {
+          "fold": "2021",
+          "train_n": 4220,
+          "validation_n": 469,
+          "raw_correction_mean_abs": 0.15695891549271598,
+          "raw_correction_p95_abs": 0.38433512787367985
+        },
+        {
+          "fold": "2022",
+          "train_n": 4689,
+          "validation_n": 477,
+          "raw_correction_mean_abs": 0.14778051953982763,
+          "raw_correction_p95_abs": 0.35386154186371394
+        },
+        {
+          "fold": "2023",
+          "train_n": 5166,
+          "validation_n": 415,
+          "raw_correction_mean_abs": 0.15285091007974178,
+          "raw_correction_p95_abs": 0.37818081957706484
+        },
+        {
+          "fold": "2024",
+          "train_n": 5581,
+          "validation_n": 381,
+          "raw_correction_mean_abs": 0.15874703505954155,
+          "raw_correction_p95_abs": 0.38244567031731813
+        }
+      ],
+      "alpha_selection": [
+        {
+          "alpha": 0.0,
+          "oof": {
+            "n": 1742,
+            "brier": 0.2083443821629999,
+            "log_loss": 0.6038947379217856,
+            "auc": 0.7285180790171717
+          },
+          "delta_log_loss_vs_market": 0.0,
+          "delta_brier_vs_market": 0.0
+        },
+        {
+          "alpha": 0.1,
+          "oof": {
+            "n": 1742,
+            "brier": 0.20807290861930702,
+            "log_loss": 0.6032842798938142,
+            "auc": 0.7292120834630956
+          },
+          "delta_log_loss_vs_market": -0.0006104580279714389,
+          "delta_brier_vs_market": -0.00027147354369289056
+        },
+        {
+          "alpha": 0.25,
+          "oof": {
+            "n": 1742,
+            "brier": 0.2077363971230147,
+            "log_loss": 0.6025258342548578,
+            "auc": 0.7302389952641243
+          },
+          "delta_log_loss_vs_market": -0.0013689036669277677,
+          "delta_brier_vs_market": -0.0006079850399852149
+        },
+        {
+          "alpha": 0.5,
+          "oof": {
+            "n": 1742,
+            "brier": 0.20735883393882712,
+            "log_loss": 0.6016755239237158,
+            "auc": 0.7310806602304578
+          },
+          "delta_log_loss_vs_market": -0.002219213998069791,
+          "delta_brier_vs_market": -0.0009855482241727942
+        },
+        {
+          "alpha": 0.75,
+          "oof": {
+            "n": 1742,
+            "brier": 0.20720094159403468,
+            "log_loss": 0.6013324235488647,
+            "auc": 0.7313961167967871
+          },
+          "delta_log_loss_vs_market": -0.002562314372920871,
+          "delta_brier_vs_market": -0.0011434405689652316
+        },
+        {
+          "alpha": 1.0,
+          "oof": {
+            "n": 1742,
+            "brier": 0.20725106132844517,
+            "log_loss": 0.6014839613166896,
+            "auc": 0.7310283078641309
+          },
+          "delta_log_loss_vs_market": -0.002410776605096032,
+          "delta_brier_vs_market": -0.0010933208345547396
+        }
+      ],
+      "selected_alpha": 0.75,
+      "selected_oof": {
+        "n": 1742,
+        "brier": 0.20720094159403468,
+        "log_loss": 0.6013324235488647,
+        "auc": 0.7313961167967871
+      },
+      "selected_delta_log_loss_vs_market": -0.002562314372920871,
+      "selected_delta_brier_vs_market": -0.0011434405689652316
+    },
+    "d3_200_strong": {
+      "config": {
+        "max_depth": 3,
+        "min_child_weight": 12,
+        "lambda": 10.0,
+        "alpha": 1.0,
+        "rounds": 200
+      },
+      "fold_diagnostics": [
+        {
+          "fold": "2021",
+          "train_n": 4220,
+          "validation_n": 469,
+          "raw_correction_mean_abs": 0.20817986055317064,
+          "raw_correction_p95_abs": 0.500461703127085
+        },
+        {
+          "fold": "2022",
+          "train_n": 4689,
+          "validation_n": 477,
+          "raw_correction_mean_abs": 0.2003896382068441,
+          "raw_correction_p95_abs": 0.49055749828786793
+        },
+        {
+          "fold": "2023",
+          "train_n": 5166,
+          "validation_n": 415,
+          "raw_correction_mean_abs": 0.19682319843010007,
+          "raw_correction_p95_abs": 0.477853938257016
+        },
+        {
+          "fold": "2024",
+          "train_n": 5581,
+          "validation_n": 381,
+          "raw_correction_mean_abs": 0.20221891416441473,
+          "raw_correction_p95_abs": 0.4490466398141537
+        }
+      ],
+      "alpha_selection": [
+        {
+          "alpha": 0.0,
+          "oof": {
+            "n": 1742,
+            "brier": 0.2083443821629999,
+            "log_loss": 0.6038947379217856,
+            "auc": 0.7285180790171717
+          },
+          "delta_log_loss_vs_market": 0.0,
+          "delta_brier_vs_market": 0.0
+        },
+        {
+          "alpha": 0.1,
+          "oof": {
+            "n": 1742,
+            "brier": 0.20808808418248453,
+            "log_loss": 0.6033345275483076,
+            "auc": 0.7291852360957485
+          },
+          "delta_log_loss_vs_market": -0.0005602103734779762,
+          "delta_brier_vs_market": -0.0002562979805153798
+        },
+        {
+          "alpha": 0.25,
+          "oof": {
+            "n": 1742,
+            "brier": 0.20782156384027226,
+            "log_loss": 0.6027567017753239,
+            "auc": 0.7299396471182036
+          },
+          "delta_log_loss_vs_market": -0.001138036146461685,
+          "delta_brier_vs_market": -0.0005228183227276584
+        },
+        {
+          "alpha": 0.5,
+          "oof": {
+            "n": 1742,
+            "brier": 0.20768308960826165,
+            "log_loss": 0.6024842174363221,
+            "auc": 0.7299315929079995
+          },
+          "delta_log_loss_vs_market": -0.001410520485463529,
+          "delta_brier_vs_market": -0.0006612925547382631
+        },
+        {
+          "alpha": 0.75,
+          "oof": {
+            "n": 1742,
+            "brier": 0.20790991578746162,
+            "log_loss": 0.6030572914410518,
+            "auc": 0.7289073658437053
+          },
+          "delta_log_loss_vs_market": -0.0008374464807338056,
+          "delta_brier_vs_market": -0.0004344663755382894
+        },
+        {
+          "alpha": 1.0,
+          "oof": {
+            "n": 1742,
+            "brier": 0.2084797423407646,
+            "log_loss": 0.6044528939130556,
+            "auc": 0.7273206864334885
+          },
+          "delta_log_loss_vs_market": 0.0005581559912699596,
+          "delta_brier_vs_market": 0.0001353601777646929
+        }
+      ],
+      "selected_alpha": 0.5,
+      "selected_oof": {
+        "n": 1742,
+        "brier": 0.20768308960826165,
+        "log_loss": 0.6024842174363221,
+        "auc": 0.7299315929079995
+      },
+      "selected_delta_log_loss_vs_market": -0.001410520485463529,
+      "selected_delta_brier_vs_market": -0.0006612925547382631
+    },
+    "d1_300_strong": {
+      "config": {
+        "max_depth": 1,
+        "min_child_weight": 10,
+        "lambda": 8.0,
+        "alpha": 1.0,
+        "rounds": 300
+      },
+      "fold_diagnostics": [
+        {
+          "fold": "2021",
+          "train_n": 4220,
+          "validation_n": 469,
+          "raw_correction_mean_abs": 0.1295160837955064,
+          "raw_correction_p95_abs": 0.30390525458578016
+        },
+        {
+          "fold": "2022",
+          "train_n": 4689,
+          "validation_n": 477,
+          "raw_correction_mean_abs": 0.12870905360958507,
+          "raw_correction_p95_abs": 0.3145560355130845
+        },
+        {
+          "fold": "2023",
+          "train_n": 5166,
+          "validation_n": 415,
+          "raw_correction_mean_abs": 0.13444615224858217,
+          "raw_correction_p95_abs": 0.30346966613947957
+        },
+        {
+          "fold": "2024",
+          "train_n": 5581,
+          "validation_n": 381,
+          "raw_correction_mean_abs": 0.1389560076091247,
+          "raw_correction_p95_abs": 0.3311781450748188
+        }
+      ],
+      "alpha_selection": [
+        {
+          "alpha": 0.0,
+          "oof": {
+            "n": 1742,
+            "brier": 0.2083443821629999,
+            "log_loss": 0.6038947379217856,
+            "auc": 0.7285180790171717
+          },
+          "delta_log_loss_vs_market": 0.0,
+          "delta_brier_vs_market": 0.0
+        },
+        {
+          "alpha": 0.1,
+          "oof": {
+            "n": 1742,
+            "brier": 0.2080987483159541,
+            "log_loss": 0.6033439455774495,
+            "auc": 0.7291154329406458
+          },
+          "delta_log_loss_vs_market": -0.0005507923443360818,
+          "delta_brier_vs_market": -0.0002456338470458175
+        },
+        {
+          "alpha": 0.25,
+          "oof": {
+            "n": 1742,
+            "brier": 0.20778370093829884,
+            "log_loss": 0.6026365121869928,
+            "auc": 0.7299893147477958
+          },
+          "delta_log_loss_vs_market": -0.0012582257347928394,
+          "delta_brier_vs_market": -0.0005606812247010706
+        },
+        {
+          "alpha": 0.5,
+          "oof": {
+            "n": 1742,
+            "brier": 0.2073972508571426,
+            "log_loss": 0.6017697937461167,
+            "auc": 0.7310336773376003
+          },
+          "delta_log_loss_vs_market": -0.002124944175668886,
+          "delta_brier_vs_market": -0.0009471313058573017
+        },
+        {
+          "alpha": 0.75,
+          "oof": {
+            "n": 1742,
+            "brier": 0.20717725765158687,
+            "log_loss": 0.6012857257454186,
+            "auc": 0.7314055133753584
+          },
+          "delta_log_loss_vs_market": -0.0026090121763669982,
+          "delta_brier_vs_market": -0.0011671245114130424
+        },
+        {
+          "alpha": 1.0,
+          "oof": {
+            "n": 1742,
+            "brier": 0.2071154686507962,
+            "log_loss": 0.6011746851837348,
+            "auc": 0.7312927544325003
+          },
+          "delta_log_loss_vs_market": -0.00272005273805076,
+          "delta_brier_vs_market": -0.001228913512203722
+        }
+      ],
+      "selected_alpha": 1.0,
+      "selected_oof": {
+        "n": 1742,
+        "brier": 0.2071154686507962,
+        "log_loss": 0.6011746851837348,
+        "auc": 0.7312927544325003
+      },
+      "selected_delta_log_loss_vs_market": -0.00272005273805076,
+      "selected_delta_brier_vs_market": -0.001228913512203722
+    }
+  },
+  "selected_candidate": "d1_300_strong",
+  "selected_alpha": 1.0,
+  "final_test": {
+    "train_n_fights": 5962,
+    "test_n_fights": 505,
+    "market": {
+      "n": 505,
+      "brier": 0.1950777517000537,
+      "log_loss": 0.5727560248220687,
+      "auc": 0.7697222222222221
+    },
+    "v4_market_offset": {
+      "n": 505,
+      "brier": 0.19244464844488068,
+      "log_loss": 0.5660198516956463,
+      "auc": 0.7733650793650795
+    },
+    "delta_log_loss_vs_market": -0.0067361731264223845,
+    "delta_brier_vs_market": -0.0026331032551730194,
+    "raw_correction_mean_abs": 0.13378384455172562,
+    "raw_correction_p95_abs": 0.30207254374051956,
+    "shrunk_probability_move_mean_abs": 0.02691880866852604,
+    "shrunk_probability_move_p95_abs": 0.06314630522117387,
+    "edge_buckets": [
+      {
+        "min_edge": 0.0,
+        "n_bets": 505,
+        "win_rate": 0.6178217821782178,
+        "avg_edge": 0.026918808668526036,
+        "roi": 0.05489996497958861
+      },
+      {
+        "min_edge": 0.02,
+        "n_bets": 294,
+        "win_rate": 0.6428571428571429,
+        "avg_edge": 0.03927419877402455,
+        "roi": 0.047953370525692866
+      },
+      {
+        "min_edge": 0.05,
+        "n_bets": 48,
+        "win_rate": 0.5833333333333334,
+        "avg_edge": 0.073237886990363,
+        "roi": 0.10563627612089492
+      },
+      {
+        "min_edge": 0.075,
+        "n_bets": 15,
+        "win_rate": 0.6,
+        "avg_edge": 0.10166705363454881,
+        "roi": 0.1723812274284375
+      },
+      {
+        "min_edge": 0.1,
+        "n_bets": 3,
+        "win_rate": 1.0,
+        "avg_edge": 0.16826036890453988,
+        "roi": 1.0172552397358599
+      },
+      {
+        "min_edge": 0.15,
+        "n_bets": 3,
+        "win_rate": 1.0,
+        "avg_edge": 0.16826036890453988,
+        "roi": 1.0172552397358599
+      }
+    ],
+    "max_pair_sum_error": 0.0,
+    "top_features_by_gain": [
+      {
+        "feature": "reach_diff",
+        "gain": 23.62726593017578
+      },
+      {
+        "feature": "ewm_recent_td_avg_diff",
+        "gain": 12.929743766784668
+      },
+      {
+        "feature": "age_diff",
+        "gain": 12.692403793334961
+      },
+      {
+        "feature": "ewm_recent_sapm_diff",
+        "gain": 12.504677772521973
+      },
+      {
+        "feature": "style_ko_finisher_score_diff",
+        "gain": 12.44066047668457
+      },
+      {
+        "feature": "recent_form_recent_win_pct_diff",
+        "gain": 11.972039222717285
+      },
+      {
+        "feature": "ewm_sapm_diff",
+        "gain": 11.970006942749023
+      },
+      {
+        "feature": "aggression_index_diff",
+        "gain": 11.56179428100586
+      },
+      {
+        "feature": "recent_form_recent_avg_fight_time_diff",
+        "gain": 11.331578254699707
+      },
+      {
+        "feature": "ewm_td_acc_diff",
+        "gain": 11.283738136291504
+      },
+      {
+        "feature": "age_squared_diff",
+        "gain": 11.01409912109375
+      },
+      {
+        "feature": "ewm_kd_avg_diff",
+        "gain": 10.914571762084961
+      },
+      {
+        "feature": "weight_diff",
+        "gain": 10.900908470153809
+      },
+      {
+        "feature": "chin_risk_diff",
+        "gain": 10.241518020629883
+      },
+      {
+        "feature": "ewm_recent_splm_diff",
+        "gain": 10.10487174987793
+      },
+      {
+        "feature": "td_avg_diff",
+        "gain": 10.06549072265625
+      },
+      {
+        "feature": "recent_avg_fight_time_diff",
+        "gain": 10.037922859191895
+      },
+      {
+        "feature": "recent_form_kd_absorbed_avg_diff",
+        "gain": 9.91460132598877
+      },
+      {
+        "feature": "worst_loss_elo_diff",
+        "gain": 9.787425994873047
+      },
+      {
+        "feature": "ewm_finish_loss_rate_diff",
+        "gain": 9.773253440856934
+      },
+      {
+        "feature": "recent_form_splm_diff",
+        "gain": 9.656187057495117
+      },
+      {
+        "feature": "recent_form_recent_finish_rate_diff",
+        "gain": 9.383163452148438
+      },
+      {
+        "feature": "recent_form_kd_avg_diff",
+        "gain": 9.326803207397461
+      },
+      {
+        "feature": "recent_form_win_streak_diff",
+        "gain": 9.293320655822754
+      },
+      {
+        "feature": "recent_form_avg_fight_time_diff",
+        "gain": 9.232012748718262
+      },
+      {
+        "feature": "avg_opponent_elo_diff",
+        "gain": 9.096905708312988
+      },
+      {
+        "feature": "recent_form_elo_diff",
+        "gain": 8.943286895751953
+      },
+      {
+        "feature": "td_acc_diff",
+        "gain": 8.778796195983887
+      },
+      {
+        "feature": "ko_win_concentration_diff",
+        "gain": 8.755640983581543
+      },
+      {
+        "feature": "recent_form_recent_splm_diff",
+        "gain": 8.697550773620605
+      }
+    ]
+  }
+}
