@@ -1,0 +1,33 @@
+name: Research UFC 324 State History Diagnostic V1
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-ufc-324-state-history-diagnostic-v1.yml]
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas pyarrow
+      - name: Inspect latest pre-UFC324 historical state for each fighter
+        run: |
+          python - <<'PY'
+          import pandas as pd, unicodedata
+          d=pd.read_parquet('data/features/fighter_state_history.parquet'); d['date']=pd.to_datetime(d.date)
+          names=['Justin Gaethje','Paddy Pimblett',"Sean O'Malley",'Song Yadong','Waldo Cortes Acosta','Derrick Lewis','Natalia Silva','Rose Namajunas','Arnold Allen','Jean Silva','Umar Nurmagomedov','Deiveson Figueiredo','Ateba Gautier','Andrey Pulyaev','Nikita Krylov','Modestas Bukauskas','Alex Perez','Charles Johnson','Josh Hokit','Denzel Freeman','Adam Fugitt','Ty Miller']
+          def n(s): return ''.join(c for c in unicodedata.normalize('NFKD',str(s)) if not unicodedata.combining(c)).replace('’',"'").lower().replace('-',' ').strip()
+          for name in names:
+            x=d[d.fighter_name.map(n).eq(n(name)) & (d.date<'2026-01-24')].sort_values('date')
+            if x.empty:
+              print('MISSING',name)
+            else:
+              r=x.iloc[-1]
+              print('FOUND',name,'date',r.date.date(),'fight_id',r.get('fight_id'),'fights',r.get('fights'),'rows',len(x))
+          print('COLUMNS',len(d.columns)); print(list(d.columns))
+          PY
