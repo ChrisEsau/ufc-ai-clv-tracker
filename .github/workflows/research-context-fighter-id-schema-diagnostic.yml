@@ -1,0 +1,30 @@
+name: Research Context Fighter ID Schema Diagnostic
+
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-context-fighter-id-schema-diagnostic.yml]
+  workflow_dispatch:
+
+jobs:
+  schema:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pandas pyarrow
+      - run: |
+          python - <<'PY'
+          import pandas as pd
+          for p in ['data/features/moneyline_feature_view.parquet','data/fight_details/ufc_round_stats.parquet']:
+              df=pd.read_parquet(p)
+              print('\nFILE',p)
+              for c in df.columns:
+                  lc=c.lower()
+                  if any(k in lc for k in ['fighter','name','red','blue','bout','fight_id','ufcstats']):
+                      print(c, str(df[c].dtype))
+          PY
