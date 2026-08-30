@@ -17,30 +17,29 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install requests
-      - name: Inspect embedded BestFightOdds Belgrade market data
+      - name: Isolate embedded BestFightOdds prop payload
         run: |
           python - <<'PY'
           from pathlib import Path
           import requests
-          url='https://www.bestfightodds.com/events/ufc-belgrade-4285'
-          text=requests.get(url,headers={'User-Agent':'Mozilla/5.0'},timeout=30).text
-          needles=['Rodriguez wins by TKO/KO','Rodriguez wins by submission','Rodriguez wins by decision','Daniel Rodriguez']
-          out=[]
-          for n in needles:
-              starts=[]; p=0
-              while True:
-                  i=text.find(n,p)
-                  if i<0: break
-                  starts.append(i); p=i+1
-              out.append(f'NEEDLE {n} COUNT {len(starts)} POS {starts[:20]}')
-              for i in starts[:4]: out.append(text[max(0,i-1500):i+2500])
-          p=Path('data/research/prop_mispricing/ufc_belgrade_bfo_embedded_v1.txt'); p.parent.mkdir(parents=True,exist_ok=True); p.write_text('\n\n=====\n\n'.join(out),encoding='utf-8')
-          print('\n'.join(out[:8]))
+          text=requests.get('https://www.bestfightodds.com/events/ufc-belgrade-4285',headers={'User-Agent':'Mozilla/5.0'},timeout=30).text
+          n='Rodriguez wins by TKO/KO'; pos=[]; p=0
+          while True:
+              i=text.find(n,p)
+              if i<0: break
+              pos.append(i); p=i+1
+          chunks=[]
+          for j,i in enumerate(pos):
+              if i>100000:
+                  chunks.append(f'=== occurrence {j} at {i} ===\n'+text[max(0,i-2500):i+6500])
+          Path('data/research/prop_mispricing/ufc_belgrade_bfo_payload_v1.txt').write_text('\n\n'.join(chunks),encoding='utf-8')
+          print('positions',pos)
+          print(chunks[0][:6000] if chunks else 'no high-position payload')
           PY
       - name: Commit inspection output
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add data/research/prop_mispricing/ufc_belgrade_bfo_embedded_v1.txt
-          git diff --cached --quiet || git commit -m 'research: capture embedded UFC Belgrade BFO data'
+          git add data/research/prop_mispricing/ufc_belgrade_bfo_payload_v1.txt
+          git diff --cached --quiet || git commit -m 'research: isolate UFC Belgrade BFO prop payload'
           git push
