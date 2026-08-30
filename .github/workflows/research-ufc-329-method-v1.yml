@@ -1,0 +1,74 @@
+name: Research UFC 329 Method V1
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-ufc-329-method-v1.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  score:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas pyarrow numpy scikit-learn xgboost
+      - name: Score UFC 329 methods
+        run: |
+          python - <<'PY'
+          import pandas as pd, numpy as np
+          from xgboost import XGBClassifier
+          from pathlib import Path
+          train=pd.read_parquet('data/features/prop_method_of_victory_feature_view.parquet')
+          state=pd.read_parquet('data/features/latest_fighter_state.parquet')
+          # July 11 UFC 329 states
+          s=state[pd.to_datetime(state['fight_date']).dt.date==pd.Timestamp('2026-07-11').date()].copy()
+          meta={'fight_id','fight_date','fighter','opponent','side','method','target','american_odds','market_implied_p','market_fair_p','event','winner','result','actual_win'}
+          feats=[c for c in train.columns if c not in meta and pd.api.types.is_numeric_dtype(train[c])]
+          # train one binary model per method target using historical native view
+          target_col='target' if 'target' in train.columns else 'actual_win'
+          method_col='method'
+          models={}; meds={}
+          for m in ['KO','SUB','DEC']:
+            t=train[train[method_col].astype(str).str.upper().str.contains(m)].copy()
+            X=t[feats].replace([np.inf,-np.inf],np.nan)
+            med=X.median(numeric_only=True); X=X.fillna(med).fillna(0)
+            y=t[target_col].astype(int)
+            mdl=XGBClassifier(n_estimators=350,max_depth=3,learning_rate=.035,subsample=.8,colsample_bytree=.8,eval_metric='logloss',random_state=17,n_jobs=2)
+            mdl.fit(X,y); models[m]=mdl; meds[m]=med
+          # archived same-day method boards for fights with complete recoverable prices
+          boards=[
+          ('Conor McGregor','Max Holloway',{'Conor McGregor':{'KO':500,'SUB':2200,'DEC':650},'Max Holloway':{'KO':105,'SUB':1400,'DEC':250}}),
+          ('Benoit Saint Denis','Paddy Pimblett',{'Benoit Saint Denis':{'KO':300,'SUB':225,'DEC':500},'Paddy Pimblett':{'KO':650,'SUB':450,'DEC':300}}),
+          ('Cory Sandhagen','Mario Bautista',{'Cory Sandhagen':{'KO':350,'SUB':650,'DEC':160},'Mario Bautista':{'KO':700,'SUB':700,'DEC':260}}),
+          ('Nikita Krylov','Robert Whittaker',{'Nikita Krylov':{'KO':300,'SUB':550,'DEC':500},'Robert Whittaker':{'KO':190,'SUB':1600,'DEC':220}}),
+          ('King Green','Terrance McKinney',{'King Green':{'KO':300,'SUB':1200,'DEC':175},'Terrance McKinney':{'KO':240,'SUB':450,'DEC':650}}),
+          ]
+          def imp(o): return 100/(o+100) if o>0 else (-o)/((-o)+100)
+          out=[]
+          for a,b,board in boards:
+            rows=s[s['fighter'].isin([a,b])]
+            if len(rows)<2: continue
+            raw=[]
+            for f in [a,b]:
+              for m,o in board[f].items(): raw.append((f,m,o,imp(o)))
+            z=sum(x[3] for x in raw)
+            for f,m,o,p in raw:
+              r=rows[rows.fighter==f].iloc[0]
+              vals={c:r[c] if c in r.index else np.nan for c in feats}
+              X=pd.DataFrame([vals])[feats].replace([np.inf,-np.inf],np.nan).fillna(meds[m]).fillna(0)
+              q=float(models[m].predict_proba(X)[0,1])
+              out.append({'fight':f'{a} vs {b}','fighter':f,'method':m,'odds':o,'fair_market_p':p/z,'model_p':q,'edge':q-p/z,'mapped_predictors':sum(c in s.columns for c in feats),'total_predictors':len(feats)})
+          out=pd.DataFrame(out); Path('data/research/prop_mispricing').mkdir(parents=True,exist_ok=True)
+          out.to_csv('data/research/prop_mispricing/ufc_329_method_v1.csv',index=False)
+          print(out.to_string(index=False))
+          PY
+      - name: Commit
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add data/research/prop_mispricing/ufc_329_method_v1.csv
+          git commit -m 'Add UFC 329 method V1 scores' || exit 0
+          git push
