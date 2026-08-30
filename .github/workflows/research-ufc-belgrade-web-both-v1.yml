@@ -20,7 +20,7 @@ jobs:
       - name: Build archived Belgrade board and run frozen scorer
         run: |
           python - <<'PY'
-          import ast, json, re, unicodedata
+          import json, re, unicodedata
           from pathlib import Path
           from difflib import SequenceMatcher
           import requests
@@ -49,61 +49,74 @@ jobs:
           def norm(s):
             return ''.join(ch for ch in unicodedata.normalize('NFKD',str(s)) if not unicodedata.combining(ch)).lower().replace('’',"'").strip()
           def odd_from_cell(td):
-            sp=td.find('span')
-            if not sp:return None
-            t=sp.get_text(strip=True).replace('−','-')
-            return int(t) if re.fullmatch(r'[+-]\d+',t) else None
+            for sp in td.find_all('span'):
+              t=sp.get_text(strip=True).replace('−','-')
+              if re.fullmatch(r'[+-]\d+',t): return int(t)
+            return None
           def cell_book(td):
             x=td.get('data-li')
             if not x:return None
             try:return int(json.loads(x)[0])
             except Exception:return None
+          def prices(rr):
+            z={}
+            for td in rr.find_all('td'):
+              b=cell_book(td); o=odd_from_cell(td)
+              if b is not None and o is not None:z[b]=o
+            return z
+
           html=requests.get(URL,headers={'User-Agent':'Mozilla/5.0'},timeout=30).text
           soup=BeautifulSoup(html,'lxml')
-          rows=soup.find_all('tr')
-          bouts=[]; current=None; pending_first=None
-          for tr in rows:
-            fighter_links=[a for a in tr.find_all('a',href=True) if '/fighters/' in a['href']]
-            if fighter_links and 'pr' not in (tr.get('class') or []):
-              name=' '.join(fighter_links[-1].get_text(' ',strip=True).split())
-              if pending_first is None:
-                pending_first=(name,tr)
-              else:
-                f1,r1=pending_first; f2=name; r2=tr; pending_first=None
-                def mlrow(rr):
-                  z={}
-                  for td in rr.find_all('td'):
-                    b=cell_book(td); o=odd_from_cell(td)
-                    if b is not None and o is not None:z[b]=o
-                  return z
-                current={'f1':f1,'f2':f2,'ml1':mlrow(r1),'ml2':mlrow(r2),'props':{}}
-                bouts.append(current)
-              continue
-            if current is None or 'pr' not in (tr.get('class') or []):continue
-            th=tr.find('th')
-            if not th:continue
-            label=' '.join(th.get_text(' ',strip=True).split())
-            lk=None
-            if label.endswith(' wins by TKO/KO'):lk='ko'
-            elif label.endswith(' wins by submission'):lk='sub'
-            elif label.endswith(' wins by decision'):lk='dec'
-            if not lk:continue
-            prefix=label.rsplit(' wins by ',1)[0]
-            s1=SequenceMatcher(None,norm(prefix),norm(current['f1'])).ratio(); s2=SequenceMatcher(None,norm(prefix),norm(current['f2'])).ratio()
-            side=1 if s1>=s2 else 2
-            for td in tr.find_all('td'):
-              b=cell_book(td); o=odd_from_cell(td)
-              if b is not None and o is not None:current['props'][(b,side,lk)]=o
+          candidates=[]
+          # BFO repeats labels/markets in multiple DOM structures. Parse each table independently
+          # and keep complete 2-fighter bout blocks so rows from later duplicates cannot overwrite them.
+          for ti,table in enumerate(soup.find_all('table')):
+            rows=table.find_all('tr')
+            fighter_rows=[]
+            for i,tr in enumerate(rows):
+              links=[a for a in tr.find_all('a',href=True) if '/fighters/' in a['href']]
+              if links and 'pr' not in (tr.get('class') or []):
+                fighter_rows.append((i,' '.join(links[-1].get_text(' ',strip=True).split()),tr))
+            j=0
+            while j+1 < len(fighter_rows):
+              i1,f1,r1=fighter_rows[j]; i2,f2,r2=fighter_rows[j+1]
+              # Only pair adjacent fighter rows; following rows belong to this bout until next fighter row.
+              end=fighter_rows[j+2][0] if j+2 < len(fighter_rows) else len(rows)
+              ml1,ml2=prices(r1),prices(r2)
+              props={}
+              for tr in rows[i2+1:end]:
+                if 'pr' not in (tr.get('class') or []):continue
+                th=tr.find('th')
+                if not th:continue
+                label=' '.join(th.get_text(' ',strip=True).split())
+                lk=None
+                if label.endswith(' wins by TKO/KO'):lk='ko'
+                elif label.endswith(' wins by submission'):lk='sub'
+                elif label.endswith(' wins by decision'):lk='dec'
+                if not lk:continue
+                prefix=label.rsplit(' wins by ',1)[0]
+                s1=SequenceMatcher(None,norm(prefix),norm(f1)).ratio(); s2=SequenceMatcher(None,norm(prefix),norm(f2)).ratio()
+                side=1 if s1>=s2 else 2
+                for td in tr.find_all('td'):
+                  b=cell_book(td); o=odd_from_cell(td)
+                  if b is not None and o is not None:props[(b,side,lk)]=o
+              complete=[]
+              for book in set(ml1)&set(ml2):
+                if all((book,side,k) in props for side in [1,2] for k in ['ko','sub','dec']):complete.append(book)
+              if complete:
+                candidates.append({'table':ti,'f1':f1,'f2':f2,'ml1':ml1,'ml2':ml2,'props':props,'complete':complete})
+              j+=2
 
-          clean=[]
-          for b in bouts:
-            if not b['ml1'] or not b['ml2']:continue
-            complete=[]
-            for book in set(b['ml1']) & set(b['ml2']):
-              if all((book,side,k) in b['props'] for side in [1,2] for k in ['ko','sub','dec']):complete.append(book)
-            if complete:b['complete']=complete; clean.append(b)
+          # Deduplicate the same bout across responsive/duplicate tables. Prefer FanDuel-complete entries,
+          # then the table with the most numeric prices. Require exactly one logical entry per 14 bouts.
+          grouped={}
+          for b in candidates:
+            key=tuple(sorted([norm(b['f1']),norm(b['f2'])]))
+            score=(21 in b['complete'],len(b['ml1'])+len(b['ml2'])+len(b['props']))
+            if key not in grouped or score>grouped[key][0]:grouped[key]=(score,b)
+          clean=[v[1] for v in grouped.values()]
           if len(clean)!=14:
-            raise RuntimeError(f'Expected 14 complete Belgrade bouts, found {len(clean)}: '+str([(x['f1'],x['f2'],x.get('complete')) for x in clean]))
+            raise RuntimeError(f'Expected 14 unique complete Belgrade bouts, found {len(clean)}: '+str([(x['table'],x['f1'],x['f2'],x['complete']) for x in clean]))
           global_books=set(clean[0]['complete'])
           for b in clean[1:]:global_books &= set(b['complete'])
           preferred=[21,24,25,20,26]
@@ -114,23 +127,26 @@ jobs:
             pair=(b['f1'],b['f2'])
             win=None
             for fighter in pair:
-              n=norm(fighter)
-              best=max(RESULTS,key=lambda x:SequenceMatcher(None,n,x).ratio())
+              n=norm(fighter); best=max(RESULTS,key=lambda x:SequenceMatcher(None,n,x).ratio())
               if SequenceMatcher(None,n,best).ratio()>.78:
                 candidate=RESULTS[best]
-                if norm(candidate[0])==norm(fighter) or SequenceMatcher(None,n,norm(candidate[0])).ratio()>.86: win=candidate
+                if SequenceMatcher(None,n,norm(candidate[0])).ratio()>.86:win=candidate
             if win is None:raise RuntimeError('No result match for '+str(pair))
             boards[pair]={'ml':{b['f1']:b['ml1'][book],b['f2']:b['ml2'][book]},
                           'm':{b['f1']:[b['props'][(book,1,'ko')],b['props'][(book,1,'sub')],b['props'][(book,1,'dec')]],
                                b['f2']:[b['props'][(book,2,'ko')],b['props'][(book,2,'sub')],b['props'][(book,2,'dec')]]},
                           'win':win}
-            source_rows.append({'fighter_a':b['f1'],'fighter_b':b['f2'],'book_id':book,'book':BOOK_NAMES.get(book,f'BFO_book_{book}'),'source_url':URL})
-          Path(OUT/'ufc_belgrade_market_sources_v1.csv').write_text('fighter_a,fighter_b,book_id,book,source_url\n'+'\n'.join(','.join(map(str,r.values())) for r in source_rows)+'\n')
-          print('GLOBAL COMPLETE BOOK',global_book,BOOK_NAMES.get(global_book))
-          print('BOARDS',len(boards))
-          for p,v in boards.items():print(p,v)
+            source_rows.append({'fighter_a':b['f1'],'fighter_b':b['f2'],'table_index':b['table'],'book_id':book,'book':BOOK_NAMES.get(book,f'BFO_book_{book}'),'source_url':URL})
+          import pandas as pd
+          pd.DataFrame(source_rows).to_csv(OUT/'ufc_belgrade_market_sources_v1.csv',index=False)
+          print('GLOBAL COMPLETE BOOK',global_book,BOOK_NAMES.get(global_book)); print('BOARDS',len(boards))
+          for p,v in sorted(boards.items()):print(p,v)
+          # Regression check against the directly inspected archived row.
+          rod=next(v for p,v in boards.items() if {'Daniel Rodriguez','Uros Medic'}==set(p))
+          if rod['m']['Daniel Rodriguez'][0] != 500:
+            raise RuntimeError(f"BFO regression mismatch: expected FanDuel Rodriguez KO +500, got {rod['m']['Daniel Rodriguez'][0]}")
 
-          # Reuse the exact frozen Abu Dhabi scorer body, changing only card/date/board/output names and card-size assertion.
+          # Reuse exact frozen Abu Dhabi scorer; mutate only date/board/output/card-size assertion.
           src=Path('.github/workflows/research-ufc-abu-dhabi-web-both-v1.yml').read_text()
           m=re.search(r"python - <<'PY'\n(.*?)\n          PY",src,re.S)
           if not m:raise RuntimeError('Could not extract frozen scorer')
@@ -149,6 +165,6 @@ jobs:
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add -f data/research/prop_mispricing/ufc_belgrade_*_v1.csv
-          git commit -m 'research: add UFC Belgrade frozen XGB scores' || echo No-changes
+          git commit -m 'research: correct scoped UFC Belgrade archived boards' || echo No-changes
           git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
           git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
