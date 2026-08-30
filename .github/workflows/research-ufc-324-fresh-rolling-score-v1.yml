@@ -1,0 +1,107 @@
+name: Research UFC 324 Fresh Rolling Score V1
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-ufc-324-fresh-rolling-score-v1.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  score:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas pyarrow numpy scikit-learn xgboost pyyaml
+      - name: Rebuild true prefight rows and score frozen models
+        run: |
+          python - <<'PY'
+          import unicodedata, numpy as np, pandas as pd
+          from pathlib import Path
+          from xgboost import XGBClassifier
+          from pipeline.features.run_build_rolling_features import build_full_rolling_features
+          OUT=Path('data/research/prop_mispricing'); OUT.mkdir(parents=True,exist_ok=True)
+          DATE=pd.Timestamp('2026-01-24')
+          def norm(s): return ''.join(c for c in unicodedata.normalize('NFKD',str(s)) if not unicodedata.combining(c)).lower().replace('’',"'").replace('-',' ').strip()
+          boards={
+          ('Adam Fugitt','Ty Miller'):{'ml':{'Adam Fugitt':330,'Ty Miller':-420},'m':{'Adam Fugitt':[900,1400,750],'Ty Miller':[-125,1900,290]},'win':('Ty Miller','win_by_ko_tko_dq')},
+          ('Alex Perez','Charles Johnson'):{'ml':{'Alex Perez':154,'Charles Johnson':-184},'m':{'Alex Perez':[750,3000,250],'Charles Johnson':[500,370,200]},'win':('Alex Perez','win_by_ko_tko_dq')},
+          ('Andrey Pulyaev','Ateba Gautier'):{'ml':{'Andrey Pulyaev':660,'Ateba Gautier':-1000},'m':{'Andrey Pulyaev':[950,3500,2200],'Ateba Gautier':[-450,1800,900]},'win':('Ateba Gautier','win_by_decision')},
+          ('Arnold Allen','Jean Silva'):{'ml':{'Arnold Allen':184,'Jean Silva':-220},'m':{'Arnold Allen':[750,1700,340],'Jean Silva':[155,1600,240]},'win':('Jean Silva','win_by_decision')},
+          ('Deiveson Figueiredo','Umar Nurmagomedov'):{'ml':{'Deiveson Figueiredo':870,'Umar Nurmagomedov':-1500},'m':{'Deiveson Figueiredo':[3000,3000,1400],'Umar Nurmagomedov':[800,175,-110]},'win':('Umar Nurmagomedov','win_by_decision')},
+          ('Denzel Freeman','Josh Hokit'):{'ml':{'Denzel Freeman':215,'Josh Hokit':-260},'m':{'Denzel Freeman':[500,2000,550],'Josh Hokit':[260,320,280]},'win':('Josh Hokit','win_by_ko_tko_dq')},
+          ('Derrick Lewis','Waldo Cortes-Acosta'):{'ml':{'Derrick Lewis':270,'Waldo Cortes-Acosta':-335},'m':{'Derrick Lewis':[390,4500,1100],'Waldo Cortes-Acosta':[-105,2200,260]},'win':('Waldo Cortes Acosta','win_by_ko_tko_dq')},
+          ('Justin Gaethje','Paddy Pimblett'):{'ml':{'Justin Gaethje':200,'Paddy Pimblett':-245},'m':{'Justin Gaethje':[410,3000,550],'Paddy Pimblett':[380,140,550]},'win':('Justin Gaethje','win_by_decision')},
+          ('Modestas Bukauskas','Nikita Krylov'):{'ml':{'Modestas Bukauskas':-132,'Nikita Krylov':112},'m':{'Modestas Bukauskas':[140,950,800],'Nikita Krylov':[270,550,800]},'win':('Nikita Krylov','win_by_ko_tko_dq')},
+          ('Natalia Silva','Rose Namajunas'):{'ml':{'Natalia Silva':-330,'Rose Namajunas':265},'m':{'Natalia Silva':[700,2500,-190],'Rose Namajunas':[1700,1700,380]},'win':('Natalia Silva','win_by_decision')},
+          ("Sean O'Malley",'Song Yadong'):{'ml':{"Sean O'Malley":-225,'Song Yadong':188},'m':{"Sean O'Malley":[320,2500,115],'Song Yadong':[650,2700,340]},'win':("Sean O'Malley",'win_by_decision')},
+          }
+          boardmap={frozenset(map(norm,k)):(k,v) for k,v in boards.items()}
+          master=pd.read_parquet('data/master/ufc_master.parquet')
+          roll=build_full_rolling_features(master); roll['date']=pd.to_datetime(roll.date)
+          card=roll[roll.date.eq(DATE)].copy()
+          def pair_of(r):
+            rn=norm(r.get('r_name','')); bn=norm(r.get('b_name','')); return boardmap.get(frozenset((rn,bn)))
+          card=card[card.apply(lambda r:pair_of(r) is not None,axis=1)].copy()
+          if len(card)!=11: raise RuntimeError(f'Expected 11 fresh rolling UFC324 rows, got {len(card)}: '+str(card[[c for c in ['fight_id','r_name','b_name'] if c in card]].to_dict('records')))
+          def pc(df):
+            z=[]
+            for c in df.columns:
+              if not pd.api.types.is_numeric_dtype(df[c]): continue
+              l=c.lower(); allow=('_pre_' in l or l.startswith('pre_') or 'ewm_' in l or 'recent_form_' in l or l.endswith('_diff') or l.startswith('combined_') or l in {'older_fighter_age','reach_mismatch_abs','height_mismatch_abs','title_fight','total_rounds'}); deny=any(x in l for x in ['winner','result','target','label','finish_round','match_time_sec','profit','odds','implied','market','actual','post_'])
+              if allow and not deny:z.append(c)
+            return sorted(set(z))
+          hp=dict(n_estimators=350,max_depth=3,learning_rate=.03,subsample=.8,colsample_bytree=.7,min_child_weight=8,reg_lambda=5,reg_alpha=.5,objective='binary:logistic',eval_metric='logloss',random_state=42,n_jobs=2)
+          def imp(o): return 100/(o+100) if o>0 else (-o)/((-o)+100)
+          # MONEYLINE frozen training
+          m=pd.read_parquet('data/market/historical_market_outcomes.parquet').copy(); m=m[(m.bookmaker=='legacy_consensus')&(m.result_status=='graded')&m.won.notna()&(m.market_key=='moneyline')].copy(); m['date']=pd.to_datetime(m.date); m['won']=m.won.astype(bool).astype(int)
+          good=m.groupby('fight_id').size(); m=m[m.fight_id.isin(good[good==2].index)].copy(); m['market_overround']=m.groupby('fight_id').implied_probability.transform('sum'); m['fair_market_p']=m.implied_probability/m.market_overround
+          fv=pd.read_parquet('data/features/moneyline_feature_view.parquet').copy(); fv['date']=pd.to_datetime(fv.date); cols=pc(fv); diffs=[c for c in cols if c.endswith('_diff')]
+          d=m.merge(fv[['fight_id']+cols],on='fight_id',how='inner'); blue=d.outcome_side.astype(str).eq('blue'); d.loc[blue,diffs]=-d.loc[blue,diffs]
+          fc=cols+['fair_market_p','market_overround']; X=d[fc].replace([np.inf,-np.inf],np.nan); valid=[c for c in fc if X[c].notna().any()]; tr=d.date<='2022-12-31'; va=(d.date>='2023-01-01')&(d.date<='2024-12-31'); med=X.loc[tr,valid].median(numeric_only=True); X=X[valid].fillna(med).fillna(0); mlmodel=XGBClassifier(**hp); mlmodel.fit(X.loc[tr],d.loc[tr,'won'],eval_set=[(X.loc[va],d.loc[va,'won'])],verbose=False)
+          mlrows=[]
+          for _,r in card.iterrows():
+            pair,b=pair_of(r); names=list(pair); # resolve board names to actual corners
+            rn=next(x for x in names if norm(x)==norm(r.r_name)); bn=next(x for x in names if norm(x)==norm(r.b_name)); ips={rn:imp(b['ml'][rn]),bn:imp(b['ml'][bn])}; ov=sum(ips.values())
+            fights_r=float(r.get('r_pre_fights',np.nan)); fights_b=float(r.get('b_pre_fights',np.nan)); cold=(not np.isfinite(fights_r) or not np.isfinite(fights_b) or min(fights_r,fights_b)<2)
+            for side,name in [('red',rn),('blue',bn)]:
+              rec={c:r.get(c,np.nan) for c in cols}
+              if side=='blue':
+                for c in diffs:
+                  if pd.notna(rec.get(c)): rec[c]=-rec[c]
+              rec.update(fair_market_p=ips[name]/ov,market_overround=ov)
+              xs=pd.DataFrame([rec]).reindex(columns=valid).replace([np.inf,-np.inf],np.nan).fillna(med).fillna(0)
+              p=float(mlmodel.predict_proba(xs)[0,1]); mlrows.append({'fight_id':r.fight_id,'fighter':name,'side':side,'american_odds':b['ml'][name],'fair_market_p':rec['fair_market_p'],'model_p':p,'edge':p-rec['fair_market_p'],'actual_win':int(norm(name)==norm(b['win'][0])),'r_pre_fights':fights_r,'b_pre_fights':fights_b,'cold_start':cold,'mapped_predictors':sum(pd.notna(r.get(c,np.nan)) for c in cols),'total_predictors':len(cols)})
+          mlout=pd.DataFrame(mlrows); mlout.to_csv(OUT/'ufc_324_moneyline_freshrolling_v1.csv',index=False)
+          # METHOD frozen training
+          pm=pd.read_parquet('data/market/historical_market_outcomes.parquet').copy(); pm=pm[(pm.bookmaker=='legacy_consensus')&(pm.result_status=='graded')&pm.won.notna()&pm.market_key.isin(['win_by_ko_tko_dq','win_by_submission','win_by_decision'])].copy(); pm['date']=pd.to_datetime(pm.date); pm['won']=pm.won.astype(bool).astype(int); pm['market_overround']=pm.groupby('fight_id').implied_probability.transform('sum'); pm['fair_market_p']=pm.implied_probability/pm.market_overround
+          pv=pd.read_parquet('data/features/prop_method_of_victory_feature_view.parquet').copy(); pv['date']=pd.to_datetime(pv.date); pcols=pc(pv); pdiffs=[c for c in pcols if c.endswith('_diff')]
+          pdx=pm.merge(pv[['fight_id']+pcols],on='fight_id',how='inner'); blue=pdx.outcome_side.astype(str).eq('blue'); pdx.loc[blue,pdiffs]=-pdx.loc[blue,pdiffs]
+          pfc=pcols+['fair_market_p','market_overround']; PX=pdx[pfc].replace([np.inf,-np.inf],np.nan); pvalid=[c for c in pfc if PX[c].notna().any()]; ptr=pdx.date<='2022-12-31'; pva=(pdx.date>='2023-01-01')&(pdx.date<='2024-12-31'); pmed=PX.loc[ptr,pvalid].median(numeric_only=True); PX=PX[pvalid].fillna(pmed).fillna(0); pmodel=XGBClassifier(**hp); pmodel.fit(PX.loc[ptr],pdx.loc[ptr,'won'],eval_set=[(PX.loc[pva],pdx.loc[pva,'won'])],verbose=False)
+          mrows=[]; keys=['win_by_ko_tko_dq','win_by_submission','win_by_decision']
+          for _,r in card.iterrows():
+            pair,b=pair_of(r); names=list(pair); rn=next(x for x in names if norm(x)==norm(r.r_name)); bn=next(x for x in names if norm(x)==norm(r.b_name)); allod=[]
+            for name in [rn,bn]: allod.extend(b['m'][name])
+            allimp=[imp(o) for o in allod]; ov=sum(allimp); fights_r=float(r.get('r_pre_fights',np.nan)); fights_b=float(r.get('b_pre_fights',np.nan)); cold=(not np.isfinite(fights_r) or not np.isfinite(fights_b) or min(fights_r,fights_b)<2)
+            for side,name in [('red',rn),('blue',bn)]:
+              for key,o in zip(keys,b['m'][name]):
+                rec={c:r.get(c,np.nan) for c in pcols}
+                if side=='blue':
+                  for c in pdiffs:
+                    if pd.notna(rec.get(c)): rec[c]=-rec[c]
+                fair=imp(o)/ov; rec.update(fair_market_p=fair,market_overround=ov); xs=pd.DataFrame([rec]).reindex(columns=pvalid).replace([np.inf,-np.inf],np.nan).fillna(pmed).fillna(0); p=float(pmodel.predict_proba(xs)[0,1]); mrows.append({'fight_id':r.fight_id,'fighter':name,'side':side,'market_key':key,'american_odds':o,'fair_market_p':fair,'model_p':p,'edge':p-fair,'actual_hit':int(norm(name)==norm(b['win'][0]) and key==b['win'][1]),'r_pre_fights':fights_r,'b_pre_fights':fights_b,'cold_start':cold,'mapped_predictors':sum(pd.notna(r.get(c,np.nan)) for c in pcols),'total_predictors':len(pcols)})
+          mout=pd.DataFrame(mrows); mout.to_csv(OUT/'ufc_324_method_freshrolling_v1.csv',index=False)
+          print('\nML\n',mlout.sort_values(['fight_id','model_p'],ascending=[True,False]).to_string(index=False)); print('\nMETHOD TOP EDGE\n',mout.sort_values('edge',ascending=False).head(30).to_string(index=False)); print('ML fights',mlout.fight_id.nunique(),'METHOD fights',mout.fight_id.nunique(),'cold fights',mlout.groupby('fight_id').cold_start.first().sum())
+          PY
+      - name: Commit scores
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -f data/research/prop_mispricing/ufc_324_*_freshrolling_v1.csv
+          git commit -m 'research: add UFC 324 fresh rolling frozen scores' || echo No-changes
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
