@@ -130,7 +130,7 @@ jobs:
           print('BOARDS',len(boards))
           for p,v in boards.items():print(p,v)
 
-          # Reuse the exact frozen Abu Dhabi scorer body, changing only date, board literal and output names.
+          # Reuse the exact frozen Abu Dhabi scorer body, changing only card/date/board/output names and card-size assertion.
           src=Path('.github/workflows/research-ufc-abu-dhabi-web-both-v1.yml').read_text()
           m=re.search(r"python - <<'PY'\n(.*?)\n          PY",src,re.S)
           if not m:raise RuntimeError('Could not extract frozen scorer')
@@ -139,6 +139,9 @@ jobs:
           code=re.sub(r"boards=\{.*?\n\}\ndef imp",'boards='+repr(boards)+'\ndef imp',code,count=1,flags=re.S)
           code=code.replace('ufc_abu_dhabi_moneyline_web_v1.csv','ufc_belgrade_moneyline_web_v1.csv')
           code=code.replace('ufc_abu_dhabi_method_web_v1.csv','ufc_belgrade_method_web_v1.csv')
+          code=code.replace('mlout.fight_id.nunique()!=12','mlout.fight_id.nunique()!=14')
+          code=code.replace('mout.fight_id.nunique()!=12','mout.fight_id.nunique()!=14')
+          code=code.replace('Expected 12/12 fights','Expected 14/14 fights')
           exec(compile(code,'<frozen_belgrade_scorer>','exec'),{})
           PY
       - name: Commit Belgrade scores
