@@ -1,0 +1,316 @@
+{
+  "design": {
+    "name": "market_offset_v11_travel_distance_difference",
+    "base": "frozen V5",
+    "architecture": "frozen depth1 market-offset",
+    "only_new_model_feature": "travel_distance_diff",
+    "definition": "red_fighter_travel_km - blue_fighter_travel_km",
+    "fighter_origin_definition": "listed locality and country from fixed public Sherdog-derived fighter snapshot; unresolved origins remain missing",
+    "event_source": "https://raw.githubusercontent.com/OppositeMusical/MMA-AI/main/ufc_event_details.csv",
+    "fighter_origin_source": "https://gist.githubusercontent.com/Atharvap2000/ce6ce9af15f82eebc63befc86b994c31/raw/45254acf4004b5f998440b97322598f49894c82e/UFC%20fighters.csv",
+    "coordinate_source": "geonamescache 3.0.2; exact normalized city+country match only; largest-population duplicate city retained",
+    "distance": "great-circle Haversine kilometers",
+    "selection": "pooled chronological 2021-2024 OOF log loss only",
+    "2025_plus": "sealed until candidate selected",
+    "no_other_environment_features": true,
+    "roi_used_for_selection": false
+  },
+  "coverage": {
+    "fight_rows": 6467,
+    "event_coordinate_rows": 6366,
+    "red_origin_rows": 3203,
+    "blue_origin_rows": 2699,
+    "complete_travel_diff_rows": 1935,
+    "complete_travel_diff_coverage": 0.2992113808566569,
+    "fighter_source_rows": 1524,
+    "fighter_source_resolved_city_rows": 1262
+  },
+  "coverage_by_year": {
+    "2010": {
+      "n": 206,
+      "complete": 135,
+      "coverage": 0.6553398058252428
+    },
+    "2011": {
+      "n": 284,
+      "complete": 199,
+      "coverage": 0.7007042253521126
+    },
+    "2012": {
+      "n": 324,
+      "complete": 209,
+      "coverage": 0.6450617283950617
+    },
+    "2013": {
+      "n": 356,
+      "complete": 241,
+      "coverage": 0.6769662921348315
+    },
+    "2014": {
+      "n": 461,
+      "complete": 269,
+      "coverage": 0.5835140997830802
+    },
+    "2015": {
+      "n": 432,
+      "complete": 279,
+      "coverage": 0.6458333333333334
+    },
+    "2016": {
+      "n": 448,
+      "complete": 217,
+      "coverage": 0.484375
+    },
+    "2017": {
+      "n": 406,
+      "complete": 108,
+      "coverage": 0.2660098522167488
+    },
+    "2018": {
+      "n": 436,
+      "complete": 97,
+      "coverage": 0.22247706422018348
+    },
+    "2019": {
+      "n": 457,
+      "complete": 53,
+      "coverage": 0.11597374179431072
+    },
+    "2020": {
+      "n": 410,
+      "complete": 38,
+      "coverage": 0.09268292682926829
+    },
+    "2021": {
+      "n": 469,
+      "complete": 39,
+      "coverage": 0.08315565031982942
+    },
+    "2022": {
+      "n": 477,
+      "complete": 22,
+      "coverage": 0.04612159329140461
+    },
+    "2023": {
+      "n": 415,
+      "complete": 15,
+      "coverage": 0.03614457831325301
+    },
+    "2024": {
+      "n": 381,
+      "complete": 8,
+      "coverage": 0.02099737532808399
+    },
+    "2025": {
+      "n": 392,
+      "complete": 5,
+      "coverage": 0.012755102040816327
+    },
+    "2026": {
+      "n": 113,
+      "complete": 1,
+      "coverage": 0.008849557522123894
+    }
+  },
+  "candidates": {
+    "v5_core": {
+      "feature_count": 51,
+      "folds": [
+        {
+          "fold": "2021",
+          "market": {
+            "n": 469,
+            "log_loss": 0.6302682759895004,
+            "brier": 0.22040143204863472,
+            "auc": 0.6891670350722074
+          },
+          "model": {
+            "n": 469,
+            "log_loss": 0.624153125480216,
+            "brier": 0.21747978488711597,
+            "auc": 0.7017757147067492
+          },
+          "delta_log_loss_vs_market": -0.006115150509284462,
+          "delta_brier_vs_market": -0.0029216471615187423,
+          "travel_distance_diff_gain": 0.0
+        },
+        {
+          "fold": "2022",
+          "market": {
+            "n": 477,
+            "log_loss": 0.6046745349039253,
+            "brier": 0.20882128815279644,
+            "auc": 0.7209038006910348
+          },
+          "model": {
+            "n": 477,
+            "log_loss": 0.6025058140395739,
+            "brier": 0.20774255293680402,
+            "auc": 0.7206037461356611
+          },
+          "delta_log_loss_vs_market": -0.002168720864351381,
+          "delta_brier_vs_market": -0.0010787352159924157,
+          "travel_distance_diff_gain": 0.0
+        },
+        {
+          "fold": "2023",
+          "market": {
+            "n": 415,
+            "log_loss": 0.5850894126885017,
+            "brier": 0.19978813448309007,
+            "auc": 0.7534827881323697
+          },
+          "model": {
+            "n": 415,
+            "log_loss": 0.58028432982816,
+            "brier": 0.197485126019986,
+            "auc": 0.7599372384937237
+          },
+          "delta_log_loss_vs_market": -0.004805082860341647,
+          "delta_brier_vs_market": -0.002303008463104078,
+          "travel_distance_diff_gain": 0.0
+        },
+        {
+          "fold": "2024",
+          "market": {
+            "n": 381,
+            "log_loss": 0.5909368834797224,
+            "brier": 0.20222522792065598,
+            "auc": 0.753883495145631
+          },
+          "model": {
+            "n": 381,
+            "log_loss": 0.5923667393473763,
+            "brier": 0.2033544340946422,
+            "auc": 0.7492094313453538
+          },
+          "delta_log_loss_vs_market": 0.001429855867653873,
+          "delta_brier_vs_market": 0.0011292061739862358,
+          "travel_distance_diff_gain": 0.0
+        }
+      ],
+      "oof": {
+        "n": 1742,
+        "log_loss": 0.600822510744624,
+        "brier": 0.2069607253451583,
+        "auc": 0.7318055391488311
+      },
+      "delta_log_loss_vs_market": -0.0030722271771616017,
+      "delta_brier_vs_market": -0.0013836568178416109,
+      "mean_fold_travel_distance_diff_gain": 0.0
+    },
+    "v5_plus_travel_distance_diff": {
+      "feature_count": 52,
+      "folds": [
+        {
+          "fold": "2021",
+          "market": {
+            "n": 469,
+            "log_loss": 0.6302682759895004,
+            "brier": 0.22040143204863472,
+            "auc": 0.6891670350722074
+          },
+          "model": {
+            "n": 469,
+            "log_loss": 0.6252015605342549,
+            "brier": 0.21793284552961759,
+            "auc": 0.7002836722664308
+          },
+          "delta_log_loss_vs_market": -0.005066715455245507,
+          "delta_brier_vs_market": -0.0024685865190171297,
+          "travel_distance_diff_gain": 0.0
+        },
+        {
+          "fold": "2022",
+          "market": {
+            "n": 477,
+            "log_loss": 0.6046745349039253,
+            "brier": 0.20882128815279644,
+            "auc": 0.7209038006910348
+          },
+          "model": {
+            "n": 477,
+            "log_loss": 0.6034367714550183,
+            "brier": 0.20813438638173562,
+            "auc": 0.718857974177123
+          },
+          "delta_log_loss_vs_market": -0.0012377634489070255,
+          "delta_brier_vs_market": -0.0006869017710608161,
+          "travel_distance_diff_gain": 0.0
+        },
+        {
+          "fold": "2023",
+          "market": {
+            "n": 415,
+            "log_loss": 0.5850894126885017,
+            "brier": 0.19978813448309007,
+            "auc": 0.7534827881323697
+          },
+          "model": {
+            "n": 415,
+            "log_loss": 0.5807853031687311,
+            "brier": 0.1976305932905988,
+            "auc": 0.7590100798782807
+          },
+          "delta_log_loss_vs_market": -0.00430410951977056,
+          "delta_brier_vs_market": -0.0021575411924912857,
+          "travel_distance_diff_gain": 0.0
+        },
+        {
+          "fold": "2024",
+          "market": {
+            "n": 381,
+            "log_loss": 0.5909368834797224,
+            "brier": 0.20222522792065598,
+            "auc": 0.753883495145631
+          },
+          "model": {
+            "n": 381,
+            "log_loss": 0.5924508190624413,
+            "brier": 0.20334651231478418,
+            "auc": 0.7490429958391123
+          },
+          "delta_log_loss_vs_market": 0.0015139355827189505,
+          "delta_brier_vs_market": 0.0011212843941282025,
+          "travel_distance_diff_gain": 0.0
+        }
+      ],
+      "oof": {
+        "n": 1742,
+        "log_loss": 0.6014974367120682,
+        "brier": 0.2072229186366302,
+        "auc": 0.7308121865569862
+      },
+      "delta_log_loss_vs_market": -0.002397301209717373,
+      "delta_brier_vs_market": -0.0011214635263697148,
+      "mean_fold_travel_distance_diff_gain": 0.0
+    }
+  },
+  "exact_v5_control": {
+    "expected_oof_log_loss": 0.600822510744624,
+    "actual_oof_log_loss": 0.600822510744624,
+    "abs_error": 0.0,
+    "exact_within_1e_12": true
+  },
+  "selected_candidate": "v5_core",
+  "travel_selected": false,
+  "oof_delta_travel_vs_v5": 0.0006749259674442287,
+  "final_test": {
+    "selected_candidate": "v5_core",
+    "market": {
+      "n": 505,
+      "log_loss": 0.5727560248220687,
+      "brier": 0.1950777517000537,
+      "auc": 0.7697222222222221
+    },
+    "selected_model": {
+      "n": 505,
+      "log_loss": 0.56601620773198,
+      "brier": 0.1924998163556433,
+      "auc": 0.773079365079365
+    },
+    "delta_log_loss_vs_market": -0.00673981709008864,
+    "delta_brier_vs_market": -0.0025779353444103925,
+    "travel_distance_diff_gain": 0.0
+  }
+}
