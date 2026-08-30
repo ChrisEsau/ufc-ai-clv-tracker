@@ -1,0 +1,37 @@
+name: Research UFC 325 Date Key Diagnostic V1
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-ufc-325-date-key-diagnostic-v1.yml]
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas pyarrow numpy pyyaml
+      - name: Inspect master and rolling keys
+        run: |
+          python - <<'PY'
+          import pandas as pd, unicodedata
+          from pipeline.features.run_build_rolling_features import build_full_rolling_features
+          names=['Alexander Volkanovski','Diego Lopes','Benoit Saint Denis','Dan Hooker','Mauricio Ruffy','Rafael Fiziev','Tai Tuivasa','Tallison Teixeira','Jamie Mullarkey','Quillan Salkilld','Billy Elekana','Junior Tafa','Cam Rowston','Cody Brundage','Jacob Malkoun','Torrez Finney','Jonathan Micallef','Oban Elliott','Kaan Ofli','Yizha','Dom Mar Fan','Kim Sang Wook','Keiichiro Nakamura','Sebastian Szalay','Lawrence Lui','Sulangrangbo']
+          def n(s): return ' '.join(''.join(c for c in unicodedata.normalize('NFKD',str(s)) if not unicodedata.combining(c)).lower().replace('’',"'").replace('-',' ').split())
+          target=set(map(n,names))
+          m=pd.read_parquet('data/master/ufc_master.parquet'); m['date']=pd.to_datetime(m.date)
+          mm=m[(m.r_name.map(n).isin(target)|m.b_name.map(n).isin(target)) & m.date.between('2026-01-28','2026-02-03')].copy()
+          cols=[c for c in ['date','event_name','fight_id','r_name','b_name','winner','method','winner_id','r_id','b_id'] if c in mm]
+          print('MASTER\n'+mm[cols].sort_values(['date','fight_id']).to_string(index=False))
+          r=build_full_rolling_features(m); r['date']=pd.to_datetime(r.date)
+          rr=r[(r.r_name.map(n).isin(target)|r.b_name.map(n).isin(target)) & r.date.between('2026-01-28','2026-02-03')].copy()
+          cols2=[c for c in ['date','event_name','fight_id','r_name','b_name','target','r_pre_fights','b_pre_fights'] if c in rr]
+          print('\nROLLING\n'+rr[cols2].sort_values(['date','fight_id']).to_string(index=False))
+          print('\nMASTER IDs',sorted(mm.fight_id.astype(str).unique()))
+          print('ROLLING IDs',sorted(rr.fight_id.astype(str).unique()))
+          print('missing_from_rolling',sorted(set(mm.fight_id.astype(str))-set(rr.fight_id.astype(str))))
+          PY
