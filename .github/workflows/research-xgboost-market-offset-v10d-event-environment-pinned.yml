@@ -1,0 +1,114 @@
+name: Research XGBoost Market Offset V10d Event Environment Pinned
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - .github/workflows/research-xgboost-market-offset-v10d-event-environment-pinned.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  v10d:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout research branch
+        uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+          fetch-depth: 0
+
+      - name: Set up exact V5 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.16"
+
+      - name: Install exact V5 packages
+        run: |
+          python -m pip install --upgrade pip==26.2.1
+          pip install \
+            pandas==3.0.5 \
+            pyarrow==25.0.1 \
+            numpy==2.4.6 \
+            scikit-learn==1.9.0 \
+            scipy==1.17.1 \
+            xgboost==3.2.0 \
+            joblib==1.5.3 \
+            threadpoolctl==3.6.0 \
+            python-dateutil==2.9.0.post0 \
+            requests beautifulsoup4
+
+      - name: Restore exact V5 input snapshot
+        run: |
+          git checkout 7df1b61126be1f4e036b256d1c774c531b8a281f -- \
+            data/market/historical_market_outcomes.parquet \
+            data/features/moneyline_feature_view.parquet
+
+      - name: Run pinned V10d environment experiment
+        run: |
+          python - <<'PY'
+          import json, subprocess, textwrap
+          from pathlib import Path
+
+          # Reuse the reviewed V10 implementation, but force the exact V5
+          # data/environment/control semantics before any environment result counts.
+          p=Path('.github/workflows/research-xgboost-market-offset-v10-event-environment.yml')
+          s=p.read_text()
+          marker="          python - <<'PY'\n"
+          start=s.index(marker)+len(marker)
+          end=s.index("\n          PY",start)
+          code=textwrap.dedent(s[start:end])
+
+          # Use the exact-reproduction V5 summary for the frozen selected core.
+          code=code.replace(
+              "xgboost_market_offset_v5_feature_reduction_summary.json",
+              "xgboost_v5_exact_reproduction_summary.json"
+          )
+
+          # Direct UFCStats is blocked on hosted runners. Use the maintained
+          # GitHub mirror of UFCStats event details instead.
+          old="""# Authoritative historical event locations from UFCStats completed-event listing.\nurl='https://ufcstats.com/statistics/events/completed?page=all'\nr=requests.get(url,headers={'User-Agent':'Mozilla/5.0 UFC research'},timeout=30); r.raise_for_status()\nsoup=BeautifulSoup(r.text,'html.parser')\nevents=[]\nfor row in soup.select('tr.b-statistics__table-row'):\n    link=row.select_one('a.b-link.b-link_style_black')\n    cols=row.select('td.b-statistics__table-col')\n    if not link or len(cols)<2: continue\n    name=link.get_text(' ',strip=True)\n    date_el=row.select_one('.b-statistics__date')\n    date=pd.to_datetime(date_el.get_text(' ',strip=True) if date_el else None,errors='coerce')\n    location=cols[-1].get_text(' ',strip=True)\n    if pd.notna(date) and name and location:\n        events.append({'event_name_ufcstats':name,'date':date.normalize(),'location':location,'event_norm':norm(name)})\nev=pd.DataFrame(events).drop_duplicates(['date','event_norm'])\nif ev.empty: raise RuntimeError('No UFCStats event locations parsed')\n"""
+          new="""# Historical UFCStats event locations from maintained GitHub mirror.\nurl='https://raw.githubusercontent.com/OppositeMusical/MMA-AI/main/ufc_event_details.csv'\nev=pd.read_csv(url)\nev=ev.rename(columns={'EVENT':'event_name_ufcstats','DATE':'date','LOCATION':'location'})\nev['date']=pd.to_datetime(ev['date'],errors='coerce').dt.normalize()\nev['event_norm']=ev['event_name_ufcstats'].map(norm)\nev=ev.dropna(subset=['date','location','event_name_ufcstats']).drop_duplicates(['date','event_norm'])\nif ev.empty: raise RuntimeError('No mirrored UFCStats event locations loaded')\n"""
+          if old not in code:
+              raise RuntimeError('V10 event source block not found')
+          code=code.replace(old,new)
+
+          # Restore exact V5 market-row completeness semantics.
+          old_filter="""market['implied_probability']=pd.to_numeric(market['implied_probability'],errors='coerce')\ngood=market.groupby('fight_id').size(); good=good[good==2].index; market=market[market.fight_id.isin(good)].copy()"""
+          new_filter="""market['implied_probability']=pd.to_numeric(market['implied_probability'],errors='coerce')\nmarket['profit_per_100']=pd.to_numeric(market['profit_per_100'],errors='coerce')\nmarket=market.dropna(subset=['date','implied_probability','profit_per_100']).copy()\ngood=market.groupby('fight_id').size(); good=good[good==2].index; market=market[market.fight_id.isin(good)].copy()"""
+          if old_filter not in code:
+              raise RuntimeError('V10 market filter block not found')
+          code=code.replace(old_filter,new_filter)
+
+          # Hard gate: the baseline in THIS SAME run must reproduce V5 exactly
+          # before selection or the 2025+ test is permitted.
+          needle="""selected=min(summary['candidates'],key=lambda k:summary['candidates'][k]['oof']['log_loss']); summary['selected_candidate']=selected; summary['selected_environment_interactions']=[c for c in candidates[selected] if c.startswith('env_')]; summary['selected_feature_count']=len(candidates[selected])"""
+          replacement="""expected_v5=0.600822510744624\nactual_v5=float(summary['candidates']['v5_core']['oof']['log_loss'])\nsummary['exact_v5_control']={'expected_oof_log_loss':expected_v5,'actual_oof_log_loss':actual_v5,'abs_error':abs(actual_v5-expected_v5),'exact_within_1e_12':abs(actual_v5-expected_v5)<=1e-12}\nprint('EXACT_V5_CONTROL',json.dumps(summary['exact_v5_control']))\nassert abs(actual_v5-expected_v5)<=1e-12, f'V5 control mismatch: {actual_v5} vs {expected_v5}'\nselected=min(summary['candidates'],key=lambda k:summary['candidates'][k]['oof']['log_loss']); summary['selected_candidate']=selected; summary['selected_environment_interactions']=[c for c in candidates[selected] if c.startswith('env_')]; summary['selected_feature_count']=len(candidates[selected])"""
+          if needle not in code:
+              raise RuntimeError('V10 selection block not found')
+          code=code.replace(needle,replacement)
+
+          code=code.replace("'name':'market_offset_v10_event_environment'","'name':'market_offset_v10d_event_environment_pinned'")
+          code=code.replace("xgboost_market_offset_v10_event_environment_summary.json","xgboost_market_offset_v10d_event_environment_pinned_summary.json")
+
+          exec(compile(code,'v10d_pinned.py','exec'),{})
+          PY
+
+      - name: Restore current branch inputs and commit output safely
+        run: |
+          git restore --source=HEAD -- data/market/historical_market_outcomes.parquet data/features/moneyline_feature_view.parquet
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f data/research/prop_mispricing/xgboost_market_offset_v10d_event_environment_pinned_summary.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Add pinned V10d event environment outputs"
+          for i in 1 2 3 4 5; do
+            git fetch origin research/ufc-prop-mispricing-xgboost-20260829
+            git rebase origin/research/ufc-prop-mispricing-xgboost-20260829 || { git rebase --abort; sleep 2; continue; }
+            git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829 && exit 0
+            sleep 3
+          done
+          exit 1
