@@ -21,6 +21,7 @@ jobs:
         run: |
           python - <<'PY'
           import unicodedata
+          from difflib import SequenceMatcher
           from pathlib import Path
           import numpy as np, pandas as pd
           from xgboost import XGBClassifier
@@ -58,9 +59,9 @@ jobs:
           }
           actual={'Rafael Fiziev','Shara Magomedov','Matheus Camilo','Asu Almabayev','Ikram Aliskerov','Abus Magomedov','Farman Hasanov','Abdul Rakhman Yakhyaev','Nursulton Ruziboev','Kaan Ofli','Daniil Donchenko','Jean Matsumoto','Tahir Abdullayev'}
           def norm(s):return ''.join(ch for ch in unicodedata.normalize('NFKD',str(s)) if not unicodedata.combining(ch)).replace('’',"'").lower().strip()
-          wanted={frozenset((norm(a),norm(b))) for a,b in odds}
-          event=latest[(latest.date.dt.strftime('%Y-%m-%d')=='2026-06-27') & latest.apply(lambda r: frozenset((norm(r.fighter_name),norm(r.opponent_name))) in wanted,axis=1)].copy()
-          print('matched state rows',len(event),'fights',event.fight_id.nunique())
+          def sim(a,b): return SequenceMatcher(None,norm(a),norm(b)).ratio()
+          event=latest[latest.date.dt.strftime('%Y-%m-%d').eq('2026-06-27')].copy()
+          print('all June 27 state rows',len(event),'fights',event.fight_id.nunique())
           fights=[]
           for fid,g in event.groupby('fight_id'):
             red=g[g.corner.astype(str).str.lower().eq('red')]; blue=g[g.corner.astype(str).str.lower().eq('blue')]
@@ -94,13 +95,23 @@ jobs:
               else: rec[c]=np.nan
               mapped += int(pd.notna(rec[c]))
             return rec,mapped
-          rows=[]
+          rows=[]; used=set()
           for red,blue in fights:
-            pair=frozenset((norm(red.fighter_name),norm(blue.fighter_name))); board=next((b for p,b in odds.items() if frozenset((norm(p[0]),norm(p[1])))==pair),None)
-            if board is None: continue
-            feat,mapped=build(red,blue); tmp=[]
+            state_names=[red.fighter_name,blue.fighter_name]
+            best=None
+            for pair,board0 in odds.items():
+              if pair in used: continue
+              direct=(sim(state_names[0],pair[0])+sim(state_names[1],pair[1]))/2
+              cross=(sim(state_names[0],pair[1])+sim(state_names[1],pair[0]))/2
+              score=max(direct,cross)
+              if best is None or score>best[0]: best=(score,pair,board0)
+            if best is None or best[0]<0.72: continue
+            _,pair,board=best; used.add(pair)
+            print('matched',red.fighter_name,'vs',blue.fighter_name,'->',pair,'score',round(best[0],3))
+            feat,mapped=build(red,blue); remaining=set(board); tmp=[]
             for side,s in [('red',red),('blue',blue)]:
-              name=next(x for x in board if norm(x)==norm(s.fighter_name)); ao=board[name]; ip=100/(ao+100) if ao>0 else (-ao)/((-ao)+100); tmp.append((side,name,ao,ip))
+              name=max(remaining,key=lambda x:sim(s.fighter_name,x)); remaining.remove(name)
+              ao=board[name]; ip=100/(ao+100) if ao>0 else (-ao)/((-ao)+100); tmp.append((side,name,ao,ip))
             over=sum(x[3] for x in tmp)
             for side,name,ao,ip in tmp:
               rec=dict(feat)
@@ -109,14 +120,14 @@ jobs:
                   if pd.notna(rec.get(c)): rec[c]=-rec[c]
               rec.update({'fight_id':red.fight_id,'fighter':name,'side':side,'american_odds':ao,'market_overround':over,'fair_market_p':ip/over,'actual_win':int(name in actual),'mapped_predictors':mapped,'total_predictors':len(cols)})
               XS=pd.DataFrame([rec]).reindex(columns=valid).replace([np.inf,-np.inf],np.nan).fillna(med).fillna(0); rec['model_p']=float(model.predict_proba(XS)[0,1]); rec['edge']=rec['model_p']-rec['fair_market_p']; rows.append(rec)
-          if not rows: raise RuntimeError('No Baku moneyline rows built')
-          out=pd.DataFrame(rows); keep=['fight_id','fighter','side','american_odds','fair_market_p','model_p','edge','actual_win','mapped_predictors','total_predictors']; out[keep].to_csv(OUT/'ufc_baku_moneyline_full_v1.csv',index=False); print(out[keep].sort_values('edge',ascending=False).to_string(index=False)); print('scored fights',out.fight_id.nunique())
+          out=pd.DataFrame(rows); keep=['fight_id','fighter','side','american_odds','fair_market_p','model_p','edge','actual_win','mapped_predictors','total_predictors']; out[keep].to_csv(OUT/'ufc_baku_moneyline_full_v1.csv',index=False); print(out[keep].sort_values('edge',ascending=False).to_string(index=False)); print('scored fights',out.fight_id.nunique(),'used boards',len(used))
+          if out.fight_id.nunique()!=13: raise RuntimeError(f'Expected 13 scored fights, got {out.fight_id.nunique()}')
           PY
       - name: Commit
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add -f data/research/prop_mispricing/ufc_baku_moneyline_full_v1.csv
-          git commit -m 'Add full UFC Baku moneyline scores' || echo No-changes
+          git commit -m 'Add complete UFC Baku moneyline scores' || echo No-changes
           git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
           git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
