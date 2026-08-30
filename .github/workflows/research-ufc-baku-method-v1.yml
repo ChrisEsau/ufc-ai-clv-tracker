@@ -47,7 +47,10 @@ jobs:
           }
           actual={('Rafael Fiziev','win_by_ko_tko_dq'),('Shara Magomedov','win_by_decision'),('Matheus Camilo','win_by_ko_tko_dq')}
           def norm(s):return ''.join(ch for ch in unicodedata.normalize('NFKD',str(s)) if not unicodedata.combining(ch)).replace('’',"'").lower().strip()
-          event=fv[fv.date.dt.strftime('%Y-%m-%d').eq('2026-06-27')].copy(); rows=[]
+          wanted={frozenset((norm(a),norm(b))) for a,b in boards}
+          event=fv[fv.apply(lambda r: frozenset((norm(r.r_name),norm(r.b_name))) in wanted,axis=1)].copy()
+          print('matched rows:',len(event),[(r.r_name,r.b_name,str(r.date.date())) for _,r in event.iterrows()])
+          rows=[]
           for _,r in event.iterrows():
             rn,bn=norm(r.r_name),norm(r.b_name); board=None
             for pair,b in boards.items():
@@ -66,6 +69,7 @@ jobs:
                 for c in diffs: rec[c]=-rec[c]
               rec.update({'fight_id':r.fight_id,'fighter':name,'side':side,'market_key':key,'american_odds':ao,'raw_implied_p':ip,'market_overround':over,'fair_market_p':ip/over,'actual_hit':int((name,key) in actual)})
               X=pd.DataFrame([rec])[valid].replace([np.inf,-np.inf],np.nan).fillna(med).fillna(0); rec['model_p']=float(model.predict_proba(X)[0,1]); rec['edge']=rec['model_p']-rec['fair_market_p']; rows.append(rec)
+          if not rows: raise RuntimeError('No Baku matchup rows matched feature view')
           out=pd.DataFrame(rows); keep=['fight_id','fighter','side','market_key','american_odds','fair_market_p','model_p','edge','actual_hit']; out[keep].to_csv(OUT/'ufc_baku_method_v1.csv',index=False); print(out[keep].sort_values('edge',ascending=False).to_string(index=False))
           PY
       - name: Commit
