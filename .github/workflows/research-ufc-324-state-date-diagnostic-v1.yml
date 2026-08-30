@@ -1,0 +1,31 @@
+name: Research UFC 324 State Date Diagnostic V1
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-ufc-324-state-date-diagnostic-v1.yml]
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas pyarrow
+      - name: Inspect UFC 324 state dates
+        run: |
+          python - <<'PY'
+          import pandas as pd, unicodedata
+          p='data/features/latest_fighter_state.parquet'
+          d=pd.read_parquet(p); d['date']=pd.to_datetime(d.date)
+          names=['Justin Gaethje','Paddy Pimblett',"Sean O'Malley",'Song Yadong','Waldo Cortes Acosta','Derrick Lewis','Natalia Silva','Rose Namajunas','Arnold Allen','Jean Silva','Umar Nurmagomedov','Deiveson Figueiredo','Ateba Gautier','Andrey Pulyaev','Nikita Krylov','Modestas Bukauskas','Alex Perez','Charles Johnson','Josh Hokit','Denzel Freeman','Adam Fugitt','Ty Miller']
+          def n(s): return ''.join(c for c in unicodedata.normalize('NFKD',str(s)) if not unicodedata.combining(c)).replace('’',"'").lower()
+          target={n(x) for x in names}
+          x=d[d.fighter_name.map(n).isin(target) & d.date.between('2026-01-20','2026-01-27')]
+          cols=[c for c in ['date','fight_id','fighter_name','corner','fights'] if c in x.columns]
+          print(x[cols].sort_values(['date','fight_id','fighter_name']).to_string(index=False))
+          print('\nDATES:',x.groupby(x.date.dt.strftime('%Y-%m-%d')).fight_id.nunique().to_dict())
+          PY
