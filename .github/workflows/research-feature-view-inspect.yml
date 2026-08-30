@@ -1,5 +1,6 @@
 name: Research Feature View Inspect
 
+# Research-only schema and join inspection.
 on:
   push:
     branches:
@@ -65,7 +66,6 @@ jobs:
               candidates = [c for c in common if c in {'fight_id','date','fighter_id','outcome_fighter_id','outcome_side','canonical_side','r_fighter_id','b_fighter_id','r_name','b_name','legacy_r_name','legacy_b_name'} or 'fighter' in c.lower() or 'fight' in c.lower()]
               summary[name]['candidate_join_columns'] = candidates
 
-          # Basic fight-id coverage if available.
           if 'fight_id' in market.columns:
               market_fights = set(market['fight_id'].dropna().astype(str))
               for name in ['moneyline','method']:
