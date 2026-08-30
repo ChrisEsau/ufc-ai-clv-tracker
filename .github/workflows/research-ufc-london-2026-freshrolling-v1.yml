@@ -1,0 +1,49 @@
+name: Research UFC London 2026 FreshRolling V1
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-ufc-london-2026-freshrolling-v1.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  score:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas pyarrow numpy scikit-learn xgboost pyyaml requests beautifulsoup4 lxml
+      - name: Run UFC London frozen scorer
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+          src=Path('.github/workflows/research-ufc-325-freshrolling-web-v5.yml').read_text()
+          m=re.search(r"python - <<'PY'\n(.*?)\n          PY",src,re.S)
+          if not m: raise RuntimeError('Could not extract scorer')
+          code='\n'.join(line[10:] if line.startswith('          ') else line for line in m.group(1).splitlines())
+          reps=[
+            ("DATE='2026-01-31'","DATE='2026-03-21'"),
+            ("https://www.bestfightodds.com/events/ufc-3971","https://www.bestfightodds.com/events/ufc-london-4081"),
+            ("Expected 13 fresh rolling UFC325 rows","Expected 13 fresh rolling UFC London rows"),
+            ("ufc_325_market_sources_v1.csv","ufc_london_2026_market_sources_v1.csv"),
+            ("ufc_325_moneyline_freshrolling_v1.csv","ufc_london_2026_moneyline_freshrolling_v1.csv"),
+            ("ufc_325_method_freshrolling_v1.csv","ufc_london_2026_method_freshrolling_v1.csv"),
+          ]
+          for old,new in reps:
+            if old not in code: raise RuntimeError('missing transform literal: '+old[:100])
+            code=code.replace(old,new,1)
+          exec(compile(code,'<ufc_london_2026_v1>','exec'),{})
+          PY
+      - name: Commit UFC London scores
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -f data/research/prop_mispricing/ufc_london_2026_*_v1.csv
+          git commit -m 'research: add UFC London 2026 authoritative frozen scores' || echo No-changes
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
