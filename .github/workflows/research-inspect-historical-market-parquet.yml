@@ -1,0 +1,132 @@
+name: Research Inspect Historical Market Parquet
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - .github/workflows/research-inspect-historical-market-parquet.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  inspect-market-parquet:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout research branch
+        uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas pyarrow
+
+      - name: Inspect parquet
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+
+          src = Path('data/market/historical_market_outcomes.parquet')
+          out_dir = Path('data/research/prop_mispricing')
+          out_dir.mkdir(parents=True, exist_ok=True)
+
+          df = pd.read_parquet(src)
+
+          def safe(v):
+              if pd.isna(v):
+                  return None
+              if hasattr(v, 'isoformat'):
+                  return v.isoformat()
+              if isinstance(v, (str, int, float, bool)):
+                  return v
+              return str(v)
+
+          columns = []
+          for c in df.columns:
+              s = df[c]
+              sample = [safe(v) for v in s.dropna().head(5).tolist()]
+              columns.append({
+                  'name': c,
+                  'dtype': str(s.dtype),
+                  'null_count': int(s.isna().sum()),
+                  'null_pct': float(s.isna().mean()),
+                  'nunique': int(s.nunique(dropna=True)),
+                  'sample_values': sample,
+              })
+
+          summary = {
+              'source': str(src),
+              'rows': int(len(df)),
+              'columns_count': int(len(df.columns)),
+              'columns': columns,
+          }
+
+          date_candidates = [c for c in df.columns if any(k in c.lower() for k in ['date', 'time', 'timestamp', 'commence'])]
+          date_ranges = {}
+          for c in date_candidates:
+              parsed = pd.to_datetime(df[c], errors='coerce', utc=True)
+              if parsed.notna().any():
+                  date_ranges[c] = {
+                      'min': parsed.min().isoformat(),
+                      'max': parsed.max().isoformat(),
+                      'parsed_nonnull': int(parsed.notna().sum()),
+                  }
+          summary['date_ranges'] = date_ranges
+
+          likely_dims = [c for c in df.columns if any(k in c.lower() for k in ['market', 'sport', 'book', 'sportsbook', 'outcome', 'selection', 'side', 'fighter', 'event', 'prop', 'period', 'result'])]
+          value_counts = {}
+          for c in likely_dims:
+              if df[c].nunique(dropna=True) <= 100:
+                  vc = df[c].astype('string').fillna('<NA>').value_counts(dropna=False).head(100)
+                  value_counts[c] = {str(k): int(v) for k, v in vc.items()}
+          summary['value_counts'] = value_counts
+
+          likely_price_cols = [c for c in df.columns if any(k in c.lower() for k in ['price', 'odds', 'prob', 'line'])]
+          numeric_summary = {}
+          for c in likely_price_cols:
+              s = pd.to_numeric(df[c], errors='coerce')
+              if s.notna().any():
+                  numeric_summary[c] = {
+                      'count': int(s.notna().sum()),
+                      'min': float(s.min()),
+                      'median': float(s.median()),
+                      'mean': float(s.mean()),
+                      'max': float(s.max()),
+                  }
+          summary['numeric_summary'] = numeric_summary
+
+          preview = df.head(50).copy()
+          preview.to_csv(out_dir / 'historical_market_outcomes_preview.csv', index=False)
+          with open(out_dir / 'historical_market_outcomes_inspection.json', 'w', encoding='utf-8') as f:
+              json.dump(summary, f, indent=2, ensure_ascii=False)
+
+          print(json.dumps({
+              'rows': summary['rows'],
+              'columns_count': summary['columns_count'],
+              'column_names': list(df.columns),
+              'date_ranges': summary['date_ranges'],
+              'value_counts_keys': list(value_counts.keys()),
+              'numeric_summary': numeric_summary,
+          }, indent=2))
+          PY
+
+      - name: Commit inspection outputs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add -f \
+            data/research/prop_mispricing/historical_market_outcomes_inspection.json \
+            data/research/prop_mispricing/historical_market_outcomes_preview.csv
+          git commit -m "Add historical market parquet inspection" || echo "No changes to commit"
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
