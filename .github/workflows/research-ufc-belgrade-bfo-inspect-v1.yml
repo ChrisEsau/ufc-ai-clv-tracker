@@ -1,0 +1,49 @@
+name: Research UFC Belgrade BFO Inspect V1
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-ufc-belgrade-bfo-inspect-v1.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests beautifulsoup4 lxml
+      - name: Inspect archived BestFightOdds Belgrade board
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import requests
+          from bs4 import BeautifulSoup
+          url='https://www.bestfightodds.com/events/ufc-belgrade-4285'
+          r=requests.get(url,headers={'User-Agent':'Mozilla/5.0'},timeout=30)
+          r.raise_for_status()
+          soup=BeautifulSoup(r.text,'lxml')
+          out=[]
+          out.append(f'URL\t{url}')
+          out.append(f'STATUS\t{r.status_code}\tBYTES\t{len(r.content)}')
+          for i,tr in enumerate(soup.find_all('tr')):
+              cells=[' '.join(x.get_text(' ',strip=True).split()) for x in tr.find_all(['th','td'])]
+              if cells:
+                  out.append(str(i)+'\t'+'\t'.join(cells))
+          p=Path('data/research/prop_mispricing/ufc_belgrade_bfo_rows_v1.txt')
+          p.parent.mkdir(parents=True,exist_ok=True)
+          p.write_text('\n'.join(out),encoding='utf-8')
+          print('\n'.join(out[:80]))
+          print('rows',len(out))
+          PY
+      - name: Commit inspection output
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add data/research/prop_mispricing/ufc_belgrade_bfo_rows_v1.txt
+          git diff --cached --quiet || git commit -m 'research: capture UFC Belgrade BFO archived rows'
+          git push
