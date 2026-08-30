@@ -1,0 +1,107 @@
+name: Research Freedom 250 Moneyline
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - .github/workflows/research-freedom-250-moneyline.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  score-freedom-250:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas pyarrow numpy scikit-learn xgboost
+      - name: Score Freedom 250 with frozen V1 moneyline model
+        run: |
+          python - <<'PY'
+          import json, unicodedata
+          from pathlib import Path
+          import numpy as np
+          import pandas as pd
+          from xgboost import XGBClassifier
+
+          OUT=Path('data/research/prop_mispricing'); OUT.mkdir(parents=True,exist_ok=True)
+          market=pd.read_parquet('data/market/historical_market_outcomes.parquet').copy()
+          market=market[(market.bookmaker=='legacy_consensus')&(market.result_status=='graded')&(market.won.notna())&(market.market_key=='moneyline')].copy()
+          market['date']=pd.to_datetime(market['date']); market['won']=market['won'].astype(bool).astype(int)
+          good=market.groupby('fight_id').size(); good=good[good==2].index; market=market[market.fight_id.isin(good)].copy()
+          market['market_overround']=market.groupby('fight_id')['implied_probability'].transform('sum')
+          market['fair_market_p']=market['implied_probability']/market['market_overround']
+          fv=pd.read_parquet('data/features/moneyline_feature_view.parquet').copy(); fv['date']=pd.to_datetime(fv['date'])
+
+          def cols_pref(df):
+            out=[]
+            for c in df.columns:
+              if not pd.api.types.is_numeric_dtype(df[c]): continue
+              lc=c.lower(); allow=('_pre_' in lc or lc.startswith('pre_') or 'ewm_' in lc or 'recent_form_' in lc or lc.endswith('_diff') or lc.startswith('combined_') or lc in {'older_fighter_age','reach_mismatch_abs','height_mismatch_abs','title_fight','total_rounds'})
+              deny=any(x in lc for x in ['winner','result','target','label','finish_round','match_time_sec','profit','odds','implied','market','actual','post_'])
+              if allow and not deny: out.append(c)
+            return sorted(set(out))
+          cols=cols_pref(fv)
+          trainrows=market.merge(fv[['fight_id']+cols],on='fight_id',how='inner')
+          blue=trainrows.outcome_side.astype(str).eq('blue'); diffs=[c for c in cols if c.endswith('_diff')]; trainrows.loc[blue,diffs]=-trainrows.loc[blue,diffs]
+          feature_cols=cols+['fair_market_p','market_overround']; X=trainrows[feature_cols].replace([np.inf,-np.inf],np.nan)
+          valid=[c for c in feature_cols if X[c].notna().any()]; X=X[valid]
+          tr=trainrows.date<='2022-12-31'; va=(trainrows.date>='2023-01-01')&(trainrows.date<='2024-12-31')
+          med=X.loc[tr].median(numeric_only=True); X=X.fillna(med).fillna(0.0)
+          model=XGBClassifier(n_estimators=350,max_depth=3,learning_rate=.03,subsample=.8,colsample_bytree=.7,min_child_weight=8,reg_lambda=5.0,reg_alpha=.5,objective='binary:logistic',eval_metric='logloss',random_state=42,n_jobs=2)
+          model.fit(X.loc[tr],trainrows.loc[tr,'won'],eval_set=[(X.loc[va],trainrows.loc[va,'won'])],verbose=False)
+
+          odds={
+            'Ilia Topuria':-470,'Justin Gaethje':360,
+            'Alex Pereira':-108,'Ciryl Gane':-112,
+            "Sean O'Malley":-440,'Aiemann Zahabi':340,
+            'Josh Hokit':-410,'Derrick Lewis':320,
+            'Mauricio Ruffy':-520,'Michael Chandler':390,
+            'Bo Nickal':-305,'Kyle Daukaus':245,
+            'Diego Lopes':-142,'Steve Garcia':120,
+          }
+          def norm(s): return ''.join(ch for ch in unicodedata.normalize('NFKD',str(s)) if not unicodedata.combining(ch)).replace('’',"'").strip().lower()
+          od={norm(k):(k,v) for k,v in odds.items()}
+          event=fv[fv['date'].dt.strftime('%Y-%m-%d').eq('2026-06-14')].copy()
+          if event.empty:
+            # fallback name match in case date semantics differ
+            names=set(od); event=fv[fv['r_name'].map(norm).isin(names)|fv['b_name'].map(norm).isin(names)].copy()
+          rows=[]
+          for _,r in event.iterrows():
+            rn,bn=norm(r['r_name']),norm(r['b_name'])
+            if rn not in od or bn not in od: continue
+            pair=[]
+            for side,nm in [('red',rn),('blue',bn)]:
+              label,ao=od[nm]
+              ip=100/(ao+100) if ao>0 else (-ao)/((-ao)+100)
+              pair.append((side,label,ao,ip))
+            over=sum(x[3] for x in pair)
+            for side,label,ao,ip in pair:
+              rec={'fight_id':r['fight_id'],'date':str(r['date'].date()),'outcome_side':side,'outcome_label':label,'american_odds':ao,'fair_market_p':ip/over,'market_overround':over}
+              for c in cols: rec[c]=r[c]
+              if side=='blue':
+                for c in diffs: rec[c]=-rec[c]
+              rows.append(rec)
+          score=pd.DataFrame(rows)
+          if score.empty: raise RuntimeError('No Freedom 250 feature rows matched')
+          XS=score[valid].replace([np.inf,-np.inf],np.nan).fillna(med).fillna(0.0)
+          score['model_p']=model.predict_proba(XS)[:,1]; score['edge']=score.model_p-score.fair_market_p
+          keep=['fight_id','date','outcome_label','outcome_side','american_odds','fair_market_p','model_p','edge','market_overround']
+          score[keep].sort_values(['fight_id','outcome_side']).to_csv(OUT/'freedom_250_moneyline_v1.csv',index=False)
+          print(score[keep].sort_values(['fight_id','outcome_side']).to_string(index=False))
+          print('matched_fights',score.fight_id.nunique())
+          PY
+      - name: Commit output
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add -f data/research/prop_mispricing/freedom_250_moneyline_v1.csv
+          git commit -m 'Add Freedom 250 V1 moneyline scores' || echo 'No changes'
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
