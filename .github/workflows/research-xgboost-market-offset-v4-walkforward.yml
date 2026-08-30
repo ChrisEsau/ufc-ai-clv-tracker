@@ -1,0 +1,53 @@
+name: Research XGBoost Market Offset V4 2026 Walk-Forward
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - .github/workflows/research-xgboost-market-offset-v4-walkforward.yml
+      - data/research/prop_mispricing/v4_2026_moneyline_walkforward_trigger.txt
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: research-xgboost-market-offset-v4-walkforward
+  cancel-in-progress: false
+
+jobs:
+  next-card:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout research branch
+        uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas pyarrow numpy scikit-learn xgboost
+
+      - name: Run exactly next chronological 2026 card
+        run: |
+          python pipeline/research/xgboost_market_offset_v4_walkforward.py --next-card
+
+      - name: Commit authoritative walk-forward outputs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add -f \
+            data/research/prop_mispricing/v4_2026_moneyline_walkforward_predictions.csv \
+            data/research/prop_mispricing/v4_2026_moneyline_walkforward_bets.csv \
+            data/research/prop_mispricing/v4_2026_moneyline_walkforward_card_summary.csv \
+            data/research/prop_mispricing/v4_2026_moneyline_walkforward_summary.json
+          git commit -m "Advance frozen V4 2026 moneyline walk-forward one card" || echo "No changes to commit"
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
