@@ -1,0 +1,107 @@
+name: Research UFC Baku Moneyline V1
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-ufc-baku-moneyline-v1.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  score:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas pyarrow numpy scikit-learn xgboost
+      - name: Score UFC Baku moneylines
+        run: |
+          python - <<'PY'
+          import unicodedata
+          from pathlib import Path
+          import numpy as np, pandas as pd
+          from xgboost import XGBClassifier
+          OUT=Path('data/research/prop_mispricing'); OUT.mkdir(parents=True,exist_ok=True)
+          m=pd.read_parquet('data/market/historical_market_outcomes.parquet').copy()
+          m=m[(m.bookmaker=='legacy_consensus')&(m.result_status=='graded')&m.won.notna()&(m.market_key=='moneyline')].copy(); m['date']=pd.to_datetime(m.date); m['won']=m.won.astype(bool).astype(int)
+          good=m.groupby('fight_id').size(); good=good[good==2].index; m=m[m.fight_id.isin(good)].copy(); m['market_overround']=m.groupby('fight_id').implied_probability.transform('sum'); m['fair_market_p']=m.implied_probability/m.market_overround
+          fv=pd.read_parquet('data/features/moneyline_feature_view.parquet').copy(); fv['date']=pd.to_datetime(fv.date)
+          latest=pd.read_parquet('data/features/latest_fighter_state.parquet').copy(); latest['date']=pd.to_datetime(latest.date)
+          def pc(df):
+            z=[]
+            for c in df.columns:
+              if not pd.api.types.is_numeric_dtype(df[c]): continue
+              l=c.lower(); allow=('_pre_' in l or l.startswith('pre_') or 'ewm_' in l or 'recent_form_' in l or l.endswith('_diff') or l.startswith('combined_') or l in {'older_fighter_age','reach_mismatch_abs','height_mismatch_abs','title_fight','total_rounds'}); deny=any(x in l for x in ['winner','result','target','label','finish_round','match_time_sec','profit','odds','implied','market','actual','post_'])
+              if allow and not deny:z.append(c)
+            return sorted(set(z))
+          cols=pc(fv); diffs=[c for c in cols if c.endswith('_diff')]
+          d=m.merge(fv[['fight_id']+cols],on='fight_id',how='inner'); blue=d.outcome_side.astype(str).eq('blue'); d.loc[blue,diffs]=-d.loc[blue,diffs]
+          fc=cols+['fair_market_p','market_overround']; X=d[fc].replace([np.inf,-np.inf],np.nan); valid=[c for c in fc if X[c].notna().any()]; tr=d.date<='2022-12-31'; va=(d.date>='2023-01-01')&(d.date<='2024-12-31'); med=X.loc[tr,valid].median(numeric_only=True); X=X[valid].fillna(med).fillna(0)
+          model=XGBClassifier(n_estimators=350,max_depth=3,learning_rate=.03,subsample=.8,colsample_bytree=.7,min_child_weight=8,reg_lambda=5,reg_alpha=.5,objective='binary:logistic',eval_metric='logloss',random_state=42,n_jobs=2); model.fit(X.loc[tr],d.loc[tr,'won'],eval_set=[(X.loc[va],d.loc[va,'won'])],verbose=False)
+          odds={('Rafael Fiziev','Manuel Torres'):{'Rafael Fiziev':-110,'Manuel Torres':-110},('Shara Magomedov','Michel Pereira'):{'Shara Magomedov':-425,'Michel Pereira':325},('Nazim Sadykhov','Matheus Camilo'):{'Nazim Sadykhov':-190,'Matheus Camilo':150}}
+          actual={'Rafael Fiziev','Shara Magomedov','Matheus Camilo'}
+          def norm(s):return ''.join(ch for ch in unicodedata.normalize('NFKD',str(s)) if not unicodedata.combining(ch)).replace('’',"'").lower().strip()
+          wanted={frozenset((norm(a),norm(b))) for a,b in odds}
+          event=latest[(latest.date.dt.strftime('%Y-%m-%d')=='2026-06-27') & latest.apply(lambda r: frozenset((norm(r.fighter_name),norm(r.opponent_name))) in wanted,axis=1)].copy()
+          fights=[]
+          for fid,g in event.groupby('fight_id'):
+            red=g[g.corner.astype(str).str.lower().eq('red')]; blue=g[g.corner.astype(str).str.lower().eq('blue')]
+            if not red.empty and not blue.empty:fights.append((red.iloc[0],blue.iloc[0]))
+          def state_value(s,col):
+            if col in {'title_fight','total_rounds'}: return s.get(col,np.nan)
+            for pref in ('r_pre_','b_pre_'):
+              if col.startswith(pref): return s.get(col[len(pref):],np.nan)
+            for pref in ('r_ewm_','b_ewm_'):
+              if col.startswith(pref): return s.get('ewm_'+col[len(pref):],np.nan)
+            for pref in ('r_recent_form_','b_recent_form_'):
+              if col.startswith(pref): return s.get('form_delta_'+col[len(pref):],np.nan)
+            return np.nan
+          def build(red,blue):
+            rec={}; mapped=0
+            for c in cols:
+              if c in {'title_fight','total_rounds'}: rec[c]=red.get(c,np.nan)
+              elif c.startswith(('r_pre_','r_ewm_','r_recent_form_')): rec[c]=state_value(red,c)
+              elif c.startswith(('b_pre_','b_ewm_','b_recent_form_')): rec[c]=state_value(blue,c)
+              elif c=='older_fighter_age': rec[c]=max(red.get('age',np.nan),blue.get('age',np.nan))
+              elif c=='reach_mismatch_abs': rec[c]=abs(red.get('reach',np.nan)-blue.get('reach',np.nan))
+              elif c=='height_mismatch_abs': rec[c]=abs(red.get('height',np.nan)-blue.get('height',np.nan))
+              elif c.endswith('_diff'):
+                stem=c[:-5]; rec[c]=np.nan
+                for base in [stem,'ewm_'+stem,'form_delta_'+stem]:
+                  if base in red.index and base in blue.index and pd.notna(red.get(base)) and pd.notna(blue.get(base)): rec[c]=red.get(base)-blue.get(base); break
+              elif c.startswith('combined_'):
+                stem=c[len('combined_'):]; rec[c]=np.nan
+                for base in [stem,'ewm_'+stem,'form_delta_'+stem]:
+                  if base in red.index and base in blue.index and pd.notna(red.get(base)) and pd.notna(blue.get(base)): rec[c]=(red.get(base)+blue.get(base))/2; break
+              else: rec[c]=np.nan
+              mapped += int(pd.notna(rec[c]))
+            return rec,mapped
+          rows=[]
+          for red,blue in fights:
+            pair=frozenset((norm(red.fighter_name),norm(blue.fighter_name))); board=next((b for p,b in odds.items() if frozenset((norm(p[0]),norm(p[1])))==pair),None)
+            if board is None: continue
+            feat,mapped=build(red,blue); tmp=[]
+            for side,s in [('red',red),('blue',blue)]:
+              name=next(x for x in board if norm(x)==norm(s.fighter_name)); ao=board[name]; ip=100/(ao+100) if ao>0 else (-ao)/((-ao)+100); tmp.append((side,name,ao,ip))
+            over=sum(x[3] for x in tmp)
+            for side,name,ao,ip in tmp:
+              rec=dict(feat)
+              if side=='blue':
+                for c in diffs:
+                  if pd.notna(rec.get(c)): rec[c]=-rec[c]
+              rec.update({'fight_id':red.fight_id,'fighter':name,'side':side,'american_odds':ao,'market_overround':over,'fair_market_p':ip/over,'actual_win':int(name in actual),'mapped_predictors':mapped,'total_predictors':len(cols)})
+              XS=pd.DataFrame([rec]).reindex(columns=valid).replace([np.inf,-np.inf],np.nan).fillna(med).fillna(0); rec['model_p']=float(model.predict_proba(XS)[0,1]); rec['edge']=rec['model_p']-rec['fair_market_p']; rows.append(rec)
+          if not rows: raise RuntimeError('No Baku moneyline rows built')
+          out=pd.DataFrame(rows); keep=['fight_id','fighter','side','american_odds','fair_market_p','model_p','edge','actual_win','mapped_predictors','total_predictors']; out[keep].to_csv(OUT/'ufc_baku_moneyline_v1.csv',index=False); print(out[keep].sort_values('edge',ascending=False).to_string(index=False))
+          PY
+      - name: Commit
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add -f data/research/prop_mispricing/ufc_baku_moneyline_v1.csv
+          git commit -m 'Add UFC Baku moneyline scores' || echo No-changes
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
