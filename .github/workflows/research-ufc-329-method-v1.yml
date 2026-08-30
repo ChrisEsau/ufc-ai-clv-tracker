@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -18,57 +20,96 @@ jobs:
       - name: Score UFC 329 methods
         run: |
           python - <<'PY'
-          import pandas as pd, numpy as np
-          from xgboost import XGBClassifier
+          import unicodedata
           from pathlib import Path
-          train=pd.read_parquet('data/features/prop_method_of_victory_feature_view.parquet')
-          state=pd.read_parquet('data/features/latest_fighter_state.parquet')
-          # July 11 UFC 329 states
-          s=state[pd.to_datetime(state['fight_date']).dt.date==pd.Timestamp('2026-07-11').date()].copy()
-          meta={'fight_id','fight_date','fighter','opponent','side','method','target','american_odds','market_implied_p','market_fair_p','event','winner','result','actual_win'}
-          feats=[c for c in train.columns if c not in meta and pd.api.types.is_numeric_dtype(train[c])]
-          # train one binary model per method target using historical native view
-          target_col='target' if 'target' in train.columns else 'actual_win'
-          method_col='method'
-          models={}; meds={}
-          for m in ['KO','SUB','DEC']:
-            t=train[train[method_col].astype(str).str.upper().str.contains(m)].copy()
-            X=t[feats].replace([np.inf,-np.inf],np.nan)
-            med=X.median(numeric_only=True); X=X.fillna(med).fillna(0)
-            y=t[target_col].astype(int)
-            mdl=XGBClassifier(n_estimators=350,max_depth=3,learning_rate=.035,subsample=.8,colsample_bytree=.8,eval_metric='logloss',random_state=17,n_jobs=2)
-            mdl.fit(X,y); models[m]=mdl; meds[m]=med
-          # archived same-day method boards for fights with complete recoverable prices
-          boards=[
-          ('Conor McGregor','Max Holloway',{'Conor McGregor':{'KO':500,'SUB':2200,'DEC':650},'Max Holloway':{'KO':105,'SUB':1400,'DEC':250}}),
-          ('Benoit Saint Denis','Paddy Pimblett',{'Benoit Saint Denis':{'KO':300,'SUB':225,'DEC':500},'Paddy Pimblett':{'KO':650,'SUB':450,'DEC':300}}),
-          ('Cory Sandhagen','Mario Bautista',{'Cory Sandhagen':{'KO':350,'SUB':650,'DEC':160},'Mario Bautista':{'KO':700,'SUB':700,'DEC':260}}),
-          ('Nikita Krylov','Robert Whittaker',{'Nikita Krylov':{'KO':300,'SUB':550,'DEC':500},'Robert Whittaker':{'KO':190,'SUB':1600,'DEC':220}}),
-          ('King Green','Terrance McKinney',{'King Green':{'KO':300,'SUB':1200,'DEC':175},'Terrance McKinney':{'KO':240,'SUB':450,'DEC':650}}),
-          ]
-          def imp(o): return 100/(o+100) if o>0 else (-o)/((-o)+100)
-          out=[]
-          for a,b,board in boards:
-            rows=s[s['fighter'].isin([a,b])]
-            if len(rows)<2: continue
-            raw=[]
-            for f in [a,b]:
-              for m,o in board[f].items(): raw.append((f,m,o,imp(o)))
-            z=sum(x[3] for x in raw)
-            for f,m,o,p in raw:
-              r=rows[rows.fighter==f].iloc[0]
-              vals={c:r[c] if c in r.index else np.nan for c in feats}
-              X=pd.DataFrame([vals])[feats].replace([np.inf,-np.inf],np.nan).fillna(meds[m]).fillna(0)
-              q=float(models[m].predict_proba(X)[0,1])
-              out.append({'fight':f'{a} vs {b}','fighter':f,'method':m,'odds':o,'fair_market_p':p/z,'model_p':q,'edge':q-p/z,'mapped_predictors':sum(c in s.columns for c in feats),'total_predictors':len(feats)})
-          out=pd.DataFrame(out); Path('data/research/prop_mispricing').mkdir(parents=True,exist_ok=True)
-          out.to_csv('data/research/prop_mispricing/ufc_329_method_v1.csv',index=False)
-          print(out.to_string(index=False))
+          import numpy as np, pandas as pd
+          from xgboost import XGBClassifier
+          OUT=Path('data/research/prop_mispricing'); OUT.mkdir(parents=True,exist_ok=True)
+          m=pd.read_parquet('data/market/historical_market_outcomes.parquet').copy()
+          m=m[(m.bookmaker=='legacy_consensus')&(m.result_status=='graded')&m.won.notna()].copy(); m['date']=pd.to_datetime(m.date); m['won']=m.won.astype(bool).astype(int)
+          keys=['win_by_decision','win_by_ko_tko_dq','win_by_submission']; mm=m[m.market_key.isin(keys)].copy(); good=mm.groupby('fight_id').size(); good=good[good==6].index; mm=mm[mm.fight_id.isin(good)].copy(); mm['market_overround']=mm.groupby('fight_id').implied_probability.transform('sum'); mm['fair_market_p']=mm.implied_probability/mm.market_overround
+          fv=pd.read_parquet('data/features/prop_method_of_victory_feature_view.parquet').copy(); fv['date']=pd.to_datetime(fv.date)
+          latest=pd.read_parquet('data/features/latest_fighter_state.parquet').copy(); latest['date']=pd.to_datetime(latest.date)
+          def pc(df):
+            z=[]
+            for c in df.columns:
+              if not pd.api.types.is_numeric_dtype(df[c]): continue
+              l=c.lower(); allow=('_pre_' in l or l.startswith('pre_') or 'ewm_' in l or 'recent_form_' in l or l.endswith('_diff') or l.startswith('combined_') or l in {'older_fighter_age','reach_mismatch_abs','height_mismatch_abs','title_fight','total_rounds'}); deny=any(x in l for x in ['winner','result','target','label','finish_round','match_time_sec','profit','odds','implied','market','actual','post_'])
+              if allow and not deny:z.append(c)
+            return sorted(set(z))
+          cols=pc(fv); diffs=[c for c in cols if c.endswith('_diff')]
+          def train(key):
+            d=mm[mm.market_key==key].merge(fv[['fight_id']+cols],on='fight_id',how='inner'); blue=d.outcome_side.astype(str).eq('blue'); d.loc[blue,diffs]=-d.loc[blue,diffs]; fc=cols+['fair_market_p','market_overround']; X=d[fc].replace([np.inf,-np.inf],np.nan); valid=[c for c in fc if X[c].notna().any()]; tr=d.date<='2022-12-31'; va=(d.date>='2023-01-01')&(d.date<='2024-12-31'); med=X.loc[tr,valid].median(numeric_only=True); X=X[valid].fillna(med).fillna(0); model=XGBClassifier(n_estimators=350,max_depth=3,learning_rate=.03,subsample=.8,colsample_bytree=.7,min_child_weight=8,reg_lambda=5,reg_alpha=.5,objective='binary:logistic',eval_metric='logloss',random_state=42,n_jobs=2); model.fit(X.loc[tr],d.loc[tr,'won'],eval_set=[(X.loc[va],d.loc[va,'won'])],verbose=False); return model,valid,med
+          models={k:train(k) for k in keys}
+          boards={
+            ('Conor McGregor','Max Holloway'):{'Conor McGregor':{'win_by_ko_tko_dq':500,'win_by_submission':2200,'win_by_decision':650},'Max Holloway':{'win_by_ko_tko_dq':105,'win_by_submission':1400,'win_by_decision':250}},
+            ('Benoit Saint Denis','Paddy Pimblett'):{'Benoit Saint Denis':{'win_by_ko_tko_dq':300,'win_by_submission':225,'win_by_decision':500},'Paddy Pimblett':{'win_by_ko_tko_dq':650,'win_by_submission':450,'win_by_decision':300}},
+            ('Cory Sandhagen','Mario Bautista'):{'Cory Sandhagen':{'win_by_ko_tko_dq':350,'win_by_submission':650,'win_by_decision':160},'Mario Bautista':{'win_by_ko_tko_dq':700,'win_by_submission':700,'win_by_decision':260}},
+            ('Nikita Krylov','Robert Whittaker'):{'Nikita Krylov':{'win_by_ko_tko_dq':300,'win_by_submission':550,'win_by_decision':500},'Robert Whittaker':{'win_by_ko_tko_dq':190,'win_by_submission':1600,'win_by_decision':220}},
+            ('King Green','Terrance McKinney'):{'King Green':{'win_by_ko_tko_dq':300,'win_by_submission':1200,'win_by_decision':175},'Terrance McKinney':{'win_by_ko_tko_dq':240,'win_by_submission':450,'win_by_decision':650}},
+          }
+          actual={('Max Holloway','win_by_ko_tko_dq'),('Paddy Pimblett','win_by_submission'),('Mario Bautista','win_by_decision'),('Robert Whittaker','win_by_ko_tko_dq'),('King Green','win_by_ko_tko_dq')}
+          def norm(s):return ''.join(ch for ch in unicodedata.normalize('NFKD',str(s)) if not unicodedata.combining(ch)).replace('’',"'").lower().strip()
+          wanted={frozenset((norm(a),norm(b))) for a,b in boards}
+          event=latest[(latest.date.dt.strftime('%Y-%m-%d')=='2026-07-11') & latest.apply(lambda r: frozenset((norm(r.fighter_name),norm(r.opponent_name))) in wanted,axis=1)].copy()
+          fights=[]
+          for fid,g in event.groupby('fight_id'):
+            red=g[g.corner.astype(str).str.lower().eq('red')]; blue=g[g.corner.astype(str).str.lower().eq('blue')]
+            if not red.empty and not blue.empty:fights.append((red.iloc[0],blue.iloc[0]))
+          def state_value(s,col):
+            if col in {'title_fight','total_rounds'}: return s.get(col,np.nan)
+            for pref in ('r_pre_','b_pre_'):
+              if col.startswith(pref): return s.get(col[len(pref):],np.nan)
+            for pref in ('r_ewm_','b_ewm_'):
+              if col.startswith(pref): return s.get('ewm_'+col[len(pref):],np.nan)
+            for pref in ('r_recent_form_','b_recent_form_'):
+              if col.startswith(pref): return s.get('form_delta_'+col[len(pref):],np.nan)
+            return np.nan
+          def build(red,blue):
+            rec={}; mapped=0
+            for c in cols:
+              if c in {'title_fight','total_rounds'}: rec[c]=red.get(c,np.nan)
+              elif c.startswith(('r_pre_','r_ewm_','r_recent_form_')): rec[c]=state_value(red,c)
+              elif c.startswith(('b_pre_','b_ewm_','b_recent_form_')): rec[c]=state_value(blue,c)
+              elif c=='older_fighter_age': rec[c]=max(red.get('age',np.nan),blue.get('age',np.nan))
+              elif c=='reach_mismatch_abs': rec[c]=abs(red.get('reach',np.nan)-blue.get('reach',np.nan))
+              elif c=='height_mismatch_abs': rec[c]=abs(red.get('height',np.nan)-blue.get('height',np.nan))
+              elif c.endswith('_diff'):
+                stem=c[:-5]; rec[c]=np.nan
+                for base in [stem,'ewm_'+stem,'form_delta_'+stem]:
+                  if base in red.index and base in blue.index and pd.notna(red.get(base)) and pd.notna(blue.get(base)): rec[c]=red.get(base)-blue.get(base); break
+              elif c.startswith('combined_'):
+                stem=c[len('combined_'):]; rec[c]=np.nan
+                for base in [stem,'ewm_'+stem,'form_delta_'+stem]:
+                  if base in red.index and base in blue.index and pd.notna(red.get(base)) and pd.notna(blue.get(base)): rec[c]=(red.get(base)+blue.get(base))/2; break
+              else: rec[c]=np.nan
+              mapped += int(pd.notna(rec[c]))
+            return rec,mapped
+          rows=[]
+          for red,blue in fights:
+            pair=frozenset((norm(red.fighter_name),norm(blue.fighter_name))); board=next((b for p,b in boards.items() if frozenset((norm(p[0]),norm(p[1])))==pair),None)
+            if board is None: continue
+            feat,mapped=build(red,blue); tmp=[]
+            for side,s in [('red',red),('blue',blue)]:
+              canon=next(x for x in board if norm(x)==norm(s.fighter_name))
+              for key,ao in board[canon].items():
+                ip=100/(ao+100) if ao>0 else (-ao)/((-ao)+100); tmp.append((side,canon,key,ao,ip))
+            over=sum(x[4] for x in tmp)
+            for side,name,key,ao,ip in tmp:
+              model,valid,med=models[key]; rec=dict(feat)
+              if side=='blue':
+                for c in diffs:
+                  if pd.notna(rec.get(c)): rec[c]=-rec[c]
+              rec.update({'fight_id':red.fight_id,'fighter':name,'side':side,'market_key':key,'american_odds':ao,'market_overround':over,'fair_market_p':ip/over,'actual_hit':int((name,key) in actual),'mapped_predictors':mapped,'total_predictors':len(cols)})
+              X=pd.DataFrame([rec]).reindex(columns=valid).replace([np.inf,-np.inf],np.nan).fillna(med).fillna(0); rec['model_p']=float(model.predict_proba(X)[0,1]); rec['edge']=rec['model_p']-rec['fair_market_p']; rows.append(rec)
+          if not rows: raise RuntimeError('No UFC 329 rows built')
+          out=pd.DataFrame(rows); keep=['fight_id','fighter','side','market_key','american_odds','fair_market_p','model_p','edge','actual_hit','mapped_predictors','total_predictors']; out[keep].to_csv(OUT/'ufc_329_method_v1.csv',index=False); print(out[keep].sort_values('edge',ascending=False).to_string(index=False)); print('scored fights',out.fight_id.nunique())
           PY
       - name: Commit
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git add data/research/prop_mispricing/ufc_329_method_v1.csv
-          git commit -m 'Add UFC 329 method V1 scores' || exit 0
-          git push
+          git add -f data/research/prop_mispricing/ufc_329_method_v1.csv
+          git commit -m 'Add UFC 329 method V1 scores' || echo No-changes
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
