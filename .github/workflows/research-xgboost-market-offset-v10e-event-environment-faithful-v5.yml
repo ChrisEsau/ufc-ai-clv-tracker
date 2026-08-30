@@ -1,0 +1,126 @@
+name: Research XGBoost Market Offset V10e Event Environment Faithful V5
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - .github/workflows/research-xgboost-market-offset-v10e-event-environment-faithful-v5.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  v10e:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout research branch with history
+        uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+          fetch-depth: 0
+
+      - name: Preserve current V10 experiment source then restore V5-era tree
+        run: |
+          cp .github/workflows/research-xgboost-market-offset-v10-event-environment.yml /tmp/v10-source.yml
+          git checkout f1918e014d533471cad3d8780ae849c9b90d8e86 -- .
+          git reset --hard f1918e014d533471cad3d8780ae849c9b90d8e86
+          test "$(git rev-parse HEAD)" = "f1918e014d533471cad3d8780ae849c9b90d8e86"
+
+      - name: Set up exact V5 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.16"
+
+      - name: Install exact V5 model stack
+        run: |
+          python -m pip install "pip==26.2.1"
+          pip install \
+            "pandas==3.0.5" \
+            "pyarrow==25.0.1" \
+            "numpy==2.4.6" \
+            "scikit-learn==1.9.0" \
+            "scipy==1.17.1" \
+            "xgboost==3.2.0" \
+            "joblib==1.5.3" \
+            "narwhals==2.25.0" \
+            "python-dateutil==2.9.0.post0" \
+            "six==1.17.0" \
+            "threadpoolctl==3.6.0" \
+            "nvidia-nccl-cu12==2.31.2" \
+            requests beautifulsoup4
+
+      - name: Run environment interactions on faithful V5 baseline
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import textwrap
+
+          s=Path('/tmp/v10-source.yml').read_text(encoding='utf-8')
+          marker="          python - <<'PY'\n"
+          step=s.index('      - name: Run V10 event environment interaction experiment')
+          start=s.index(marker,step)+len(marker)
+          end=s.index("\n          PY",start)
+          code=textwrap.dedent(s[start:end])
+
+          old_source="""# Authoritative historical event locations from UFCStats completed-event listing.\nurl='https://ufcstats.com/statistics/events/completed?page=all'\nr=requests.get(url,headers={'User-Agent':'Mozilla/5.0 UFC research'},timeout=30); r.raise_for_status()\nsoup=BeautifulSoup(r.text,'html.parser')\nevents=[]\nfor row in soup.select('tr.b-statistics__table-row'):\n    link=row.select_one('a.b-link.b-link_style_black')\n    cols=row.select('td.b-statistics__table-col')\n    if not link or len(cols)<2: continue\n    name=link.get_text(' ',strip=True)\n    date_el=row.select_one('.b-statistics__date')\n    date=pd.to_datetime(date_el.get_text(' ',strip=True) if date_el else None,errors='coerce')\n    location=cols[-1].get_text(' ',strip=True)\n    if pd.notna(date) and name and location:\n        events.append({'event_name_ufcstats':name,'date':date.normalize(),'location':location,'event_norm':norm(name)})\nev=pd.DataFrame(events).drop_duplicates(['date','event_norm'])\nif ev.empty: raise RuntimeError('No UFCStats event locations parsed')\n"""
+          new_source="""# Historical UFCStats event locations from maintained GitHub mirror.\nurl='https://raw.githubusercontent.com/OppositeMusical/MMA-AI/main/ufc_event_details.csv'\nev=pd.read_csv(url)\nev=ev.rename(columns={'EVENT':'event_name_ufcstats','DATE':'date','LOCATION':'location'})\nev['date']=pd.to_datetime(ev['date'],errors='coerce').dt.normalize()\nev['event_norm']=ev['event_name_ufcstats'].map(norm)\nev=ev.dropna(subset=['date','location','event_name_ufcstats']).drop_duplicates(['date','event_norm'])\nif ev.empty: raise RuntimeError('No mirrored UFCStats event locations loaded')\n"""
+          if old_source not in code: raise RuntimeError('Expected V10 event source block not found')
+          code=code.replace(old_source,new_source)
+
+          old_filter="""market['implied_probability']=pd.to_numeric(market['implied_probability'],errors='coerce')\ngood=market.groupby('fight_id').size(); good=good[good==2].index; market=market[market.fight_id.isin(good)].copy()"""
+          new_filter="""market['implied_probability']=pd.to_numeric(market['implied_probability'],errors='coerce')\nmarket['profit_per_100']=pd.to_numeric(market['profit_per_100'],errors='coerce')\nmarket=market.dropna(subset=['date','implied_probability','profit_per_100']).copy()\ngood=market.groupby('fight_id').size(); good=good[good==2].index; market=market[market.fight_id.isin(good)].copy()"""
+          if old_filter not in code: raise RuntimeError('Expected V10 market filter block not found')
+          code=code.replace(old_filter,new_filter)
+
+          old_merge="""df=red.merge(fv[need],on='fight_id',how='inner',suffixes=('','_fv'))\n# Primary exact event-name/date match, then date-only fallback when UFCStats has one event that date."""
+          new_merge="""df=red.merge(fv[need],on='fight_id',how='inner',suffixes=('','_fv')).sort_values(['date','fight_id']).reset_index(drop=True)\n# Preserve frozen V5 canonical row order before and after event annotation.\n# Primary exact event-name/date match, then date-only fallback when UFCStats has one event that date."""
+          if old_merge not in code: raise RuntimeError('Expected V10 merge block not found')
+          code=code.replace(old_merge,new_merge)
+
+          old_after_fallback="""for c in ['location','international','las_vegas','abu_dhabi','high_altitude','europe','oceania','asia_mideast','latin_america','canada']:\n    miss=df[c].isna(); df.loc[miss,c]=df.loc[miss,'date'].map(date_unique[c])\nenv_cols="""
+          new_after_fallback="""for c in ['location','international','las_vegas','abu_dhabi','high_altitude','europe','oceania','asia_mideast','latin_america','canada']:\n    miss=df[c].isna(); df.loc[miss,c]=df.loc[miss,'date'].map(date_unique[c])\ndf=df.sort_values(['date','fight_id']).reset_index(drop=True)\nenv_cols="""
+          if old_after_fallback not in code: raise RuntimeError('Expected V10 fallback block not found')
+          code=code.replace(old_after_fallback,new_after_fallback)
+
+          code=code.replace("'name':'market_offset_v10_event_environment'","'name':'market_offset_v10e_event_environment_faithful_v5'")
+          code=code.replace("xgboost_market_offset_v10_event_environment_summary.json","xgboost_market_offset_v10e_event_environment_faithful_v5_summary.json")
+          exec(compile(code,'v10e_dynamic.py','exec'),{})
+          PY
+
+      - name: Assert V5 core reproduces before accepting environment comparison
+        run: |
+          python - <<'PY'
+          import json, math
+          from pathlib import Path
+          p=Path('data/research/prop_mispricing/xgboost_market_offset_v10e_event_environment_faithful_v5_summary.json')
+          s=json.loads(p.read_text(encoding='utf-8'))
+          core=s['candidates']['v5_core']['oof']
+          expected={'log_loss':0.600822510744624,'brier':0.2069607253451583,'auc':0.7318055391488311}
+          print(json.dumps({'v5_core':core,'expected':expected,'selected_candidate':s['selected_candidate'],'coverage':s['coverage']},indent=2))
+          assert core['n']==1742
+          for k,v in expected.items():
+              if not math.isclose(core[k],v,rel_tol=0.0,abs_tol=1e-10):
+                  raise AssertionError(f'V5 core reproduction failed for {k}: expected {v}, got {core[k]}')
+          print('V10E_V5_CORE_REPRODUCTION_PASS')
+          PY
+
+      - name: Preserve result and commit to research branch
+        run: |
+          cp data/research/prop_mispricing/xgboost_market_offset_v10e_event_environment_faithful_v5_summary.json /tmp/v10e-summary.json
+          git fetch origin research/ufc-prop-mispricing-xgboost-20260829
+          git checkout -B research/ufc-prop-mispricing-xgboost-20260829 origin/research/ufc-prop-mispricing-xgboost-20260829
+          cp /tmp/v10e-summary.json data/research/prop_mispricing/xgboost_market_offset_v10e_event_environment_faithful_v5_summary.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/research/prop_mispricing/xgboost_market_offset_v10e_event_environment_faithful_v5_summary.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Add faithful V5 event environment results"
+          for i in 1 2 3 4 5; do
+            git fetch origin research/ufc-prop-mispricing-xgboost-20260829
+            git rebase origin/research/ufc-prop-mispricing-xgboost-20260829 || { git rebase --abort; sleep 2; continue; }
+            git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829 && exit 0
+            sleep 3
+          done
+          exit 1
