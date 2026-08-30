@@ -1,0 +1,153 @@
+name: Research UFC Abu Dhabi ML + Method V1
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-ufc-abu-dhabi-both-v1.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  score:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas pyarrow numpy scikit-learn xgboost
+      - name: Score UFC Abu Dhabi ML and methods
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import numpy as np, pandas as pd
+          from xgboost import XGBClassifier
+
+          DATE='2026-07-25'
+          OUT=Path('data/research/prop_mispricing'); OUT.mkdir(parents=True,exist_ok=True)
+          market=pd.read_parquet('data/market/historical_market_outcomes.parquet').copy()
+          market['date']=pd.to_datetime(market.date)
+          market=market[(market.bookmaker=='legacy_consensus')&(market.result_status=='graded')&market.won.notna()].copy()
+          market['won']=market.won.astype(bool).astype(int)
+          latest=pd.read_parquet('data/features/latest_fighter_state.parquet').copy(); latest['date']=pd.to_datetime(latest.date)
+          event_state=latest[latest.date.dt.strftime('%Y-%m-%d').eq(DATE)].copy()
+          print('target state rows',len(event_state),'fights',event_state.fight_id.nunique())
+
+          def predictor_cols(df):
+            out=[]
+            for c in df.columns:
+              if not pd.api.types.is_numeric_dtype(df[c]): continue
+              l=c.lower()
+              allow=('_pre_' in l or l.startswith('pre_') or 'ewm_' in l or 'recent_form_' in l or l.endswith('_diff') or l.startswith('combined_') or l in {'older_fighter_age','reach_mismatch_abs','height_mismatch_abs','title_fight','total_rounds'})
+              deny=any(x in l for x in ['winner','result','target','label','finish_round','match_time_sec','profit','odds','implied','market','actual','post_'])
+              if allow and not deny: out.append(c)
+            return sorted(set(out))
+
+          def state_value(s,col):
+            if col in {'title_fight','total_rounds'}: return s.get(col,np.nan)
+            for pref in ('r_pre_','b_pre_'):
+              if col.startswith(pref): return s.get(col[len(pref):],np.nan)
+            for pref in ('r_ewm_','b_ewm_'):
+              if col.startswith(pref): return s.get('ewm_'+col[len(pref):],np.nan)
+            for pref in ('r_recent_form_','b_recent_form_'):
+              if col.startswith(pref): return s.get('form_delta_'+col[len(pref):],np.nan)
+            return np.nan
+
+          def build_pair(red,blue,cols):
+            rec={}; mapped=0
+            for c in cols:
+              if c in {'title_fight','total_rounds'}: rec[c]=red.get(c,np.nan)
+              elif c.startswith(('r_pre_','r_ewm_','r_recent_form_')): rec[c]=state_value(red,c)
+              elif c.startswith(('b_pre_','b_ewm_','b_recent_form_')): rec[c]=state_value(blue,c)
+              elif c=='older_fighter_age': rec[c]=max(red.get('age',np.nan),blue.get('age',np.nan))
+              elif c=='reach_mismatch_abs': rec[c]=abs(red.get('reach',np.nan)-blue.get('reach',np.nan))
+              elif c=='height_mismatch_abs': rec[c]=abs(red.get('height',np.nan)-blue.get('height',np.nan))
+              elif c.endswith('_diff'):
+                stem=c[:-5]; rec[c]=np.nan
+                for base in [stem,'ewm_'+stem,'form_delta_'+stem]:
+                  if base in red.index and base in blue.index and pd.notna(red.get(base)) and pd.notna(blue.get(base)):
+                    rec[c]=red.get(base)-blue.get(base); break
+              elif c.startswith('combined_'):
+                stem=c[len('combined_'):]; rec[c]=np.nan
+                for base in [stem,'ewm_'+stem,'form_delta_'+stem]:
+                  if base in red.index and base in blue.index and pd.notna(red.get(base)) and pd.notna(blue.get(base)):
+                    rec[c]=(red.get(base)+blue.get(base))/2; break
+              else: rec[c]=np.nan
+              mapped += int(pd.notna(rec[c]))
+            return rec,mapped
+
+          def state_pairs():
+            pairs={}
+            for fid,g in event_state.groupby('fight_id'):
+              r=g[g.corner.astype(str).str.lower().eq('red')]; b=g[g.corner.astype(str).str.lower().eq('blue')]
+              if not r.empty and not b.empty: pairs[fid]=(r.iloc[0],b.iloc[0])
+            return pairs
+          pairs=state_pairs()
+
+          # MONEYLINE
+          fv=pd.read_parquet('data/features/moneyline_feature_view.parquet').copy(); fv['date']=pd.to_datetime(fv.date)
+          cols=predictor_cols(fv); diffs=[c for c in cols if c.endswith('_diff')]
+          mm=market[market.market_key.eq('moneyline')].copy(); good=mm.groupby('fight_id').size(); mm=mm[mm.fight_id.isin(good[good==2].index)].copy()
+          mm['market_overround']=mm.groupby('fight_id').implied_probability.transform('sum'); mm['fair_market_p']=mm.implied_probability/mm.market_overround
+          d=mm.merge(fv[['fight_id']+cols],on='fight_id',how='inner'); blue=d.outcome_side.astype(str).eq('blue'); d.loc[blue,diffs]=-d.loc[blue,diffs]
+          fc=cols+['fair_market_p','market_overround']; X=d[fc].replace([np.inf,-np.inf],np.nan); valid=[c for c in fc if X[c].notna().any()]
+          tr=d.date<='2022-12-31'; va=(d.date>='2023-01-01')&(d.date<='2024-12-31'); med=X.loc[tr,valid].median(numeric_only=True); X=X[valid].fillna(med).fillna(0)
+          mdl=XGBClassifier(n_estimators=350,max_depth=3,learning_rate=.03,subsample=.8,colsample_bytree=.7,min_child_weight=8,reg_lambda=5,reg_alpha=.5,objective='binary:logistic',eval_metric='logloss',random_state=42,n_jobs=2)
+          mdl.fit(X.loc[tr],d.loc[tr,'won'],eval_set=[(X.loc[va],d.loc[va,'won'])],verbose=False)
+          target=mm[mm.date.dt.strftime('%Y-%m-%d').eq(DATE)].copy(); rows=[]
+          for fid,g in target.groupby('fight_id'):
+            if fid not in pairs: continue
+            red,blue_s=pairs[fid]; feat,mapped=build_pair(red,blue_s,cols)
+            for _,r in g.iterrows():
+              rec=dict(feat)
+              if str(r.outcome_side).lower()=='blue':
+                for c in diffs:
+                  if pd.notna(rec.get(c)): rec[c]=-rec[c]
+              rec.update({'fight_id':fid,'fighter':r.outcome_label,'side':r.outcome_side,'american_odds':r.american_odds,'fair_market_p':r.fair_market_p,'actual_win':int(r.won),'mapped_predictors':mapped,'total_predictors':len(cols),'market_overround':r.market_overround})
+              XS=pd.DataFrame([rec]).reindex(columns=valid).replace([np.inf,-np.inf],np.nan).fillna(med).fillna(0)
+              rec['model_p']=float(mdl.predict_proba(XS)[0,1]); rec['edge']=rec['model_p']-rec['fair_market_p']; rows.append(rec)
+          mlout=pd.DataFrame(rows); keep=['fight_id','fighter','side','american_odds','fair_market_p','model_p','edge','actual_win','mapped_predictors','total_predictors']
+          if mlout.empty: raise RuntimeError('No July 25 moneyline rows scored')
+          mlout[keep].to_csv(OUT/'ufc_abu_dhabi_moneyline_v1.csv',index=False)
+          print('\nML scored fights',mlout.fight_id.nunique()); print(mlout[keep].sort_values('edge',ascending=False).to_string(index=False))
+
+          # METHODS
+          fv2=pd.read_parquet('data/features/prop_method_of_victory_feature_view.parquet').copy(); fv2['date']=pd.to_datetime(fv2.date)
+          cols2=predictor_cols(fv2); diffs2=[c for c in cols2 if c.endswith('_diff')]
+          keys=['win_by_decision','win_by_ko_tko_dq','win_by_submission']
+          meth=market[market.market_key.isin(keys)].copy(); good=meth.groupby('fight_id').size(); meth=meth[meth.fight_id.isin(good[good==6].index)].copy()
+          meth['market_overround']=meth.groupby('fight_id').implied_probability.transform('sum'); meth['fair_market_p']=meth.implied_probability/meth.market_overround
+          models={}
+          for key in keys:
+            dk=meth[meth.market_key.eq(key)].merge(fv2[['fight_id']+cols2],on='fight_id',how='inner')
+            blue=dk.outcome_side.astype(str).eq('blue'); dk.loc[blue,diffs2]=-dk.loc[blue,diffs2]
+            fc2=cols2+['fair_market_p','market_overround']; XX=dk[fc2].replace([np.inf,-np.inf],np.nan); valid2=[c for c in fc2 if XX[c].notna().any()]
+            tr2=dk.date<='2022-12-31'; va2=(dk.date>='2023-01-01')&(dk.date<='2024-12-31'); med2=XX.loc[tr2,valid2].median(numeric_only=True); XX=XX[valid2].fillna(med2).fillna(0)
+            m2=XGBClassifier(n_estimators=350,max_depth=3,learning_rate=.03,subsample=.8,colsample_bytree=.7,min_child_weight=8,reg_lambda=5,reg_alpha=.5,objective='binary:logistic',eval_metric='logloss',random_state=42,n_jobs=2)
+            m2.fit(XX.loc[tr2],dk.loc[tr2,'won'],eval_set=[(XX.loc[va2],dk.loc[va2,'won'])],verbose=False); models[key]=(m2,valid2,med2)
+          target2=meth[meth.date.dt.strftime('%Y-%m-%d').eq(DATE)].copy(); rows=[]
+          for fid,g in target2.groupby('fight_id'):
+            if fid not in pairs: continue
+            red,blue_s=pairs[fid]; feat,mapped=build_pair(red,blue_s,cols2)
+            for _,r in g.iterrows():
+              rec=dict(feat)
+              if str(r.outcome_side).lower()=='blue':
+                for c in diffs2:
+                  if pd.notna(rec.get(c)): rec[c]=-rec[c]
+              rec.update({'fight_id':fid,'fighter':r.outcome_label,'side':r.outcome_side,'market_key':r.market_key,'american_odds':r.american_odds,'fair_market_p':r.fair_market_p,'actual_hit':int(r.won),'mapped_predictors':mapped,'total_predictors':len(cols2),'market_overround':r.market_overround})
+              m2,valid2,med2=models[r.market_key]; XS=pd.DataFrame([rec]).reindex(columns=valid2).replace([np.inf,-np.inf],np.nan).fillna(med2).fillna(0)
+              rec['model_p']=float(m2.predict_proba(XS)[0,1]); rec['edge']=rec['model_p']-rec['fair_market_p']; rows.append(rec)
+          mout=pd.DataFrame(rows); keep2=['fight_id','fighter','side','market_key','american_odds','fair_market_p','model_p','edge','actual_hit','mapped_predictors','total_predictors']
+          if mout.empty: raise RuntimeError('No July 25 method rows scored')
+          mout[keep2].to_csv(OUT/'ufc_abu_dhabi_method_v1.csv',index=False)
+          print('\nMETHOD scored fights',mout.fight_id.nunique()); print(mout[keep2].sort_values('edge',ascending=False).to_string(index=False))
+          PY
+      - name: Commit outputs
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add -f data/research/prop_mispricing/ufc_abu_dhabi_moneyline_v1.csv data/research/prop_mispricing/ufc_abu_dhabi_method_v1.csv
+          git commit -m 'Add UFC Abu Dhabi ML and method scores' || echo No-changes
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
