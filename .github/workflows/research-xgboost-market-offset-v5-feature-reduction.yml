@@ -1,0 +1,274 @@
+name: Research XGBoost Market Offset V5 Feature Reduction
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - .github/workflows/research-xgboost-market-offset-v5-feature-reduction.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  xgboost-market-offset-v5-feature-reduction:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout research branch
+        uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas pyarrow numpy scikit-learn xgboost
+
+      - name: Run feature reduction experiment
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import numpy as np
+          import pandas as pd
+          from sklearn.metrics import brier_score_loss, log_loss, roc_auc_score
+          import xgboost as xgb
+
+          OUT = Path('data/research/prop_mispricing')
+          OUT.mkdir(parents=True, exist_ok=True)
+
+          market = pd.read_parquet('data/market/historical_market_outcomes.parquet').copy()
+          market = market[(market['bookmaker'] == 'legacy_consensus') & (market['result_status'] == 'graded') & market['won'].notna()].copy()
+          market['date'] = pd.to_datetime(market['date'], errors='coerce')
+          market['won'] = market['won'].astype(bool).astype(int)
+          market['implied_probability'] = pd.to_numeric(market['implied_probability'], errors='coerce')
+          market['profit_per_100'] = pd.to_numeric(market['profit_per_100'], errors='coerce')
+          market = market.dropna(subset=['date','implied_probability','profit_per_100']).copy()
+
+          ml = market[market['market_key'] == 'moneyline'].copy()
+          good = ml.groupby('fight_id').size()
+          good = good[good == 2].index
+          ml = ml[ml['fight_id'].isin(good)].copy()
+          ml['market_overround'] = ml.groupby('fight_id')['implied_probability'].transform('sum')
+          ml['fair_market_p'] = ml['implied_probability'] / ml['market_overround']
+
+          red = ml[ml['outcome_side'].astype(str).eq('red')].copy()
+          fv = pd.read_parquet('data/features/moneyline_feature_view.parquet').copy()
+
+          deny_tokens = [
+              'winner','result','target','label','finish_round','match_time_sec',
+              'profit','odds','implied','market','actual','post_'
+          ]
+          def clean_numeric(c):
+              if c not in fv.columns or not pd.api.types.is_numeric_dtype(fv[c]):
+                  return False
+              return not any(x in c.lower() for x in deny_tokens)
+
+          signed = sorted([
+              c for c in fv.columns
+              if clean_numeric(c)
+              and c.lower().endswith('_diff')
+              and 'abs_diff' not in c.lower()
+              and '_abs_' not in c.lower()
+          ])
+
+          df = red.merge(fv[['fight_id'] + signed], on='fight_id', how='inner').sort_values(['date','fight_id']).copy()
+          Xraw = df[signed + ['market_overround']].replace([np.inf,-np.inf], np.nan)
+
+          def clip_p(p): return np.clip(np.asarray(p,float),1e-6,1-1e-6)
+          def logit(p):
+              p=clip_p(p); return np.log(p/(1-p))
+          def sigmoid(z):
+              z=np.clip(np.asarray(z,float),-30,30); return 1/(1+np.exp(-z))
+          def metrics(y,p):
+              y=np.asarray(y,int); p=clip_p(p)
+              return {
+                  'n': int(len(y)),
+                  'brier': float(brier_score_loss(y,p)),
+                  'log_loss': float(log_loss(y,p,labels=[0,1])),
+                  'auc': float(roc_auc_score(y,p)) if len(np.unique(y))==2 else None,
+              }
+
+          # Frozen V4 capacity.
+          params = {
+              'max_depth': 1,
+              'eta': 0.03,
+              'subsample': 0.8,
+              'colsample_bytree': 0.7,
+              'min_child_weight': 10,
+              'lambda': 8.0,
+              'alpha': 1.0,
+              'objective': 'binary:logistic',
+              'eval_metric': 'logloss',
+              'seed': 42,
+              'nthread': 2,
+          }
+          rounds = 300
+          alpha = 1.0
+
+          # CLEAN RANKING RULE: rank features using only data through 2020.
+          # 2021-2024 remain validation data for subset selection.
+          rank_train = df['date'] <= '2020-12-31'
+          rank_cols = [c for c in signed + ['market_overround'] if Xraw.loc[rank_train,c].notna().any()]
+          rank_med = Xraw.loc[rank_train,rank_cols].median(numeric_only=True)
+          Xrank = Xraw.loc[rank_train,rank_cols].fillna(rank_med).fillna(0.0)
+          yrank = df.loc[rank_train,'won'].astype(int).to_numpy()
+          mrank = logit(df.loc[rank_train,'fair_market_p'])
+          drank = xgb.DMatrix(Xrank,label=yrank,base_margin=mrank,feature_names=rank_cols)
+          rank_model = xgb.train(params,drank,num_boost_round=rounds,verbose_eval=False)
+          gain = rank_model.get_score(importance_type='gain')
+          ranked_signed = sorted(signed, key=lambda c: gain.get(c,0.0), reverse=True)
+
+          # Candidate subsets. Market overround is always retained as V4 did.
+          candidates = {
+              'full_v4': signed,
+              'top_100_pre2021_gain': ranked_signed[:100],
+              'top_75_pre2021_gain': ranked_signed[:75],
+              'top_50_pre2021_gain': ranked_signed[:50],
+              'top_35_pre2021_gain': ranked_signed[:35],
+          }
+
+          # Domain ablations from the full signed set.
+          domains = {
+              'style': ['style_'],
+              'recent_form': ['recent_form_','recent_'],
+              'ewm': ['ewm_'],
+              'physical': ['age','reach','height','weight'],
+              'grappling': ['td_','takedown','ctrl','control','wrestl','sub_','submission','ground'],
+              'striking': ['sapm','splm','str_','strike','kd_','ko_','chin','power','aggression'],
+          }
+          for name,tokens in domains.items():
+              candidates[f'abl_no_{name}'] = [c for c in signed if not any(t in c.lower() for t in tokens)]
+
+          folds = [
+              ('2021','2020-12-31','2021-01-01','2021-12-31'),
+              ('2022','2021-12-31','2022-01-01','2022-12-31'),
+              ('2023','2022-12-31','2023-01-01','2023-12-31'),
+              ('2024','2023-12-31','2024-01-01','2024-12-31'),
+          ]
+
+          summary = {
+              'design': {
+                  'name':'market_offset_v5_feature_reduction',
+                  'base_architecture':'frozen V4 d1_300_strong alpha=1.0',
+                  'feature_ranking':'gain from model trained only through 2020',
+                  'subset_selection':'pooled chronological 2021-2024 OOF log loss',
+                  '2025_plus':'untouched until subset frozen',
+                  'roi_used_for_selection':False,
+              },
+              'full_signed_feature_count':len(signed),
+              'pre2021_ranked_features':ranked_signed,
+              'candidates':{},
+          }
+
+          market_oof_parts=[]
+          for fold_name,train_end,val_start,val_end in folds:
+              val=(df['date']>=val_start)&(df['date']<=val_end)
+              market_oof_parts.append(pd.DataFrame({'fold':fold_name,'won':df.loc[val,'won'].astype(int).to_numpy(),'p':df.loc[val,'fair_market_p'].to_numpy()}))
+          market_oof=pd.concat(market_oof_parts,ignore_index=True)
+          market_oof_metrics=metrics(market_oof['won'],market_oof['p'])
+          summary['market_oof']=market_oof_metrics
+
+          candidate_oof_store={}
+          for name,cols in candidates.items():
+              feature_cols=cols+['market_overround']
+              oof=[]; folds_out=[]
+              for fold_name,train_end,val_start,val_end in folds:
+                  tr=df['date']<=train_end
+                  va=(df['date']>=val_start)&(df['date']<=val_end)
+                  valid=[c for c in feature_cols if Xraw.loc[tr,c].notna().any()]
+                  med=Xraw.loc[tr,valid].median(numeric_only=True)
+                  Xtr=Xraw.loc[tr,valid].fillna(med).fillna(0.0)
+                  Xva=Xraw.loc[va,valid].fillna(med).fillna(0.0)
+                  ytr=df.loc[tr,'won'].astype(int).to_numpy(); yva=df.loc[va,'won'].astype(int).to_numpy()
+                  mtr=logit(df.loc[tr,'fair_market_p']); mva=logit(df.loc[va,'fair_market_p'])
+                  dtr=xgb.DMatrix(Xtr,label=ytr,base_margin=mtr,feature_names=valid)
+                  dva=xgb.DMatrix(Xva,label=yva,base_margin=mva,feature_names=valid)
+                  model=xgb.train(params,dtr,num_boost_round=rounds,verbose_eval=False)
+                  full_margin=model.predict(dva,output_margin=True)
+                  p=sigmoid(mva + alpha*(full_margin-mva))
+                  mm=metrics(yva,sigmoid(mva)); mx=metrics(yva,p)
+                  folds_out.append({
+                      'fold':fold_name,'train_n':int(tr.sum()),'validation_n':int(va.sum()),'feature_count':len(valid),
+                      'market':mm,'model':mx,'delta_log_loss_vs_market':float(mx['log_loss']-mm['log_loss']),
+                      'delta_brier_vs_market':float(mx['brier']-mm['brier'])
+                  })
+                  oof.append(pd.DataFrame({'fight_id':df.loc[va,'fight_id'].to_numpy(),'date':df.loc[va,'date'].to_numpy(),'won':yva,'model_p':p,'market_p':sigmoid(mva)}))
+              odf=pd.concat(oof,ignore_index=True)
+              om=metrics(odf['won'],odf['model_p'])
+              summary['candidates'][name]={
+                  'feature_count':len(cols)+1,
+                  'folds':folds_out,
+                  'oof':om,
+                  'delta_log_loss_vs_market':float(om['log_loss']-market_oof_metrics['log_loss']),
+                  'delta_brier_vs_market':float(om['brier']-market_oof_metrics['brier']),
+              }
+              candidate_oof_store[name]=odf
+
+          selected=min(summary['candidates'], key=lambda k: summary['candidates'][k]['oof']['log_loss'])
+          selected_cols=candidates[selected]
+          summary['selected_candidate']=selected
+          summary['selected_feature_count']=len(selected_cols)+1
+          summary['selected_features']=selected_cols
+
+          # Final frozen fit through 2024; only now score untouched 2025+.
+          feature_cols=selected_cols+['market_overround']
+          tr=df['date']<='2024-12-31'; te=df['date']>='2025-01-01'
+          valid=[c for c in feature_cols if Xraw.loc[tr,c].notna().any()]
+          med=Xraw.loc[tr,valid].median(numeric_only=True)
+          Xtr=Xraw.loc[tr,valid].fillna(med).fillna(0.0); Xte=Xraw.loc[te,valid].fillna(med).fillna(0.0)
+          ytr=df.loc[tr,'won'].astype(int).to_numpy(); yte=df.loc[te,'won'].astype(int).to_numpy()
+          mtr=logit(df.loc[tr,'fair_market_p']); mte=logit(df.loc[te,'fair_market_p'])
+          dtr=xgb.DMatrix(Xtr,label=ytr,base_margin=mtr,feature_names=valid)
+          dte=xgb.DMatrix(Xte,label=yte,base_margin=mte,feature_names=valid)
+          model=xgb.train(params,dtr,num_boost_round=rounds,verbose_eval=False)
+          full_margin=model.predict(dte,output_margin=True); correction=full_margin-mte
+          p_market=sigmoid(mte); p_model=sigmoid(mte+correction)
+          mt=metrics(yte,p_market); mx=metrics(yte,p_model)
+
+          test_red=df.loc[te,['fight_id','date','won','fair_market_p','market_overround','outcome_label']].copy()
+          test_red['model_p_red']=p_model
+          side=ml[ml['fight_id'].isin(test_red['fight_id'])].copy().merge(test_red[['fight_id','model_p_red']],on='fight_id',how='inner')
+          side['model_p']=np.where(side['outcome_side'].astype(str).eq('red'),side['model_p_red'],1-side['model_p_red'])
+          side['edge']=side['model_p']-side['fair_market_p']
+          roi=[]
+          for thr in [0.0,0.02,0.05,0.075,0.10,0.15]:
+              g=side[side['edge']>=thr]
+              if len(g)==0: continue
+              profit=np.where(g['won'].eq(1),g['profit_per_100'],-100.0)
+              roi.append({'min_edge':thr,'n_bets':int(len(g)),'win_rate':float(g['won'].mean()),'avg_edge':float(g['edge'].mean()),'roi':float(profit.mean()/100.0)})
+
+          gain_final=model.get_score(importance_type='gain')
+          summary['final_test']={
+              'selected_candidate':selected,
+              'train_n_fights':int(tr.sum()),'test_n_fights':int(te.sum()),'feature_count':len(valid),
+              'market':mt,'v5_market_offset':mx,
+              'delta_log_loss_vs_market':float(mx['log_loss']-mt['log_loss']),
+              'delta_brier_vs_market':float(mx['brier']-mt['brier']),
+              'mean_abs_probability_move':float(np.mean(np.abs(p_model-p_market))),
+              'p95_abs_probability_move':float(np.quantile(np.abs(p_model-p_market),0.95)),
+              'edge_buckets':roi,
+              'max_pair_sum_error':float((side.groupby('fight_id')['model_p'].sum()-1.0).abs().max()),
+              'top_features_by_gain':[{'feature':k,'gain':float(v)} for k,v in sorted(gain_final.items(),key=lambda z:z[1],reverse=True)[:30]],
+          }
+
+          side.to_csv(OUT/'xgboost_market_offset_v5_feature_reduction_test_predictions.csv',index=False)
+          candidate_oof_store[selected].to_csv(OUT/'xgboost_market_offset_v5_selected_oof.csv',index=False)
+          with open(OUT/'xgboost_market_offset_v5_feature_reduction_summary.json','w',encoding='utf-8') as f:
+              json.dump(summary,f,indent=2)
+          print(json.dumps(summary,indent=2))
+          PY
+
+      - name: Commit research outputs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add -f data/research/prop_mispricing/xgboost_market_offset_v5_feature_reduction_summary.json data/research/prop_mispricing/xgboost_market_offset_v5_feature_reduction_test_predictions.csv data/research/prop_mispricing/xgboost_market_offset_v5_selected_oof.csv
+          git commit -m "Add XGBoost market-offset V5 feature reduction results" || echo "No changes to commit"
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
