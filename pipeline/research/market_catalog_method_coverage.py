@@ -8,8 +8,12 @@ FILES = [
     'fanduel_market_catalog.parquet',
     'canonical_market_catalog.parquet',
 ]
-METHOD_TERMS = ('method', 'ko', 'tko', 'submission', 'decision')
-KEY_HINTS = ('market', 'category', 'type', 'outcome', 'selection', 'label', 'fighter', 'event', 'fight', 'participant', 'name')
+
+REQUIRED_METHOD_KEYS = {
+    'win_by_ko_tko_dq',
+    'win_by_submission',
+    'win_by_decision',
+}
 
 
 def summarize(path: Path):
@@ -17,68 +21,63 @@ def summarize(path: Path):
     out = {
         'file': path.name,
         'rows': int(len(df)),
-        'columns': [str(c) for c in df.columns],
-        'dtypes': {str(c): str(df[c].dtype) for c in df.columns},
+        'snapshot_min': None,
+        'snapshot_max': None,
+        'event_min': None,
+        'event_max': None,
+        'unique_events': int(df['provider_event_id'].nunique()) if 'provider_event_id' in df else None,
     }
-
-    date_cov = {}
-    for c in df.columns:
-        lc = str(c).lower()
-        if any(k in lc for k in ('date', 'time', 'captured', 'scrape', 'start')):
-            s = pd.to_datetime(df[c], errors='coerce', utc=True)
+    for col, lo, hi in [
+        ('snapshot_timestamp', 'snapshot_min', 'snapshot_max'),
+        ('event_start_timestamp', 'event_min', 'event_max'),
+    ]:
+        if col in df:
+            s = pd.to_datetime(df[col], errors='coerce', utc=True)
             if s.notna().any():
-                date_cov[str(c)] = {
-                    'n': int(s.notna().sum()),
-                    'min': str(s.min()),
-                    'max': str(s.max()),
-                }
-    out['date_coverage'] = date_cov
+                out[lo] = str(s.min())
+                out[hi] = str(s.max())
 
-    categorical = {}
-    method_hits = {}
-    method_mask = pd.Series(False, index=df.index)
-    for c in df.columns:
-        s = df[c]
-        if s.dtype == 'object' or pd.api.types.is_string_dtype(s):
-            vals = s.fillna('').astype(str)
-            low = vals.str.lower()
-            hit = low.apply(lambda x: any(t in x for t in METHOD_TERMS))
-            method_mask |= hit
-            if hit.any():
-                method_hits[str(c)] = vals[hit].value_counts().head(50).to_dict()
-            if any(k in str(c).lower() for k in KEY_HINTS):
-                categorical[str(c)] = vals[vals.ne('')].value_counts().head(30).to_dict()
+    fm = df[df.get('market_family', pd.Series('', index=df.index)).astype(str).eq('fighter_method_props')].copy()
+    out['fighter_method_rows'] = int(len(fm))
+    out['fighter_method_events'] = int(fm['provider_event_id'].nunique()) if len(fm) else 0
 
-    m = df[method_mask]
-    out['method_like_rows'] = int(len(m))
-    out['method_hits'] = method_hits
-    out['key_values'] = categorical
-
-    # Compact uniqueness counts for likely identifiers.
-    uniq = {}
-    for c in df.columns:
-        lc = str(c).lower()
-        if any(k in lc for k in ('event', 'fight', 'bout', 'market', 'fighter', 'participant')):
-            try:
-                uniq[str(c)] = int(df[c].nunique(dropna=True))
-            except Exception:
-                pass
-    out['unique_counts'] = uniq
-
-    # Keep only 8 method rows so schema/value semantics are visible in logs.
-    if len(m):
-        sample_cols = [c for c in df.columns if any(k in str(c).lower() for k in KEY_HINTS) or str(c).lower() in ('odds','price','american_odds','captured_at','snapshot_at')]
-        sample_cols = sample_cols[:20] or list(df.columns[:12])
-        sm = m[sample_cols].head(8).copy()
-        out['method_samples'] = sm.astype(object).where(pd.notna(sm), None).to_dict('records')
-    else:
-        out['method_samples'] = []
+    event_details = []
+    complete = 0
+    incomplete = 0
+    if len(fm):
+        for event_id, g in fm.groupby('provider_event_id', sort=True):
+            event_name = str(g['event_name'].iloc[0])
+            fighters = sorted(set(g['fighter_name'].dropna().astype(str)))
+            keys_by_fighter = {
+                f: sorted(set(g.loc[g['fighter_name'].astype(str).eq(f), 'market_key'].dropna().astype(str)))
+                for f in fighters
+            }
+            rows_by_fighter = {f: int((g['fighter_name'].astype(str) == f).sum()) for f in fighters}
+            is_complete = (
+                len(fighters) == 2
+                and all(set(keys_by_fighter[f]) == REQUIRED_METHOD_KEYS for f in fighters)
+                and len(g) == 6
+            )
+            complete += int(is_complete)
+            incomplete += int(not is_complete)
+            event_details.append({
+                'provider_event_id': str(event_id),
+                'event_name': event_name,
+                'rows': int(len(g)),
+                'fighters': fighters,
+                'keys_by_fighter': keys_by_fighter,
+                'rows_by_fighter': rows_by_fighter,
+                'complete_six_way': bool(is_complete),
+            })
+    out['complete_six_way_events'] = complete
+    out['incomplete_six_way_events'] = incomplete
+    out['events'] = event_details
     return out
 
 
 def main():
     result = {'files': [summarize(BASE / f) for f in FILES if (BASE / f).exists()]}
-    print('COMPACT_METHOD_COVERAGE=' + json.dumps(result, default=str, separators=(',', ':')))
+    print('SIX_WAY_COVERAGE=' + json.dumps(result, default=str, separators=(',', ':')))
 
 if __name__ == '__main__':
     main()
