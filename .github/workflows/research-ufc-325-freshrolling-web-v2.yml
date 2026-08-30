@@ -1,4 +1,4 @@
-name: Research UFC 326 Combined FreshRolling V2
+name: Research UFC 326 Covered FreshRolling V3
 on:
   push:
     branches: [research/ufc-prop-mispricing-xgboost-20260829]
@@ -17,7 +17,7 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install pandas pyarrow numpy scikit-learn xgboost pyyaml requests beautifulsoup4 lxml
-      - name: Run combined UFC 326 frozen scorer
+      - name: Run covered UFC 326 frozen scorer
         run: |
           python - <<'PY'
           import re
@@ -30,8 +30,9 @@ jobs:
             ("DATE='2026-01-31'","DATE='2026-03-07'"),
             ("url='https://www.bestfightodds.com/events/ufc-3971'; html=requests.get(url,headers=H,timeout=30).text; soup=BeautifulSoup(html,'lxml')","urls=['https://www.bestfightodds.com/events/ufc-4025','https://www.bestfightodds.com/events/ufc-326-4065']; url=';'.join(urls); soups=[BeautifulSoup(requests.get(u,headers=H,timeout=30).text,'lxml') for u in urls]"),
             ("for ti,table in enumerate(soup.find_all('table')):","for ti,table in enumerate(sum((s.find_all('table') for s in soups), [])):") ,
-            ("if len(boards)!=13:raise RuntimeError(f'Expected 13 matched boards, got {len(boards)}: {list(boards)}')","if len(boards)!=13:raise RuntimeError(f'Expected 13 matched UFC326 boards, got {len(boards)}: {list(boards)}')"),
-            ("Expected 13 fresh rolling UFC325 rows","Expected 13 fresh rolling UFC326 rows"),
+            ("if len(boards)!=13:raise RuntimeError(f'Expected 13 matched boards, got {len(boards)}: {list(boards)}')","if len(boards)!=9:raise RuntimeError(f'Expected 9 matched complete UFC326 boards, got {len(boards)}: {list(boards)}')"),
+            ("len(card)!=13","len(card)!=9"),
+            ("Expected 13 fresh rolling UFC325 rows","Expected 9 market-covered fresh rolling UFC326 rows"),
             ("ufc_325_market_sources_v1.csv","ufc_326_market_sources_v1.csv"),
             ("ufc_325_moneyline_freshrolling_v1.csv","ufc_326_moneyline_freshrolling_v1.csv"),
             ("ufc_325_method_freshrolling_v1.csv","ufc_326_method_freshrolling_v1.csv"),
@@ -39,13 +40,13 @@ jobs:
           for old,new in reps:
             if old not in code: raise RuntimeError('missing transform literal: '+old[:120])
             code=code.replace(old,new,1)
-          exec(compile(code,'<ufc326_combined_v2>','exec'),{})
+          exec(compile(code,'<ufc326_covered_v3>','exec'),{})
           PY
       - name: Commit UFC 326 scores
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add -f data/research/prop_mispricing/ufc_326_*_v1.csv
-          git commit -m 'research: add UFC 326 authoritative frozen scores' || echo No-changes
+          git commit -m 'research: add UFC 326 authoritative covered frozen scores' || echo No-changes
           git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
           git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
