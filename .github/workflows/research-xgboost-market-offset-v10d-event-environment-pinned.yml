@@ -83,6 +83,14 @@ jobs:
               raise RuntimeError('V10 market filter block not found')
           code=code.replace(old_filter,new_filter)
 
+          # Original V5 sorted the modeling frame before any XGBoost fit.
+          # This is required for exact seeded subsample=0.8 reproduction.
+          old_merge="""df=red.merge(fv[need],on='fight_id',how='inner',suffixes=('','_fv'))\n# Primary exact event-name/date match, then date-only fallback when UFCStats has one event that date."""
+          new_merge="""df=red.merge(fv[need],on='fight_id',how='inner',suffixes=('','_fv')).sort_values(['date','fight_id']).copy()\n# Primary exact event-name/date match, then date-only fallback when UFCStats has one event that date."""
+          if old_merge not in code:
+              raise RuntimeError('V10 modeling-frame merge block not found')
+          code=code.replace(old_merge,new_merge)
+
           # Hard gate: the baseline in THIS SAME run must reproduce V5 exactly
           # before selection or the 2025+ test is permitted.
           needle="""selected=min(summary['candidates'],key=lambda k:summary['candidates'][k]['oof']['log_loss']); summary['selected_candidate']=selected; summary['selected_environment_interactions']=[c for c in candidates[selected] if c.startswith('env_')]; summary['selected_feature_count']=len(candidates[selected])"""
