@@ -1,0 +1,207 @@
+name: Research XGBoost Market Offset V6 Career Trajectory
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - .github/workflows/research-xgboost-market-offset-v6-trajectory.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  xgboost-market-offset-v6-trajectory:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout research branch
+        uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas pyarrow numpy scikit-learn xgboost
+
+      - name: Run trajectory family experiment
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import numpy as np
+          import pandas as pd
+          from sklearn.metrics import brier_score_loss, log_loss, roc_auc_score
+          import xgboost as xgb
+
+          OUT = Path('data/research/prop_mispricing')
+          V5 = OUT/'xgboost_market_offset_v5_feature_reduction_summary.json'
+          with open(V5,'r',encoding='utf-8') as f:
+              v5 = json.load(f)
+          core = list(v5['selected_features'])
+
+          market = pd.read_parquet('data/market/historical_market_outcomes.parquet').copy()
+          market = market[(market['bookmaker']=='legacy_consensus') & (market['result_status']=='graded') & market['won'].notna()].copy()
+          market['date'] = pd.to_datetime(market['date'], errors='coerce')
+          market['won'] = market['won'].astype(bool).astype(int)
+          market['implied_probability'] = pd.to_numeric(market['implied_probability'], errors='coerce')
+          market['profit_per_100'] = pd.to_numeric(market['profit_per_100'], errors='coerce')
+          market = market.dropna(subset=['date','implied_probability','profit_per_100']).copy()
+          ml = market[market['market_key']=='moneyline'].copy()
+          good = ml.groupby('fight_id').size(); good = good[good==2].index
+          ml = ml[ml['fight_id'].isin(good)].copy()
+          ml['market_overround'] = ml.groupby('fight_id')['implied_probability'].transform('sum')
+          ml['fair_market_p'] = ml['implied_probability']/ml['market_overround']
+          red = ml[ml['outcome_side'].astype(str).eq('red')].copy()
+
+          fv = pd.read_parquet('data/features/moneyline_feature_view.parquet').copy()
+
+          # These metrics exist in three prefight horizons in the feature view:
+          # career/pre, medium-horizon EWM, and short-horizon recent_form.
+          metrics = [
+              'elo','win_pct','kd_avg','kd_absorbed_avg','splm','sapm','str_acc','str_def',
+              'td_avg','td_acc','td_def','sub_avg','ctrl_per_min','ctrl_against_per_min',
+              'finish_rate','ko_rate','sub_win_rate','decision_win_rate','finish_loss_rate',
+              'decision_loss_rate','avg_opponent_elo','avg_fight_time'
+          ]
+
+          raw_needed = set(['fight_id'] + core)
+          for side in ['r','b']:
+              for m in metrics:
+                  raw_needed.update([f'{side}_pre_{m}',f'{side}_ewm_{m}',f'{side}_recent_form_{m}'])
+          raw_needed = [c for c in raw_needed if c in fv.columns]
+          df = red.merge(fv[raw_needed], on='fight_id', how='inner').sort_values(['date','fight_id']).copy()
+
+          # Career trajectory = within-fighter change across horizons, then RED minus BLUE.
+          fam_recent_career=[]; fam_recent_ewm=[]; fam_ewm_career=[]
+          for m in metrics:
+              req = [f'r_pre_{m}',f'b_pre_{m}',f'r_ewm_{m}',f'b_ewm_{m}',f'r_recent_form_{m}',f'b_recent_form_{m}']
+              if not all(c in df.columns for c in req):
+                  continue
+              n1=f'traj_{m}_recent_minus_career_diff'
+              n2=f'traj_{m}_recent_minus_ewm_diff'
+              n3=f'traj_{m}_ewm_minus_career_diff'
+              df[n1] = (df[f'r_recent_form_{m}']-df[f'r_pre_{m}']) - (df[f'b_recent_form_{m}']-df[f'b_pre_{m}'])
+              df[n2] = (df[f'r_recent_form_{m}']-df[f'r_ewm_{m}']) - (df[f'b_recent_form_{m}']-df[f'b_ewm_{m}'])
+              df[n3] = (df[f'r_ewm_{m}']-df[f'r_pre_{m}']) - (df[f'b_ewm_{m}']-df[f'b_pre_{m}'])
+              fam_recent_career.append(n1); fam_recent_ewm.append(n2); fam_ewm_career.append(n3)
+
+          candidates = {
+              'v5_core': core,
+              'v5_plus_recent_minus_career': core + fam_recent_career,
+              'v5_plus_recent_minus_ewm': core + fam_recent_ewm,
+              'v5_plus_ewm_minus_career': core + fam_ewm_career,
+              'v5_plus_short_and_long_trajectory': core + fam_recent_career + fam_recent_ewm,
+              'v5_plus_all_trajectory': core + fam_recent_career + fam_recent_ewm + fam_ewm_career,
+          }
+
+          def clip_p(p): return np.clip(np.asarray(p,float),1e-6,1-1e-6)
+          def logit(p):
+              p=clip_p(p); return np.log(p/(1-p))
+          def sigmoid(z):
+              z=np.clip(np.asarray(z,float),-30,30); return 1/(1+np.exp(-z))
+          def metrics_fn(y,p):
+              y=np.asarray(y,int); p=clip_p(p)
+              return {'n':int(len(y)),'brier':float(brier_score_loss(y,p)),'log_loss':float(log_loss(y,p,labels=[0,1])),'auc':float(roc_auc_score(y,p)) if len(np.unique(y))==2 else None}
+
+          params = {
+              'max_depth':1,'eta':0.03,'subsample':0.8,'colsample_bytree':0.7,
+              'min_child_weight':10,'lambda':8.0,'alpha':1.0,
+              'objective':'binary:logistic','eval_metric':'logloss','seed':42,'nthread':2,
+          }
+          rounds=300
+          folds=[
+              ('2021','2020-12-31','2021-01-01','2021-12-31'),
+              ('2022','2021-12-31','2022-01-01','2022-12-31'),
+              ('2023','2022-12-31','2023-01-01','2023-12-31'),
+              ('2024','2023-12-31','2024-01-01','2024-12-31'),
+          ]
+
+          summary={'design':{
+              'name':'market_offset_v6_career_trajectory',
+              'base':'frozen V5 top-50 feature core + market_overround',
+              'architecture':'frozen V4/V5 d1_300_strong alpha=1.0',
+              'trajectory_definition':'within-fighter recent/EWM/career change, then red-minus-blue matchup difference',
+              'selection':'pooled chronological 2021-2024 OOF log loss only',
+              '2025_plus':'untouched until trajectory family selected',
+              'roi_used_for_selection':False,
+          },'trajectory_metrics':metrics,'trajectory_feature_counts':{
+              'recent_minus_career':len(fam_recent_career),
+              'recent_minus_ewm':len(fam_recent_ewm),
+              'ewm_minus_career':len(fam_ewm_career),
+          },'candidates':{}}
+
+          market_oof_parts=[]
+          for cname, cols0 in candidates.items():
+              cols = list(dict.fromkeys(cols0 + ['market_overround']))
+              Xraw=df[cols].replace([np.inf,-np.inf],np.nan)
+              oof_parts=[]; fold_rows=[]
+              for fold,train_end,val_start,val_end in folds:
+                  tr=df['date']<=train_end
+                  va=(df['date']>=val_start)&(df['date']<=val_end)
+                  valid=[c for c in cols if Xraw.loc[tr,c].notna().any()]
+                  med=Xraw.loc[tr,valid].median(numeric_only=True)
+                  Xtr=Xraw.loc[tr,valid].fillna(med).fillna(0.0)
+                  Xva=Xraw.loc[va,valid].fillna(med).fillna(0.0)
+                  ytr=df.loc[tr,'won'].astype(int).to_numpy(); yva=df.loc[va,'won'].astype(int).to_numpy()
+                  mtr=logit(df.loc[tr,'fair_market_p']); mva=logit(df.loc[va,'fair_market_p'])
+                  dtr=xgb.DMatrix(Xtr,label=ytr,base_margin=mtr,feature_names=valid)
+                  dva=xgb.DMatrix(Xva,label=yva,base_margin=mva,feature_names=valid)
+                  booster=xgb.train(params,dtr,num_boost_round=rounds,verbose_eval=False)
+                  p=sigmoid(booster.predict(dva,output_margin=True))
+                  mm=metrics_fn(yva,sigmoid(mva)); mx=metrics_fn(yva,p)
+                  fold_rows.append({'fold':fold,'train_n':int(tr.sum()),'validation_n':int(va.sum()),'feature_count':len(valid),'market':mm,'model':mx,'delta_log_loss_vs_market':mx['log_loss']-mm['log_loss'],'delta_brier_vs_market':mx['brier']-mm['brier']})
+                  oof_parts.append(pd.DataFrame({'won':yva,'market_p':sigmoid(mva),'model_p':p}))
+              oof=pd.concat(oof_parts,ignore_index=True)
+              mo=metrics_fn(oof['won'],oof['market_p']); xo=metrics_fn(oof['won'],oof['model_p'])
+              summary['candidates'][cname]={'feature_count':len(cols),'folds':fold_rows,'oof':xo,'delta_log_loss_vs_market':xo['log_loss']-mo['log_loss'],'delta_brier_vs_market':xo['brier']-mo['brier']}
+              if not market_oof_parts: market_oof_parts=[oof[['won','market_p']]]
+
+          selected=min(summary['candidates'],key=lambda k:summary['candidates'][k]['oof']['log_loss'])
+          summary['selected_candidate']=selected
+          selected_cols=list(dict.fromkeys(candidates[selected]+['market_overround']))
+          summary['selected_feature_count']=len(selected_cols)
+          summary['selected_trajectory_features']=[c for c in selected_cols if c.startswith('traj_')]
+
+          # Final fit only after family selection is frozen.
+          Xraw=df[selected_cols].replace([np.inf,-np.inf],np.nan)
+          tr=df['date']<='2024-12-31'; te=df['date']>='2025-01-01'
+          valid=[c for c in selected_cols if Xraw.loc[tr,c].notna().any()]
+          med=Xraw.loc[tr,valid].median(numeric_only=True)
+          Xtr=Xraw.loc[tr,valid].fillna(med).fillna(0.0); Xte=Xraw.loc[te,valid].fillna(med).fillna(0.0)
+          ytr=df.loc[tr,'won'].astype(int).to_numpy(); yte=df.loc[te,'won'].astype(int).to_numpy()
+          mtr=logit(df.loc[tr,'fair_market_p']); mte=logit(df.loc[te,'fair_market_p'])
+          dtr=xgb.DMatrix(Xtr,label=ytr,base_margin=mtr,feature_names=valid); dte=xgb.DMatrix(Xte,label=yte,base_margin=mte,feature_names=valid)
+          booster=xgb.train(params,dtr,num_boost_round=rounds,verbose_eval=False)
+          margin=booster.predict(dte,output_margin=True); p=sigmoid(margin); pm=sigmoid(mte)
+          mm=metrics_fn(yte,pm); mx=metrics_fn(yte,p)
+          test_red=df.loc[te,['fight_id','date','won','fair_market_p','market_overround','outcome_label']].copy(); test_red['model_p_red']=p
+          side=ml[ml['fight_id'].isin(test_red['fight_id'])].merge(test_red[['fight_id','model_p_red']],on='fight_id',how='inner')
+          side['model_p']=np.where(side['outcome_side'].astype(str).eq('red'),side['model_p_red'],1-side['model_p_red']); side['edge']=side['model_p']-side['fair_market_p']
+          roi=[]
+          for thr in [0,.02,.05,.075,.10,.15]:
+              g=side[side['edge']>=thr]
+              if len(g):
+                  profit=np.where(g['won'].eq(1),g['profit_per_100'],-100.0)
+                  roi.append({'min_edge':thr,'n_bets':int(len(g)),'win_rate':float(g['won'].mean()),'avg_edge':float(g['edge'].mean()),'roi':float(profit.mean()/100)})
+          gain=booster.get_score(importance_type='gain')
+          summary['final_test']={'selected_candidate':selected,'train_n_fights':int(tr.sum()),'test_n_fights':int(te.sum()),'feature_count':len(valid),'market':mm,'v6_market_offset':mx,'delta_log_loss_vs_market':mx['log_loss']-mm['log_loss'],'delta_brier_vs_market':mx['brier']-mm['brier'],'mean_abs_probability_move':float(np.mean(np.abs(p-pm))),'p95_abs_probability_move':float(np.quantile(np.abs(p-pm),.95)),'edge_buckets':roi,'max_pair_sum_error':float((side.groupby('fight_id')['model_p'].sum()-1).abs().max()),'top_features_by_gain':[{'feature':k,'gain':float(v)} for k,v in sorted(gain.items(),key=lambda z:z[1],reverse=True)[:35]]}
+
+          side.to_csv(OUT/'xgboost_market_offset_v6_trajectory_test_predictions.csv',index=False)
+          with open(OUT/'xgboost_market_offset_v6_trajectory_summary.json','w',encoding='utf-8') as f: json.dump(summary,f,indent=2)
+          print(json.dumps(summary,indent=2))
+          PY
+
+      - name: Commit research outputs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add -f data/research/prop_mispricing/xgboost_market_offset_v6_trajectory_summary.json data/research/prop_mispricing/xgboost_market_offset_v6_trajectory_test_predictions.csv
+          git commit -m "Add XGBoost V6 career trajectory results" || echo "No changes to commit"
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
