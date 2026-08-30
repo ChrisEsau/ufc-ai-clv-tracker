@@ -1,0 +1,11 @@
+FIGHTER ROWS FIRST 8 [(1, 'Daniel Rodriguez'), (2, 'Uros Medic'), (175, 'Jan Blachowicz'), (176, 'Navajo Stirling'), (295, 'Aleksandar Rakic'), (296, 'Marcin Tybura'), (415, 'Gilbert Urbina'), (416, 'Vlasto Cepo')]
+BLOCK j=0 start=1,2 end=175 pair=Daniel Rodriguez|Uros Medic
+ROW 23 label='Rodriguez wins by TKO/KO' prefix='Rodriguez' sims=0.720/0.421 side=1 vals=[(21, 500, None), (25, 525, None), (20, 500, None), (26, 525, None)]
+ROW 25 label='Medic wins by TKO/KO' prefix='Medic' sims=0.286/0.667 side=2 vals=[(21, -250, None), (20, -250, None), (26, -278, None)]
+ROW 27 label='Rodriguez wins by submission' prefix='Rodriguez' sims=0.720/0.421 side=1 vals=[(21, 1500, None), (25, 1200, None), (20, 1400, None), (26, 1200, None)]
+ROW 29 label='Medic wins by submission' prefix='Medic' sims=0.286/0.667 side=2 vals=[(21, 1200, None), (20, 700, None), (26, 1050, None)]
+ROW 35 label='Rodriguez wins by decision' prefix='Rodriguez' sims=0.720/0.421 side=1 vals=[(21, 2200, None), (25, 2200, None), (20, 1200, None), (26, 2200, None)]
+ROW 37 label='Medic wins by decision' prefix='Medic' sims=0.286/0.667 side=2 vals=[(21, 1800, None), (20, 900, None), (26, 2000, None)]
+ROW 131 label='Either fighter wins by TKO/KO' prefix='Either fighter' sims=0.333/0.167 side=1 vals=[(21, -550, 500)]
+ROW 133 label='Either fighter wins by submission' prefix='Either fighter' sims=0.333/0.167 side=1 vals=[(21, 700, 1500)]
+FINAL FD {(21, 1, 'ko'): -550, (21, 2, 'ko'): -250, (21, 1, 'sub'): 700, (21, 2, 'sub'): 1200, (21, 1, 'dec'): 2200, (21, 2, 'dec'): 1800}
