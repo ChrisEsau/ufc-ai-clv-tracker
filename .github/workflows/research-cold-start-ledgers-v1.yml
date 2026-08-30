@@ -1,4 +1,5 @@
 name: Research Cold Start Filtered Ledgers V1
+# Rebuild trigger: corrected UFC Belgrade BFO fighter-specific method board.
 on:
   push:
     branches: [research/ufc-prop-mispricing-xgboost-20260829]
