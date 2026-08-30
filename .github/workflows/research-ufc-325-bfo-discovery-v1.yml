@@ -1,0 +1,48 @@
+name: Research UFC 325 BFO Discovery V1
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-ufc-325-bfo-discovery-v1.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests beautifulsoup4
+      - name: Discover archive IDs
+        run: |
+          python - <<'PY'
+          import requests,re
+          from pathlib import Path
+          out=[]
+          H={'User-Agent':'Mozilla/5.0'}
+          for i in range(3960,4021):
+            u=f'https://www.bestfightodds.com/events/ufc-{i}'
+            try:
+              t=requests.get(u,headers=H,timeout=12).text
+            except Exception as e:
+              continue
+            low=t.lower()
+            if 'volkanovski' in low or ('diego lopes' in low and 'saint' in low):
+              title=re.search(r'<title>(.*?)</title>',t,re.I|re.S)
+              out.append((i,u,(title.group(1).strip() if title else ''),len(t),'volkanovski' in low,'hooker' in low,'saint-denis' in low or 'saint denis' in low))
+          p=Path('data/research/prop_mispricing/ufc_325_bfo_discovery_v1.txt'); p.parent.mkdir(parents=True,exist_ok=True); p.write_text('\n'.join(map(str,out))+'\n')
+          print('\n'.join(map(str,out)))
+          if not out: raise RuntimeError('No UFC 325 BFO archive found')
+          PY
+      - name: Commit discovery
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -f data/research/prop_mispricing/ufc_325_bfo_discovery_v1.txt
+          git commit -m 'research: add UFC 325 BFO discovery' || echo No-changes
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
