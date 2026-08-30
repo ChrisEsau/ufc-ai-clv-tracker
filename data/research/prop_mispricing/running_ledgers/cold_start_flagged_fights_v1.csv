@@ -1,0 +1,24 @@
+date,fight_id,fighters,min_prior_fights,cold_start,cold_start_fighters,fighter_prior_fights,card
+2026-06-20,6658fe4531c86674,Levan Chokheli vs Leon Shahbazyan,0.0,True,Leon Shahbazyan | Levan Chokheli,Leon Shahbazyan:0 | Levan Chokheli:0,Vegas 119
+2026-06-20,9efa4de316b8bf43,Otari Tanzilovi vs Shane Collins,0.0,True,Shane Collins | Otari Tanzilovi,Shane Collins:0 | Otari Tanzilovi:0,Vegas 119
+2026-06-20,e4849375d1949c74,Murtazali Magomedov vs Melsik Baghdasaryan,0.0,True,Murtazali Magomedov,Melsik Baghdasaryan:5 | Murtazali Magomedov:0,Vegas 119
+2026-06-27,0e60ab32f3d03929,Theodor Berggren vs Daniil Donchenko,0.0,True,Theodor Berggren,Daniil Donchenko:2 | Theodor Berggren:0,Baku
+2026-06-27,1a7119f3996b5635,Javier Reyes vs Kaan Ofli,1.0,True,Javier Reyes,Javier Reyes:1 | Kaan Ofli:4,Baku
+2026-06-27,6a35ff33b8597904,Eric Nolan vs Farman Hasanov,0.0,True,Eric Nolan | Farman Hasanov,Eric Nolan:1 | Farman Hasanov:0,Baku
+2026-06-27,f1cb2e7ef096ec7c,Jefferson Nascimento vs Tahir Abdullayev,0.0,True,Jefferson Nascimento | Tahir Abdullayev,Jefferson Nascimento:0 | Tahir Abdullayev:0,Baku
+2026-07-11,1162a74e3604c488,Zach Reese vs Ryan Gandra,1.0,True,Ryan Gandra,Zach Reese:7 | Ryan Gandra:1,UFC 329
+2026-07-11,118c25bda9392140,Elisha Ellison vs Gable Steveson,0.0,True,Elisha Ellison | Gable Steveson,Elisha Ellison:1 | Gable Steveson:0,UFC 329
+2026-07-11,9e00ee7644774e18,John Garza vs Farid Basharat,0.0,True,John Garza,Farid Basharat:6 | John Garza:0,UFC 329
+2026-07-11,b223b10ef19f912c,Cesar Almeida vs Damian Pinas,1.0,True,Damian Pinas,Cesar Almeida:5 | Damian Pinas:1,UFC 329
+2026-07-18,307ea95ad7ebe466,Dione Barbosa vs Anna Melisano,0.0,True,Anna Melisano,Dione Barbosa:5 | Anna Melisano:0,Oklahoma City
+2026-07-18,46d800ce45fdd3e6,Felipe Franco vs Levi Rodrigues Jr.,0.0,True,Levi Rodrigues Jr. | Felipe Franco,Levi Rodrigues Jr.:0 | Felipe Franco:1,Oklahoma City
+2026-07-18,9e525f939fba3e73,Damien Anderson vs Ezra Elliott,0.0,True,Ezra Elliott | Damien Anderson,Ezra Elliott:0 | Damien Anderson:0,Oklahoma City
+2026-07-18,c64c6ba6eb1e1d06,Alberto Montes vs Tommy McMillen,1.0,True,Tommy McMillen | Alberto Montes,Tommy McMillen:1 | Alberto Montes:1,Oklahoma City
+2026-07-18,e05155c1b5c2dc74,Alvin Hines vs RJ Harris,0.0,True,Alvin Hines | RJ Harris,Alvin Hines:1 | RJ Harris:0,Oklahoma City
+2026-07-18,f2eb569176e46edf,Seokhyeon Ko vs Jean-Paul Lebosnoyani,1.0,True,Jean-Paul Lebosnoyani,Seokhyeon Ko:2 | Jean-Paul Lebosnoyani:1,Oklahoma City
+2026-07-25,05bc7a042156b6f6,Muhammad Saidov vs Dustin Jacoby,0.0,True,Muhammad Saidov,Muhammad Saidov:0 | Dustin Jacoby:16,Abu Dhabi
+2026-07-25,3ac870d6e7d323b7,Brendson Ribeiro vs Magomed Tuchalov,0.0,True,Magomed Tuchalov,Brendson Ribeiro:7 | Magomed Tuchalov:0,Abu Dhabi
+2026-07-25,4ace64aa144389c5,Damian Rzepecki vs Magomed Zaynukov,0.0,True,Magomed Zaynukov | Damian Rzepecki,Magomed Zaynukov:0 | Damian Rzepecki:0,Abu Dhabi
+2026-07-25,532340708f0500bd,Abdul Hussein vs Cody Gibson,0.0,True,Abdul Hussein,Abdul Hussein:0 | Cody Gibson:10,Abu Dhabi
+2026-07-25,5ffb251c6ea48b65,Tyrell Fortune vs Rizvan Kuniev,1.0,True,Tyrell Fortune,Rizvan Kuniev:2 | Tyrell Fortune:1,Abu Dhabi
+2026-07-25,61280e5644189c61,Saygid Izagakhmaev vs Abubakar Vagaev,0.0,True,Saygid Izagakhmaev | Abubakar Vagaev,Saygid Izagakhmaev:1 | Abubakar Vagaev:0,Abu Dhabi
