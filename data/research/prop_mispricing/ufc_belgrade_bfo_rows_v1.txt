@@ -1,0 +1,3476 @@
+URL	https://www.bestfightodds.com/events/ufc-belgrade-4285
+STATUS	200	BYTES	1380067
+0	
+1	44217 Daniel Rodriguez
+2	Uros Medic
+3	Over 1½ rounds
+4	Under 1½ rounds
+5	Over 2½ rounds
+6	Under 2½ rounds
+7	Over 3½ rounds
+8	Under 3½ rounds
+9	Over 4½ rounds
+10	Under 4½ rounds
+11	Fight goes to decision
+12	Fight doesn't go to decision
+13	Fight starts round 2
+14	Fight won't start round 2
+15	Fight starts round 3
+16	Fight won't start round 3
+17	Fight starts round 4
+18	Fight won't start round 4
+19	Fight starts round 5
+20	Fight won't start round 5
+21	Fight is a draw
+22	Fight is not a draw
+23	Rodriguez wins by TKO/KO
+24	Any other result
+25	Medic wins by TKO/KO
+26	Any other result
+27	Rodriguez wins by submission
+28	Any other result
+29	Medic wins by submission
+30	Any other result
+31	Rodriguez wins inside distance
+32	Not Rodriguez inside distance
+33	Medic wins inside distance
+34	Not Medic inside distance
+35	Rodriguez wins by decision
+36	Not Rodriguez by decision
+37	Medic wins by decision
+38	Not Medic by decision
+39	Rodriguez wins in round 1
+40	Any other result
+41	Medic wins in round 1
+42	Any other result
+43	Rodriguez wins in round 2
+44	Any other result
+45	Medic wins in round 2
+46	Any other result
+47	Rodriguez wins in round 3
+48	Any other result
+49	Medic wins in round 3
+50	Any other result
+51	Rodriguez wins in round 4
+52	Any other result
+53	Medic wins in round 4
+54	Any other result
+55	Rodriguez wins in round 5
+56	Any other result
+57	Medic wins in round 5
+58	Any other result
+59	Rodriguez wins by unanimous decision
+60	Any other result
+61	Medic wins by unanimous decision
+62	Any other result
+63	Rodriguez wins by split/majority decision
+64	Any other result
+65	Medic wins by split/majority decision
+66	Any other result
+67	Fight ends in round 1
+68	Fight doesn't end in round 1
+69	Fight ends in round 1
+70	Fight doesn't end in round 1
+71	Fight ends in round 2
+72	Fight doesn't end in round 2
+73	Fight ends in round 2
+74	Fight doesn't end in round 2
+75	Fight ends in round 3
+76	Fight doesn't end in round 3
+77	Fight ends in round 3
+78	Fight doesn't end in round 3
+79	Fight ends in round 4
+80	Fight doesn't end in round 4
+81	Fight ends in round 4
+82	Fight doesn't end in round 4
+83	Fight ends in round 5
+84	Fight doesn't end in round 5
+85	Fight ends in round 5
+86	Fight doesn't end in round 5
+87	Rodriguez (scorecards = no action)
+88	Medic (scorecards = no action)
+89	Medic (scorecards = no action)
+90	Rodriguez (scorecards = no action)
+91	Rodriguez wins by TKO/KO in round 1
+92	Any other result
+93	Medic wins by TKO/KO in round 1
+94	Any other result
+95	Rodriguez wins by submission in round 1
+96	Any other result
+97	Medic wins by submission in round 1
+98	Any other result
+99	Rodriguez wins by TKO/KO in round 2
+100	Any other result
+101	Medic wins by TKO/KO in round 2
+102	Any other result
+103	Rodriguez wins by TKO/KO in round 3
+104	Any other result
+105	Medic wins by TKO/KO in round 3
+106	Any other result
+107	Rodriguez wins by TKO/KO in round 4
+108	Any other result
+109	Medic wins by TKO/KO in round 4
+110	Any other result
+111	Rodriguez wins by TKO/KO in round 5
+112	Any other result
+113	Medic wins by TKO/KO in round 5
+114	Any other result
+115	Rodriguez wins by submission in round 2
+116	Any other result
+117	Medic wins by submission in round 2
+118	Any other result
+119	Rodriguez wins by submission in round 3
+120	Any other result
+121	Medic wins by submission in round 3
+122	Any other result
+123	Rodriguez wins by submission in round 4
+124	Any other result
+125	Medic wins by submission in round 4
+126	Any other result
+127	Rodriguez wins by submission in round 5
+128	Any other result
+129	Medic wins by submission in round 5
+130	Any other result
+131	Either fighter wins by TKO/KO
+132	Any other result
+133	Either fighter wins by submission
+134	Any other result
+135	Rodriguez wins in round 1 or 2
+136	Any other result
+137	Medic wins in round 1 or 2
+138	Any other result
+139	Rodriguez wins in round 3 or 4
+140	Any other result
+141	Medic wins in round 3 or 4
+142	Any other result
+143	Fight ends in round 1 or 2
+144	Any other result
+145	Fight ends in round 3 or 4
+146	Any other result
+147	Fight ends in final round or goes to decision
+148	Any other result
+149	Fight ends in final round or goes to decision
+150	Any other result
+151	Rodriguez wins in final round or by decision
+152	Any other result
+153	Medic wins in final round or by decision
+154	Any other result
+155	Fight ends in TKO/KO/DQ in round 1
+156	Any other result
+157	Fight ends in TKO/KO/DQ in round 2
+158	Any other result
+159	Fight ends in TKO/KO/DQ in round 3
+160	Any other result
+161	Fight ends in TKO/KO/DQ in round 4
+162	Any other result
+163	Fight ends in TKO/KO/DQ in round 5
+164	Any other result
+165	Fight ends in submission in round 1
+166	Any other result
+167	Fight ends in submission in round 2
+168	Any other result
+169	Fight ends in submission in round 3
+170	Any other result
+171	Fight ends in submission in round 4
+172	Any other result
+173	Fight ends in submission in round 5
+174	Any other result
+175	44218 Jan Blachowicz
+176	Navajo Stirling
+177	Over 1½ rounds
+178	Under 1½ rounds
+179	Over 2½ rounds
+180	Under 2½ rounds
+181	Fight goes to decision
+182	Fight doesn't go to decision
+183	Fight starts round 2
+184	Fight won't start round 2
+185	Fight starts round 3
+186	Fight won't start round 3
+187	Fight is a draw
+188	Fight is not a draw
+189	Blachowicz wins by TKO/KO
+190	Any other result
+191	Stirling wins by TKO/KO
+192	Any other result
+193	Blachowicz wins by submission
+194	Any other result
+195	Stirling wins by submission
+196	Any other result
+197	Blachowicz wins inside distance
+198	Not Blachowicz inside distance
+199	Stirling wins inside distance
+200	Not Stirling inside distance
+201	Blachowicz wins by decision
+202	Not Blachowicz by decision
+203	Stirling wins by decision
+204	Not Stirling by decision
+205	Blachowicz wins in round 1
+206	Any other result
+207	Stirling wins in round 1
+208	Any other result
+209	Blachowicz wins in round 2
+210	Any other result
+211	Stirling wins in round 2
+212	Any other result
+213	Blachowicz wins in round 3
+214	Any other result
+215	Stirling wins in round 3
+216	Any other result
+217	Fight ends in round 1
+218	Fight doesn't end in round 1
+219	Fight ends in round 1
+220	Fight doesn't end in round 1
+221	Fight ends in round 1
+222	Fight doesn't end in round 1
+223	Fight ends in round 2
+224	Fight doesn't end in round 2
+225	Fight ends in round 2
+226	Fight doesn't end in round 2
+227	Fight ends in round 2
+228	Fight doesn't end in round 2
+229	Fight ends in round 3
+230	Fight doesn't end in round 3
+231	Fight ends in round 3
+232	Fight doesn't end in round 3
+233	Fight ends in round 3
+234	Fight doesn't end in round 3
+235	Blachowicz (scorecards = no action)
+236	Stirling (scorecards = no action)
+237	Stirling (scorecards = no action)
+238	Blachowicz (scorecards = no action)
+239	Blachowicz wins by TKO/KO in round 1
+240	Any other result
+241	Stirling wins by TKO/KO in round 1
+242	Any other result
+243	Blachowicz wins by submission in round 1
+244	Any other result
+245	Stirling wins by submission in round 1
+246	Any other result
+247	Blachowicz wins by TKO/KO in round 2
+248	Any other result
+249	Stirling wins by TKO/KO in round 2
+250	Any other result
+251	Blachowicz wins by TKO/KO in round 3
+252	Any other result
+253	Stirling wins by TKO/KO in round 3
+254	Any other result
+255	Blachowicz wins by submission in round 2
+256	Any other result
+257	Stirling wins by submission in round 2
+258	Any other result
+259	Blachowicz wins by submission in round 3
+260	Any other result
+261	Stirling wins by submission in round 3
+262	Any other result
+263	Either fighter wins by TKO/KO
+264	Any other result
+265	Either fighter wins by submission
+266	Any other result
+267	Blachowicz wins in round 1 or 2
+268	Any other result
+269	Stirling wins in round 1 or 2
+270	Any other result
+271	Fight ends in round 1 or 2
+272	Any other result
+273	Fight ends in final round or goes to decision
+274	Any other result
+275	Fight ends in final round or goes to decision
+276	Any other result
+277	Fight ends in final round or goes to decision
+278	Any other result
+279	Blachowicz wins in final round or by decision
+280	Any other result
+281	Stirling wins in final round or by decision
+282	Any other result
+283	Fight ends in TKO/KO/DQ in round 1
+284	Any other result
+285	Fight ends in TKO/KO/DQ in round 2
+286	Any other result
+287	Fight ends in TKO/KO/DQ in round 3
+288	Any other result
+289	Fight ends in submission in round 1
+290	Any other result
+291	Fight ends in submission in round 2
+292	Any other result
+293	Fight ends in submission in round 3
+294	Any other result
+295	44219 Aleksandar Rakic
+296	Marcin Tybura
+297	Over 1½ rounds
+298	Under 1½ rounds
+299	Over 2½ rounds
+300	Under 2½ rounds
+301	Fight goes to decision
+302	Fight doesn't go to decision
+303	Fight starts round 2
+304	Fight won't start round 2
+305	Fight starts round 3
+306	Fight won't start round 3
+307	Fight is a draw
+308	Fight is not a draw
+309	Rakic wins by TKO/KO
+310	Any other result
+311	Tybura wins by TKO/KO
+312	Any other result
+313	Rakic wins by submission
+314	Any other result
+315	Tybura wins by submission
+316	Any other result
+317	Rakic wins inside distance
+318	Not Rakic inside distance
+319	Tybura wins inside distance
+320	Not Tybura inside distance
+321	Rakic wins by decision
+322	Not Rakic by decision
+323	Tybura wins by decision
+324	Not Tybura by decision
+325	Rakic wins in round 1
+326	Any other result
+327	Tybura wins in round 1
+328	Any other result
+329	Rakic wins in round 2
+330	Any other result
+331	Tybura wins in round 2
+332	Any other result
+333	Rakic wins in round 3
+334	Any other result
+335	Tybura wins in round 3
+336	Any other result
+337	Fight ends in round 1
+338	Fight doesn't end in round 1
+339	Fight ends in round 1
+340	Fight doesn't end in round 1
+341	Fight ends in round 1
+342	Fight doesn't end in round 1
+343	Fight ends in round 2
+344	Fight doesn't end in round 2
+345	Fight ends in round 2
+346	Fight doesn't end in round 2
+347	Fight ends in round 2
+348	Fight doesn't end in round 2
+349	Fight ends in round 3
+350	Fight doesn't end in round 3
+351	Fight ends in round 3
+352	Fight doesn't end in round 3
+353	Fight ends in round 3
+354	Fight doesn't end in round 3
+355	Rakic (scorecards = no action)
+356	Tybura (scorecards = no action)
+357	Tybura (scorecards = no action)
+358	Rakic (scorecards = no action)
+359	Rakic wins by TKO/KO in round 1
+360	Any other result
+361	Tybura wins by TKO/KO in round 1
+362	Any other result
+363	Rakic wins by submission in round 1
+364	Any other result
+365	Tybura wins by submission in round 1
+366	Any other result
+367	Rakic wins by TKO/KO in round 2
+368	Any other result
+369	Tybura wins by TKO/KO in round 2
+370	Any other result
+371	Rakic wins by TKO/KO in round 3
+372	Any other result
+373	Tybura wins by TKO/KO in round 3
+374	Any other result
+375	Rakic wins by submission in round 2
+376	Any other result
+377	Tybura wins by submission in round 2
+378	Any other result
+379	Rakic wins by submission in round 3
+380	Any other result
+381	Tybura wins by submission in round 3
+382	Any other result
+383	Either fighter wins by TKO/KO
+384	Any other result
+385	Either fighter wins by submission
+386	Any other result
+387	Rakic wins in round 1 or 2
+388	Any other result
+389	Tybura wins in round 1 or 2
+390	Any other result
+391	Fight ends in round 1 or 2
+392	Any other result
+393	Fight ends in final round or goes to decision
+394	Any other result
+395	Fight ends in final round or goes to decision
+396	Any other result
+397	Fight ends in final round or goes to decision
+398	Any other result
+399	Rakic wins in final round or by decision
+400	Any other result
+401	Tybura wins in final round or by decision
+402	Any other result
+403	Fight ends in TKO/KO/DQ in round 1
+404	Any other result
+405	Fight ends in TKO/KO/DQ in round 2
+406	Any other result
+407	Fight ends in TKO/KO/DQ in round 3
+408	Any other result
+409	Fight ends in submission in round 1
+410	Any other result
+411	Fight ends in submission in round 2
+412	Any other result
+413	Fight ends in submission in round 3
+414	Any other result
+415	44221 Gilbert Urbina
+416	Vlasto Cepo
+417	Over 1½ rounds
+418	Under 1½ rounds
+419	Over 2½ rounds
+420	Under 2½ rounds
+421	Fight goes to decision
+422	Fight doesn't go to decision
+423	Fight starts round 2
+424	Fight won't start round 2
+425	Fight starts round 3
+426	Fight won't start round 3
+427	Fight is a draw
+428	Fight is not a draw
+429	Urbina wins by TKO/KO
+430	Any other result
+431	Cepo wins by TKO/KO
+432	Any other result
+433	Urbina wins by submission
+434	Any other result
+435	Cepo wins by submission
+436	Any other result
+437	Urbina wins inside distance
+438	Not Urbina inside distance
+439	Cepo wins inside distance
+440	Not Cepo inside distance
+441	Urbina wins by decision
+442	Not Urbina by decision
+443	Cepo wins by decision
+444	Not Cepo by decision
+445	Urbina wins in round 1
+446	Any other result
+447	Cepo wins in round 1
+448	Any other result
+449	Urbina wins in round 2
+450	Any other result
+451	Cepo wins in round 2
+452	Any other result
+453	Urbina wins in round 3
+454	Any other result
+455	Cepo wins in round 3
+456	Any other result
+457	Fight ends in round 1
+458	Fight doesn't end in round 1
+459	Fight ends in round 1
+460	Fight doesn't end in round 1
+461	Fight ends in round 1
+462	Fight doesn't end in round 1
+463	Fight ends in round 2
+464	Fight doesn't end in round 2
+465	Fight ends in round 2
+466	Fight doesn't end in round 2
+467	Fight ends in round 2
+468	Fight doesn't end in round 2
+469	Fight ends in round 3
+470	Fight doesn't end in round 3
+471	Fight ends in round 3
+472	Fight doesn't end in round 3
+473	Fight ends in round 3
+474	Fight doesn't end in round 3
+475	Urbina (scorecards = no action)
+476	Cepo (scorecards = no action)
+477	Cepo (scorecards = no action)
+478	Urbina (scorecards = no action)
+479	Urbina wins by TKO/KO in round 1
+480	Any other result
+481	Cepo wins by TKO/KO in round 1
+482	Any other result
+483	Urbina wins by submission in round 1
+484	Any other result
+485	Cepo wins by submission in round 1
+486	Any other result
+487	Urbina wins by TKO/KO in round 2
+488	Any other result
+489	Cepo wins by TKO/KO in round 2
+490	Any other result
+491	Urbina wins by TKO/KO in round 3
+492	Any other result
+493	Cepo wins by TKO/KO in round 3
+494	Any other result
+495	Urbina wins by submission in round 2
+496	Any other result
+497	Cepo wins by submission in round 2
+498	Any other result
+499	Urbina wins by submission in round 3
+500	Any other result
+501	Cepo wins by submission in round 3
+502	Any other result
+503	Either fighter wins by TKO/KO
+504	Any other result
+505	Either fighter wins by submission
+506	Any other result
+507	Urbina wins in round 1 or 2
+508	Any other result
+509	Cepo wins in round 1 or 2
+510	Any other result
+511	Fight ends in round 1 or 2
+512	Any other result
+513	Fight ends in final round or goes to decision
+514	Any other result
+515	Fight ends in final round or goes to decision
+516	Any other result
+517	Fight ends in final round or goes to decision
+518	Any other result
+519	Urbina wins in final round or by decision
+520	Any other result
+521	Cepo wins in final round or by decision
+522	Any other result
+523	Fight ends in TKO/KO/DQ in round 1
+524	Any other result
+525	Fight ends in TKO/KO/DQ in round 2
+526	Any other result
+527	Fight ends in TKO/KO/DQ in round 3
+528	Any other result
+529	Fight ends in submission in round 1
+530	Any other result
+531	Fight ends in submission in round 2
+532	Any other result
+533	Fight ends in submission in round 3
+534	Any other result
+535	44220 Dusko Todorovic
+536	Robert Valentin
+537	Over 1½ rounds
+538	Under 1½ rounds
+539	Over 2½ rounds
+540	Under 2½ rounds
+541	Fight goes to decision
+542	Fight doesn't go to decision
+543	Fight starts round 2
+544	Fight won't start round 2
+545	Fight starts round 3
+546	Fight won't start round 3
+547	Fight is a draw
+548	Fight is not a draw
+549	Todorovic wins by TKO/KO
+550	Any other result
+551	Valentin wins by TKO/KO
+552	Any other result
+553	Todorovic wins by submission
+554	Any other result
+555	Valentin wins by submission
+556	Any other result
+557	Todorovic wins inside distance
+558	Not Todorovic inside distance
+559	Valentin wins inside distance
+560	Not Valentin inside distance
+561	Todorovic wins by decision
+562	Not Todorovic by decision
+563	Valentin wins by decision
+564	Not Valentin by decision
+565	Todorovic wins in round 1
+566	Any other result
+567	Valentin wins in round 1
+568	Any other result
+569	Todorovic wins in round 2
+570	Any other result
+571	Valentin wins in round 2
+572	Any other result
+573	Todorovic wins in round 3
+574	Any other result
+575	Valentin wins in round 3
+576	Any other result
+577	Fight ends in round 1
+578	Fight doesn't end in round 1
+579	Fight ends in round 1
+580	Fight doesn't end in round 1
+581	Fight ends in round 1
+582	Fight doesn't end in round 1
+583	Fight ends in round 2
+584	Fight doesn't end in round 2
+585	Fight ends in round 2
+586	Fight doesn't end in round 2
+587	Fight ends in round 2
+588	Fight doesn't end in round 2
+589	Fight ends in round 3
+590	Fight doesn't end in round 3
+591	Fight ends in round 3
+592	Fight doesn't end in round 3
+593	Fight ends in round 3
+594	Fight doesn't end in round 3
+595	Todorovic (scorecards = no action)
+596	Valentin (scorecards = no action)
+597	Valentin (scorecards = no action)
+598	Todorovic (scorecards = no action)
+599	Todorovic wins by TKO/KO in round 1
+600	Any other result
+601	Valentin wins by TKO/KO in round 1
+602	Any other result
+603	Todorovic wins by submission in round 1
+604	Any other result
+605	Valentin wins by submission in round 1
+606	Any other result
+607	Todorovic wins by TKO/KO in round 2
+608	Any other result
+609	Valentin wins by TKO/KO in round 2
+610	Any other result
+611	Todorovic wins by TKO/KO in round 3
+612	Any other result
+613	Valentin wins by TKO/KO in round 3
+614	Any other result
+615	Todorovic wins by submission in round 2
+616	Any other result
+617	Valentin wins by submission in round 2
+618	Any other result
+619	Todorovic wins by submission in round 3
+620	Any other result
+621	Valentin wins by submission in round 3
+622	Any other result
+623	Either fighter wins by TKO/KO
+624	Any other result
+625	Either fighter wins by submission
+626	Any other result
+627	Todorovic wins in round 1 or 2
+628	Any other result
+629	Valentin wins in round 1 or 2
+630	Any other result
+631	Fight ends in round 1 or 2
+632	Any other result
+633	Fight ends in final round or goes to decision
+634	Any other result
+635	Fight ends in final round or goes to decision
+636	Any other result
+637	Fight ends in final round or goes to decision
+638	Any other result
+639	Todorovic wins in final round or by decision
+640	Any other result
+641	Valentin wins in final round or by decision
+642	Any other result
+643	Fight ends in TKO/KO/DQ in round 1
+644	Any other result
+645	Fight ends in TKO/KO/DQ in round 2
+646	Any other result
+647	Fight ends in TKO/KO/DQ in round 3
+648	Any other result
+649	Fight ends in submission in round 1
+650	Any other result
+651	Fight ends in submission in round 2
+652	Any other result
+653	Fight ends in submission in round 3
+654	Any other result
+655	44228 Milos Janicic
+656	Noah Gugnon
+657	Over 1½ rounds
+658	Under 1½ rounds
+659	Over 2½ rounds
+660	Under 2½ rounds
+661	Fight goes to decision
+662	Fight doesn't go to decision
+663	Fight starts round 2
+664	Fight won't start round 2
+665	Fight starts round 3
+666	Fight won't start round 3
+667	Fight is a draw
+668	Fight is not a draw
+669	Janicic wins by TKO/KO
+670	Any other result
+671	Gugnon wins by TKO/KO
+672	Any other result
+673	Janicic wins by submission
+674	Any other result
+675	Gugnon wins by submission
+676	Any other result
+677	Janicic wins inside distance
+678	Not Janicic inside distance
+679	Gugnon wins inside distance
+680	Not Gugnon inside distance
+681	Janicic wins by decision
+682	Not Janicic by decision
+683	Gugnon wins by decision
+684	Not Gugnon by decision
+685	Janicic wins in round 1
+686	Any other result
+687	Gugnon wins in round 1
+688	Any other result
+689	Janicic wins in round 2
+690	Any other result
+691	Gugnon wins in round 2
+692	Any other result
+693	Janicic wins in round 3
+694	Any other result
+695	Gugnon wins in round 3
+696	Any other result
+697	Fight ends in round 1
+698	Fight doesn't end in round 1
+699	Fight ends in round 1
+700	Fight doesn't end in round 1
+701	Fight ends in round 1
+702	Fight doesn't end in round 1
+703	Fight ends in round 2
+704	Fight doesn't end in round 2
+705	Fight ends in round 2
+706	Fight doesn't end in round 2
+707	Fight ends in round 2
+708	Fight doesn't end in round 2
+709	Fight ends in round 3
+710	Fight doesn't end in round 3
+711	Fight ends in round 3
+712	Fight doesn't end in round 3
+713	Fight ends in round 3
+714	Fight doesn't end in round 3
+715	Janicic (scorecards = no action)
+716	Gugnon (scorecards = no action)
+717	Gugnon (scorecards = no action)
+718	Janicic (scorecards = no action)
+719	Janicic wins by TKO/KO in round 1
+720	Any other result
+721	Gugnon wins by TKO/KO in round 1
+722	Any other result
+723	Janicic wins by submission in round 1
+724	Any other result
+725	Gugnon wins by submission in round 1
+726	Any other result
+727	Janicic wins by TKO/KO in round 2
+728	Any other result
+729	Gugnon wins by TKO/KO in round 2
+730	Any other result
+731	Janicic wins by TKO/KO in round 3
+732	Any other result
+733	Gugnon wins by TKO/KO in round 3
+734	Any other result
+735	Janicic wins by submission in round 2
+736	Any other result
+737	Gugnon wins by submission in round 2
+738	Any other result
+739	Janicic wins by submission in round 3
+740	Any other result
+741	Gugnon wins by submission in round 3
+742	Any other result
+743	Either fighter wins by TKO/KO
+744	Any other result
+745	Either fighter wins by submission
+746	Any other result
+747	Janicic wins in round 1 or 2
+748	Any other result
+749	Gugnon wins in round 1 or 2
+750	Any other result
+751	Fight ends in round 1 or 2
+752	Any other result
+753	Fight ends in final round or goes to decision
+754	Any other result
+755	Fight ends in final round or goes to decision
+756	Any other result
+757	Fight ends in final round or goes to decision
+758	Any other result
+759	Janicic wins in final round or by decision
+760	Any other result
+761	Gugnon wins in final round or by decision
+762	Any other result
+763	Fight ends in TKO/KO/DQ in round 1
+764	Any other result
+765	Fight ends in TKO/KO/DQ in round 2
+766	Any other result
+767	Fight ends in TKO/KO/DQ in round 3
+768	Any other result
+769	Fight ends in submission in round 1
+770	Any other result
+771	Fight ends in submission in round 2
+772	Any other result
+773	Fight ends in submission in round 3
+774	Any other result
+775	44222 Ludovit Klein
+776	Tofiq Musayev
+777	Over 1½ rounds
+778	Under 1½ rounds
+779	Over 2½ rounds
+780	Under 2½ rounds
+781	Fight goes to decision
+782	Fight doesn't go to decision
+783	Fight starts round 2
+784	Fight won't start round 2
+785	Fight starts round 3
+786	Fight won't start round 3
+787	Fight is a draw
+788	Fight is not a draw
+789	Klein wins by TKO/KO
+790	Any other result
+791	Musayev wins by TKO/KO
+792	Any other result
+793	Klein wins by submission
+794	Any other result
+795	Musayev wins by submission
+796	Any other result
+797	Klein wins inside distance
+798	Not Klein inside distance
+799	Musayev wins inside distance
+800	Not Musayev inside distance
+801	Klein wins by decision
+802	Not Klein by decision
+803	Musayev wins by decision
+804	Not Musayev by decision
+805	Klein wins in round 1
+806	Any other result
+807	Musayev wins in round 1
+808	Any other result
+809	Klein wins in round 2
+810	Any other result
+811	Musayev wins in round 2
+812	Any other result
+813	Klein wins in round 3
+814	Any other result
+815	Musayev wins in round 3
+816	Any other result
+817	Fight ends in round 1
+818	Fight doesn't end in round 1
+819	Fight ends in round 1
+820	Fight doesn't end in round 1
+821	Fight ends in round 1
+822	Fight doesn't end in round 1
+823	Fight ends in round 2
+824	Fight doesn't end in round 2
+825	Fight ends in round 2
+826	Fight doesn't end in round 2
+827	Fight ends in round 2
+828	Fight doesn't end in round 2
+829	Fight ends in round 3
+830	Fight doesn't end in round 3
+831	Fight ends in round 3
+832	Fight doesn't end in round 3
+833	Fight ends in round 3
+834	Fight doesn't end in round 3
+835	Klein (scorecards = no action)
+836	Musayev (scorecards = no action)
+837	Musayev (scorecards = no action)
+838	Klein (scorecards = no action)
+839	Klein wins by TKO/KO in round 1
+840	Any other result
+841	Musayev wins by TKO/KO in round 1
+842	Any other result
+843	Klein wins by submission in round 1
+844	Any other result
+845	Musayev wins by submission in round 1
+846	Any other result
+847	Klein wins by TKO/KO in round 2
+848	Any other result
+849	Musayev wins by TKO/KO in round 2
+850	Any other result
+851	Klein wins by TKO/KO in round 3
+852	Any other result
+853	Musayev wins by TKO/KO in round 3
+854	Any other result
+855	Klein wins by submission in round 2
+856	Any other result
+857	Musayev wins by submission in round 2
+858	Any other result
+859	Klein wins by submission in round 3
+860	Any other result
+861	Musayev wins by submission in round 3
+862	Any other result
+863	Either fighter wins by TKO/KO
+864	Any other result
+865	Either fighter wins by submission
+866	Any other result
+867	Klein wins in round 1 or 2
+868	Any other result
+869	Musayev wins in round 1 or 2
+870	Any other result
+871	Fight ends in round 1 or 2
+872	Any other result
+873	Fight ends in final round or goes to decision
+874	Any other result
+875	Fight ends in final round or goes to decision
+876	Any other result
+877	Fight ends in final round or goes to decision
+878	Any other result
+879	Klein wins in final round or by decision
+880	Any other result
+881	Musayev wins in final round or by decision
+882	Any other result
+883	Fight ends in TKO/KO/DQ in round 1
+884	Any other result
+885	Fight ends in TKO/KO/DQ in round 2
+886	Any other result
+887	Fight ends in TKO/KO/DQ in round 3
+888	Any other result
+889	Fight ends in submission in round 1
+890	Any other result
+891	Fight ends in submission in round 2
+892	Any other result
+893	Fight ends in submission in round 3
+894	Any other result
+895	44223 Michael Oliveira
+896	Oban Elliott
+897	Over 1½ rounds
+898	Under 1½ rounds
+899	Over 2½ rounds
+900	Under 2½ rounds
+901	Fight goes to decision
+902	Fight doesn't go to decision
+903	Fight starts round 2
+904	Fight won't start round 2
+905	Fight starts round 3
+906	Fight won't start round 3
+907	Fight is a draw
+908	Fight is not a draw
+909	Oliveira wins by TKO/KO
+910	Any other result
+911	Elliott wins by TKO/KO
+912	Any other result
+913	Oliveira wins by submission
+914	Any other result
+915	Elliott wins by submission
+916	Any other result
+917	Oliveira wins inside distance
+918	Not Oliveira inside distance
+919	Elliott wins inside distance
+920	Not Elliott inside distance
+921	Oliveira wins by decision
+922	Not Oliveira by decision
+923	Elliott wins by decision
+924	Not Elliott by decision
+925	Oliveira wins in round 1
+926	Any other result
+927	Elliott wins in round 1
+928	Any other result
+929	Oliveira wins in round 2
+930	Any other result
+931	Elliott wins in round 2
+932	Any other result
+933	Oliveira wins in round 3
+934	Any other result
+935	Elliott wins in round 3
+936	Any other result
+937	Fight ends in round 1
+938	Fight doesn't end in round 1
+939	Fight ends in round 1
+940	Fight doesn't end in round 1
+941	Fight ends in round 1
+942	Fight doesn't end in round 1
+943	Fight ends in round 2
+944	Fight doesn't end in round 2
+945	Fight ends in round 2
+946	Fight doesn't end in round 2
+947	Fight ends in round 2
+948	Fight doesn't end in round 2
+949	Fight ends in round 3
+950	Fight doesn't end in round 3
+951	Fight ends in round 3
+952	Fight doesn't end in round 3
+953	Fight ends in round 3
+954	Fight doesn't end in round 3
+955	Oliveira (scorecards = no action)
+956	Elliott (scorecards = no action)
+957	Elliott (scorecards = no action)
+958	Oliveira (scorecards = no action)
+959	Oliveira wins by TKO/KO in round 1
+960	Any other result
+961	Elliott wins by TKO/KO in round 1
+962	Any other result
+963	Oliveira wins by submission in round 1
+964	Any other result
+965	Elliott wins by submission in round 1
+966	Any other result
+967	Oliveira wins by TKO/KO in round 2
+968	Any other result
+969	Elliott wins by TKO/KO in round 2
+970	Any other result
+971	Oliveira wins by TKO/KO in round 3
+972	Any other result
+973	Elliott wins by TKO/KO in round 3
+974	Any other result
+975	Oliveira wins by submission in round 2
+976	Any other result
+977	Elliott wins by submission in round 2
+978	Any other result
+979	Oliveira wins by submission in round 3
+980	Any other result
+981	Elliott wins by submission in round 3
+982	Any other result
+983	Either fighter wins by TKO/KO
+984	Any other result
+985	Either fighter wins by submission
+986	Any other result
+987	Oliveira wins in round 1 or 2
+988	Any other result
+989	Elliott wins in round 1 or 2
+990	Any other result
+991	Fight ends in round 1 or 2
+992	Any other result
+993	Fight ends in final round or goes to decision
+994	Any other result
+995	Fight ends in final round or goes to decision
+996	Any other result
+997	Fight ends in final round or goes to decision
+998	Any other result
+999	Oliveira wins in final round or by decision
+1000	Any other result
+1001	Elliott wins in final round or by decision
+1002	Any other result
+1003	Fight ends in TKO/KO/DQ in round 1
+1004	Any other result
+1005	Fight ends in TKO/KO/DQ in round 2
+1006	Any other result
+1007	Fight ends in TKO/KO/DQ in round 3
+1008	Any other result
+1009	Fight ends in submission in round 1
+1010	Any other result
+1011	Fight ends in submission in round 2
+1012	Any other result
+1013	Fight ends in submission in round 3
+1014	Any other result
+1015	44240 Borislav Nikolic
+1016	Mark Vologdin
+1017	Over 1½ rounds
+1018	Under 1½ rounds
+1019	Over 2½ rounds
+1020	Under 2½ rounds
+1021	Fight goes to decision
+1022	Fight doesn't go to decision
+1023	Fight starts round 2
+1024	Fight won't start round 2
+1025	Fight starts round 3
+1026	Fight won't start round 3
+1027	Fight is a draw
+1028	Fight is not a draw
+1029	Nikolic wins by TKO/KO
+1030	Any other result
+1031	Vologdin wins by TKO/KO
+1032	Any other result
+1033	Nikolic wins by submission
+1034	Any other result
+1035	Vologdin wins by submission
+1036	Any other result
+1037	Nikolic wins inside distance
+1038	Not Nikolic inside distance
+1039	Vologdin wins inside distance
+1040	Not Vologdin inside distance
+1041	Nikolic wins by decision
+1042	Not Nikolic by decision
+1043	Vologdin wins by decision
+1044	Not Vologdin by decision
+1045	Nikolic wins in round 1
+1046	Any other result
+1047	Vologdin wins in round 1
+1048	Any other result
+1049	Nikolic wins in round 2
+1050	Any other result
+1051	Vologdin wins in round 2
+1052	Any other result
+1053	Nikolic wins in round 3
+1054	Any other result
+1055	Vologdin wins in round 3
+1056	Any other result
+1057	Fight ends in round 1
+1058	Fight doesn't end in round 1
+1059	Fight ends in round 1
+1060	Fight doesn't end in round 1
+1061	Fight ends in round 1
+1062	Fight doesn't end in round 1
+1063	Fight ends in round 2
+1064	Fight doesn't end in round 2
+1065	Fight ends in round 2
+1066	Fight doesn't end in round 2
+1067	Fight ends in round 2
+1068	Fight doesn't end in round 2
+1069	Fight ends in round 3
+1070	Fight doesn't end in round 3
+1071	Fight ends in round 3
+1072	Fight doesn't end in round 3
+1073	Fight ends in round 3
+1074	Fight doesn't end in round 3
+1075	Nikolic (scorecards = no action)
+1076	Vologdin (scorecards = no action)
+1077	Vologdin (scorecards = no action)
+1078	Nikolic (scorecards = no action)
+1079	Nikolic wins by TKO/KO in round 1
+1080	Any other result
+1081	Vologdin wins by TKO/KO in round 1
+1082	Any other result
+1083	Nikolic wins by submission in round 1
+1084	Any other result
+1085	Vologdin wins by submission in round 1
+1086	Any other result
+1087	Nikolic wins by TKO/KO in round 2
+1088	Any other result
+1089	Vologdin wins by TKO/KO in round 2
+1090	Any other result
+1091	Nikolic wins by TKO/KO in round 3
+1092	Any other result
+1093	Vologdin wins by TKO/KO in round 3
+1094	Any other result
+1095	Nikolic wins by submission in round 2
+1096	Any other result
+1097	Vologdin wins by submission in round 2
+1098	Any other result
+1099	Nikolic wins by submission in round 3
+1100	Any other result
+1101	Vologdin wins by submission in round 3
+1102	Any other result
+1103	Either fighter wins by TKO/KO
+1104	Any other result
+1105	Either fighter wins by submission
+1106	Any other result
+1107	Nikolic wins in round 1 or 2
+1108	Any other result
+1109	Vologdin wins in round 1 or 2
+1110	Any other result
+1111	Fight ends in round 1 or 2
+1112	Any other result
+1113	Fight ends in final round or goes to decision
+1114	Any other result
+1115	Fight ends in final round or goes to decision
+1116	Any other result
+1117	Fight ends in final round or goes to decision
+1118	Any other result
+1119	Nikolic wins in final round or by decision
+1120	Any other result
+1121	Vologdin wins in final round or by decision
+1122	Any other result
+1123	Fight ends in TKO/KO/DQ in round 1
+1124	Any other result
+1125	Fight ends in TKO/KO/DQ in round 2
+1126	Any other result
+1127	Fight ends in TKO/KO/DQ in round 3
+1128	Any other result
+1129	Fight ends in submission in round 1
+1130	Any other result
+1131	Fight ends in submission in round 2
+1132	Any other result
+1133	Fight ends in submission in round 3
+1134	Any other result
+1135	44225 Bogdan Grad
+1136	Dennis Buzukia
+1137	Over 1½ rounds
+1138	Under 1½ rounds
+1139	Over 2½ rounds
+1140	Under 2½ rounds
+1141	Fight goes to decision
+1142	Fight doesn't go to decision
+1143	Fight starts round 2
+1144	Fight won't start round 2
+1145	Fight starts round 3
+1146	Fight won't start round 3
+1147	Fight is a draw
+1148	Fight is not a draw
+1149	Grad wins by TKO/KO
+1150	Any other result
+1151	Buzukia wins by TKO/KO
+1152	Any other result
+1153	Grad wins by submission
+1154	Any other result
+1155	Buzukia wins by submission
+1156	Any other result
+1157	Grad wins inside distance
+1158	Not Grad inside distance
+1159	Buzukia wins inside distance
+1160	Not Buzukia inside distance
+1161	Grad wins by decision
+1162	Not Grad by decision
+1163	Buzukia wins by decision
+1164	Not Buzukia by decision
+1165	Grad wins in round 1
+1166	Any other result
+1167	Buzukia wins in round 1
+1168	Any other result
+1169	Grad wins in round 2
+1170	Any other result
+1171	Buzukia wins in round 2
+1172	Any other result
+1173	Grad wins in round 3
+1174	Any other result
+1175	Buzukia wins in round 3
+1176	Any other result
+1177	Fight ends in round 1
+1178	Fight doesn't end in round 1
+1179	Fight ends in round 1
+1180	Fight doesn't end in round 1
+1181	Fight ends in round 1
+1182	Fight doesn't end in round 1
+1183	Fight ends in round 2
+1184	Fight doesn't end in round 2
+1185	Fight ends in round 2
+1186	Fight doesn't end in round 2
+1187	Fight ends in round 2
+1188	Fight doesn't end in round 2
+1189	Fight ends in round 3
+1190	Fight doesn't end in round 3
+1191	Fight ends in round 3
+1192	Fight doesn't end in round 3
+1193	Fight ends in round 3
+1194	Fight doesn't end in round 3
+1195	Grad (scorecards = no action)
+1196	Buzukia (scorecards = no action)
+1197	Buzukia (scorecards = no action)
+1198	Grad (scorecards = no action)
+1199	Grad wins by TKO/KO in round 1
+1200	Any other result
+1201	Buzukia wins by TKO/KO in round 1
+1202	Any other result
+1203	Grad wins by submission in round 1
+1204	Any other result
+1205	Buzukia wins by submission in round 1
+1206	Any other result
+1207	Grad wins by TKO/KO in round 2
+1208	Any other result
+1209	Buzukia wins by TKO/KO in round 2
+1210	Any other result
+1211	Grad wins by TKO/KO in round 3
+1212	Any other result
+1213	Buzukia wins by TKO/KO in round 3
+1214	Any other result
+1215	Grad wins by submission in round 2
+1216	Any other result
+1217	Buzukia wins by submission in round 2
+1218	Any other result
+1219	Grad wins by submission in round 3
+1220	Any other result
+1221	Buzukia wins by submission in round 3
+1222	Any other result
+1223	Either fighter wins by TKO/KO
+1224	Any other result
+1225	Either fighter wins by submission
+1226	Any other result
+1227	Grad wins in round 1 or 2
+1228	Any other result
+1229	Buzukia wins in round 1 or 2
+1230	Any other result
+1231	Fight ends in round 1 or 2
+1232	Any other result
+1233	Fight ends in final round or goes to decision
+1234	Any other result
+1235	Fight ends in final round or goes to decision
+1236	Any other result
+1237	Fight ends in final round or goes to decision
+1238	Any other result
+1239	Grad wins in final round or by decision
+1240	Any other result
+1241	Buzukia wins in final round or by decision
+1242	Any other result
+1243	Fight ends in TKO/KO/DQ in round 1
+1244	Any other result
+1245	Fight ends in TKO/KO/DQ in round 2
+1246	Any other result
+1247	Fight ends in TKO/KO/DQ in round 3
+1248	Any other result
+1249	Fight ends in submission in round 1
+1250	Any other result
+1251	Fight ends in submission in round 2
+1252	Any other result
+1253	Fight ends in submission in round 3
+1254	Any other result
+1255	44226 Kyle Prepolec
+1256	Mateusz Rebecki
+1257	Over 1½ rounds
+1258	Under 1½ rounds
+1259	Over 2½ rounds
+1260	Under 2½ rounds
+1261	Fight goes to decision
+1262	Fight doesn't go to decision
+1263	Fight starts round 2
+1264	Fight won't start round 2
+1265	Fight starts round 3
+1266	Fight won't start round 3
+1267	Fight is a draw
+1268	Fight is not a draw
+1269	Prepolec wins by TKO/KO
+1270	Any other result
+1271	Rebecki wins by TKO/KO
+1272	Any other result
+1273	Prepolec wins by submission
+1274	Any other result
+1275	Rebecki wins by submission
+1276	Any other result
+1277	Prepolec wins inside distance
+1278	Not Prepolec inside distance
+1279	Rebecki wins inside distance
+1280	Not Rebecki inside distance
+1281	Prepolec wins by decision
+1282	Not Prepolec by decision
+1283	Rebecki wins by decision
+1284	Not Rebecki by decision
+1285	Prepolec wins in round 1
+1286	Any other result
+1287	Rebecki wins in round 1
+1288	Any other result
+1289	Prepolec wins in round 2
+1290	Any other result
+1291	Rebecki wins in round 2
+1292	Any other result
+1293	Prepolec wins in round 3
+1294	Any other result
+1295	Rebecki wins in round 3
+1296	Any other result
+1297	Fight ends in round 1
+1298	Fight doesn't end in round 1
+1299	Fight ends in round 1
+1300	Fight doesn't end in round 1
+1301	Fight ends in round 1
+1302	Fight doesn't end in round 1
+1303	Fight ends in round 2
+1304	Fight doesn't end in round 2
+1305	Fight ends in round 2
+1306	Fight doesn't end in round 2
+1307	Fight ends in round 2
+1308	Fight doesn't end in round 2
+1309	Fight ends in round 3
+1310	Fight doesn't end in round 3
+1311	Fight ends in round 3
+1312	Fight doesn't end in round 3
+1313	Fight ends in round 3
+1314	Fight doesn't end in round 3
+1315	Prepolec (scorecards = no action)
+1316	Rebecki (scorecards = no action)
+1317	Rebecki (scorecards = no action)
+1318	Prepolec (scorecards = no action)
+1319	Prepolec wins by TKO/KO in round 1
+1320	Any other result
+1321	Rebecki wins by TKO/KO in round 1
+1322	Any other result
+1323	Prepolec wins by submission in round 1
+1324	Any other result
+1325	Rebecki wins by submission in round 1
+1326	Any other result
+1327	Prepolec wins by TKO/KO in round 2
+1328	Any other result
+1329	Rebecki wins by TKO/KO in round 2
+1330	Any other result
+1331	Prepolec wins by TKO/KO in round 3
+1332	Any other result
+1333	Rebecki wins by TKO/KO in round 3
+1334	Any other result
+1335	Prepolec wins by submission in round 2
+1336	Any other result
+1337	Rebecki wins by submission in round 2
+1338	Any other result
+1339	Prepolec wins by submission in round 3
+1340	Any other result
+1341	Rebecki wins by submission in round 3
+1342	Any other result
+1343	Either fighter wins by TKO/KO
+1344	Any other result
+1345	Either fighter wins by submission
+1346	Any other result
+1347	Prepolec wins in round 1 or 2
+1348	Any other result
+1349	Rebecki wins in round 1 or 2
+1350	Any other result
+1351	Fight ends in round 1 or 2
+1352	Any other result
+1353	Fight ends in final round or goes to decision
+1354	Any other result
+1355	Fight ends in final round or goes to decision
+1356	Any other result
+1357	Fight ends in final round or goes to decision
+1358	Any other result
+1359	Prepolec wins in final round or by decision
+1360	Any other result
+1361	Rebecki wins in final round or by decision
+1362	Any other result
+1363	Fight ends in TKO/KO/DQ in round 1
+1364	Any other result
+1365	Fight ends in TKO/KO/DQ in round 2
+1366	Any other result
+1367	Fight ends in TKO/KO/DQ in round 3
+1368	Any other result
+1369	Fight ends in submission in round 1
+1370	Any other result
+1371	Fight ends in submission in round 2
+1372	Any other result
+1373	Fight ends in submission in round 3
+1374	Any other result
+1375	44227 Hailey Cowan
+1376	Nina Milosevic
+1377	Over 1½ rounds
+1378	Under 1½ rounds
+1379	Over 2½ rounds
+1380	Under 2½ rounds
+1381	Fight goes to decision
+1382	Fight doesn't go to decision
+1383	Fight starts round 2
+1384	Fight won't start round 2
+1385	Fight starts round 3
+1386	Fight won't start round 3
+1387	Fight is a draw
+1388	Fight is not a draw
+1389	Cowan wins by TKO/KO
+1390	Any other result
+1391	Milosevic wins by TKO/KO
+1392	Any other result
+1393	Cowan wins by submission
+1394	Any other result
+1395	Milosevic wins by submission
+1396	Any other result
+1397	Cowan wins inside distance
+1398	Not Cowan inside distance
+1399	Milosevic wins inside distance
+1400	Not Milosevic inside distance
+1401	Cowan wins by decision
+1402	Not Cowan by decision
+1403	Milosevic wins by decision
+1404	Not Milosevic by decision
+1405	Cowan wins in round 1
+1406	Any other result
+1407	Milosevic wins in round 1
+1408	Any other result
+1409	Cowan wins in round 2
+1410	Any other result
+1411	Milosevic wins in round 2
+1412	Any other result
+1413	Cowan wins in round 3
+1414	Any other result
+1415	Milosevic wins in round 3
+1416	Any other result
+1417	Fight ends in round 1
+1418	Fight doesn't end in round 1
+1419	Fight ends in round 1
+1420	Fight doesn't end in round 1
+1421	Fight ends in round 1
+1422	Fight doesn't end in round 1
+1423	Fight ends in round 2
+1424	Fight doesn't end in round 2
+1425	Fight ends in round 2
+1426	Fight doesn't end in round 2
+1427	Fight ends in round 2
+1428	Fight doesn't end in round 2
+1429	Fight ends in round 3
+1430	Fight doesn't end in round 3
+1431	Fight ends in round 3
+1432	Fight doesn't end in round 3
+1433	Fight ends in round 3
+1434	Fight doesn't end in round 3
+1435	Cowan (scorecards = no action)
+1436	Milosevic (scorecards = no action)
+1437	Milosevic (scorecards = no action)
+1438	Cowan (scorecards = no action)
+1439	Cowan wins by TKO/KO in round 1
+1440	Any other result
+1441	Milosevic wins by TKO/KO in round 1
+1442	Any other result
+1443	Cowan wins by submission in round 1
+1444	Any other result
+1445	Milosevic wins by submission in round 1
+1446	Any other result
+1447	Cowan wins by TKO/KO in round 2
+1448	Any other result
+1449	Milosevic wins by TKO/KO in round 2
+1450	Any other result
+1451	Cowan wins by TKO/KO in round 3
+1452	Any other result
+1453	Milosevic wins by TKO/KO in round 3
+1454	Any other result
+1455	Cowan wins by submission in round 2
+1456	Any other result
+1457	Milosevic wins by submission in round 2
+1458	Any other result
+1459	Cowan wins by submission in round 3
+1460	Any other result
+1461	Milosevic wins by submission in round 3
+1462	Any other result
+1463	Either fighter wins by TKO/KO
+1464	Any other result
+1465	Either fighter wins by submission
+1466	Any other result
+1467	Cowan wins in round 1 or 2
+1468	Any other result
+1469	Milosevic wins in round 1 or 2
+1470	Any other result
+1471	Fight ends in round 1 or 2
+1472	Any other result
+1473	Fight ends in final round or goes to decision
+1474	Any other result
+1475	Fight ends in final round or goes to decision
+1476	Any other result
+1477	Fight ends in final round or goes to decision
+1478	Any other result
+1479	Cowan wins in final round or by decision
+1480	Any other result
+1481	Milosevic wins in final round or by decision
+1482	Any other result
+1483	Fight ends in TKO/KO/DQ in round 1
+1484	Any other result
+1485	Fight ends in TKO/KO/DQ in round 2
+1486	Any other result
+1487	Fight ends in TKO/KO/DQ in round 3
+1488	Any other result
+1489	Fight ends in submission in round 1
+1490	Any other result
+1491	Fight ends in submission in round 2
+1492	Any other result
+1493	Fight ends in submission in round 3
+1494	Any other result
+1495	44230 Alexander Poppeck
+1496	Jovan Leka
+1497	Over 1½ rounds
+1498	Under 1½ rounds
+1499	Over 2½ rounds
+1500	Under 2½ rounds
+1501	Fight goes to decision
+1502	Fight doesn't go to decision
+1503	Fight starts round 2
+1504	Fight won't start round 2
+1505	Fight starts round 3
+1506	Fight won't start round 3
+1507	Fight is a draw
+1508	Fight is not a draw
+1509	Poppeck wins by TKO/KO
+1510	Any other result
+1511	Leka wins by TKO/KO
+1512	Any other result
+1513	Poppeck wins by submission
+1514	Any other result
+1515	Leka wins by submission
+1516	Any other result
+1517	Poppeck wins inside distance
+1518	Not Poppeck inside distance
+1519	Leka wins inside distance
+1520	Not Leka inside distance
+1521	Poppeck wins by decision
+1522	Not Poppeck by decision
+1523	Leka wins by decision
+1524	Not Leka by decision
+1525	Poppeck wins in round 1
+1526	Any other result
+1527	Leka wins in round 1
+1528	Any other result
+1529	Poppeck wins in round 2
+1530	Any other result
+1531	Leka wins in round 2
+1532	Any other result
+1533	Poppeck wins in round 3
+1534	Any other result
+1535	Leka wins in round 3
+1536	Any other result
+1537	Fight ends in round 1
+1538	Fight doesn't end in round 1
+1539	Fight ends in round 1
+1540	Fight doesn't end in round 1
+1541	Fight ends in round 1
+1542	Fight doesn't end in round 1
+1543	Fight ends in round 2
+1544	Fight doesn't end in round 2
+1545	Fight ends in round 2
+1546	Fight doesn't end in round 2
+1547	Fight ends in round 2
+1548	Fight doesn't end in round 2
+1549	Fight ends in round 3
+1550	Fight doesn't end in round 3
+1551	Fight ends in round 3
+1552	Fight doesn't end in round 3
+1553	Fight ends in round 3
+1554	Fight doesn't end in round 3
+1555	Poppeck (scorecards = no action)
+1556	Leka (scorecards = no action)
+1557	Leka (scorecards = no action)
+1558	Poppeck (scorecards = no action)
+1559	Poppeck wins by TKO/KO in round 1
+1560	Any other result
+1561	Leka wins by TKO/KO in round 1
+1562	Any other result
+1563	Poppeck wins by submission in round 1
+1564	Any other result
+1565	Leka wins by submission in round 1
+1566	Any other result
+1567	Poppeck wins by TKO/KO in round 2
+1568	Any other result
+1569	Leka wins by TKO/KO in round 2
+1570	Any other result
+1571	Poppeck wins by TKO/KO in round 3
+1572	Any other result
+1573	Leka wins by TKO/KO in round 3
+1574	Any other result
+1575	Poppeck wins by submission in round 2
+1576	Any other result
+1577	Leka wins by submission in round 2
+1578	Any other result
+1579	Poppeck wins by submission in round 3
+1580	Any other result
+1581	Leka wins by submission in round 3
+1582	Any other result
+1583	Either fighter wins by TKO/KO
+1584	Any other result
+1585	Either fighter wins by submission
+1586	Any other result
+1587	Poppeck wins in round 1 or 2
+1588	Any other result
+1589	Leka wins in round 1 or 2
+1590	Any other result
+1591	Fight ends in round 1 or 2
+1592	Any other result
+1593	Fight ends in final round or goes to decision
+1594	Any other result
+1595	Fight ends in final round or goes to decision
+1596	Any other result
+1597	Fight ends in final round or goes to decision
+1598	Any other result
+1599	Poppeck wins in final round or by decision
+1600	Any other result
+1601	Leka wins in final round or by decision
+1602	Any other result
+1603	Fight ends in TKO/KO/DQ in round 1
+1604	Any other result
+1605	Fight ends in TKO/KO/DQ in round 2
+1606	Any other result
+1607	Fight ends in TKO/KO/DQ in round 3
+1608	Any other result
+1609	Fight ends in submission in round 1
+1610	Any other result
+1611	Fight ends in submission in round 2
+1612	Any other result
+1613	Fight ends in submission in round 3
+1614	Any other result
+1615	44229 Marina Spasic
+1616	Stephanie Luciano
+1617	Over 1½ rounds
+1618	Under 1½ rounds
+1619	Over 2½ rounds
+1620	Under 2½ rounds
+1621	Fight goes to decision
+1622	Fight doesn't go to decision
+1623	Fight starts round 2
+1624	Fight won't start round 2
+1625	Fight starts round 3
+1626	Fight won't start round 3
+1627	Fight is a draw
+1628	Fight is not a draw
+1629	Spasic wins by TKO/KO
+1630	Any other result
+1631	Luciano wins by TKO/KO
+1632	Any other result
+1633	Spasic wins by submission
+1634	Any other result
+1635	Luciano wins by submission
+1636	Any other result
+1637	Spasic wins inside distance
+1638	Not Spasic inside distance
+1639	Luciano wins inside distance
+1640	Not Luciano inside distance
+1641	Spasic wins by decision
+1642	Not Spasic by decision
+1643	Luciano wins by decision
+1644	Not Luciano by decision
+1645	Spasic wins in round 1
+1646	Any other result
+1647	Luciano wins in round 1
+1648	Any other result
+1649	Spasic wins in round 2
+1650	Any other result
+1651	Luciano wins in round 2
+1652	Any other result
+1653	Spasic wins in round 3
+1654	Any other result
+1655	Luciano wins in round 3
+1656	Any other result
+1657	Fight ends in round 1
+1658	Fight doesn't end in round 1
+1659	Fight ends in round 1
+1660	Fight doesn't end in round 1
+1661	Fight ends in round 1
+1662	Fight doesn't end in round 1
+1663	Fight ends in round 2
+1664	Fight doesn't end in round 2
+1665	Fight ends in round 2
+1666	Fight doesn't end in round 2
+1667	Fight ends in round 2
+1668	Fight doesn't end in round 2
+1669	Fight ends in round 3
+1670	Fight doesn't end in round 3
+1671	Fight ends in round 3
+1672	Fight doesn't end in round 3
+1673	Fight ends in round 3
+1674	Fight doesn't end in round 3
+1675	Spasic (scorecards = no action)
+1676	Luciano (scorecards = no action)
+1677	Luciano (scorecards = no action)
+1678	Spasic (scorecards = no action)
+1679	Spasic wins by TKO/KO in round 1
+1680	Any other result
+1681	Luciano wins by TKO/KO in round 1
+1682	Any other result
+1683	Spasic wins by submission in round 1
+1684	Any other result
+1685	Luciano wins by submission in round 1
+1686	Any other result
+1687	Spasic wins by TKO/KO in round 2
+1688	Any other result
+1689	Luciano wins by TKO/KO in round 2
+1690	Any other result
+1691	Spasic wins by TKO/KO in round 3
+1692	Any other result
+1693	Luciano wins by TKO/KO in round 3
+1694	Any other result
+1695	Spasic wins by submission in round 2
+1696	Any other result
+1697	Luciano wins by submission in round 2
+1698	Any other result
+1699	Spasic wins by submission in round 3
+1700	Any other result
+1701	Luciano wins by submission in round 3
+1702	Any other result
+1703	Either fighter wins by TKO/KO
+1704	Any other result
+1705	Either fighter wins by submission
+1706	Any other result
+1707	Spasic wins in round 1 or 2
+1708	Any other result
+1709	Luciano wins in round 1 or 2
+1710	Any other result
+1711	Fight ends in round 1 or 2
+1712	Any other result
+1713	Fight ends in final round or goes to decision
+1714	Any other result
+1715	Fight ends in final round or goes to decision
+1716	Any other result
+1717	Fight ends in final round or goes to decision
+1718	Any other result
+1719	Spasic wins in final round or by decision
+1720	Any other result
+1721	Luciano wins in final round or by decision
+1722	Any other result
+1723	Fight ends in TKO/KO/DQ in round 1
+1724	Any other result
+1725	Fight ends in TKO/KO/DQ in round 2
+1726	Any other result
+1727	Fight ends in TKO/KO/DQ in round 3
+1728	Any other result
+1729	Fight ends in submission in round 1
+1730	Any other result
+1731	Fight ends in submission in round 2
+1732	Any other result
+1733	Fight ends in submission in round 3
+1734	Any other result
+1735	44224 Josias Musasa
+1736	Mark Vologdin
+1737		Polymarket $20 Bonus i	Kalshi Up to $500 i	FanDuel	Caesars	BetRivers	BetWay	Unibet	BetMGM	DraftKings	Props
+1738	44217 Daniel Rodriguez	+317 ▼	+295 ▲	+315 ▼	+290 ▼	+310 ▲	+300 ▲	+310 ▲				86
+1739	Uros Medic	-335 ▲	-361 ▼	-400 ▲	-370 ▲	-435 ▼	-400 ▼	-435 ▼				86
+1740	Over 1½ rounds			+168 ▲			+163	+175 ▲				
+1741	Under 1½ rounds			-215 ▼			-225	-245 ▼				
+1742	Over 2½ rounds						+275	+370 ▲				
+1743	Under 2½ rounds						-400	-590 ▼				
+1744	Over 3½ rounds						+400	+525 ▲				
+1745	Under 3½ rounds						-654	-1000 ▼				
+1746	Over 4½ rounds						+500	+700 ▲				
+1747	Under 4½ rounds						-1000	-2000 ▼				
+1748	Fight goes to decision			+890			+700	+950 ▲				
+1749	Fight doesn't go to decision			-1800 ▼			-1613	-2000 ▼				
+1750	Fight starts round 2			+108 ▲								
+1751	Fight won't start round 2			-142 ▼								
+1752	Fight starts round 3			+250 ▲								
+1753	Fight won't start round 3			-370 ▼								
+1754	Fight starts round 4			+410								
+1755	Fight won't start round 4			-700 ▼								
+1756	Fight starts round 5			+540								
+1757	Fight won't start round 5			-1100 ▲								
+1758	Fight is a draw			+5000	+6000		+8000	+4500				
+1759	Fight is not a draw			n/a	n/a		n/a	n/a				
+1760	Rodriguez wins by TKO/KO			+500 ▼		+525 ▲	+500	+525 ▲				
+1761	Any other result			n/a		n/a	n/a	n/a				
+1762	Medic wins by TKO/KO			-250 ▼			-250	-278 ▼				
+1763	Any other result			n/a			n/a	n/a				
+1764	Rodriguez wins by submission			+1500 ▼		+1200 ▼	+1400	+1200				
+1765	Any other result			n/a		n/a	n/a	n/a				
+1766	Medic wins by submission			+1200 ▲			+700	+1050				
+1767	Any other result			n/a			n/a	n/a				
+1768	Rodriguez wins inside distance						+350	+390 ▲				
+1769	Not Rodriguez inside distance						-549	-590				
+1770	Medic wins inside distance						-333	-360 ▼				
+1771	Not Medic inside distance						+225	+250 ▲				
+1772	Rodriguez wins by decision			+2200 ▼		+2200 ▲	+1200	+2200 ▲				
+1773	Not Rodriguez by decision			n/a		n/a	-10000	n/a				
+1774	Medic wins by decision			+1800 ▲			+900	+2000 ▲				
+1775	Not Medic by decision			n/a			-3333	n/a				
+1776	Rodriguez wins in round 1			+850 ▼	+800		+900	+950 ▼				
+1777	Any other result			n/a	n/a		n/a	n/a				
+1778	Medic wins in round 1			-110 ▼	-120		-110 ▼	-107 ▼				
+1779	Any other result			n/a	n/a		n/a	n/a				
+1780	Rodriguez wins in round 2			+1900 ▼	+1400 ▼		+1600	+1500 ▲				
+1781	Any other result			n/a	n/a		n/a	n/a				
+1782	Medic wins in round 2			+490 ▲	+350		+300	+420 ▼				
+1783	Any other result			n/a	n/a		n/a	n/a				
+1784	Rodriguez wins in round 3			+2500 ▼	+2000		+2000	+2400 ▲				
+1785	Any other result			n/a	n/a		n/a	n/a				
+1786	Medic wins in round 3			+1400 ▲	+1200 ▼		+1200	+1400 ▲				
+1787	Any other result			n/a	n/a		n/a	n/a				
+1788	Rodriguez wins in round 4			+3300	+2500		+2800	+3500 ▲				
+1789	Any other result			n/a	n/a		n/a	n/a				
+1790	Medic wins in round 4			+2500 ▲	+2200 ▼		+1800	+2400 ▲				
+1791	Any other result			n/a	n/a		n/a	n/a				
+1792	Rodriguez wins in round 5			+4000	+3000		+3300	+5000 ▲				
+1793	Any other result			n/a	n/a		n/a	n/a				
+1794	Medic wins in round 5			+3300 ▲	+3000		+2500	+3500 ▲				
+1795	Any other result			n/a	n/a		n/a	n/a				
+1796	Rodriguez wins by unanimous decision						+1200					
+1797	Any other result						n/a					
+1798	Medic wins by unanimous decision						+1200					
+1799	Any other result						n/a					
+1800	Rodriguez wins by split/majority decision						+2800					
+1801	Any other result						n/a					
+1802	Medic wins by split/majority decision						+2500					
+1803	Any other result						n/a					
+1804	Fight ends in round 1			-160 ▼			-125	-152 ▼				
+1805	Fight doesn't end in round 1			n/a			n/a	n/a				
+1806	Fight ends in round 1					+950 ▼						
+1807	Fight doesn't end in round 1					n/a						
+1808	Fight ends in round 2			+370 ▲			+275	+310 ▲				
+1809	Fight doesn't end in round 2			n/a			n/a	n/a				
+1810	Fight ends in round 2					+1500 ▲						
+1811	Fight doesn't end in round 2					n/a						
+1812	Fight ends in round 3			+900 ▲			+900	+900 ▲				
+1813	Fight doesn't end in round 3			n/a			n/a	n/a				
+1814	Fight ends in round 3					+2400 ▲						
+1815	Fight doesn't end in round 3					n/a						
+1816	Fight ends in round 4			+1600 ▲			+1600	+1500 ▲				
+1817	Fight doesn't end in round 4			n/a			n/a	n/a				
+1818	Fight ends in round 4					+3500 ▲						
+1819	Fight doesn't end in round 4					n/a						
+1820	Fight ends in round 5			+2000			+2200	+2400 ▲				
+1821	Fight doesn't end in round 5			n/a			n/a	n/a				
+1822	Fight ends in round 5					+5000 ▲						
+1823	Fight doesn't end in round 5					n/a						
+1824	Rodriguez (scorecards = no action)											
+1825	Medic (scorecards = no action)											
+1826	Medic (scorecards = no action)											
+1827	Rodriguez (scorecards = no action)											
+1828	Rodriguez wins by TKO/KO in round 1			+1100 ▼		+1300 ▼	+1000	+1300 ▼				
+1829	Any other result			n/a		n/a	n/a	n/a				
+1830	Medic wins by TKO/KO in round 1			+110 ▼			+100	+110 ▼				
+1831	Any other result			n/a			n/a	n/a				
+1832	Rodriguez wins by submission in round 1			+3000 ▼		+3000 ▲	+2800	+3000 ▲				
+1833	Any other result			n/a		n/a	n/a	n/a				
+1834	Medic wins by submission in round 1			+1800 ▲			+1600	+1700 ▼				
+1835	Any other result			n/a			n/a	n/a				
+1836	Rodriguez wins by TKO/KO in round 2			+2500 ▼		+2000 ▲	+1600	+2000 ▲				
+1837	Any other result			n/a		n/a	n/a	n/a				
+1838	Medic wins by TKO/KO in round 2			+550 ▲			+400	+460 ▲				
+1839	Any other result			n/a			n/a	n/a				
+1840	Rodriguez wins by TKO/KO in round 3			+3000 ▼		+3000 ▲	+2500	+3000 ▲				
+1841	Any other result			n/a		n/a	n/a	n/a				
+1842	Medic wins by TKO/KO in round 3			+1500 ▲			+1600	+1500 ▲				
+1843	Any other result			n/a			n/a	n/a				
+1844	Rodriguez wins by TKO/KO in round 4			+4000 ▼		+4500 ▲	+3300	+4500 ▲				
+1845	Any other result			n/a		n/a	n/a	n/a				
+1846	Medic wins by TKO/KO in round 4			+2700 ▲			+2200	+2500 ▲				
+1847	Any other result			n/a			n/a	n/a				
+1848	Rodriguez wins by TKO/KO in round 5			+5500 ▼		+6000 ▲	+4000	+6000 ▲				
+1849	Any other result			n/a		n/a	n/a	n/a				
+1850	Medic wins by TKO/KO in round 5			+3500 ▲			+3300	+3500 ▲				
+1851	Any other result			n/a			n/a	n/a				
+1852	Rodriguez wins by submission in round 2			+6000 ▲		+4000 ▼	+3300	+4000 ▼				
+1853	Any other result			n/a		n/a	n/a	n/a				
+1854	Medic wins by submission in round 2			+5000 ▲			+2200	+4000				
+1855	Any other result			n/a			n/a	n/a				
+1856	Rodriguez wins by submission in round 3			+8000		+6000	+4000	+6000				
+1857	Any other result			n/a		n/a	n/a	n/a				
+1858	Medic wins by submission in round 3			+10000 ▲			+3300	+8000				
+1859	Any other result			n/a			n/a	n/a				
+1860	Rodriguez wins by submission in round 4			+10000		+8000 ▲	+5000	+8000 ▲				
+1861	Any other result			n/a		n/a	n/a	n/a				
+1862	Medic wins by submission in round 4			+17500 ▲			+4000	+12000 ▲				
+1863	Any other result			n/a			n/a	n/a				
+1864	Rodriguez wins by submission in round 5			+12500 ▲		+11000 ▲	+6600	+11000 ▲				
+1865	Any other result			n/a		n/a	n/a	n/a				
+1866	Medic wins by submission in round 5			+25000 ▲			+5000	+15000 ▲				
+1867	Any other result			n/a			n/a	n/a				
+1868	Either fighter wins by TKO/KO			-550 ▼								
+1869	Any other result			n/a								
+1870	Either fighter wins by submission			+700 ▲								
+1871	Any other result			n/a								
+1872	Rodriguez wins in round 1 or 2					+575 ▼		+575 ▲				
+1873	Any other result					n/a		n/a				
+1874	Medic wins in round 1 or 2							-235 ▼				
+1875	Any other result							n/a				
+1876	Rodriguez wins in round 3 or 4					+1600 ▲		+1600 ▲				
+1877	Any other result					n/a		n/a				
+1878	Medic wins in round 3 or 4							+900 ▲				
+1879	Any other result							n/a				
+1880	Fight ends in round 1 or 2							-455 ▼				
+1881	Any other result							n/a				
+1882	Fight ends in round 3 or 4							+575 ▲				
+1883	Any other result							n/a				
+1884	Fight ends in final round or goes to decision							+700 ▲				
+1885	Any other result							n/a				
+1886	Fight ends in final round or goes to decision					+1700 ▲						
+1887	Any other result					n/a						
+1888	Rodriguez wins in final round or by decision							+1700 ▲				
+1889	Any other result							n/a				
+1890	Medic wins in final round or by decision							+1400 ▲				
+1891	Any other result							n/a				
+1892	Fight ends in TKO/KO/DQ in round 1			-125 ▼				-141 ▼				
+1893	Any other result			n/a				n/a				
+1894	Fight ends in TKO/KO/DQ in round 2			+440 ▲				+330 ▲				
+1895	Any other result			n/a				n/a				
+1896	Fight ends in TKO/KO/DQ in round 3			+1000 ▼				+1000 ▲				
+1897	Any other result			n/a				n/a				
+1898	Fight ends in TKO/KO/DQ in round 4			+1800 ▲				+1600 ▲				
+1899	Any other result			n/a				n/a				
+1900	Fight ends in TKO/KO/DQ in round 5			+2500 ▲				+2500 ▲				
+1901	Any other result			n/a				n/a				
+1902	Fight ends in submission in round 1			+1200 ▲				+1000 ▼				
+1903	Any other result			n/a				n/a				
+1904	Fight ends in submission in round 2			+3000 ▲				+2200				
+1905	Any other result			n/a				n/a				
+1906	Fight ends in submission in round 3			+5000 ▲				+4000				
+1907	Any other result			n/a				n/a				
+1908	Fight ends in submission in round 4			+8000 ▲				+6000 ▲				
+1909	Any other result			n/a				n/a				
+1910	Fight ends in submission in round 5			+10000 ▲				+8000 ▲				
+1911	Any other result			n/a				n/a				
+1912	44218 Jan Blachowicz		+239 ▼	+285 ▲	+290 ▲	+250 ▲	+250 ▲	+250 ▲				59
+1913	Navajo Stirling		-291 ▲	-355 ▼	-370 ▼	-335 ▼	-333 ▼	-335 ▼				59
+1914	Over 1½ rounds					-400 ▲	-400	-400 ▲				
+1915	Under 1½ rounds					+260 ▼	+275	+275 ▼				
+1916	Over 2½ rounds			-210 ▲		-215 ▲	-225	-215 ▲				
+1917	Under 2½ rounds			+160 ▼		+155	+163	+155 ▼				
+1918	Fight goes to decision			-160 ▲		-167 ▲	-188	-167 ▲				
+1919	Fight doesn't go to decision			+128 ▼		+128 ▼	+140	+128 ▼				
+1920	Fight starts round 2			-650								
+1921	Fight won't start round 2			+390 ▼								
+1922	Fight starts round 3			-270 ▲								
+1923	Fight won't start round 3			+192 ▼								
+1924	Fight is a draw			+5000	+6000	+4500	+5000	+4500				
+1925	Fight is not a draw			n/a	n/a	n/a	n/a	n/a				
+1926	Blachowicz wins by TKO/KO			+1100 ▲		+800	+800	+800				
+1927	Any other result			n/a		n/a	n/a	n/a				
+1928	Stirling wins by TKO/KO			+240 ▼		+260 ▼	+250	+265 ▼				
+1929	Any other result			n/a		n/a	n/a	n/a				
+1930	Blachowicz wins by submission			+2200 ▲		+1800 ▲	+1800	+1800 ▲				
+1931	Any other result			n/a		n/a	n/a	n/a				
+1932	Stirling wins by submission			+1400 ▼		+1400	+1000	+1400				
+1933	Any other result			n/a		n/a	n/a	n/a				
+1934	Blachowicz wins inside distance						+600	+650 ▲				
+1935	Not Blachowicz inside distance						-1408	-1115 ▼				
+1936	Stirling wins inside distance						+163	+215 ▼				
+1937	Not Stirling inside distance						-225	-305 ▲				
+1938	Blachowicz wins by decision			+500 ▲		+500 ▲	+450	+480 ▲				
+1939	Not Blachowicz by decision			n/a		n/a	-800	-770 ▼				
+1940	Stirling wins by decision			+105 ▲		+108 ▼	-105	+110 ▼				
+1941	Not Stirling by decision			n/a		n/a	-125	-143 ▲				
+1942	Blachowicz wins in round 1			+1700 ▲	+1200		+1400	+1500 ▲				
+1943	Any other result			n/a	n/a		n/a	n/a				
+1944	Stirling wins in round 1			+500 ▼	+400		+400	+575 ▼				
+1945	Any other result			n/a	n/a		n/a	n/a				
+1946	Blachowicz wins in round 2			+2200 ▲	+1800 ▲		+1800	+1800 ▼				
+1947	Any other result			n/a	n/a		n/a	n/a				
+1948	Stirling wins in round 2			+800 ▼	+700 ▼		+600	+800				
+1949	Any other result			n/a	n/a		n/a	n/a				
+1950	Blachowicz wins in round 3			+2700 ▲	+2500 ▲		+2500	+2200 ▼				
+1951	Any other result			n/a	n/a		n/a	n/a				
+1952	Stirling wins in round 3			+1000 ▼	+1100 ▼		+900	+1050 ▼				
+1953	Any other result			n/a	n/a		n/a	n/a				
+1954	Fight ends in round 1			+380 ▼		+375 ▼	+350 ▲	+375 ▼				
+1955	Fight doesn't end in round 1			n/a		n/a	n/a	n/a				
+1956	Fight ends in round 1					+1500 ▲						
+1957	Fight doesn't end in round 1					n/a						
+1958	Fight ends in round 1					+575 ▼						
+1959	Fight doesn't end in round 1					n/a						
+1960	Fight ends in round 2			+550 ▼		+510 ▼	+550 ▲	+510 ▼				
+1961	Fight doesn't end in round 2			n/a		n/a	n/a	n/a				
+1962	Fight ends in round 2					+1800 ▼						
+1963	Fight doesn't end in round 2					n/a						
+1964	Fight ends in round 2					+800						
+1965	Fight doesn't end in round 2					n/a						
+1966	Fight ends in round 3			+700 ▼		+750	+800	+750				
+1967	Fight doesn't end in round 3			n/a		n/a	n/a	n/a				
+1968	Fight ends in round 3					+2200 ▼						
+1969	Fight doesn't end in round 3					n/a						
+1970	Fight ends in round 3					+1050 ▼						
+1971	Fight doesn't end in round 3					n/a						
+1972	Blachowicz (scorecards = no action)											
+1973	Stirling (scorecards = no action)											
+1974	Stirling (scorecards = no action)											
+1975	Blachowicz (scorecards = no action)											
+1976	Blachowicz wins by TKO/KO in round 1			+2500 ▲		+2000 ▲		+2000 ▲				
+1977	Any other result			n/a		n/a		n/a				
+1978	Stirling wins by TKO/KO in round 1			+650 ▼		+700 ▼		+700 ▼				
+1979	Any other result			n/a		n/a		n/a				
+1980	Blachowicz wins by submission in round 1			+4500 ▲		+4000 ▼		+4000 ▼				
+1981	Any other result			n/a		n/a		n/a				
+1982	Stirling wins by submission in round 1			+2700 ▼		+3300		+3300				
+1983	Any other result			n/a		n/a		n/a				
+1984	Blachowicz wins by TKO/KO in round 2			+3000 ▲		+2400		+2400				
+1985	Any other result			n/a		n/a		n/a				
+1986	Stirling wins by TKO/KO in round 2			+1000 ▲		+900 ▼		+900 ▼				
+1987	Any other result			n/a		n/a		n/a				
+1988	Blachowicz wins by TKO/KO in round 3			+3500 ▲		+2900 ▼		+2900 ▼				
+1989	Any other result			n/a		n/a		n/a				
+1990	Stirling wins by TKO/KO in round 3			+1200 ▼		+1200 ▼		+1200 ▼				
+1991	Any other result			n/a		n/a		n/a				
+1992	Blachowicz wins by submission in round 2			+5000 ▲		+5000		+5000				
+1993	Any other result			n/a		n/a		n/a				
+1994	Stirling wins by submission in round 2			+3500 ▼		+4000		+4000				
+1995	Any other result			n/a		n/a		n/a				
+1996	Blachowicz wins by submission in round 3			+5000		+6000 ▲		+6000 ▲				
+1997	Any other result			n/a		n/a		n/a				
+1998	Stirling wins by submission in round 3			+4500 ▼		+5000		+5000				
+1999	Any other result			n/a		n/a		n/a				
+2000	Either fighter wins by TKO/KO			+180 ▼								
+2001	Any other result			n/a								
+2002	Either fighter wins by submission			+900 ▼								
+2003	Any other result			n/a								
+2004	Blachowicz wins in round 1 or 2			+1000 ▲		+850 ▲		+850 ▲				
+2005	Any other result			n/a		n/a		n/a				
+2006	Stirling wins in round 1 or 2			+280 ▼		+300 ▼		+300 ▼				
+2007	Any other result			n/a		n/a		n/a				
+2008	Fight ends in round 1 or 2					+195 ▼		+195 ▼				
+2009	Any other result					n/a		n/a				
+2010	Fight ends in final round or goes to decision					-305 ▲		-305 ▲				
+2011	Any other result					n/a		n/a				
+2012	Fight ends in final round or goes to decision					+400 ▲						
+2013	Any other result					n/a						
+2014	Fight ends in final round or goes to decision					-127 ▼						
+2015	Any other result					n/a						
+2016	Blachowicz wins in final round or by decision			+430 ▲				+400 ▲				
+2017	Any other result			n/a				n/a				
+2018	Stirling wins in final round or by decision			-135 ▲				-127 ▼				
+2019	Any other result			n/a				n/a				
+2020	Fight ends in TKO/KO/DQ in round 1			+500 ▼		+425 ▼		+425 ▼				
+2021	Any other result			n/a		n/a		n/a				
+2022	Fight ends in TKO/KO/DQ in round 2			+750 ▲		+575		+575				
+2023	Any other result			n/a		n/a		n/a				
+2024	Fight ends in TKO/KO/DQ in round 3			+950 ▲		+750		+750				
+2025	Any other result			n/a		n/a		n/a				
+2026	Fight ends in submission in round 1			+1900 ▼		+1500 ▼		+1500 ▼				
+2027	Any other result			n/a		n/a		n/a				
+2028	Fight ends in submission in round 2			+2500 ▼		+1800		+1800				
+2029	Any other result			n/a		n/a		n/a				
+2030	Fight ends in submission in round 3			+3000		+2200		+2200				
+2031	Any other result			n/a		n/a		n/a				
+2032	44219 Aleksandar Rakic	-355 ▼	-3487 ▼	-390 ▲	-400 ▲	-420 ▼	-350	-420 ▼				59
+2033	Marcin Tybura	+335 ▲	+1770 ▲	+310	+310 ▼	+310 ▲	+260 ▼	+310 ▲				59
+2034	Over 1½ rounds					-215 ▼	-225	-215 ▼				
+2035	Under 1½ rounds					+155 ▲	+163	+155 ▲				
+2036	Over 2½ rounds			+110 ▲		-113 ▼	-110 ▲	-112 ▼				
+2037	Under 2½ rounds			-140 ▼		-121 ▲	-120 ▼	-120 ▲				
+2038	Fight goes to decision			+140 ▲		+112 ▲	+120 ▲	+112 ▲				
+2039	Fight doesn't go to decision			-180 ▼		-150 ▼	-163 ▼	-150 ▼				
+2040	Fight starts round 2			-270 ▲								
+2041	Fight won't start round 2			+192 ▼								
+2042	Fight starts round 3			-118 ▲								
+2043	Fight won't start round 3			-112 ▼								
+2044	Fight is a draw			+5000	+6000	+4500	+6600	+4500				
+2045	Fight is not a draw			n/a	n/a	n/a	n/a	n/a				
+2046	Rakic wins by TKO/KO			-105 ▼		+116 ▼	+110 ▼	+116 ▼				
+2047	Any other result			n/a		n/a	n/a	n/a				
+2048	Tybura wins by TKO/KO			+1100 ▲		+1050 ▲	+800	+1100 ▲				
+2049	Any other result			n/a		n/a	n/a	n/a				
+2050	Rakic wins by submission			+1600 ▲		+1700 ▼	+2000	+1700 ▼				
+2051	Any other result			n/a		n/a	n/a	n/a				
+2052	Tybura wins by submission			+1900 ▲		+1400 ▲	+1200	+1400 ▲				
+2053	Any other result			n/a		n/a	n/a	n/a				
+2054	Rakic wins inside distance						-120 ▼	+106 ▼				
+2055	Not Rakic inside distance						-110 ▲	-139 ▲				
+2056	Tybura wins inside distance						+600	+750 ▲				
+2057	Not Tybura inside distance						-1408	-1250 ▼				
+2058	Rakic wins by decision			+240 ▲		+185 ▼	+163	+185 ▼				
+2059	Not Rakic by decision			n/a		n/a	-225	-250 ▲				
+2060	Tybura wins by decision			+650 ▲		+650 ▲	+500	+650 ▲				
+2061	Not Tybura by decision			n/a		n/a	-1000	-1115 ▼				
+2062	Rakic wins in round 1			+230 ▼	+250 ▲		+275	+310 ▼				
+2063	Any other result			n/a	n/a		n/a	n/a				
+2064	Tybura wins in round 1			+1600 ▲	+1400 ▲		+1400	+1600 ▲				
+2065	Any other result			n/a	n/a		n/a	n/a				
+2066	Rakic wins in round 2			+500 ▼	+450 ▼		+450	+475 ▼				
+2067	Any other result			n/a	n/a		n/a	n/a				
+2068	Tybura wins in round 2			+2200 ▲	+1800		+1800	+2000 ▲				
+2069	Any other result			n/a	n/a		n/a	n/a				
+2070	Rakic wins in round 3			+850 ▲	+700 ▼		+700	+900 ▼				
+2071	Any other result			n/a	n/a		n/a	n/a				
+2072	Tybura wins in round 3			+2700 ▲	+2500		+2500	+2500 ▲				
+2073	Any other result			n/a	n/a		n/a	n/a				
+2074	Fight ends in round 1			+185 ▼		+225 ▲	+250	+225 ▲				
+2075	Fight doesn't end in round 1			n/a		n/a	n/a	n/a				
+2076	Fight ends in round 1					+310 ▼						
+2077	Fight doesn't end in round 1					n/a						
+2078	Fight ends in round 1					+1600 ▲						
+2079	Fight doesn't end in round 1					n/a						
+2080	Fight ends in round 2			+390 ▼		+360 ▼	+400	+360 ▼				
+2081	Fight doesn't end in round 2			n/a		n/a	n/a	n/a				
+2082	Fight ends in round 2					+475 ▼						
+2083	Fight doesn't end in round 2					n/a						
+2084	Fight ends in round 2					+2000 ▲						
+2085	Fight doesn't end in round 2					n/a						
+2086	Fight ends in round 3			+650 ▲		+650 ▼	+600	+650 ▼				
+2087	Fight doesn't end in round 3			n/a		n/a	n/a	n/a				
+2088	Fight ends in round 3					+900 ▼						
+2089	Fight doesn't end in round 3					n/a						
+2090	Fight ends in round 3					+2500 ▲						
+2091	Fight doesn't end in round 3					n/a						
+2092	Rakic (scorecards = no action)											
+2093	Tybura (scorecards = no action)											
+2094	Tybura (scorecards = no action)											
+2095	Rakic (scorecards = no action)											
+2096	Rakic wins by TKO/KO in round 1			+270 ▼		+335 ▼		+335 ▼				
+2097	Any other result			n/a		n/a		n/a				
+2098	Tybura wins by TKO/KO in round 1			+2200 ▲		+2500 ▲		+2500 ▲				
+2099	Any other result			n/a		n/a		n/a				
+2100	Rakic wins by submission in round 1			+2700 ▼		+3500 ▼		+3500 ▼				
+2101	Any other result			n/a		n/a		n/a				
+2102	Tybura wins by submission in round 1			+3500 ▲		+3300 ▲		+3300 ▲				
+2103	Any other result			n/a		n/a		n/a				
+2104	Rakic wins by TKO/KO in round 2			+550 ▼		+510 ▼		+510 ▼				
+2105	Any other result			n/a		n/a		n/a				
+2106	Tybura wins by TKO/KO in round 2			+3000 ▲		+3300 ▲		+3300 ▲				
+2107	Any other result			n/a		n/a		n/a				
+2108	Rakic wins by TKO/KO in round 3			+950 ▼		+950 ▼		+950 ▼				
+2109	Any other result			n/a		n/a		n/a				
+2110	Tybura wins by TKO/KO in round 3			+4000 ▲		+4000 ▲		+4000 ▲				
+2111	Any other result			n/a		n/a		n/a				
+2112	Rakic wins by submission in round 2			+4500 ▲		+4500 ▼		+4500 ▼				
+2113	Any other result			n/a		n/a		n/a				
+2114	Tybura wins by submission in round 2			+5000 ▲		+4000 ▲		+4000 ▲				
+2115	Any other result			n/a		n/a		n/a				
+2116	Rakic wins by submission in round 3			+5000 ▲		+7000 ▼		+7000 ▼				
+2117	Any other result			n/a		n/a		n/a				
+2118	Tybura wins by submission in round 3			+5000		+5000 ▲		+5000 ▲				
+2119	Any other result			n/a		n/a		n/a				
+2120	Either fighter wins by TKO/KO			-135 ▼								
+2121	Any other result			n/a								
+2122	Either fighter wins by submission			+900 ▲								
+2123	Any other result			n/a								
+2124	Rakic wins in round 1 or 2			+120 ▼		+143 ▼		+143 ▼				
+2125	Any other result			n/a		n/a		n/a				
+2126	Tybura wins in round 1 or 2			+900 ▼		+900 ▲		+900 ▲				
+2127	Any other result			n/a		n/a		n/a				
+2128	Fight ends in round 1 or 2					+104 ▲		+104 ▲				
+2129	Any other result					n/a		n/a				
+2130	Fight ends in final round or goes to decision					-150 ▼		-150 ▼				
+2131	Any other result					n/a		n/a				
+2132	Fight ends in final round or goes to decision					+125 ▼						
+2133	Any other result					n/a						
+2134	Fight ends in final round or goes to decision					+525 ▲						
+2135	Any other result					n/a						
+2136	Rakic wins in final round or by decision			+155 ▲				+125 ▼				
+2137	Any other result			n/a				n/a				
+2138	Tybura wins in final round or by decision			+500 ▲				+525 ▲				
+2139	Any other result			n/a				n/a				
+2140	Fight ends in TKO/KO/DQ in round 1			+230 ▼		+245 ▼		+245 ▼				
+2141	Any other result			n/a		n/a		n/a				
+2142	Fight ends in TKO/KO/DQ in round 2			+470 ▼		+375 ▼		+375 ▼				
+2143	Any other result			n/a		n/a		n/a				
+2144	Fight ends in TKO/KO/DQ in round 3			+750 ▼		+650 ▼		+650 ▼				
+2145	Any other result			n/a		n/a		n/a				
+2146	Fight ends in submission in round 1			+1700 ▼		+1400 ▲		+1400 ▲				
+2147	Any other result			n/a		n/a		n/a				
+2148	Fight ends in submission in round 2			+2700 ▲		+1800 ▲		+1800 ▲				
+2149	Any other result			n/a		n/a		n/a				
+2150	Fight ends in submission in round 3			+3500 ▲		+2900 ▲		+2900 ▲				
+2151	Any other result			n/a		n/a		n/a				
+2152	44221 Gilbert Urbina	+270 ▼	+239 ▼	+270 ▼	+265 ▲	+260 ▼	+275 ▲	+260 ▼				59
+2153	Vlasto Cepo	-285 ▲	-307	-335 ▲	-340 ▼	-345 ▲	-350 ▼	-345 ▲				59
+2154	Over 1½ rounds					+205 ▼	+225	+215 ▼				
+2155	Under 1½ rounds					-305 ▲	-333	-305 ▲				
+2156	Over 2½ rounds					+410 ▼	+450	+450				
+2157	Under 2½ rounds					-770 ▲	-800	-770 ▲				
+2158	Fight goes to decision			+810 ▲		+575 ▼	+550 ▲	+575 ▼				
+2159	Fight doesn't go to decision			-1600 ▼		-1000 ▲	-1205 ▼	-1000 ▲				
+2160	Fight starts round 2			+200 ▲								
+2161	Fight won't start round 2			-280 ▼								
+2162	Fight starts round 3			+460 ▲								
+2163	Fight won't start round 3			-800 ▼								
+2164	Fight is a draw			+5000	+6000	+4500	+8000	+4500				
+2165	Fight is not a draw			n/a	n/a	n/a	n/a	n/a				
+2166	Urbina wins by TKO/KO			+1000 ▲		+950 ▲	+800	+950 ▼				
+2167	Any other result			n/a		n/a	n/a	n/a				
+2168	Cepo wins by TKO/KO			-230 ▼		-215 ▲	-225	-215 ▲				
+2169	Any other result			n/a		n/a	n/a	n/a				
+2170	Urbina wins by submission			+550 ▼		+540 ▼	+450	+540 ▼				
+2171	Any other result			n/a		n/a	n/a	n/a				
+2172	Cepo wins by submission			+1500 ▲		+1200 ▲	+900	+1200 ▲				
+2173	Any other result			n/a		n/a	n/a	n/a				
+2174	Urbina wins inside distance						+300	+360 ▲				
+2175	Not Urbina inside distance						-450	-530				
+2176	Cepo wins inside distance						-275	-250 ▲				
+2177	Not Cepo inside distance						+200	+180 ▼				
+2178	Urbina wins by decision			+1800 ▲		+1300 ▼	+1200	+1400 ▼				
+2179	Not Urbina by decision			n/a		n/a	-10000	-5000				
+2180	Cepo wins by decision			+1800 ▲		+1200 ▼	+1200	+1300 ▼				
+2181	Not Cepo by decision			n/a		n/a	-10000	-3335 ▲				
+2182	Urbina wins in round 1			+650 ▼	+700		+700	+700 ▼				
+2183	Any other result			n/a	n/a		n/a	n/a				
+2184	Cepo wins in round 1			-180 ▼	-200 ▼		-188	-117 ▲				
+2185	Any other result			n/a	n/a		n/a	n/a				
+2186	Urbina wins in round 2			+1200 ▲	+1200		+1200	+1200 ▼				
+2187	Any other result			n/a	n/a		n/a	n/a				
+2188	Cepo wins in round 2			+850 ▲	+500 ▲		+450	+510 ▼				
+2189	Any other result			n/a	n/a		n/a	n/a				
+2190	Urbina wins in round 3			+2000 ▲	+2000 ▼		+2200	+2200 ▼				
+2191	Any other result			n/a	n/a		n/a	n/a				
+2192	Cepo wins in round 3			+3300	+1600		+1200	+1600 ▼				
+2193	Any other result			n/a	n/a		n/a	n/a				
+2194	Fight ends in round 1			-300 ▼		-190 ▲	-225	-190 ▲				
+2195	Fight doesn't end in round 1			n/a		n/a	n/a	n/a				
+2196	Fight ends in round 1					+700 ▼						
+2197	Fight doesn't end in round 1					n/a						
+2198	Fight ends in round 1					-117 ▲						
+2199	Fight doesn't end in round 1					n/a						
+2200	Fight ends in round 2			+490 ▲		+335 ▼	+350	+335 ▼				
+2201	Fight doesn't end in round 2			n/a		n/a	n/a	n/a				
+2202	Fight ends in round 2					+1200 ▼						
+2203	Fight doesn't end in round 2					n/a						
+2204	Fight ends in round 2					+510 ▼						
+2205	Fight doesn't end in round 2					n/a						
+2206	Fight ends in round 3			+1300 ▲		+1000 ▼	+1000	+1000 ▼				
+2207	Fight doesn't end in round 3			n/a		n/a	n/a	n/a				
+2208	Fight ends in round 3					+2200 ▼						
+2209	Fight doesn't end in round 3					n/a						
+2210	Fight ends in round 3					+1600 ▼						
+2211	Fight doesn't end in round 3					n/a						
+2212	Urbina (scorecards = no action)											
+2213	Cepo (scorecards = no action)											
+2214	Cepo (scorecards = no action)											
+2215	Urbina (scorecards = no action)											
+2216	Urbina wins by TKO/KO in round 1			+1800 ▼		+1900 ▲		+1900 ▲				
+2217	Any other result			n/a		n/a		n/a				
+2218	Cepo wins by TKO/KO in round 1			-155 ▼		+100 ▲		+100 ▲				
+2219	Any other result			n/a		n/a		n/a				
+2220	Urbina wins by submission in round 1			+1100 ▼		+1100 ▲		+1100 ▲				
+2221	Any other result			n/a		n/a		n/a				
+2222	Cepo wins by submission in round 1			+1800 ▲		+1800 ▲		+1800 ▲				
+2223	Any other result			n/a		n/a		n/a				
+2224	Urbina wins by TKO/KO in round 2			+3000 ▲		+2900 ▼		+2900 ▼				
+2225	Any other result			n/a		n/a		n/a				
+2226	Cepo wins by TKO/KO in round 2			+950 ▲		+550 ▼		+550 ▼				
+2227	Any other result			n/a		n/a		n/a				
+2228	Urbina wins by TKO/KO in round 3			+4500 ▲		+5000 ▼		+5000 ▼				
+2229	Any other result			n/a		n/a		n/a				
+2230	Cepo wins by TKO/KO in round 3			+3500		+1800 ▼		+1800 ▼				
+2231	Any other result			n/a		n/a		n/a				
+2232	Urbina wins by submission in round 2			+1900 ▲		+1800 ▼		+1800 ▼				
+2233	Any other result			n/a		n/a		n/a				
+2234	Cepo wins by submission in round 2			+5000 ▲		+5000 ▼		+5000 ▼				
+2235	Any other result			n/a		n/a		n/a				
+2236	Urbina wins by submission in round 3			+3000 ▲		+3000 ▼		+3000 ▼				
+2237	Any other result			n/a		n/a		n/a				
+2238	Cepo wins by submission in round 3			+5000		+10000 ▼		+10000 ▼				
+2239	Any other result			n/a		n/a		n/a				
+2240	Either fighter wins by TKO/KO			-320 ▼								
+2241	Any other result			n/a								
+2242	Either fighter wins by submission			+390 ▲								
+2243	Any other result			n/a								
+2244	Urbina wins in round 1 or 2			+410 ▼		+420 ▲		+420 ▲				
+2245	Any other result			n/a		n/a		n/a				
+2246	Cepo wins in round 1 or 2			-260 ▼		-230 ▲		-230 ▲				
+2247	Any other result			n/a		n/a		n/a				
+2248	Fight ends in round 1 or 2					-560 ▲		-560 ▲				
+2249	Any other result					n/a		n/a				
+2250	Fight ends in final round or goes to decision					+335 ▼		+335 ▼				
+2251	Any other result					n/a		n/a				
+2252	Fight ends in final round or goes to decision					+850 ▼						
+2253	Any other result					n/a						
+2254	Fight ends in final round or goes to decision					+700 ▼						
+2255	Any other result					n/a						
+2256	Urbina wins in final round or by decision			+1000 ▲				+850 ▼				
+2257	Any other result			n/a				n/a				
+2258	Cepo wins in final round or by decision			+1200 ▲				+700 ▼				
+2259	Any other result			n/a				n/a				
+2260	Fight ends in TKO/KO/DQ in round 1			-180 ▼		-143 ▲		-143 ▲				
+2261	Any other result			n/a		n/a		n/a				
+2262	Fight ends in TKO/KO/DQ in round 2			+700 ▲		+430 ▼		+430 ▼				
+2263	Any other result			n/a		n/a		n/a				
+2264	Fight ends in TKO/KO/DQ in round 3			+2200 ▲		+1300 ▼		+1300 ▼				
+2265	Any other result			n/a		n/a		n/a				
+2266	Fight ends in submission in round 1			+650 ▼		+600 ▲		+600 ▲				
+2267	Any other result			n/a		n/a		n/a				
+2268	Fight ends in submission in round 2			+1700 ▲		+1300 ▼		+1300 ▼				
+2269	Any other result			n/a		n/a		n/a				
+2270	Fight ends in submission in round 3			+2700 ▲		+2500 ▼		+2500 ▼				
+2271	Any other result			n/a		n/a		n/a				
+2272	44220 Dusko Todorovic	+144 ▼	+207 ▼	+134 ▼	+125 ▼	+132 ▼	+140 ▲	+132 ▼				59
+2273	Robert Valentin	-150 ▲	-277 ▲	-158 ▲	-150 ▲	-165 ▲	-175 ▼	-165 ▲				59
+2274	Over 1½ rounds			-106 ▲		-108 ▼	+105	-106 ▼				
+2275	Under 1½ rounds			-118		-127	-138	-125 ▲				
+2276	Over 2½ rounds					+205 ▲	+225	+205 ▼				
+2277	Under 2½ rounds					-295	-333	-295				
+2278	Fight goes to decision			+310 ▼		+280 ▼	+275	+280 ▼				
+2279	Fight doesn't go to decision			-450 ▲		-400 ▲	-400	-400 ▲				
+2280	Fight starts round 2			-172 ▼								
+2281	Fight won't start round 2			+126 ▲								
+2282	Fight starts round 3			+150 ▲								
+2283	Fight won't start round 3			-205 ▼								
+2284	Fight is a draw			+5000	+6000	+4500	+8000	+4500				
+2285	Fight is not a draw			n/a	n/a	n/a	n/a	n/a				
+2286	Todorovic wins by TKO/KO			+410 ▲		+400 ▼	+400	+400 ▼				
+2287	Any other result			n/a		n/a	n/a	n/a				
+2288	Valentin wins by TKO/KO			+250 ▲		+295 ▲	+240	+295 ▲				
+2289	Any other result			n/a		n/a	n/a	n/a				
+2290	Todorovic wins by submission			+700 ▲		+700 ▲	+600	+700 ▲				
+2291	Any other result			n/a		n/a	n/a	n/a				
+2292	Valentin wins by submission			+250 ▼		+240 ▲	+225	+240 ▲				
+2293	Any other result			n/a		n/a	n/a	n/a				
+2294	Todorovic wins inside distance						+200	+235 ▼				
+2295	Not Todorovic inside distance						-275	-335 ▲				
+2296	Valentin wins inside distance						-120	-109 ▲				
+2297	Not Valentin inside distance						-110	-122 ▼				
+2298	Todorovic wins by decision			+600 ▼		+550 ▼	+500	+575 ▼				
+2299	Not Todorovic by decision			n/a		n/a	-1000	-1000				
+2300	Valentin wins by decision			+900 ▲		+750 ▼	+700	+800 ▲				
+2301	Not Valentin by decision			n/a		n/a	-1587	-1430				
+2302	Todorovic wins in round 1			+500 ▲	+400		+450	+525 ▼				
+2303	Any other result			n/a	n/a		n/a	n/a				
+2304	Valentin wins in round 1			+240 ▲	+200		+200	+250 ▲				
+2305	Any other result			n/a	n/a		n/a	n/a				
+2306	Todorovic wins in round 2			+950 ▲	+850		+700	+850 ▼				
+2307	Any other result			n/a	n/a		n/a	n/a				
+2308	Valentin wins in round 2			+470	+400		+400	+480 ▲				
+2309	Any other result			n/a	n/a		n/a	n/a				
+2310	Todorovic wins in round 3			+1400 ▼	+1400		+1400	+1500 ▼				
+2311	Any other result			n/a	n/a		n/a	n/a				
+2312	Valentin wins in round 3			+850 ▼	+900		+900	+900 ▼				
+2313	Any other result			n/a	n/a		n/a	n/a				
+2314	Fight ends in round 1			+120 ▼		+125 ▲	+125 ▲	+125 ▲				
+2315	Fight doesn't end in round 1			n/a		n/a	n/a	n/a				
+2316	Fight ends in round 1					+525 ▼						
+2317	Fight doesn't end in round 1					n/a						
+2318	Fight ends in round 1					+250 ▲						
+2319	Fight doesn't end in round 1					n/a						
+2320	Fight ends in round 2			+280 ▲		+275 ▼	+250	+275 ▼				
+2321	Fight doesn't end in round 2			n/a		n/a	n/a	n/a				
+2322	Fight ends in round 2					+850 ▼						
+2323	Fight doesn't end in round 2					n/a						
+2324	Fight ends in round 2					+480 ▲						
+2325	Fight doesn't end in round 2					n/a						
+2326	Fight ends in round 3			+500 ▼		+550 ▼	+550	+550 ▼				
+2327	Fight doesn't end in round 3			n/a		n/a	n/a	n/a				
+2328	Fight ends in round 3					+1500 ▼						
+2329	Fight doesn't end in round 3					n/a						
+2330	Fight ends in round 3					+900 ▼						
+2331	Fight doesn't end in round 3					n/a						
+2332	Todorovic (scorecards = no action)											
+2333	Valentin (scorecards = no action)											
+2334	Valentin (scorecards = no action)											
+2335	Todorovic (scorecards = no action)											
+2336	Todorovic wins by TKO/KO in round 1			+850 ▲		+850 ▼		+850 ▼				
+2337	Any other result			n/a		n/a		n/a				
+2338	Valentin wins by TKO/KO in round 1			+550		+650 ▲		+650 ▲				
+2339	Any other result			n/a		n/a		n/a				
+2340	Todorovic wins by submission in round 1			+1400 ▲		+1400 ▼		+1400 ▼				
+2341	Any other result			n/a		n/a		n/a				
+2342	Valentin wins by submission in round 1			+550		+525 ▲		+525 ▲				
+2343	Any other result			n/a		n/a		n/a				
+2344	Todorovic wins by TKO/KO in round 2			+1500 ▲		+1300 ▼		+1300 ▼				
+2345	Any other result			n/a		n/a		n/a				
+2346	Valentin wins by TKO/KO in round 2			+1000 ▲		+1050 ▼		+1050 ▼				
+2347	Any other result			n/a		n/a		n/a				
+2348	Todorovic wins by TKO/KO in round 3			+2000 ▼		+2200 ▼		+2200 ▼				
+2349	Any other result			n/a		n/a		n/a				
+2350	Valentin wins by TKO/KO in round 3			+1700 ▼		+1800 ▼		+1800 ▼				
+2351	Any other result			n/a		n/a		n/a				
+2352	Todorovic wins by submission in round 2			+2200 ▲		+2200 ▲		+2200 ▲				
+2353	Any other result			n/a		n/a		n/a				
+2354	Valentin wins by submission in round 2			+1000		+900 ▼		+900 ▼				
+2355	Any other result			n/a		n/a		n/a				
+2356	Todorovic wins by submission in round 3			+3000 ▼		+3400 ▼		+3400 ▼				
+2357	Any other result			n/a		n/a		n/a				
+2358	Valentin wins by submission in round 3			+1700 ▼		+1600 ▼		+1600 ▼				
+2359	Any other result			n/a		n/a		n/a				
+2360	Either fighter wins by TKO/KO			+115 ▲								
+2361	Any other result			n/a								
+2362	Either fighter wins by submission			+155 ▼								
+2363	Any other result			n/a								
+2364	Todorovic wins in round 1 or 2			+290 ▲		+295 ▼		+295 ▼				
+2365	Any other result			n/a		n/a		n/a				
+2366	Valentin wins in round 1 or 2			+115 ▲		+123 ▲		+123 ▲				
+2367	Any other result			n/a		n/a		n/a				
+2368	Fight ends in round 1 or 2					-215 ▲		-215 ▲				
+2369	Any other result					n/a		n/a				
+2370	Fight ends in final round or goes to decision					+143 ▼		+143 ▼				
+2371	Any other result					n/a		n/a				
+2372	Fight ends in final round or goes to decision					+380 ▼						
+2373	Any other result					n/a						
+2374	Fight ends in final round or goes to decision					+380 ▲						
+2375	Any other result					n/a						
+2376	Todorovic wins in final round or by decision			+390 ▼				+380 ▼				
+2377	Any other result			n/a				n/a				
+2378	Valentin wins in final round or by decision			+420 ▲				+380 ▲				
+2379	Any other result			n/a				n/a				
+2380	Fight ends in TKO/KO/DQ in round 1			+300 ▲		+285 ▲		+285 ▲				
+2381	Any other result			n/a		n/a		n/a				
+2382	Fight ends in TKO/KO/DQ in round 2			+600 ▲		+525 ▲		+525 ▲				
+2383	Any other result			n/a		n/a		n/a				
+2384	Fight ends in TKO/KO/DQ in round 3			+1000 ▼		+1000 ▼		+1000 ▼				
+2385	Any other result			n/a		n/a		n/a				
+2386	Fight ends in submission in round 1			+380 ▲		+310 ▲		+310 ▲				
+2387	Any other result			n/a		n/a		n/a				
+2388	Fight ends in submission in round 2			+700 ▲		+600		+600				
+2389	Any other result			n/a		n/a		n/a				
+2390	Fight ends in submission in round 3			+1200 ▼		+1100 ▼		+1100 ▼				
+2391	Any other result			n/a		n/a		n/a				
+2392	44228 Milos Janicic		-137	-132 ▼	-135 ▲	-124 ▼	-105 ▲	-124 ▼				59
+2393	Noah Gugnon		+114 ▲	+112 ▲	+115 ▼	+100 ▲	-120 ▼	+100 ▲				59
+2394	Over 1½ rounds			-136 ▲		-136 ▲	-125	-134 ▲				
+2395	Under 1½ rounds			+108		+100	-105	+102				
+2396	Over 2½ rounds					+165 ▲	+150	+165 ▲				
+2397	Under 2½ rounds					-230 ▼	-200	-230 ▼				
+2398	Fight goes to decision			+230 ▲		+230 ▲	+200	+230 ▲				
+2399	Fight doesn't go to decision			-320 ▼		-315 ▼	-275	-315 ▼				
+2400	Fight starts round 2			-220 ▲								
+2401	Fight won't start round 2			+162 ▼								
+2402	Fight starts round 3			+116 ▲								
+2403	Fight won't start round 3			-154 ▼								
+2404	Fight is a draw			+5000	+6000	+4500	+6600	+4500				
+2405	Fight is not a draw			n/a	n/a	n/a	n/a	n/a				
+2406	Janicic wins by TKO/KO			+160 ▼		+180 ▼	+175	+180 ▼				
+2407	Any other result			n/a		n/a	n/a	n/a				
+2408	Gugnon wins by TKO/KO			+360 ▲		+290 ▲	+240	+295 ▲				
+2409	Any other result			n/a		n/a	n/a	n/a				
+2410	Janicic wins by submission			+1000 ▼		+950 ▼	+900	+950 ▼				
+2411	Any other result			n/a		n/a	n/a	n/a				
+2412	Gugnon wins by submission			+650 ▲		+650 ▲	+500	+650 ▲				
+2413	Any other result			n/a		n/a	n/a	n/a				
+2414	Janicic wins inside distance						+110	+138 ▼				
+2415	Not Janicic inside distance						-150	-186 ▲				
+2416	Gugnon wins inside distance						+175	+180 ▲				
+2417	Not Gugnon inside distance						-250	-250 ▼				
+2418	Janicic wins by decision			+600 ▼		+550 ▼	+500	+575 ▼				
+2419	Not Janicic by decision			n/a		n/a	-1000	-1000				
+2420	Gugnon wins by decision			+490 ▼		+525 ▲	+500	+525 ▲				
+2421	Not Gugnon by decision			n/a		n/a	-1000	-835				
+2422	Janicic wins in round 1			+320 ▼	+375 ▲		+300	+375 ▼				
+2423	Any other result			n/a	n/a		n/a	n/a				
+2424	Gugnon wins in round 1			+500 ▲	+350		+350	+475 ▲				
+2425	Any other result			n/a	n/a		n/a	n/a				
+2426	Janicic wins in round 2			+550 ▼	+600 ▼		+500	+600 ▼				
+2427	Any other result			n/a	n/a		n/a	n/a				
+2428	Gugnon wins in round 2			+800 ▲	+550 ▼		+600	+700 ▲				
+2429	Any other result			n/a	n/a		n/a	n/a				
+2430	Janicic wins in round 3			+1000 ▼	+1000		+900	+900 ▼				
+2431	Any other result			n/a	n/a		n/a	n/a				
+2432	Gugnon wins in round 3			+1100 ▲	+850		+900	+1000 ▲				
+2433	Any other result			n/a	n/a		n/a	n/a				
+2434	Fight ends in round 1			+160 ▼		+163 ▼	+188	+163 ▼				
+2435	Fight doesn't end in round 1			n/a		n/a	n/a	n/a				
+2436	Fight ends in round 1					+375 ▼						
+2437	Fight doesn't end in round 1					n/a						
+2438	Fight ends in round 1					+475 ▲						
+2439	Fight doesn't end in round 1					n/a						
+2440	Fight ends in round 2			+280 ▼		+290 ▼	+275	+290 ▼				
+2441	Fight doesn't end in round 2			n/a		n/a	n/a	n/a				
+2442	Fight ends in round 2					+600 ▼						
+2443	Fight doesn't end in round 2					n/a						
+2444	Fight ends in round 2					+700 ▲						
+2445	Fight doesn't end in round 2					n/a						
+2446	Fight ends in round 3			+500		+460 ▲	+400	+460 ▲				
+2447	Fight doesn't end in round 3			n/a		n/a	n/a	n/a				
+2448	Fight ends in round 3					+900 ▼						
+2449	Fight doesn't end in round 3					n/a						
+2450	Fight ends in round 3					+1000 ▲						
+2451	Fight doesn't end in round 3					n/a						
+2452	Janicic (scorecards = no action)											
+2453	Gugnon (scorecards = no action)											
+2454	Gugnon (scorecards = no action)											
+2455	Janicic (scorecards = no action)											
+2456	Janicic wins by TKO/KO in round 1			+420 ▼		+460 ▼		+460 ▼				
+2457	Any other result			n/a		n/a		n/a				
+2458	Gugnon wins by TKO/KO in round 1			+850 ▲		+700 ▲		+700 ▲				
+2459	Any other result			n/a		n/a		n/a				
+2460	Janicic wins by submission in round 1			+1900 ▼		+2000 ▼		+2000 ▼				
+2461	Any other result			n/a		n/a		n/a				
+2462	Gugnon wins by submission in round 1			+1500 ▲		+1500 ▲		+1500 ▲				
+2463	Any other result			n/a		n/a		n/a				
+2464	Janicic wins by TKO/KO in round 2			+700 ▼		+750 ▼		+750 ▼				
+2465	Any other result			n/a		n/a		n/a				
+2466	Gugnon wins by TKO/KO in round 2			+1200 ▲		+1050 ▲		+1050 ▲				
+2467	Any other result			n/a		n/a		n/a				
+2468	Janicic wins by TKO/KO in round 3			+1200 ▼		+1100 ▼		+1100 ▼				
+2469	Any other result			n/a		n/a		n/a				
+2470	Gugnon wins by TKO/KO in round 3			+1800 ▲		+1400 ▲		+1400 ▲				
+2471	Any other result			n/a		n/a		n/a				
+2472	Janicic wins by submission in round 2			+3000 ▲		+2900 ▼		+2900 ▼				
+2473	Any other result			n/a		n/a		n/a				
+2474	Gugnon wins by submission in round 2			+2000 ▲		+2000 ▲		+2000 ▲				
+2475	Any other result			n/a		n/a		n/a				
+2476	Janicic wins by submission in round 3			+4500 ▼		+4000 ▼		+4000 ▼				
+2477	Any other result			n/a		n/a		n/a				
+2478	Gugnon wins by submission in round 3			+3000 ▲		+2800 ▲		+2800 ▲				
+2479	Any other result			n/a		n/a		n/a				
+2480	Either fighter wins by TKO/KO			-140 ▼								
+2481	Any other result			n/a								
+2482	Either fighter wins by submission			+380 ▲								
+2483	Any other result			n/a								
+2484	Janicic wins in round 1 or 2			+160 ▼		+190 ▼		+190 ▼				
+2485	Any other result			n/a		n/a		n/a				
+2486	Gugnon wins in round 1 or 2			+280 ▲		+245 ▲		+245 ▲				
+2487	Any other result			n/a		n/a		n/a				
+2488	Fight ends in round 1 or 2					-159 ▼		-159 ▼				
+2489	Any other result					n/a		n/a				
+2490	Fight ends in final round or goes to decision					+110 ▲		+110 ▲				
+2491	Any other result					n/a		n/a				
+2492	Fight ends in final round or goes to decision					+310 ▼						
+2493	Any other result					n/a						
+2494	Fight ends in final round or goes to decision					+320 ▲						
+2495	Any other result					n/a						
+2496	Janicic wins in final round or by decision			+350 ▲				+310 ▼				
+2497	Any other result			n/a				n/a				
+2498	Gugnon wins in final round or by decision			+310 ▲				+320 ▲				
+2499	Any other result			n/a				n/a				
+2500	Fight ends in TKO/KO/DQ in round 1			+240 ▼		+210 ▼		+210 ▼				
+2501	Any other result			n/a		n/a		n/a				
+2502	Fight ends in TKO/KO/DQ in round 2			+420 ▼		+350 ▼		+350 ▼				
+2503	Any other result			n/a		n/a		n/a				
+2504	Fight ends in TKO/KO/DQ in round 3			+700 ▼		+575		+575				
+2505	Any other result			n/a		n/a		n/a				
+2506	Fight ends in submission in round 1			+850 ▲		+750 ▲		+750 ▲				
+2507	Any other result			n/a		n/a		n/a				
+2508	Fight ends in submission in round 2			+1300 ▲		+1200		+1200				
+2509	Any other result			n/a		n/a		n/a				
+2510	Fight ends in submission in round 3			+1900 ▲		+1700		+1700				
+2511	Any other result			n/a		n/a		n/a				
+2512	44222 Ludovit Klein	-233 ▼	+1071 ▲	-255 ▲	-275 ▼	-265 ▼	-250 ▼	-265 ▼				59
+2513	Tofiq Musayev	+223 ▲	-2049 ▼	+210	+225 ▲	+205 ▲	+200 ▲	+205 ▲				59
+2514	Over 1½ rounds					-345	-333	-345				
+2515	Under 1½ rounds					+235	+225	+235				
+2516	Over 2½ rounds			-168 ▼		-180	-175	-180				
+2517	Under 2½ rounds			+132 ▲		+130	+130	+133				
+2518	Fight goes to decision			-138 ▼		-143	-150	-143				
+2519	Fight doesn't go to decision			+108 ▲		+108	+110	+108				
+2520	Fight starts round 2			-460 ▲								
+2521	Fight won't start round 2			+310 ▼								
+2522	Fight starts round 3			-210 ▼								
+2523	Fight won't start round 3			+152 ▲								
+2524	Fight is a draw			+5000	+6000	+4500	+5000	+4500				
+2525	Fight is not a draw			n/a	n/a	n/a	n/a	n/a				
+2526	Klein wins by TKO/KO			+390 ▼		+360	+350	+360				
+2527	Any other result			n/a		n/a	n/a	n/a				
+2528	Musayev wins by TKO/KO			+550 ▲		+600 ▲	+500	+600 ▲				
+2529	Any other result			n/a		n/a	n/a	n/a				
+2530	Klein wins by submission			+700		+650 ▼	+600	+700				
+2531	Any other result			n/a		n/a	n/a	n/a				
+2532	Musayev wins by submission			+1900 ▲		+1600 ▲	+900	+1600 ▲				
+2533	Any other result			n/a		n/a	n/a	n/a				
+2534	Klein wins inside distance						+200	+210 ▼				
+2535	Not Klein inside distance						-275	-295 ▲				
+2536	Musayev wins inside distance						+400	+480 ▲				
+2537	Not Musayev inside distance						-649	-770 ▼				
+2538	Klein wins by decision			+125 ▼		+132 ▼	+140	+132 ▼				
+2539	Not Klein by decision			n/a		n/a	-188	-177 ▲				
+2540	Musayev wins by decision			+500		+480 ▲	+450	+480 ▲				
+2541	Not Musayev by decision			n/a		n/a	-800	-770 ▼				
+2542	Klein wins in round 1			+500 ▼	+550		+500	+575				
+2543	Any other result			n/a	n/a		n/a	n/a				
+2544	Musayev wins in round 1			+1000 ▲	+750		+700	+1150 ▲				
+2545	Any other result			n/a	n/a		n/a	n/a				
+2546	Klein wins in round 2			+850	+750		+700	+750 ▼				
+2547	Any other result			n/a	n/a		n/a	n/a				
+2548	Musayev wins in round 2			+1400 ▲	+1000		+1000	+1400				
+2549	Any other result			n/a	n/a		n/a	n/a				
+2550	Klein wins in round 3			+1400	+1000		+900	+1050 ▼				
+2551	Any other result			n/a	n/a		n/a	n/a				
+2552	Musayev wins in round 3			+2000 ▲	+1500 ▲		+1600	+1900 ▲				
+2553	Any other result			n/a	n/a		n/a	n/a				
+2554	Fight ends in round 1			+300 ▼		+330	+300	+330				
+2555	Fight doesn't end in round 1			n/a		n/a	n/a	n/a				
+2556	Fight ends in round 1					+575						
+2557	Fight doesn't end in round 1					n/a						
+2558	Fight ends in round 1					+1150 ▲						
+2559	Fight doesn't end in round 1					n/a						
+2560	Fight ends in round 2			+500 ▲		+460	+500	+460				
+2561	Fight doesn't end in round 2			n/a		n/a	n/a	n/a				
+2562	Fight ends in round 2					+750 ▼						
+2563	Fight doesn't end in round 2					n/a						
+2564	Fight ends in round 2					+1400						
+2565	Fight doesn't end in round 2					n/a						
+2566	Fight ends in round 3			+800		+700	+800	+700				
+2567	Fight doesn't end in round 3			n/a		n/a	n/a	n/a				
+2568	Fight ends in round 3					+1050 ▼						
+2569	Fight doesn't end in round 3					n/a						
+2570	Fight ends in round 3					+1900 ▲						
+2571	Fight doesn't end in round 3					n/a						
+2572	Klein (scorecards = no action)											
+2573	Musayev (scorecards = no action)											
+2574	Musayev (scorecards = no action)											
+2575	Klein (scorecards = no action)											
+2576	Klein wins by TKO/KO in round 1			+850 ▼		+900		+900				
+2577	Any other result			n/a		n/a		n/a				
+2578	Musayev wins by TKO/KO in round 1			+1300 ▲		+1500 ▲		+1500 ▲				
+2579	Any other result			n/a		n/a		n/a				
+2580	Klein wins by submission in round 1			+1400 ▼		+1600		+1600				
+2581	Any other result			n/a		n/a		n/a				
+2582	Musayev wins by submission in round 1			+3500 ▲		+3500		+3500				
+2583	Any other result			n/a		n/a		n/a				
+2584	Klein wins by TKO/KO in round 2			+1400		+1150 ▼		+1150 ▼				
+2585	Any other result			n/a		n/a		n/a				
+2586	Musayev wins by TKO/KO in round 2			+1800 ▲		+1900 ▲		+1900 ▲				
+2587	Any other result			n/a		n/a		n/a				
+2588	Klein wins by TKO/KO in round 3			+2000 ▼		+1600		+1600				
+2589	Any other result			n/a		n/a		n/a				
+2590	Musayev wins by TKO/KO in round 3			+2500		+2400 ▲		+2400 ▲				
+2591	Any other result			n/a		n/a		n/a				
+2592	Klein wins by submission in round 2			+2200		+2000		+2000				
+2593	Any other result			n/a		n/a		n/a				
+2594	Musayev wins by submission in round 2			+5000 ▲		+4500		+4500				
+2595	Any other result			n/a		n/a		n/a				
+2596	Klein wins by submission in round 3			+3300 ▲		+2800		+2800				
+2597	Any other result			n/a		n/a		n/a				
+2598	Musayev wins by submission in round 3			+5000		+5500		+5500				
+2599	Any other result			n/a		n/a		n/a				
+2600	Either fighter wins by TKO/KO			+195								
+2601	Any other result			n/a								
+2602	Either fighter wins by submission			+500								
+2603	Any other result			n/a								
+2604	Klein wins in round 1 or 2			+280 ▼		+290 ▼		+290 ▼				
+2605	Any other result			n/a		n/a		n/a				
+2606	Musayev wins in round 1 or 2			+550 ▲		+650 ▲		+650 ▲				
+2607	Any other result			n/a		n/a		n/a				
+2608	Fight ends in round 1 or 2					+165		+165				
+2609	Any other result					n/a		n/a				
+2610	Fight ends in final round or goes to decision					-250		-250				
+2611	Any other result					n/a		n/a				
+2612	Fight ends in final round or goes to decision					-104 ▼						
+2613	Any other result					n/a						
+2614	Fight ends in final round or goes to decision					+360 ▲						
+2615	Any other result					n/a						
+2616	Klein wins in final round or by decision			-105 ▼				-104 ▼				
+2617	Any other result			n/a				n/a				
+2618	Musayev wins in final round or by decision			+410 ▲				+360 ▲				
+2619	Any other result			n/a				n/a				
+2620	Fight ends in TKO/KO/DQ in round 1			+490 ▼		+460		+460				
+2621	Any other result			n/a		n/a		n/a				
+2622	Fight ends in TKO/KO/DQ in round 2			+800 ▲		+600		+600				
+2623	Any other result			n/a		n/a		n/a				
+2624	Fight ends in TKO/KO/DQ in round 3			+1200		+800		+800				
+2625	Any other result			n/a		n/a		n/a				
+2626	Fight ends in submission in round 1			+1100		+950		+950				
+2627	Any other result			n/a		n/a		n/a				
+2628	Fight ends in submission in round 2			+1700 ▲		+1200		+1200				
+2629	Any other result			n/a		n/a		n/a				
+2630	Fight ends in submission in round 3			+2500 ▲		+1600		+1600				
+2631	Any other result			n/a		n/a		n/a				
+2632	44223 Michael Oliveira	-355 ▼	-2588 ▼	-450 ▼	-480 ▼	-910 ▼	-350	-435 ▼				59
+2633	Oban Elliott	+335 ▲	+1460 ▲	+350 ▲	+360 ▲	+575 ▲	+275 ▲	+320 ▲				59
+2634	Over 1½ rounds			-160 ▲		-180	-163	-167 ▲				
+2635	Under 1½ rounds			+126 ▼		+130 ▼	+120	+125 ▼				
+2636	Over 2½ rounds			+124 ▲		+110 ▼	+130	+120 ▲				
+2637	Under 2½ rounds			-156		-150 ▲	-175	-162 ▼				
+2638	Fight goes to decision			+174 ▲		+145 ▼	+163	+160 ▲				
+2639	Fight doesn't go to decision			-230 ▼		-195 ▲	-225	-215 ▼				
+2640	Fight starts round 2			-260 ▲								
+2641	Fight won't start round 2			+184 ▼								
+2642	Fight starts round 3			-110								
+2643	Fight won't start round 3			-122 ▼								
+2644	Fight is a draw			+5000 ▼	+6000	+4500	+6600	+4500				
+2645	Fight is not a draw			n/a	n/a	n/a	n/a	n/a				
+2646	Oliveira wins by TKO/KO			-160 ▼		-130 ▼	-188	-139 ▼				
+2647	Any other result			n/a		n/a	n/a	n/a				
+2648	Elliott wins by TKO/KO			+1700 ▲		+1300 ▲	+800	+1300 ▲				
+2649	Any other result			n/a		n/a	n/a	n/a				
+2650	Oliveira wins by submission			+2500 ▲		+2000	+2200	+2000				
+2651	Any other result			n/a		n/a	n/a	n/a				
+2652	Elliott wins by submission			+2200 ▲		+1600 ▼	+1200	+1600 ▼				
+2653	Any other result			n/a		n/a	n/a	n/a				
+2654	Oliveira wins inside distance						-175	-159 ▼				
+2655	Not Oliveira inside distance						+130	+120 ▲				
+2656	Elliott wins inside distance						+700	+900 ▲				
+2657	Not Elliott inside distance						-1587	-2000 ▼				
+2658	Oliveira wins by decision			+360 ▲		+275 ▼	+450	+300 ▲				
+2659	Not Oliveira by decision			n/a		n/a	-800	-435 ▼				
+2660	Elliott wins by decision			+550 ▲		+550 ▲	+500	+575 ▲				
+2661	Not Elliott by decision			n/a		n/a	-1000	-910 ▼				
+2662	Oliveira wins in round 1			+210 ▼	+145 ▼		+150	+225 ▼				
+2663	Any other result			n/a	n/a		n/a	n/a				
+2664	Elliott wins in round 1			+2200 ▲	+1600		+1200	+2200 ▼				
+2665	Any other result			n/a	n/a		n/a	n/a				
+2666	Oliveira wins in round 2			+400 ▼	+280 ▼		+300	+400 ▼				
+2667	Any other result			n/a	n/a		n/a	n/a				
+2668	Elliott wins in round 2			+2700 ▲	+2000		+1800	+2400 ▲				
+2669	Any other result			n/a	n/a		n/a	n/a				
+2670	Oliveira wins in round 3			+600 ▼	+650 ▼		+700	+700 ▼				
+2671	Any other result			n/a	n/a		n/a	n/a				
+2672	Elliott wins in round 3			+3500 ▲	+2500 ▲		+2500	+2500 ▲				
+2673	Any other result			n/a	n/a		n/a	n/a				
+2674	Fight ends in round 1			+180 ▼		+195 ▼	+175	+185 ▼				
+2675	Fight doesn't end in round 1			n/a		n/a	n/a	n/a				
+2676	Fight ends in round 1					+235 ▼						
+2677	Fight doesn't end in round 1					n/a						
+2678	Fight ends in round 1					+2400 ▲						
+2679	Fight doesn't end in round 1					n/a						
+2680	Fight ends in round 2			+340 ▼		+330 ▲	+300	+320 ▼				
+2681	Fight doesn't end in round 2			n/a		n/a	n/a	n/a				
+2682	Fight ends in round 2					+410 ▼						
+2683	Fight doesn't end in round 2					n/a						
+2684	Fight ends in round 2					+2500 ▲						
+2685	Fight doesn't end in round 2					n/a						
+2686	Fight ends in round 3			+500 ▼		+575 ▲	+550	+550 ▼				
+2687	Fight doesn't end in round 3			n/a		n/a	n/a	n/a				
+2688	Fight ends in round 3					+700 ▼						
+2689	Fight doesn't end in round 3					n/a						
+2690	Fight ends in round 3					+2800 ▲						
+2691	Fight doesn't end in round 3					n/a						
+2692	Oliveira (scorecards = no action)											
+2693	Elliott (scorecards = no action)											
+2694	Elliott (scorecards = no action)											
+2695	Oliveira (scorecards = no action)											
+2696	Oliveira wins by TKO/KO in round 1			+220 ▼		+250 ▼		+240 ▼				
+2697	Any other result			n/a		n/a		n/a				
+2698	Elliott wins by TKO/KO in round 1			+3500 ▲		+3500 ▲		+3500 ▲				
+2699	Any other result			n/a		n/a		n/a				
+2700	Oliveira wins by submission in round 1			+4500 ▲		+4500 ▲		+4000 ▼				
+2701	Any other result			n/a		n/a		n/a				
+2702	Elliott wins by submission in round 1			+4500 ▲		+4500 ▲		+4500 ▲				
+2703	Any other result			n/a		n/a		n/a				
+2704	Oliveira wins by TKO/KO in round 2			+430 ▼		+430 ▼		+420 ▼				
+2705	Any other result			n/a		n/a		n/a				
+2706	Elliott wins by TKO/KO in round 2			+4500 ▲		+4000 ▲		+3500 ▲				
+2707	Any other result			n/a		n/a		n/a				
+2708	Oliveira wins by TKO/KO in round 3			+650 ▼		+750 ▼		+750 ▼				
+2709	Any other result			n/a		n/a		n/a				
+2710	Elliott wins by TKO/KO in round 3			+5000		+4000 ▲		+4000 ▲				
+2711	Any other result			n/a		n/a		n/a				
+2712	Oliveira wins by submission in round 2			+5000		+6000		+6000				
+2713	Any other result			n/a		n/a		n/a				
+2714	Elliott wins by submission in round 2			+5000 ▲		+5000 ▲		+4500 ▲				
+2715	Any other result			n/a		n/a		n/a				
+2716	Oliveira wins by submission in round 3			+5000		+8000		+8000				
+2717	Any other result			n/a		n/a		n/a				
+2718	Elliott wins by submission in round 3			+5000		+5000 ▲		+5000 ▲				
+2719	Any other result			n/a		n/a		n/a				
+2720	Either fighter wins by TKO/KO			-185 ▼								
+2721	Any other result			n/a								
+2722	Either fighter wins by submission			+1300 ▲								
+2723	Any other result			n/a								
+2724	Oliveira wins in round 1 or 2			-105 ▼		+106 ▼		+100 ▼				
+2725	Any other result			n/a		n/a		n/a				
+2726	Elliott wins in round 1 or 2			+1300 ▲		+1300 ▲		+1200 ▲				
+2727	Any other result			n/a		n/a		n/a				
+2728	Fight ends in round 1 or 2					-117 ▼		-125 ▼				
+2729	Any other result					n/a		n/a				
+2730	Fight ends in final round or goes to decision					-125 ▼		-115 ▲				
+2731	Any other result					n/a		n/a				
+2732	Fight ends in final round or goes to decision					+163 ▼						
+2733	Any other result					n/a						
+2734	Fight ends in final round or goes to decision					+450 ▲						
+2735	Any other result					n/a						
+2736	Oliveira wins in final round or by decision			+185 ▼				+175 ▲				
+2737	Any other result			n/a				n/a				
+2738	Elliott wins in final round or by decision			+470 ▲				+460 ▲				
+2739	Any other result			n/a				n/a				
+2740	Fight ends in TKO/KO/DQ in round 1			+200 ▼		+200 ▲		+188 ▼				
+2741	Any other result			n/a		n/a		n/a				
+2742	Fight ends in TKO/KO/DQ in round 2			+390 ▼		+330 ▲		+320 ▼				
+2743	Any other result			n/a		n/a		n/a				
+2744	Fight ends in TKO/KO/DQ in round 3			+600 ▼		+600 ▲		+600 ▲				
+2745	Any other result			n/a		n/a		n/a				
+2746	Fight ends in submission in round 1			+2500 ▲		+1900 ▲		+1800 ▲				
+2747	Any other result			n/a		n/a		n/a				
+2748	Fight ends in submission in round 2			+3500 ▲		+2200 ▲		+2000 ▲				
+2749	Any other result			n/a		n/a		n/a				
+2750	Fight ends in submission in round 3			+4500 ▲		+3500 ▲		+3500 ▲				
+2751	Any other result			n/a		n/a		n/a				
+2752	44240 Borislav Nikolic		-10679 ▼	-225 ▼	-230 ▼	-210 ▼	-200 ▼	-210 ▼				59
+2753	Mark Vologdin		+4566 ▲	+188 ▲	+190 ▲	+165 ▲	+163 ▲	+165 ▲				59
+2754	Over 1½ rounds					-250 ▲	-275	-240 ▲				
+2755	Under 1½ rounds					+175 ▼	+200	+170 ▼				
+2756	Over 2½ rounds			-128 ▲		-130 ▲	-138	-120 ▲				
+2757	Under 2½ rounds			+100 ▼		-105 ▼	+105	-112 ▼				
+2758	Fight goes to decision			-102 ▲		-103 ▲	-110 ▲	+108 ▲				
+2759	Fight doesn't go to decision			-126 ▼		-130 ▼	-120 ▲	-143 ▼				
+2760	Fight starts round 2			-430 ▲								
+2761	Fight won't start round 2			+290								
+2762	Fight starts round 3			-158 ▲								
+2763	Fight won't start round 3			+118 ▼								
+2764	Fight is a draw			+5000	+6000	+4500	+5000	+4500				
+2765	Fight is not a draw			n/a	n/a	n/a	n/a	n/a				
+2766	Nikolic wins by TKO/KO			+340 ▲		+300 ▼	+300	+290 ▼				
+2767	Any other result			n/a		n/a	n/a	n/a				
+2768	Vologdin wins by TKO/KO			+650 ▲		+600 ▼	+500	+650 ▲				
+2769	Any other result			n/a		n/a	n/a	n/a				
+2770	Nikolic wins by submission			+420 ▼		+460 ▼	+450	+440 ▼				
+2771	Any other result			n/a		n/a	n/a	n/a				
+2772	Vologdin wins by submission			+1700 ▼		+1300 ▼	+1400	+1300 ▼				
+2773	Any other result			n/a		n/a	n/a	n/a				
+2774	Nikolic wins inside distance						+163	+150 ▼				
+2775	Not Nikolic inside distance						-225	-200 ▲				
+2776	Vologdin wins inside distance						+400	+410 ▼				
+2777	Not Vologdin inside distance						-649	-625 ▲				
+2778	Nikolic wins by decision			+210 ▼		+220 ▲	+200	+235 ▲				
+2779	Not Nikolic by decision			n/a		n/a	-275	-335 ▼				
+2780	Vologdin wins by decision			+410 ▲		+390 ▲	+300	+400 ▲				
+2781	Not Vologdin by decision			n/a		n/a	-450	-625 ▼				
+2782	Nikolic wins in round 1			+470 ▼	+375		+400	+425 ▼				
+2783	Any other result			n/a	n/a		n/a	n/a				
+2784	Vologdin wins in round 1			+1000 ▲	+900		+900	+950 ▼				
+2785	Any other result			n/a	n/a		n/a	n/a				
+2786	Nikolic wins in round 2			+500 ▼	+550		+600	+600 ▼				
+2787	Any other result			n/a	n/a		n/a	n/a				
+2788	Vologdin wins in round 2			+1600 ▲	+1200		+1200	+1300 ▼				
+2789	Any other result			n/a	n/a		n/a	n/a				
+2790	Nikolic wins in round 3			+1000 ▼	+900		+1000	+900 ▼				
+2791	Any other result			n/a	n/a		n/a	n/a				
+2792	Vologdin wins in round 3			+2000 ▼	+1800		+1800	+1800 ▼				
+2793	Any other result			n/a	n/a		n/a	n/a				
+2794	Fight ends in round 1			+280 ▼		+265 ▼	+260	+250 ▼				
+2795	Fight doesn't end in round 1			n/a		n/a	n/a	n/a				
+2796	Fight ends in round 1					+450 ▼						
+2797	Fight doesn't end in round 1					n/a						
+2798	Fight ends in round 1					+1000 ▼						
+2799	Fight doesn't end in round 1					n/a						
+2800	Fight ends in round 2			+380 ▼		+390 ▼	+400	+380 ▼				
+2801	Fight doesn't end in round 2			n/a		n/a	n/a	n/a				
+2802	Fight ends in round 2					+650 ▼						
+2803	Fight doesn't end in round 2					n/a						
+2804	Fight ends in round 2					+1300 ▼						
+2805	Fight doesn't end in round 2					n/a						
+2806	Fight ends in round 3			+650 ▼		+600	+700	+575 ▼				
+2807	Fight doesn't end in round 3			n/a		n/a	n/a	n/a				
+2808	Fight ends in round 3					+900 ▼						
+2809	Fight doesn't end in round 3					n/a						
+2810	Fight ends in round 3					+1800 ▼						
+2811	Fight doesn't end in round 3					n/a						
+2812	Nikolic (scorecards = no action)											
+2813	Vologdin (scorecards = no action)											
+2814	Vologdin (scorecards = no action)											
+2815	Nikolic (scorecards = no action)											
+2816	Nikolic wins by TKO/KO in round 1			+900 ▼		+800 ▼		+750 ▼				
+2817	Any other result			n/a		n/a		n/a				
+2818	Vologdin wins by TKO/KO in round 1			+1400 ▲		+1300 ▼		+1300 ▼				
+2819	Any other result			n/a		n/a		n/a				
+2820	Nikolic wins by submission in round 1			+1000 ▼		+1100 ▼		+1050 ▼				
+2821	Any other result			n/a		n/a		n/a				
+2822	Vologdin wins by submission in round 1			+3000 ▼		+3000 ▼		+2900 ▼				
+2823	Any other result			n/a		n/a		n/a				
+2824	Nikolic wins by TKO/KO in round 2			+1000 ▲		+1100 ▼		+1050 ▼				
+2825	Any other result			n/a		n/a		n/a				
+2826	Vologdin wins by TKO/KO in round 2			+2200 ▲		+1800 ▼		+1700 ▼				
+2827	Any other result			n/a		n/a		n/a				
+2828	Nikolic wins by TKO/KO in round 3			+1800 ▲		+1500 ▼		+1500 ▼				
+2829	Any other result			n/a		n/a		n/a				
+2830	Vologdin wins by TKO/KO in round 3			+2700 ▲		+2400 ▼		+2400 ▼				
+2831	Any other result			n/a		n/a		n/a				
+2832	Nikolic wins by submission in round 2			+1200 ▼		+1500 ▼		+1400 ▼				
+2833	Any other result			n/a		n/a		n/a				
+2834	Vologdin wins by submission in round 2			+5000 ▲		+4000		+4000				
+2835	Any other result			n/a		n/a		n/a				
+2836	Nikolic wins by submission in round 3			+2200 ▼		+2000		+2000				
+2837	Any other result			n/a		n/a		n/a				
+2838	Vologdin wins by submission in round 3			+5000		+5000		+5000				
+2839	Any other result			n/a		n/a		n/a				
+2840	Either fighter wins by TKO/KO			+185 ▼								
+2841	Any other result			n/a								
+2842	Either fighter wins by submission			+320 ▼								
+2843	Any other result			n/a								
+2844	Nikolic wins in round 1 or 2			+200 ▼		+220 ▼		+210 ▼				
+2845	Any other result			n/a		n/a		n/a				
+2846	Vologdin wins in round 1 or 2			+600 ▲		+550 ▼		+525 ▼				
+2847	Any other result			n/a		n/a		n/a				
+2848	Fight ends in round 1 or 2					+125 ▼		+115 ▼				
+2849	Any other result					n/a		n/a				
+2850	Fight ends in final round or goes to decision					-182 ▲		-167 ▲				
+2851	Any other result					n/a		n/a				
+2852	Fight ends in final round or goes to decision					+145 ▲						
+2853	Any other result					n/a						
+2854	Fight ends in final round or goes to decision					+300 ▲						
+2855	Any other result					n/a						
+2856	Nikolic wins in final round or by decision			+145 ▼				+155 ▲				
+2857	Any other result			n/a				n/a				
+2858	Vologdin wins in final round or by decision			+320 ▲				+310 ▲				
+2859	Any other result			n/a				n/a				
+2860	Fight ends in TKO/KO/DQ in round 1			+500 ▼		+410 ▼		+390 ▼				
+2861	Any other result			n/a		n/a		n/a				
+2862	Fight ends in TKO/KO/DQ in round 2			+700 ▲		+575 ▼		+550 ▼				
+2863	Any other result			n/a		n/a		n/a				
+2864	Fight ends in TKO/KO/DQ in round 3			+1100 ▲		+800		+750 ▼				
+2865	Any other result			n/a		n/a		n/a				
+2866	Fight ends in submission in round 1			+800 ▼		+700 ▼		+650 ▼				
+2867	Any other result			n/a		n/a		n/a				
+2868	Fight ends in submission in round 2			+1000 ▼		+900 ▼		+900 ▼				
+2869	Any other result			n/a		n/a		n/a				
+2870	Fight ends in submission in round 3			+1700 ▼		+1400		+1400				
+2871	Any other result			n/a		n/a		n/a				
+2872	44225 Bogdan Grad	-194 ▼	-137 ▲	-225 ▼	-225 ▼	-195 ▲	-200 ▼	-195 ▲				59
+2873	Dennis Buzukia	+186 ▲	+114 ▼	+188 ▲	+185 ▲	+155 ▼	+163 ▲	+155 ▼				59
+2874	Over 1½ rounds					-315 ▼	-275	-315 ▼				
+2875	Under 1½ rounds					+215 ▲	+200	+215 ▲				
+2876	Over 2½ rounds			-124 ▲		-150 ▼	-138	-150 ▼				
+2877	Under 2½ rounds			-102 ▼		+110 ▲	+105	+114 ▲				
+2878	Fight goes to decision			+104 ▲		-115 ▼	-120	-115 ▼				
+2879	Fight doesn't go to decision			-132 ▼		-115 ▲	-110	-115 ▲				
+2880	Fight starts round 2			-370 ▲								
+2881	Fight won't start round 2			+250 ▼								
+2882	Fight starts round 3			-158 ▲								
+2883	Fight won't start round 3			+118 ▼								
+2884	Fight is a draw			+5000	+6000	+4500	+5000	+4500				
+2885	Fight is not a draw			n/a	n/a	n/a	n/a	n/a				
+2886	Grad wins by TKO/KO			+240 ▼		+340 ▲	+300	+340 ▲				
+2887	Any other result			n/a		n/a	n/a	n/a				
+2888	Buzukia wins by TKO/KO			+480 ▲		+390 ▼	+350	+400 ▼				
+2889	Any other result			n/a		n/a	n/a	n/a				
+2890	Grad wins by submission			+800 ▼		+700	+600	+700				
+2891	Any other result			n/a		n/a	n/a	n/a				
+2892	Buzukia wins by submission			+2000 ▲		+1800 ▲	+1600	+1800 ▼				
+2893	Any other result			n/a		n/a	n/a	n/a				
+2894	Grad wins inside distance						+175	+215 ▲				
+2895	Not Grad inside distance						-250	-305 ▼				
+2896	Buzukia wins inside distance						+300	+340 ▼				
+2897	Not Buzukia inside distance						-450	-500 ▲				
+2898	Grad wins by decision			+190 ▲		+170 ▲	+163	+175 ▲				
+2899	Not Grad by decision			n/a		n/a	-225	-235 ▼				
+2900	Buzukia wins by decision			+500 ▲		+450 ▼	+450	+450 ▼				
+2901	Not Buzukia by decision			n/a		n/a	-800	-715 ▲				
+2902	Grad wins in round 1			+420 ▼	+370		+300	+600 ▲				
+2903	Any other result			n/a	n/a		n/a	n/a				
+2904	Buzukia wins in round 1			+900 ▲	+800		+800	+950 ▼				
+2905	Any other result			n/a	n/a		n/a	n/a				
+2906	Grad wins in round 2			+700 ▼	+650		+600	+800 ▲				
+2907	Any other result			n/a	n/a		n/a	n/a				
+2908	Buzukia wins in round 2			+1200 ▲	+1000		+1000	+1100 ▼				
+2909	Any other result			n/a	n/a		n/a	n/a				
+2910	Grad wins in round 3			+1000 ▼	+1000		+1000	+1000 ▲				
+2911	Any other result			n/a	n/a		n/a	n/a				
+2912	Buzukia wins in round 3			+1700 ▼	+1500 ▲		+1400	+1300 ▼				
+2913	Any other result			n/a	n/a		n/a	n/a				
+2914	Fight ends in round 1			+250 ▼		+310 ▲	+260	+310 ▲				
+2915	Fight doesn't end in round 1			n/a		n/a	n/a	n/a				
+2916	Fight ends in round 1					+600 ▲						
+2917	Fight doesn't end in round 1					n/a						
+2918	Fight ends in round 1					+950 ▼						
+2919	Fight doesn't end in round 1					n/a						
+2920	Fight ends in round 2			+430 ▼		+410 ▼	+450	+410 ▼				
+2921	Fight doesn't end in round 2			n/a		n/a	n/a	n/a				
+2922	Fight ends in round 2					+800 ▲						
+2923	Fight doesn't end in round 2					n/a						
+2924	Fight ends in round 2					+1100 ▼						
+2925	Fight doesn't end in round 2					n/a						
+2926	Fight ends in round 3			+600 ▼		+550	+800	+550				
+2927	Fight doesn't end in round 3			n/a		n/a	n/a	n/a				
+2928	Fight ends in round 3					+1000 ▲						
+2929	Fight doesn't end in round 3					n/a						
+2930	Fight ends in round 3					+1300 ▼						
+2931	Fight doesn't end in round 3					n/a						
+2932	Grad (scorecards = no action)											
+2933	Buzukia (scorecards = no action)											
+2934	Buzukia (scorecards = no action)											
+2935	Grad (scorecards = no action)											
+2936	Grad wins by TKO/KO in round 1			+600 ▼		+900 ▲		+900 ▲				
+2937	Any other result			n/a		n/a		n/a				
+2938	Buzukia wins by TKO/KO in round 1			+1100 ▲		+1100 ▼		+1100 ▼				
+2939	Any other result			n/a		n/a		n/a				
+2940	Grad wins by submission in round 1			+1700 ▼		+1700		+1700				
+2941	Any other result			n/a		n/a		n/a				
+2942	Buzukia wins by submission in round 1			+4000 ▲		+4500		+4500				
+2943	Any other result			n/a		n/a		n/a				
+2944	Grad wins by TKO/KO in round 2			+1000 ▼		+1150 ▲		+1150 ▲				
+2945	Any other result			n/a		n/a		n/a				
+2946	Buzukia wins by TKO/KO in round 2			+1600 ▲		+1300 ▼		+1300 ▼				
+2947	Any other result			n/a		n/a		n/a				
+2948	Grad wins by TKO/KO in round 3			+1300 ▼		+1500 ▲		+1500 ▲				
+2949	Any other result			n/a		n/a		n/a				
+2950	Buzukia wins by TKO/KO in round 3			+2000 ▼		+1500 ▼		+1500 ▼				
+2951	Any other result			n/a		n/a		n/a				
+2952	Grad wins by submission in round 2			+2500 ▲		+2200 ▲		+2200 ▲				
+2953	Any other result			n/a		n/a		n/a				
+2954	Buzukia wins by submission in round 2			+5000 ▲		+5000 ▼		+5000 ▼				
+2955	Any other result			n/a		n/a		n/a				
+2956	Grad wins by submission in round 3			+3000 ▼		+2800 ▲		+2800 ▲				
+2957	Any other result			n/a		n/a		n/a				
+2958	Buzukia wins by submission in round 3			+5000		+5500 ▼		+5500 ▼				
+2959	Any other result			n/a		n/a		n/a				
+2960	Either fighter wins by TKO/KO			+120 ▼								
+2961	Any other result			n/a								
+2962	Either fighter wins by submission			+550 ▼								
+2963	Any other result			n/a								
+2964	Grad wins in round 1 or 2			+220 ▼		+300 ▲		+300 ▲				
+2965	Any other result			n/a		n/a		n/a				
+2966	Buzukia wins in round 1 or 2			+500 ▲		+480 ▼		+480 ▼				
+2967	Any other result			n/a		n/a		n/a				
+2968	Fight ends in round 1 or 2					+148 ▲		+148 ▲				
+2969	Any other result					n/a		n/a				
+2970	Fight ends in final round or goes to decision					-220 ▼		-220 ▼				
+2971	Any other result					n/a		n/a				
+2972	Fight ends in final round or goes to decision					+123 ▲						
+2973	Any other result					n/a						
+2974	Fight ends in final round or goes to decision					+310 ▼						
+2975	Any other result					n/a						
+2976	Grad wins in final round or by decision			+130 ▲				+123 ▲				
+2977	Any other result			n/a				n/a				
+2978	Buzukia wins in final round or by decision			+380 ▲				+310 ▼				
+2979	Any other result			n/a				n/a				
+2980	Fight ends in TKO/KO/DQ in round 1			+360 ▼		+400 ▲		+400 ▲				
+2981	Any other result			n/a		n/a		n/a				
+2982	Fight ends in TKO/KO/DQ in round 2			+600 ▼		+510 ▲		+510 ▲				
+2983	Any other result			n/a		n/a		n/a				
+2984	Fight ends in TKO/KO/DQ in round 3			+800 ▼		+650 ▲		+650 ▲				
+2985	Any other result			n/a		n/a		n/a				
+2986	Fight ends in submission in round 1			+1200 ▼		+1050		+1050				
+2987	Any other result			n/a		n/a		n/a				
+2988	Fight ends in submission in round 2			+1900 ▲		+1300		+1300				
+2989	Any other result			n/a		n/a		n/a				
+2990	Fight ends in submission in round 3			+2500 ▲		+1800 ▼		+1800 ▼				
+2991	Any other result			n/a		n/a		n/a				
+2992	44226 Kyle Prepolec	+567 ▲	+2236 ▲	+570 ▲	+650 ▲	+600 ▲	+450 ▲	+525 ▲				59
+2993	Mateusz Rebecki	-614 ▼	-2588	-820 ▼	-1000 ▼	-1000 ▼	-649 ▼	-835 ▼				59
+2994	Over 1½ rounds			-150 ▲		-167 ▼	-175	-167 ▼				
+2995	Under 1½ rounds			+118 ▼		+123 ▲	+130	+125 ▲				
+2996	Over 2½ rounds			+120 ▲		+115 ▼	+120	+118 ▼				
+2997	Under 2½ rounds			-152 ▼		-157 ▲	-163	-157 ▲				
+2998	Fight goes to decision			+160 ▲		+150 ▼	+150	+150 ▼				
+2999	Fight doesn't go to decision			-210 ▼		-205 ▲	-200	-205 ▲				
+3000	Fight starts round 2			-270 ▲								
+3001	Fight won't start round 2			+192 ▼								
+3002	Fight starts round 3			-110 ▲								
+3003	Fight won't start round 3			-120 ▼								
+3004	Fight is a draw			+5000	+6000	+4500	+6600	+4500 ▼				
+3005	Fight is not a draw			n/a	n/a	n/a	n/a	n/a				
+3006	Prepolec wins by TKO/KO			+1400 ▲		+1100 ▲	+900	+1150 ▲				
+3007	Any other result			n/a		n/a	n/a	n/a				
+3008	Rebecki wins by TKO/KO			+240 ▲		+205 ▲	+200	+205 ▲				
+3009	Any other result			n/a		n/a	n/a	n/a				
+3010	Prepolec wins by submission			+3500 ▲		+3000	+2000	+3000 ▼				
+3011	Any other result			n/a		n/a	n/a	n/a				
+3012	Rebecki wins by submission			+185 ▼		+240 ▲	+225	+240 ▼				
+3013	Any other result			n/a		n/a	n/a	n/a				
+3014	Prepolec wins inside distance						+700	+1050 ▲				
+3015	Not Prepolec inside distance						-1587	-2500 ▼				
+3016	Rebecki wins inside distance						-163	-148 ▼				
+3017	Not Rebecki inside distance						+120	+110 ▲				
+3018	Prepolec wins by decision			+1200 ▲		+1150 ▲	+700	+1100 ▲				
+3019	Not Prepolec by decision			n/a		n/a	-1587	-2500				
+3020	Rebecki wins by decision			+210 ▼		+205 ▼	+200	+205 ▼				
+3021	Not Rebecki by decision			n/a		n/a	-275	-286 ▲				
+3022	Prepolec wins in round 1			+2200 ▲	+1400		+1000	+2200 ▲				
+3023	Any other result			n/a	n/a		n/a	n/a				
+3024	Rebecki wins in round 1			+220 ▼	+210		+250	+230 ▲				
+3025	Any other result			n/a	n/a		n/a	n/a				
+3026	Prepolec wins in round 2			+3000 ▲	+2200		+1800	+2800 ▲				
+3027	Any other result			n/a	n/a		n/a	n/a				
+3028	Rebecki wins in round 2			+390 ▼	+325		+350	+400 ▲				
+3029	Any other result			n/a	n/a		n/a	n/a				
+3030	Prepolec wins in round 3			+3500 ▲	+2500		+2500	+4000 ▲				
+3031	Any other result			n/a	n/a		n/a	n/a				
+3032	Rebecki wins in round 3			+650 ▼	+625 ▼		+600	+650 ▼				
+3033	Any other result			n/a	n/a		n/a	n/a				
+3034	Fight ends in round 1			+190 ▲		+185 ▲	+200	+185 ▲				
+3035	Fight doesn't end in round 1			n/a		n/a	n/a	n/a				
+3036	Fight ends in round 1					+2200 ▲						
+3037	Fight doesn't end in round 1					n/a						
+3038	Fight ends in round 1					+230 ▲						
+3039	Fight doesn't end in round 1					n/a						
+3040	Fight ends in round 2			+340 ▼		+340 ▲	+300	+340 ▲				
+3041	Fight doesn't end in round 2			n/a		n/a	n/a	n/a				
+3042	Fight ends in round 2					+2800 ▲						
+3043	Fight doesn't end in round 2					n/a						
+3044	Fight ends in round 2					+400 ▲						
+3045	Fight doesn't end in round 2					n/a						
+3046	Fight ends in round 3			+550 ▼		+575	+550	+575 ▲				
+3047	Fight doesn't end in round 3			n/a		n/a	n/a	n/a				
+3048	Fight ends in round 3					+4000 ▲						
+3049	Fight doesn't end in round 3					n/a						
+3050	Fight ends in round 3					+650 ▼						
+3051	Fight doesn't end in round 3					n/a						
+3052	Prepolec (scorecards = no action)											
+3053	Rebecki (scorecards = no action)											
+3054	Rebecki (scorecards = no action)											
+3055	Prepolec (scorecards = no action)											
+3056	Prepolec wins by TKO/KO in round 1			+2700 ▲		+2500 ▲		+2500 ▲				
+3057	Any other result			n/a		n/a		n/a				
+3058	Rebecki wins by TKO/KO in round 1			+600 ▲		+500 ▲		+500 ▲				
+3059	Any other result			n/a		n/a		n/a				
+3060	Prepolec wins by submission in round 1			+5000		+7000 ▲		+7000 ▲				
+3061	Any other result			n/a		n/a		n/a				
+3062	Rebecki wins by submission in round 1			+480 ▼		+575 ▲		+575 ▲				
+3063	Any other result			n/a		n/a		n/a				
+3064	Prepolec wins by TKO/KO in round 2			+4000 ▲		+3400 ▲		+3400 ▲				
+3065	Any other result			n/a		n/a		n/a				
+3066	Rebecki wins by TKO/KO in round 2			+950 ▲		+800		+800 ▲				
+3067	Any other result			n/a		n/a		n/a				
+3068	Prepolec wins by TKO/KO in round 3			+4500 ▲		+4500 ▲		+4500 ▲				
+3069	Any other result			n/a		n/a		n/a				
+3070	Rebecki wins by TKO/KO in round 3			+1500 ▲		+1300		+1300 ▲				
+3071	Any other result			n/a		n/a		n/a				
+3072	Prepolec wins by submission in round 2			+5000		+9000 ▲		+9000 ▲				
+3073	Any other result			n/a		n/a		n/a				
+3074	Rebecki wins by submission in round 2			+750 ▼		+900		+900 ▼				
+3075	Any other result			n/a		n/a		n/a				
+3076	Prepolec wins by submission in round 3			+5000		+10000		+10000 ▼				
+3077	Any other result			n/a		n/a		n/a				
+3078	Rebecki wins by submission in round 3			+1200 ▼		+1400		+1400 ▼				
+3079	Any other result			n/a		n/a		n/a				
+3080	Either fighter wins by TKO/KO			+190 ▲								
+3081	Any other result			n/a								
+3082	Either fighter wins by submission			+175 ▼								
+3083	Any other result			n/a								
+3084	Prepolec wins in round 1 or 2			+1400 ▲		+1300 ▲		+1300 ▲				
+3085	Any other result			n/a		n/a		n/a				
+3086	Rebecki wins in round 1 or 2			-105 ▼		+102 ▼		+102 ▼				
+3087	Any other result			n/a		n/a		n/a				
+3088	Fight ends in round 1 or 2					-122 ▲		-122 ▲				
+3089	Any other result					n/a		n/a				
+3090	Fight ends in final round or goes to decision					-120 ▼		-120 ▼				
+3091	Any other result					n/a		n/a				
+3092	Fight ends in final round or goes to decision					+900 ▲						
+3093	Any other result					n/a						
+3094	Fight ends in final round or goes to decision					+123 ▼						
+3095	Any other result					n/a						
+3096	Prepolec wins in final round or by decision			+950 ▲				+900 ▲				
+3097	Any other result			n/a				n/a				
+3098	Rebecki wins in final round or by decision			+125 ▼				+123 ▼				
+3099	Any other result			n/a				n/a				
+3100	Fight ends in TKO/KO/DQ in round 1			+490 ▲		+350 ▲		+350 ▲				
+3101	Any other result			n/a		n/a		n/a				
+3102	Fight ends in TKO/KO/DQ in round 2			+750 ▲		+550 ▲		+550 ▲				
+3103	Any other result			n/a		n/a		n/a				
+3104	Fight ends in TKO/KO/DQ in round 3			+1200 ▲		+950		+950 ▲				
+3105	Any other result			n/a		n/a		n/a				
+3106	Fight ends in submission in round 1			+450 ▼		+450 ▼		+450 ▼				
+3107	Any other result			n/a		n/a		n/a				
+3108	Fight ends in submission in round 2			+700 ▼		+700		+700 ▼				
+3109	Any other result			n/a		n/a		n/a				
+3110	Fight ends in submission in round 3			+1100 ▼		+1200		+1200 ▼				
+3111	Any other result			n/a		n/a		n/a				
+3112	44227 Hailey Cowan	+426 ▲	+397 ▼	+430 ▲	+430 ▲	+575 ▲	+350 ▲	+390 ▲				59
+3113	Nina Milosevic	-456 ▼	-491 ▲	-590 ▼	-600 ▼	-910 ▼	-500 ▼	-560 ▼				59
+3114	Over 1½ rounds					-265 ▲	-250 ▼	-265 ▲				
+3115	Under 1½ rounds					+185 ▼	+175 ▲	+190				
+3116	Over 2½ rounds			-118 ▲		-132 ▲	-138 ▼	-132 ▲				
+3117	Under 2½ rounds			-108 ▼		-103 ▼	+100 ▲	-103 ▼				
+3118	Fight goes to decision			+108 ▲		-103 ▲	-105 ▲	-103 ▲				
+3119	Fight doesn't go to decision			-136 ▼		-130 ▼	-125 ▼	-130 ▼				
+3120	Fight starts round 2			-370 ▲								
+3121	Fight won't start round 2			+250 ▼								
+3122	Fight starts round 3			-152 ▲								
+3123	Fight won't start round 3			+114 ▼								
+3124	Fight is a draw			+5000	+6000	+4500	+6600	+4500				
+3125	Fight is not a draw			n/a	n/a	n/a	n/a	n/a				
+3126	Cowan wins by TKO/KO			+2700 ▲		+2200 ▲	+2200 ▲	+2200 ▲				
+3127	Any other result			n/a		n/a	n/a	n/a				
+3128	Milosevic wins by TKO/KO			+330 ▼		+360 ▼	+300	+360 ▼				
+3129	Any other result			n/a		n/a	n/a	n/a				
+3130	Cowan wins by submission			+2000 ▲		+1400 ▲	+1400	+1400 ▲				
+3131	Any other result			n/a		n/a	n/a	n/a				
+3132	Milosevic wins by submission			+220 ▼		+235 ▼	+200 ▼	+235 ▼				
+3133	Any other result			n/a		n/a	n/a	n/a				
+3134	Cowan wins inside distance						+900	+1100 ▲				
+3135	Not Cowan inside distance						-3333	-2500				
+3136	Milosevic wins inside distance						-110 ▼	+102 ▼				
+3137	Not Milosevic inside distance						-120 ▲	-136 ▲				
+3138	Cowan wins by decision			+650 ▲		+700 ▲	+600	+650 ▲				
+3139	Not Cowan by decision			n/a		n/a	-1408	-1115 ▼				
+3140	Milosevic wins by decision			+170 ▲		+155 ▼	+150	+160 ▼				
+3141	Not Milosevic by decision			n/a		n/a	-200	-215 ▲				
+3142	Cowan wins in round 1			+2700 ▲	+2200 ▲		+1600	+2200 ▲				
+3143	Any other result			n/a	n/a		n/a	n/a				
+3144	Milosevic wins in round 1			+290 ▼	+285 ▲		+275	+350 ▼				
+3145	Any other result			n/a	n/a		n/a	n/a				
+3146	Cowan wins in round 2			+3000	+2700 ▲		+2200	+2900 ▲				
+3147	Any other result			n/a	n/a		n/a	n/a				
+3148	Milosevic wins in round 2			+470 ▼	+380 ▲		+450	+475 ▼				
+3149	Any other result			n/a	n/a		n/a	n/a				
+3150	Cowan wins in round 3			+4000	+3300		+2800	+4000 ▲				
+3151	Any other result			n/a	n/a		n/a	n/a				
+3152	Milosevic wins in round 3			+750	+650		+700	+650				
+3153	Any other result			n/a	n/a		n/a	n/a				
+3154	Fight ends in round 1			+250 ▼		+275 ▼	+260 ▲	+275 ▼				
+3155	Fight doesn't end in round 1			n/a		n/a	n/a	n/a				
+3156	Fight ends in round 1					+2200 ▲						
+3157	Fight doesn't end in round 1					n/a						
+3158	Fight ends in round 1					+350 ▼						
+3159	Fight doesn't end in round 1					n/a						
+3160	Fight ends in round 2			+400 ▼		+390 ▼	+400	+390 ▼				
+3161	Fight doesn't end in round 2			n/a		n/a	n/a	n/a				
+3162	Fight ends in round 2					+2900 ▲						
+3163	Fight doesn't end in round 2					n/a						
+3164	Fight ends in round 2					+475 ▼						
+3165	Fight doesn't end in round 2					n/a						
+3166	Fight ends in round 3			+650		+550 ▼	+700	+550 ▼				
+3167	Fight doesn't end in round 3			n/a		n/a	n/a	n/a				
+3168	Fight ends in round 3					+4000 ▲						
+3169	Fight doesn't end in round 3					n/a						
+3170	Fight ends in round 3					+650						
+3171	Fight doesn't end in round 3					n/a						
+3172	Cowan (scorecards = no action)											
+3173	Milosevic (scorecards = no action)											
+3174	Milosevic (scorecards = no action)											
+3175	Cowan (scorecards = no action)											
+3176	Cowan wins by TKO/KO in round 1			+5000		+5000 ▲		+5000 ▲				
+3177	Any other result			n/a		n/a		n/a				
+3178	Milosevic wins by TKO/KO in round 1			+750 ▼		+900 ▼		+900 ▼				
+3179	Any other result			n/a		n/a		n/a				
+3180	Cowan wins by submission in round 1			+4000 ▲		+3300 ▲		+3300 ▲				
+3181	Any other result			n/a		n/a		n/a				
+3182	Milosevic wins by submission in round 1			+550 ▼		+650 ▼		+650 ▼				
+3183	Any other result			n/a		n/a		n/a				
+3184	Cowan wins by TKO/KO in round 2			+5000		+6000 ▲		+6000 ▲				
+3185	Any other result			n/a		n/a		n/a				
+3186	Milosevic wins by TKO/KO in round 2			+1100 ▼		+1150 ▼		+1150 ▼				
+3187	Any other result			n/a		n/a		n/a				
+3188	Cowan wins by TKO/KO in round 3			+5000		+7500 ▲		+7500 ▲				
+3189	Any other result			n/a		n/a		n/a				
+3190	Milosevic wins by TKO/KO in round 3			+1700 ▼		+1500 ▼		+1500 ▼				
+3191	Any other result			n/a		n/a		n/a				
+3192	Cowan wins by submission in round 2			+5000		+4000 ▲		+4000 ▲				
+3193	Any other result			n/a		n/a		n/a				
+3194	Milosevic wins by submission in round 2			+850 ▼		+850 ▼		+850 ▼				
+3195	Any other result			n/a		n/a		n/a				
+3196	Cowan wins by submission in round 3			+5000		+5000 ▲		+5000 ▲				
+3197	Any other result			n/a		n/a		n/a				
+3198	Milosevic wins by submission in round 3			+1300		+1100 ▼		+1100 ▼				
+3199	Any other result			n/a		n/a		n/a				
+3200	Either fighter wins by TKO/KO			+280 ▼								
+3201	Any other result			n/a								
+3202	Either fighter wins by submission			+190 ▲								
+3203	Any other result			n/a								
+3204	Cowan wins in round 1 or 2			+1600 ▲		+1400 ▲		+1400 ▲				
+3205	Any other result			n/a		n/a		n/a				
+3206	Milosevic wins in round 1 or 2			+135 ▼		+160 ▼		+160 ▼				
+3207	Any other result			n/a		n/a		n/a				
+3208	Fight ends in round 1 or 2					+128 ▼		+128 ▼				
+3209	Any other result					n/a		n/a				
+3210	Fight ends in final round or goes to decision					-190 ▲		-190 ▲				
+3211	Any other result					n/a		n/a				
+3212	Fight ends in final round or goes to decision					+575 ▲						
+3213	Any other result					n/a						
+3214	Fight ends in final round or goes to decision					-107 ▼						
+3215	Any other result					n/a						
+3216	Cowan wins in final round or by decision			+550 ▲				+575 ▲				
+3217	Any other result			n/a				n/a				
+3218	Milosevic wins in final round or by decision			+105 ▲				-107 ▼				
+3219	Any other result			n/a				n/a				
+3220	Fight ends in TKO/KO/DQ in round 1			+700 ▼		+650 ▼		+650 ▼				
+3221	Any other result			n/a		n/a		n/a				
+3222	Fight ends in TKO/KO/DQ in round 2			+1000 ▼		+850		+850				
+3223	Any other result			n/a		n/a		n/a				
+3224	Fight ends in TKO/KO/DQ in round 3			+1500 ▼		+1050 ▼		+1050 ▼				
+3225	Any other result			n/a		n/a		n/a				
+3226	Fight ends in submission in round 1			+500 ▼		+460 ▼		+460 ▼				
+3227	Any other result			n/a		n/a		n/a				
+3228	Fight ends in submission in round 2			+750 ▲		+600		+600				
+3229	Any other result			n/a		n/a		n/a				
+3230	Fight ends in submission in round 3			+1100		+850		+850				
+3231	Any other result			n/a		n/a		n/a				
+3232	44230 Alexander Poppeck		+312 ▲	+235 ▲	+280 ▲	+255 ▲	+225 ▲	+255 ▲				59
+3233	Jovan Leka		-405 ▼	-290 ▼	-360 ▼	-345 ▼	-300 ▼	-345 ▼				59
+3234	Over 1½ rounds					-195 ▲	-225	-195 ▲				
+3235	Under 1½ rounds					+138 ▼	+163	+143 ▼				
+3236	Over 2½ rounds			+120 ▲		+102 ▲	+100 ▲	+102 ▲				
+3237	Under 2½ rounds			-152 ▼		-137 ▼	-138 ▼	-137 ▼				
+3238	Fight goes to decision			+148 ▲		+133 ▲	+130 ▲	+133 ▲				
+3239	Fight doesn't go to decision			-190 ▼		-180 ▼	-175 ▼	-180 ▼				
+3240	Fight starts round 2			-250 ▲								
+3241	Fight won't start round 2			+178 ▼								
+3242	Fight starts round 3			-110 ▲								
+3243	Fight won't start round 3			-120 ▼								
+3244	Fight is a draw			+5000	+6000	+4500 ▼	+6600	+4500				
+3245	Fight is not a draw			n/a	n/a	n/a	n/a	n/a				
+3246	Poppeck wins by TKO/KO			+650 ▲		+600 ▲	+550 ▲	+650 ▲				
+3247	Any other result			n/a		n/a	n/a	n/a				
+3248	Leka wins by TKO/KO			+200 ▼		+235 ▼	+200 ▼	+235 ▼				
+3249	Any other result			n/a		n/a	n/a	n/a				
+3250	Poppeck wins by submission			+2200 ▲		+1800 ▲	+2000	+1800 ▲				
+3251	Any other result			n/a		n/a	n/a	n/a				
+3252	Leka wins by submission			+380 ▼		+350 ▼	+400	+350 ▼				
+3253	Any other result			n/a		n/a	n/a	n/a				
+3254	Poppeck wins inside distance						+450 ▲	+525 ▲				
+3255	Not Poppeck inside distance						-800 ▼	-835 ▼				
+3256	Leka wins inside distance						-110 ▼	+105 ▼				
+3257	Not Leka inside distance						-120 ▲	-139 ▲				
+3258	Poppeck wins by decision			+550 ▲		+700 ▲	+400	+650 ▲				
+3259	Not Poppeck by decision			n/a		n/a	-649	-1115 ▼				
+3260	Leka wins by decision			+280 ▲		+220 ▼	+225	+220 ▼				
+3261	Not Leka by decision			n/a		n/a	-333	-315 ▲				
+3262	Poppeck wins in round 1			+1000 ▲	+800		+800	+1150 ▲				
+3263	Any other result			n/a	n/a		n/a	n/a				
+3264	Leka wins in round 1			+250 ▼	+325		+350	+310 ▼				
+3265	Any other result			n/a	n/a		n/a	n/a				
+3266	Poppeck wins in round 2			+1600 ▲	+1200		+1000	+1600 ▲				
+3267	Any other result			n/a	n/a		n/a	n/a				
+3268	Leka wins in round 2			+500 ▼	+450		+450	+500 ▼				
+3269	Any other result			n/a	n/a		n/a	n/a				
+3270	Poppeck wins in round 3			+2700 ▲	+1600		+1600	+2000 ▲				
+3271	Any other result			n/a	n/a		n/a	n/a				
+3272	Leka wins in round 3			+900 ▼	+700 ▼		+800	+800 ▼				
+3273	Any other result			n/a	n/a		n/a	n/a				
+3274	Fight ends in round 1			+175 ▼		+205 ▼	+210 ▼	+205 ▼				
+3275	Fight doesn't end in round 1			n/a		n/a	n/a	n/a				
+3276	Fight ends in round 1					+1150 ▲						
+3277	Fight doesn't end in round 1					n/a						
+3278	Fight ends in round 1					+310 ▼						
+3279	Fight doesn't end in round 1					n/a						
+3280	Fight ends in round 2			+370 ▼		+350 ▼	+350	+350 ▼				
+3281	Fight doesn't end in round 2			n/a		n/a	n/a	n/a				
+3282	Fight ends in round 2					+1600 ▲						
+3283	Fight doesn't end in round 2					n/a						
+3284	Fight ends in round 2					+500 ▼						
+3285	Fight doesn't end in round 2					n/a						
+3286	Fight ends in round 3			+700 ▼		+575 ▲	+600	+575				
+3287	Fight doesn't end in round 3			n/a		n/a	n/a	n/a				
+3288	Fight ends in round 3					+2000 ▲						
+3289	Fight doesn't end in round 3					n/a						
+3290	Fight ends in round 3					+800 ▼						
+3291	Fight doesn't end in round 3					n/a						
+3292	Poppeck (scorecards = no action)											
+3293	Leka (scorecards = no action)											
+3294	Leka (scorecards = no action)											
+3295	Poppeck (scorecards = no action)											
+3296	Poppeck wins by TKO/KO in round 1			+1300 ▲		+1500 ▲		+1500 ▲				
+3297	Any other result			n/a		n/a		n/a				
+3298	Leka wins by TKO/KO in round 1			+470 ▼		+575 ▼		+575 ▼				
+3299	Any other result			n/a		n/a		n/a				
+3300	Poppeck wins by submission in round 1			+3500		+4000 ▲		+4000 ▲				
+3301	Any other result			n/a		n/a		n/a				
+3302	Leka wins by submission in round 1			+800 ▼		+800 ▼		+800 ▼				
+3303	Any other result			n/a		n/a		n/a				
+3304	Poppeck wins by TKO/KO in round 2			+2000 ▲		+1900 ▲		+1900 ▲				
+3305	Any other result			n/a		n/a		n/a				
+3306	Leka wins by TKO/KO in round 2			+850 ▼		+900 ▼		+900 ▼				
+3307	Any other result			n/a		n/a		n/a				
+3308	Poppeck wins by TKO/KO in round 3			+3500 ▲		+2500 ▲		+2500 ▲				
+3309	Any other result			n/a		n/a		n/a				
+3310	Leka wins by TKO/KO in round 3			+1500 ▼		+1300 ▼		+1300 ▼				
+3311	Any other result			n/a		n/a		n/a				
+3312	Poppeck wins by submission in round 2			+5000		+5000 ▲		+5000 ▲				
+3313	Any other result			n/a		n/a		n/a				
+3314	Leka wins by submission in round 2			+1400 ▲		+1200 ▼		+1200 ▼				
+3315	Any other result			n/a		n/a		n/a				
+3316	Poppeck wins by submission in round 3			+5000		+6600 ▲		+6600 ▲				
+3317	Any other result			n/a		n/a		n/a				
+3318	Leka wins by submission in round 3			+2200 ▼		+1800 ▼		+1800 ▼				
+3319	Any other result			n/a		n/a		n/a				
+3320	Either fighter wins by TKO/KO			+120 ▼								
+3321	Any other result			n/a								
+3322	Either fighter wins by submission			+310 ▼								
+3323	Any other result			n/a								
+3324	Poppeck wins in round 1 or 2			+600 ▲		+650 ▲		+650 ▲				
+3325	Any other result			n/a		n/a		n/a				
+3326	Leka wins in round 1 or 2			+125 ▼		+148 ▼		+148 ▼				
+3327	Any other result			n/a		n/a		n/a				
+3328	Fight ends in round 1 or 2					-107 ▼		-107 ▼				
+3329	Any other result					n/a		n/a				
+3330	Fight ends in final round or goes to decision					-136 ▲		-136 ▲				
+3331	Any other result					n/a		n/a				
+3332	Fight ends in final round or goes to decision					+500 ▲						
+3333	Any other result					n/a						
+3334	Fight ends in final round or goes to decision					+140 ▼						
+3335	Any other result					n/a						
+3336	Poppeck wins in final round or by decision			+460 ▲				+500 ▲				
+3337	Any other result			n/a				n/a				
+3338	Leka wins in final round or by decision			+185 ▲				+140 ▼				
+3339	Any other result			n/a				n/a				
+3340	Fight ends in TKO/KO/DQ in round 1			+310 ▼		+335 ▼		+335 ▼				
+3341	Any other result			n/a		n/a		n/a				
+3342	Fight ends in TKO/KO/DQ in round 2			+600		+510 ▲		+510 ▲				
+3343	Any other result			n/a		n/a		n/a				
+3344	Fight ends in TKO/KO/DQ in round 3			+1100 ▼		+800 ▲		+800 ▲				
+3345	Any other result			n/a		n/a		n/a				
+3346	Fight ends in submission in round 1			+650 ▼		+575 ▼		+575 ▼				
+3347	Any other result			n/a		n/a		n/a				
+3348	Fight ends in submission in round 2			+1200 ▲		+850 ▼		+850 ▼				
+3349	Any other result			n/a		n/a		n/a				
+3350	Fight ends in submission in round 3			+2000 ▲		+1400 ▼		+1400 ▼				
+3351	Any other result			n/a		n/a		n/a				
+3352	44229 Marina Spasic		+189 ▼	+275 ▲	+275 ▲	+255 ▼	+250 ▲	+270 ▲				59
+3353	Stephanie Luciano		-240 ▲	-340 ▼	-350 ▼	-335 ▲	-333 ▼	-360 ▼				59
+3354	Over 1½ rounds					-625 ▼	-549	-625 ▼				
+3355	Under 1½ rounds					+360 ▲	+350	+390 ▲				
+3356	Over 2½ rounds			-280		-315 ▼	-275	-315 ▼				
+3357	Under 2½ rounds			+210 ▲		+215 ▲	+200	+215				
+3358	Fight goes to decision			-225 ▼		-250 ▼	-225	-250 ▼				
+3359	Fight doesn't go to decision			+172 ▲		+180 ▲	+163	+180 ▲				
+3360	Fight starts round 2			-850								
+3361	Fight won't start round 2			+480 ▼								
+3362	Fight starts round 3			-360 ▼								
+3363	Fight won't start round 3			+250 ▲								
+3364	Fight is a draw			+5000	+6000	+4500	+5000	+4500				
+3365	Fight is not a draw			n/a	n/a	n/a	n/a	n/a				
+3366	Spasic wins by TKO/KO			+1400		+1150 ▲	+1200	+1150 ▲				
+3367	Any other result			n/a		n/a	n/a	n/a				
+3368	Luciano wins by TKO/KO			+1000 ▲		+900 ▲	+800	+900 ▼				
+3369	Any other result			n/a		n/a	n/a	n/a				
+3370	Spasic wins by submission			+3000		+1800 ▼	+2500	+1900 ▼				
+3371	Any other result			n/a		n/a	n/a	n/a				
+3372	Luciano wins by submission			+360 ▼		+410 ▲	+350	+410 ▼				
+3373	Any other result			n/a		n/a	n/a	n/a				
+3374	Spasic wins inside distance						+900	+950 ▲				
+3375	Not Spasic inside distance						-3333	-2000 ▼				
+3376	Luciano wins inside distance						+210 ▼	+270 ▼				
+3377	Not Luciano inside distance						-300 ▲	-385 ▲				
+3378	Spasic wins by decision			+420 ▲		+400 ▼	+350	+410 ▲				
+3379	Not Spasic by decision			n/a		n/a	-549	-625 ▼				
+3380	Luciano wins by decision			-115 ▼		-118 ▲	-138	-122 ▼				
+3381	Not Luciano by decision			n/a		n/a	+105	-108 ▲				
+3382	Spasic wins in round 1			+2200	+2000		+2000	+2200 ▲				
+3383	Any other result			n/a	n/a		n/a	n/a				
+3384	Luciano wins in round 1			+650	+550		+550	+800 ▼				
+3385	Any other result			n/a	n/a		n/a	n/a				
+3386	Spasic wins in round 2			+2700	+2400		+2800	+2400 ▲				
+3387	Any other result			n/a	n/a		n/a	n/a				
+3388	Luciano wins in round 2			+850 ▼	+750		+800	+900 ▼				
+3389	Any other result			n/a	n/a		n/a	n/a				
+3390	Spasic wins in round 3			+3500	+3000		+3300	+2800 ▲				
+3391	Any other result			n/a	n/a		n/a	n/a				
+3392	Luciano wins in round 3			+1100 ▼	+1000		+1000	+1050 ▲				
+3393	Any other result			n/a	n/a		n/a	n/a				
+3394	Fight ends in round 1			+500 ▲		+550 ▲	+450	+550 ▲				
+3395	Fight doesn't end in round 1			n/a		n/a	n/a	n/a				
+3396	Fight ends in round 1					+2000 ▼						
+3397	Fight doesn't end in round 1					n/a						
+3398	Fight ends in round 1					+800 ▼						
+3399	Fight doesn't end in round 1					n/a						
+3400	Fight ends in round 2			+650 ▼		+650 ▲	+600	+650 ▲				
+3401	Fight doesn't end in round 2			n/a		n/a	n/a	n/a				
+3402	Fight ends in round 2					+2400 ▲						
+3403	Fight doesn't end in round 2					n/a						
+3404	Fight ends in round 2					+900 ▼						
+3405	Fight doesn't end in round 2					n/a						
+3406	Fight ends in round 3			+900 ▼		+700 ▲	+900	+700 ▲				
+3407	Fight doesn't end in round 3			n/a		n/a	n/a	n/a				
+3408	Fight ends in round 3					+2500 ▼						
+3409	Fight doesn't end in round 3					n/a						
+3410	Fight ends in round 3					+1050 ▲						
+3411	Fight doesn't end in round 3					n/a						
+3412	Spasic (scorecards = no action)											
+3413	Luciano (scorecards = no action)											
+3414	Luciano (scorecards = no action)											
+3415	Spasic (scorecards = no action)											
+3416	Spasic wins by TKO/KO in round 1			+2700		+3000 ▲		+3000 ▲				
+3417	Any other result			n/a		n/a		n/a				
+3418	Luciano wins by TKO/KO in round 1			+2200 ▲		+2400 ▲		+2400 ▲				
+3419	Any other result			n/a		n/a		n/a				
+3420	Spasic wins by submission in round 1			+5000		+5000 ▲		+5000 ▲				
+3421	Any other result			n/a		n/a		n/a				
+3422	Luciano wins by submission in round 1			+950 ▼		+1150 ▼		+1150 ▼				
+3423	Any other result			n/a		n/a		n/a				
+3424	Spasic wins by TKO/KO in round 2			+3500		+3300 ▼		+3500 ▲				
+3425	Any other result			n/a		n/a		n/a				
+3426	Luciano wins by TKO/KO in round 2			+2700 ▲		+2800 ▲		+2500 ▼				
+3427	Any other result			n/a		n/a		n/a				
+3428	Spasic wins by TKO/KO in round 3			+5000		+3500 ▼		+4000 ▲				
+3429	Any other result			n/a		n/a		n/a				
+3430	Luciano wins by TKO/KO in round 3			+3500 ▲		+3000 ▲		+2900 ▼				
+3431	Any other result			n/a		n/a		n/a				
+3432	Spasic wins by submission in round 2			+5000		+5500 ▲		+5500 ▲				
+3433	Any other result			n/a		n/a		n/a				
+3434	Luciano wins by submission in round 2			+1200 ▼		+1300 ▼		+1300 ▼				
+3435	Any other result			n/a		n/a		n/a				
+3436	Spasic wins by submission in round 3			+5000		+6000 ▲		+6000 ▲				
+3437	Any other result			n/a		n/a		n/a				
+3438	Luciano wins by submission in round 3			+1600 ▼		+1500 ▲		+1500 ▲				
+3439	Any other result			n/a		n/a		n/a				
+3440	Either fighter wins by TKO/KO			+550 ▲								
+3441	Any other result			n/a								
+3442	Either fighter wins by submission			+320 ▼								
+3443	Any other result			n/a								
+3444	Spasic wins in round 1 or 2			+1300		+1200 ▲		+1200 ▲				
+3445	Any other result			n/a		n/a		n/a				
+3446	Luciano wins in round 1 or 2			+340 ▲		+400 ▼		+400 ▼				
+3447	Any other result			n/a		n/a		n/a				
+3448	Fight ends in round 1 or 2					+285 ▲		+285 ▲				
+3449	Any other result					n/a		n/a				
+3450	Fight ends in final round or goes to decision					-480 ▼		-480 ▼				
+3451	Any other result					n/a		n/a				
+3452	Fight ends in final round or goes to decision					+340 ▼						
+3453	Any other result					n/a						
+3454	Fight ends in final round or goes to decision					-159 ▲						
+3455	Any other result					n/a						
+3456	Spasic wins in final round or by decision			+370 ▲				+360 ▲				
+3457	Any other result			n/a				n/a				
+3458	Luciano wins in final round or by decision			-150 ▼				-165 ▼				
+3459	Any other result			n/a				n/a				
+3460	Fight ends in TKO/KO/DQ in round 1			+1300 ▲		+1150 ▲		+1150 ▲				
+3461	Any other result			n/a		n/a		n/a				
+3462	Fight ends in TKO/KO/DQ in round 2			+1700 ▲		+1300 ▲		+1300 ▲				
+3463	Any other result			n/a		n/a		n/a				
+3464	Fight ends in TKO/KO/DQ in round 3			+2200 ▲		+1300 ▲		+1300 ▲				
+3465	Any other result			n/a		n/a		n/a				
+3466	Fight ends in submission in round 1			+850 ▼		+800 ▼		+800 ▼				
+3467	Any other result			n/a		n/a		n/a				
+3468	Fight ends in submission in round 2			+1100 ▲		+850 ▼		+850 ▼				
+3469	Any other result			n/a		n/a		n/a				
+3470	Fight ends in submission in round 3			+1400 ▼		+950 ▼		+950 ▼				
+3471	Any other result			n/a		n/a		n/a				
+3472	44224 Josias Musasa		-126									
+3473	Mark Vologdin		-200 ▼									
