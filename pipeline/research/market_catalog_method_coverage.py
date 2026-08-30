@@ -3,92 +3,82 @@ import json
 import pandas as pd
 
 BASE = Path('data/market')
-OUT = Path('data/research/prop_mispricing/market_catalog_method_coverage.json')
-
 FILES = [
     'draftkings_market_catalog.parquet',
     'fanduel_market_catalog.parquet',
     'canonical_market_catalog.parquet',
 ]
-
 METHOD_TERMS = ('method', 'ko', 'tko', 'submission', 'decision')
+KEY_HINTS = ('market', 'category', 'type', 'outcome', 'selection', 'label', 'fighter', 'event', 'fight', 'participant', 'name')
 
 
 def summarize(path: Path):
     df = pd.read_parquet(path)
     out = {
-        'file': str(path),
+        'file': path.name,
         'rows': int(len(df)),
-        'columns': list(map(str, df.columns)),
+        'columns': [str(c) for c in df.columns],
+        'dtypes': {str(c): str(df[c].dtype) for c in df.columns},
     }
 
-    # Date/time coverage across plausible columns.
     date_cov = {}
     for c in df.columns:
         lc = str(c).lower()
-        if any(k in lc for k in ('date', 'time', 'captured', 'scrape', 'event_start')):
+        if any(k in lc for k in ('date', 'time', 'captured', 'scrape', 'start')):
             s = pd.to_datetime(df[c], errors='coerce', utc=True)
             if s.notna().any():
                 date_cov[str(c)] = {
-                    'non_null': int(s.notna().sum()),
+                    'n': int(s.notna().sum()),
                     'min': str(s.min()),
                     'max': str(s.max()),
                 }
     out['date_coverage'] = date_cov
 
-    # Enumerate categorical-ish text columns and method-related values.
-    text_summary = {}
+    categorical = {}
     method_hits = {}
-    for c in df.columns:
-        s = df[c]
-        if s.dtype == 'object' or pd.api.types.is_string_dtype(s):
-            vals = s.dropna().astype(str)
-            nunique = vals.nunique()
-            if nunique <= 300:
-                vc = vals.value_counts().head(100)
-                text_summary[str(c)] = {
-                    'nunique': int(nunique),
-                    'top_values': {str(k): int(v) for k, v in vc.items()},
-                }
-            mask = vals.str.lower().apply(lambda x: any(t in x for t in METHOD_TERMS))
-            if mask.any():
-                vc = vals[mask].value_counts().head(200)
-                method_hits[str(c)] = {str(k): int(v) for k, v in vc.items()}
-    out['text_summary'] = text_summary
-    out['method_hits'] = method_hits
-
-    # Row-level method-like records based on all text columns.
     method_mask = pd.Series(False, index=df.index)
     for c in df.columns:
         s = df[c]
         if s.dtype == 'object' or pd.api.types.is_string_dtype(s):
-            low = s.fillna('').astype(str).str.lower()
-            method_mask |= low.apply(lambda x: any(t in x for t in METHOD_TERMS))
-    m = df[method_mask].copy()
+            vals = s.fillna('').astype(str)
+            low = vals.str.lower()
+            hit = low.apply(lambda x: any(t in x for t in METHOD_TERMS))
+            method_mask |= hit
+            if hit.any():
+                method_hits[str(c)] = vals[hit].value_counts().head(50).to_dict()
+            if any(k in str(c).lower() for k in KEY_HINTS):
+                categorical[str(c)] = vals[vals.ne('')].value_counts().head(30).to_dict()
+
+    m = df[method_mask]
     out['method_like_rows'] = int(len(m))
+    out['method_hits'] = method_hits
+    out['key_values'] = categorical
 
-    # Save representative rows as records, bounded for JSON size.
+    # Compact uniqueness counts for likely identifiers.
+    uniq = {}
+    for c in df.columns:
+        lc = str(c).lower()
+        if any(k in lc for k in ('event', 'fight', 'bout', 'market', 'fighter', 'participant')):
+            try:
+                uniq[str(c)] = int(df[c].nunique(dropna=True))
+            except Exception:
+                pass
+    out['unique_counts'] = uniq
+
+    # Keep only 8 method rows so schema/value semantics are visible in logs.
     if len(m):
-        sample = m.head(100).copy()
-        for c in sample.columns:
-            if pd.api.types.is_datetime64_any_dtype(sample[c]):
-                sample[c] = sample[c].astype(str)
-        out['method_sample_rows'] = sample.astype(object).where(pd.notna(sample), None).to_dict('records')
+        sample_cols = [c for c in df.columns if any(k in str(c).lower() for k in KEY_HINTS) or str(c).lower() in ('odds','price','american_odds','captured_at','snapshot_at')]
+        sample_cols = sample_cols[:20] or list(df.columns[:12])
+        sm = m[sample_cols].head(8).copy()
+        out['method_samples'] = sm.astype(object).where(pd.notna(sm), None).to_dict('records')
     else:
-        out['method_sample_rows'] = []
-
+        out['method_samples'] = []
     return out
 
 
 def main():
-    result = {'files': []}
-    for name in FILES:
-        p = BASE / name
-        if p.exists():
-            result['files'].append(summarize(p))
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(result, indent=2, default=str), encoding='utf-8')
-    print(json.dumps(result, indent=2, default=str))
+    result = {'files': [summarize(BASE / f) for f in FILES if (BASE / f).exists()]}
+    print('COMPACT_METHOD_COVERAGE=' + json.dumps(result, default=str, separators=(',', ':')))
 
 if __name__ == '__main__':
     main()
