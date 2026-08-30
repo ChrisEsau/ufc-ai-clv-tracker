@@ -1,0 +1,135 @@
+name: Research Cold Start Filtered Ledgers V1
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-cold-start-ledgers-v1.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  ledger:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas pyarrow numpy
+      - name: Rebuild cold-start filtered ledgers
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import pandas as pd, numpy as np
+          ROOT=Path('data/research/prop_mispricing')
+          OUT=ROOT/'running_ledgers'; OUT.mkdir(parents=True,exist_ok=True)
+          thresholds=[0.02,0.03,0.05,0.075,0.10]
+          cards=['Freedom 250','Vegas 119','Baku','UFC 329','Oklahoma City','Abu Dhabi']
+          dates={'Freedom 250':'2026-06-14','Vegas 119':'2026-06-20','Baku':'2026-06-27','UFC 329':'2026-07-11','Oklahoma City':'2026-07-18','Abu Dhabi':'2026-07-25'}
+
+          # Existing canonical first-five bet ledger contains every >=2% qualifying bet.
+          old=pd.read_csv(OUT/'bet_ledger_v1.csv')
+          old=old[np.isclose(old.threshold,0.02)].copy()
+          old=old[['market_type','card','date','fight_id','fighter','market_key','odds','market_fair_p','model_p','edge','won']]
+
+          # Append Abu Dhabi directly from the frozen web-sourced score files.
+          ml=pd.read_csv(ROOT/'ufc_abu_dhabi_moneyline_web_v1.csv')
+          ml=ml[ml.edge>=0.02].copy()
+          ml2=pd.DataFrame({
+              'market_type':'moneyline','card':'Abu Dhabi','date':'2026-07-25','fight_id':ml.fight_id,
+              'fighter':ml.fighter,'market_key':'moneyline','odds':ml.american_odds,'market_fair_p':ml.fair_market_p,
+              'model_p':ml.model_p,'edge':ml.edge,'won':ml.actual_win.astype(int)})
+          me=pd.read_csv(ROOT/'ufc_abu_dhabi_method_web_v1.csv')
+          me=me[me.edge>=0.02].copy()
+          me2=pd.DataFrame({
+              'market_type':'method','card':'Abu Dhabi','date':'2026-07-25','fight_id':me.fight_id,
+              'fighter':me.fighter,'market_key':me.market_key,'odds':me.american_odds,'market_fair_p':me.fair_market_p,
+              'model_p':me.model_p,'edge':me.edge,'won':me.actual_hit.astype(int)})
+          allbets=pd.concat([old,ml2,me2],ignore_index=True)
+
+          # Exact prefight cold-start flag from latest_fighter_state.fights.
+          st=pd.read_parquet('data/features/latest_fighter_state.parquet').copy()
+          st['date']=pd.to_datetime(st['date']).dt.strftime('%Y-%m-%d')
+          st=st[st.date.isin(dates.values())].copy()
+          fight_meta=[]
+          for (dt,fid),g in st.groupby(['date','fight_id']):
+              vals=pd.to_numeric(g.fights,errors='coerce')
+              fighters=' vs '.join(g.sort_values('corner').fighter_name.astype(str).tolist())
+              cold_names=g.loc[vals<2,'fighter_name'].astype(str).tolist()
+              fight_meta.append({'date':dt,'fight_id':fid,'fighters':fighters,
+                                 'min_prior_fights':float(vals.min()) if vals.notna().any() else np.nan,
+                                 'cold_start':bool((vals<2).any()),
+                                 'cold_start_fighters':' | '.join(cold_names),
+                                 'fighter_prior_fights':' | '.join(f'{n}:{int(f)}' for n,f in zip(g.fighter_name,vals) if pd.notna(f))})
+          fm=pd.DataFrame(fight_meta)
+          allbets=allbets.merge(fm[['date','fight_id','min_prior_fights','cold_start','cold_start_fighters','fighter_prior_fights']],on=['date','fight_id'],how='left')
+          if allbets.cold_start.isna().any():
+              miss=allbets[allbets.cold_start.isna()][['card','date','fight_id']].drop_duplicates()
+              raise RuntimeError('Missing cold-start state for:\n'+miss.to_string(index=False))
+          allbets['eligible']=~allbets.cold_start
+          allbets['eligibility_reason']=np.where(allbets.eligible,'eligible','cold_start_fighter_lt_2_prior_fights')
+          allbets.to_csv(OUT/'cold_start_all_qualifying_bets_v1.csv',index=False)
+
+          # Flagged fights across all six cards, whether or not a >=2% bet existed.
+          flagged=fm[fm.cold_start].copy()
+          flagged['card']=flagged.date.map({v:k for k,v in dates.items()})
+          flagged=flagged[flagged.card.notna()].sort_values(['date','fight_id'])
+          flagged.to_csv(OUT/'cold_start_flagged_fights_v1.csv',index=False)
+
+          def payout_mult(o): return o/100 if o>0 else 100/abs(o)
+          def kelly_full(p,o):
+              b=payout_mult(o); return (b*p-(1-p))/b
+
+          bet_rows=[]; card_rows=[]; summary=[]
+          eligible=allbets[allbets.eligible].copy()
+          for market in ['moneyline','method']:
+            base=eligible[eligible.market_type.eq(market)].copy()
+            for th in thresholds:
+              flat_bank=500.0; kbank=500.0; flat_peak=500.0; kpeak=500.0; maxfdd=maxkdd=0.0
+              tb=tw=0; fr=fp=kr=kp=0.0
+              for card in cards:
+                d=base[(base.card==card)&(base.edge>=th)].copy()
+                sf=flat_bank; sk=kbank
+                cfp=ckp=cfr=ckr=0.0
+                for _,r in d.iterrows():
+                  o=float(r.odds); w=int(r.won); b=payout_mult(o)
+                  fs=10.0; fpnl=fs*b if w else -fs
+                  kf=max(0.0,kelly_full(float(r.model_p),o)); ks=sk*0.25*kf; kpnl=ks*b if w else -ks
+                  cfr+=fs; cfp+=fpnl; ckr+=ks; ckp+=kpnl
+                  bet_rows.append({'market_type':market,'threshold':th,'card':card,'date':r.date,'fight_id':r.fight_id,
+                                   'fighter':r.fighter,'market_key':r.market_key,'odds':o,'market_fair_p':r.market_fair_p,
+                                   'model_p':r.model_p,'edge':r.edge,'won':w,'prior_fight_floor':r.min_prior_fights,
+                                   'fighter_prior_fights':r.fighter_prior_fights,'flat_stake':fs,'flat_pnl':fpnl,
+                                   'kelly_full_fraction':kf,'quarter_kelly_stake':ks,'quarter_kelly_pnl':kpnl,
+                                   'kelly_bankroll_basis':sk})
+                flat_bank+=cfp; kbank+=ckp
+                flat_peak=max(flat_peak,flat_bank); kpeak=max(kpeak,kbank)
+                fdd=(flat_peak-flat_bank)/flat_peak if flat_peak else 0; kdd=(kpeak-kbank)/kpeak if kpeak else 0
+                maxfdd=max(maxfdd,fdd); maxkdd=max(maxkdd,kdd)
+                cb=len(d); cw=int(d.won.sum())
+                tb+=cb; tw+=cw; fr+=cfr; fp+=cfp; kr+=ckr; kp+=ckp
+                card_rows.append({'market_type':market,'threshold':th,'card':card,'date':dates[card],
+                                  'bets':cb,'wins':cw,'losses':cb-cw,'flat_start_bankroll':sf,'flat_risk':cfr,
+                                  'flat_profit':cfp,'flat_end_bankroll':flat_bank,'flat_card_roi':cfp/cfr if cfr else np.nan,
+                                  'kelly_start_bankroll':sk,'kelly_risk':ckr,'kelly_profit':ckp,'kelly_end_bankroll':kbank,
+                                  'kelly_card_roi':ckp/ckr if ckr else np.nan})
+              summary.append({'market_type':market,'threshold':th,'cards':len(cards),'bets':tb,'wins':tw,'losses':tb-tw,
+                              'win_rate':tw/tb if tb else np.nan,'flat_total_risk':fr,'flat_profit':fp,
+                              'flat_roi':fp/fr if fr else np.nan,'flat_end_bankroll':flat_bank,'flat_max_drawdown':maxfdd,
+                              'kelly_total_risk':kr,'kelly_profit':kp,'kelly_roi_on_staked':kp/kr if kr else np.nan,
+                              'kelly_end_bankroll':kbank,'kelly_return_on_start_bankroll':kbank/500-1,'kelly_max_drawdown':maxkdd})
+          pd.DataFrame(bet_rows).to_csv(OUT/'cold_start_bet_ledger_v1.csv',index=False)
+          pd.DataFrame(card_rows).to_csv(OUT/'cold_start_card_ledger_v1.csv',index=False)
+          s=pd.DataFrame(summary); s.to_csv(OUT/'cold_start_summary_v1.csv',index=False)
+          print('\nFLAGGED FIGHTS\n',flagged[['card','date','fighters','cold_start_fighters','fighter_prior_fights']].to_string(index=False))
+          print('\nFILTERED SUMMARY\n',s.to_string(index=False))
+          PY
+      - name: Commit filtered ledgers
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add -f data/research/prop_mispricing/running_ledgers/cold_start_*_v1.csv
+          git commit -m 'Add cold-start filtered ML and method ledgers' || echo No-changes
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
