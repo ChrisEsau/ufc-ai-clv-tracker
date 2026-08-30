@@ -1,0 +1,211 @@
+name: Research XGBoost Market Offset V4 Capacity
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - .github/workflows/research-xgboost-market-offset-v4-capacity.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  xgboost-market-offset-v4-capacity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout research branch
+        uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas pyarrow numpy scikit-learn xgboost
+
+      - name: Run residual capacity selection
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import numpy as np
+          import pandas as pd
+          from sklearn.metrics import brier_score_loss, log_loss, roc_auc_score
+          import xgboost as xgb
+
+          OUT = Path('data/research/prop_mispricing')
+          OUT.mkdir(parents=True, exist_ok=True)
+
+          market = pd.read_parquet('data/market/historical_market_outcomes.parquet').copy()
+          market = market[(market['bookmaker'] == 'legacy_consensus') & (market['result_status'] == 'graded') & market['won'].notna()].copy()
+          market['date'] = pd.to_datetime(market['date'], errors='coerce')
+          market['won'] = market['won'].astype(bool).astype(int)
+          market['implied_probability'] = pd.to_numeric(market['implied_probability'], errors='coerce')
+          market['profit_per_100'] = pd.to_numeric(market['profit_per_100'], errors='coerce')
+          market = market.dropna(subset=['date','implied_probability','profit_per_100']).copy()
+
+          ml = market[market['market_key'] == 'moneyline'].copy()
+          good = ml.groupby('fight_id').size()
+          good = good[good == 2].index
+          ml = ml[ml['fight_id'].isin(good)].copy()
+          ml['market_overround'] = ml.groupby('fight_id')['implied_probability'].transform('sum')
+          ml['fair_market_p'] = ml['implied_probability'] / ml['market_overround']
+          red = ml[ml['outcome_side'].astype(str).eq('red')].copy()
+
+          fv = pd.read_parquet('data/features/moneyline_feature_view.parquet').copy()
+          deny = ['winner','result','target','label','finish_round','match_time_sec','profit','odds','implied','market','actual','post_']
+          def clean_numeric(c):
+              return c in fv.columns and pd.api.types.is_numeric_dtype(fv[c]) and not any(x in c.lower() for x in deny)
+          diff_cols = sorted([
+              c for c in fv.columns
+              if clean_numeric(c) and c.lower().endswith('_diff')
+              and 'abs_diff' not in c.lower() and '_abs_' not in c.lower()
+          ])
+          feature_cols = diff_cols + ['market_overround']
+          df = red.merge(fv[['fight_id'] + diff_cols], on='fight_id', how='inner').sort_values(['date','fight_id']).copy()
+          Xraw = df[feature_cols].replace([np.inf,-np.inf], np.nan)
+
+          def clip_p(p): return np.clip(np.asarray(p,float), 1e-6, 1-1e-6)
+          def logit(p):
+              p = clip_p(p); return np.log(p/(1-p))
+          def sigmoid(z):
+              z = np.clip(np.asarray(z,float), -30, 30); return 1/(1+np.exp(-z))
+          def metrics(y,p):
+              y=np.asarray(y,int); p=clip_p(p)
+              return {
+                  'n': int(len(y)),
+                  'brier': float(brier_score_loss(y,p)),
+                  'log_loss': float(log_loss(y,p,labels=[0,1])),
+                  'auc': float(roc_auc_score(y,p)) if len(np.unique(y))==2 else None,
+              }
+
+          base = dict(
+              eta=0.03, subsample=0.8, colsample_bytree=0.7,
+              objective='binary:logistic', eval_metric='logloss', seed=42, nthread=2,
+          )
+          candidates = {
+              'v3_baseline_d3_350': dict(max_depth=3, min_child_weight=8, **{'lambda':5.0,'alpha':0.5}, rounds=350),
+              'd2_250_strong': dict(max_depth=2, min_child_weight=12, **{'lambda':8.0,'alpha':1.0}, rounds=250),
+              'd2_180_stronger': dict(max_depth=2, min_child_weight=16, **{'lambda':12.0,'alpha':1.5}, rounds=180),
+              'd3_200_strong': dict(max_depth=3, min_child_weight=12, **{'lambda':10.0,'alpha':1.0}, rounds=200),
+              'd1_300_strong': dict(max_depth=1, min_child_weight=10, **{'lambda':8.0,'alpha':1.0}, rounds=300),
+          }
+          alpha_grid = [0.0,0.10,0.25,0.50,0.75,1.0]
+          folds = [
+              ('2021','2020-12-31','2021-01-01','2021-12-31'),
+              ('2022','2021-12-31','2022-01-01','2022-12-31'),
+              ('2023','2022-12-31','2023-01-01','2023-12-31'),
+              ('2024','2023-12-31','2024-01-01','2024-12-31'),
+          ]
+
+          summary = {
+              'design': {
+                  'name':'market_offset_v4_capacity',
+                  'features':'same signed diff set as V3',
+                  'market_role':'fair market logit as base_margin',
+                  'selection':'candidate tree capacity + shrinkage alpha selected only on pooled 2021-2024 chronological OOF log loss',
+                  'final_test':'2025+ untouched until candidate and alpha frozen',
+                  'bet_thresholds':'not used for model selection',
+              },
+              'feature_count': len(feature_cols),
+              'candidates': {},
+          }
+
+          candidate_oof = {}
+          for cname, cfg in candidates.items():
+              parts=[]; fold_rows=[]
+              for fold_name, train_end, val_start, val_end in folds:
+                  train = df['date'] <= train_end
+                  val = (df['date'] >= val_start) & (df['date'] <= val_end)
+                  valid_cols = [c for c in feature_cols if Xraw.loc[train,c].notna().any()]
+                  med = Xraw.loc[train,valid_cols].median(numeric_only=True)
+                  Xtr=Xraw.loc[train,valid_cols].fillna(med).fillna(0.0)
+                  Xva=Xraw.loc[val,valid_cols].fillna(med).fillna(0.0)
+                  ytr=df.loc[train,'won'].astype(int).to_numpy(); yva=df.loc[val,'won'].astype(int).to_numpy()
+                  mtr=logit(df.loc[train,'fair_market_p']); mva=logit(df.loc[val,'fair_market_p'])
+                  params=base.copy(); params.update({k:v for k,v in cfg.items() if k!='rounds'})
+                  dtr=xgb.DMatrix(Xtr,label=ytr,base_margin=mtr,feature_names=valid_cols)
+                  dva=xgb.DMatrix(Xva,label=yva,base_margin=mva,feature_names=valid_cols)
+                  booster=xgb.train(params,dtr,num_boost_round=cfg['rounds'],verbose_eval=False)
+                  corr=booster.predict(dva,output_margin=True)-mva
+                  fold_rows.append({
+                      'fold':fold_name,'train_n':int(train.sum()),'validation_n':int(val.sum()),
+                      'raw_correction_mean_abs':float(np.mean(np.abs(corr))),
+                      'raw_correction_p95_abs':float(np.quantile(np.abs(corr),0.95)),
+                  })
+                  parts.append(pd.DataFrame({'fold':fold_name,'fight_id':df.loc[val,'fight_id'].to_numpy(),'won':yva,'market_margin':mva,'correction':corr}))
+              oof=pd.concat(parts,ignore_index=True)
+              market_m=metrics(oof['won'],sigmoid(oof['market_margin']))
+              alpha_rows=[]
+              for a in alpha_grid:
+                  ma=metrics(oof['won'],sigmoid(oof['market_margin']+a*oof['correction']))
+                  alpha_rows.append({'alpha':a,'oof':ma,'delta_log_loss_vs_market':float(ma['log_loss']-market_m['log_loss']),'delta_brier_vs_market':float(ma['brier']-market_m['brier'])})
+              best=min(alpha_rows,key=lambda r:r['oof']['log_loss'])
+              summary['candidates'][cname]={'config':cfg,'fold_diagnostics':fold_rows,'alpha_selection':alpha_rows,'selected_alpha':best['alpha'],'selected_oof':best['oof'],'selected_delta_log_loss_vs_market':best['delta_log_loss_vs_market'],'selected_delta_brier_vs_market':best['delta_brier_vs_market']}
+              candidate_oof[cname]=oof
+
+          selected_name=min(summary['candidates'],key=lambda k:summary['candidates'][k]['selected_oof']['log_loss'])
+          selected_alpha=summary['candidates'][selected_name]['selected_alpha']
+          selected_cfg=candidates[selected_name]
+          summary['selected_candidate']=selected_name
+          summary['selected_alpha']=selected_alpha
+
+          train=df['date']<='2024-12-31'; test=df['date']>='2025-01-01'
+          valid_cols=[c for c in feature_cols if Xraw.loc[train,c].notna().any()]
+          med=Xraw.loc[train,valid_cols].median(numeric_only=True)
+          Xtr=Xraw.loc[train,valid_cols].fillna(med).fillna(0.0); Xte=Xraw.loc[test,valid_cols].fillna(med).fillna(0.0)
+          ytr=df.loc[train,'won'].astype(int).to_numpy(); yte=df.loc[test,'won'].astype(int).to_numpy()
+          mtr=logit(df.loc[train,'fair_market_p']); mte=logit(df.loc[test,'fair_market_p'])
+          params=base.copy(); params.update({k:v for k,v in selected_cfg.items() if k!='rounds'})
+          dtr=xgb.DMatrix(Xtr,label=ytr,base_margin=mtr,feature_names=valid_cols); dte=xgb.DMatrix(Xte,label=yte,base_margin=mte,feature_names=valid_cols)
+          booster=xgb.train(params,dtr,num_boost_round=selected_cfg['rounds'],verbose_eval=False)
+          corr=booster.predict(dte,output_margin=True)-mte
+          p_market=sigmoid(mte); p_model=sigmoid(mte+selected_alpha*corr)
+          mm=metrics(yte,p_market); mx=metrics(yte,p_model)
+
+          test_red=df.loc[test,['fight_id','date','won','fair_market_p','market_overround','outcome_label']].copy()
+          test_red['raw_tree_correction_logit']=corr; test_red['selected_alpha']=selected_alpha; test_red['model_p_red']=p_model
+          side=ml[ml['fight_id'].isin(test_red['fight_id'])].copy().merge(test_red[['fight_id','model_p_red']],on='fight_id',how='inner')
+          side['model_p']=np.where(side['outcome_side'].astype(str).eq('red'),side['model_p_red'],1-side['model_p_red'])
+          side['edge']=side['model_p']-side['fair_market_p']
+          roi=[]
+          for thr in [0.0,0.02,0.05,0.075,0.10,0.15]:
+              g=side[side['edge']>=thr]
+              if len(g):
+                  profit=np.where(g['won'].eq(1),g['profit_per_100'],-100.0)
+                  roi.append({'min_edge':thr,'n_bets':int(len(g)),'win_rate':float(g['won'].mean()),'avg_edge':float(g['edge'].mean()),'roi':float(profit.mean()/100.0)})
+
+          summary['final_test']={
+              'train_n_fights':int(train.sum()),'test_n_fights':int(test.sum()),
+              'market':mm,'v4_market_offset':mx,
+              'delta_log_loss_vs_market':float(mx['log_loss']-mm['log_loss']),
+              'delta_brier_vs_market':float(mx['brier']-mm['brier']),
+              'raw_correction_mean_abs':float(np.mean(np.abs(corr))),
+              'raw_correction_p95_abs':float(np.quantile(np.abs(corr),0.95)),
+              'shrunk_probability_move_mean_abs':float(np.mean(np.abs(p_model-p_market))),
+              'shrunk_probability_move_p95_abs':float(np.quantile(np.abs(p_model-p_market),0.95)),
+              'edge_buckets':roi,
+              'max_pair_sum_error':float((side.groupby('fight_id')['model_p'].sum()-1).abs().max()),
+              'top_features_by_gain':[{'feature':k,'gain':float(v)} for k,v in sorted(booster.get_score(importance_type='gain').items(),key=lambda z:z[1],reverse=True)[:30]],
+          }
+
+          side.to_csv(OUT/'xgboost_market_offset_v4_capacity_test_predictions.csv',index=False)
+          candidate_oof[selected_name].to_csv(OUT/'xgboost_market_offset_v4_capacity_selected_oof.csv',index=False)
+          with open(OUT/'xgboost_market_offset_v4_capacity_summary.json','w',encoding='utf-8') as f: json.dump(summary,f,indent=2)
+          print(json.dumps(summary,indent=2))
+          PY
+
+      - name: Commit research outputs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add -f data/research/prop_mispricing/xgboost_market_offset_v4_capacity_summary.json data/research/prop_mispricing/xgboost_market_offset_v4_capacity_test_predictions.csv data/research/prop_mispricing/xgboost_market_offset_v4_capacity_selected_oof.csv
+          git commit -m "Add XGBoost market-offset V4 capacity results" || echo "No changes to commit"
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
