@@ -68,8 +68,6 @@ jobs:
           html=requests.get(URL,headers={'User-Agent':'Mozilla/5.0'},timeout=30).text
           soup=BeautifulSoup(html,'lxml')
           candidates=[]
-          # BFO repeats labels/markets in multiple DOM structures. Parse each table independently
-          # and keep complete 2-fighter bout blocks so rows from later duplicates cannot overwrite them.
           for ti,table in enumerate(soup.find_all('table')):
             rows=table.find_all('tr')
             fighter_rows=[]
@@ -80,7 +78,6 @@ jobs:
             j=0
             while j+1 < len(fighter_rows):
               i1,f1,r1=fighter_rows[j]; i2,f2,r2=fighter_rows[j+1]
-              # Only pair adjacent fighter rows; following rows belong to this bout until next fighter row.
               end=fighter_rows[j+2][0] if j+2 < len(fighter_rows) else len(rows)
               ml1,ml2=prices(r1),prices(r2)
               props={}
@@ -95,7 +92,9 @@ jobs:
                 elif label.endswith(' wins by decision'):lk='dec'
                 if not lk:continue
                 prefix=label.rsplit(' wins by ',1)[0]
+                if norm(prefix).startswith('either fighter'):continue
                 s1=SequenceMatcher(None,norm(prefix),norm(f1)).ratio(); s2=SequenceMatcher(None,norm(prefix),norm(f2)).ratio()
+                if max(s1,s2)<0.55:continue
                 side=1 if s1>=s2 else 2
                 for td in tr.find_all('td'):
                   b=cell_book(td); o=odd_from_cell(td)
@@ -107,8 +106,6 @@ jobs:
                 candidates.append({'table':ti,'f1':f1,'f2':f2,'ml1':ml1,'ml2':ml2,'props':props,'complete':complete})
               j+=2
 
-          # Deduplicate the same bout across responsive/duplicate tables. Prefer FanDuel-complete entries,
-          # then the table with the most numeric prices. Require exactly one logical entry per 14 bouts.
           grouped={}
           for b in candidates:
             key=tuple(sorted([norm(b['f1']),norm(b['f2'])]))
@@ -141,12 +138,10 @@ jobs:
           pd.DataFrame(source_rows).to_csv(OUT/'ufc_belgrade_market_sources_v1.csv',index=False)
           print('GLOBAL COMPLETE BOOK',global_book,BOOK_NAMES.get(global_book)); print('BOARDS',len(boards))
           for p,v in sorted(boards.items()):print(p,v)
-          # Regression check against the directly inspected archived row.
           rod=next(v for p,v in boards.items() if {'Daniel Rodriguez','Uros Medic'}==set(p))
-          if rod['m']['Daniel Rodriguez'][0] != 500:
-            raise RuntimeError(f"BFO regression mismatch: expected FanDuel Rodriguez KO +500, got {rod['m']['Daniel Rodriguez'][0]}")
+          if rod['m']['Daniel Rodriguez'] != [500,1500,2200]:
+            raise RuntimeError(f"BFO regression mismatch for Rodriguez methods: {rod['m']['Daniel Rodriguez']}")
 
-          # Reuse exact frozen Abu Dhabi scorer; mutate only date/board/output/card-size assertion.
           src=Path('.github/workflows/research-ufc-abu-dhabi-web-both-v1.yml').read_text()
           m=re.search(r"python - <<'PY'\n(.*?)\n          PY",src,re.S)
           if not m:raise RuntimeError('Could not extract frozen scorer')
@@ -165,6 +160,6 @@ jobs:
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add -f data/research/prop_mispricing/ufc_belgrade_*_v1.csv
-          git commit -m 'research: correct scoped UFC Belgrade archived boards' || echo No-changes
+          git commit -m 'research: correct generic-market overwrite in UFC Belgrade boards' || echo No-changes
           git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
           git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
