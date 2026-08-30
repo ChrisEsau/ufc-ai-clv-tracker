@@ -16,30 +16,50 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install requests
-      - name: Isolate embedded BestFightOdds prop payload
+      - run: pip install requests beautifulsoup4 lxml
+      - name: Inspect duplicate price-bearing prop tables
         run: |
           python - <<'PY'
+          import json,re,requests
+          from bs4 import BeautifulSoup
           from pathlib import Path
-          import requests
-          text=requests.get('https://www.bestfightodds.com/events/ufc-belgrade-4285',headers={'User-Agent':'Mozilla/5.0'},timeout=30).text
-          n='Rodriguez wins by TKO/KO'; pos=[]; p=0
-          while True:
-              i=text.find(n,p)
-              if i<0: break
-              pos.append(i); p=i+1
-          chunks=[]
-          for j,i in enumerate(pos):
-              if i>100000:
-                  chunks.append(f'=== occurrence {j} at {i} ===\n'+text[max(0,i-2500):i+6500])
-          Path('data/research/prop_mispricing/ufc_belgrade_bfo_payload_v1.txt').write_text('\n\n'.join(chunks),encoding='utf-8')
-          print('positions',pos)
-          print(chunks[0][:6000] if chunks else 'no high-position payload')
+          url='https://www.bestfightodds.com/events/ufc-belgrade-4285'
+          soup=BeautifulSoup(requests.get(url,headers={'User-Agent':'Mozilla/5.0'},timeout=30).text,'lxml')
+          out=[]
+          for ti,t in enumerate(soup.find_all('table')):
+            txt=' '.join(t.get_text(' ',strip=True).split())
+            if 'Daniel Rodriguez' not in txt or 'Uros Medic' not in txt: continue
+            numeric=0
+            for td in t.find_all('td',attrs={'data-li':True}):
+              if any(re.fullmatch(r'[+-]\d+',s.get_text(strip=True).replace('−','-')) for s in td.find_all('span')): numeric+=1
+            out.append(f'TABLE {ti} class={t.get("class")} id={t.get("id")} numeric_cells={numeric}')
+            # parent/previous headings help identify current-vs-history tables
+            p=t
+            for level in range(3):
+              p=p.parent if p else None
+              if p:
+                out.append(f' parent{level+1} tag={p.name} class={p.get("class")} id={p.get("id")}')
+            for tr in t.find_all('tr'):
+              th=tr.find('th'); label=' '.join(th.get_text(' ',strip=True).split()) if th else ''
+              if label in ['Rodriguez wins by TKO/KO','Rodriguez wins by submission','Rodriguez wins by decision','Medic wins by TKO/KO','Medic wins by submission','Medic wins by decision']:
+                vals=[]
+                for td in tr.find_all('td'):
+                  dl=td.get('data-li'); val=None
+                  for s in td.find_all('span'):
+                    z=s.get_text(strip=True).replace('−','-')
+                    if re.fullmatch(r'[+-]\d+',z): val=z; break
+                  if dl and val:
+                    try: book=json.loads(dl)[0]
+                    except: book='?'
+                    vals.append(f'{book}:{val}')
+                out.append(label+' | '+' '.join(vals))
+          p=Path('data/research/prop_mispricing/ufc_belgrade_bfo_tables_v1.txt');p.write_text('\n'.join(out),encoding='utf-8')
+          print('\n'.join(out))
           PY
       - name: Commit inspection output
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add data/research/prop_mispricing/ufc_belgrade_bfo_payload_v1.txt
-          git diff --cached --quiet || git commit -m 'research: isolate UFC Belgrade BFO prop payload'
+          git add data/research/prop_mispricing/ufc_belgrade_bfo_tables_v1.txt
+          git diff --cached --quiet || git commit -m 'research: inspect duplicate UFC Belgrade BFO tables'
           git push
