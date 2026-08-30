@@ -1,0 +1,77 @@
+name: Research UFC Mexico Market Diagnostic V1
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-ufc-mexico-market-diagnostic-v1.yml]
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas pyarrow requests beautifulsoup4 lxml
+      - name: Compare BFO 4052 to master
+        run: |
+          python - <<'PY'
+          import json,re,unicodedata,pandas as pd,requests
+          from bs4 import BeautifulSoup
+          DATE=pd.Timestamp('2026-02-28'); URL='https://www.bestfightodds.com/events/ufc-mexico-4052'; H={'User-Agent':'Mozilla/5.0'}
+          def norm(s): return ' '.join(''.join(ch for ch in unicodedata.normalize('NFKD',str(s)) if not unicodedata.combining(ch)).lower().replace('’',"'").replace('-',' ').split())
+          def odd(td):
+            for sp in td.find_all('span'):
+              t=sp.get_text(strip=True).replace('−','-')
+              if re.fullmatch(r'[+-]\d+',t): return int(t)
+          def book(td):
+            x=td.get('data-li')
+            try:return int(json.loads(x)[0]) if x else None
+            except:return None
+          def prices(tr):
+            z={}
+            for td in tr.find_all('td'):
+              b,o=book(td),odd(td)
+              if b is not None and o is not None:z[b]=o
+            return z
+          soup=BeautifulSoup(requests.get(URL,headers=H,timeout=30).text,'lxml'); cand=[]
+          for table in soup.find_all('table'):
+            rows=table.find_all('tr'); fr=[]
+            for i,tr in enumerate(rows):
+              links=[a for a in tr.find_all('a',href=True) if '/fighters/' in a['href']]
+              if links and 'pr' not in (tr.get('class') or []):fr.append((i,' '.join(links[-1].get_text(' ',strip=True).split()),tr))
+            j=0
+            while j+1<len(fr):
+              i1,f1,r1=fr[j]; i2,f2,r2=fr[j+1]; end=fr[j+2][0] if j+2<len(fr) else len(rows); ml1,ml2=prices(r1),prices(r2); props={}
+              for tr in rows[i2+1:end]:
+                if 'pr' not in (tr.get('class') or []):continue
+                th=tr.find('th'); label=' '.join(th.get_text(' ',strip=True).split()) if th else ''; lk=None
+                if label.endswith(' wins by TKO/KO'):lk='ko'
+                elif label.endswith(' wins by submission'):lk='sub'
+                elif label.endswith(' wins by decision'):lk='dec'
+                if not lk:continue
+                pre=norm(label.rsplit(' wins by ',1)[0]); n1,n2=norm(f1),norm(f2)
+                side=1 if pre and pre in n1 and pre not in n2 else (2 if pre and pre in n2 and pre not in n1 else None)
+                if side is None:continue
+                for td in tr.find_all('td'):
+                  b,o=book(td),odd(td)
+                  if b is not None and o is not None:props[(b,side,lk)]=o
+              complete=[b for b in set(ml1)&set(ml2) if all((b,s,k) in props for s in [1,2] for k in ['ko','sub','dec'])]
+              cand.append((f1,f2,sorted(complete)))
+              j+=2
+          d={frozenset(map(norm,(a,b))):(a,b,c) for a,b,c in cand}; cand=list(d.values())
+          master=pd.read_parquet('data/master/ufc_master.parquet'); master['date']=pd.to_datetime(master.date); card=master[master.date.eq(DATE)].copy()
+          m={frozenset((norm(r.r_name),norm(r.b_name))):(r.r_name,r.b_name,r.fight_id) for _,r in card.iterrows()}
+          print('MASTER CARD FIGHTS',len(m)); [print('MASTER',x) for x in m.values()]
+          print('\nBFO BOUTS',len(cand)); [print('BFO',x) for x in cand]
+          matched=[]; incomplete=[]
+          for a,b,c in cand:
+            k=frozenset((norm(a),norm(b)))
+            if k in m:(matched if c else incomplete).append((a,b,c,m[k]))
+          print('\nMATCHED COMPLETE',len(matched)); [print(x) for x in matched]
+          print('\nMATCHED INCOMPLETE',len(incomplete)); [print(x) for x in incomplete]
+          found={frozenset((norm(a),norm(b))) for a,b,c,_ in matched}
+          print('\nMASTER NOT COMPLETE ON BFO',len(set(m)-found)); [print(m[k]) for k in set(m)-found]
+          PY
