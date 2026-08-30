@@ -1,0 +1,61 @@
+name: Research Environment Schema Diagnostic
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - .github/workflows/research-environment-schema-diagnostic.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  schema:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pandas pyarrow
+      - name: Inspect environment-related data
+        run: |
+          python - <<'PY'
+          import os, glob, pandas as pd, pyarrow.parquet as pq
+          keys=['location','venue','city','state','country','national','hometown','home_town','residence','resid','gym','team','camp','train','altitude','elevation','latitude','longitude','lat','lon']
+          paths=[]
+          for p in glob.glob('data/**/*.parquet',recursive=True):
+              try:
+                  names=pq.ParquetFile(p).schema.names
+              except Exception:
+                  continue
+              hits=[c for c in names if any(k in c.lower() for k in keys)]
+              if hits:
+                  paths.append((p,hits))
+          print('FILES_WITH_ENV_COLUMNS',len(paths))
+          for p,hits in paths:
+              print('\nFILE',p)
+              print('COLUMNS',hits)
+              try:
+                  df=pd.read_parquet(p,columns=hits[:20])
+                  for c in hits[:20]:
+                      vals=df[c].dropna().astype(str).drop_duplicates().head(12).tolist()
+                      print(c,'SAMPLE',vals)
+              except Exception as e:
+                  print('SAMPLE_ERROR',repr(e))
+          print('\nMASTER ALL COLUMNS')
+          p='data/master/ufc_master.parquet'
+          if os.path.exists(p):
+              print(pq.ParquetFile(p).schema.names)
+          print('\nFEATURE VIEW TEXT COLUMNS')
+          p='data/features/moneyline_feature_view.parquet'
+          if os.path.exists(p):
+              df=pd.read_parquet(p)
+              for c in df.columns:
+                  if not pd.api.types.is_numeric_dtype(df[c]):
+                      print(c, str(df[c].dtype), df[c].dropna().astype(str).drop_duplicates().head(8).tolist())
+          PY
