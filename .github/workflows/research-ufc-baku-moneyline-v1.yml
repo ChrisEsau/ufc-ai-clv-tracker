@@ -17,7 +17,7 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install pandas pyarrow numpy scikit-learn xgboost
-      - name: Score UFC Baku moneylines
+      - name: Score full UFC Baku moneyline card
         run: |
           python - <<'PY'
           import unicodedata
@@ -41,11 +41,26 @@ jobs:
           d=m.merge(fv[['fight_id']+cols],on='fight_id',how='inner'); blue=d.outcome_side.astype(str).eq('blue'); d.loc[blue,diffs]=-d.loc[blue,diffs]
           fc=cols+['fair_market_p','market_overround']; X=d[fc].replace([np.inf,-np.inf],np.nan); valid=[c for c in fc if X[c].notna().any()]; tr=d.date<='2022-12-31'; va=(d.date>='2023-01-01')&(d.date<='2024-12-31'); med=X.loc[tr,valid].median(numeric_only=True); X=X[valid].fillna(med).fillna(0)
           model=XGBClassifier(n_estimators=350,max_depth=3,learning_rate=.03,subsample=.8,colsample_bytree=.7,min_child_weight=8,reg_lambda=5,reg_alpha=.5,objective='binary:logistic',eval_metric='logloss',random_state=42,n_jobs=2); model.fit(X.loc[tr],d.loc[tr,'won'],eval_set=[(X.loc[va],d.loc[va,'won'])],verbose=False)
-          odds={('Rafael Fiziev','Manuel Torres'):{'Rafael Fiziev':-110,'Manuel Torres':-110},('Shara Magomedov','Michel Pereira'):{'Shara Magomedov':-425,'Michel Pereira':325},('Nazim Sadykhov','Matheus Camilo'):{'Nazim Sadykhov':-190,'Matheus Camilo':150}}
-          actual={'Rafael Fiziev','Shara Magomedov','Matheus Camilo'}
+          odds={
+            ('Rafael Fiziev','Manuel Torres'):{'Rafael Fiziev':-110,'Manuel Torres':-110},
+            ('Shara Magomedov','Michel Pereira'):{'Shara Magomedov':-425,'Michel Pereira':325},
+            ('Nazim Sadykhov','Matheus Camilo'):{'Nazim Sadykhov':-190,'Matheus Camilo':150},
+            ('Asu Almabayev','Charles Johnson'):{'Asu Almabayev':-330,'Charles Johnson':240},
+            ('Ikram Aliskerov','Brunno Ferreira'):{'Ikram Aliskerov':-275,'Brunno Ferreira':205},
+            ('Abus Magomedov','Michal Oleksiejczuk'):{'Abus Magomedov':-105,'Michal Oleksiejczuk':-120},
+            ('Farman Hasanov','Eric Nolan'):{'Farman Hasanov':-170,'Eric Nolan':135},
+            ('Abdul Rakhman Yakhyaev','Julius Walker'):{'Abdul Rakhman Yakhyaev':-750,'Julius Walker':475},
+            ('Nursulton Ruziboev','Andrey Pulyaev'):{'Nursulton Ruziboev':-185,'Andrey Pulyaev':154},
+            ('Kaan Ofli','Javier Reyes'):{'Kaan Ofli':190,'Javier Reyes':-230},
+            ('Daniil Donchenko','Theodor Berggren'):{'Daniil Donchenko':-500,'Theodor Berggren':350},
+            ('Bekzat Almakhan','Jean Matsumoto'):{'Bekzat Almakhan':140,'Jean Matsumoto':-180},
+            ('Tahir Abdullayev','Jefferson Nascimento'):{'Tahir Abdullayev':120,'Jefferson Nascimento':-150},
+          }
+          actual={'Rafael Fiziev','Shara Magomedov','Matheus Camilo','Asu Almabayev','Ikram Aliskerov','Abus Magomedov','Farman Hasanov','Abdul Rakhman Yakhyaev','Nursulton Ruziboev','Kaan Ofli','Daniil Donchenko','Jean Matsumoto','Tahir Abdullayev'}
           def norm(s):return ''.join(ch for ch in unicodedata.normalize('NFKD',str(s)) if not unicodedata.combining(ch)).replace('’',"'").lower().strip()
           wanted={frozenset((norm(a),norm(b))) for a,b in odds}
           event=latest[(latest.date.dt.strftime('%Y-%m-%d')=='2026-06-27') & latest.apply(lambda r: frozenset((norm(r.fighter_name),norm(r.opponent_name))) in wanted,axis=1)].copy()
+          print('matched state rows',len(event),'fights',event.fight_id.nunique())
           fights=[]
           for fid,g in event.groupby('fight_id'):
             red=g[g.corner.astype(str).str.lower().eq('red')]; blue=g[g.corner.astype(str).str.lower().eq('blue')]
@@ -95,13 +110,13 @@ jobs:
               rec.update({'fight_id':red.fight_id,'fighter':name,'side':side,'american_odds':ao,'market_overround':over,'fair_market_p':ip/over,'actual_win':int(name in actual),'mapped_predictors':mapped,'total_predictors':len(cols)})
               XS=pd.DataFrame([rec]).reindex(columns=valid).replace([np.inf,-np.inf],np.nan).fillna(med).fillna(0); rec['model_p']=float(model.predict_proba(XS)[0,1]); rec['edge']=rec['model_p']-rec['fair_market_p']; rows.append(rec)
           if not rows: raise RuntimeError('No Baku moneyline rows built')
-          out=pd.DataFrame(rows); keep=['fight_id','fighter','side','american_odds','fair_market_p','model_p','edge','actual_win','mapped_predictors','total_predictors']; out[keep].to_csv(OUT/'ufc_baku_moneyline_v1.csv',index=False); print(out[keep].sort_values('edge',ascending=False).to_string(index=False))
+          out=pd.DataFrame(rows); keep=['fight_id','fighter','side','american_odds','fair_market_p','model_p','edge','actual_win','mapped_predictors','total_predictors']; out[keep].to_csv(OUT/'ufc_baku_moneyline_full_v1.csv',index=False); print(out[keep].sort_values('edge',ascending=False).to_string(index=False)); print('scored fights',out.fight_id.nunique())
           PY
       - name: Commit
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git add -f data/research/prop_mispricing/ufc_baku_moneyline_v1.csv
-          git commit -m 'Add UFC Baku moneyline scores' || echo No-changes
+          git add -f data/research/prop_mispricing/ufc_baku_moneyline_full_v1.csv
+          git commit -m 'Add full UFC Baku moneyline scores' || echo No-changes
           git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
           git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
