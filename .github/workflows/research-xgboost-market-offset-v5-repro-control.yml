@@ -1,0 +1,124 @@
+name: Research XGBoost Market Offset V5 Repro Control
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - .github/workflows/research-xgboost-market-offset-v5-repro-control.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  v5-repro-control:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout research branch
+        uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.16"
+
+      - name: Install exact V5 dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas==3.0.5 pyarrow==25.0.1 numpy==2.4.6 scikit-learn==1.9.0 scipy==1.17.1 xgboost==3.2.0
+
+      - name: Reproduce frozen V5 exactly
+        run: |
+          python - <<'PY'
+          import json, platform
+          from pathlib import Path
+          import numpy as np
+          import pandas as pd
+          import pyarrow
+          import sklearn
+          import scipy
+          import xgboost as xgb
+          from sklearn.metrics import brier_score_loss, log_loss, roc_auc_score
+
+          OUT = Path('data/research/prop_mispricing')
+          with open(OUT/'xgboost_market_offset_v5_feature_reduction_summary.json','r',encoding='utf-8') as f:
+              frozen=json.load(f)
+          selected=list(frozen['selected_features'])
+          assert len(selected)==50, len(selected)
+
+          market=pd.read_parquet('data/market/historical_market_outcomes.parquet').copy()
+          market=market[(market['bookmaker']=='legacy_consensus')&(market['result_status']=='graded')&market['won'].notna()].copy()
+          market['date']=pd.to_datetime(market['date'],errors='coerce')
+          market['won']=market['won'].astype(bool).astype(int)
+          market['implied_probability']=pd.to_numeric(market['implied_probability'],errors='coerce')
+          market['profit_per_100']=pd.to_numeric(market['profit_per_100'],errors='coerce')
+          market=market.dropna(subset=['date','implied_probability','profit_per_100']).copy()
+          ml=market[market['market_key']=='moneyline'].copy()
+          good=ml.groupby('fight_id').size(); good=good[good==2].index
+          ml=ml[ml['fight_id'].isin(good)].copy()
+          ml['market_overround']=ml.groupby('fight_id')['implied_probability'].transform('sum')
+          ml['fair_market_p']=ml['implied_probability']/ml['market_overround']
+          red=ml[ml['outcome_side'].astype(str).eq('red')].copy()
+
+          fv=pd.read_parquet('data/features/moneyline_feature_view.parquet').copy()
+          df=red.merge(fv[['fight_id']+selected],on='fight_id',how='inner').sort_values(['date','fight_id']).copy()
+          feature_cols=selected+['market_overround']
+          Xraw=df[feature_cols].replace([np.inf,-np.inf],np.nan)
+
+          def clip(p): return np.clip(np.asarray(p,float),1e-6,1-1e-6)
+          def logit(p): p=clip(p); return np.log(p/(1-p))
+          def sigmoid(z): z=np.clip(np.asarray(z,float),-30,30); return 1/(1+np.exp(-z))
+          def metrics(y,p):
+              y=np.asarray(y,int); p=clip(p)
+              return {'n':int(len(y)),'brier':float(brier_score_loss(y,p)),'log_loss':float(log_loss(y,p,labels=[0,1])),'auc':float(roc_auc_score(y,p)) if len(np.unique(y))==2 else None}
+
+          params={'max_depth':1,'eta':0.03,'subsample':0.8,'colsample_bytree':0.7,'min_child_weight':10,'lambda':8.0,'alpha':1.0,'objective':'binary:logistic','eval_metric':'logloss','seed':42,'nthread':2}
+          folds=[('2021','2020-12-31','2021-01-01','2021-12-31'),('2022','2021-12-31','2022-01-01','2022-12-31'),('2023','2022-12-31','2023-01-01','2023-12-31'),('2024','2023-12-31','2024-01-01','2024-12-31')]
+          parts=[]; fout=[]
+          for name,train_end,val_start,val_end in folds:
+              tr=df['date']<=train_end; va=(df['date']>=val_start)&(df['date']<=val_end)
+              valid=[c for c in feature_cols if Xraw.loc[tr,c].notna().any()]
+              med=Xraw.loc[tr,valid].median(numeric_only=True)
+              Xtr=Xraw.loc[tr,valid].fillna(med).fillna(0.0); Xv=Xraw.loc[va,valid].fillna(med).fillna(0.0)
+              yt=df.loc[tr,'won'].astype(int).to_numpy(); yv=df.loc[va,'won'].astype(int).to_numpy()
+              mt=logit(df.loc[tr,'fair_market_p']); mv=logit(df.loc[va,'fair_market_p'])
+              model=xgb.train(params,xgb.DMatrix(Xtr,label=yt,base_margin=mt,feature_names=valid),num_boost_round=300,verbose_eval=False)
+              full=model.predict(xgb.DMatrix(Xv,label=yv,base_margin=mv,feature_names=valid),output_margin=True)
+              p=sigmoid(mv+(full-mv))
+              m=metrics(yv,p)
+              fout.append({'fold':name,'train_n':int(tr.sum()),'validation_n':int(va.sum()),'metrics':m})
+              parts.append(pd.DataFrame({'fight_id':df.loc[va,'fight_id'].to_numpy(),'date':df.loc[va,'date'].to_numpy(),'won':yv,'model_p':p}))
+          oof=pd.concat(parts,ignore_index=True)
+          om=metrics(oof['won'],oof['model_p'])
+
+          expected={'rows':6467,'oof_n':1742,'log_loss':0.600822510744624,'brier':0.2069607253451583,
+                    'fold_ll':{'2021':0.624153125480216,'2022':0.6025058140395739,'2023':0.58028432982816,'2024':0.5923667393473763}}
+          checks={
+            'row_count':len(df)==expected['rows'],
+            'oof_n':om['n']==expected['oof_n'],
+            'oof_log_loss':abs(om['log_loss']-expected['log_loss'])<1e-12,
+            'oof_brier':abs(om['brier']-expected['brier'])<1e-12,
+            'fold_log_losses':all(abs(next(x['metrics']['log_loss'] for x in fout if x['fold']==k)-v)<1e-12 for k,v in expected['fold_ll'].items()),
+          }
+          summary={'design':{'name':'v5_exact_repro_control','source':'frozen V5 selected features and mechanics','control_only':True},
+                   'runtime':{'python':platform.python_version(),'numpy':np.__version__,'pandas':pd.__version__,'pyarrow':pyarrow.__version__,'sklearn':sklearn.__version__,'scipy':scipy.__version__,'xgboost':xgb.__version__},
+                   'selected_features':selected,'row_count':len(df),'folds':fout,'oof':om,'expected':expected,'checks':checks,'passed':all(checks.values())}
+          with open(OUT/'xgboost_market_offset_v5_repro_control_summary.json','w',encoding='utf-8') as f: json.dump(summary,f,indent=2)
+          oof.to_csv(OUT/'xgboost_market_offset_v5_repro_control_oof.csv',index=False)
+          print(json.dumps(summary,indent=2))
+          if not summary['passed']:
+              raise SystemExit('V5 reproducibility control FAILED')
+          PY
+
+      - name: Commit reproducibility outputs
+        if: success()
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add -f data/research/prop_mispricing/xgboost_market_offset_v5_repro_control_summary.json data/research/prop_mispricing/xgboost_market_offset_v5_repro_control_oof.csv
+          git commit -m "Add exact V5 reproducibility control results" || echo "No changes to commit"
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
