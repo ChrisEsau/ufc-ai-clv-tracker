@@ -1,0 +1,36 @@
+name: Research Inspect Cold Start Fields
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-inspect-cold-start-fields.yml]
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas pyarrow
+      - name: Inspect fields
+        run: |
+          python - <<'PY'
+          import pandas as pd
+          p='data/features/latest_fighter_state.parquet'
+          d=pd.read_parquet(p)
+          print('LATEST STATE COLUMNS CONTAINING fight/count/bout/start:')
+          for c in d.columns:
+              l=c.lower()
+              if any(x in l for x in ['fight','bout','count','start','experience']):
+                  print(c, d[c].dtype)
+          print('\nSAMPLE JULY 25:')
+          x=d[pd.to_datetime(d['date']).dt.strftime('%Y-%m-%d').eq('2026-07-25')]
+          cols=['fighter_name','fight_id']+[c for c in d.columns if any(k in c.lower() for k in ['fight','bout','count','experience'])]
+          print(x[[c for c in cols if c in x.columns]].to_string(index=False))
+          r=pd.read_parquet('data/fight_details/ufc_round_stats.parquet')
+          print('\nROUND STATS COLUMNS:')
+          print(list(r.columns))
+          PY
