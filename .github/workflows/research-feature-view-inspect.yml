@@ -1,0 +1,93 @@
+name: Research Feature View Inspect
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - .github/workflows/research-feature-view-inspect.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  inspect-feature-views:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout research branch
+        uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas pyarrow numpy
+
+      - name: Inspect feature views and join keys
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+
+          out = Path('data/research/prop_mispricing')
+          out.mkdir(parents=True, exist_ok=True)
+
+          paths = {
+              'market': 'data/market/historical_market_outcomes.parquet',
+              'moneyline': 'data/features/moneyline_feature_view.parquet',
+              'method': 'data/features/prop_method_of_victory_feature_view.parquet',
+          }
+
+          frames = {k: pd.read_parquet(v) for k, v in paths.items()}
+          summary = {}
+          for name, df in frames.items():
+              summary[name] = {
+                  'path': paths[name],
+                  'rows': int(len(df)),
+                  'columns_count': int(len(df.columns)),
+                  'columns': [{'name': c, 'dtype': str(df[c].dtype), 'null_pct': float(df[c].isna().mean())} for c in df.columns],
+                  'sample': df.head(3).astype(object).where(pd.notna(df.head(3)), None).to_dict(orient='records'),
+              }
+
+          market = frames['market']
+          for name in ['moneyline','method']:
+              df = frames[name]
+              common = sorted(set(market.columns).intersection(df.columns))
+              summary[name]['common_market_columns'] = common
+              candidates = [c for c in common if c in {'fight_id','date','fighter_id','outcome_fighter_id','outcome_side','canonical_side','r_fighter_id','b_fighter_id','r_name','b_name','legacy_r_name','legacy_b_name'} or 'fighter' in c.lower() or 'fight' in c.lower()]
+              summary[name]['candidate_join_columns'] = candidates
+
+          # Basic fight-id coverage if available.
+          if 'fight_id' in market.columns:
+              market_fights = set(market['fight_id'].dropna().astype(str))
+              for name in ['moneyline','method']:
+                  df = frames[name]
+                  if 'fight_id' in df.columns:
+                      feature_fights = set(df['fight_id'].dropna().astype(str))
+                      summary[name]['fight_id_coverage'] = {
+                          'market_unique_fights': len(market_fights),
+                          'feature_unique_fights': len(feature_fights),
+                          'intersection': len(market_fights & feature_fights),
+                          'market_coverage_pct': (len(market_fights & feature_fights) / len(market_fights)) if market_fights else None,
+                      }
+
+          with open(out/'feature_view_inspection.json','w',encoding='utf-8') as f:
+              json.dump(summary,f,indent=2,default=str)
+          print(json.dumps(summary,indent=2,default=str))
+          PY
+
+      - name: Commit inspection output
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add -f data/research/prop_mispricing/feature_view_inspection.json
+          git commit -m "Add feature-view inspection diagnostics" || echo "No changes to commit"
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
