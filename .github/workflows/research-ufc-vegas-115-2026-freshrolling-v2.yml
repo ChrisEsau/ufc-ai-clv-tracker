@@ -1,0 +1,56 @@
+name: Research UFC Vegas 115 2026 FreshRolling V2
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-ufc-vegas-115-2026-freshrolling-v2.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  score:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas pyarrow numpy scikit-learn xgboost pyyaml requests beautifulsoup4 lxml
+      - name: Run covered UFC Vegas 115 frozen scorer
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+          src=Path('.github/workflows/research-ufc-325-freshrolling-web-v5.yml').read_text()
+          m=re.search(r"python - <<'PY'\n(.*?)\n          PY",src,re.S)
+          if not m: raise RuntimeError('Could not extract scorer')
+          code='\n'.join(line[10:] if line.startswith('          ') else line for line in m.group(1).splitlines())
+          reps=[
+            ("DATE='2026-01-31'","DATE='2026-04-04'"),
+            ("https://www.bestfightodds.com/events/ufc-3971","https://www.bestfightodds.com/events/ufc-vegas-115-4107"),
+            ("ufc_325_market_sources_v1.csv","ufc_vegas_115_2026_market_sources_v1.csv"),
+            ("ufc_325_moneyline_freshrolling_v1.csv","ufc_vegas_115_2026_moneyline_freshrolling_v1.csv"),
+            ("ufc_325_method_freshrolling_v1.csv","ufc_vegas_115_2026_method_freshrolling_v1.csv"),
+          ]
+          for old,new in reps:
+            if old not in code: raise RuntimeError('missing transform literal: '+old[:100])
+            code=code.replace(old,new,1)
+          old_outer="if len(boards)!=13:raise RuntimeError(f'Expected 13 matched boards, got {len(boards)}: {list(boards)}')"
+          new_outer="if len(boards)!=12:raise RuntimeError(f'Expected 12 matched boards, got {len(boards)}: {list(boards)}')"
+          if old_outer not in code: raise RuntimeError('outer board check missing')
+          code=code.replace(old_outer,new_outer,1)
+          old_newcheck="newcheck=\"if len(card)!=13: raise RuntimeError(f'Expected 13 fresh rolling UFC325 rows, got {len(card)}: '+str(card[[c for c in ['fight_id','r_name','b_name'] if c in card]].to_dict('records')))\""
+          new_newcheck="newcheck=\"if len(card)!=12: raise RuntimeError(f'Expected 12 fresh rolling UFC Vegas 115 rows, got {len(card)}: '+str(card[[c for c in ['fight_id','r_name','b_name'] if c in card]].to_dict('records')))\""
+          if old_newcheck not in code: raise RuntimeError('inner card check missing')
+          code=code.replace(old_newcheck,new_newcheck,1)
+          exec(compile(code,'<ufc_vegas_115_2026_v2>','exec'),{})
+          PY
+      - name: Commit UFC Vegas 115 scores
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -f data/research/prop_mispricing/ufc_vegas_115_2026_*_v1.csv
+          git commit -m 'research: add UFC Vegas 115 2026 authoritative covered frozen scores' || echo No-changes
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
