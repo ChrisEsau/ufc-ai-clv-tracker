@@ -1,0 +1,111 @@
+name: Research Method ML Winner Filter V1
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-method-ml-winner-filter-v1.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas numpy
+      - name: Rebuild method ledger with ML-winner agreement
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import pandas as pd, numpy as np
+
+          ROOT=Path('data/research/prop_mispricing')
+          OUT=ROOT/'running_ledgers'
+          cards=['Freedom 250','Vegas 119','Baku','UFC 329','Oklahoma City','Abu Dhabi','Belgrade']
+          dates={'Freedom 250':'2026-06-14','Vegas 119':'2026-06-20','Baku':'2026-06-27','UFC 329':'2026-07-11','Oklahoma City':'2026-07-18','Abu Dhabi':'2026-07-25','Belgrade':'2026-08-01'}
+          thresholds=[0.02,0.03,0.05,0.075,0.10]
+          ml_files={
+            'Freedom 250':'freedom_250_moneyline_v1.csv',
+            'Vegas 119':'ufc_vegas_119_moneyline_v1.csv',
+            'Baku':'ufc_baku_moneyline_full_v1.csv',
+            'UFC 329':'ufc_329_moneyline_v1.csv',
+            'Oklahoma City':'ufc_okc_moneyline_v1.csv',
+            'Abu Dhabi':'ufc_abu_dhabi_moneyline_web_v1.csv',
+            'Belgrade':'ufc_belgrade_moneyline_web_v1.csv',
+          }
+
+          # Build one ML-model winner per fight from the raw ML probabilities.
+          winners=[]
+          for card,path in ml_files.items():
+            x=pd.read_csv(ROOT/path).copy()
+            if 'fighter' not in x.columns:
+              x=x.rename(columns={'outcome_label':'fighter'})
+            idx=x.groupby('fight_id')['model_p'].idxmax()
+            w=x.loc[idx,['fight_id','fighter','model_p']].copy()
+            w['card']=card
+            w=w.rename(columns={'fighter':'ml_predicted_winner','model_p':'ml_winner_p'})
+            winners.append(w)
+          winners=pd.concat(winners,ignore_index=True)
+
+          q=pd.read_csv(OUT/'cold_start_all_qualifying_bets_v1.csv')
+          q=q[(q.market_type=='method') & (q.eligible.astype(str).str.lower().isin(['true','1']))].copy()
+          q=q.merge(winners,on=['card','fight_id'],how='left')
+          if q.ml_predicted_winner.isna().any():
+            raise RuntimeError('Missing ML winner mapping for method rows')
+          q['ml_winner_match']=q.fighter.eq(q.ml_predicted_winner)
+          kept=q[q.ml_winner_match].copy()
+          kept.to_csv(OUT/'method_ml_winner_filtered_bets_v1.csv',index=False)
+
+          def payout_mult(o): return o/100 if o>0 else 100/abs(o)
+          def kelly_full(p,o):
+            b=payout_mult(o)
+            return max(0.0,(b*p-(1-p))/b)
+
+          card_rows=[]; summaries=[]
+          for th in thresholds:
+            flat_bank=500.0; kbank=500.0
+            flat_peak=500.0; kpeak=500.0; maxfdd=maxkdd=0.0
+            tb=tw=0; fr=fp=kr=kp=0.0
+            for card in cards:
+              d=kept[(kept.card==card)&(kept.edge>=th)].copy()
+              sf,sk=flat_bank,kbank
+              cfr=cfp=ckr=ckp=0.0
+              for _,r in d.iterrows():
+                o=float(r.odds); b=payout_mult(o); w=int(r.won)
+                fs=10.0; fpnl=fs*b if w else -fs
+                kf=kelly_full(float(r.model_p),o); ks=sk*0.25*kf; kpnl=ks*b if w else -ks
+                cfr+=fs; cfp+=fpnl; ckr+=ks; ckp+=kpnl
+              flat_bank+=cfp; kbank+=ckp
+              flat_peak=max(flat_peak,flat_bank); kpeak=max(kpeak,kbank)
+              maxfdd=max(maxfdd,(flat_peak-flat_bank)/flat_peak if flat_peak else 0)
+              maxkdd=max(maxkdd,(kpeak-kbank)/kpeak if kpeak else 0)
+              cb=len(d); cw=int(d.won.sum())
+              tb+=cb; tw+=cw; fr+=cfr; fp+=cfp; kr+=ckr; kp+=ckp
+              card_rows.append({'threshold':th,'card':card,'date':dates[card],'bets':cb,'wins':cw,'losses':cb-cw,
+                                'flat_start_bankroll':sf,'flat_risk':cfr,'flat_profit':cfp,'flat_end_bankroll':flat_bank,
+                                'flat_card_roi':cfp/cfr if cfr else np.nan,'kelly_start_bankroll':sk,'kelly_risk':ckr,
+                                'kelly_profit':ckp,'kelly_end_bankroll':kbank,'kelly_card_roi':ckp/ckr if ckr else np.nan})
+            summaries.append({'threshold':th,'cards':len(cards),'bets':tb,'wins':tw,'losses':tb-tw,
+                              'win_rate':tw/tb if tb else np.nan,'flat_total_risk':fr,'flat_profit':fp,
+                              'flat_roi':fp/fr if fr else np.nan,'flat_end_bankroll':flat_bank,'flat_max_drawdown':maxfdd,
+                              'kelly_total_risk':kr,'kelly_profit':kp,'kelly_roi_on_staked':kp/kr if kr else np.nan,
+                              'kelly_end_bankroll':kbank,'kelly_return_on_start_bankroll':kbank/500-1,'kelly_max_drawdown':maxkdd})
+
+          pd.DataFrame(card_rows).to_csv(OUT/'method_ml_winner_card_ledger_v1.csv',index=False)
+          s=pd.DataFrame(summaries)
+          s.to_csv(OUT/'method_ml_winner_summary_v1.csv',index=False)
+          print('\nMETHOD BETS KEPT:',len(kept),'OF',len(q),'ELIGIBLE >=2% METHOD BETS')
+          print('\nSUMMARY\n',s.to_string(index=False))
+          PY
+      - name: Commit filtered method outputs
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add -f data/research/prop_mispricing/running_ledgers/method_ml_winner_*_v1.csv
+          git commit -m 'Add method ledger filtered by ML predicted winner' || echo No-changes
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
