@@ -1,0 +1,226 @@
+import json, math, re, unicodedata
+from pathlib import Path
+import numpy as np
+import pandas as pd
+import requests
+import geonamescache
+from sklearn.metrics import log_loss, brier_score_loss, roc_auc_score
+import xgboost as xgb
+
+OUT=Path('data/research/prop_mispricing'); OUT.mkdir(parents=True,exist_ok=True)
+V5_SUMMARY=OUT/'xgboost_v5_exact_reproduction_summary.json'
+if not V5_SUMMARY.exists():
+    V5_SUMMARY=OUT/'xgboost_market_offset_v5_feature_reduction_summary.json'
+with open(V5_SUMMARY,'r',encoding='utf-8') as f:
+    v5=json.load(f)
+core=[c for c in v5['selected_features'] if c!='market_overround']
+
+EVENT_URL='https://raw.githubusercontent.com/OppositeMusical/MMA-AI/main/ufc_event_details.csv'
+FIGHTER_URL='https://gist.githubusercontent.com/Atharvap2000/ce6ce9af15f82eebc63befc86b994c31/raw/45254acf4004b5f998440b97322598f49894c82e/UFC%20fighters.csv'
+
+
+def norm(s):
+    s=unicodedata.normalize('NFKD',str(s or '')).encode('ascii','ignore').decode('ascii').lower()
+    s=s.replace('–','-').replace('—','-')
+    s=re.sub(r'[^a-z0-9]+',' ',s)
+    return ' '.join(s.split())
+
+
+def clip(p): return np.clip(np.asarray(p,float),1e-6,1-1e-6)
+def logit(p):
+    p=clip(p); return np.log(p/(1-p))
+def sigmoid(z):
+    z=np.clip(np.asarray(z,float),-30,30); return 1/(1+np.exp(-z))
+def metrics(y,p):
+    y=np.asarray(y,int); p=clip(p)
+    return {'n':int(len(y)),'log_loss':float(log_loss(y,p,labels=[0,1])),'brier':float(brier_score_loss(y,p)),'auc':float(roc_auc_score(y,p)) if len(np.unique(y))==2 else None}
+def haversine_km(lat1,lon1,lat2,lon2):
+    r=6371.0088
+    a1,a2=math.radians(lat1),math.radians(lat2)
+    da=math.radians(lat2-lat1); dl=math.radians(lon2-lon1)
+    h=math.sin(da/2)**2+math.cos(a1)*math.cos(a2)*math.sin(dl/2)**2
+    return 2*r*math.asin(min(1.0,math.sqrt(h)))
+
+# Deterministic offline city/country resolver from pinned GeoNames cache.
+gc=geonamescache.GeonamesCache()
+countries=gc.get_countries()
+country_code={}
+for c in countries.values():
+    for key in [c.get('name'),c.get('iso'),c.get('iso3')]:
+        if key: country_code[norm(key)]=c.get('iso')
+country_code.update({
+    'usa':'US','u s a':'US','united states':'US','united states of america':'US',
+    'uk':'GB','u k':'GB','united kingdom':'GB','england':'GB','scotland':'GB','wales':'GB','northern ireland':'GB',
+    'south korea':'KR','korea south':'KR','republic of korea':'KR',
+    'north korea':'KP','russia':'RU','czech republic':'CZ','czechia':'CZ',
+    'uae':'AE','u a e':'AE','united arab emirates':'AE',
+})
+city_index={}
+for c in gc.get_cities().values():
+    key=(norm(c.get('name')),c.get('countrycode'))
+    pop=int(c.get('population') or 0)
+    prev=city_index.get(key)
+    if prev is None or pop>prev[2]:
+        city_index[key]=(float(c['latitude']),float(c['longitude']),pop,c.get('name'))
+
+
+def resolve_place(locality,country):
+    city=str(locality or '').split(',')[0].strip()
+    cc=country_code.get(norm(country))
+    if not city or not cc: return None
+    hit=city_index.get((norm(city),cc))
+    if not hit: return None
+    return (hit[0],hit[1])
+
+
+def resolve_event_location(location):
+    parts=[x.strip() for x in str(location or '').split(',') if x.strip()]
+    if len(parts)<2: return None
+    return resolve_place(parts[0],parts[-1])
+
+# Fighter origin = listed locality/country from a fixed public Sherdog-derived snapshot.
+# Do not infer missing origin from nationality, association, previous fight, or event.
+resp=requests.get(FIGHTER_URL,timeout=60); resp.raise_for_status()
+fighter_csv=OUT/'_v11_fighter_locations.csv'; fighter_csv.write_bytes(resp.content)
+fighters=pd.read_csv(fighter_csv)
+fighters.columns=[str(c).strip().lower() for c in fighters.columns]
+name_col='fighter' if 'fighter' in fighters.columns else ('name' if 'name' in fighters.columns else None)
+if name_col is None or not {'locality','country'}.issubset(fighters.columns):
+    raise RuntimeError(f'Fighter locality source columns not understood: {fighters.columns.tolist()}')
+fighters['fighter_norm']=fighters[name_col].map(norm)
+fighters=fighters.dropna(subset=[name_col]).drop_duplicates('fighter_norm',keep='first').copy()
+fighter_origin={}
+for r in fighters.itertuples(index=False):
+    xy=resolve_place(getattr(r,'locality',None),getattr(r,'country',None))
+    if xy: fighter_origin[r.fighter_norm]=xy
+
+# Event locations from same maintained UFCStats mirror used in valid V10E.
+ev=pd.read_csv(EVENT_URL)
+ev=ev.rename(columns={'EVENT':'event_name_ufcstats','DATE':'date','LOCATION':'location'})
+ev['date']=pd.to_datetime(ev['date'],errors='coerce').dt.normalize()
+ev['event_norm']=ev['event_name_ufcstats'].map(norm)
+ev=ev.dropna(subset=['date','location','event_name_ufcstats']).drop_duplicates(['date','event_norm'])
+coords=ev['location'].map(resolve_event_location)
+ev['event_lat']=[x[0] if x else np.nan for x in coords]
+ev['event_lon']=[x[1] if x else np.nan for x in coords]
+
+market=pd.read_parquet('data/market/historical_market_outcomes.parquet').copy()
+market=market[(market['bookmaker']=='legacy_consensus')&(market['result_status']=='graded')&market['won'].notna()&(market['market_key']=='moneyline')].copy()
+market['date']=pd.to_datetime(market['date'],errors='coerce').dt.normalize()
+market['won']=market['won'].astype(bool).astype(int)
+market['implied_probability']=pd.to_numeric(market['implied_probability'],errors='coerce')
+market['profit_per_100']=pd.to_numeric(market['profit_per_100'],errors='coerce')
+market=market.dropna(subset=['date','implied_probability','profit_per_100']).copy()
+good=market.groupby('fight_id').size(); good=good[good==2].index
+market=market[market.fight_id.isin(good)].copy()
+market['market_overround']=market.groupby('fight_id')['implied_probability'].transform('sum')
+market['fair_market_p']=market['implied_probability']/market['market_overround']
+red=market[market['outcome_side'].astype(str).eq('red')].copy()
+blue=market[market['outcome_side'].astype(str).eq('blue')][['fight_id','outcome_label']].rename(columns={'outcome_label':'blue_fighter'})
+red=red.merge(blue,on='fight_id',how='left').rename(columns={'outcome_label':'red_fighter'})
+
+fv=pd.read_parquet('data/features/moneyline_feature_view.parquet').copy()
+fv['date']=pd.to_datetime(fv['date'],errors='coerce').dt.normalize()
+fv['event_norm']=fv['event_name'].map(norm)
+need=['fight_id','date','event_name','event_norm']+[c for c in core if c in fv.columns]
+# Exact V5 canonical order; required with subsample=.8.
+df=red.merge(fv[need],on='fight_id',how='inner',suffixes=('','_fv')).sort_values(['date','fight_id']).reset_index(drop=True)
+
+# Event/date match with date-only fallback when only one UFC event exists that date.
+df=df.merge(ev[['date','event_norm','location','event_lat','event_lon']],on=['date','event_norm'],how='left')
+date_unique=ev.groupby('date').filter(lambda g: len(g)==1).drop_duplicates('date').set_index('date')
+for c in ['location','event_lat','event_lon']:
+    miss=df[c].isna(); df.loc[miss,c]=df.loc[miss,'date'].map(date_unique[c])
+
+df['red_norm']=df['red_fighter'].map(norm); df['blue_norm']=df['blue_fighter'].map(norm)
+red_xy=df['red_norm'].map(fighter_origin); blue_xy=df['blue_norm'].map(fighter_origin)
+df['red_origin_lat']=[x[0] if isinstance(x,tuple) else np.nan for x in red_xy]
+df['red_origin_lon']=[x[1] if isinstance(x,tuple) else np.nan for x in red_xy]
+df['blue_origin_lat']=[x[0] if isinstance(x,tuple) else np.nan for x in blue_xy]
+df['blue_origin_lon']=[x[1] if isinstance(x,tuple) else np.nan for x in blue_xy]
+
+
+def dist_row(r,prefix):
+    vals=[r[f'{prefix}_origin_lat'],r[f'{prefix}_origin_lon'],r['event_lat'],r['event_lon']]
+    if any(pd.isna(x) for x in vals): return np.nan
+    return haversine_km(*map(float,vals))
+
+df['red_travel_km']=df.apply(lambda r:dist_row(r,'red'),axis=1)
+df['blue_travel_km']=df.apply(lambda r:dist_row(r,'blue'),axis=1)
+df['travel_distance_diff']=df['red_travel_km']-df['blue_travel_km']
+
+coverage={
+    'fight_rows':int(len(df)),
+    'event_coordinate_rows':int((df['event_lat'].notna()&df['event_lon'].notna()).sum()),
+    'red_origin_rows':int(df['red_origin_lat'].notna().sum()),
+    'blue_origin_rows':int(df['blue_origin_lat'].notna().sum()),
+    'complete_travel_diff_rows':int(df['travel_distance_diff'].notna().sum()),
+    'complete_travel_diff_coverage':float(df['travel_distance_diff'].notna().mean()),
+    'fighter_source_rows':int(len(fighters)),
+    'fighter_source_resolved_city_rows':int(len(fighter_origin)),
+}
+coverage_by_year={}
+for year,g in df.groupby(df['date'].dt.year):
+    coverage_by_year[str(int(year))]={'n':int(len(g)),'complete':int(g['travel_distance_diff'].notna().sum()),'coverage':float(g['travel_distance_diff'].notna().mean())}
+
+params={'max_depth':1,'eta':0.03,'subsample':0.8,'colsample_bytree':0.7,'min_child_weight':10,'lambda':8.0,'alpha':1.0,'objective':'binary:logistic','eval_metric':'logloss','seed':42,'nthread':2}
+rounds=300
+base=list(dict.fromkeys(core+['market_overround']))
+candidates={'v5_core':base,'v5_plus_travel_distance_diff':base+['travel_distance_diff']}
+folds=[('2021','2020-12-31','2021-01-01','2021-12-31'),('2022','2021-12-31','2022-01-01','2022-12-31'),('2023','2022-12-31','2023-01-01','2023-12-31'),('2024','2023-12-31','2024-01-01','2024-12-31')]
+
+summary={'design':{
+    'name':'market_offset_v11_travel_distance_difference','base':'frozen V5','architecture':'frozen depth1 market-offset',
+    'only_new_model_feature':'travel_distance_diff','definition':'red_fighter_travel_km - blue_fighter_travel_km',
+    'fighter_origin_definition':'listed locality and country from fixed public Sherdog-derived fighter snapshot; unresolved origins remain missing',
+    'event_source':EVENT_URL,'fighter_origin_source':FIGHTER_URL,
+    'coordinate_source':'geonamescache 3.0.2; exact normalized city+country match only; largest-population duplicate city retained',
+    'distance':'great-circle Haversine kilometers','selection':'pooled chronological 2021-2024 OOF log loss only',
+    '2025_plus':'sealed until candidate selected','no_other_environment_features':True,'roi_used_for_selection':False,
+},'coverage':coverage,'coverage_by_year':coverage_by_year,'candidates':{}}
+
+for cname,cols in candidates.items():
+    raw=df[cols].replace([np.inf,-np.inf],np.nan); parts=[]; fr=[]; travel_gains=[]
+    for fold,train_end,val_start,val_end in folds:
+        tr=df.date<=train_end; va=(df.date>=val_start)&(df.date<=val_end)
+        valid=[c for c in cols if raw.loc[tr,c].notna().any()]
+        med=raw.loc[tr,valid].median(numeric_only=True)
+        Xtr=raw.loc[tr,valid].fillna(med).fillna(0.0); Xv=raw.loc[va,valid].fillna(med).fillna(0.0)
+        yt=df.loc[tr,'won'].astype(int).to_numpy(); yv=df.loc[va,'won'].astype(int).to_numpy()
+        mt=logit(df.loc[tr,'fair_market_p']); mv=logit(df.loc[va,'fair_market_p'])
+        b=xgb.train(params,xgb.DMatrix(Xtr,label=yt,base_margin=mt,feature_names=valid),num_boost_round=rounds,verbose_eval=False)
+        p=sigmoid(b.predict(xgb.DMatrix(Xv,base_margin=mv,feature_names=valid),output_margin=True)); pm=sigmoid(mv)
+        mm=metrics(yv,pm); mx=metrics(yv,p); gain=b.get_score(importance_type='gain')
+        tg=float(gain.get('travel_distance_diff',0.0)); travel_gains.append(tg)
+        fr.append({'fold':fold,'market':mm,'model':mx,'delta_log_loss_vs_market':float(mx['log_loss']-mm['log_loss']),'delta_brier_vs_market':float(mx['brier']-mm['brier']),'travel_distance_diff_gain':tg})
+        parts.append(pd.DataFrame({'y':yv,'market':pm,'model':p}))
+    oo=pd.concat(parts,ignore_index=True); mm=metrics(oo.y,oo.market); mx=metrics(oo.y,oo.model)
+    summary['candidates'][cname]={'feature_count':len(cols),'folds':fr,'oof':mx,'delta_log_loss_vs_market':float(mx['log_loss']-mm['log_loss']),'delta_brier_vs_market':float(mx['brier']-mm['brier']),'mean_fold_travel_distance_diff_gain':float(np.mean(travel_gains)) if cname!='v5_core' else 0.0}
+
+expected_v5=0.600822510744624
+actual_v5=float(summary['candidates']['v5_core']['oof']['log_loss'])
+summary['exact_v5_control']={'expected_oof_log_loss':expected_v5,'actual_oof_log_loss':actual_v5,'abs_error':abs(actual_v5-expected_v5),'exact_within_1e_12':abs(actual_v5-expected_v5)<=1e-12}
+print('EXACT_V5_CONTROL',json.dumps(summary['exact_v5_control']))
+assert abs(actual_v5-expected_v5)<=1e-12, f'V5 control mismatch: {actual_v5} vs {expected_v5}'
+
+selected=min(summary['candidates'],key=lambda k:summary['candidates'][k]['oof']['log_loss'])
+summary['selected_candidate']=selected
+summary['travel_selected']=selected=='v5_plus_travel_distance_diff'
+summary['oof_delta_travel_vs_v5']=float(summary['candidates']['v5_plus_travel_distance_diff']['oof']['log_loss']-actual_v5)
+
+# Open sealed 2025+ only after the candidate is selected from 2021-2024 OOF.
+cols=candidates[selected]; raw=df[cols].replace([np.inf,-np.inf],np.nan)
+tr=df.date<='2024-12-31'; te=df.date>='2025-01-01'
+valid=[c for c in cols if raw.loc[tr,c].notna().any()]; med=raw.loc[tr,valid].median(numeric_only=True)
+Xtr=raw.loc[tr,valid].fillna(med).fillna(0.0); Xt=raw.loc[te,valid].fillna(med).fillna(0.0)
+yt=df.loc[tr,'won'].astype(int).to_numpy(); ye=df.loc[te,'won'].astype(int).to_numpy()
+mt=logit(df.loc[tr,'fair_market_p']); me=logit(df.loc[te,'fair_market_p'])
+b=xgb.train(params,xgb.DMatrix(Xtr,label=yt,base_margin=mt,feature_names=valid),num_boost_round=rounds,verbose_eval=False)
+p=sigmoid(b.predict(xgb.DMatrix(Xt,base_margin=me,feature_names=valid),output_margin=True)); pm=sigmoid(me)
+final_gain=b.get_score(importance_type='gain')
+summary['final_test']={'selected_candidate':selected,'market':metrics(ye,pm),'selected_model':metrics(ye,p),'delta_log_loss_vs_market':float(metrics(ye,p)['log_loss']-metrics(ye,pm)['log_loss']),'delta_brier_vs_market':float(metrics(ye,p)['brier']-metrics(ye,pm)['brier']),'travel_distance_diff_gain':float(final_gain.get('travel_distance_diff',0.0))}
+
+fighter_csv.unlink(missing_ok=True)
+out=OUT/'xgboost_market_offset_v11_travel_distance_diff_summary.json'
+with open(out,'w',encoding='utf-8') as f: json.dump(summary,f,indent=2)
+print(json.dumps(summary,indent=2))
