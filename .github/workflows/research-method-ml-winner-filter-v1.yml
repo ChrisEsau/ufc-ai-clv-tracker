@@ -38,7 +38,6 @@ jobs:
             'Belgrade':'ufc_belgrade_moneyline_web_v1.csv',
           }
 
-          # Build one ML-model winner per fight from the raw ML probabilities.
           winners=[]
           for card,path in ml_files.items():
             x=pd.read_csv(ROOT/path).copy()
@@ -46,15 +45,17 @@ jobs:
               x=x.rename(columns={'outcome_label':'fighter'})
             idx=x.groupby('fight_id')['model_p'].idxmax()
             w=x.loc[idx,['fight_id','fighter','model_p']].copy()
-            w['card']=card
             w=w.rename(columns={'fighter':'ml_predicted_winner','model_p':'ml_winner_p'})
             winners.append(w)
           winners=pd.concat(winners,ignore_index=True)
+          if winners.fight_id.duplicated().any():
+            raise RuntimeError('Duplicate fight_id in ML winner map')
 
           q=pd.read_csv(OUT/'cold_start_all_qualifying_bets_v1.csv')
           q=q[(q.market_type=='method') & (q.eligible.astype(str).str.lower().isin(['true','1']))].copy()
-          q=q.merge(winners,on=['card','fight_id'],how='left')
+          q=q.merge(winners,on='fight_id',how='left')
           if q.ml_predicted_winner.isna().any():
+            print(q.loc[q.ml_predicted_winner.isna(),['card','date','fight_id','fighter']].drop_duplicates().to_string(index=False))
             raise RuntimeError('Missing ML winner mapping for method rows')
           q['ml_winner_match']=q.fighter.eq(q.ml_predicted_winner)
           kept=q[q.ml_winner_match].copy()
