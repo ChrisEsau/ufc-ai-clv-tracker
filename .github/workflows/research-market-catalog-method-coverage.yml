@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/research-market-catalog-method-coverage.yml'
       - 'pipeline/research/market_catalog_method_coverage.py'
+      - 'pipeline/research/data_market_parquet_inventory.py'
 
 permissions:
   contents: read
@@ -23,3 +24,4 @@ jobs:
           python-version: '3.11'
       - run: pip install pandas pyarrow
       - run: python -m pipeline.research.market_catalog_method_coverage
+      - run: python -m pipeline.research.data_market_parquet_inventory
