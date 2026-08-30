@@ -1,0 +1,201 @@
+name: Research XGBoost Market Offset V9 Context Reduction
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - .github/workflows/research-xgboost-market-offset-v9-context-reduction.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  xgboost-market-offset-v9-context-reduction:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout research branch
+        uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas pyarrow numpy scikit-learn xgboost
+
+      - name: Run compact context reduction
+        run: |
+          python - <<'PY'
+          import json
+          from collections import defaultdict
+          from pathlib import Path
+          import numpy as np
+          import pandas as pd
+          from sklearn.metrics import brier_score_loss, log_loss, roc_auc_score
+          import xgboost as xgb
+
+          OUT=Path('data/research/prop_mispricing')
+          with open(OUT/'xgboost_market_offset_v5_feature_reduction_summary.json','r',encoding='utf-8') as f:
+              v5=json.load(f)
+          core=list(v5['selected_features'])
+
+          market=pd.read_parquet('data/market/historical_market_outcomes.parquet').copy()
+          market=market[(market['bookmaker']=='legacy_consensus') & (market['result_status']=='graded') & market['won'].notna()].copy()
+          market['date']=pd.to_datetime(market['date'],errors='coerce')
+          market['won']=market['won'].astype(bool).astype(int)
+          market['implied_probability']=pd.to_numeric(market['implied_probability'],errors='coerce')
+          market['profit_per_100']=pd.to_numeric(market['profit_per_100'],errors='coerce')
+          market=market.dropna(subset=['date','implied_probability','profit_per_100'])
+          ml=market[market['market_key']=='moneyline'].copy()
+          good=ml.groupby('fight_id').size(); good=good[good==2].index
+          ml=ml[ml['fight_id'].isin(good)].copy()
+          ml['market_overround']=ml.groupby('fight_id')['implied_probability'].transform('sum')
+          ml['fair_market_p']=ml['implied_probability']/ml['market_overround']
+          red=ml[ml['outcome_side'].astype(str).eq('red')].copy()
+
+          fv=pd.read_parquet('data/features/moneyline_feature_view.parquet').copy()
+          fv['date']=pd.to_datetime(fv['date'],errors='coerce')
+
+          def division_weight(s):
+              if pd.isna(s): return np.nan
+              t=str(s).lower()
+              if 'light heavyweight' in t: return 205.0
+              if 'heavyweight' in t: return 265.0
+              if 'strawweight' in t: return 115.0
+              if 'flyweight' in t: return 125.0
+              if 'bantamweight' in t: return 135.0
+              if 'featherweight' in t: return 145.0
+              if 'lightweight' in t: return 155.0
+              if 'welterweight' in t: return 170.0
+              if 'middleweight' in t: return 185.0
+              return np.nan
+
+          apps=[]
+          for r in fv[['fight_id','date','division','r_name','b_name']].dropna(subset=['fight_id','date']).itertuples(index=False):
+              apps.append((r.fight_id,r.date,'r',r.r_name,r.division))
+              apps.append((r.fight_id,r.date,'b',r.b_name,r.division))
+          apps=pd.DataFrame(apps,columns=['fight_id','date','side','fighter','division']).dropna(subset=['fighter']).sort_values(['date','fight_id','side']).reset_index(drop=True)
+          apps['division_weight']=apps['division'].map(division_weight)
+          history=defaultdict(list); rows=[]
+          for r in apps.itertuples(index=False):
+              h=history[str(r.fighter)]
+              activity365=sum(1 for x in h if 0 < (r.date-x['date']).days <= 365)
+              activity730=sum(1 for x in h if 0 < (r.date-x['date']).days <= 730)
+              prev=h[-1] if h else None
+              prev_w=prev['division_weight'] if prev else np.nan
+              cur=r.division_weight
+              rec=np.isfinite(cur); prev_rec=prev is not None and np.isfinite(prev_w)
+              prior_current=sum(1 for x in h if rec and np.isfinite(x['division_weight']) and x['division_weight']==cur)
+              change=int(prev_rec and rec and prev_w!=cur)
+              move=(cur-prev_w) if change else 0.0
+              rows.append({'fight_id':r.fight_id,'side':r.side,'ctx_activity365':activity365,'ctx_activity730':activity730,'ctx_prior_current_weight_fights':prior_current,'ctx_first_fight_current_weight':int(len(h)>0 and rec and prior_current==0),'ctx_weight_class_changed':change,'ctx_move_lbs':float(move),'ctx_moved_up':int(move>0),'ctx_moved_down':int(move<0)})
+              h.append({'date':r.date,'division_weight':cur})
+          ctx=pd.DataFrame(rows)
+          cr=ctx[ctx.side=='r'].drop(columns='side').add_prefix('r_').rename(columns={'r_fight_id':'fight_id'})
+          cb=ctx[ctx.side=='b'].drop(columns='side').add_prefix('b_').rename(columns={'b_fight_id':'fight_id'})
+
+          needed=set(['fight_id']+core+['r_pre_days_since_last_fight','b_pre_days_since_last_fight','r_pre_last_fight_ko_loss','b_pre_last_fight_ko_loss','r_pre_age','b_pre_age'])
+          needed=[c for c in needed if c in fv.columns]
+          df=red.merge(fv[needed],on='fight_id',how='inner').merge(cr,on='fight_id',how='left').merge(cb,on='fight_id',how='left').sort_values(['date','fight_id']).copy()
+          rlay=pd.to_numeric(df['r_pre_days_since_last_fight'],errors='coerce').clip(lower=0)
+          blay=pd.to_numeric(df['b_pre_days_since_last_fight'],errors='coerce').clip(lower=0)
+          df['ctx_layoff_log_diff']=np.log1p(rlay)-np.log1p(blay)
+          df['ctx_layoff_abs_diff']=(rlay-blay).abs()
+          df['ctx_max_layoff_days']=pd.concat([rlay,blay],axis=1).max(axis=1)
+          df['ctx_min_layoff_days']=pd.concat([rlay,blay],axis=1).min(axis=1)
+          for d in [365,540,730]:
+              rf=(rlay>=d).astype(int); bf=(blay>=d).astype(int)
+              df[f'ctx_layoff_ge_{d}_diff']=rf-bf
+              df[f'ctx_layoff_ge_{d}_count']=rf+bf
+          df['ctx_age_x_log_layoff_diff']=pd.to_numeric(df['r_pre_age'],errors='coerce')*np.log1p(rlay)-pd.to_numeric(df['b_pre_age'],errors='coerce')*np.log1p(blay)
+          df['ctx_layoff_after_ko_loss_diff']=rlay*pd.to_numeric(df['r_pre_last_fight_ko_loss'],errors='coerce').fillna(0)-blay*pd.to_numeric(df['b_pre_last_fight_ko_loss'],errors='coerce').fillna(0)
+          for h in [365,730]:
+              rc=f'r_ctx_activity{h}'; bc=f'b_ctx_activity{h}'
+              df[f'ctx_activity{h}_diff']=df[rc]-df[bc]
+              df[f'ctx_min_activity{h}']=df[[rc,bc]].min(axis=1)
+              df[f'ctx_max_activity{h}']=df[[rc,bc]].max(axis=1)
+          for base in ['prior_current_weight_fights','first_fight_current_weight','weight_class_changed','move_lbs','moved_up','moved_down']:
+              rc=f'r_ctx_{base}'; bc=f'b_ctx_{base}'
+              df[f'ctx_{base}_diff']=df[rc]-df[bc]
+          df['ctx_min_current_weight_fights']=df[['r_ctx_prior_current_weight_fights','b_ctx_prior_current_weight_fights']].min(axis=1)
+          df['ctx_weight_change_count']=df['r_ctx_weight_class_changed']+df['b_ctx_weight_class_changed']
+          df['ctx_first_current_weight_count']=df['r_ctx_first_fight_current_weight']+df['b_ctx_first_fight_current_weight']
+          df['ctx_abs_move_lbs_max']=df[['r_ctx_move_lbs','b_ctx_move_lbs']].abs().max(axis=1)
+
+          context=[c for c in df.columns if c.startswith('ctx_')]
+          def clip_p(p): return np.clip(np.asarray(p,float),1e-6,1-1e-6)
+          def logit(p): p=clip_p(p); return np.log(p/(1-p))
+          def sigmoid(z): z=np.clip(np.asarray(z,float),-30,30); return 1/(1+np.exp(-z))
+          def mfn(y,p):
+              y=np.asarray(y,int); p=clip_p(p)
+              return {'n':int(len(y)),'brier':float(brier_score_loss(y,p)),'log_loss':float(log_loss(y,p,labels=[0,1])),'auc':float(roc_auc_score(y,p)) if len(np.unique(y))==2 else None}
+          params={'max_depth':1,'eta':0.03,'subsample':0.8,'colsample_bytree':0.7,'min_child_weight':10,'lambda':8.0,'alpha':1.0,'objective':'binary:logistic','eval_metric':'logloss','seed':42,'nthread':2}
+          rounds=300
+
+          # Rank context with V5 core present using only data through 2020.
+          rank_cols=list(dict.fromkeys(core+context+['market_overround']))
+          tr0=df['date']<='2020-12-31'; X0=df.loc[tr0,rank_cols].replace([np.inf,-np.inf],np.nan)
+          med0=X0.median(numeric_only=True); X0=X0.fillna(med0).fillna(0.0)
+          y0=df.loc[tr0,'won'].astype(int).to_numpy(); m0=logit(df.loc[tr0,'fair_market_p'])
+          d0=xgb.DMatrix(X0,label=y0,base_margin=m0,feature_names=rank_cols)
+          b0=xgb.train(params,d0,num_boost_round=rounds,verbose_eval=False)
+          gains=b0.get_score(importance_type='gain')
+          ranked=sorted(context,key=lambda c:(-float(gains.get(c,0.0)),c))
+
+          candidates={'v5_core':core}
+          for k in [3,5,8,12]: candidates[f'v5_plus_top_{k}_context_pre2021_gain']=core+ranked[:k]
+          folds=[('2021','2020-12-31','2021-01-01','2021-12-31'),('2022','2021-12-31','2022-01-01','2022-12-31'),('2023','2022-12-31','2023-01-01','2023-12-31'),('2024','2023-12-31','2024-01-01','2024-12-31')]
+          summary={'design':{'name':'market_offset_v9_context_reduction','base':'frozen V5 top-50 core','architecture':'frozen V4/V5 d1_300_strong alpha=1.0','context_ranking':'gain using only data through 2020 with V5 core present','subset_selection':'pooled chronological 2021-2024 OOF log loss only','2025_plus':'untouched until compact context subset frozen','roi_used_for_selection':False},'context_feature_count':len(context),'pre2021_ranked_context_features':[{'feature':c,'gain':float(gains.get(c,0.0))} for c in ranked],'candidates':{}}
+          for cname,basecols in candidates.items():
+              cols=list(dict.fromkeys(basecols+['market_overround']))
+              parts=[]; fr=[]
+              for fold,train_end,val_start,val_end in folds:
+                  tr=df.date<=train_end; va=(df.date>=val_start)&(df.date<=val_end)
+                  Xraw=df[cols].replace([np.inf,-np.inf],np.nan); valid=[c for c in cols if Xraw.loc[tr,c].notna().any()]
+                  med=Xraw.loc[tr,valid].median(numeric_only=True)
+                  Xtr=Xraw.loc[tr,valid].fillna(med).fillna(0.0); Xva=Xraw.loc[va,valid].fillna(med).fillna(0.0)
+                  ytr=df.loc[tr,'won'].astype(int).to_numpy(); yva=df.loc[va,'won'].astype(int).to_numpy(); mtr=logit(df.loc[tr,'fair_market_p']); mva=logit(df.loc[va,'fair_market_p'])
+                  dtr=xgb.DMatrix(Xtr,label=ytr,base_margin=mtr,feature_names=valid); dva=xgb.DMatrix(Xva,label=yva,base_margin=mva,feature_names=valid)
+                  b=xgb.train(params,dtr,num_boost_round=rounds,verbose_eval=False); p=sigmoid(b.predict(dva,output_margin=True)); mm=mfn(yva,sigmoid(mva)); mx=mfn(yva,p)
+                  fr.append({'fold':fold,'market':mm,'model':mx,'delta_log_loss_vs_market':mx['log_loss']-mm['log_loss'],'delta_brier_vs_market':mx['brier']-mm['brier']})
+                  parts.append(pd.DataFrame({'won':yva,'market_p':sigmoid(mva),'model_p':p}))
+              oof=pd.concat(parts,ignore_index=True); mo=mfn(oof.won,oof.market_p); xo=mfn(oof.won,oof.model_p)
+              summary['candidates'][cname]={'feature_count':len(cols),'folds':fr,'oof':xo,'delta_log_loss_vs_market':xo['log_loss']-mo['log_loss'],'delta_brier_vs_market':xo['brier']-mo['brier']}
+          selected=min(summary['candidates'],key=lambda k:summary['candidates'][k]['oof']['log_loss'])
+          summary['selected_candidate']=selected
+          selected_context=[c for c in candidates[selected] if c.startswith('ctx_')]
+          summary['selected_context_features']=selected_context
+          summary['selected_feature_count']=len(list(dict.fromkeys(candidates[selected]+['market_overround'])))
+
+          cols=list(dict.fromkeys(candidates[selected]+['market_overround'])); tr=df.date<='2024-12-31'; te=df.date>='2025-01-01'; Xraw=df[cols].replace([np.inf,-np.inf],np.nan); valid=[c for c in cols if Xraw.loc[tr,c].notna().any()]; med=Xraw.loc[tr,valid].median(numeric_only=True)
+          Xtr=Xraw.loc[tr,valid].fillna(med).fillna(0.0); Xte=Xraw.loc[te,valid].fillna(med).fillna(0.0); ytr=df.loc[tr,'won'].astype(int).to_numpy(); yte=df.loc[te,'won'].astype(int).to_numpy(); mtr=logit(df.loc[tr,'fair_market_p']); mte=logit(df.loc[te,'fair_market_p'])
+          dtr=xgb.DMatrix(Xtr,label=ytr,base_margin=mtr,feature_names=valid); dte=xgb.DMatrix(Xte,label=yte,base_margin=mte,feature_names=valid); b=xgb.train(params,dtr,num_boost_round=rounds,verbose_eval=False); p=sigmoid(b.predict(dte,output_margin=True)); pm=sigmoid(mte)
+          summary['final_test']={'selected_candidate':selected,'market':mfn(yte,pm),'v9_market_offset':mfn(yte,p)}
+          summary['final_test']['delta_log_loss_vs_market']=summary['final_test']['v9_market_offset']['log_loss']-summary['final_test']['market']['log_loss']
+          summary['final_test']['delta_brier_vs_market']=summary['final_test']['v9_market_offset']['brier']-summary['final_test']['market']['brier']
+          with open(OUT/'xgboost_market_offset_v9_context_reduction_summary.json','w',encoding='utf-8') as f: json.dump(summary,f,indent=2)
+          print(json.dumps(summary,indent=2))
+          PY
+
+      - name: Commit research outputs safely
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/research/prop_mispricing/xgboost_market_offset_v9_context_reduction_summary.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Add XGBoost V9 compact context reduction results"
+          for i in 1 2 3; do
+            git fetch origin research/ufc-prop-mispricing-xgboost-20260829
+            git rebase origin/research/ufc-prop-mispricing-xgboost-20260829 && git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829 && exit 0
+            git rebase --abort || true
+            sleep 2
+          done
+          exit 1
