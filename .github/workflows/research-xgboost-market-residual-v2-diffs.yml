@@ -1,0 +1,265 @@
+name: Research XGBoost Market Residual V2 Diffs
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - .github/workflows/research-xgboost-market-residual-v2-diffs.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  xgboost-market-residual-v2-diffs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout research branch
+        uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas pyarrow numpy scikit-learn xgboost
+
+      - name: Run diff-only chronological experiment
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import numpy as np
+          import pandas as pd
+          from sklearn.metrics import brier_score_loss, log_loss, roc_auc_score
+          from xgboost import XGBClassifier
+
+          OUT = Path('data/research/prop_mispricing')
+          OUT.mkdir(parents=True, exist_ok=True)
+
+          market = pd.read_parquet('data/market/historical_market_outcomes.parquet').copy()
+          market = market[(market['bookmaker'] == 'legacy_consensus') & (market['result_status'] == 'graded') & market['won'].notna()].copy()
+          market['date'] = pd.to_datetime(market['date'], errors='coerce')
+          market['won'] = market['won'].astype(bool).astype(int)
+          market['implied_probability'] = pd.to_numeric(market['implied_probability'], errors='coerce')
+          market['profit_per_100'] = pd.to_numeric(market['profit_per_100'], errors='coerce')
+          market = market.dropna(subset=['date','implied_probability','profit_per_100']).copy()
+
+          ml = market[market['market_key'] == 'moneyline'].copy()
+          good = ml.groupby('fight_id').size()
+          good = good[good == 2].index
+          ml = ml[ml['fight_id'].isin(good)].copy()
+          ml['market_overround'] = ml.groupby('fight_id')['implied_probability'].transform('sum')
+          ml['fair_market_p'] = ml['implied_probability'] / ml['market_overround']
+
+          # One canonical row per fight: red side only. This guarantees pair coherence:
+          # P(blue) = 1 - P(red).
+          red = ml[ml['outcome_side'].astype(str).eq('red')].copy()
+          fv = pd.read_parquet('data/features/moneyline_feature_view.parquet').copy()
+
+          deny_tokens = [
+              'winner','result','target','label','finish_round','match_time_sec',
+              'profit','odds','implied','market','actual','post_'
+          ]
+
+          def clean_numeric(c):
+              if c not in fv.columns or not pd.api.types.is_numeric_dtype(fv[c]):
+                  return False
+              lc = c.lower()
+              return not any(x in lc for x in deny_tokens)
+
+          # Signed directional differences only. Explicitly exclude absolute-difference
+          # columns because V1 incorrectly flipped every *_diff column for blue rows.
+          signed_diff_cols = sorted([
+              c for c in fv.columns
+              if clean_numeric(c)
+              and c.lower().endswith('_diff')
+              and 'abs_diff' not in c.lower()
+              and '_abs_' not in c.lower()
+          ])
+
+          # Orientation-safe context only: no raw r_* / b_* fighter columns.
+          exact_context = {
+              'older_fighter_age','reach_mismatch_abs','height_mismatch_abs',
+              'title_fight','total_rounds'
+          }
+          symmetric_context_cols = sorted(set([
+              c for c in fv.columns
+              if clean_numeric(c) and (
+                  c.lower().startswith('combined_') or
+                  'abs_diff' in c.lower() or
+                  c.lower().endswith('_mismatch_abs') or
+                  c.lower() in exact_context
+              )
+          ]))
+
+          variants = {
+              'diff_only': signed_diff_cols,
+              'diff_plus_symmetric_context': sorted(set(signed_diff_cols + symmetric_context_cols)),
+          }
+
+          needed = sorted(set(['fight_id'] + [c for cols in variants.values() for c in cols]))
+          df = red.merge(fv[needed], on='fight_id', how='inner').sort_values(['date','fight_id']).copy()
+
+          def metrics(y, p):
+              p = np.clip(np.asarray(p, float), 1e-6, 1-1e-6)
+              y = np.asarray(y, int)
+              return {
+                  'n': int(len(y)),
+                  'brier': float(brier_score_loss(y, p)),
+                  'log_loss': float(log_loss(y, p, labels=[0,1])),
+                  'auc': float(roc_auc_score(y, p)) if len(np.unique(y)) == 2 else None,
+              }
+
+          def make_model():
+              return XGBClassifier(
+                  n_estimators=350,
+                  max_depth=3,
+                  learning_rate=0.03,
+                  subsample=0.8,
+                  colsample_bytree=0.7,
+                  min_child_weight=8,
+                  reg_lambda=5.0,
+                  reg_alpha=0.5,
+                  objective='binary:logistic',
+                  eval_metric='logloss',
+                  random_state=42,
+                  n_jobs=2,
+              )
+
+          # Architecture selection uses only pre-2025 chronological folds.
+          folds = [
+              ('2021', '2020-12-31', '2021-01-01', '2021-12-31'),
+              ('2022', '2021-12-31', '2022-01-01', '2022-12-31'),
+              ('2023', '2022-12-31', '2023-01-01', '2023-12-31'),
+              ('2024', '2023-12-31', '2024-01-01', '2024-12-31'),
+          ]
+
+          summary = {
+              'design': {
+                  'one_row_per_fight': True,
+                  'target_side': 'red',
+                  'pair_probability_rule': 'p_blue = 1 - p_red',
+                  'raw_r_b_features_used': False,
+                  'signed_abs_diff_separated': True,
+                  'hyperparameters': 'identical to V1 to isolate feature architecture',
+                  'selection_rule': 'lowest mean pre-2025 CV delta log loss vs market',
+                  'final_test': '2025-01-01 onward; untouched for variant selection',
+              },
+              'feature_counts': {
+                  'signed_diff': len(signed_diff_cols),
+                  'symmetric_context': len(symmetric_context_cols),
+              },
+              'variants': {},
+          }
+
+          for variant, cols in variants.items():
+              feature_cols = cols + ['fair_market_p','market_overround']
+              Xall = df[feature_cols].replace([np.inf,-np.inf], np.nan)
+              fold_rows = []
+              for fold_name, train_end, val_start, val_end in folds:
+                  train = df['date'] <= train_end
+                  val = (df['date'] >= val_start) & (df['date'] <= val_end)
+                  valid_cols = [c for c in feature_cols if Xall.loc[train, c].notna().any()]
+                  med = Xall.loc[train, valid_cols].median(numeric_only=True)
+                  X = Xall[valid_cols].fillna(med).fillna(0.0)
+                  model = make_model()
+                  model.fit(X.loc[train], df.loc[train,'won'])
+                  p = model.predict_proba(X.loc[val])[:,1]
+                  mm = metrics(df.loc[val,'won'], df.loc[val,'fair_market_p'])
+                  mx = metrics(df.loc[val,'won'], p)
+                  fold_rows.append({
+                      'fold': fold_name,
+                      'train_n': int(train.sum()),
+                      'validation_n': int(val.sum()),
+                      'feature_count': len(valid_cols),
+                      'market': mm,
+                      'xgboost': mx,
+                      'delta_log_loss': float(mx['log_loss'] - mm['log_loss']),
+                      'delta_brier': float(mx['brier'] - mm['brier']),
+                  })
+              summary['variants'][variant] = {
+                  'cv_folds': fold_rows,
+                  'cv_mean_delta_log_loss': float(np.mean([r['delta_log_loss'] for r in fold_rows])),
+                  'cv_mean_delta_brier': float(np.mean([r['delta_brier'] for r in fold_rows])),
+              }
+
+          selected = min(summary['variants'], key=lambda k: summary['variants'][k]['cv_mean_delta_log_loss'])
+          summary['selected_variant'] = selected
+
+          # Final model is trained only through 2024 after variant selection.
+          cols = variants[selected]
+          feature_cols = cols + ['fair_market_p','market_overround']
+          Xall = df[feature_cols].replace([np.inf,-np.inf], np.nan)
+          train = df['date'] <= '2024-12-31'
+          test = df['date'] >= '2025-01-01'
+          valid_cols = [c for c in feature_cols if Xall.loc[train, c].notna().any()]
+          med = Xall.loc[train, valid_cols].median(numeric_only=True)
+          X = Xall[valid_cols].fillna(med).fillna(0.0)
+          model = make_model()
+          model.fit(X.loc[train], df.loc[train,'won'])
+          p_red = model.predict_proba(X.loc[test])[:,1]
+
+          test_red = df.loc[test, ['fight_id','date','won','fair_market_p','market_overround','outcome_label']].copy()
+          test_red['model_p_red'] = p_red
+          market_metrics = metrics(test_red['won'], test_red['fair_market_p'])
+          model_metrics = metrics(test_red['won'], test_red['model_p_red'])
+
+          summary['final_test'] = {
+              'selected_variant': selected,
+              'train_n_fights': int(train.sum()),
+              'test_n_fights': int(test.sum()),
+              'feature_count': len(valid_cols),
+              'market': market_metrics,
+              'xgboost': model_metrics,
+              'delta_log_loss': float(model_metrics['log_loss'] - market_metrics['log_loss']),
+              'delta_brier': float(model_metrics['brier'] - market_metrics['brier']),
+              'top_features': [
+                  {'feature': f, 'importance': float(v)}
+                  for f,v in sorted(zip(valid_cols, model.feature_importances_), key=lambda z:z[1], reverse=True)[:30]
+              ],
+          }
+
+          # Expand coherent fight probabilities back to both sportsbook sides for edge/ROI diagnostics.
+          side = ml[ml['fight_id'].isin(test_red['fight_id'])].copy()
+          side = side.merge(test_red[['fight_id','model_p_red']], on='fight_id', how='inner')
+          side['model_p'] = np.where(side['outcome_side'].astype(str).eq('red'), side['model_p_red'], 1.0-side['model_p_red'])
+          side['edge'] = side['model_p'] - side['fair_market_p']
+          side['prob_pair_sum_check'] = side.groupby('fight_id')['model_p'].transform('sum')
+
+          roi = []
+          for thr in [0.00,0.02,0.05,0.075,0.10,0.15]:
+              g = side[side['edge'] >= thr]
+              if len(g) == 0:
+                  continue
+              profit = np.where(g['won'].eq(1), g['profit_per_100'], -100.0)
+              roi.append({
+                  'min_edge': thr,
+                  'n_bets': int(len(g)),
+                  'win_rate': float(g['won'].mean()),
+                  'avg_edge': float(g['edge'].mean()),
+                  'roi': float(profit.mean()/100.0),
+              })
+          summary['final_test']['edge_buckets'] = roi
+          summary['final_test']['max_pair_sum_error'] = float((side.groupby('fight_id')['model_p'].sum()-1.0).abs().max())
+
+          side.to_csv(OUT/'xgboost_market_residual_v2_diffs_test_predictions.csv', index=False)
+          with open(OUT/'xgboost_market_residual_v2_diffs_summary.json','w',encoding='utf-8') as f:
+              json.dump(summary,f,indent=2)
+
+          print(json.dumps(summary,indent=2))
+          PY
+
+      - name: Commit research outputs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add -f data/research/prop_mispricing/xgboost_market_residual_v2_diffs_summary.json data/research/prop_mispricing/xgboost_market_residual_v2_diffs_test_predictions.csv
+          git commit -m "Add XGBoost market residual V2 diff results" || echo "No changes to commit"
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
