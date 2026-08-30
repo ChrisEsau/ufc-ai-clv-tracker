@@ -1,0 +1,420 @@
+{
+  "source": "data/market/historical_market_outcomes.parquet",
+  "rows": 57320,
+  "columns_count": 24,
+  "columns": [
+    {
+      "name": "historical_market_run_id",
+      "dtype": "str",
+      "null_count": 0,
+      "null_pct": 0.0,
+      "nunique": 2,
+      "sample_values": [
+        "historical_market_outcomes_20260613_184833",
+        "historical_market_outcomes_20260613_184833",
+        "historical_market_outcomes_20260613_184833",
+        "historical_market_outcomes_20260613_184833",
+        "historical_market_outcomes_20260613_184833"
+      ]
+    },
+    {
+      "name": "historical_market_timestamp",
+      "dtype": "str",
+      "null_count": 0,
+      "null_pct": 0.0,
+      "nunique": 2,
+      "sample_values": [
+        "2026-06-13T18:48:33.185521+00:00",
+        "2026-06-13T18:48:33.185521+00:00",
+        "2026-06-13T18:48:33.185521+00:00",
+        "2026-06-13T18:48:33.185521+00:00",
+        "2026-06-13T18:48:33.185521+00:00"
+      ]
+    },
+    {
+      "name": "fight_id",
+      "dtype": "str",
+      "null_count": 0,
+      "null_pct": 0.0,
+      "nunique": 6511,
+      "sample_values": [
+        "85e94a6c071fd9fa",
+        "85e94a6c071fd9fa",
+        "85e94a6c071fd9fa",
+        "85e94a6c071fd9fa",
+        "85e94a6c071fd9fa"
+      ]
+    },
+    {
+      "name": "date",
+      "dtype": "datetime64[us]",
+      "null_count": 0,
+      "null_pct": 0.0,
+      "nunique": 606,
+      "sample_values": [
+        "2026-03-28T00:00:00",
+        "2026-03-28T00:00:00",
+        "2026-03-28T00:00:00",
+        "2026-03-28T00:00:00",
+        "2026-03-28T00:00:00"
+      ]
+    },
+    {
+      "name": "event_name",
+      "dtype": "str",
+      "null_count": 0,
+      "null_pct": 0.0,
+      "nunique": 611,
+      "sample_values": [
+        "UFC Fight Night: Adesanya vs. Pyfer",
+        "UFC Fight Night: Adesanya vs. Pyfer",
+        "UFC Fight Night: Adesanya vs. Pyfer",
+        "UFC Fight Night: Adesanya vs. Pyfer",
+        "UFC Fight Night: Adesanya vs. Pyfer"
+      ]
+    },
+    {
+      "name": "market_key",
+      "dtype": "str",
+      "null_count": 0,
+      "null_pct": 0.0,
+      "nunique": 6,
+      "sample_values": [
+        "moneyline",
+        "win_by_decision",
+        "win_by_submission",
+        "win_by_ko_tko_dq",
+        "moneyline"
+      ]
+    },
+    {
+      "name": "bookmaker",
+      "dtype": "str",
+      "null_count": 0,
+      "null_pct": 0.0,
+      "nunique": 2,
+      "sample_values": [
+        "legacy_consensus",
+        "legacy_consensus",
+        "legacy_consensus",
+        "legacy_consensus",
+        "legacy_consensus"
+      ]
+    },
+    {
+      "name": "outcome_join_key",
+      "dtype": "str",
+      "null_count": 0,
+      "null_pct": 0.0,
+      "nunique": 2127,
+      "sample_values": [
+        "fighter:1338e2c7480bdf9e",
+        "fighter:1338e2c7480bdf9e",
+        "fighter:1338e2c7480bdf9e",
+        "fighter:1338e2c7480bdf9e",
+        "fighter:c1085e1701b13eca"
+      ]
+    },
+    {
+      "name": "outcome_fighter_id",
+      "dtype": "str",
+      "null_count": 11339,
+      "null_pct": 0.1978192602930914,
+      "nunique": 2125,
+      "sample_values": [
+        "1338e2c7480bdf9e",
+        "1338e2c7480bdf9e",
+        "1338e2c7480bdf9e",
+        "1338e2c7480bdf9e",
+        "c1085e1701b13eca"
+      ]
+    },
+    {
+      "name": "outcome_label",
+      "dtype": "str",
+      "null_count": 0,
+      "null_pct": 0.0,
+      "nunique": 2128,
+      "sample_values": [
+        "Israel Adesanya",
+        "Israel Adesanya",
+        "Israel Adesanya",
+        "Israel Adesanya",
+        "Joe Pyfer"
+      ]
+    },
+    {
+      "name": "outcome_side",
+      "dtype": "str",
+      "null_count": 0,
+      "null_pct": 0.0,
+      "nunique": 4,
+      "sample_values": [
+        "red",
+        "red",
+        "red",
+        "red",
+        "blue"
+      ]
+    },
+    {
+      "name": "canonical_side",
+      "dtype": "str",
+      "null_count": 0,
+      "null_pct": 0.0,
+      "nunique": 4,
+      "sample_values": [
+        "red",
+        "red",
+        "red",
+        "red",
+        "blue"
+      ]
+    },
+    {
+      "name": "legacy_side",
+      "dtype": "str",
+      "null_count": 0,
+      "null_pct": 0.0,
+      "nunique": 3,
+      "sample_values": [
+        "red",
+        "red",
+        "red",
+        "red",
+        "blue"
+      ]
+    },
+    {
+      "name": "american_odds",
+      "dtype": "float64",
+      "null_count": 0,
+      "null_pct": 0.0,
+      "nunique": 9667,
+      "sample_values": [
+        -130.0,
+        163.0,
+        2500.0,
+        300.0,
+        102.0
+      ]
+    },
+    {
+      "name": "implied_probability",
+      "dtype": "float64",
+      "null_count": 0,
+      "null_pct": 0.0,
+      "nunique": 9777,
+      "sample_values": [
+        0.5652173913043478,
+        0.38022813688212925,
+        0.038461538461538464,
+        0.25,
+        0.49504950495049505
+      ]
+    },
+    {
+      "name": "profit_per_100",
+      "dtype": "float64",
+      "null_count": 0,
+      "null_pct": 0.0,
+      "nunique": 9666,
+      "sample_values": [
+        76.92307692307692,
+        163.0,
+        2500.0,
+        300.0,
+        102.0
+      ]
+    },
+    {
+      "name": "won",
+      "dtype": "object",
+      "null_count": 24,
+      "null_pct": 0.000418702023726448,
+      "nunique": 2,
+      "sample_values": [
+        false,
+        false,
+        false,
+        false,
+        true
+      ]
+    },
+    {
+      "name": "result_status",
+      "dtype": "str",
+      "null_count": 0,
+      "null_pct": 0.0,
+      "nunique": 2,
+      "sample_values": [
+        "graded",
+        "graded",
+        "graded",
+        "graded",
+        "graded"
+      ]
+    },
+    {
+      "name": "source",
+      "dtype": "str",
+      "null_count": 0,
+      "null_pct": 0.0,
+      "nunique": 2,
+      "sample_values": [
+        "ufc-master w odds.csv",
+        "ufc-master w odds.csv",
+        "ufc-master w odds.csv",
+        "ufc-master w odds.csv",
+        "ufc-master w odds.csv"
+      ]
+    },
+    {
+      "name": "mapping_method",
+      "dtype": "str",
+      "null_count": 0,
+      "null_pct": 0.0,
+      "nunique": 6,
+      "sample_values": [
+        "direct",
+        "direct",
+        "direct",
+        "direct",
+        "direct"
+      ]
+    },
+    {
+      "name": "legacy_row_number",
+      "dtype": "float64",
+      "null_count": 11339,
+      "null_pct": 0.1978192602930914,
+      "nunique": 6511,
+      "sample_values": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "legacy_r_name",
+      "dtype": "str",
+      "null_count": 0,
+      "null_pct": 0.0,
+      "nunique": 1660,
+      "sample_values": [
+        "Israel Adesanya",
+        "Israel Adesanya",
+        "Israel Adesanya",
+        "Israel Adesanya",
+        "Israel Adesanya"
+      ]
+    },
+    {
+      "name": "legacy_b_name",
+      "dtype": "str",
+      "null_count": 0,
+      "null_pct": 0.0,
+      "nunique": 1947,
+      "sample_values": [
+        "Joe Pyfer",
+        "Joe Pyfer",
+        "Joe Pyfer",
+        "Joe Pyfer",
+        "Joe Pyfer"
+      ]
+    },
+    {
+      "name": "legacy_winner_side",
+      "dtype": "str",
+      "null_count": 0,
+      "null_pct": 0.0,
+      "nunique": 4,
+      "sample_values": [
+        "blue",
+        "blue",
+        "blue",
+        "blue",
+        "blue"
+      ]
+    }
+  ],
+  "date_ranges": {
+    "historical_market_timestamp": {
+      "min": "2026-06-13T18:48:33.185521+00:00",
+      "max": "2026-06-16T14:27:37.397465+00:00",
+      "parsed_nonnull": 57320
+    },
+    "date": {
+      "min": "2010-03-21T00:00:00+00:00",
+      "max": "2026-03-28T00:00:00+00:00",
+      "parsed_nonnull": 57320
+    }
+  },
+  "value_counts": {
+    "historical_market_run_id": {
+      "historical_market_outcomes_20260613_184833": 45981,
+      "synthetic_distance_markets_20260616_142737": 11339
+    },
+    "historical_market_timestamp": {
+      "2026-06-13T18:48:33.185521+00:00": 45981,
+      "2026-06-16T14:27:37.397465+00:00": 11339
+    },
+    "market_key": {
+      "moneyline": 12988,
+      "win_by_decision": 11306,
+      "win_by_ko_tko_dq": 10844,
+      "win_by_submission": 10843,
+      "goes_distance": 5787,
+      "inside_distance": 5552
+    },
+    "bookmaker": {
+      "legacy_consensus": 45981,
+      "synthetic_legacy_consensus": 11339
+    },
+    "outcome_side": {
+      "red": 23023,
+      "blue": 22958,
+      "yes": 5787,
+      "no": 5552
+    },
+    "canonical_side": {
+      "red": 23023,
+      "blue": 22958,
+      "goes_distance": 5787,
+      "inside_distance": 5552
+    },
+    "legacy_side": {
+      "red": 23023,
+      "blue": 22958,
+      "synthetic": 11339
+    },
+    "result_status": {
+      "graded": 57296,
+      "ungraded": 24
+    },
+    "legacy_winner_side": {
+      "red": 33000,
+      "blue": 24290,
+      "draw": 20,
+      "no contest": 10
+    }
+  },
+  "numeric_summary": {
+    "american_odds": {
+      "count": 57320,
+      "min": -99999899.997124,
+      "median": 240.0,
+      "mean": -301480.767227208,
+      "max": 12500.0
+    },
+    "implied_probability": {
+      "count": 57320,
+      "min": 0.007936507936507936,
+      "median": 0.29411764705882354,
+      "mean": 0.3494585403395304,
+      "max": 0.999999
+    }
+  }
+}
