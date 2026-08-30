@@ -1,0 +1,117 @@
+name: Research XGBoost Market Offset V10d V5 Exact Reproduction
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - .github/workflows/research-xgboost-market-offset-v10d-v5-exact-reproduction.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reproduce-v5:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout exact original V5 commit
+        uses: actions/checkout@v4
+        with:
+          ref: 7df1b61126be1f4e036b256d1c774c531b8a281f
+          fetch-depth: 1
+
+      - name: Set up exact V5 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.16"
+
+      - name: Install exact V5 package stack
+        run: |
+          python -m pip install "pip==26.2.1"
+          pip install \
+            "pandas==3.0.5" \
+            "pyarrow==25.0.1" \
+            "numpy==2.4.6" \
+            "scikit-learn==1.9.0" \
+            "scipy==1.17.1" \
+            "xgboost==3.2.0" \
+            "joblib==1.5.3" \
+            "narwhals==2.25.0" \
+            "python-dateutil==2.9.0.post0" \
+            "six==1.17.0" \
+            "threadpoolctl==3.6.0" \
+            "nvidia-nccl-cu12==2.31.2"
+          python - <<'PY'
+          import platform
+          import numpy, pandas, pyarrow, scipy, sklearn, xgboost
+          print('Python:', platform.python_version())
+          print('numpy:', numpy.__version__)
+          print('pandas:', pandas.__version__)
+          print('pyarrow:', pyarrow.__version__)
+          print('scipy:', scipy.__version__)
+          print('scikit-learn:', sklearn.__version__)
+          print('xgboost:', xgboost.__version__)
+          PY
+
+      - name: Execute exact original V5 model code
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import textwrap
+
+          p = Path('.github/workflows/research-xgboost-market-offset-v5-feature-reduction.yml')
+          s = p.read_text(encoding='utf-8')
+          step = s.index('      - name: Run feature reduction experiment')
+          marker = "          python - <<'PY'\n"
+          start = s.index(marker, step) + len(marker)
+          end = s.index("\n          PY", start)
+          code = textwrap.dedent(s[start:end])
+          exec(compile(code, 'v5_exact_original.py', 'exec'), {})
+          PY
+
+      - name: Assert exact frozen V5 reproduction
+        run: |
+          python - <<'PY'
+          import json
+          import math
+          from pathlib import Path
+
+          path = Path('data/research/prop_mispricing/xgboost_market_offset_v5_feature_reduction_summary.json')
+          s = json.loads(path.read_text(encoding='utf-8'))
+
+          expected = {
+              'selected_candidate': 'top_50_pre2021_gain',
+              'selected_feature_count': 51,
+              'market_oof_log_loss': 0.6038947379217856,
+              'market_oof_brier': 0.20834438216299994,
+              'selected_oof_log_loss': 0.600822510744624,
+              'selected_oof_brier': 0.2069607253451583,
+              'selected_oof_auc': 0.7318055391488311,
+              'selected_delta_log_loss': -0.0030722271771616017,
+              'selected_delta_brier': -0.0013836568178416386,
+          }
+
+          selected = s['selected_candidate']
+          got = {
+              'selected_candidate': selected,
+              'selected_feature_count': s['selected_feature_count'],
+              'market_oof_log_loss': s['market_oof']['log_loss'],
+              'market_oof_brier': s['market_oof']['brier'],
+              'selected_oof_log_loss': s['candidates'][selected]['oof']['log_loss'],
+              'selected_oof_brier': s['candidates'][selected]['oof']['brier'],
+              'selected_oof_auc': s['candidates'][selected]['oof']['auc'],
+              'selected_delta_log_loss': s['candidates'][selected]['delta_log_loss_vs_market'],
+              'selected_delta_brier': s['candidates'][selected]['delta_brier_vs_market'],
+          }
+
+          print(json.dumps({'expected': expected, 'got': got}, indent=2))
+          assert got['selected_candidate'] == expected['selected_candidate']
+          assert got['selected_feature_count'] == expected['selected_feature_count']
+          for key in expected:
+              if key in {'selected_candidate', 'selected_feature_count'}:
+                  continue
+              if not math.isclose(got[key], expected[key], rel_tol=0.0, abs_tol=1e-10):
+                  raise AssertionError(f'{key}: expected {expected[key]!r}, got {got[key]!r}')
+          print('V5_EXACT_REPRODUCTION_PASS')
+          PY
