@@ -1,4 +1,4 @@
-# Rerun after OKC Delgado alias repair
+# Rerun after OKC Delgado alias repair; strip pre-existing ML helper columns before merge
 name: Research Method ML Winner Filter V1
 on:
   push:
@@ -54,11 +54,12 @@ jobs:
 
           q=pd.read_csv(OUT/'cold_start_all_qualifying_bets_v1.csv')
           q=q[(q.market_type=='method') & (q.eligible.astype(str).str.lower().isin(['true','1']))].copy()
-          q=q.merge(winners,on='fight_id',how='left')
-          if q.ml_predicted_winner.isna().any():
-            print(q.loc[q.ml_predicted_winner.isna(),['card','date','fight_id','fighter']].drop_duplicates().to_string(index=False))
+          q=q.drop(columns=[c for c in q.columns if c.startswith('ml_predicted_winner') or c=='ml_winner_p'],errors='ignore')
+          q=q.merge(winners,on='fight_id',how='left',validate='many_to_one')
+          if q['ml_predicted_winner'].isna().any():
+            print(q.loc[q['ml_predicted_winner'].isna(),['card','date','fight_id','fighter']].drop_duplicates().to_string(index=False))
             raise RuntimeError('Missing ML winner mapping for method rows')
-          q['ml_winner_match']=q.fighter.eq(q.ml_predicted_winner)
+          q['ml_winner_match']=q['fighter'].eq(q['ml_predicted_winner'])
           kept=q[q.ml_winner_match].copy()
           kept.to_csv(OUT/'method_ml_winner_filtered_bets_v1.csv',index=False)
 
@@ -100,7 +101,7 @@ jobs:
           pd.DataFrame(card_rows).to_csv(OUT/'method_ml_winner_card_ledger_v1.csv',index=False)
           s=pd.DataFrame(summaries)
           s.to_csv(OUT/'method_ml_winner_summary_v1.csv',index=False)
-          print('\nMETHOD BETS KEPT:',len(kept),'OF',len(q),'ELIGIBLE >=2% METHOD BETS')
+          print('\nMETHOD BETS KEPT:',len(kept),'OF',len(q),'ELIGIBLE METHOD BET ROWS')
           print('\nSUMMARY\n',s.to_string(index=False))
           PY
       - name: Commit filtered method outputs
