@@ -1,0 +1,61 @@
+name: Research UFC Vegas 115 Compact Summary V1
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-ufc-vegas-115-compact-summary-v1.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  summarize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas
+      - name: Build compact summary
+        run: |
+          python - <<'PY'
+          import pandas as pd
+          from pathlib import Path
+          base=Path('data/research/prop_mispricing')
+          ml=pd.read_csv(base/'ufc_vegas_115_2026_moneyline_freshrolling_v1.csv')
+          me=pd.read_csv(base/'ufc_vegas_115_2026_method_freshrolling_v1.csv')
+          labels={'win_by_ko_tko_dq':'KO','win_by_submission':'SUB','win_by_decision':'DEC'}
+          rows=[]
+          for fid,g in ml.groupby('fight_id',sort=False):
+            g=g.reset_index(drop=True)
+            a,b=g.iloc[0],g.iloc[1]
+            pred=g.loc[g.model_p.idxmax()]
+            actual=g.loc[g.actual_win.idxmax()]
+            value=g.loc[g.edge.idxmax()]
+            mg=me[(me.fight_id==fid)&(me.fighter==pred.fighter)].copy()
+            hit=me[(me.fight_id==fid)&(me.actual_hit==1)]
+            actual_method=labels.get(hit.iloc[0].market_key,'') if len(hit) else ''
+            fair=' / '.join(f"{labels[k]} {p*100:.1f}" for k,p in zip(mg.market_key,mg.fair_market_p))+'%'
+            model=' / '.join(f"{labels[k]} {p*100:.1f}" for k,p in zip(mg.market_key,mg.model_p))+'%'
+            qs=[]
+            for _,r in mg[mg.edge>=0.02].iterrows():
+              qs.append(f"{pred.fighter} {labels[r.market_key]} {r.edge*100:+.2f} odds {int(r.american_odds):+d} hit {int(r.actual_hit)}")
+            rows.append(dict(fight_id=fid,fighter_a=a.fighter,fighter_b=b.fighter,
+              fair_a=a.fair_market_p,fair_b=b.fair_market_p,model_a=a.model_p,model_b=b.model_p,
+              edge_a=a.edge,edge_b=b.edge,a_fights=a.r_pre_fights,b_fights=a.b_pre_fights,
+              cold_start=bool(a.cold_start),actual_winner=actual.fighter,ml_predicted_winner=pred.fighter,
+              value_fighter=value.fighter,value_edge=value.edge,actual_method=actual_method,
+              method_fair=fair,method_model=model,method_qualifiers=' | '.join(qs)))
+          out=pd.DataFrame(rows)
+          out.to_csv(base/'ufc_vegas_115_2026_compact_summary_v1.csv',index=False)
+          print(out.to_csv(index=False))
+          PY
+      - name: Commit compact summary
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -f data/research/prop_mispricing/ufc_vegas_115_2026_compact_summary_v1.csv
+          git commit -m 'research: add UFC Vegas 115 compact score summary' || echo No-changes
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
