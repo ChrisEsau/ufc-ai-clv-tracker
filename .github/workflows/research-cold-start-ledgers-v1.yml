@@ -1,5 +1,5 @@
 name: Research Cold Start Filtered Ledgers V1
-# Rebuild trigger: corrected UFC Belgrade BFO fighter-specific method board.
+# Rebuild trigger: require exact-method bets to match the frozen ML-predicted winner.
 on:
   push:
     branches: [research/ufc-prop-mispricing-xgboost-20260829]
@@ -53,6 +53,31 @@ jobs:
           bel_ml,bel_me=card_rows('Belgrade','2026-08-01','ufc_belgrade_moneyline_web_v1.csv','ufc_belgrade_method_web_v1.csv')
           allbets=pd.concat([old,abu_ml,abu_me,bel_ml,bel_me],ignore_index=True)
 
+          # Frozen ML confirmation gate for method props.
+          # The predicted winner is the fighter with the higher stored ML model probability.
+          ml_paths=[
+              'freedom_250_moneyline_v1.csv',
+              'ufc_vegas_119_moneyline_v1.csv',
+              'ufc_baku_moneyline_full_v1.csv',
+              'ufc_329_moneyline_v1.csv',
+              'ufc_okc_moneyline_v1.csv',
+              'ufc_abu_dhabi_moneyline_web_v1.csv',
+              'ufc_belgrade_moneyline_web_v1.csv',
+          ]
+          ml_full=[]
+          for p in ml_paths:
+              x=pd.read_csv(ROOT/p).copy()
+              if 'outcome_label' in x.columns:
+                  x=x.rename(columns={'outcome_label':'fighter'})
+              ml_full.append(x[['fight_id','fighter','model_p']])
+          ml_full=pd.concat(ml_full,ignore_index=True)
+          ml_full['model_p']=pd.to_numeric(ml_full.model_p,errors='raise')
+          ml_winners=(ml_full.sort_values(['fight_id','model_p'],ascending=[True,False])
+                      .drop_duplicates('fight_id')[['fight_id','fighter','model_p']]
+                      .rename(columns={'fighter':'ml_predicted_winner','model_p':'ml_predicted_winner_p'}))
+          allbets=allbets.merge(ml_winners,on='fight_id',how='left')
+          allbets['matches_ml_predicted_winner']=allbets.fighter.eq(allbets.ml_predicted_winner)
+
           # Exact prefight cold-start flag from latest_fighter_state.fights.
           st=pd.read_parquet('data/features/latest_fighter_state.parquet').copy()
           st['date']=pd.to_datetime(st['date']).dt.strftime('%Y-%m-%d')
@@ -72,8 +97,21 @@ jobs:
           if allbets.cold_start.isna().any():
               miss=allbets[allbets.cold_start.isna()][['card','date','fight_id']].drop_duplicates()
               raise RuntimeError('Missing cold-start state for:\n'+miss.to_string(index=False))
-          allbets['eligible']=~allbets.cold_start
-          allbets['eligibility_reason']=np.where(allbets.eligible,'eligible','cold_start_fighter_lt_2_prior_fights')
+          allbets['cold_start_eligible']=~allbets.cold_start
+          method_gate=~allbets.market_type.eq('method') | allbets.matches_ml_predicted_winner
+          allbets['eligible']=allbets.cold_start_eligible & method_gate
+          allbets['eligibility_reason']=np.select(
+              [
+                  allbets.cold_start,
+                  allbets.market_type.eq('method') & allbets.ml_predicted_winner.isna(),
+                  allbets.market_type.eq('method') & ~allbets.matches_ml_predicted_winner,
+              ],
+              [
+                  'cold_start_fighter_lt_2_prior_fights',
+                  'missing_moneyline_prediction',
+                  'method_fighter_not_ml_predicted_winner',
+              ],
+              default='eligible')
           allbets.to_csv(OUT/'cold_start_all_qualifying_bets_v1.csv',index=False)
 
           # Flagged fights across all cards, whether or not a >=2% bet existed.
@@ -135,6 +173,6 @@ jobs:
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add -f data/research/prop_mispricing/running_ledgers/cold_start_*_v1.csv
-          git commit -m 'Add Belgrade to cold-start filtered ML and method ledgers' || echo No-changes
+          git commit -m 'Filter method ledger by frozen ML-predicted winner' || echo No-changes
           git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
           git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
