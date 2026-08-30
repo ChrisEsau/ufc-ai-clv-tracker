@@ -6,6 +6,7 @@ on:
       - research/ufc-prop-mispricing-xgboost-20260829
     paths:
       - .github/workflows/research-xgboost-market-offset-v4-walkforward.yml
+      - pipeline/research/xgboost_market_offset_v4_walkforward.py
       - data/research/prop_mispricing/v4_2026_moneyline_walkforward_trigger.txt
   workflow_dispatch:
 
@@ -33,7 +34,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pandas pyarrow numpy scikit-learn xgboost
+          pip install pandas pyarrow numpy scikit-learn xgboost pyyaml
 
       - name: Run exactly next chronological 2026 card
         run: |
