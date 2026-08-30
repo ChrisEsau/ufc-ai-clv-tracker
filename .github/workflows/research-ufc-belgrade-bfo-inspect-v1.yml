@@ -17,49 +17,57 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install requests beautifulsoup4 lxml
-      - name: Inspect duplicate price-bearing prop tables
+      - name: Trace Rodriguez bout block assignments
         run: |
           python - <<'PY'
-          import json,re,requests
+          import json,re,requests,unicodedata
           from bs4 import BeautifulSoup
+          from difflib import SequenceMatcher
           from pathlib import Path
-          url='https://www.bestfightodds.com/events/ufc-belgrade-4285'
-          soup=BeautifulSoup(requests.get(url,headers={'User-Agent':'Mozilla/5.0'},timeout=30).text,'lxml')
+          def norm(s):return ''.join(ch for ch in unicodedata.normalize('NFKD',str(s)) if not unicodedata.combining(ch)).lower().strip()
+          def ov(td):
+            for sp in td.find_all('span'):
+              z=sp.get_text(strip=True).replace('−','-')
+              if re.fullmatch(r'[+-]\d+',z):return int(z)
+          def bid(td):
+            try:return int(json.loads(td.get('data-li'))[0])
+            except:return None
+          soup=BeautifulSoup(requests.get('https://www.bestfightodds.com/events/ufc-belgrade-4285',headers={'User-Agent':'Mozilla/5.0'}).text,'lxml')
+          t=soup.find_all('table')[1]; rows=t.find_all('tr')
+          fr=[]
+          for i,tr in enumerate(rows):
+            links=[a for a in tr.find_all('a',href=True) if '/fighters/' in a['href']]
+            if links and 'pr' not in (tr.get('class') or []):fr.append((i,' '.join(links[-1].get_text(' ',strip=True).split())))
           out=[]
-          for ti,t in enumerate(soup.find_all('table')):
-            txt=' '.join(t.get_text(' ',strip=True).split())
-            if 'Daniel Rodriguez' not in txt or 'Uros Medic' not in txt: continue
-            numeric=0
-            for td in t.find_all('td',attrs={'data-li':True}):
-              if any(re.fullmatch(r'[+-]\d+',s.get_text(strip=True).replace('−','-')) for s in td.find_all('span')): numeric+=1
-            out.append(f'TABLE {ti} class={t.get("class")} id={t.get("id")} numeric_cells={numeric}')
-            # parent/previous headings help identify current-vs-history tables
-            p=t
-            for level in range(3):
-              p=p.parent if p else None
-              if p:
-                out.append(f' parent{level+1} tag={p.name} class={p.get("class")} id={p.get("id")}')
-            for tr in t.find_all('tr'):
+          out.append('FIGHTER ROWS FIRST 8 '+repr(fr[:8]))
+          for j in range(len(fr)-1):
+            i1,f1=fr[j]; i2,f2=fr[j+1]
+            if set([f1,f2])!=set(['Daniel Rodriguez','Uros Medic']):continue
+            end=fr[j+2][0] if j+2<len(fr) else len(rows)
+            out.append(f'BLOCK j={j} start={i1},{i2} end={end} pair={f1}|{f2}')
+            props={}
+            for ri,tr in enumerate(rows[i2+1:end],start=i2+1):
               th=tr.find('th'); label=' '.join(th.get_text(' ',strip=True).split()) if th else ''
-              if label in ['Rodriguez wins by TKO/KO','Rodriguez wins by submission','Rodriguez wins by decision','Medic wins by TKO/KO','Medic wins by submission','Medic wins by decision']:
-                vals=[]
-                for td in tr.find_all('td'):
-                  dl=td.get('data-li'); val=None
-                  for s in td.find_all('span'):
-                    z=s.get_text(strip=True).replace('−','-')
-                    if re.fullmatch(r'[+-]\d+',z): val=z; break
-                  if dl and val:
-                    try: book=json.loads(dl)[0]
-                    except: book='?'
-                    vals.append(f'{book}:{val}')
-                out.append(label+' | '+' '.join(vals))
-          p=Path('data/research/prop_mispricing/ufc_belgrade_bfo_tables_v1.txt');p.write_text('\n'.join(out),encoding='utf-8')
-          print('\n'.join(out))
+              lk=None
+              if label.endswith(' wins by TKO/KO'):lk='ko'
+              elif label.endswith(' wins by submission'):lk='sub'
+              elif label.endswith(' wins by decision'):lk='dec'
+              if not lk:continue
+              prefix=label.rsplit(' wins by ',1)[0]
+              s1=SequenceMatcher(None,norm(prefix),norm(f1)).ratio();s2=SequenceMatcher(None,norm(prefix),norm(f2)).ratio();side=1 if s1>=s2 else 2
+              vals=[]
+              for td in tr.find_all('td'):
+                b=bid(td);o=ov(td)
+                if b is not None and o is not None:
+                  old=props.get((b,side,lk));props[(b,side,lk)]=o;vals.append((b,o,old))
+              out.append(f'ROW {ri} label={label!r} prefix={prefix!r} sims={s1:.3f}/{s2:.3f} side={side} vals={vals}')
+            out.append('FINAL FD '+repr({k:v for k,v in props.items() if k[0]==21}))
+          p=Path('data/research/prop_mispricing/ufc_belgrade_bfo_trace_v1.txt');p.write_text('\n'.join(out));print('\n'.join(out))
           PY
       - name: Commit inspection output
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add data/research/prop_mispricing/ufc_belgrade_bfo_tables_v1.txt
-          git diff --cached --quiet || git commit -m 'research: inspect duplicate UFC Belgrade BFO tables'
+          git add data/research/prop_mispricing/ufc_belgrade_bfo_trace_v1.txt
+          git diff --cached --quiet || git commit -m 'research: trace Belgrade Rodriguez prop assignment'
           git push
