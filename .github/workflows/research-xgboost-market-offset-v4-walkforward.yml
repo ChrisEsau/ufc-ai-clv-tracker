@@ -38,7 +38,7 @@ jobs:
 
       - name: Run exactly next chronological 2026 card
         run: |
-          python pipeline/research/xgboost_market_offset_v4_walkforward.py --next-card
+          python -m pipeline.research.xgboost_market_offset_v4_walkforward --next-card
 
       - name: Commit authoritative walk-forward outputs
         run: |
