@@ -1,0 +1,118 @@
+name: Research UFC 325 FreshRolling Web V5
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-ufc-325-freshrolling-web-v5.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  score:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas pyarrow numpy scikit-learn xgboost pyyaml requests beautifulsoup4 lxml
+      - name: Parse BFO 3971 and run frozen scorer
+        run: |
+          python - <<'PY'
+          import json,re,unicodedata
+          from pathlib import Path
+          import pandas as pd, requests
+          from bs4 import BeautifulSoup
+          DATE='2026-01-31'; OUT=Path('data/research/prop_mispricing'); H={'User-Agent':'Mozilla/5.0'}
+          BOOK_NAMES={21:'FanDuel',24:'Caesars',25:'BetRivers',20:'BetWay',26:'Unibet',23:'BetMGM'}; PREFERRED=[21,24,25,23,20,26]
+          def norm(s):
+            z=' '.join(''.join(ch for ch in unicodedata.normalize('NFKD',str(s)) if not unicodedata.combining(ch)).lower().replace('’',"'").replace('-',' ').split())
+            return {'kim sang wook':'sangwook kim'}.get(z,z)
+          def method_key(x):
+            s=str(x).lower()
+            if 'submission' in s:return 'win_by_submission'
+            if 'decision' in s:return 'win_by_decision'
+            if 'ko/tko' in s or 'tko' in s or re.search(r'\bko\b',s):return 'win_by_ko_tko_dq'
+            raise RuntimeError('Unknown method '+str(x))
+          def odd(td):
+            for sp in td.find_all('span'):
+              t=sp.get_text(strip=True).replace('−','-')
+              if re.fullmatch(r'[+-]\d+',t):return int(t)
+          def book(td):
+            x=td.get('data-li')
+            try:return int(json.loads(x)[0]) if x else None
+            except:return None
+          def prices(tr):
+            z={}
+            for td in tr.find_all('td'):
+              b,o=book(td),odd(td)
+              if b is not None and o is not None:z[b]=o
+            return z
+          url='https://www.bestfightodds.com/events/ufc-3971'; html=requests.get(url,headers=H,timeout=30).text; soup=BeautifulSoup(html,'lxml')
+          cand=[]
+          for ti,table in enumerate(soup.find_all('table')):
+            rows=table.find_all('tr'); fr=[]
+            for i,tr in enumerate(rows):
+              links=[a for a in tr.find_all('a',href=True) if '/fighters/' in a['href']]
+              if links and 'pr' not in (tr.get('class') or []):fr.append((i,' '.join(links[-1].get_text(' ',strip=True).split()),tr))
+            j=0
+            while j+1<len(fr):
+              i1,f1,r1=fr[j]; i2,f2,r2=fr[j+1]; end=fr[j+2][0] if j+2<len(fr) else len(rows); ml1,ml2=prices(r1),prices(r2); props={}
+              for tr in rows[i2+1:end]:
+                if 'pr' not in (tr.get('class') or []):continue
+                th=tr.find('th'); label=' '.join(th.get_text(' ',strip=True).split()) if th else ''; lk=None
+                if label.endswith(' wins by TKO/KO'):lk='ko'
+                elif label.endswith(' wins by submission'):lk='sub'
+                elif label.endswith(' wins by decision'):lk='dec'
+                if not lk:continue
+                pre=norm(label.rsplit(' wins by ',1)[0]); n1,n2=norm(f1),norm(f2)
+                side=1 if pre and pre in n1 and pre not in n2 else (2 if pre and pre in n2 and pre not in n1 else None)
+                if side is None:continue
+                for td in tr.find_all('td'):
+                  b,o=book(td),odd(td)
+                  if b is not None and o is not None:props[(b,side,lk)]=o
+              complete=[b for b in set(ml1)&set(ml2) if all((b,s,k) in props for s in [1,2] for k in ['ko','sub','dec'])]
+              if complete:cand.append((f1,f2,ml1,ml2,props,complete))
+              j+=2
+          master=pd.read_parquet('data/master/ufc_master.parquet'); master['date']=pd.to_datetime(master.date); actual=master[master.date.eq(pd.Timestamp(DATE))]
+          amap={frozenset((norm(r.r_name),norm(r.b_name))):r for _,r in actual.iterrows()}; boards={}; sources=[]
+          for f1,f2,ml1,ml2,props,complete in cand:
+            key=frozenset((norm(f1),norm(f2)))
+            if key not in amap:continue
+            r=amap[key]; b=next((x for x in PREFERRED if x in complete),complete[0]); win=(str(r.winner),method_key(r.method))
+            boards[(f1,f2)]={'ml':{f1:ml1[b],f2:ml2[b]},'m':{f1:[props[(b,1,'ko')],props[(b,1,'sub')],props[(b,1,'dec')]],f2:[props[(b,2,'ko')],props[(b,2,'sub')],props[(b,2,'dec')]]},'win':win}
+            sources.append({'fighter_a':f1,'fighter_b':f2,'book_id':b,'book':BOOK_NAMES.get(b,str(b)),'source_url':url})
+          # dedupe any repeated tables
+          tmp={}
+          for k,v in boards.items():tmp[frozenset(map(norm,k))]=(k,v)
+          boards=dict(x for x in tmp.values())
+          if len(boards)!=13:raise RuntimeError(f'Expected 13 matched boards, got {len(boards)}: {list(boards)}')
+          pd.DataFrame(sources).drop_duplicates(['fighter_a','fighter_b']).to_csv(OUT/'ufc_325_market_sources_v1.csv',index=False)
+          print('BOARDS',len(boards)); [print(k,v) for k,v in boards.items()]
+          src=Path('.github/workflows/research-ufc-324-fresh-rolling-score-v1.yml').read_text(); m=re.search(r"python - <<'PY'\n(.*?)\n          PY",src,re.S)
+          code='\n'.join(line[10:] if line.startswith('          ') else line for line in m.group(1).splitlines())
+          old="DATE=pd.Timestamp('2026-01-24')"; new=f"DATE=pd.Timestamp('{DATE}')"
+          if old not in code:raise RuntimeError('date literal missing')
+          code=code.replace(old,new,1)
+          pat=r"boards=\{.*?\n\}\nboardmap="; repl='boards='+repr(boards)+'\nboardmap='
+          code,nsub=re.subn(pat,repl,code,count=1,flags=re.S)
+          if nsub!=1:raise RuntimeError('board injection failed')
+          oldnorm="def norm(s): return ''.join(c for c in unicodedata.normalize('NFKD',str(s)) if not unicodedata.combining(c)).lower().replace('’',\"'\").replace('-',' ').strip()"
+          newnorm="def norm(s):\n  z=' '.join(''.join(c for c in unicodedata.normalize('NFKD',str(s)) if not unicodedata.combining(c)).lower().replace('’',\"'\").replace('-',' ').split())\n  return {'kim sang wook':'sangwook kim'}.get(z,z)"
+          if oldnorm not in code:raise RuntimeError('inner norm literal missing')
+          code=code.replace(oldnorm,newnorm,1)
+          oldcheck="if len(card)!=11: raise RuntimeError(f'Expected 11 fresh rolling UFC324 rows, got {len(card)}: '+str(card[[c for c in ['fight_id','r_name','b_name'] if c in card]].to_dict('records')))"
+          newcheck="if len(card)!=13: raise RuntimeError(f'Expected 13 fresh rolling UFC325 rows, got {len(card)}: '+str(card[[c for c in ['fight_id','r_name','b_name'] if c in card]].to_dict('records')))"
+          if oldcheck not in code:raise RuntimeError('check literal missing')
+          code=code.replace(oldcheck,newcheck,1).replace('ufc_324_moneyline_freshrolling_v1.csv','ufc_325_moneyline_freshrolling_v1.csv').replace('ufc_324_method_freshrolling_v1.csv','ufc_325_method_freshrolling_v1.csv')
+          exec(compile(code,'<ufc325_v5>','exec'),{})
+          PY
+      - name: Commit UFC 325 scores
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -f data/research/prop_mispricing/ufc_325_*_v1.csv
+          git commit -m 'research: add UFC 325 authoritative frozen scores' || echo No-changes
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
