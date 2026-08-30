@@ -53,27 +53,22 @@ jobs:
           od={norm(k):(k,v,source[k]) for k,v in odds.items()}
 
           up=pd.read_parquet('data/cards/ufcstats_upcoming_fights.parquet').copy()
-          print('UPCOMING_COLUMNS',list(up.columns))
-          # Resolve common schema aliases.
           def pick(cands):
             for c in cands:
               if c in up.columns:return c
             return None
-          rc=pick(['r_name','red_name','red_fighter_name','fighter_1_name']); bc=pick(['b_name','blue_name','blue_fighter_name','fighter_2_name'])
+          rc=pick(['r_name','red_name','red_fighter_name','red_fighter','fighter_1_name']); bc=pick(['b_name','blue_name','blue_fighter_name','blue_fighter','fighter_2_name'])
           rid=pick(['r_id','red_id','red_fighter_id','fighter_1_id']); bid=pick(['b_id','blue_id','blue_fighter_id','fighter_2_id']); fid=pick(['fight_id']); dc=pick(['date','event_date'])
           if not all([rc,bc,rid,bid,fid]): raise RuntimeError(f'Unsupported upcoming schema: {list(up.columns)}')
           mask=up[rc].map(norm).isin(od)|up[bc].map(norm).isin(od)
           if dc:
             dd=pd.to_datetime(up[dc],errors='coerce'); mask &= dd.dt.strftime('%Y-%m-%d').eq('2026-09-05')
-          live=up.loc[mask].copy()
-          print('MATCHED_UPCOMING',len(live)); print(live[[fid,rc,bc,rid,bid]].to_string(index=False))
+          live=up.loc[mask].copy(); print('MATCHED_UPCOMING',len(live)); print(live[[fid,rc,bc,rid,bid]].to_string(index=False))
           prep=pd.DataFrame({'fight_id':live[fid].astype(str),'r_id':live[rid].astype(str),'b_id':live[bid].astype(str),'r_name':live[rc],'b_name':live[bc],'date':pd.Timestamp('2026-09-05')})
           for c in ['title_fight','total_rounds','division']:
             if c in live.columns: prep[c]=live[c].values
 
-          latest=pd.read_parquet('data/features/latest_fighter_state.parquet').copy()
-          latest['fighter_id']=latest['fighter_id'].astype(str)
-          state_feature_cols=[c for c in latest.columns if c not in STATE_CONTEXT_COLUMNS]
+          latest=pd.read_parquet('data/features/latest_fighter_state.parquet').copy(); latest['fighter_id']=latest['fighter_id'].astype(str)
           rows=[]
           for _,r in prep.iterrows():
             for side in ['r','b']:
@@ -82,8 +77,7 @@ jobs:
               else:
                 rec={c:np.nan for c in latest.columns}; rec['fighter_id']=fighter_id
               rec['fight_id']=str(r['fight_id']); rows.append(rec)
-          state_live=pd.DataFrame(rows)
-          livefv=build_moneyline_feature_view(prepared_fights_df=prep,fighter_state_history_df=state_live)
+          state_live=pd.DataFrame(rows); livefv=build_moneyline_feature_view(prepared_fights_df=prep,fighter_state_history_df=state_live)
 
           outrows=[]
           for _,r in livefv.iterrows():
@@ -96,12 +90,10 @@ jobs:
             for side,label,ao,src,ip in pair:
               vals={c:(r[c] if c in livefv.columns else np.nan) for c in valid}; vals['fair_market_p']=ip/over; vals['market_overround']=over
               if side=='blue':
-                for c in [x for x in valid if x.endswith('_diff') and x in vals and pd.notna(vals[x])]: vals[c]=-vals[c]
+                for c in [x for x in valid if x.endswith('_diff') and pd.notna(vals.get(x))]: vals[c]=-vals[c]
               XS=pd.DataFrame([vals],columns=valid).replace([np.inf,-np.inf],np.nan).fillna(med).fillna(0)
               p=float(model.predict_proba(XS)[0,1]); outrows.append({'fight_id':r.fight_id,'fighter':label,'side':side,'american_odds':ao,'market_source':src,'fair_market_p':ip/over,'model_p':p,'edge':p-ip/over,'market_overround':over})
-          out=pd.DataFrame(outrows)
-          out.sort_values(['fight_id','side']).to_csv(OUT/'ufc_paris_moneyline_v1.csv',index=False)
-          print(out.sort_values(['fight_id','side']).to_string(index=False)); print('matched_fights',out.fight_id.nunique())
+          out=pd.DataFrame(outrows); out.sort_values(['fight_id','side']).to_csv(OUT/'ufc_paris_moneyline_v1.csv',index=False); print(out.sort_values(['fight_id','side']).to_string(index=False)); print('matched_fights',out.fight_id.nunique())
           PY
       - name: Commit
         run: |
