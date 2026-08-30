@@ -1,0 +1,161 @@
+name: Research UFC 324 Web ML + Method V1
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-ufc-324-web-both-v1.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  score:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas pyarrow numpy scikit-learn xgboost requests beautifulsoup4 lxml
+      - name: Build archived UFC 324 board and run frozen scorer
+        run: |
+          python - <<'PY'
+          import json, re, unicodedata
+          from pathlib import Path
+          from difflib import SequenceMatcher
+          import requests
+          from bs4 import BeautifulSoup
+
+          DATE='2026-01-24'
+          URL='https://www.bestfightodds.com/events/ufc-324-3973'
+          OUT=Path('data/research/prop_mispricing'); OUT.mkdir(parents=True,exist_ok=True)
+          BOOK_NAMES={21:'FanDuel',24:'Caesars',25:'BetRivers',20:'BetWay',26:'Unibet'}
+          RESULTS={
+            'justin gaethje':('Justin Gaethje','win_by_decision'),
+            "sean o'malley":("Sean O'Malley",'win_by_decision'),
+            'waldo cortes acosta':('Waldo Cortes Acosta','win_by_ko_tko_dq'),
+            'natalia silva':('Natalia Silva','win_by_decision'),
+            'jean silva':('Jean Silva','win_by_decision'),
+            'umar nurmagomedov':('Umar Nurmagomedov','win_by_decision'),
+            'ateba gautier':('Ateba Gautier','win_by_decision'),
+            'nikita krylov':('Nikita Krylov','win_by_ko_tko_dq'),
+            'alex perez':('Alex Perez','win_by_ko_tko_dq'),
+            'josh hokit':('Josh Hokit','win_by_ko_tko_dq'),
+            'ty miller':('Ty Miller','win_by_ko_tko_dq'),
+          }
+          def norm(s):
+            return ''.join(ch for ch in unicodedata.normalize('NFKD',str(s)) if not unicodedata.combining(ch)).lower().replace('’',"'").strip()
+          def odd_from_cell(td):
+            for sp in td.find_all('span'):
+              t=sp.get_text(strip=True).replace('−','-')
+              if re.fullmatch(r'[+-]\d+',t): return int(t)
+            return None
+          def cell_book(td):
+            x=td.get('data-li')
+            if not x:return None
+            try:return int(json.loads(x)[0])
+            except Exception:return None
+          def prices(rr):
+            z={}
+            for td in rr.find_all('td'):
+              b=cell_book(td); o=odd_from_cell(td)
+              if b is not None and o is not None:z[b]=o
+            return z
+
+          html=requests.get(URL,headers={'User-Agent':'Mozilla/5.0'},timeout=30).text
+          soup=BeautifulSoup(html,'lxml')
+          candidates=[]
+          for ti,table in enumerate(soup.find_all('table')):
+            rows=table.find_all('tr'); fighter_rows=[]
+            for i,tr in enumerate(rows):
+              links=[a for a in tr.find_all('a',href=True) if '/fighters/' in a['href']]
+              if links and 'pr' not in (tr.get('class') or []):
+                fighter_rows.append((i,' '.join(links[-1].get_text(' ',strip=True).split()),tr))
+            j=0
+            while j+1 < len(fighter_rows):
+              i1,f1,r1=fighter_rows[j]; i2,f2,r2=fighter_rows[j+1]
+              end=fighter_rows[j+2][0] if j+2 < len(fighter_rows) else len(rows)
+              ml1,ml2=prices(r1),prices(r2); props={}
+              for tr in rows[i2+1:end]:
+                if 'pr' not in (tr.get('class') or []):continue
+                th=tr.find('th')
+                if not th:continue
+                label=' '.join(th.get_text(' ',strip=True).split()); lk=None
+                if label.endswith(' wins by TKO/KO'):lk='ko'
+                elif label.endswith(' wins by submission'):lk='sub'
+                elif label.endswith(' wins by decision'):lk='dec'
+                if not lk:continue
+                prefix=norm(label.rsplit(' wins by ',1)[0]); n1,n2=norm(f1),norm(f2)
+                if prefix and prefix in n1 and prefix not in n2:side=1
+                elif prefix and prefix in n2 and prefix not in n1:side=2
+                else:continue
+                for td in tr.find_all('td'):
+                  b=cell_book(td); o=odd_from_cell(td)
+                  if b is not None and o is not None:props[(b,side,lk)]=o
+              complete=[]
+              for book in set(ml1)&set(ml2):
+                if all((book,side,k) in props for side in [1,2] for k in ['ko','sub','dec']):complete.append(book)
+              if complete:candidates.append({'table':ti,'f1':f1,'f2':f2,'ml1':ml1,'ml2':ml2,'props':props,'complete':complete})
+              j+=2
+
+          grouped={}
+          for b in candidates:
+            key=tuple(sorted([norm(b['f1']),norm(b['f2'])])); score=(21 in b['complete'],len(b['ml1'])+len(b['ml2'])+len(b['props']))
+            if key not in grouped or score>grouped[key][0]:grouped[key]=(score,b)
+          clean=[v[1] for v in grouped.values()]
+          # Keep only bouts that actually occurred according to official results.
+          occurred=[]
+          result_names=set(RESULTS)
+          for b in clean:
+            matched=[]
+            for f in (b['f1'],b['f2']):
+              n=norm(f); best=max(result_names,key=lambda x:SequenceMatcher(None,n,x).ratio())
+              if SequenceMatcher(None,n,best).ratio()>.78:matched.append(best)
+            if matched: occurred.append(b)
+          clean=occurred
+          if len(clean)!=11:
+            raise RuntimeError(f'Expected 11 completed UFC 324 bouts with complete markets, found {len(clean)}: '+str([(x['table'],x['f1'],x['f2'],x['complete']) for x in clean]))
+          global_books=set(clean[0]['complete'])
+          for b in clean[1:]:global_books &= set(b['complete'])
+          preferred=[21,24,25,20,26]; global_book=next((x for x in preferred if x in global_books),None)
+          boards={}; source_rows=[]
+          for b in clean:
+            book=global_book or next((x for x in preferred if x in b['complete']),b['complete'][0]); pair=(b['f1'],b['f2']); win=None
+            for fighter in pair:
+              n=norm(fighter); best=max(RESULTS,key=lambda x:SequenceMatcher(None,n,x).ratio())
+              if SequenceMatcher(None,n,best).ratio()>.78:
+                candidate=RESULTS[best]
+                if SequenceMatcher(None,n,norm(candidate[0])).ratio()>.86:win=candidate
+            if win is None:raise RuntimeError('No result match for '+str(pair))
+            boards[pair]={'ml':{b['f1']:b['ml1'][book],b['f2']:b['ml2'][book]},
+                          'm':{b['f1']:[b['props'][(book,1,'ko')],b['props'][(book,1,'sub')],b['props'][(book,1,'dec')]],
+                               b['f2']:[b['props'][(book,2,'ko')],b['props'][(book,2,'sub')],b['props'][(book,2,'dec')]]},
+                          'win':win}
+            source_rows.append({'fighter_a':b['f1'],'fighter_b':b['f2'],'table_index':b['table'],'book_id':book,'book':BOOK_NAMES.get(book,f'BFO_book_{book}'),'source_url':URL})
+          import pandas as pd
+          pd.DataFrame(source_rows).to_csv(OUT/'ufc_324_market_sources_v1.csv',index=False)
+          print('GLOBAL COMPLETE BOOK',global_book,BOOK_NAMES.get(global_book)); print('BOARDS',len(boards))
+          for p,v in sorted(boards.items()):print(p,v)
+
+          src=Path('.github/workflows/research-ufc-abu-dhabi-web-both-v1.yml').read_text()
+          m=re.search(r"python - <<'PY'\n(.*?)\n          PY",src,re.S)
+          if not m:raise RuntimeError('Could not extract frozen scorer')
+          code='\n'.join(line[10:] if line.startswith('          ') else line for line in m.group(1).splitlines())
+          code=code.replace("DATE='2026-07-25'",f"DATE='{DATE}'")
+          code=re.sub(r"boards=\{.*?\n\}\ndef imp",'boards='+repr(boards)+'\ndef imp',code,count=1,flags=re.S)
+          code=code.replace('ufc_abu_dhabi_moneyline_web_v1.csv','ufc_324_moneyline_web_v1.csv')
+          code=code.replace('ufc_abu_dhabi_method_web_v1.csv','ufc_324_method_web_v1.csv')
+          code=code.replace('mlout.fight_id.nunique()!=12','mlout.fight_id.nunique()!=11')
+          code=code.replace('mout.fight_id.nunique()!=12','mout.fight_id.nunique()!=11')
+          code=code.replace('Expected 12/12 fights','Expected 11/11 fights')
+          exec(compile(code,'<frozen_ufc324_scorer>','exec'),{})
+          PY
+      - name: Commit UFC 324 scores
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -f data/research/prop_mispricing/ufc_324_*_v1.csv
+          git commit -m 'research: add frozen UFC 324 ML and method scores' || echo No-changes
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
+          
