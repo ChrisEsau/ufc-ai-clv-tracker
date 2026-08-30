@@ -1,0 +1,141 @@
+{
+  "design": {
+    "name": "v5_exact_repro_control",
+    "source": "frozen V5 selected features and mechanics",
+    "control_only": true
+  },
+  "runtime": {
+    "python": "3.11.16",
+    "numpy": "2.4.6",
+    "pandas": "3.0.5",
+    "pyarrow": "25.0.1",
+    "sklearn": "1.9.0",
+    "scipy": "1.17.1",
+    "xgboost": "3.2.0"
+  },
+  "selected_features": [
+    "reach_diff",
+    "recent_form_recent_avg_fight_time_diff",
+    "age_diff",
+    "ewm_sapm_diff",
+    "ewm_recent_sapm_diff",
+    "style_ko_finisher_score_diff",
+    "ewm_td_acc_diff",
+    "recent_finish_rate_diff",
+    "chin_risk_diff",
+    "recent_form_avg_opponent_elo_diff",
+    "recent_avg_fight_time_diff",
+    "aggression_index_diff",
+    "age_squared_diff",
+    "sapm_diff",
+    "ewm_kd_avg_diff",
+    "style_all_round_finisher_score_diff",
+    "recent_form_kd_absorbed_avg_diff",
+    "ewm_recent_splm_diff",
+    "elo_diff",
+    "ewm_elo_diff",
+    "ewm_recent_td_avg_diff",
+    "days_since_last_fight_diff",
+    "td_avg_diff",
+    "style_score_spread_diff",
+    "ko_dependency_diff",
+    "recent_form_avg_fight_time_diff",
+    "wrestling_mismatch_diff",
+    "win_pct_diff",
+    "recent_form_ko_rate_diff",
+    "recent_form_worst_loss_elo_diff",
+    "age_x_career_ko_losses_diff",
+    "ewm_str_def_diff",
+    "losses_diff",
+    "ewm_recent_win_pct_diff",
+    "avg_opponent_elo_diff",
+    "ewm_td_avg_diff",
+    "avg_fight_time_diff",
+    "ewm_days_since_last_fight_diff",
+    "pressure_striking_adv_diff",
+    "weight_diff",
+    "ctrl_against_per_min_diff",
+    "ewm_finish_loss_rate_diff",
+    "ewm_win_pct_diff",
+    "victory_concentration_index_diff",
+    "recent_form_td_acc_diff",
+    "sub_avg_diff",
+    "recent_form_best_win_elo_diff",
+    "ewm_best_win_elo_diff",
+    "style_primary_score_diff",
+    "recent_form_recent_finish_rate_diff"
+  ],
+  "row_count": 6467,
+  "folds": [
+    {
+      "fold": "2021",
+      "train_n": 4220,
+      "validation_n": 469,
+      "metrics": {
+        "n": 469,
+        "brier": 0.21747978488711597,
+        "log_loss": 0.624153125480216,
+        "auc": 0.7017757147067492
+      }
+    },
+    {
+      "fold": "2022",
+      "train_n": 4689,
+      "validation_n": 477,
+      "metrics": {
+        "n": 477,
+        "brier": 0.20774255293680402,
+        "log_loss": 0.6025058140395739,
+        "auc": 0.7206037461356611
+      }
+    },
+    {
+      "fold": "2023",
+      "train_n": 5166,
+      "validation_n": 415,
+      "metrics": {
+        "n": 415,
+        "brier": 0.197485126019986,
+        "log_loss": 0.58028432982816,
+        "auc": 0.7599372384937237
+      }
+    },
+    {
+      "fold": "2024",
+      "train_n": 5581,
+      "validation_n": 381,
+      "metrics": {
+        "n": 381,
+        "brier": 0.2033544340946422,
+        "log_loss": 0.5923667393473763,
+        "auc": 0.7492094313453538
+      }
+    }
+  ],
+  "oof": {
+    "n": 1742,
+    "brier": 0.2069607253451583,
+    "log_loss": 0.600822510744624,
+    "auc": 0.7318055391488311
+  },
+  "expected": {
+    "rows": 6467,
+    "oof_n": 1742,
+    "log_loss": 0.600822510744624,
+    "brier": 0.2069607253451583,
+    "fold_ll": {
+      "2021": 0.624153125480216,
+      "2022": 0.6025058140395739,
+      "2023": 0.58028432982816,
+      "2024": 0.5923667393473763
+    }
+  },
+  "checks": {
+    "row_count": true,
+    "oof_n": true,
+    "oof_log_loss": true,
+    "oof_brier": true,
+    "fold_log_losses": true
+  },
+  "passed": true
+}
