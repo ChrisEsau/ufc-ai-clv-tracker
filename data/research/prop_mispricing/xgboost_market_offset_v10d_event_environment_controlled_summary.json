@@ -1,0 +1,2485 @@
+{
+  "design": {
+    "name": "market_offset_v10d_event_environment_controlled",
+    "base": "frozen V5 exact reproduction",
+    "architecture": "frozen V5 depth1 market-offset",
+    "environment_source": "https://raw.githubusercontent.com/OppositeMusical/MMA-AI/main/ufc_event_details.csv",
+    "environment_usage": "interaction-only; no raw environment intercept",
+    "interaction_ranking": "through 2020 only",
+    "candidate_selection": "pooled 2021-2024 OOF log loss only",
+    "2025_plus": "sealed until candidate selected",
+    "roi_used_for_selection": false
+  },
+  "runtime": {
+    "python": "3.11.16",
+    "numpy": "2.4.6",
+    "pandas": "3.0.5",
+    "pyarrow": "25.0.1",
+    "sklearn": "1.9.0",
+    "scipy": "1.17.1",
+    "xgboost": "3.2.0"
+  },
+  "control": {
+    "passed": true,
+    "expected_log_loss": 0.600822510744624,
+    "expected_brier": 0.2069607253451583,
+    "observed": {
+      "n": 1742,
+      "brier": 0.2069607253451583,
+      "log_loss": 0.600822510744624,
+      "auc": 0.7318055391488311
+    }
+  },
+  "coverage": {
+    "fight_rows": 6467,
+    "matched_location_rows": 6467,
+    "coverage": 1.0,
+    "event_rows": 781
+  },
+  "environment_flags": [
+    "international",
+    "las_vegas",
+    "abu_dhabi",
+    "high_altitude",
+    "europe",
+    "oceania",
+    "asia_mideast",
+    "latin_america",
+    "canada"
+  ],
+  "interaction_count": 450,
+  "pre2021_ranked_interactions": [
+    {
+      "feature": "env_international__x__reach_diff",
+      "gain": 18.839323043823242
+    },
+    {
+      "feature": "env_las_vegas__x__reach_diff",
+      "gain": 11.22849178314209
+    },
+    {
+      "feature": "env_international__x__recent_form_recent_finish_rate_diff",
+      "gain": 11.151443481445312
+    },
+    {
+      "feature": "env_latin_america__x__age_diff",
+      "gain": 11.083650588989258
+    },
+    {
+      "feature": "env_las_vegas__x__wrestling_mismatch_diff",
+      "gain": 10.59000015258789
+    },
+    {
+      "feature": "env_international__x__ewm_str_def_diff",
+      "gain": 10.226053237915039
+    },
+    {
+      "feature": "env_international__x__ewm_kd_avg_diff",
+      "gain": 10.189265251159668
+    },
+    {
+      "feature": "env_international__x__avg_opponent_elo_diff",
+      "gain": 9.44360637664795
+    },
+    {
+      "feature": "env_international__x__win_pct_diff",
+      "gain": 9.340370178222656
+    },
+    {
+      "feature": "env_international__x__style_score_spread_diff",
+      "gain": 9.313543319702148
+    },
+    {
+      "feature": "env_las_vegas__x__age_x_career_ko_losses_diff",
+      "gain": 9.279167175292969
+    },
+    {
+      "feature": "env_international__x__recent_form_best_win_elo_diff",
+      "gain": 9.246179580688477
+    },
+    {
+      "feature": "env_international__x__ewm_recent_win_pct_diff",
+      "gain": 8.809890747070312
+    },
+    {
+      "feature": "env_international__x__ewm_win_pct_diff",
+      "gain": 8.630407333374023
+    },
+    {
+      "feature": "env_international__x__chin_risk_diff",
+      "gain": 8.551169395446777
+    },
+    {
+      "feature": "env_oceania__x__ctrl_against_per_min_diff",
+      "gain": 7.940068244934082
+    },
+    {
+      "feature": "env_las_vegas__x__aggression_index_diff",
+      "gain": 6.783982276916504
+    },
+    {
+      "feature": "env_international__x__recent_form_recent_avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__age_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__ewm_sapm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__ewm_recent_sapm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__style_ko_finisher_score_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__ewm_td_acc_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__recent_finish_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__recent_form_avg_opponent_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__recent_avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__aggression_index_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__age_squared_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__sapm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__style_all_round_finisher_score_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__recent_form_kd_absorbed_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__ewm_recent_splm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__ewm_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__ewm_recent_td_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__days_since_last_fight_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__td_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__ko_dependency_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__recent_form_avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__wrestling_mismatch_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__recent_form_ko_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__recent_form_worst_loss_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__age_x_career_ko_losses_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__losses_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__ewm_td_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__ewm_days_since_last_fight_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__pressure_striking_adv_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__weight_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__ctrl_against_per_min_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__ewm_finish_loss_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__victory_concentration_index_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__recent_form_td_acc_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__sub_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__ewm_best_win_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_international__x__style_primary_score_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__recent_form_recent_avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__age_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__ewm_sapm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__ewm_recent_sapm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__style_ko_finisher_score_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__ewm_td_acc_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__recent_finish_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__chin_risk_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__recent_form_avg_opponent_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__recent_avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__age_squared_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__sapm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__ewm_kd_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__style_all_round_finisher_score_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__recent_form_kd_absorbed_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__ewm_recent_splm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__ewm_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__ewm_recent_td_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__days_since_last_fight_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__td_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__style_score_spread_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__ko_dependency_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__recent_form_avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__win_pct_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__recent_form_ko_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__recent_form_worst_loss_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__ewm_str_def_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__losses_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__ewm_recent_win_pct_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__avg_opponent_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__ewm_td_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__ewm_days_since_last_fight_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__pressure_striking_adv_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__weight_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__ctrl_against_per_min_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__ewm_finish_loss_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__ewm_win_pct_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__victory_concentration_index_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__recent_form_td_acc_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__sub_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__recent_form_best_win_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__ewm_best_win_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__style_primary_score_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_las_vegas__x__recent_form_recent_finish_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__reach_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__recent_form_recent_avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__age_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__ewm_sapm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__ewm_recent_sapm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__style_ko_finisher_score_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__ewm_td_acc_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__recent_finish_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__chin_risk_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__recent_form_avg_opponent_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__recent_avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__aggression_index_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__age_squared_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__sapm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__ewm_kd_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__style_all_round_finisher_score_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__recent_form_kd_absorbed_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__ewm_recent_splm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__ewm_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__ewm_recent_td_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__days_since_last_fight_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__td_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__style_score_spread_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__ko_dependency_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__recent_form_avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__wrestling_mismatch_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__win_pct_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__recent_form_ko_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__recent_form_worst_loss_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__age_x_career_ko_losses_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__ewm_str_def_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__losses_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__ewm_recent_win_pct_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__avg_opponent_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__ewm_td_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__ewm_days_since_last_fight_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__pressure_striking_adv_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__weight_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__ctrl_against_per_min_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__ewm_finish_loss_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__ewm_win_pct_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__victory_concentration_index_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__recent_form_td_acc_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__sub_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__recent_form_best_win_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__ewm_best_win_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__style_primary_score_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_abu_dhabi__x__recent_form_recent_finish_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__reach_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__recent_form_recent_avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__age_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__ewm_sapm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__ewm_recent_sapm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__style_ko_finisher_score_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__ewm_td_acc_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__recent_finish_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__chin_risk_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__recent_form_avg_opponent_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__recent_avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__aggression_index_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__age_squared_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__sapm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__ewm_kd_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__style_all_round_finisher_score_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__recent_form_kd_absorbed_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__ewm_recent_splm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__ewm_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__ewm_recent_td_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__days_since_last_fight_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__td_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__style_score_spread_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__ko_dependency_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__recent_form_avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__wrestling_mismatch_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__win_pct_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__recent_form_ko_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__recent_form_worst_loss_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__age_x_career_ko_losses_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__ewm_str_def_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__losses_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__ewm_recent_win_pct_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__avg_opponent_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__ewm_td_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__ewm_days_since_last_fight_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__pressure_striking_adv_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__weight_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__ctrl_against_per_min_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__ewm_finish_loss_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__ewm_win_pct_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__victory_concentration_index_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__recent_form_td_acc_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__sub_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__recent_form_best_win_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__ewm_best_win_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__style_primary_score_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_high_altitude__x__recent_form_recent_finish_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__reach_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__recent_form_recent_avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__age_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__ewm_sapm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__ewm_recent_sapm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__style_ko_finisher_score_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__ewm_td_acc_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__recent_finish_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__chin_risk_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__recent_form_avg_opponent_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__recent_avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__aggression_index_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__age_squared_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__sapm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__ewm_kd_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__style_all_round_finisher_score_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__recent_form_kd_absorbed_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__ewm_recent_splm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__ewm_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__ewm_recent_td_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__days_since_last_fight_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__td_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__style_score_spread_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__ko_dependency_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__recent_form_avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__wrestling_mismatch_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__win_pct_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__recent_form_ko_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__recent_form_worst_loss_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__age_x_career_ko_losses_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__ewm_str_def_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__losses_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__ewm_recent_win_pct_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__avg_opponent_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__ewm_td_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__ewm_days_since_last_fight_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__pressure_striking_adv_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__weight_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__ctrl_against_per_min_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__ewm_finish_loss_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__ewm_win_pct_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__victory_concentration_index_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__recent_form_td_acc_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__sub_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__recent_form_best_win_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__ewm_best_win_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__style_primary_score_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_europe__x__recent_form_recent_finish_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__reach_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__recent_form_recent_avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__age_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__ewm_sapm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__ewm_recent_sapm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__style_ko_finisher_score_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__ewm_td_acc_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__recent_finish_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__chin_risk_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__recent_form_avg_opponent_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__recent_avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__aggression_index_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__age_squared_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__sapm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__ewm_kd_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__style_all_round_finisher_score_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__recent_form_kd_absorbed_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__ewm_recent_splm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__ewm_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__ewm_recent_td_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__days_since_last_fight_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__td_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__style_score_spread_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__ko_dependency_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__recent_form_avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__wrestling_mismatch_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__win_pct_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__recent_form_ko_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__recent_form_worst_loss_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__age_x_career_ko_losses_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__ewm_str_def_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__losses_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__ewm_recent_win_pct_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__avg_opponent_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__ewm_td_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__ewm_days_since_last_fight_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__pressure_striking_adv_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__weight_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__ewm_finish_loss_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__ewm_win_pct_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__victory_concentration_index_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__recent_form_td_acc_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__sub_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__recent_form_best_win_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__ewm_best_win_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__style_primary_score_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_oceania__x__recent_form_recent_finish_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__reach_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__recent_form_recent_avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__age_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__ewm_sapm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__ewm_recent_sapm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__style_ko_finisher_score_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__ewm_td_acc_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__recent_finish_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__chin_risk_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__recent_form_avg_opponent_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__recent_avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__aggression_index_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__age_squared_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__sapm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__ewm_kd_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__style_all_round_finisher_score_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__recent_form_kd_absorbed_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__ewm_recent_splm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__ewm_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__ewm_recent_td_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__days_since_last_fight_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__td_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__style_score_spread_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__ko_dependency_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__recent_form_avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__wrestling_mismatch_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__win_pct_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__recent_form_ko_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__recent_form_worst_loss_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__age_x_career_ko_losses_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__ewm_str_def_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__losses_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__ewm_recent_win_pct_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__avg_opponent_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__ewm_td_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__ewm_days_since_last_fight_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__pressure_striking_adv_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__weight_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__ctrl_against_per_min_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__ewm_finish_loss_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__ewm_win_pct_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__victory_concentration_index_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__recent_form_td_acc_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__sub_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__recent_form_best_win_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__ewm_best_win_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__style_primary_score_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_asia_mideast__x__recent_form_recent_finish_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__reach_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__recent_form_recent_avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__ewm_sapm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__ewm_recent_sapm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__style_ko_finisher_score_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__ewm_td_acc_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__recent_finish_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__chin_risk_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__recent_form_avg_opponent_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__recent_avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__aggression_index_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__age_squared_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__sapm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__ewm_kd_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__style_all_round_finisher_score_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__recent_form_kd_absorbed_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__ewm_recent_splm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__ewm_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__ewm_recent_td_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__days_since_last_fight_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__td_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__style_score_spread_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__ko_dependency_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__recent_form_avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__wrestling_mismatch_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__win_pct_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__recent_form_ko_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__recent_form_worst_loss_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__age_x_career_ko_losses_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__ewm_str_def_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__losses_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__ewm_recent_win_pct_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__avg_opponent_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__ewm_td_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__ewm_days_since_last_fight_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__pressure_striking_adv_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__weight_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__ctrl_against_per_min_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__ewm_finish_loss_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__ewm_win_pct_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__victory_concentration_index_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__recent_form_td_acc_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__sub_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__recent_form_best_win_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__ewm_best_win_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__style_primary_score_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_latin_america__x__recent_form_recent_finish_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__reach_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__recent_form_recent_avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__age_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__ewm_sapm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__ewm_recent_sapm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__style_ko_finisher_score_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__ewm_td_acc_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__recent_finish_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__chin_risk_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__recent_form_avg_opponent_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__recent_avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__aggression_index_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__age_squared_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__sapm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__ewm_kd_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__style_all_round_finisher_score_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__recent_form_kd_absorbed_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__ewm_recent_splm_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__ewm_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__ewm_recent_td_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__days_since_last_fight_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__td_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__style_score_spread_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__ko_dependency_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__recent_form_avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__wrestling_mismatch_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__win_pct_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__recent_form_ko_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__recent_form_worst_loss_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__age_x_career_ko_losses_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__ewm_str_def_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__losses_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__ewm_recent_win_pct_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__avg_opponent_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__ewm_td_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__avg_fight_time_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__ewm_days_since_last_fight_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__pressure_striking_adv_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__weight_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__ctrl_against_per_min_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__ewm_finish_loss_rate_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__ewm_win_pct_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__victory_concentration_index_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__recent_form_td_acc_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__sub_avg_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__recent_form_best_win_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__ewm_best_win_elo_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__style_primary_score_diff",
+      "gain": 0.0
+    },
+    {
+      "feature": "env_canada__x__recent_form_recent_finish_rate_diff",
+      "gain": 0.0
+    }
+  ],
+  "candidates": {
+    "v5_core": {
+      "folds": [
+        {
+          "fold": "2021",
+          "train_n": 4220,
+          "validation_n": 469,
+          "market": {
+            "n": 469,
+            "brier": 0.22040143204863472,
+            "log_loss": 0.6302682759895004,
+            "auc": 0.6891670350722074
+          },
+          "model": {
+            "n": 469,
+            "brier": 0.21747978488711597,
+            "log_loss": 0.624153125480216,
+            "auc": 0.7017757147067492
+          },
+          "delta_log_loss_vs_market": -0.006115150509284462,
+          "delta_brier_vs_market": -0.0029216471615187423
+        },
+        {
+          "fold": "2022",
+          "train_n": 4689,
+          "validation_n": 477,
+          "market": {
+            "n": 477,
+            "brier": 0.20882128815279644,
+            "log_loss": 0.6046745349039253,
+            "auc": 0.7209038006910348
+          },
+          "model": {
+            "n": 477,
+            "brier": 0.20774255293680402,
+            "log_loss": 0.6025058140395739,
+            "auc": 0.7206037461356611
+          },
+          "delta_log_loss_vs_market": -0.002168720864351381,
+          "delta_brier_vs_market": -0.0010787352159924157
+        },
+        {
+          "fold": "2023",
+          "train_n": 5166,
+          "validation_n": 415,
+          "market": {
+            "n": 415,
+            "brier": 0.19978813448309007,
+            "log_loss": 0.5850894126885017,
+            "auc": 0.7534827881323697
+          },
+          "model": {
+            "n": 415,
+            "brier": 0.197485126019986,
+            "log_loss": 0.58028432982816,
+            "auc": 0.7599372384937237
+          },
+          "delta_log_loss_vs_market": -0.004805082860341647,
+          "delta_brier_vs_market": -0.002303008463104078
+        },
+        {
+          "fold": "2024",
+          "train_n": 5581,
+          "validation_n": 381,
+          "market": {
+            "n": 381,
+            "brier": 0.20222522792065598,
+            "log_loss": 0.5909368834797224,
+            "auc": 0.753883495145631
+          },
+          "model": {
+            "n": 381,
+            "brier": 0.2033544340946422,
+            "log_loss": 0.5923667393473763,
+            "auc": 0.7492094313453538
+          },
+          "delta_log_loss_vs_market": 0.001429855867653873,
+          "delta_brier_vs_market": 0.0011292061739862358
+        }
+      ],
+      "market_oof": {
+        "n": 1742,
+        "brier": 0.2083443821629999,
+        "log_loss": 0.6038947379217856,
+        "auc": 0.7285180790171717
+      },
+      "oof": {
+        "n": 1742,
+        "brier": 0.2069607253451583,
+        "log_loss": 0.600822510744624,
+        "auc": 0.7318055391488311
+      },
+      "delta_log_loss_vs_market": -0.0030722271771616017,
+      "delta_brier_vs_market": -0.0013836568178416109
+    },
+    "v5_plus_top_3_environment_interactions_pre2021_gain": {
+      "folds": [
+        {
+          "fold": "2021",
+          "train_n": 4220,
+          "validation_n": 469,
+          "market": {
+            "n": 469,
+            "brier": 0.22040143204863472,
+            "log_loss": 0.6302682759895004,
+            "auc": 0.6891670350722074
+          },
+          "model": {
+            "n": 469,
+            "brier": 0.2175431569468146,
+            "log_loss": 0.6244500800861442,
+            "auc": 0.7013704686118478
+          },
+          "delta_log_loss_vs_market": -0.005818195903356194,
+          "delta_brier_vs_market": -0.002858275101820129
+        },
+        {
+          "fold": "2022",
+          "train_n": 4689,
+          "validation_n": 477,
+          "market": {
+            "n": 477,
+            "brier": 0.20882128815279644,
+            "log_loss": 0.6046745349039253,
+            "auc": 0.7209038006910348
+          },
+          "model": {
+            "n": 477,
+            "brier": 0.2083845466576329,
+            "log_loss": 0.6040210725016141,
+            "auc": 0.7192398617930533
+          },
+          "delta_log_loss_vs_market": -0.0006534624023112334,
+          "delta_brier_vs_market": -0.00043674149516353955
+        },
+        {
+          "fold": "2023",
+          "train_n": 5166,
+          "validation_n": 415,
+          "market": {
+            "n": 415,
+            "brier": 0.19978813448309007,
+            "log_loss": 0.5850894126885017,
+            "auc": 0.7534827881323697
+          },
+          "model": {
+            "n": 415,
+            "brier": 0.19776135777497988,
+            "log_loss": 0.580822384200833,
+            "auc": 0.7592002662609357
+          },
+          "delta_log_loss_vs_market": -0.004267028487668689,
+          "delta_brier_vs_market": -0.0020267767081101895
+        },
+        {
+          "fold": "2024",
+          "train_n": 5581,
+          "validation_n": 381,
+          "market": {
+            "n": 381,
+            "brier": 0.20222522792065598,
+            "log_loss": 0.5909368834797224,
+            "auc": 0.753883495145631
+          },
+          "model": {
+            "n": 381,
+            "brier": 0.203010405357106,
+            "log_loss": 0.5916982385280415,
+            "auc": 0.7498196948682386
+          },
+          "delta_log_loss_vs_market": 0.0007613550483190901,
+          "delta_brier_vs_market": 0.000785177436450013
+        }
+      ],
+      "market_oof": {
+        "n": 1742,
+        "brier": 0.2083443821629999,
+        "log_loss": 0.6038947379217856,
+        "auc": 0.7285180790171717
+      },
+      "oof": {
+        "n": 1742,
+        "brier": 0.2071441431007009,
+        "log_loss": 0.6012993441252589,
+        "auc": 0.7312967815376024
+      },
+      "delta_log_loss_vs_market": -0.002595393796526735,
+      "delta_brier_vs_market": -0.0012002390622990189
+    },
+    "v5_plus_top_5_environment_interactions_pre2021_gain": {
+      "folds": [
+        {
+          "fold": "2021",
+          "train_n": 4220,
+          "validation_n": 469,
+          "market": {
+            "n": 469,
+            "brier": 0.22040143204863472,
+            "log_loss": 0.6302682759895004,
+            "auc": 0.6891670350722074
+          },
+          "model": {
+            "n": 469,
+            "brier": 0.21744465727288584,
+            "log_loss": 0.6242316827945719,
+            "auc": 0.7016467727674623
+          },
+          "delta_log_loss_vs_market": -0.006036593194928552,
+          "delta_brier_vs_market": -0.002956774775748877
+        },
+        {
+          "fold": "2022",
+          "train_n": 4689,
+          "validation_n": 477,
+          "market": {
+            "n": 477,
+            "brier": 0.20882128815279644,
+            "log_loss": 0.6046745349039253,
+            "auc": 0.7209038006910348
+          },
+          "model": {
+            "n": 477,
+            "brier": 0.20823669147270135,
+            "log_loss": 0.6035482088205201,
+            "auc": 0.7197308601563921
+          },
+          "delta_log_loss_vs_market": -0.001126326083405238,
+          "delta_brier_vs_market": -0.0005845966800950841
+        },
+        {
+          "fold": "2023",
+          "train_n": 5166,
+          "validation_n": 415,
+          "market": {
+            "n": 415,
+            "brier": 0.19978813448309007,
+            "log_loss": 0.5850894126885017,
+            "auc": 0.7534827881323697
+          },
+          "model": {
+            "n": 415,
+            "brier": 0.19781704918104948,
+            "log_loss": 0.5809672356591151,
+            "auc": 0.7583206542411562
+          },
+          "delta_log_loss_vs_market": -0.004122177029386553,
+          "delta_brier_vs_market": -0.0019710853020405983
+        },
+        {
+          "fold": "2024",
+          "train_n": 5581,
+          "validation_n": 381,
+          "market": {
+            "n": 381,
+            "brier": 0.20222522792065598,
+            "log_loss": 0.5909368834797224,
+            "auc": 0.753883495145631
+          },
+          "model": {
+            "n": 381,
+            "brier": 0.20290778790714686,
+            "log_loss": 0.591542867226323,
+            "auc": 0.7500970873786408
+          },
+          "delta_log_loss_vs_market": 0.0006059837466005913,
+          "delta_brier_vs_market": 0.0006825599864908882
+        }
+      ],
+      "market_oof": {
+        "n": 1742,
+        "brier": 0.2083443821629999,
+        "log_loss": 0.6038947379217856,
+        "auc": 0.7285180790171717
+      },
+      "oof": {
+        "n": 1742,
+        "brier": 0.20706796136407607,
+        "log_loss": 0.6011115901548818,
+        "auc": 0.7314847131090325
+      },
+      "delta_log_loss_vs_market": -0.002783147766903804,
+      "delta_brier_vs_market": -0.001276420798923844
+    },
+    "v5_plus_top_10_environment_interactions_pre2021_gain": {
+      "folds": [
+        {
+          "fold": "2021",
+          "train_n": 4220,
+          "validation_n": 469,
+          "market": {
+            "n": 469,
+            "brier": 0.22040143204863472,
+            "log_loss": 0.6302682759895004,
+            "auc": 0.6891670350722074
+          },
+          "model": {
+            "n": 469,
+            "brier": 0.21754787648686486,
+            "log_loss": 0.6244180516288623,
+            "auc": 0.7010204833480695
+          },
+          "delta_log_loss_vs_market": -0.00585022436063809,
+          "delta_brier_vs_market": -0.0028535555617698605
+        },
+        {
+          "fold": "2022",
+          "train_n": 4689,
+          "validation_n": 477,
+          "market": {
+            "n": 477,
+            "brier": 0.20882128815279644,
+            "log_loss": 0.6046745349039253,
+            "auc": 0.7209038006910348
+          },
+          "model": {
+            "n": 477,
+            "brier": 0.2080733643556188,
+            "log_loss": 0.6033084029603395,
+            "auc": 0.7199672667757775
+          },
+          "delta_log_loss_vs_market": -0.0013661319435858132,
+          "delta_brier_vs_market": -0.0007479237971776409
+        },
+        {
+          "fold": "2023",
+          "train_n": 5166,
+          "validation_n": 415,
+          "market": {
+            "n": 415,
+            "brier": 0.19978813448309007,
+            "log_loss": 0.5850894126885017,
+            "auc": 0.7534827881323697
+          },
+          "model": {
+            "n": 415,
+            "brier": 0.1975116796230558,
+            "log_loss": 0.580263611267395,
+            "auc": 0.7591051730696082
+          },
+          "delta_log_loss_vs_market": -0.004825801421106668,
+          "delta_brier_vs_market": -0.002276454860034277
+        },
+        {
+          "fold": "2024",
+          "train_n": 5581,
+          "validation_n": 381,
+          "market": {
+            "n": 381,
+            "brier": 0.20222522792065598,
+            "log_loss": 0.5909368834797224,
+            "auc": 0.753883495145631
+          },
+          "model": {
+            "n": 381,
+            "brier": 0.20283414345576836,
+            "log_loss": 0.5914250509688365,
+            "auc": 0.7505686546463246
+          },
+          "delta_log_loss_vs_market": 0.0004881674891140664,
+          "delta_brier_vs_market": 0.0006089155351123865
+        }
+      ],
+      "market_oof": {
+        "n": 1742,
+        "brier": 0.2083443821629999,
+        "log_loss": 0.6038947379217856,
+        "auc": 0.7285180790171717
+      },
+      "oof": {
+        "n": 1742,
+        "brier": 0.2069621725431606,
+        "log_loss": 0.6009027081062652,
+        "auc": 0.731669959943728
+      },
+      "delta_log_loss_vs_market": -0.0029920298155203806,
+      "delta_brier_vs_market": -0.0013822096198393141
+    },
+    "v5_plus_top_20_environment_interactions_pre2021_gain": {
+      "folds": [
+        {
+          "fold": "2021",
+          "train_n": 4220,
+          "validation_n": 469,
+          "market": {
+            "n": 469,
+            "brier": 0.22040143204863472,
+            "log_loss": 0.6302682759895004,
+            "auc": 0.6891670350722074
+          },
+          "model": {
+            "n": 469,
+            "brier": 0.21719694738052714,
+            "log_loss": 0.6234769567014985,
+            "auc": 0.7023467432950191
+          },
+          "delta_log_loss_vs_market": -0.006791319288001918,
+          "delta_brier_vs_market": -0.0032044846681075767
+        },
+        {
+          "fold": "2022",
+          "train_n": 4689,
+          "validation_n": 477,
+          "market": {
+            "n": 477,
+            "brier": 0.20882128815279644,
+            "log_loss": 0.6046745349039253,
+            "auc": 0.7209038006910348
+          },
+          "model": {
+            "n": 477,
+            "brier": 0.20790836393740256,
+            "log_loss": 0.6028904373816761,
+            "auc": 0.7214948172394982
+          },
+          "delta_log_loss_vs_market": -0.0017840975222491728,
+          "delta_brier_vs_market": -0.0009129242153938788
+        },
+        {
+          "fold": "2023",
+          "train_n": 5166,
+          "validation_n": 415,
+          "market": {
+            "n": 415,
+            "brier": 0.19978813448309007,
+            "log_loss": 0.5850894126885017,
+            "auc": 0.7534827881323697
+          },
+          "model": {
+            "n": 415,
+            "brier": 0.19729313451714248,
+            "log_loss": 0.5800173661859886,
+            "auc": 0.7606979840243439
+          },
+          "delta_log_loss_vs_market": -0.005072046502513028,
+          "delta_brier_vs_market": -0.0024949999659475974
+        },
+        {
+          "fold": "2024",
+          "train_n": 5581,
+          "validation_n": 381,
+          "market": {
+            "n": 381,
+            "brier": 0.20222522792065598,
+            "log_loss": 0.5909368834797224,
+            "auc": 0.753883495145631
+          },
+          "model": {
+            "n": 381,
+            "brier": 0.20224537867581033,
+            "log_loss": 0.5900798083165387,
+            "auc": 0.7525658807212205
+          },
+          "delta_log_loss_vs_market": -0.0008570751631836737,
+          "delta_brier_vs_market": 2.0150755154352273e-05
+        }
+      ],
+      "market_oof": {
+        "n": 1742,
+        "brier": 0.2083443821629999,
+        "log_loss": 0.6038947379217856,
+        "auc": 0.7285180790171717
+      },
+      "oof": {
+        "n": 1742,
+        "brier": 0.20664167509742026,
+        "log_loss": 0.6001820007232196,
+        "auc": 0.7330176977845552
+      },
+      "delta_log_loss_vs_market": -0.0037127371985660185,
+      "delta_brier_vs_market": -0.0017027070655796506
+    },
+    "v5_plus_top_40_environment_interactions_pre2021_gain": {
+      "folds": [
+        {
+          "fold": "2021",
+          "train_n": 4220,
+          "validation_n": 469,
+          "market": {
+            "n": 469,
+            "brier": 0.22040143204863472,
+            "log_loss": 0.6302682759895004,
+            "auc": 0.6891670350722074
+          },
+          "model": {
+            "n": 469,
+            "brier": 0.21690938330174114,
+            "log_loss": 0.6229158400592893,
+            "auc": 0.7032677571470674
+          },
+          "delta_log_loss_vs_market": -0.007352435930211065,
+          "delta_brier_vs_market": -0.0034920487468935724
+        },
+        {
+          "fold": "2022",
+          "train_n": 4689,
+          "validation_n": 477,
+          "market": {
+            "n": 477,
+            "brier": 0.20882128815279644,
+            "log_loss": 0.6046745349039253,
+            "auc": 0.7209038006910348
+          },
+          "model": {
+            "n": 477,
+            "brier": 0.20781415523758262,
+            "log_loss": 0.6027074881211631,
+            "auc": 0.7220585561011095
+          },
+          "delta_log_loss_vs_market": -0.0019670467827621607,
+          "delta_brier_vs_market": -0.0010071329152138153
+        },
+        {
+          "fold": "2023",
+          "train_n": 5166,
+          "validation_n": 415,
+          "market": {
+            "n": 415,
+            "brier": 0.19978813448309007,
+            "log_loss": 0.5850894126885017,
+            "auc": 0.7534827881323697
+          },
+          "model": {
+            "n": 415,
+            "brier": 0.19748744706320673,
+            "log_loss": 0.5806623616993316,
+            "auc": 0.7603889311525295
+          },
+          "delta_log_loss_vs_market": -0.004427050989170067,
+          "delta_brier_vs_market": -0.002300687419883346
+        },
+        {
+          "fold": "2024",
+          "train_n": 5581,
+          "validation_n": 381,
+          "market": {
+            "n": 381,
+            "brier": 0.20222522792065598,
+            "log_loss": 0.5909368834797224,
+            "auc": 0.753883495145631
+          },
+          "model": {
+            "n": 381,
+            "brier": 0.20200995744079714,
+            "log_loss": 0.5895106219318192,
+            "auc": 0.7531761442441055
+          },
+          "delta_log_loss_vs_market": -0.0014262615479031515,
+          "delta_brier_vs_market": -0.00021527047985883674
+        }
+      ],
+      "market_oof": {
+        "n": 1742,
+        "brier": 0.2083443821629999,
+        "log_loss": 0.6038947379217856,
+        "auc": 0.7285180790171717
+      },
+      "oof": {
+        "n": 1742,
+        "brier": 0.20653325897417799,
+        "log_loss": 0.6000100045251707,
+        "auc": 0.7335640417100698
+      },
+      "delta_log_loss_vs_market": -0.003884733396614881,
+      "delta_brier_vs_market": -0.0018111231888219281
+    }
+  },
+  "selected_candidate": "v5_plus_top_40_environment_interactions_pre2021_gain",
+  "selected_feature_count": 91,
+  "selected_environment_interactions": [
+    "env_international__x__reach_diff",
+    "env_las_vegas__x__reach_diff",
+    "env_international__x__recent_form_recent_finish_rate_diff",
+    "env_latin_america__x__age_diff",
+    "env_las_vegas__x__wrestling_mismatch_diff",
+    "env_international__x__ewm_str_def_diff",
+    "env_international__x__ewm_kd_avg_diff",
+    "env_international__x__avg_opponent_elo_diff",
+    "env_international__x__win_pct_diff",
+    "env_international__x__style_score_spread_diff",
+    "env_las_vegas__x__age_x_career_ko_losses_diff",
+    "env_international__x__recent_form_best_win_elo_diff",
+    "env_international__x__ewm_recent_win_pct_diff",
+    "env_international__x__ewm_win_pct_diff",
+    "env_international__x__chin_risk_diff",
+    "env_oceania__x__ctrl_against_per_min_diff",
+    "env_las_vegas__x__aggression_index_diff",
+    "env_international__x__recent_form_recent_avg_fight_time_diff",
+    "env_international__x__age_diff",
+    "env_international__x__ewm_sapm_diff",
+    "env_international__x__ewm_recent_sapm_diff",
+    "env_international__x__style_ko_finisher_score_diff",
+    "env_international__x__ewm_td_acc_diff",
+    "env_international__x__recent_finish_rate_diff",
+    "env_international__x__recent_form_avg_opponent_elo_diff",
+    "env_international__x__recent_avg_fight_time_diff",
+    "env_international__x__aggression_index_diff",
+    "env_international__x__age_squared_diff",
+    "env_international__x__sapm_diff",
+    "env_international__x__style_all_round_finisher_score_diff",
+    "env_international__x__recent_form_kd_absorbed_avg_diff",
+    "env_international__x__ewm_recent_splm_diff",
+    "env_international__x__elo_diff",
+    "env_international__x__ewm_elo_diff",
+    "env_international__x__ewm_recent_td_avg_diff",
+    "env_international__x__days_since_last_fight_diff",
+    "env_international__x__td_avg_diff",
+    "env_international__x__ko_dependency_diff",
+    "env_international__x__recent_form_avg_fight_time_diff",
+    "env_international__x__wrestling_mismatch_diff"
+  ],
+  "final_test": {
+    "train_n_fights": 5962,
+    "test_n_fights": 505,
+    "market": {
+      "n": 505,
+      "brier": 0.1950777517000537,
+      "log_loss": 0.5727560248220687,
+      "auc": 0.7697222222222221
+    },
+    "model": {
+      "n": 505,
+      "brier": 0.1926176151552368,
+      "log_loss": 0.5663653359560914,
+      "auc": 0.7728412698412699
+    },
+    "delta_log_loss_vs_market": -0.006390688865977268,
+    "delta_brier_vs_market": -0.0024601365448169155,
+    "delta_log_loss_vs_frozen_v5_final": 0.00034912822411137245,
+    "delta_brier_vs_frozen_v5_final": 0.00011779879959347705,
+    "mean_abs_probability_move_from_market": 0.027737291587973306,
+    "p95_abs_probability_move_from_market": 0.06935971717228044
+  }
+}
