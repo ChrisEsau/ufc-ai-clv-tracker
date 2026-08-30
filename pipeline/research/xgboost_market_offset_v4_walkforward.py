@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 import xgboost as xgb
 from sklearn.metrics import brier_score_loss, log_loss
+from pipeline.features.run_build_rolling_features import build_full_rolling_features
 
 OUT = Path("data/research/prop_mispricing")
 PRED_PATH = OUT / "v4_2026_moneyline_walkforward_predictions.csv"
@@ -136,28 +137,46 @@ def load_core():
 
 
 def cold_start_frame(target_date: pd.Timestamp, fight_ids) -> pd.DataFrame:
-    st = pd.read_parquet("data/features/latest_fighter_state.parquet").copy()
-    st["date"] = pd.to_datetime(st["date"], errors="coerce").dt.normalize()
-    st = st[(st["date"] == target_date) & st["fight_id"].isin(set(fight_ids))].copy()
-    rows = []
-    for (dt, fid), g in st.groupby(["date", "fight_id"]):
-        vals = pd.to_numeric(g["fights"], errors="coerce")
-        cold_names = g.loc[vals < 2, "fighter_name"].astype(str).tolist()
-        rows.append({
-            "date": dt,
-            "fight_id": fid,
-            "cold_start": bool((vals < 2).any()),
-            "min_prior_fights": float(vals.min()) if vals.notna().any() else np.nan,
-            "cold_start_fighters": " | ".join(cold_names),
-            "fighter_prior_fights": " | ".join(
-                f"{n}:{int(f)}" for n, f in zip(g["fighter_name"], vals) if pd.notna(f)
-            ),
-        })
-    fm = pd.DataFrame(rows)
-    missing = sorted(set(map(str, fight_ids)) - set(fm.get("fight_id", pd.Series(dtype=str)).astype(str)))
+    # Locked 2026 V1 scoring rule: build fresh rolling prefight rows, then mark
+    # cold if either r_pre_fights/b_pre_fights is missing/nonfinite or < 2.
+    master = pd.read_parquet("data/master/ufc_master.parquet")
+    roll = build_full_rolling_features(master)
+    roll["date"] = pd.to_datetime(roll["date"], errors="coerce").dt.normalize()
+    target = roll[(roll["date"] == target_date) & roll["fight_id"].isin(set(fight_ids))].copy()
+    if target["fight_id"].duplicated().any():
+        raise RuntimeError("Fresh rolling cold-start source has duplicate target fight rows")
+    missing = sorted(set(map(str, fight_ids)) - set(target["fight_id"].astype(str)))
     if missing:
-        raise RuntimeError(f"Missing locked cold-start state for fight_ids: {missing}")
-    return fm
+        raise RuntimeError(f"Missing fresh-rolling V1 cold-start rows for fight_ids: {missing}")
+    rows = []
+    for _, r in target.iterrows():
+        rf = pd.to_numeric(pd.Series([r.get("r_pre_fights", np.nan)]), errors="coerce").iloc[0]
+        bf = pd.to_numeric(pd.Series([r.get("b_pre_fights", np.nan)]), errors="coerce").iloc[0]
+        r_ok = bool(np.isfinite(rf))
+        b_ok = bool(np.isfinite(bf))
+        cold = (not r_ok) or (not b_ok) or min(float(rf), float(bf)) < 2
+        cold_names = []
+        if (not r_ok) or float(rf) < 2:
+            cold_names.append(str(r.get("r_name", "red")))
+        if (not b_ok) or float(bf) < 2:
+            cold_names.append(str(r.get("b_name", "blue")))
+        prior = []
+        if r_ok:
+            prior.append(f"{r.get('r_name','red')}:{int(rf)}")
+        if b_ok:
+            prior.append(f"{r.get('b_name','blue')}:{int(bf)}")
+        finite_vals = [float(v) for v in (rf, bf) if np.isfinite(v)]
+        rows.append({
+            "date": target_date,
+            "fight_id": r["fight_id"],
+            "cold_start": bool(cold),
+            "min_prior_fights": min(finite_vals) if finite_vals else np.nan,
+            "cold_start_fighters": " | ".join(cold_names),
+            "fighter_prior_fights": " | ".join(prior),
+            "r_pre_fights": float(rf) if r_ok else np.nan,
+            "b_pre_fights": float(bf) if b_ok else np.nan,
+        })
+    return pd.DataFrame(rows)
 
 
 def choose_next_card(ml: pd.DataFrame):
@@ -199,6 +218,7 @@ def run_next_card():
         print("All available 2026 cards are already processed.")
         return
     target_date, event_name = chosen
+    print(f"Target next card: {target_date.date()} | {event_name}")
 
     target_market = ml[(ml["date"] == target_date) & (ml["event_name"] == event_name)].copy()
     counts = target_market.groupby("fight_id").size()
@@ -245,7 +265,7 @@ def run_next_card():
     fm = cold_start_frame(target_date, target_fights)
     pred_red = pred_red.merge(fm, on=["date", "fight_id"], how="left", validate="one_to_one")
     market_card = target_market.merge(
-        pred_red[["fight_id", "raw_tree_correction_logit_red", "market_logit_red", "model_logit_red", "v4_model_p_red", "cold_start", "min_prior_fights", "cold_start_fighters", "fighter_prior_fights"]],
+        pred_red[["fight_id", "raw_tree_correction_logit_red", "market_logit_red", "model_logit_red", "v4_model_p_red", "cold_start", "min_prior_fights", "cold_start_fighters", "fighter_prior_fights", "r_pre_fights", "b_pre_fights"]],
         on="fight_id", how="inner", validate="many_to_one"
     )
     market_card["v4_model_p"] = np.where(
@@ -269,7 +289,7 @@ def run_next_card():
     predictions = market_card.rename(columns={"outcome_label": "fighter", "outcome_side": "side"})[[
         "date", "event_name", "fight_id", "fighter", "side", "american_odds", "fair_market_p", "v4_model_p", "edge",
         "cold_start", "bet_eligible", "actual_winner", "won", "profit_if_bet", "raw_tree_correction_logit_red",
-        "market_logit_red", "model_logit_red", "min_prior_fights", "cold_start_fighters", "fighter_prior_fights"
+        "market_logit_red", "model_logit_red", "min_prior_fights", "cold_start_fighters", "fighter_prior_fights", "r_pre_fights", "b_pre_fights"
     ]].copy()
     predictions["date"] = pd.to_datetime(predictions["date"]).dt.strftime("%Y-%m-%d")
     predictions["won"] = predictions["won"].astype(int)
@@ -356,7 +376,7 @@ def run_next_card():
             "feature_count": len(feature_cols),
             "xgboost": CFG,
             "market_role": "vig-free RED fair market logit supplied as base_margin; additive tree correction only",
-            "cold_start_rule": "fight ineligible if either latest_fighter_state.fights < 2",
+            "cold_start_rule": "locked V1 fresh rolling: either r_pre_fights/b_pre_fights missing/nonfinite or < 2",
             "edge_threshold": THRESHOLD,
             "flat_stake": FLAT_STAKE,
         },
