@@ -1,0 +1,213 @@
+name: Research XGBoost Market Residual V1
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - .github/workflows/research-xgboost-market-residual-v1.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  xgboost-market-residual-v1:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout research branch
+        uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas pyarrow numpy scikit-learn xgboost
+
+      - name: Run chronological market residual experiment
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import numpy as np
+          import pandas as pd
+          from sklearn.metrics import brier_score_loss, log_loss, roc_auc_score
+          from xgboost import XGBClassifier
+
+          OUT = Path('data/research/prop_mispricing')
+          OUT.mkdir(parents=True, exist_ok=True)
+
+          market = pd.read_parquet('data/market/historical_market_outcomes.parquet').copy()
+          market = market[(market['bookmaker'] == 'legacy_consensus') & (market['result_status'] == 'graded') & market['won'].notna()].copy()
+          market['date'] = pd.to_datetime(market['date'], errors='coerce')
+          market['won'] = market['won'].astype(bool).astype(int)
+          market['implied_probability'] = pd.to_numeric(market['implied_probability'], errors='coerce')
+          market['profit_per_100'] = pd.to_numeric(market['profit_per_100'], errors='coerce')
+          market = market.dropna(subset=['date','implied_probability','profit_per_100']).copy()
+
+          # Fair market baseline.
+          ml = market[market['market_key'] == 'moneyline'].copy()
+          good_ml = ml.groupby('fight_id').size()
+          good_ml = good_ml[good_ml == 2].index
+          ml = ml[ml['fight_id'].isin(good_ml)].copy()
+          ml['market_overround'] = ml.groupby('fight_id')['implied_probability'].transform('sum')
+          ml['fair_market_p'] = ml['implied_probability'] / ml['market_overround']
+
+          method_keys = ['win_by_decision','win_by_ko_tko_dq','win_by_submission']
+          mm = market[market['market_key'].isin(method_keys)].copy()
+          good_mm = mm.groupby('fight_id').size()
+          good_mm = good_mm[good_mm == 6].index
+          mm = mm[mm['fight_id'].isin(good_mm)].copy()
+          mm['market_overround'] = mm.groupby('fight_id')['implied_probability'].transform('sum')
+          mm['fair_market_p'] = mm['implied_probability'] / mm['market_overround']
+
+          fv_moneyline = pd.read_parquet('data/features/moneyline_feature_view.parquet')
+          fv_method = pd.read_parquet('data/features/prop_method_of_victory_feature_view.parquet')
+
+          # Explicitly prefight-only numeric features. Exclude raw same-fight stats/results.
+          def prefight_numeric_cols(df):
+              cols = []
+              for c in df.columns:
+                  if not pd.api.types.is_numeric_dtype(df[c]):
+                      continue
+                  lc = c.lower()
+                  allow = (
+                      '_pre_' in lc or lc.startswith('pre_') or
+                      'ewm_' in lc or 'recent_form_' in lc or
+                      lc.endswith('_diff') or lc.startswith('combined_') or
+                      lc in {'older_fighter_age','reach_mismatch_abs','height_mismatch_abs','title_fight','total_rounds'}
+                  )
+                  deny = any(x in lc for x in [
+                      'winner','result','target','label','finish_round','match_time_sec',
+                      'profit','odds','implied','market','actual','post_'
+                  ])
+                  if allow and not deny:
+                      cols.append(c)
+              return sorted(set(cols))
+
+          ml_cols = prefight_numeric_cols(fv_moneyline)
+          mm_cols = prefight_numeric_cols(fv_method)
+
+          def orient_features(rows, fv, cols):
+              base = rows.merge(fv[['fight_id'] + cols], on='fight_id', how='inner')
+              # Feature views are red-oriented. For blue-side market outcomes, flip *_diff signs.
+              blue = base['outcome_side'].astype(str).eq('blue')
+              diff_cols = [c for c in cols if c.endswith('_diff')]
+              base.loc[blue, diff_cols] = -base.loc[blue, diff_cols]
+              return base
+
+          datasets = {
+              'moneyline': orient_features(ml, fv_moneyline, ml_cols),
+              'ko': orient_features(mm[mm['market_key'] == 'win_by_ko_tko_dq'], fv_method, mm_cols),
+              'submission': orient_features(mm[mm['market_key'] == 'win_by_submission'], fv_method, mm_cols),
+          }
+
+          def metrics(y, p):
+              p = np.clip(np.asarray(p, float), 1e-6, 1-1e-6)
+              y = np.asarray(y, int)
+              return {
+                  'n': int(len(y)),
+                  'brier': float(brier_score_loss(y, p)),
+                  'log_loss': float(log_loss(y, p, labels=[0,1])),
+                  'auc': float(roc_auc_score(y, p)) if len(np.unique(y)) == 2 else None,
+              }
+
+          def roi_table(df):
+              out = []
+              for thr in [0.00,0.02,0.05,0.075,0.10,0.15]:
+                  g = df[df['edge'] >= thr]
+                  if len(g) == 0:
+                      continue
+                  profit = np.where(g['won'].eq(1), g['profit_per_100'], -100.0)
+                  out.append({
+                      'min_edge': thr,
+                      'n_bets': int(len(g)),
+                      'win_rate': float(g['won'].mean()),
+                      'avg_edge': float(g['edge'].mean()),
+                      'roi': float(profit.mean()/100.0),
+                  })
+              return out
+
+          summary = {'split': {'train_end':'2022-12-31','validation':'2023-01-01..2024-12-31','test':'2025-01-01..2026-03-28'}, 'markets': {}}
+          pred_frames = []
+
+          for name, df in datasets.items():
+              df = df.sort_values(['date','fight_id','outcome_side']).copy()
+              cols = ml_cols if name == 'moneyline' else mm_cols
+              cols = [c for c in cols if c in df.columns]
+              # Add market prior and overround explicitly.
+              feature_cols = cols + ['fair_market_p','market_overround']
+              X = df[feature_cols].replace([np.inf,-np.inf], np.nan)
+              # Drop columns unusable in training.
+              valid_cols = [c for c in feature_cols if X[c].notna().any()]
+              X = X[valid_cols]
+              med = X[df['date'] <= '2022-12-31'].median(numeric_only=True)
+              X = X.fillna(med).fillna(0.0)
+              y = df['won'].astype(int)
+
+              train = df['date'] <= '2022-12-31'
+              val = (df['date'] >= '2023-01-01') & (df['date'] <= '2024-12-31')
+              test = df['date'] >= '2025-01-01'
+
+              model = XGBClassifier(
+                  n_estimators=350,
+                  max_depth=3,
+                  learning_rate=0.03,
+                  subsample=0.8,
+                  colsample_bytree=0.7,
+                  min_child_weight=8,
+                  reg_lambda=5.0,
+                  reg_alpha=0.5,
+                  objective='binary:logistic',
+                  eval_metric='logloss',
+                  random_state=42,
+                  n_jobs=2,
+              )
+              model.fit(X.loc[train], y.loc[train], eval_set=[(X.loc[val], y.loc[val])], verbose=False)
+
+              p_test = model.predict_proba(X.loc[test])[:,1]
+              t = df.loc[test, ['fight_id','date','market_key','outcome_label','outcome_side','american_odds','profit_per_100','won','fair_market_p','market_overround']].copy()
+              t['model_p'] = p_test
+              t['edge'] = t['model_p'] - t['fair_market_p']
+              t['market_name'] = name
+              pred_frames.append(t)
+
+              m_market = metrics(t['won'], t['fair_market_p'])
+              m_model = metrics(t['won'], t['model_p'])
+              summary['markets'][name] = {
+                  'rows_total': int(len(df)),
+                  'feature_count': int(len(valid_cols)),
+                  'train_n': int(train.sum()),
+                  'validation_n': int(val.sum()),
+                  'test_n': int(test.sum()),
+                  'test_market': m_market,
+                  'test_xgboost': m_model,
+                  'test_delta_log_loss': float(m_model['log_loss'] - m_market['log_loss']),
+                  'test_delta_brier': float(m_model['brier'] - m_market['brier']),
+                  'edge_buckets': roi_table(t),
+                  'top_features': [
+                      {'feature': f, 'importance': float(v)}
+                      for f,v in sorted(zip(valid_cols, model.feature_importances_), key=lambda z:z[1], reverse=True)[:25]
+                  ],
+              }
+
+          preds = pd.concat(pred_frames, ignore_index=True)
+          preds.to_csv(OUT/'xgboost_market_residual_v1_test_predictions.csv', index=False)
+          with open(OUT/'xgboost_market_residual_v1_summary.json','w',encoding='utf-8') as f:
+              json.dump(summary,f,indent=2)
+          print(json.dumps(summary,indent=2))
+          PY
+
+      - name: Commit research outputs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add -f data/research/prop_mispricing/xgboost_market_residual_v1_summary.json data/research/prop_mispricing/xgboost_market_residual_v1_test_predictions.csv
+          git commit -m "Add XGBoost market residual V1 results" || echo "No changes to commit"
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
