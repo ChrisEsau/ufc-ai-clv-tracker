@@ -1,0 +1,47 @@
+name: Research UFC 325 FreshRolling Web V3
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - .github/workflows/research-ufc-325-freshrolling-web-v3.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  score:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas pyarrow numpy scikit-learn xgboost pyyaml requests beautifulsoup4 lxml
+      - name: Run UFC 325 corrected date scorer
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+          src=Path('.github/workflows/research-ufc-325-freshrolling-web-v1.yml').read_text()
+          m=re.search(r"python - <<'PY'\n(.*?)\n          PY",src,re.S)
+          if not m:
+            raise RuntimeError('Could not extract V1 scorer')
+          code='\n'.join(line[10:] if line.startswith('          ') else line for line in m.group(1).splitlines())
+          code=code.replace("DATE='2026-01-31'","DATE='2026-02-01'")
+          pattern=r"pages=\[\]\nfor i in range\(3960,4026\):.*?if not pages:raise RuntimeError\('No BFO UFC 325 archive page found'\)"
+          repl="u='https://www.bestfightodds.com/events/ufc-3971'\nt=requests.get(u,headers=H,timeout=30).text\npages=[(u,t)]\nif 'volkanovski' not in t.lower() or 'diego lopes' not in t.lower(): raise RuntimeError('Pinned BFO 3971 mismatch')"
+          code,n=re.subn(pattern,repl,code,count=1,flags=re.S)
+          if n!=1:
+            raise RuntimeError('Could not pin BFO scan block')
+          exec(compile(code,'<ufc325_corrected_date>','exec'),{})
+          PY
+      - name: Commit UFC 325 scores
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -f data/research/prop_mispricing/ufc_325_*_v1.csv
+          git commit -m 'research: add UFC 325 corrected-date frozen scores' || echo No-changes
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
