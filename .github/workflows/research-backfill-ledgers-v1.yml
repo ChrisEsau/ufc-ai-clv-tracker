@@ -1,0 +1,120 @@
+name: Research Backfill ML and Method Ledgers V1
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-backfill-ledgers-v1.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas numpy
+      - name: Backfill ledgers
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import pandas as pd, numpy as np
+
+          ROOT=Path('data/research/prop_mispricing')
+          OUT=ROOT/'running_ledgers'; OUT.mkdir(parents=True,exist_ok=True)
+          thresholds=[0.02,0.03,0.05,0.075,0.10]
+          card_order=['Freedom 250','Vegas 119','Baku','UFC 329','Oklahoma City']
+          card_dates={'Freedom 250':'2026-06-14','Vegas 119':'2026-06-20','Baku':'2026-06-27','UFC 329':'2026-07-11','Oklahoma City':'2026-07-18'}
+
+          freedom_winners={'Justin Gaethje','Ciryl Gane',"Sean O'Malley",'Josh Hokit','Mauricio Ruffy','Bo Nickal','Diego Lopes'}
+          freedom_methods={
+            ('Justin Gaethje','win_by_ko_tko_dq'),('Ciryl Gane','win_by_ko_tko_dq'),("Sean O'Malley",'win_by_ko_tko_dq'),
+            ('Josh Hokit','win_by_ko_tko_dq'),('Mauricio Ruffy','win_by_ko_tko_dq'),('Bo Nickal','win_by_ko_tko_dq'),('Diego Lopes','win_by_ko_tko_dq')}
+
+          def std_ml(path,card):
+            d=pd.read_csv(path).copy()
+            if 'fighter' not in d and 'outcome_label' in d: d=d.rename(columns={'outcome_label':'fighter'})
+            if 'actual_win' not in d:
+              if card=='Freedom 250': d['actual_win']=d.fighter.isin(freedom_winners).astype(int)
+              else: raise RuntimeError(f'missing actual_win: {path}')
+            d['card']=card; d['date']=card_dates[card]; d['market_type']='moneyline'
+            return d[['card','date','market_type','fight_id','fighter','american_odds','fair_market_p','model_p','edge','actual_win']]
+
+          def std_method(paths,card):
+            d=pd.concat([pd.read_csv(p) for p in paths],ignore_index=True)
+            if 'actual_hit' not in d:
+              if card=='Freedom 250': d['actual_hit']=[int((r.fighter,r.market_key) in freedom_methods) for r in d.itertuples()]
+              else: raise RuntimeError(f'missing actual_hit: {paths}')
+            d['card']=card; d['date']=card_dates[card]; d['market_type']='method'
+            return d[['card','date','market_type','fight_id','fighter','market_key','american_odds','fair_market_p','model_p','edge','actual_hit']].rename(columns={'actual_hit':'actual_win'})
+
+          ml=pd.concat([
+            std_ml(ROOT/'freedom_250_moneyline_v1.csv','Freedom 250'),
+            std_ml(ROOT/'ufc_vegas_119_moneyline_v1.csv','Vegas 119'),
+            std_ml(ROOT/'ufc_baku_moneyline_full_v1.csv','Baku'),
+            std_ml(ROOT/'ufc_329_moneyline_v1.csv','UFC 329'),
+            std_ml(ROOT/'ufc_okc_moneyline_v1.csv','Oklahoma City'),
+          ],ignore_index=True)
+          method=pd.concat([
+            std_method([ROOT/'freedom_250_method_v1.csv',ROOT/'freedom_250_method_rest_v1.csv'],'Freedom 250'),
+            std_method([ROOT/'ufc_vegas_119_method_v1.csv'],'Vegas 119'),
+            std_method([ROOT/'ufc_baku_method_v1.csv'],'Baku'),
+            std_method([ROOT/'ufc_329_method_v1.csv'],'UFC 329'),
+            std_method([ROOT/'ufc_okc_method_full_v1.csv'],'Oklahoma City'),
+          ],ignore_index=True)
+
+          # Baku full scorer includes 12 clean fights; explicitly exclude Almabayev-Johnson if ever present.
+          ml=ml[~((ml.card=='Baku') & ml.fighter.isin(['Asu Almabayev','Charles Johnson']))].copy()
+
+          def payout_mult(ao):
+            return ao/100.0 if ao>0 else 100.0/abs(ao)
+          def kelly_full(p,ao):
+            b=payout_mult(ao); q=1-p
+            return (b*p-q)/b
+
+          bet_rows=[]; card_rows=[]; summary_rows=[]
+          for market_name,data in [('moneyline',ml),('method',method)]:
+            data=data.copy(); data['card_rank']=data.card.map({c:i for i,c in enumerate(card_order)})
+            data=data.sort_values(['card_rank','fight_id','fighter'] + (['market_key'] if 'market_key' in data else [])).reset_index(drop=True)
+            for th in thresholds:
+              flat_bank=500.0; kelly_bank=500.0; flat_peak=500.0; kelly_peak=500.0; flat_maxdd=0.0; kelly_maxdd=0.0
+              total_bets=total_wins=0; flat_risk=flat_profit=kelly_risk=kelly_profit=0.0
+              for card in card_order:
+                cardd=data[(data.card==card)&(data.edge>=th)].copy()
+                start_flat=flat_bank; start_kelly=kelly_bank
+                cfprofit=0.0; ckprofit=0.0; cfrisk=0.0; ckrisk=0.0; cwins=int(cardd.actual_win.sum()); cbets=len(cardd)
+                # all Kelly stakes use bankroll at start of card (simultaneous pre-card staking)
+                for _,r in cardd.iterrows():
+                  ao=float(r.american_odds); win=int(r.actual_win); b=payout_mult(ao)
+                  flat_stake=10.0
+                  flat_pnl=flat_stake*b if win else -flat_stake
+                  f=max(0.0,kelly_full(float(r.model_p),ao)); kelly_stake=start_kelly*0.25*f
+                  kelly_pnl=kelly_stake*b if win else -kelly_stake
+                  cfprofit+=flat_pnl; cfrisk+=flat_stake; ckprofit+=kelly_pnl; ckrisk+=kelly_stake
+                  bet_rows.append({'market_type':market_name,'threshold':th,'card':card,'date':card_dates[card],'fight_id':r.fight_id,'fighter':r.fighter,'market_key':r.get('market_key','moneyline'),'odds':ao,'market_fair_p':r.fair_market_p,'model_p':r.model_p,'edge':r.edge,'won':win,'flat_stake':flat_stake,'flat_pnl':flat_pnl,'kelly_full_fraction':f,'quarter_kelly_stake':kelly_stake,'quarter_kelly_pnl':kelly_pnl,'kelly_bankroll_basis':start_kelly})
+                flat_bank+=cfprofit; kelly_bank+=ckprofit
+                flat_peak=max(flat_peak,flat_bank); kelly_peak=max(kelly_peak,kelly_bank)
+                flat_dd=(flat_peak-flat_bank)/flat_peak if flat_peak else 0; kelly_dd=(kelly_peak-kelly_bank)/kelly_peak if kelly_peak else 0
+                flat_maxdd=max(flat_maxdd,flat_dd); kelly_maxdd=max(kelly_maxdd,kelly_dd)
+                total_bets+=cbets; total_wins+=cwins; flat_risk+=cfrisk; flat_profit+=cfprofit; kelly_risk+=ckrisk; kelly_profit+=ckprofit
+                card_rows.append({'market_type':market_name,'threshold':th,'card':card,'date':card_dates[card],'bets':cbets,'wins':cwins,'losses':cbets-cwins,'flat_start_bankroll':start_flat,'flat_risk':cfrisk,'flat_profit':cfprofit,'flat_end_bankroll':flat_bank,'flat_card_roi':cfprofit/cfrisk if cfrisk else np.nan,'kelly_start_bankroll':start_kelly,'kelly_risk':ckrisk,'kelly_profit':ckprofit,'kelly_end_bankroll':kelly_bank,'kelly_card_roi':ckprofit/ckrisk if ckrisk else np.nan})
+              summary_rows.append({'market_type':market_name,'threshold':th,'cards':len(card_order),'bets':total_bets,'wins':total_wins,'losses':total_bets-total_wins,'win_rate':total_wins/total_bets if total_bets else np.nan,'flat_total_risk':flat_risk,'flat_profit':flat_profit,'flat_roi':flat_profit/flat_risk if flat_risk else np.nan,'flat_end_bankroll':flat_bank,'flat_max_drawdown':flat_maxdd,'kelly_total_risk':kelly_risk,'kelly_profit':kelly_profit,'kelly_roi_on_staked':kelly_profit/kelly_risk if kelly_risk else np.nan,'kelly_end_bankroll':kelly_bank,'kelly_return_on_start_bankroll':(kelly_bank/500)-1,'kelly_max_drawdown':kelly_maxdd})
+
+          bets=pd.DataFrame(bet_rows); cards=pd.DataFrame(card_rows); summary=pd.DataFrame(summary_rows)
+          bets.to_csv(OUT/'bet_ledger_v1.csv',index=False)
+          cards.to_csv(OUT/'card_ledger_v1.csv',index=False)
+          summary.to_csv(OUT/'summary_v1.csv',index=False)
+          print('\nSUMMARY\n',summary.to_string(index=False))
+          print('\nCARD LEDGER\n',cards.to_string(index=False))
+          PY
+      - name: Commit ledgers
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add -f data/research/prop_mispricing/running_ledgers/*.csv
+          git commit -m 'Backfill ML and method bankroll ledgers' || echo No-changes
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
