@@ -1,0 +1,223 @@
+name: Research XGBoost Market Offset V10d Event Environment Controlled
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - .github/workflows/research-xgboost-market-offset-v10d-event-environment-controlled.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  v10d-event-environment:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout research branch
+        uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.16"
+
+      - name: Install exact frozen dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas==3.0.5 pyarrow==25.0.1 numpy==2.4.6 scikit-learn==1.9.0 scipy==1.17.1 xgboost==3.2.0
+
+      - name: Run controlled V10d experiment
+        run: |
+          python - <<'PY'
+          import json, platform, re
+          from pathlib import Path
+          import numpy as np
+          import pandas as pd
+          import pyarrow, sklearn, scipy
+          import xgboost as xgb
+          from sklearn.metrics import brier_score_loss, log_loss, roc_auc_score
+
+          OUT=Path('data/research/prop_mispricing')
+          with open(OUT/'xgboost_market_offset_v5_feature_reduction_summary.json','r',encoding='utf-8') as f:
+              frozen=json.load(f)
+          core=list(frozen['selected_features'])
+          assert len(core)==50
+
+          def clip(p): return np.clip(np.asarray(p,float),1e-6,1-1e-6)
+          def logit(p): p=clip(p); return np.log(p/(1-p))
+          def sigmoid(z): z=np.clip(np.asarray(z,float),-30,30); return 1/(1+np.exp(-z))
+          def metrics(y,p):
+              y=np.asarray(y,int); p=clip(p)
+              return {'n':int(len(y)),'brier':float(brier_score_loss(y,p)),'log_loss':float(log_loss(y,p,labels=[0,1])),'auc':float(roc_auc_score(y,p)) if len(np.unique(y))==2 else None}
+          def norm(s):
+              s=str(s or '').lower().replace('–','-').replace('—','-')
+              return ' '.join(re.sub(r'[^a-z0-9]+',' ',s).split())
+
+          # Rebuild frozen V5 rows EXACTLY, including sort order.
+          market=pd.read_parquet('data/market/historical_market_outcomes.parquet').copy()
+          market=market[(market['bookmaker']=='legacy_consensus')&(market['result_status']=='graded')&market['won'].notna()].copy()
+          market['date']=pd.to_datetime(market['date'],errors='coerce')
+          market['won']=market['won'].astype(bool).astype(int)
+          market['implied_probability']=pd.to_numeric(market['implied_probability'],errors='coerce')
+          market['profit_per_100']=pd.to_numeric(market['profit_per_100'],errors='coerce')
+          market=market.dropna(subset=['date','implied_probability','profit_per_100']).copy()
+          ml=market[market['market_key']=='moneyline'].copy()
+          good=ml.groupby('fight_id').size(); good=good[good==2].index
+          ml=ml[ml['fight_id'].isin(good)].copy()
+          ml['market_overround']=ml.groupby('fight_id')['implied_probability'].transform('sum')
+          ml['fair_market_p']=ml['implied_probability']/ml['market_overround']
+          red=ml[ml['outcome_side'].astype(str).eq('red')].copy()
+
+          fv=pd.read_parquet('data/features/moneyline_feature_view.parquet').copy()
+          df=red.merge(fv[['fight_id']+core],on='fight_id',how='inner').sort_values(['date','fight_id']).copy()
+          assert len(df)==6467
+
+          params={'max_depth':1,'eta':0.03,'subsample':0.8,'colsample_bytree':0.7,'min_child_weight':10,'lambda':8.0,'alpha':1.0,'objective':'binary:logistic','eval_metric':'logloss','seed':42,'nthread':2}
+          rounds=300
+          folds=[('2021','2020-12-31','2021-01-01','2021-12-31'),('2022','2021-12-31','2022-01-01','2022-12-31'),('2023','2022-12-31','2023-01-01','2023-12-31'),('2024','2023-12-31','2024-01-01','2024-12-31')]
+          base_cols=core+['market_overround']
+
+          def run_oof(cols, frame):
+              raw=frame[cols].replace([np.inf,-np.inf],np.nan)
+              parts=[]; fout=[]
+              for name,train_end,val_start,val_end in folds:
+                  tr=frame['date']<=train_end; va=(frame['date']>=val_start)&(frame['date']<=val_end)
+                  valid=[c for c in cols if raw.loc[tr,c].notna().any()]
+                  med=raw.loc[tr,valid].median(numeric_only=True)
+                  Xtr=raw.loc[tr,valid].fillna(med).fillna(0.0); Xv=raw.loc[va,valid].fillna(med).fillna(0.0)
+                  yt=frame.loc[tr,'won'].astype(int).to_numpy(); yv=frame.loc[va,'won'].astype(int).to_numpy()
+                  mt=logit(frame.loc[tr,'fair_market_p']); mv=logit(frame.loc[va,'fair_market_p'])
+                  model=xgb.train(params,xgb.DMatrix(Xtr,label=yt,base_margin=mt,feature_names=valid),num_boost_round=rounds,verbose_eval=False)
+                  full=model.predict(xgb.DMatrix(Xv,label=yv,base_margin=mv,feature_names=valid),output_margin=True)
+                  p=sigmoid(mv+(full-mv)); pm=sigmoid(mv)
+                  mm=metrics(yv,pm); mx=metrics(yv,p)
+                  fout.append({'fold':name,'train_n':int(tr.sum()),'validation_n':int(va.sum()),'market':mm,'model':mx,'delta_log_loss_vs_market':mx['log_loss']-mm['log_loss'],'delta_brier_vs_market':mx['brier']-mm['brier']})
+                  parts.append(pd.DataFrame({'fight_id':frame.loc[va,'fight_id'].to_numpy(),'date':frame.loc[va,'date'].to_numpy(),'won':yv,'market_p':pm,'model_p':p}))
+              odf=pd.concat(parts,ignore_index=True)
+              mm=metrics(odf['won'],odf['market_p']); mx=metrics(odf['won'],odf['model_p'])
+              return {'folds':fout,'market_oof':mm,'oof':mx,'delta_log_loss_vs_market':mx['log_loss']-mm['log_loss'],'delta_brier_vs_market':mx['brier']-mm['brier']}, odf
+
+          # Hard V5 reproduction gate BEFORE event features exist.
+          control, control_oof=run_oof(base_cols,df)
+          expected_ll=0.600822510744624; expected_brier=0.2069607253451583
+          control_pass=(abs(control['oof']['log_loss']-expected_ll)<1e-12 and abs(control['oof']['brier']-expected_brier)<1e-12)
+          if not control_pass:
+              raise SystemExit(f"V5 control failed: {control['oof']}")
+
+          # Historical event-location source: GitHub mirror of UFCStats event details.
+          event_url='https://raw.githubusercontent.com/OppositeMusical/MMA-AI/main/ufc_event_details.csv'
+          ev=pd.read_csv(event_url)
+          ev['date_key']=pd.to_datetime(ev['DATE'],errors='coerce').dt.normalize()
+          ev['event_norm']=ev['EVENT'].map(norm)
+          ev=ev.dropna(subset=['date_key','LOCATION']).copy()
+
+          # Map event name onto already-sorted V5 rows WITHOUT merging/reordering.
+          event_name_by_fight=fv.drop_duplicates('fight_id').set_index('fight_id')['event_name'].to_dict()
+          df['event_name']=df['fight_id'].map(event_name_by_fight)
+          df['event_norm']=df['event_name'].map(norm)
+          df['date_key']=pd.to_datetime(df['date'],errors='coerce').dt.normalize()
+          exact={(r.date_key,r.event_norm):r.LOCATION for r in ev.itertuples(index=False)}
+          unique_date=ev.groupby('date_key')['LOCATION'].agg(lambda s:s.iloc[0] if len(s)==1 else None).to_dict()
+          locations=[]
+          for r in df[['date_key','event_norm']].itertuples(index=False):
+              loc=exact.get((r.date_key,r.event_norm))
+              if loc is None: loc=unique_date.get(r.date_key)
+              locations.append(loc)
+          df['location']=locations
+          coverage=float(df['location'].notna().mean())
+          if coverage < 0.999:
+              raise SystemExit(f'Event location coverage too low: {coverage}')
+
+          def flags(loc):
+              sl=str(loc or '').lower()
+              us=sl.endswith('usa')
+              return {
+                'international':float(not us),
+                'las_vegas':float('las vegas' in sl),
+                'abu_dhabi':float('abu dhabi' in sl or 'yas island' in sl),
+                'high_altitude':float(any(x in sl for x in ['mexico city','denver','salt lake city','broomfield','calgary','colorado springs'])),
+                'europe':float(any(x in sl for x in ['united kingdom','england','scotland','ireland','france','germany','sweden','poland','czech','netherlands','croatia','russia','spain'])),
+                'oceania':float(any(x in sl for x in ['australia','new zealand'])),
+                'asia_mideast':float(any(x in sl for x in ['united arab emirates','china','japan','singapore','south korea','saudi arabia','qatar','macau','azerbaijan'])),
+                'latin_america':float(any(x in sl for x in ['mexico','brazil','chile','argentina','uruguay'])),
+                'canada':float('canada' in sl),
+              }
+          env_cols=['international','las_vegas','abu_dhabi','high_altitude','europe','oceania','asia_mideast','latin_america','canada']
+          flag_rows=[flags(x) for x in df['location']]
+          for e in env_cols: df[e]=[r[e] for r in flag_rows]
+
+          interactions=[]
+          for e in env_cols:
+              for c in core:
+                  n=f'env_{e}__x__{c}'
+                  df[n]=pd.to_numeric(df[c],errors='coerce')*df[e]
+                  interactions.append(n)
+
+          # Rank environment interactions only on <=2020. V5 core remains fixed.
+          rank_cols=base_cols+interactions
+          pre=df['date']<='2020-12-31'
+          raw=df[rank_cols].replace([np.inf,-np.inf],np.nan)
+          valid=[c for c in rank_cols if raw.loc[pre,c].notna().any()]
+          med=raw.loc[pre,valid].median(numeric_only=True)
+          X=raw.loc[pre,valid].fillna(med).fillna(0.0); y=df.loc[pre,'won'].astype(int).to_numpy(); m=logit(df.loc[pre,'fair_market_p'])
+          rank_model=xgb.train(params,xgb.DMatrix(X,label=y,base_margin=m,feature_names=valid),num_boost_round=rounds,verbose_eval=False)
+          gain=rank_model.get_score(importance_type='gain')
+          ranked=sorted(interactions,key=lambda c:gain.get(c,0.0),reverse=True)
+
+          candidates={'v5_core':base_cols}
+          for k in [3,5,10,20,40]: candidates[f'v5_plus_top_{k}_environment_interactions_pre2021_gain']=base_cols+ranked[:k]
+
+          results={}; stores={}
+          for name,cols in candidates.items():
+              res,odf=run_oof(cols,df); results[name]=res; stores[name]=odf
+          # Assert candidate v5_core still equals exact hard gate.
+          if abs(results['v5_core']['oof']['log_loss']-expected_ll)>=1e-12:
+              raise SystemExit('V5 candidate control changed after event feature construction')
+
+          selected=min(results,key=lambda n:results[n]['oof']['log_loss'])
+          selected_cols=candidates[selected]
+
+          # Only after pre-2025 selection is frozen, score 2025+ once.
+          raw=df[selected_cols].replace([np.inf,-np.inf],np.nan)
+          tr=df['date']<='2024-12-31'; te=df['date']>='2025-01-01'
+          valid=[c for c in selected_cols if raw.loc[tr,c].notna().any()]
+          med=raw.loc[tr,valid].median(numeric_only=True)
+          Xtr=raw.loc[tr,valid].fillna(med).fillna(0.0); Xt=raw.loc[te,valid].fillna(med).fillna(0.0)
+          yt=df.loc[tr,'won'].astype(int).to_numpy(); ye=df.loc[te,'won'].astype(int).to_numpy()
+          mt=logit(df.loc[tr,'fair_market_p']); me=logit(df.loc[te,'fair_market_p'])
+          final_model=xgb.train(params,xgb.DMatrix(Xtr,label=yt,base_margin=mt,feature_names=valid),num_boost_round=rounds,verbose_eval=False)
+          full=final_model.predict(xgb.DMatrix(Xt,label=ye,base_margin=me,feature_names=valid),output_margin=True)
+          p=sigmoid(me+(full-me)); pm=sigmoid(me)
+          final_market=metrics(ye,pm); final_model_metrics=metrics(ye,p)
+
+          test=df.loc[te,['fight_id','date','won','fair_market_p','market_overround','event_name','location']].copy()
+          test['market_p']=pm; test['model_p_red']=p; test['probability_move']=p-pm
+          selected_env=[c for c in selected_cols if c.startswith('env_')]
+          summary={
+            'design':{'name':'market_offset_v10d_event_environment_controlled','base':'frozen V5 exact reproduction','architecture':'frozen V5 depth1 market-offset','environment_source':event_url,'environment_usage':'interaction-only; no raw environment intercept','interaction_ranking':'through 2020 only','candidate_selection':'pooled 2021-2024 OOF log loss only','2025_plus':'sealed until candidate selected','roi_used_for_selection':False},
+            'runtime':{'python':platform.python_version(),'numpy':np.__version__,'pandas':pd.__version__,'pyarrow':pyarrow.__version__,'sklearn':sklearn.__version__,'scipy':scipy.__version__,'xgboost':xgb.__version__},
+            'control':{'passed':control_pass,'expected_log_loss':expected_ll,'expected_brier':expected_brier,'observed':control['oof']},
+            'coverage':{'fight_rows':int(len(df)),'matched_location_rows':int(df['location'].notna().sum()),'coverage':coverage,'event_rows':int(len(ev))},
+            'environment_flags':env_cols,'interaction_count':len(interactions),
+            'pre2021_ranked_interactions':[{'feature':c,'gain':float(gain.get(c,0.0))} for c in ranked],
+            'candidates':results,'selected_candidate':selected,'selected_feature_count':len(selected_cols),'selected_environment_interactions':selected_env,
+            'final_test':{'train_n_fights':int(tr.sum()),'test_n_fights':int(te.sum()),'market':final_market,'model':final_model_metrics,'delta_log_loss_vs_market':final_model_metrics['log_loss']-final_market['log_loss'],'delta_brier_vs_market':final_model_metrics['brier']-final_market['brier'],'delta_log_loss_vs_frozen_v5_final':final_model_metrics['log_loss']-0.56601620773198,'delta_brier_vs_frozen_v5_final':final_model_metrics['brier']-0.1924998163556433,'mean_abs_probability_move_from_market':float(np.mean(np.abs(p-pm))),'p95_abs_probability_move_from_market':float(np.quantile(np.abs(p-pm),0.95))},
+          }
+          with open(OUT/'xgboost_market_offset_v10d_event_environment_controlled_summary.json','w',encoding='utf-8') as f: json.dump(summary,f,indent=2)
+          stores[selected].to_csv(OUT/'xgboost_market_offset_v10d_selected_oof.csv',index=False)
+          test.to_csv(OUT/'xgboost_market_offset_v10d_test_predictions.csv',index=False)
+          print(json.dumps(summary,indent=2))
+          PY
+
+      - name: Commit controlled research outputs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add -f data/research/prop_mispricing/xgboost_market_offset_v10d_event_environment_controlled_summary.json data/research/prop_mispricing/xgboost_market_offset_v10d_selected_oof.csv data/research/prop_mispricing/xgboost_market_offset_v10d_test_predictions.csv
+          git commit -m "Add controlled V10d event environment results" || echo "No changes to commit"
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
