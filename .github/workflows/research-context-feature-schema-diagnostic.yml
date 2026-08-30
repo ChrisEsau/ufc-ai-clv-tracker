@@ -1,0 +1,48 @@
+name: Research Context Feature Schema Diagnostic
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - .github/workflows/research-context-feature-schema-diagnostic.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  schema:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout research branch
+        uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install pyarrow pandas
+        run: pip install pandas pyarrow
+      - name: Inspect context-related columns
+        run: |
+          python - <<'PY'
+          import pandas as pd
+          paths = [
+              'data/features/moneyline_feature_view.parquet',
+              'data/fight_details/ufc_round_stats.parquet',
+              'data/market/historical_market_outcomes.parquet',
+          ]
+          keys = ['day','layoff','last_fight','weight','class','division','fight_count','fights','activity','event','date','age']
+          for p in paths:
+              try:
+                  df = pd.read_parquet(p)
+              except Exception as e:
+                  print('\nFILE',p,'ERROR',repr(e)); continue
+              print('\nFILE',p,'ROWS',len(df),'COLS',len(df.columns))
+              for c in df.columns:
+                  lc=c.lower()
+                  if any(k in lc for k in keys):
+                      print(c, str(df[c].dtype))
+          PY
