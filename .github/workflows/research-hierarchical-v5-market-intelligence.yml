@@ -1,5 +1,5 @@
 name: Research Hierarchical V5 Market Intelligence
-# trigger: all market-intelligence events
+# trigger: all market-intelligence events v2
 
 on:
   workflow_dispatch:
@@ -9,6 +9,7 @@ on:
     paths:
       - .github/workflows/research-hierarchical-v5-market-intelligence.yml
       - pipeline/research/run_hierarchical_v5_market_intelligence.py
+      - pipeline/research/run_hierarchical_v5_market_intelligence_v2.py
 
 permissions:
   contents: write
@@ -44,7 +45,7 @@ jobs:
 
       - name: Score every complete fight in market intelligence parquet
         run: |
-          python -m pipeline.research.run_hierarchical_v5_market_intelligence
+          python -m pipeline.research.run_hierarchical_v5_market_intelligence_v2
 
       - name: Commit outputs
         run: |
