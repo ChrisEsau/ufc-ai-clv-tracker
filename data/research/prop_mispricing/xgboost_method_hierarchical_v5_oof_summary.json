@@ -1,0 +1,193 @@
+{
+  "experiment": "frozen_v5_moneyline_plus_conditional_method_oof_v1",
+  "design": "P(side wins) from exact frozen V5 moneyline; separate red/blue 3-class XGBoost predicts KO/SUB/DEC conditional on that side winning; multiply into six-way probabilities",
+  "v5_source_snapshot": "7df1b61126be1f4e036b256d1c774c531b8a281f",
+  "v5_expected_oof_log_loss": 0.600822510744624,
+  "v5_standalone_oof_log_loss": 0.600822510744624,
+  "v5_exact_within_1e_12": true,
+  "method_feature_count": 140,
+  "method_hyperparameters": {
+    "max_depth": 1,
+    "eta": 0.03,
+    "subsample": 0.8,
+    "colsample_bytree": 0.7,
+    "min_child_weight": 10,
+    "lambda": 8.0,
+    "alpha": 1.0,
+    "objective": "multi:softprob",
+    "num_class": 3,
+    "eval_metric": "mlogloss",
+    "seed": 42,
+    "nthread": 2,
+    "num_boost_round": 300
+  },
+  "selection": "none; fixed first-pass architecture, chronological 2021-2024 OOF only",
+  "roi_used": false,
+  "reads_2025_plus_for_selection": false,
+  "folds": [
+    {
+      "fold": "2021",
+      "n": 450,
+      "red_conditional_train_n": 1830,
+      "blue_conditional_train_n": 1320,
+      "red_feature_count": 140,
+      "blue_feature_count": 140,
+      "market": {
+        "n": 450,
+        "log_loss": 1.5707128340472991,
+        "brier": 0.7579690207893608,
+        "top1_accuracy": 0.34444444444444444,
+        "winner_accuracy": 0.6422222222222222,
+        "method_accuracy": 0.5044444444444445
+      },
+      "frozen_six_way": {
+        "n": 450,
+        "log_loss": 1.5599555758188297,
+        "brier": 0.7549241087914824,
+        "top1_accuracy": 0.3711111111111111,
+        "winner_accuracy": 0.6644444444444444,
+        "method_accuracy": 0.5155555555555555
+      },
+      "hierarchical_v5": {
+        "n": 450,
+        "log_loss": 1.5668865162854986,
+        "brier": 0.7594523136196432,
+        "top1_accuracy": 0.36444444444444446,
+        "winner_accuracy": 0.6666666666666666,
+        "method_accuracy": 0.5022222222222222
+      },
+      "delta_ll_hier_vs_market": -0.003826317761800535,
+      "delta_ll_hier_vs_frozen_six_way": 0.006930940466668867
+    },
+    {
+      "fold": "2022",
+      "n": 432,
+      "red_conditional_train_n": 2082,
+      "blue_conditional_train_n": 1518,
+      "red_feature_count": 140,
+      "blue_feature_count": 140,
+      "market": {
+        "n": 432,
+        "log_loss": 1.5414733267108995,
+        "brier": 0.748329397773327,
+        "top1_accuracy": 0.36342592592592593,
+        "winner_accuracy": 0.6759259259259259,
+        "method_accuracy": 0.5347222222222222
+      },
+      "frozen_six_way": {
+        "n": 432,
+        "log_loss": 1.5298538041606147,
+        "brier": 0.7467694944637432,
+        "top1_accuracy": 0.3680555555555556,
+        "winner_accuracy": 0.6828703703703703,
+        "method_accuracy": 0.5324074074074074
+      },
+      "hierarchical_v5": {
+        "n": 432,
+        "log_loss": 1.5303890129938387,
+        "brier": 0.7464446123386502,
+        "top1_accuracy": 0.3726851851851852,
+        "winner_accuracy": 0.7013888888888888,
+        "method_accuracy": 0.5300925925925926
+      },
+      "delta_ll_hier_vs_market": -0.011084313717060867,
+      "delta_ll_hier_vs_frozen_six_way": 0.000535208833223999
+    },
+    {
+      "fold": "2023",
+      "n": 378,
+      "red_conditional_train_n": 2337,
+      "blue_conditional_train_n": 1696,
+      "red_feature_count": 140,
+      "blue_feature_count": 140,
+      "market": {
+        "n": 378,
+        "log_loss": 1.5763769114843038,
+        "brier": 0.7571350697644309,
+        "top1_accuracy": 0.3544973544973545,
+        "winner_accuracy": 0.6851851851851852,
+        "method_accuracy": 0.5158730158730159
+      },
+      "frozen_six_way": {
+        "n": 378,
+        "log_loss": 1.5687214573254085,
+        "brier": 0.7537715696347848,
+        "top1_accuracy": 0.3783068783068783,
+        "winner_accuracy": 0.6984126984126984,
+        "method_accuracy": 0.5264550264550265
+      },
+      "hierarchical_v5": {
+        "n": 378,
+        "log_loss": 1.562550226640108,
+        "brier": 0.7508729461984168,
+        "top1_accuracy": 0.38095238095238093,
+        "winner_accuracy": 0.6931216931216931,
+        "method_accuracy": 0.5370370370370371
+      },
+      "delta_ll_hier_vs_market": -0.013826684844195913,
+      "delta_ll_hier_vs_frozen_six_way": -0.006171230685300566
+    },
+    {
+      "fold": "2024",
+      "n": 335,
+      "red_conditional_train_n": 2554,
+      "blue_conditional_train_n": 1863,
+      "red_feature_count": 140,
+      "blue_feature_count": 140,
+      "market": {
+        "n": 335,
+        "log_loss": 1.4813287902240113,
+        "brier": 0.7201079578004405,
+        "top1_accuracy": 0.42388059701492536,
+        "winner_accuracy": 0.6925373134328359,
+        "method_accuracy": 0.5552238805970149
+      },
+      "frozen_six_way": {
+        "n": 335,
+        "log_loss": 1.4682413902299887,
+        "brier": 0.7136726175010444,
+        "top1_accuracy": 0.4298507462686567,
+        "winner_accuracy": 0.6895522388059702,
+        "method_accuracy": 0.564179104477612
+      },
+      "hierarchical_v5": {
+        "n": 335,
+        "log_loss": 1.466109500640212,
+        "brier": 0.7126320682193301,
+        "top1_accuracy": 0.417910447761194,
+        "winner_accuracy": 0.6865671641791045,
+        "method_accuracy": 0.5611940298507463
+      },
+      "delta_ll_hier_vs_market": -0.015219289583799256,
+      "delta_ll_hier_vs_frozen_six_way": -0.0021318895897766144
+    }
+  ],
+  "pooled": {
+    "market": {
+      "n": 1595,
+      "log_loss": 1.5453623007689679,
+      "brier": 0.7472085150014998,
+      "top1_accuracy": 0.3686520376175549,
+      "winner_accuracy": 0.6721003134796238,
+      "method_accuracy": 0.5260188087774295
+    },
+    "frozen_six_way": {
+      "n": 1595,
+      "log_loss": 1.5346171969353664,
+      "brier": 0.7437782136359263,
+      "top1_accuracy": 0.3843260188087774,
+      "winner_accuracy": 0.6827586206896552,
+      "method_accuracy": 0.5329153605015674
+    },
+    "hierarchical_v5": {
+      "n": 1595,
+      "log_loss": 1.5348073067876138,
+      "brier": 0.7440622759721714,
+      "top1_accuracy": 0.38181818181818183,
+      "winner_accuracy": 0.6865203761755486,
+      "method_accuracy": 0.5304075235109718
+    },
+    "delta_ll_hier_vs_market": -0.010554993981354066,
+    "delta_ll_hier_vs_frozen_six_way": 0.00019010985224743315
+  }
+}
