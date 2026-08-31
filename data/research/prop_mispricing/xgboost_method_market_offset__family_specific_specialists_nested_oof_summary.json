@@ -1,0 +1,135 @@
+{
+  "experiment": "six_way_method_family_specific_specialists_nested_oof_v1",
+  "period": "nested chronological 2022-2024 OOF",
+  "reads_2025_plus": false,
+  "uses_roi": false,
+  "selection_rule": "each test year selects KO/SUB/DEC configs only from earlier OOF years",
+  "pooled_n": 1154,
+  "pooled_market": {
+    "n": 1154,
+    "log_loss": 1.5376403678228374,
+    "brier": 0.7438696776615844,
+    "top1_accuracy": 0.3778162911611785,
+    "winner_accuracy": 0.6837088388214905,
+    "method_accuracy": 0.5329289428076257
+  },
+  "pooled_nested": {
+    "n": 1154,
+    "log_loss": 1.5328299784954778,
+    "brier": 0.742415200271026,
+    "top1_accuracy": 0.38908145580589254,
+    "winner_accuracy": 0.6941074523396881,
+    "method_accuracy": 0.5398613518197574
+  },
+  "pooled_frozen_sixway_same_rows": {
+    "n": 1154,
+    "log_loss": 1.5272529441015166,
+    "brier": 0.7403824647516163,
+    "top1_accuracy": 0.38908145580589254,
+    "winner_accuracy": 0.6897746967071057,
+    "method_accuracy": 0.5381282495667244
+  },
+  "delta_nested_minus_market_log_loss": -0.004810389327359665,
+  "delta_nested_minus_frozen_sixway_log_loss": 0.005577034393961178,
+  "beats_frozen_sixway_same_rows": false,
+  "yearly": [
+    {
+      "year": 2022,
+      "n": 433,
+      "market": {
+        "n": 433,
+        "log_loss": 1.5406912519128553,
+        "brier": 0.7480878742784635,
+        "top1_accuracy": 0.3625866050808314,
+        "winner_accuracy": 0.6766743648960739,
+        "method_accuracy": 0.5334872979214781
+      },
+      "nested": {
+        "n": 433,
+        "log_loss": 1.5427993498243593,
+        "brier": 0.7514629724433579,
+        "top1_accuracy": 0.371824480369515,
+        "winner_accuracy": 0.6974595842956121,
+        "method_accuracy": 0.5173210161662818
+      }
+    },
+    {
+      "year": 2023,
+      "n": 384,
+      "market": {
+        "n": 384,
+        "log_loss": 1.5792545876819555,
+        "brier": 0.7585459723317663,
+        "top1_accuracy": 0.3567708333333333,
+        "winner_accuracy": 0.6875,
+        "method_accuracy": 0.515625
+      },
+      "nested": {
+        "n": 384,
+        "log_loss": 1.5816285016857872,
+        "brier": 0.7577937205306614,
+        "top1_accuracy": 0.3567708333333333,
+        "winner_accuracy": 0.6927083333333334,
+        "method_accuracy": 0.5208333333333334
+      }
+    },
+    {
+      "year": 2024,
+      "n": 337,
+      "market": {
+        "n": 337,
+        "log_loss": 1.486302405695599,
+        "brier": 0.7217267213160105,
+        "top1_accuracy": 0.42136498516320475,
+        "winner_accuracy": 0.6884272997032641,
+        "method_accuracy": 0.5519287833827893
+      },
+      "nested": {
+        "n": 337,
+        "log_loss": 1.4644164156157016,
+        "brier": 0.7132667221395134,
+        "top1_accuracy": 0.44807121661721067,
+        "winner_accuracy": 0.6913946587537092,
+        "method_accuracy": 0.5905044510385756
+      }
+    }
+  ],
+  "calibration": {
+    "RED_KO_TKO": {
+      "actual_count": 215,
+      "empirical_rate": 0.18630849220103987,
+      "mean_probability": 0.1855630271193478,
+      "brier_component": 0.14106288293407407
+    },
+    "RED_SUB": {
+      "actual_count": 123,
+      "empirical_rate": 0.10658578856152513,
+      "mean_probability": 0.08802815688940724,
+      "brier_component": 0.08375013968299003
+    },
+    "RED_DEC": {
+      "actual_count": 316,
+      "empirical_rate": 0.2738301559792028,
+      "mean_probability": 0.26783847659119053,
+      "brier_component": 0.18505400690463233
+    },
+    "BLUE_KO_TKO": {
+      "actual_count": 158,
+      "empirical_rate": 0.1369150779896014,
+      "mean_probability": 0.15717188275916552,
+      "brier_component": 0.11040553599804914
+    },
+    "BLUE_SUB": {
+      "actual_count": 89,
+      "empirical_rate": 0.07712305025996534,
+      "mean_probability": 0.06929176550534989,
+      "brier_component": 0.06697852418531147
+    },
+    "BLUE_DEC": {
+      "actual_count": 253,
+      "empirical_rate": 0.21923743500866552,
+      "mean_probability": 0.23210669113553903,
+      "brier_component": 0.15516411056596896
+    }
+  }
+}
