@@ -1,4 +1,4 @@
-# trigger 2026-08-31 v7
+# trigger 2026-08-31 v8
 name: Research UFC Paris Hierarchical V5 Methods Live
 
 on:
@@ -35,11 +35,14 @@ jobs:
           from pathlib import Path
           p=Path('pipeline/market/providers/draftkings_public.py')
           s=p.read_text()
-          old='EVENT_SUBCATEGORY_MARKETS_ENDPOINT = "/controldata/league/eventSubcategory/v1/markets"'
-          new='EVENT_SUBCATEGORY_MARKETS_ENDPOINT = "/controldata/event/eventSubcategory/v1/markets"'
-          if old not in s:
-              raise RuntimeError('expected DraftKings league-level endpoint not found')
-          p.write_text(s.replace(old,new))
+          old_endpoint='EVENT_SUBCATEGORY_MARKETS_ENDPOINT = "/controldata/league/eventSubcategory/v1/markets"'
+          new_endpoint='EVENT_SUBCATEGORY_MARKETS_ENDPOINT = "/controldata/event/eventSubcategory/v1/markets"'
+          old_vars='"templateVars": subcategory_id,'
+          new_vars='"templateVars": f"{event_id},{subcategory_id}",'
+          if old_endpoint not in s or old_vars not in s:
+              raise RuntimeError('expected DraftKings event-subcategory builder shape not found')
+          s=s.replace(old_endpoint,new_endpoint).replace(old_vars,new_vars)
+          p.write_text(s)
           PY
           python -m pipeline.research.score_ufc_paris_hierarchical_v5_live
       - uses: actions/upload-artifact@v4
