@@ -1,0 +1,110 @@
+{
+  "experiment": "six_way_method_bet_gate_oof_diagnostic_v1",
+  "development_period": "chronological 2021-2024 OOF only",
+  "source": "data/research/prop_mispricing/xgboost_method_market_offset__oof_predictions.csv",
+  "frozen_oof_fights": 1604,
+  "cold_start_filter": false,
+  "one_bet_per_fight": "hard maximum one; choose largest signed logit residual, then price edge",
+  "selection_policy": "NO ROI OR PROFIT USED. Prefer >=20 bets in every fold and >=120 pooled, then minimize worst-fold absolute calibration gap, pooled absolute calibration gap, bets/card, and finally prefer larger sample.",
+  "grid": {
+    "logit_thresholds": [
+      0.2,
+      0.25,
+      0.3,
+      0.35,
+      0.4,
+      0.5
+    ],
+    "price_edge_thresholds": [
+      0.0,
+      0.01,
+      0.02,
+      0.03,
+      0.05,
+      0.075,
+      0.1
+    ]
+  },
+  "selected_gate": {
+    "logit_threshold": 0.3,
+    "price_edge_threshold": 0.0,
+    "bets": 509,
+    "fight_coverage": 0.31733167082294267,
+    "hit_rate": 0.2770137524557957,
+    "mean_model_p": 0.2979165120214985,
+    "mean_raw_p": 0.27718737575489455,
+    "calibration_gap": -0.02090275956570281,
+    "mean_price_edge": 0.020729136266603894,
+    "mean_signed_logit_residual": 0.3900214663648159,
+    "mean_model_implied_ev_margin": 0.08900462432766756,
+    "cards": 161,
+    "bets_per_card": 3.1614906832298137,
+    "per_fold": [
+      {
+        "logit_threshold": 0.3,
+        "price_edge_threshold": 0.0,
+        "fold": 2021,
+        "bets": 157,
+        "fight_coverage": 0.3488888888888889,
+        "hit_rate": 0.27388535031847133,
+        "mean_model_p": 0.3027224980626896,
+        "mean_raw_p": 0.28099279543991146,
+        "calibration_gap": -0.02883714774421825,
+        "mean_price_edge": 0.0217297026227781,
+        "mean_signed_logit_residual": 0.40312315518130515,
+        "mean_model_implied_ev_margin": 0.08682702271779037,
+        "cards": 43,
+        "bets_per_card": 3.6511627906976742
+      },
+      {
+        "logit_threshold": 0.3,
+        "price_edge_threshold": 0.0,
+        "fold": 2022,
+        "bets": 123,
+        "fight_coverage": 0.2840646651270208,
+        "hit_rate": 0.2601626016260163,
+        "mean_model_p": 0.28680096130545546,
+        "mean_raw_p": 0.26737294006977774,
+        "calibration_gap": -0.026638359679439172,
+        "mean_price_edge": 0.019428021235677672,
+        "mean_signed_logit_residual": 0.39266320296859225,
+        "mean_model_implied_ev_margin": 0.08704011718609007,
+        "cards": 42,
+        "bets_per_card": 2.9285714285714284
+      },
+      {
+        "logit_threshold": 0.3,
+        "price_edge_threshold": 0.0,
+        "fold": 2023,
+        "bets": 129,
+        "fight_coverage": 0.3359375,
+        "hit_rate": 0.26356589147286824,
+        "mean_model_p": 0.2867975242493689,
+        "mean_raw_p": 0.2637044218436748,
+        "calibration_gap": -0.023231632776500644,
+        "mean_price_edge": 0.023093102405693976,
+        "mean_signed_logit_residual": 0.38075642418221783,
+        "mean_model_implied_ev_margin": 0.10553884442518467,
+        "cards": 39,
+        "bets_per_card": 3.3076923076923075
+      },
+      {
+        "logit_threshold": 0.3,
+        "price_edge_threshold": 0.0,
+        "fold": 2024,
+        "bets": 100,
+        "fight_coverage": 0.29673590504451036,
+        "hit_rate": 0.32,
+        "mean_model_p": 0.3183867355436087,
+        "mean_raw_p": 0.3006776332875852,
+        "calibration_gap": 0.0016132644563913168,
+        "mean_price_edge": 0.017709102256023422,
+        "mean_signed_logit_residual": 0.37815438331583423,
+        "mean_model_implied_ev_margin": 0.07351065871351803,
+        "cards": 37,
+        "bets_per_card": 2.7027027027027026
+      }
+    ]
+  },
+  "note": "2025+ data is not read by this diagnostic and cannot influence gate selection."
+}
