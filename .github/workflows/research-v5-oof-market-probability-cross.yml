@@ -1,0 +1,36 @@
+name: Research V5 OOF Market Probability Cross
+
+on:
+  push:
+    paths:
+      - 'data/research/prop_mispricing/v5_oof_market_probability_cross_trigger.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  diagnostic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -q pandas pyarrow numpy
+      - name: Restore frozen V5 historical market parquet
+        run: |
+          git show 7df1b61126be1f4e036b256d1c774c531b8a281f:data/market/historical_market_outcomes.parquet > data/research/prop_mispricing/_v5_frozen_historical_market_outcomes.parquet
+      - name: Run OOF market probability cross diagnostic
+        run: python pipeline/research/v5_oof_market_probability_cross.py
+      - name: Remove temporary frozen parquet
+        run: rm -f data/research/prop_mispricing/_v5_frozen_historical_market_outcomes.parquet
+      - name: Commit outputs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/research/prop_mispricing/v5_oof_2021_2024_market_probability_cross.csv data/research/prop_mispricing/v5_oof_2021_2024_positive_edge_fights.csv
+          git diff --cached --quiet && exit 0
+          git commit -m "Add frozen V5 2021-2024 OOF market probability diagnostic"
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
