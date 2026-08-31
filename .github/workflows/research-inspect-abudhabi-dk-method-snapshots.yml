@@ -17,7 +17,7 @@ jobs:
           python-version: '3.11.16'
       - name: Install parquet packages
         run: pip install pandas==3.0.5 pyarrow==25.0.1
-      - name: Inspect snapshots
+      - name: Inspect snapshots before 13:00 UTC card start
         run: python -m pipeline.research.inspect_abudhabi_dk_method_snapshots
       - uses: actions/upload-artifact@v4
         with:
