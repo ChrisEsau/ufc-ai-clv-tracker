@@ -98,10 +98,11 @@ jobs:
             data/research/prop_mispricing/xgboost_method_market_offset__feature_list.json
             data/research/prop_mispricing/xgboost_method_market_offset__candidate_results.csv
 
-      - name: Commit development outputs safely
+      - name: Commit runner and development outputs safely
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pipeline/research/xgboost_method_market_offset.py
           git add -f \
             data/research/prop_mispricing/xgboost_method_market_offset__audit.json \
             data/research/prop_mispricing/xgboost_method_market_offset__summary.json \
