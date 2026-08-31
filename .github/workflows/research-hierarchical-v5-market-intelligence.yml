@@ -1,5 +1,5 @@
 name: Research Hierarchical V5 Market Intelligence
-# trigger: score all complete fights by normalized fighter pair
+# trigger: grade all scored market-intelligence bets
 
 on:
   workflow_dispatch:
@@ -8,13 +8,13 @@ on:
       - research/ufc-prop-mispricing-xgboost-20260829
     paths:
       - .github/workflows/research-hierarchical-v5-market-intelligence.yml
-      - pipeline/research/run_hierarchical_v5_market_intelligence_v3.py
+      - pipeline/research/grade_hierarchical_v5_market_intelligence.py
 
 permissions:
   contents: write
 
 jobs:
-  score-all-events:
+  grade-all-events:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -24,21 +24,20 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11.16"
-      - name: Install pinned environment
+      - name: Install environment
         run: |
           python -m pip install --upgrade pip==26.2.1
-          pip install pandas==3.0.5 pyarrow==25.0.1 numpy==2.4.6 scikit-learn==1.9.0 scipy==1.17.1 xgboost==3.2.0 joblib==1.5.3 threadpoolctl==3.6.0 python-dateutil==2.9.0.post0
-      - name: Score all complete fights
-        run: python -m pipeline.research.run_hierarchical_v5_market_intelligence_v3
-      - name: Commit outputs
+          pip install pandas==3.0.5 pyarrow==25.0.1 numpy==2.4.6
+      - name: Grade all matched bets
+        run: python -m pipeline.research.grade_hierarchical_v5_market_intelligence
+      - name: Commit grading outputs
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -f \
-            data/research/prop_mispricing/hierarchical_v5_market_intelligence_predictions.csv \
-            data/research/prop_mispricing/hierarchical_v5_market_intelligence_bets.csv \
-            data/research/prop_mispricing/hierarchical_v5_market_intelligence_unscored.csv \
-            data/research/prop_mispricing/hierarchical_v5_market_intelligence_summary.json
+            data/research/prop_mispricing/hierarchical_v5_market_intelligence_graded_bets.csv \
+            data/research/prop_mispricing/hierarchical_v5_market_intelligence_ungraded_bets.csv \
+            data/research/prop_mispricing/hierarchical_v5_market_intelligence_grading_summary.json
           git diff --cached --quiet && exit 0
-          git commit -m "research: add hierarchical V5 all-event market intelligence results"
+          git commit -m "research: add hierarchical V5 market intelligence grading"
           git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
