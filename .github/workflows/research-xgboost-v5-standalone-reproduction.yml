@@ -1,6 +1,11 @@
 name: Research XGBoost V5 Standalone Reproduction
 
 on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - .github/workflows/research-xgboost-v5-standalone-reproduction.yml
   workflow_dispatch:
 
 permissions:
