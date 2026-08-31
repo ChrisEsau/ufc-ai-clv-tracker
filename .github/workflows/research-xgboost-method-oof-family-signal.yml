@@ -1,0 +1,42 @@
+name: Research XGBoost Method OOF Family Signal
+
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths:
+      - 'pipeline/research/xgboost_method_oof_family_signal.py'
+      - '.github/workflows/research-xgboost-method-oof-family-signal.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  method-family-signal:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout research branch
+        uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+          fetch-depth: 0
+      - name: Set up exact Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11.16'
+          check-latest: false
+      - name: Install frozen environment
+        run: |
+          python -m pip install --upgrade pip==26.2.1
+          pip install pandas==3.0.5 pyarrow==25.0.1 numpy==2.4.6 scikit-learn==1.9.0 scipy==1.17.1 xgboost==3.2.0 joblib==1.5.3 threadpoolctl==3.6.0 python-dateutil==2.9.0.post0
+      - name: Run OOF method-family signal diagnostic
+        run: python -m pipeline.research.xgboost_method_oof_family_signal
+      - name: Commit outputs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f data/research/prop_mispricing/xgboost_method_market_offset__2021_2024_oof_method_family_*.csv data/research/prop_mispricing/xgboost_method_market_offset__2021_2024_oof_method_family_*.json
+          git diff --cached --quiet && exit 0
+          git commit -m "research: add OOF method family signal results"
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
