@@ -1,0 +1,135 @@
+name: Research UFC Paris Frozen V5 Market Offset
+
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-ufc-paris-v5-market-offset-v1.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  score:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.16"
+      - name: Install exact V5 packages
+        run: |
+          python -m pip install --upgrade pip==26.2.1
+          pip install pandas==3.0.5 pyarrow==25.0.1 numpy==2.4.6 scikit-learn==1.9.0 scipy==1.17.1 xgboost==3.2.0 joblib==1.5.3 threadpoolctl==3.6.0 python-dateutil==2.9.0.post0
+      - name: Score UFC Paris with exact frozen V5 architecture
+        run: |
+          python - <<'PY'
+          import subprocess, unicodedata
+          from pathlib import Path
+          import numpy as np, pandas as pd, xgboost as xgb
+          from pipeline.features.views.moneyline import build_moneyline_feature_view
+
+          OUT=Path('data/research/prop_mispricing'); OUT.mkdir(parents=True,exist_ok=True)
+          SNAP='7df1b61126be1f4e036b256d1c774c531b8a281f'
+          # Read the exact frozen V5 training snapshot without replacing current live-state files.
+          for repo_path,out_path in [
+              ('data/market/historical_market_outcomes.parquet','/tmp/v5_market.parquet'),
+              ('data/features/moneyline_feature_view.parquet','/tmp/v5_fv.parquet')]:
+              with open(out_path,'wb') as f:
+                  subprocess.run(['git','show',f'{SNAP}:{repo_path}'],stdout=f,check=True)
+
+          market=pd.read_parquet('/tmp/v5_market.parquet').copy()
+          market=market[(market.bookmaker=='legacy_consensus')&(market.result_status=='graded')&market.won.notna()].copy()
+          market['date']=pd.to_datetime(market.date,errors='coerce'); market['won']=market.won.astype(bool).astype(int)
+          market['implied_probability']=pd.to_numeric(market.implied_probability,errors='coerce')
+          market=market.dropna(subset=['date','implied_probability']).copy()
+          ml=market[market.market_key=='moneyline'].copy(); good=ml.groupby('fight_id').size(); ml=ml[ml.fight_id.isin(good[good==2].index)].copy()
+          ml['market_overround']=ml.groupby('fight_id').implied_probability.transform('sum'); ml['fair_market_p']=ml.implied_probability/ml.market_overround
+          red=ml[ml.outcome_side.astype(str).eq('red')].copy()
+          fv=pd.read_parquet('/tmp/v5_fv.parquet').copy()
+
+          selected=[
+            'reach_diff','recent_form_recent_avg_fight_time_diff','age_diff','ewm_sapm_diff','ewm_recent_sapm_diff',
+            'style_ko_finisher_score_diff','ewm_td_acc_diff','recent_finish_rate_diff','chin_risk_diff','recent_form_avg_opponent_elo_diff',
+            'recent_avg_fight_time_diff','aggression_index_diff','age_squared_diff','sapm_diff','ewm_kd_avg_diff',
+            'style_all_round_finisher_score_diff','recent_form_kd_absorbed_avg_diff','ewm_recent_splm_diff','elo_diff','ewm_elo_diff',
+            'ewm_recent_td_avg_diff','days_since_last_fight_diff','td_avg_diff','style_score_spread_diff','ko_dependency_diff',
+            'recent_form_avg_fight_time_diff','wrestling_mismatch_diff','win_pct_diff','recent_form_ko_rate_diff','recent_form_worst_loss_elo_diff',
+            'age_x_career_ko_losses_diff','ewm_str_def_diff','losses_diff','ewm_recent_win_pct_diff','avg_opponent_elo_diff',
+            'ewm_td_avg_diff','avg_fight_time_diff','ewm_days_since_last_fight_diff','pressure_striking_adv_diff','weight_diff',
+            'ctrl_against_per_min_diff','ewm_finish_loss_rate_diff','ewm_win_pct_diff','victory_concentration_index_diff','recent_form_td_acc_diff',
+            'sub_avg_diff','recent_form_best_win_elo_diff','ewm_best_win_elo_diff','style_primary_score_diff','recent_form_recent_finish_rate_diff']
+          feature_cols=selected+['market_overround']
+          df=red.merge(fv[['fight_id']+[c for c in selected if c in fv.columns]],on='fight_id',how='inner').sort_values(['date','fight_id']).copy()
+          missing_train=[c for c in selected if c not in df.columns]
+          if missing_train: raise RuntimeError(f'Frozen V5 training snapshot missing selected features: {missing_train}')
+          Xraw=df[feature_cols].replace([np.inf,-np.inf],np.nan)
+          tr=df.date<='2024-12-31'; valid=[c for c in feature_cols if Xraw.loc[tr,c].notna().any()]
+          med=Xraw.loc[tr,valid].median(numeric_only=True); Xtr=Xraw.loc[tr,valid].fillna(med).fillna(0.0)
+          ytr=df.loc[tr,'won'].astype(int).to_numpy()
+          def clip_p(p): return np.clip(np.asarray(p,float),1e-6,1-1e-6)
+          def logit(p): p=clip_p(p); return np.log(p/(1-p))
+          def sigmoid(z): z=np.clip(np.asarray(z,float),-30,30); return 1/(1+np.exp(-z))
+          mtr=logit(df.loc[tr,'fair_market_p'])
+          params={'max_depth':1,'eta':0.03,'subsample':0.8,'colsample_bytree':0.7,'min_child_weight':10,'lambda':8.0,'alpha':1.0,'objective':'binary:logistic','eval_metric':'logloss','seed':42,'nthread':2}
+          dtr=xgb.DMatrix(Xtr,label=ytr,base_margin=mtr,feature_names=valid)
+          model=xgb.train(params,dtr,num_boost_round=300,verbose_eval=False)
+
+          fights=[
+            ('Dan Hooker','Salahdine Parnasse',375,-500,'UFC'),('Fares Ziam','Axel Sola',-150,125,'UFC'),('Michael Page','Nursulton Ruziboev',-200,165,'UFC'),
+            ('Daniil Donchenko','Punahele Soriano',-215,172,'Oddschecker'),('Morgan Charriere','Felipe Lima',170,-205,'UFC'),('Losene Keita','Muhammad Naimov',-300,240,'UFC'),
+            ('Mario Pinto','Ryan Spann',-260,210,'UFC'),('Kurtis Campbell','Trevor Peek',-340,270,'UFC'),('Oumar Sy','Modestas Bukauskas',-185,155,'UFC'),
+            ('Nathaniel Wood','Mairon Santos',108,-134,'BestFightOdds'),('Michael Aljarouj','Fabia Sintes',-155,130,'UFC'),('Nora Cornolle','Klaudia Sygula',-130,110,'UFC'),
+            ('Matthieu Letho Duclos','Luis Felipe Dias',100,-120,'UFC'),('Delphine Benouaich','Sofia Montenegro',-160,135,'UFC')]
+          def norm(s): return ''.join(ch for ch in unicodedata.normalize('NFKD',str(s)) if not unicodedata.combining(ch)).replace('’',"'").lower().strip()
+          latest=pd.read_parquet('data/features/latest_fighter_state.parquet').copy(); latest['fighter_id']=latest.fighter_id.astype(str)
+          name_col='fighter_name' if 'fighter_name' in latest.columns else None
+          if name_col is None: raise RuntimeError('latest_fighter_state lacks fighter_name')
+          latest['_norm_name']=latest[name_col].map(norm)
+          prep_rows=[]; state_rows=[]; meta={}
+          for i,(a,b,ao_a,ao_b,src) in enumerate(fights,1):
+              fid=f'paris_v5_20260905_{i:02d}'; ids=[]; found=[]
+              for nm in [a,b]:
+                  hit=latest[latest._norm_name.eq(norm(nm))]
+                  if len(hit): rec=hit.iloc[-1].drop(labels=['_norm_name']).to_dict(); fighter_id=str(rec['fighter_id']); ok=True
+                  else:
+                      rec={c:np.nan for c in latest.columns if c!='_norm_name'}; fighter_id=f'missing::{norm(nm)}'; rec['fighter_id']=fighter_id; rec['fighter_name']=nm; ok=False
+                  rec['fight_id']=fid; state_rows.append(rec); ids.append(fighter_id); found.append(ok)
+              prep_rows.append({'fight_id':fid,'r_id':ids[0],'b_id':ids[1],'r_name':a,'b_name':b,'date':pd.Timestamp('2026-09-05'),'title_fight':False,'total_rounds':5 if i==1 else 3})
+              meta[fid]={'r':(a,ao_a,src,found[0]),'b':(b,ao_b,src,found[1])}
+          livefv=build_moneyline_feature_view(prepared_fights_df=pd.DataFrame(prep_rows),fighter_state_history_df=pd.DataFrame(state_rows))
+          missing_live=[c for c in selected if c not in livefv.columns]
+          if missing_live: raise RuntimeError(f'Current live feature builder missing frozen V5 features: {missing_live}')
+
+          rows=[]
+          for _,r in livefv.iterrows():
+              a,ao_a,src_a,found_a=meta[r.fight_id]['r']; b,ao_b,src_b,found_b=meta[r.fight_id]['b']
+              def imp(ao): return 100/(ao+100) if ao>0 else (-ao)/((-ao)+100)
+              ipa,ipb=imp(ao_a),imp(ao_b); over=ipa+ipb; fair_a=ipa/over; fair_b=ipb/over
+              vals={c:r[c] for c in selected}; vals['market_overround']=over
+              Xlive=pd.DataFrame([{c:vals.get(c,np.nan) for c in valid}],columns=valid).replace([np.inf,-np.inf],np.nan).fillna(med).fillna(0.0)
+              mlive=logit([fair_a]); dlive=xgb.DMatrix(Xlive,base_margin=mlive,feature_names=valid)
+              full_margin=model.predict(dlive,output_margin=True); correction=full_margin-mlive; p_a=float(sigmoid(mlive+correction)[0]); p_b=1-p_a
+              cold=not (found_a and found_b)
+              rows += [
+                {'fight_id':r.fight_id,'fighter':a,'opponent':b,'side':'red','american_odds':ao_a,'market_source':src_a,'fighter_state_found':found_a,'fight_cold_start':cold,'fair_market_p':fair_a,'v5_model_p':p_a,'edge':p_a-fair_a,'selected_feature_count':len(selected)+1},
+                {'fight_id':r.fight_id,'fighter':b,'opponent':a,'side':'blue','american_odds':ao_b,'market_source':src_b,'fighter_state_found':found_b,'fight_cold_start':cold,'fair_market_p':fair_b,'v5_model_p':p_b,'edge':p_b-fair_b,'selected_feature_count':len(selected)+1}]
+          out=pd.DataFrame(rows).sort_values(['fight_id','side'])
+          out.to_csv(OUT/'ufc_paris_v5_market_offset_v1.csv',index=False)
+          print(out.to_string(index=False)); print('missing_states=',out.loc[~out.fighter_state_found,'fighter'].tolist())
+          PY
+      - name: Commit result
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f data/research/prop_mispricing/ufc_paris_v5_market_offset_v1.csv
+          git commit -m "research: add UFC Paris frozen V5 moneyline scores" || echo No-changes
+          for i in 1 2 3; do
+            git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
+            git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829 && exit 0
+            sleep 3
+          done
+          exit 1
