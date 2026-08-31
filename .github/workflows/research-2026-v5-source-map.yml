@@ -1,0 +1,68 @@
+name: Research 2026 V5 Source Map
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-2026-v5-source-map.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  map:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas pyarrow
+      - name: Build source map
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import pandas as pd
+
+          ROOT=Path('data/research/prop_mispricing')
+          inv=pd.read_csv(ROOT/'full_2026_event_inventory.csv')
+          cov=pd.read_csv(ROOT/'full_2026_moneyline_file_coverage.csv')
+
+          # Files known not to represent the frozen V5 card prediction surface.
+          bad_tokens=['method','ledger','profit_weighted','roi_meta','market_offset_v3','market_offset_v4','market_offset_v7','market_offset_v8','market_residual']
+          c=cov[~cov.file.str.lower().apply(lambda s:any(t in s for t in bad_tokens))].copy()
+          # Strong preference: exact frozen V5 combined test file for dates it covers; otherwise per-card moneyline files.
+          def pri(f):
+              s=f.lower()
+              if s=='xgboost_v5_exact_reproduction_test_predictions.csv': return 0
+              if 'moneyline_freshrolling' in s: return 1
+              if 'moneyline' in s and ('fresh' in s or 'web' in s or 'full' in s): return 2
+              if 'moneyline' in s: return 3
+              if 'v5' in s: return 4
+              return 9
+          c['priority']=c.file.map(pri)
+          # Only plausible prediction sources.
+          c=c[c.priority<9]
+          rows=[]
+          for r in inv.itertuples(index=False):
+              g=c[(c.date==r.date)&(c.event==r.event)].copy()
+              if len(g):
+                  g['complete']=g.unique_fights.eq(r.fights)
+                  g=g.sort_values(['complete','priority','unique_fights','file'],ascending=[False,True,False,True])
+                  best=g.iloc[0]
+                  candidates=' | '.join(g.file.tolist())
+                  rows.append({'date':r.date,'event':r.event,'fights':r.fights,'best_file':best.file,'covered_fights':int(best.unique_fights),'complete':bool(best.complete),'priority':int(best.priority),'candidate_files':candidates})
+              else:
+                  rows.append({'date':r.date,'event':r.event,'fights':r.fights,'best_file':'','covered_fights':0,'complete':False,'priority':99,'candidate_files':''})
+          out=pd.DataFrame(rows)
+          out.to_csv(ROOT/'full_2026_v5_source_map.csv',index=False)
+          print(out[['date','event','fights','best_file','covered_fights','complete']].to_string(index=False))
+          print('\ncomplete_events=',int(out.complete.sum()),'of',len(out))
+          PY
+      - name: Commit map
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -f data/research/prop_mispricing/full_2026_v5_source_map.csv
+          git commit -m 'research: export full 2026 V5 source map' || echo No-changes
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
