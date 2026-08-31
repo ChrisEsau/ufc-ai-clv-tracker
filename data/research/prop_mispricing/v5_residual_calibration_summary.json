@@ -1,0 +1,149 @@
+{
+  "experiment": "frozen_v5_scalar_logit_residual_calibration_v1",
+  "mapping": "calibrated_logit = market_logit + k * (v5_logit - market_logit)",
+  "selection_objective": "binary log loss only; no ROI used",
+  "k_search_bounds": [
+    0.0,
+    2.0
+  ],
+  "chronological_calibration_protocol": "fit k on prior OOF years, test next year: 2021->2022, 2021-22->2023, 2021-23->2024",
+  "folds": [
+    {
+      "test_year": 2022,
+      "train_n": 469,
+      "test_n": 477,
+      "k": 1.453326825816265,
+      "market_ll": 0.6046745349039253,
+      "v5_ll": 0.6025058140395739,
+      "cal_ll": 0.6034679596925585,
+      "market_brier": 0.20882128815279644,
+      "v5_brier": 0.20774255293680402,
+      "cal_brier": 0.20809430788255084
+    },
+    {
+      "test_year": 2023,
+      "train_n": 946,
+      "test_n": 415,
+      "k": 1.1647025921565302,
+      "market_ll": 0.5850894126885017,
+      "v5_ll": 0.58028432982816,
+      "cal_ll": 0.580076870916275,
+      "market_brier": 0.19978813448309005,
+      "v5_brier": 0.197485126019986,
+      "cal_brier": 0.19734006760255576
+    },
+    {
+      "test_year": 2024,
+      "train_n": 1361,
+      "test_n": 381,
+      "k": 1.2050225965629242,
+      "market_ll": 0.5909368834797224,
+      "v5_ll": 0.5923667393473764,
+      "cal_ll": 0.5934083072188814,
+      "market_brier": 0.20222522792065598,
+      "v5_brier": 0.2033544340946422,
+      "cal_brier": 0.20388734699829583
+    }
+  ],
+  "chronological_2022_2024_metrics": {
+    "market": {
+      "n": 1273,
+      "log_loss": 0.5941781712652591,
+      "brier": 0.20390231115250287
+    },
+    "v5": {
+      "n": 1273,
+      "log_loss": 0.5922270211051953,
+      "brier": 0.20308528235601603
+    },
+    "calibrated": {
+      "n": 1273,
+      "log_loss": 0.59283164434721,
+      "brier": 0.2033292946750889
+    }
+  },
+  "final_k_fit_on_all_2021_2024_oof": 0.9957320324116444,
+  "evaluation_period": "2025-01-01 through 2026-03-28; previously examined in prior diagnostics",
+  "evaluation_metrics": {
+    "market": {
+      "n": 505,
+      "log_loss": 0.5727560248220686,
+      "brier": 0.1950777517000537
+    },
+    "v5": {
+      "n": 505,
+      "log_loss": 0.56601620773198,
+      "brier": 0.19249981635564334
+    },
+    "calibrated": {
+      "n": 505,
+      "log_loss": 0.5660322565186054,
+      "brier": 0.19250511830615935
+    }
+  },
+  "residual_bucket_diagnostics": [
+    {
+      "bucket": "0-1%",
+      "n": 355,
+      "avg_abs_prob_residual": 0.0049643018158663605,
+      "avg_abs_logit_residual": 0.023970987735409715,
+      "avg_realized_directional_gap_vs_market": -0.019604982729614626,
+      "avg_v5_directional_move": 0.0049643018158663605,
+      "direction_accuracy": 0.504225352112676
+    },
+    {
+      "bucket": "1-2%",
+      "n": 377,
+      "avg_abs_prob_residual": 0.01507480436537741,
+      "avg_abs_logit_residual": 0.07518889251067895,
+      "avg_realized_directional_gap_vs_market": 0.019033293225258933,
+      "avg_v5_directional_move": 0.01507480436537741,
+      "direction_accuracy": 0.5543766578249337
+    },
+    {
+      "bucket": "2-3%",
+      "n": 350,
+      "avg_abs_prob_residual": 0.024811364005529246,
+      "avg_abs_logit_residual": 0.12240352741609561,
+      "avg_realized_directional_gap_vs_market": 0.014894418947446206,
+      "avg_v5_directional_move": 0.024811364005529246,
+      "direction_accuracy": 0.5657142857142857
+    },
+    {
+      "bucket": "3-4%",
+      "n": 241,
+      "avg_abs_prob_residual": 0.03474362182066822,
+      "avg_abs_logit_residual": 0.16436956794863955,
+      "avg_realized_directional_gap_vs_market": 0.043263598861569795,
+      "avg_v5_directional_move": 0.03474362182066822,
+      "direction_accuracy": 0.5975103734439834
+    },
+    {
+      "bucket": "4-6%",
+      "n": 269,
+      "avg_abs_prob_residual": 0.048755249333655354,
+      "avg_abs_logit_residual": 0.22497345048964248,
+      "avg_realized_directional_gap_vs_market": 0.041193022496893765,
+      "avg_v5_directional_move": 0.048755249333655354,
+      "direction_accuracy": 0.5985130111524164
+    },
+    {
+      "bucket": "6-8%",
+      "n": 104,
+      "avg_abs_prob_residual": 0.06918850071162884,
+      "avg_abs_logit_residual": 0.3113796679452335,
+      "avg_realized_directional_gap_vs_market": 0.09123231856184406,
+      "avg_v5_directional_move": 0.06918850071162884,
+      "direction_accuracy": 0.6538461538461539
+    },
+    {
+      "bucket": "8%+",
+      "n": 46,
+      "avg_abs_prob_residual": 0.10909371686360667,
+      "avg_abs_logit_residual": 0.499191290336002,
+      "avg_realized_directional_gap_vs_market": 0.08688836913513018,
+      "avg_v5_directional_move": 0.10909371686360667,
+      "direction_accuracy": 0.6086956521739131
+    }
+  ]
+}
