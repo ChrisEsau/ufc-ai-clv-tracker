@@ -1,0 +1,100 @@
+name: Research XGBoost Six-Way Method Market Offset
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - .github/workflows/research-xgboost-method-market-offset.yml
+      - pipeline/research/xgboost_method_market_offset.py
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: research-xgboost-method-market-offset
+  cancel-in-progress: false
+
+jobs:
+  six-way-method-market-offset:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout research branch
+        uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install research dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas pyarrow numpy scikit-learn xgboost
+
+      - name: Verify multiclass base-margin contract
+        run: |
+          python - <<'PY'
+          import numpy as np
+          import xgboost as xgb
+
+          p = np.array([
+              [0.30, 0.10, 0.15, 0.20, 0.05, 0.20],
+              [0.15, 0.05, 0.30, 0.10, 0.10, 0.30],
+          ], dtype=float)
+          d = xgb.DMatrix(np.zeros((2, 1)), label=np.array([0, 5]))
+          d.set_base_margin(np.log(p).reshape(-1))
+          params = {'objective': 'multi:softprob', 'num_class': 6, 'seed': 42}
+          booster = xgb.train(params, d, num_boost_round=0)
+          got = np.asarray(booster.predict(d), dtype=float)
+          if got.shape != p.shape or not np.allclose(got, p, atol=1e-12, rtol=0):
+              raise RuntimeError(f'multiclass base_margin contract failed: version={xgb.__version__} shape={got.shape} max_err={np.max(np.abs(got-p)) if got.shape == p.shape else None}')
+          print(f'xgboost={xgb.__version__} multiclass base_margin verified; max_err={np.max(np.abs(got-p)):.3g}')
+          PY
+
+      - name: Development OOF and candidate freeze
+        run: |
+          python pipeline/research/xgboost_method_market_offset.py --stage develop
+
+      - name: Verify freeze exists before opening sealed test
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('data/research/prop_mispricing/xgboost_method_market_offset__frozen_candidate.json')
+          if not p.exists():
+              raise SystemExit('frozen candidate artifact missing')
+          x = json.loads(p.read_text())
+          assert x['frozen_before_2025_plus_scoring'] is True
+          assert x['development_cutoff'] == '2024-12-31'
+          print('candidate frozen; 2025+ test may now be scored')
+          PY
+
+      - name: Score sealed 2025+ once
+        run: |
+          python pipeline/research/xgboost_method_market_offset.py --stage test
+
+      - name: Upload research artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: xgboost-method-market-offset
+          path: |
+            data/research/prop_mispricing/xgboost_method_market_offset__summary.json
+            data/research/prop_mispricing/xgboost_method_market_offset__frozen_candidate.json
+            data/research/prop_mispricing/xgboost_method_market_offset__oof_predictions.csv
+            data/research/prop_mispricing/xgboost_method_market_offset__test_predictions.csv
+
+      - name: Commit research outputs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add -f \
+            data/research/prop_mispricing/xgboost_method_market_offset__summary.json \
+            data/research/prop_mispricing/xgboost_method_market_offset__frozen_candidate.json \
+            data/research/prop_mispricing/xgboost_method_market_offset__oof_predictions.csv \
+            data/research/prop_mispricing/xgboost_method_market_offset__test_predictions.csv
+          git commit -m "research: add six-way method market-offset results" || echo "No changes to commit"
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
