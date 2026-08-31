@@ -1,0 +1,132 @@
+name: Disable Cold Start in Six-Way Method Research
+
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-method-disable-cold-start.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+          fetch-depth: 0
+      - name: Remove cold-start gating from method experiment
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('pipeline/research/xgboost_method_market_offset.py')
+          s=p.read_text()
+
+          old='''    aux = ["state_fight_id", "r_pre_fights", "b_pre_fights"]
+    missing_aux = [c for c in aux if c not in fv.columns]
+    if missing_aux:
+        raise RuntimeError(f"cold-start columns missing: {missing_aux}")
+    fr = fv[["fight_id"] + aux + features].drop_duplicates("fight_id")
+'''
+          new='''    fr = fv[["fight_id"] + features].drop_duplicates("fight_id")
+'''
+          if old not in s: raise SystemExit('aux cold-start snippet not found')
+          s=s.replace(old,new,1)
+
+          old='''    df["red_prior_ufc_fights"] = pd.to_numeric(df["r_pre_fights"], errors="coerce")
+    df["blue_prior_ufc_fights"] = pd.to_numeric(df["b_pre_fights"], errors="coerce")
+    if df[["red_prior_ufc_fights", "blue_prior_ufc_fights"]].isna().any(axis=None):
+        bad = df.loc[df[["red_prior_ufc_fights", "blue_prior_ufc_fights"]].isna().any(axis=1), "fight_id"].head(20).tolist()
+        raise RuntimeError(f"missing prefight prior-UFC-fight counts: {bad}")
+    df["min_prior_ufc_fights"] = df[["red_prior_ufc_fights", "blue_prior_ufc_fights"]].min(axis=1)
+    df["cold_start"] = df["min_prior_ufc_fights"] < MIN_PRIOR_UFC_FIGHTS
+    df["betting_eligible"] = ~df["cold_start"]
+'''
+          new='''    # Cold-start filtering is intentionally OFF for this six-way method experiment.
+    # Every otherwise-valid complete six-price fight participates in OOF selection.
+    df["cold_start"] = False
+    df["betting_eligible"] = True
+'''
+          if old not in s: raise SystemExit('row cold-start snippet not found')
+          s=s.replace(old,new,1)
+
+          old='''    cols = ["fight_id", "date", "event_name", "red_fighter", "blue_fighter", "target", "betting_eligible", "cold_start", "red_prior_ufc_fights", "blue_prior_ufc_fights", "min_prior_ufc_fights"]'''
+          new='''    cols = ["fight_id", "date", "event_name", "red_fighter", "blue_fighter", "target", "betting_eligible", "cold_start"]'''
+          if old not in s: raise SystemExit('ledger cold-start columns not found')
+          s=s.replace(old,new,1)
+
+          # Audit should report coverage, not eligibility exclusions.
+          start='''    fv = pd.read_parquet(FEATURE_PATH, columns=["fight_id", "r_pre_fights", "b_pre_fights"]).drop_duplicates("fight_id")
+    fv["r_pre_fights"] = pd.to_numeric(fv["r_pre_fights"], errors="coerce")
+    fv["b_pre_fights"] = pd.to_numeric(fv["b_pre_fights"], errors="coerce")
+'''
+          if start not in s: raise SystemExit('audit state prelude not found')
+          s=s.replace(start,'''    fv = pd.read_parquet(FEATURE_PATH, columns=["fight_id"]).drop_duplicates("fight_id")
+''',1)
+          old='''        f = fv[fv["fight_id"].isin(complete_y)].copy()
+        missing_state = f[["r_pre_fights", "b_pre_fights"]].isna().any(axis=1)
+        cold = f[["r_pre_fights", "b_pre_fights"]].min(axis=1) < MIN_PRIOR_UFC_FIGHTS
+        coverage.append({
+            "year": year,
+            "method_market_fights": int(len(ids)),
+            "complete_six_price_fights": int(len(complete_y)),
+            "missing_price_fights": missing_price,
+            "duplicate_price_fights": duplicate_price,
+            "complete_price_fights_with_feature_view": int(len(f)),
+            "missing_prefight_count_fights": int(missing_state.sum()),
+            "cold_start_exclusions": int(cold.sum()),
+            "betting_eligible_complete_fights": int((~missing_state & ~cold).sum()),
+        })
+'''
+          new='''        f = fv[fv["fight_id"].isin(complete_y)].copy()
+        coverage.append({
+            "year": year,
+            "method_market_fights": int(len(ids)),
+            "complete_six_price_fights": int(len(complete_y)),
+            "missing_price_fights": missing_price,
+            "duplicate_price_fights": duplicate_price,
+            "complete_price_fights_with_feature_view": int(len(f)),
+            "cold_start_filter": "OFF",
+            "oof_eligible_complete_fights": int(len(f)),
+        })
+'''
+          if old not in s: raise SystemExit('audit cold-start block not found')
+          s=s.replace(old,new,1)
+
+          replacements={
+            '"cold_start_rule": "whole fight betting-ineligible if either r_pre_fights or b_pre_fights < 2",':'"cold_start_rule": "OFF for this experiment",',
+            '"cold_start_provenance": "moneyline_feature_view prefight counts; direct cross-check against available latest_fighter_state rows was 324/324 exact, 0 mismatches",':'"cold_start_provenance": "not used",',
+            '"development_betting_eligible": int(dev["betting_eligible"].sum()),':'"development_oof_eligible": int(len(dev)),',
+            '"development_cold_start_exclusions": int(dev["cold_start"].sum()),':'"development_cold_start_exclusions": 0,',
+            '"cold_start_rule": "whole fight betting-ineligible if either prefight r_pre_fights or b_pre_fights < 2",':'"cold_start_rule": "OFF for this experiment",',
+            '"development_betting_eligible_count": int(df["betting_eligible"].sum()),':'"development_oof_eligible_count": int(len(df)),',
+            '"development_cold_start_exclusion_count": int(df["cold_start"].sum()),':'"development_cold_start_exclusion_count": 0,',
+            '            val = val_all[val_all["betting_eligible"]].copy()':'            val = val_all.copy()',
+            '"validation_n_betting_eligible": int(len(val)),':'"validation_n_oof_eligible": int(len(val)),',
+            '"cold_start_excluded": int((~val_all["betting_eligible"]).sum()),':'"cold_start_excluded": 0,',
+            '"cold_start_eligibility": "whole fight betting-ineligible if either prefight prior UFC fight count <2",':'"cold_start_eligibility": "OFF; no cold-start exclusion in this experiment",',
+            '"selection_metric": "pooled_2021_2024_betting_eligible_multiclass_log_loss",':'"selection_metric": "pooled_2021_2024_multiclass_log_loss",',
+          }
+          for old,new in replacements.items():
+              if old not in s: raise SystemExit(f'metadata/gating snippet not found: {old}')
+              s=s.replace(old,new)
+          p.write_text(s)
+          PY
+      - name: Patch workflow assertion
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('.github/workflows/research-xgboost-method-market-offset.yml')
+          s=p.read_text()
+          s=s.replace("assert x['selection_metric']=='pooled_2021_2024_betting_eligible_multiclass_log_loss'", "assert x['selection_metric']=='pooled_2021_2024_multiclass_log_loss'")
+          p.write_text(s)
+          PY
+      - name: Commit protocol correction
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pipeline/research/xgboost_method_market_offset.py .github/workflows/research-xgboost-method-market-offset.yml
+          git commit -m "research: keep cold start off in six-way method OOF"
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
