@@ -1,0 +1,2 @@
+triggered_at=2026-08-31T00:29Z
+purpose=v5_latest_snapshot_threshold_sweep
