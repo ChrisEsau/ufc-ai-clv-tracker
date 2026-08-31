@@ -1,0 +1,116 @@
+name: Research V5 Frozen Logit 0.20 Forward Ledger
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-v5-logit020-forward-ledger.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  score:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas pyarrow numpy
+      - name: Apply frozen logit gate
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import numpy as np, pandas as pd, unicodedata
+
+          ROOT=Path('data/research/prop_mispricing')
+          OUT=ROOT/'running_ledgers'; OUT.mkdir(parents=True,exist_ok=True)
+          TH=0.20
+          cards=[
+            ('Freedom 250','2026-06-14','freedom_250_moneyline_v1.csv'),
+            ('Vegas 119','2026-06-20','ufc_vegas_119_moneyline_v1.csv'),
+            ('Baku','2026-06-27','ufc_baku_moneyline_full_v1.csv'),
+            ('UFC 329','2026-07-11','ufc_329_moneyline_v1.csv'),
+            ('Oklahoma City','2026-07-18','ufc_okc_moneyline_v1.csv'),
+            ('Abu Dhabi','2026-07-25','ufc_abu_dhabi_moneyline_web_v1.csv'),
+            ('Belgrade','2026-08-01','ufc_belgrade_moneyline_web_v1.csv'),
+          ]
+          def norm(s):
+            return ' '.join(''.join(ch for ch in unicodedata.normalize('NFKD',str(s)) if not unicodedata.combining(ch)).lower().replace('’',"'").replace('-',' ').split())
+          def logit(p):
+            p=np.clip(np.asarray(p,dtype=float),1e-12,1-1e-12)
+            return np.log(p/(1-p))
+          def payout(o):
+            o=float(o); return o/100.0 if o>0 else 100.0/abs(o)
+
+          master=pd.read_parquet('data/master/ufc_master.parquet').copy()
+          master['date']=pd.to_datetime(master['date']).dt.strftime('%Y-%m-%d')
+          rows=[]; card_summary=[]
+          for card,date,path in cards:
+            p=ROOT/path
+            if not p.exists():
+              raise RuntimeError(f'Missing full ML file: {p}')
+            d=pd.read_csv(p).copy()
+            if 'outcome_label' in d.columns: d=d.rename(columns={'outcome_label':'fighter','outcome_side':'side'})
+            if 'american_odds' not in d.columns and 'odds' in d.columns: d=d.rename(columns={'odds':'american_odds'})
+            if 'fair_market_p' not in d.columns and 'market_fair_p' in d.columns: d=d.rename(columns={'market_fair_p':'fair_market_p'})
+            need={'fight_id','fighter','american_odds','fair_market_p','model_p'}
+            miss=need-set(d.columns)
+            if miss: raise RuntimeError(f'{path} missing columns {sorted(miss)}; got {list(d.columns)}')
+            d['fair_market_p']=pd.to_numeric(d.fair_market_p,errors='raise')
+            d['model_p']=pd.to_numeric(d.model_p,errors='raise')
+            d['logit_residual']=logit(d.model_p)-logit(d.fair_market_p)
+            # Bet only the side V5 prices ABOVE market, when the positive residual reaches the frozen threshold.
+            q=d[d.logit_residual>=TH].copy()
+            # Guardrail: at most one bet per fight.
+            if q.fight_id.duplicated().any():
+              raise RuntimeError(f'Multiple qualifying sides in {card}: '+str(q[q.fight_id.duplicated(False)][['fight_id','fighter','logit_residual']].to_dict('records')))
+            m=master[master.date.eq(date)].copy()
+            mmap={str(r.fight_id):r for _,r in m.iterrows()} if 'fight_id' in m.columns else {}
+            cp=0.0; cw=0
+            for _,r in q.iterrows():
+              fid=str(r.fight_id)
+              if fid not in mmap: raise RuntimeError(f'{card}: no master result for fight_id {fid}')
+              mr=mmap[fid]
+              w=str(mr.winner)
+              wl=norm(w)
+              if wl in {'red','r'}: actual=str(mr.r_name)
+              elif wl in {'blue','b'}: actual=str(mr.b_name)
+              else: actual=w
+              won=int(norm(r.fighter)==norm(actual))
+              pnl=payout(r.american_odds) if won else -1.0
+              cp+=pnl; cw+=won
+              rows.append({'card':card,'date':date,'fight_id':fid,'fighter':r.fighter,'american_odds':float(r.american_odds),'fair_market_p':float(r.fair_market_p),'model_p':float(r.model_p),'prob_edge':float(r.model_p-r.fair_market_p),'logit_residual':float(r.logit_residual),'won':won,'pnl_units':pnl})
+            card_summary.append({'card':card,'date':date,'bets':len(q),'wins':cw,'losses':len(q)-cw,'profit_units':cp,'roi':cp/len(q) if len(q) else np.nan})
+
+          bets=pd.DataFrame(rows).sort_values(['date','fight_id']) if rows else pd.DataFrame(columns=['card','date','fight_id','fighter','american_odds','fair_market_p','model_p','prob_edge','logit_residual','won','pnl_units'])
+          cardsdf=pd.DataFrame(card_summary)
+          if len(bets):
+            bets['cum_profit_units']=bets.pnl_units.cumsum()
+            curve=bets.cum_profit_units.to_numpy(float)
+            peaks=np.maximum.accumulate(np.r_[0.0,curve])
+            dd=peaks[1:]-curve
+            max_dd=float(dd.max()) if len(dd) else 0.0
+          else: max_dd=0.0
+          summary=pd.DataFrame([{
+            'rule':'positive_logit_residual_ge_0.20','cold_start_filter':False,'flat_stake_units':1.0,
+            'start_date':cards[0][1],'end_date':cards[-1][1],'cards':len(cards),'bets':len(bets),
+            'wins':int(bets.won.sum()) if len(bets) else 0,'losses':int(len(bets)-bets.won.sum()) if len(bets) else 0,
+            'profit_units':float(bets.pnl_units.sum()) if len(bets) else 0.0,
+            'roi':float(bets.pnl_units.sum()/len(bets)) if len(bets) else np.nan,'max_drawdown_units':max_dd
+          }])
+          bets.to_csv(OUT/'v5_logit020_forward_bets.csv',index=False)
+          cardsdf.to_csv(OUT/'v5_logit020_forward_by_card.csv',index=False)
+          summary.to_csv(OUT/'v5_logit020_forward_summary.csv',index=False)
+          print('\nSUMMARY\n',summary.to_string(index=False))
+          print('\nBY CARD\n',cardsdf.to_string(index=False))
+          print('\nBETS\n',bets.to_string(index=False))
+          PY
+      - name: Commit outputs
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -f data/research/prop_mispricing/running_ledgers/v5_logit020_forward_*.csv
+          git commit -m 'research: score frozen V5 logit 0.20 forward ledger' || echo No-changes
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
