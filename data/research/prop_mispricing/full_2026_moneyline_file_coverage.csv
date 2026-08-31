@@ -1,0 +1,152 @@
+date,event,file,rows_2026_event,unique_fights,total_rows_file
+2026-01-24,UFC 324: Gaethje vs. Pimblett,v5_frozen_logit020_combined_ledger.csv,3,3,120
+2026-01-24,UFC 324: Gaethje vs. Pimblett,v5_frozen_logit020_later_ledger.csv,3,3,120
+2026-01-24,UFC 324: Gaethje vs. Pimblett,ufc_324_method_freshrolling_v1.csv,66,11,66
+2026-01-24,UFC 324: Gaethje vs. Pimblett,ufc_324_moneyline_freshrolling_v1.csv,22,11,22
+2026-01-24,UFC 324: Gaethje vs. Pimblett,v5_historical_2025_to_20260328_positive_edge_fights.csv,11,11,505
+2026-01-24,UFC 324: Gaethje vs. Pimblett,v5_profit_weighted_classifier_2025_to_20260328.csv,11,11,505
+2026-01-24,UFC 324: Gaethje vs. Pimblett,v5_roi_meta_xgboost_2025_to_20260328_predictions.csv,11,11,505
+2026-01-24,UFC 324: Gaethje vs. Pimblett,xgboost_market_offset_v3_test_predictions.csv,22,11,1010
+2026-01-24,UFC 324: Gaethje vs. Pimblett,xgboost_market_offset_v4_capacity_test_predictions.csv,22,11,1010
+2026-01-24,UFC 324: Gaethje vs. Pimblett,xgboost_market_offset_v5_feature_reduction_test_predictions.csv,22,11,1010
+2026-01-24,UFC 324: Gaethje vs. Pimblett,xgboost_market_offset_v7_trajectory_reduction_test_predictions.csv,22,11,1010
+2026-01-24,UFC 324: Gaethje vs. Pimblett,xgboost_market_offset_v8_context_test_predictions.csv,22,11,1010
+2026-01-24,UFC 324: Gaethje vs. Pimblett,xgboost_market_residual_v1_test_predictions.csv,66,11,2966
+2026-01-24,UFC 324: Gaethje vs. Pimblett,xgboost_market_residual_v2_diffs_test_predictions.csv,22,11,1010
+2026-01-24,UFC 324: Gaethje vs. Pimblett,xgboost_v5_exact_reproduction_test_predictions.csv,22,11,1010
+2026-01-31,UFC 325: Volkanovski vs. Lopes 2,v5_frozen_logit020_combined_ledger.csv,4,4,120
+2026-01-31,UFC 325: Volkanovski vs. Lopes 2,v5_frozen_logit020_later_ledger.csv,4,4,120
+2026-01-31,UFC 325: Volkanovski vs. Lopes 2,ufc_325_method_freshrolling_v1.csv,78,13,78
+2026-01-31,UFC 325: Volkanovski vs. Lopes 2,ufc_325_moneyline_freshrolling_v1.csv,26,13,26
+2026-01-31,UFC 325: Volkanovski vs. Lopes 2,v5_historical_2025_to_20260328_positive_edge_fights.csv,13,13,505
+2026-01-31,UFC 325: Volkanovski vs. Lopes 2,v5_profit_weighted_classifier_2025_to_20260328.csv,13,13,505
+2026-01-31,UFC 325: Volkanovski vs. Lopes 2,v5_roi_meta_xgboost_2025_to_20260328_predictions.csv,13,13,505
+2026-01-31,UFC 325: Volkanovski vs. Lopes 2,xgboost_market_offset_v3_test_predictions.csv,26,13,1010
+2026-01-31,UFC 325: Volkanovski vs. Lopes 2,xgboost_market_offset_v4_capacity_test_predictions.csv,26,13,1010
+2026-01-31,UFC 325: Volkanovski vs. Lopes 2,xgboost_market_offset_v5_feature_reduction_test_predictions.csv,26,13,1010
+2026-01-31,UFC 325: Volkanovski vs. Lopes 2,xgboost_market_offset_v7_trajectory_reduction_test_predictions.csv,26,13,1010
+2026-01-31,UFC 325: Volkanovski vs. Lopes 2,xgboost_market_offset_v8_context_test_predictions.csv,26,13,1010
+2026-01-31,UFC 325: Volkanovski vs. Lopes 2,xgboost_market_residual_v1_test_predictions.csv,78,13,2966
+2026-01-31,UFC 325: Volkanovski vs. Lopes 2,xgboost_market_residual_v2_diffs_test_predictions.csv,26,13,1010
+2026-01-31,UFC 325: Volkanovski vs. Lopes 2,xgboost_v5_exact_reproduction_test_predictions.csv,26,13,1010
+2026-02-07,UFC Fight Night: Bautista vs. Oliveira,v5_frozen_logit020_combined_ledger.csv,3,3,120
+2026-02-07,UFC Fight Night: Bautista vs. Oliveira,v5_frozen_logit020_later_ledger.csv,3,3,120
+2026-02-07,UFC Fight Night: Bautista vs. Oliveira,ufc_vegas_113_method_freshrolling_v1.csv,54,9,54
+2026-02-07,UFC Fight Night: Bautista vs. Oliveira,ufc_vegas_113_moneyline_freshrolling_v1.csv,18,9,18
+2026-02-07,UFC Fight Night: Bautista vs. Oliveira,v5_historical_2025_to_20260328_positive_edge_fights.csv,13,13,505
+2026-02-07,UFC Fight Night: Bautista vs. Oliveira,v5_profit_weighted_classifier_2025_to_20260328.csv,13,13,505
+2026-02-07,UFC Fight Night: Bautista vs. Oliveira,v5_roi_meta_xgboost_2025_to_20260328_predictions.csv,13,13,505
+2026-02-07,UFC Fight Night: Bautista vs. Oliveira,xgboost_market_offset_v3_test_predictions.csv,26,13,1010
+2026-02-07,UFC Fight Night: Bautista vs. Oliveira,xgboost_market_offset_v4_capacity_test_predictions.csv,26,13,1010
+2026-02-07,UFC Fight Night: Bautista vs. Oliveira,xgboost_market_offset_v5_feature_reduction_test_predictions.csv,26,13,1010
+2026-02-07,UFC Fight Night: Bautista vs. Oliveira,xgboost_market_offset_v7_trajectory_reduction_test_predictions.csv,26,13,1010
+2026-02-07,UFC Fight Night: Bautista vs. Oliveira,xgboost_market_offset_v8_context_test_predictions.csv,26,13,1010
+2026-02-07,UFC Fight Night: Bautista vs. Oliveira,xgboost_market_residual_v1_test_predictions.csv,78,13,2966
+2026-02-07,UFC Fight Night: Bautista vs. Oliveira,xgboost_market_residual_v2_diffs_test_predictions.csv,26,13,1010
+2026-02-07,UFC Fight Night: Bautista vs. Oliveira,xgboost_v5_exact_reproduction_test_predictions.csv,26,13,1010
+2026-02-21,UFC Fight Night: Strickland vs. Hernandez,v5_frozen_logit020_combined_ledger.csv,1,1,120
+2026-02-21,UFC Fight Night: Strickland vs. Hernandez,v5_frozen_logit020_later_ledger.csv,1,1,120
+2026-02-21,UFC Fight Night: Strickland vs. Hernandez,ufc_houston_method_freshrolling_v1.csv,78,13,78
+2026-02-21,UFC Fight Night: Strickland vs. Hernandez,ufc_houston_moneyline_freshrolling_v1.csv,26,13,26
+2026-02-21,UFC Fight Night: Strickland vs. Hernandez,v5_historical_2025_to_20260328_positive_edge_fights.csv,13,13,505
+2026-02-21,UFC Fight Night: Strickland vs. Hernandez,v5_profit_weighted_classifier_2025_to_20260328.csv,13,13,505
+2026-02-21,UFC Fight Night: Strickland vs. Hernandez,v5_roi_meta_xgboost_2025_to_20260328_predictions.csv,13,13,505
+2026-02-21,UFC Fight Night: Strickland vs. Hernandez,xgboost_market_offset_v3_test_predictions.csv,26,13,1010
+2026-02-21,UFC Fight Night: Strickland vs. Hernandez,xgboost_market_offset_v4_capacity_test_predictions.csv,26,13,1010
+2026-02-21,UFC Fight Night: Strickland vs. Hernandez,xgboost_market_offset_v5_feature_reduction_test_predictions.csv,26,13,1010
+2026-02-21,UFC Fight Night: Strickland vs. Hernandez,xgboost_market_offset_v7_trajectory_reduction_test_predictions.csv,26,13,1010
+2026-02-21,UFC Fight Night: Strickland vs. Hernandez,xgboost_market_offset_v8_context_test_predictions.csv,26,13,1010
+2026-02-21,UFC Fight Night: Strickland vs. Hernandez,xgboost_market_residual_v1_test_predictions.csv,78,13,2966
+2026-02-21,UFC Fight Night: Strickland vs. Hernandez,xgboost_market_residual_v2_diffs_test_predictions.csv,26,13,1010
+2026-02-21,UFC Fight Night: Strickland vs. Hernandez,xgboost_v5_exact_reproduction_test_predictions.csv,26,13,1010
+2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,v5_frozen_logit020_combined_ledger.csv,4,4,120
+2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,v5_frozen_logit020_later_ledger.csv,4,4,120
+2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,ufc_mexico_method_freshrolling_v1.csv,78,13,78
+2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,ufc_mexico_moneyline_freshrolling_v1.csv,26,13,26
+2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,v5_historical_2025_to_20260328_positive_edge_fights.csv,13,13,505
+2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,v5_profit_weighted_classifier_2025_to_20260328.csv,13,13,505
+2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,v5_roi_meta_xgboost_2025_to_20260328_predictions.csv,13,13,505
+2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,xgboost_market_offset_v3_test_predictions.csv,26,13,1010
+2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,xgboost_market_offset_v4_capacity_test_predictions.csv,26,13,1010
+2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,xgboost_market_offset_v5_feature_reduction_test_predictions.csv,26,13,1010
+2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,xgboost_market_offset_v7_trajectory_reduction_test_predictions.csv,26,13,1010
+2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,xgboost_market_offset_v8_context_test_predictions.csv,26,13,1010
+2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,xgboost_market_residual_v1_test_predictions.csv,78,13,2966
+2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,xgboost_market_residual_v2_diffs_test_predictions.csv,26,13,1010
+2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,xgboost_v5_exact_reproduction_test_predictions.csv,26,13,1010
+2026-03-07,UFC 326: Holloway vs. Oliveira 2,v5_frozen_logit020_combined_ledger.csv,4,4,120
+2026-03-07,UFC 326: Holloway vs. Oliveira 2,v5_frozen_logit020_later_ledger.csv,4,4,120
+2026-03-07,UFC 326: Holloway vs. Oliveira 2,ufc_326_method_freshrolling_v1.csv,54,9,54
+2026-03-07,UFC 326: Holloway vs. Oliveira 2,ufc_326_moneyline_freshrolling_v1.csv,18,9,18
+2026-03-07,UFC 326: Holloway vs. Oliveira 2,v5_historical_2025_to_20260328_positive_edge_fights.csv,11,11,505
+2026-03-07,UFC 326: Holloway vs. Oliveira 2,v5_profit_weighted_classifier_2025_to_20260328.csv,11,11,505
+2026-03-07,UFC 326: Holloway vs. Oliveira 2,v5_roi_meta_xgboost_2025_to_20260328_predictions.csv,11,11,505
+2026-03-07,UFC 326: Holloway vs. Oliveira 2,xgboost_market_offset_v3_test_predictions.csv,22,11,1010
+2026-03-07,UFC 326: Holloway vs. Oliveira 2,xgboost_market_offset_v4_capacity_test_predictions.csv,22,11,1010
+2026-03-07,UFC 326: Holloway vs. Oliveira 2,xgboost_market_offset_v5_feature_reduction_test_predictions.csv,22,11,1010
+2026-03-07,UFC 326: Holloway vs. Oliveira 2,xgboost_market_offset_v7_trajectory_reduction_test_predictions.csv,22,11,1010
+2026-03-07,UFC 326: Holloway vs. Oliveira 2,xgboost_market_offset_v8_context_test_predictions.csv,22,11,1010
+2026-03-07,UFC 326: Holloway vs. Oliveira 2,xgboost_market_residual_v1_test_predictions.csv,66,11,2966
+2026-03-07,UFC 326: Holloway vs. Oliveira 2,xgboost_market_residual_v2_diffs_test_predictions.csv,22,11,1010
+2026-03-07,UFC 326: Holloway vs. Oliveira 2,xgboost_v5_exact_reproduction_test_predictions.csv,22,11,1010
+2026-03-14,UFC Fight Night: Emmett vs. Vallejos,v5_frozen_logit020_combined_ledger.csv,2,2,120
+2026-03-14,UFC Fight Night: Emmett vs. Vallejos,v5_frozen_logit020_later_ledger.csv,2,2,120
+2026-03-14,UFC Fight Night: Emmett vs. Vallejos,ufc_vegas_114_method_freshrolling_v1.csv,78,13,78
+2026-03-14,UFC Fight Night: Emmett vs. Vallejos,ufc_vegas_114_moneyline_freshrolling_v1.csv,26,13,26
+2026-03-14,UFC Fight Night: Emmett vs. Vallejos,v5_historical_2025_to_20260328_positive_edge_fights.csv,14,14,505
+2026-03-14,UFC Fight Night: Emmett vs. Vallejos,v5_profit_weighted_classifier_2025_to_20260328.csv,14,14,505
+2026-03-14,UFC Fight Night: Emmett vs. Vallejos,v5_roi_meta_xgboost_2025_to_20260328_predictions.csv,14,14,505
+2026-03-14,UFC Fight Night: Emmett vs. Vallejos,xgboost_market_offset_v3_test_predictions.csv,28,14,1010
+2026-03-14,UFC Fight Night: Emmett vs. Vallejos,xgboost_market_offset_v4_capacity_test_predictions.csv,28,14,1010
+2026-03-14,UFC Fight Night: Emmett vs. Vallejos,xgboost_market_offset_v5_feature_reduction_test_predictions.csv,28,14,1010
+2026-03-14,UFC Fight Night: Emmett vs. Vallejos,xgboost_market_offset_v7_trajectory_reduction_test_predictions.csv,28,14,1010
+2026-03-14,UFC Fight Night: Emmett vs. Vallejos,xgboost_market_offset_v8_context_test_predictions.csv,28,14,1010
+2026-03-14,UFC Fight Night: Emmett vs. Vallejos,xgboost_market_residual_v1_test_predictions.csv,84,14,2966
+2026-03-14,UFC Fight Night: Emmett vs. Vallejos,xgboost_market_residual_v2_diffs_test_predictions.csv,28,14,1010
+2026-03-14,UFC Fight Night: Emmett vs. Vallejos,xgboost_v5_exact_reproduction_test_predictions.csv,28,14,1010
+2026-03-21,UFC Fight Night: Evloev vs. Murphy,v5_frozen_logit020_combined_ledger.csv,5,5,120
+2026-03-21,UFC Fight Night: Evloev vs. Murphy,v5_frozen_logit020_later_ledger.csv,5,5,120
+2026-03-21,UFC Fight Night: Evloev vs. Murphy,ufc_london_2026_method_freshrolling_v1.csv,78,13,78
+2026-03-21,UFC Fight Night: Evloev vs. Murphy,ufc_london_2026_moneyline_freshrolling_v1.csv,26,13,26
+2026-03-21,UFC Fight Night: Evloev vs. Murphy,v5_historical_2025_to_20260328_positive_edge_fights.csv,13,13,505
+2026-03-21,UFC Fight Night: Evloev vs. Murphy,v5_profit_weighted_classifier_2025_to_20260328.csv,13,13,505
+2026-03-21,UFC Fight Night: Evloev vs. Murphy,v5_roi_meta_xgboost_2025_to_20260328_predictions.csv,13,13,505
+2026-03-21,UFC Fight Night: Evloev vs. Murphy,xgboost_market_offset_v3_test_predictions.csv,26,13,1010
+2026-03-21,UFC Fight Night: Evloev vs. Murphy,xgboost_market_offset_v4_capacity_test_predictions.csv,26,13,1010
+2026-03-21,UFC Fight Night: Evloev vs. Murphy,xgboost_market_offset_v5_feature_reduction_test_predictions.csv,26,13,1010
+2026-03-21,UFC Fight Night: Evloev vs. Murphy,xgboost_market_offset_v7_trajectory_reduction_test_predictions.csv,26,13,1010
+2026-03-21,UFC Fight Night: Evloev vs. Murphy,xgboost_market_offset_v8_context_test_predictions.csv,26,13,1010
+2026-03-21,UFC Fight Night: Evloev vs. Murphy,xgboost_market_residual_v1_test_predictions.csv,78,13,2966
+2026-03-21,UFC Fight Night: Evloev vs. Murphy,xgboost_market_residual_v2_diffs_test_predictions.csv,26,13,1010
+2026-03-21,UFC Fight Night: Evloev vs. Murphy,xgboost_v5_exact_reproduction_test_predictions.csv,26,13,1010
+2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,ufc_seattle_2026_method_freshrolling_v1.csv,60,10,60
+2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,ufc_seattle_2026_moneyline_freshrolling_v1.csv,20,10,20
+2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,v5_historical_2025_to_20260328_positive_edge_fights.csv,12,12,505
+2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,v5_profit_weighted_classifier_2025_to_20260328.csv,12,12,505
+2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,v5_roi_meta_xgboost_2025_to_20260328_predictions.csv,12,12,505
+2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,xgboost_market_offset_v3_test_predictions.csv,24,12,1010
+2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,xgboost_market_offset_v4_capacity_test_predictions.csv,24,12,1010
+2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,xgboost_market_offset_v5_feature_reduction_test_predictions.csv,24,12,1010
+2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,xgboost_market_offset_v7_trajectory_reduction_test_predictions.csv,24,12,1010
+2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,xgboost_market_offset_v8_context_test_predictions.csv,24,12,1010
+2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,xgboost_market_residual_v1_test_predictions.csv,72,12,2966
+2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,xgboost_market_residual_v2_diffs_test_predictions.csv,24,12,1010
+2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,xgboost_v5_exact_reproduction_test_predictions.csv,24,12,1010
+2026-04-04,UFC Fight Night: Moicano vs. Duncan,ufc_vegas_115_2026_method_freshrolling_v1.csv,72,12,72
+2026-04-04,UFC Fight Night: Moicano vs. Duncan,ufc_vegas_115_2026_moneyline_freshrolling_v1.csv,24,12,24
+2026-06-14,UFC Freedom 250,freedom_250_method_v1.csv,12,2,12
+2026-06-14,UFC Freedom 250,freedom_250_method_rest_v1.csv,30,5,30
+2026-06-14,UFC Freedom 250,freedom_250_moneyline_v1.csv,14,7,14
+2026-06-20,UFC Fight Night: Kape vs. Horiguchi,ufc_vegas_119_method_v1.csv,30,5,30
+2026-06-20,UFC Fight Night: Kape vs. Horiguchi,ufc_vegas_119_moneyline_v1.csv,22,11,22
+2026-06-27,UFC Fight Night: Fiziev vs. Torres,ufc_baku_method_v1.csv,18,3,18
+2026-06-27,UFC Fight Night: Fiziev vs. Torres,ufc_baku_moneyline_v1.csv,6,3,6
+2026-06-27,UFC Fight Night: Fiziev vs. Torres,ufc_baku_moneyline_full_v1.csv,26,13,26
+2026-07-11,UFC 329: McGregor vs. Holloway 2,ufc_329_method_v1.csv,30,5,30
+2026-07-11,UFC 329: McGregor vs. Holloway 2,ufc_329_moneyline_v1.csv,26,13,26
+2026-07-18,UFC Fight Night: Du Plessis vs. Usman,ufc_okc_method_full_v1.csv,72,12,72
+2026-07-18,UFC Fight Night: Du Plessis vs. Usman,ufc_okc_moneyline_v1.csv,24,12,24
+2026-07-25,UFC Fight Night: Ankalaev vs. Guskov,ufc_abu_dhabi_method_web_v1.csv,72,12,72
+2026-07-25,UFC Fight Night: Ankalaev vs. Guskov,ufc_abu_dhabi_moneyline_web_v1.csv,24,12,24
+2026-08-01,UFC Fight Night: Medic vs. Rodriguez,ufc_belgrade_method_web_v1.csv,84,14,84
+2026-08-01,UFC Fight Night: Medic vs. Rodriguez,ufc_belgrade_moneyline_web_v1.csv,28,14,28
