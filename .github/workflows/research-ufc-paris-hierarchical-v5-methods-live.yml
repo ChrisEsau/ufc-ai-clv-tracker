@@ -1,4 +1,4 @@
-# trigger 2026-08-31 v3
+# trigger 2026-08-31 v5
 name: Research UFC Paris Hierarchical V5 Methods Live
 
 on:
@@ -30,7 +30,7 @@ jobs:
           python -m pip install --upgrade pip==26.2.1
           pip install pandas==3.0.5 pyarrow==25.0.1 numpy==2.4.6 scikit-learn==1.9.0 scipy==1.17.1 xgboost==3.2.0 joblib==1.5.3 threadpoolctl==3.6.0 python-dateutil==2.9.0.post0 requests==2.32.5
       - name: Run live Paris hierarchical V5 method scorer
-        run: python pipeline/research/score_ufc_paris_hierarchical_v5_live.py
+        run: python -m pipeline.research.score_ufc_paris_hierarchical_v5_live
       - uses: actions/upload-artifact@v4
         with:
           name: ufc-paris-hierarchical-v5-methods-20260831
