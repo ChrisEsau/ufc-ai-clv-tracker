@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import subprocess
 import pandas as pd
 
 from pipeline.market.providers.draftkings_public import DraftKingsSnapshot, flatten_market_diagnostics
@@ -10,36 +11,59 @@ OUT=Path('data/research/prop_mispricing')
 OUT.mkdir(parents=True,exist_ok=True)
 START=pd.Timestamp('2026-07-01',tz='UTC')
 END=pd.Timestamp('2026-08-31 23:59:59',tz='UTC')
+
+
+def _historical_text(path: str) -> str | None:
+    p=Path(path)
+    if p.exists():
+        return p.read_text()
+    # Files were committed by the DK discovery workflows and later deleted from branch tip.
+    # Resolve the historical blob directly from the full Git object database.
+    try:
+        out=subprocess.check_output(['git','rev-list','--all','--objects','--',path],text=True,stderr=subprocess.DEVNULL)
+        for line in out.splitlines():
+            parts=line.split(' ',1)
+            if len(parts)==2 and parts[1]==path:
+                try:
+                    return subprocess.check_output(['git','cat-file','-p',parts[0]],text=True)
+                except Exception:
+                    continue
+    except Exception:
+        pass
+    return None
+
 idx=pd.read_parquet(ROOT/'draftkings_raw_index.parquet').copy()
 idx['_ts']=pd.to_datetime(idx['snapshot_timestamp'],errors='coerce',utc=True)
 idx=idx[(idx['_ts']>=START)&(idx['_ts']<=END)&idx['status'].astype(str).eq('success')&idx['raw_payload_path'].notna()].copy()
 frames=[]
 missing=[]
+recovered=0
 for _,r in idx.iterrows():
-    p=Path(str(r['raw_payload_path']))
-    if not p.exists():
-        missing.append(str(p)); continue
+    path=str(r['raw_payload_path'])
     try:
-        payload=json.loads(p.read_text())
-        snap=DraftKingsSnapshot(str(r['snapshot_run_id']),str(r['snapshot_timestamp']),p)
+        txt=_historical_text(path)
+        if txt is None:
+            missing.append(path); continue
+        if not Path(path).exists(): recovered += 1
+        payload=json.loads(txt)
+        snap=DraftKingsSnapshot(str(r['snapshot_run_id']),str(r['snapshot_timestamp']),Path(path))
         reg={'subcategory_id':r.get('provider_subcategory_id'),'name':r.get('provider_subcategory_name'),'family':r.get('registry_family')}
         d=flatten_market_diagnostics(payload,snapshot=snap,request_url=r.get('request_url'),registry_entry=reg)
         if not d.empty: frames.append(d)
     except Exception as e:
-        missing.append(f'{p}: {e}')
+        missing.append(f'{path}: {e}')
 diag=pd.concat(frames,ignore_index=True) if frames else pd.DataFrame()
 can=normalize_draftkings_diagnostic_rows(diag) if not diag.empty else pd.DataFrame()
 if not can.empty:
     can['event_start_dt']=pd.to_datetime(can['event_start_timestamp'],errors='coerce',utc=True)
     can=can[(can['event_start_dt']>=START)&(can['event_start_dt']<=END)].copy()
 can.to_csv(OUT/'draftkings_jul_aug_2026_replayed_catalog.csv',index=False)
-summary={'index_rows':int(len(idx)),'missing_payloads':missing[:50],'replayed_rows':int(len(can))}
+summary={'index_rows':int(len(idx)),'historical_blobs_recovered':int(recovered),'missing_count':len(missing),'missing_payloads':missing[:50],'replayed_rows':int(len(can))}
 if not can.empty:
     summary['events']=can.groupby(['provider_event_id','event_name','event_start_timestamp'],dropna=False).agg(rows=('provider_selection_id','size'),families=('market_family',lambda s: sorted(set(map(str,s.dropna()))))).reset_index().astype(str).to_dict(orient='records')
     summary['market_family_counts']=can['market_family'].value_counts(dropna=False).astype(int).to_dict()
     summary['market_key_counts']=can['market_key'].value_counts(dropna=False).astype(int).to_dict()
     summary['fighter_method_rows']=can[can['market_key'].astype(str).str.startswith('win_by_')][['snapshot_timestamp','provider_event_id','event_name','event_start_timestamp','market_key','fighter_name','american_odds','implied_probability','raw_payload_path']].astype(str).head(200).to_dict(orient='records')
-# Round stats + feature coverage diagnostics
 rs=pd.read_parquet('data/fight_details/ufc_round_stats.parquet')
 summary['round_stats_columns']=list(rs.columns)
 for c in ['date','event_date','ufcstats_event_date']:
