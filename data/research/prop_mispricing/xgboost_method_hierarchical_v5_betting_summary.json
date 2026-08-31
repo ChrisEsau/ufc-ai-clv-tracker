@@ -1,0 +1,76 @@
+{
+  "experiment": "hierarchical_v5_winner_side_only_method_betting_oof_v1",
+  "model": "new hierarchical V5 exact-method model only",
+  "period": "chronological 2021-2024 OOF",
+  "rule": {
+    "winner_side": "red if frozen V5 P(red)> =0.5 else blue",
+    "eligible_methods": "KO/SUB/DEC on predicted winner side only",
+    "signed_logit_residual_threshold": 0.3,
+    "multiple_bets_per_fight_allowed": true,
+    "stake_per_bet_units": 1.0,
+    "residual_market_probability": "normalized six-way legacy-consensus market probability",
+    "payout_price": "raw legacy-consensus implied probability converted to decimal odds as 1/p"
+  },
+  "pooled": {
+    "bets": 672,
+    "wins": 227,
+    "losses": 445,
+    "stake_units": 672.0,
+    "profit_units": 74.6988418119431,
+    "roi": 0.111158990791582,
+    "hit_rate": 0.33779761904761907,
+    "fights_bet": 640,
+    "bets_per_fight": 1.05
+  },
+  "by_fold": {
+    "2021": {
+      "bets": 194,
+      "wins": 61,
+      "losses": 133,
+      "stake_units": 194.0,
+      "profit_units": 24.605480611065314,
+      "roi": 0.12683237428384184,
+      "hit_rate": 0.31443298969072164,
+      "fights_bet": 180,
+      "bets_per_fight": 1.0777777777777777
+    },
+    "2022": {
+      "bets": 179,
+      "wins": 67,
+      "losses": 112,
+      "stake_units": 179.0,
+      "profit_units": 44.9103781082042,
+      "roi": 0.25089596708493966,
+      "hit_rate": 0.3743016759776536,
+      "fights_bet": 173,
+      "bets_per_fight": 1.0346820809248556
+    },
+    "2023": {
+      "bets": 166,
+      "wins": 48,
+      "losses": 118,
+      "stake_units": 166.0,
+      "profit_units": -0.06138716356107121,
+      "roi": -0.000369802190126935,
+      "hit_rate": 0.2891566265060241,
+      "fights_bet": 157,
+      "bets_per_fight": 1.0573248407643312
+    },
+    "2024": {
+      "bets": 133,
+      "wins": 51,
+      "losses": 82,
+      "stake_units": 133.0,
+      "profit_units": 5.244370256234658,
+      "roi": 0.03943135531003503,
+      "hit_rate": 0.38345864661654133,
+      "fights_bet": 130,
+      "bets_per_fight": 1.023076923076923
+    }
+  },
+  "bet_count_distribution": {
+    "fights_with_1_bet": 611,
+    "fights_with_2_bets": 26,
+    "fights_with_3_bets": 3
+  }
+}
