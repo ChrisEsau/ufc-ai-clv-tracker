@@ -1,0 +1,46 @@
+{
+  "experiment": "v5_logit_residual_flat_bet_roi_diagnostic_v1",
+  "n": 1742,
+  "pricing_semantics": "flat 1u bets at authoritative legacy_consensus raw implied moneyline probability from the exact V5 historical market snapshot; decimal odds = 1/raw implied probability",
+  "selection_note": "measurement only on 2021-2024 OOF; no threshold promoted",
+  "overall_if_bet_every_v5_direction": {
+    "n": 1742.0,
+    "wins": 987.0,
+    "win_rate": 0.5665901262916189,
+    "mean_abs_logit_residual": 0.1350025009169496,
+    "mean_raw_implied_p": 0.5662458613486407,
+    "mean_decimal_odds": 2.044385599611292,
+    "profit_units": -23.39550967975658,
+    "roi": -0.01343025813992915
+  },
+  "top_decile": {
+    "n": 175.0,
+    "wins": 121.0,
+    "win_rate": 0.6914285714285714,
+    "mean_abs_logit_residual": 0.36555746405797657,
+    "mean_raw_implied_p": 0.6235480319918872,
+    "mean_decimal_odds": 1.7654621980886174,
+    "profit_units": 23.716734755461104,
+    "roi": 0.13552419860263487
+  },
+  "top_two_deciles": {
+    "n": 349.0,
+    "wins": 236.0,
+    "win_rate": 0.6762177650429799,
+    "mean_abs_logit_residual": 0.3001256684668354,
+    "mean_raw_implied_p": 0.628372384380452,
+    "mean_decimal_odds": 1.7537588216490927,
+    "profit_units": 27.630073977182008,
+    "roi": 0.07916926641026363
+  },
+  "top_three_deciles": {
+    "n": 523.0,
+    "wins": 339.0,
+    "win_rate": 0.6481835564053537,
+    "mean_abs_logit_residual": 0.26275307677032284,
+    "mean_raw_implied_p": 0.604499429137704,
+    "mean_decimal_odds": 1.8767578056400347,
+    "profit_units": 27.86625558958915,
+    "roi": 0.053281559444721134
+  }
+}
