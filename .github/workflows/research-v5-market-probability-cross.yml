@@ -1,0 +1,90 @@
+name: Research V5 Market Probability Cross
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - data/research/prop_mispricing/v5_market_probability_cross_trigger.txt
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cross:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -q pandas
+      - name: Run market probability cross diagnostic
+        run: |
+          python - <<'PY'
+          import pandas as pd
+
+          src='data/research/prop_mispricing/v5_historical_2025_to_20260328_positive_edge_fights.csv'
+          out='data/research/prop_mispricing/v5_historical_2025_to_20260328_market_probability_cross.csv'
+          df=pd.read_csv(src)
+          df['date']=pd.to_datetime(df['date'])
+          for c in ['edge','fair_market_p','model_p','profit_units','bet_win']:
+              df[c]=pd.to_numeric(df[c], errors='coerce')
+
+          # Vig-free probability bands for the side V5 likes.
+          p_bins=[0,.30,.40,.50,.60,.70,.80,1.000001]
+          p_labels=['<30%','30-40%','40-50%','50-60%','60-70%','70-80%','80%+']
+          df['market_p_bucket']=pd.cut(df['fair_market_p'], bins=p_bins, labels=p_labels, right=False, include_lowest=True)
+
+          e_bins=[0,.02,.04,.06,.075,float('inf')]
+          e_labels=['0-2%','2-4%','4-6%','6-7.5%','7.5%+']
+          df['edge_bucket_cross']=pd.cut(df['edge'], bins=e_bins, labels=e_labels, right=False, include_lowest=True)
+
+          periods=[('2025_to_2026_03_28',df),('2025',df[df.date.dt.year==2025]),('2026_Jan_Mar',df[df.date.dt.year==2026])]
+          rows=[]
+          for period,base in periods:
+              for pb in p_labels:
+                  q=base[base.market_p_bucket==pb]
+                  n=len(q); w=int(q.bet_win.sum()) if n else 0; pr=float(q.profit_units.sum()) if n else 0.0
+                  rows.append({'period':period,'analysis':'market_probability','market_p_bucket':pb,'edge_bucket':'ALL','bets':n,'wins':w,'losses':n-w,'win_rate':w/n if n else None,'profit_units':pr,'roi':pr/n if n else None,'avg_market_p':q.fair_market_p.mean() if n else None,'avg_v5_p':q.model_p.mean() if n else None,'avg_edge':q.edge.mean() if n else None})
+              for pb in p_labels:
+                  for eb in e_labels:
+                      q=base[(base.market_p_bucket==pb)&(base.edge_bucket_cross==eb)]
+                      n=len(q); w=int(q.bet_win.sum()) if n else 0; pr=float(q.profit_units.sum()) if n else 0.0
+                      rows.append({'period':period,'analysis':'market_x_edge','market_p_bucket':pb,'edge_bucket':eb,'bets':n,'wins':w,'losses':n-w,'win_rate':w/n if n else None,'profit_units':pr,'roi':pr/n if n else None,'avg_market_p':q.fair_market_p.mean() if n else None,'avg_v5_p':q.model_p.mean() if n else None,'avg_edge':q.edge.mean() if n else None})
+          res=pd.DataFrame(rows)
+          res.to_csv(out,index=False)
+
+          for period in ['2025_to_2026_03_28','2025','2026_Jan_Mar']:
+              print('\n===',period,' MARKET PROBABILITY ===')
+              r=res[(res.period==period)&(res.analysis=='market_probability')]
+              print(r.to_string(index=False, formatters={
+                  'win_rate':lambda x:'' if pd.isna(x) else f'{x:.1%}',
+                  'profit_units':lambda x:f'{x:+.3f}',
+                  'roi':lambda x:'' if pd.isna(x) else f'{x:+.1%}',
+                  'avg_market_p':lambda x:'' if pd.isna(x) else f'{x:.1%}',
+                  'avg_v5_p':lambda x:'' if pd.isna(x) else f'{x:.1%}',
+                  'avg_edge':lambda x:'' if pd.isna(x) else f'{x:.2%}',
+              }))
+              print('\n===',period,' CROSS (n>=5) ===')
+              r=res[(res.period==period)&(res.analysis=='market_x_edge') & (res.bets>=5)]
+              print(r.to_string(index=False, formatters={
+                  'win_rate':lambda x:'' if pd.isna(x) else f'{x:.1%}',
+                  'profit_units':lambda x:f'{x:+.3f}',
+                  'roi':lambda x:'' if pd.isna(x) else f'{x:+.1%}',
+                  'avg_market_p':lambda x:'' if pd.isna(x) else f'{x:.1%}',
+                  'avg_v5_p':lambda x:'' if pd.isna(x) else f'{x:.1%}',
+                  'avg_edge':lambda x:'' if pd.isna(x) else f'{x:.2%}',
+              }))
+          PY
+      - name: Commit output
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/research/prop_mispricing/v5_historical_2025_to_20260328_market_probability_cross.csv
+          git diff --cached --quiet && exit 0
+          git commit -m "Add frozen V5 market probability cross diagnostic"
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
