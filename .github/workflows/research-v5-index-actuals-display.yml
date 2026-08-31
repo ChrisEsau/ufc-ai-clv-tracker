@@ -1,0 +1,39 @@
+name: Research V5 Index Actuals Display
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - data/research/prop_mispricing/v5_index_actuals_trigger.txt
+  workflow_dispatch:
+
+jobs:
+  display:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -q pandas pyarrow
+      - name: Join actual results and print compact table
+        run: |
+          python - <<'PY'
+          import pandas as pd
+          p='data/research/prop_mispricing/v5_draftkings_index_latest_by_fight.csv'
+          m='data/master/ufc_master.parquet'
+          x=pd.read_csv(p)
+          master=pd.read_parquet(m)
+          print('MASTER_RESULT_COLUMNS', [c for c in master.columns if any(k in c.lower() for k in ['winner','result','outcome','won'])])
+          print('MASTER_NAME_COLUMNS', [c for c in master.columns if any(k in c.lower() for k in ['r_name','b_name','red','blue'])][:30])
+          keep=['fight_id']+[c for c in master.columns if any(k in c.lower() for k in ['winner','result','outcome','won'])]
+          keep=list(dict.fromkeys(c for c in keep if c in master.columns))
+          j=x.merge(master[keep].drop_duplicates('fight_id'),on='fight_id',how='left')
+          print('JOINED_COLUMNS', list(j.columns))
+          cols=['date','event_name','fight_id','fighter_name','american_odds','fair_market_p','v5_model_p','edge']+[c for c in keep if c!='fight_id']
+          cols=[c for c in cols if c in j.columns]
+          print(j[cols].to_csv(index=False))
+          PY
