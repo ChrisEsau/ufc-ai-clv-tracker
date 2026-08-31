@@ -1,0 +1,29 @@
+date,event,fights,best_file,covered_fights,complete,priority,candidate_files
+2026-01-24,UFC 324: Gaethje vs. Pimblett,11,xgboost_v5_exact_reproduction_test_predictions.csv,11,True,0,xgboost_v5_exact_reproduction_test_predictions.csv | ufc_324_moneyline_freshrolling_v1.csv | v5_historical_2025_to_20260328_positive_edge_fights.csv | xgboost_market_offset_v5_feature_reduction_test_predictions.csv
+2026-01-31,UFC 325: Volkanovski vs. Lopes 2,13,xgboost_v5_exact_reproduction_test_predictions.csv,13,True,0,xgboost_v5_exact_reproduction_test_predictions.csv | ufc_325_moneyline_freshrolling_v1.csv | v5_historical_2025_to_20260328_positive_edge_fights.csv | xgboost_market_offset_v5_feature_reduction_test_predictions.csv
+2026-02-07,UFC Fight Night: Bautista vs. Oliveira,13,xgboost_v5_exact_reproduction_test_predictions.csv,13,True,0,xgboost_v5_exact_reproduction_test_predictions.csv | v5_historical_2025_to_20260328_positive_edge_fights.csv | xgboost_market_offset_v5_feature_reduction_test_predictions.csv | ufc_vegas_113_moneyline_freshrolling_v1.csv
+2026-02-21,UFC Fight Night: Strickland vs. Hernandez,13,xgboost_v5_exact_reproduction_test_predictions.csv,13,True,0,xgboost_v5_exact_reproduction_test_predictions.csv | ufc_houston_moneyline_freshrolling_v1.csv | v5_historical_2025_to_20260328_positive_edge_fights.csv | xgboost_market_offset_v5_feature_reduction_test_predictions.csv
+2026-02-28,UFC Fight Night: Moreno vs. Kavanagh,13,xgboost_v5_exact_reproduction_test_predictions.csv,13,True,0,xgboost_v5_exact_reproduction_test_predictions.csv | ufc_mexico_moneyline_freshrolling_v1.csv | v5_historical_2025_to_20260328_positive_edge_fights.csv | xgboost_market_offset_v5_feature_reduction_test_predictions.csv
+2026-03-07,UFC 326: Holloway vs. Oliveira 2,12,xgboost_v5_exact_reproduction_test_predictions.csv,11,False,0,xgboost_v5_exact_reproduction_test_predictions.csv | ufc_326_moneyline_freshrolling_v1.csv | v5_historical_2025_to_20260328_positive_edge_fights.csv | xgboost_market_offset_v5_feature_reduction_test_predictions.csv
+2026-03-14,UFC Fight Night: Emmett vs. Vallejos,14,xgboost_v5_exact_reproduction_test_predictions.csv,14,True,0,xgboost_v5_exact_reproduction_test_predictions.csv | v5_historical_2025_to_20260328_positive_edge_fights.csv | xgboost_market_offset_v5_feature_reduction_test_predictions.csv | ufc_vegas_114_moneyline_freshrolling_v1.csv
+2026-03-21,UFC Fight Night: Evloev vs. Murphy,13,xgboost_v5_exact_reproduction_test_predictions.csv,13,True,0,xgboost_v5_exact_reproduction_test_predictions.csv | ufc_london_2026_moneyline_freshrolling_v1.csv | v5_historical_2025_to_20260328_positive_edge_fights.csv | xgboost_market_offset_v5_feature_reduction_test_predictions.csv
+2026-03-28,UFC Fight Night: Adesanya vs. Pyfer,12,xgboost_v5_exact_reproduction_test_predictions.csv,12,True,0,xgboost_v5_exact_reproduction_test_predictions.csv | v5_historical_2025_to_20260328_positive_edge_fights.csv | xgboost_market_offset_v5_feature_reduction_test_predictions.csv | ufc_seattle_2026_moneyline_freshrolling_v1.csv
+2026-04-04,UFC Fight Night: Moicano vs. Duncan,13,ufc_vegas_115_2026_moneyline_freshrolling_v1.csv,12,False,1,ufc_vegas_115_2026_moneyline_freshrolling_v1.csv
+2026-04-11,UFC 327: Prochazka vs. Ulberg,11,,0,False,99,
+2026-04-18,UFC Fight Night: Burns vs. Malott,11,,0,False,99,
+2026-04-25,UFC Fight Night: Sterling vs. Zalal,13,,0,False,99,
+2026-05-02,UFC Fight Night: Della Maddalena vs. Prates,13,,0,False,99,
+2026-05-09,UFC 328: Chimaev vs. Strickland,13,,0,False,99,
+2026-05-16,UFC Fight Night: Allen vs. Costa,13,,0,False,99,
+2026-05-30,UFC Fight Night: Song vs. Figueiredo,12,,0,False,99,
+2026-06-06,UFC Fight Night: Muhammad vs. Bonfim,12,,0,False,99,
+2026-06-14,UFC Freedom 250,7,freedom_250_moneyline_v1.csv,7,True,3,freedom_250_moneyline_v1.csv
+2026-06-20,UFC Fight Night: Kape vs. Horiguchi,12,ufc_vegas_119_moneyline_v1.csv,11,False,3,ufc_vegas_119_moneyline_v1.csv
+2026-06-27,UFC Fight Night: Fiziev vs. Torres,13,ufc_baku_moneyline_full_v1.csv,13,True,2,ufc_baku_moneyline_full_v1.csv | ufc_baku_moneyline_v1.csv
+2026-07-11,UFC 329: McGregor vs. Holloway 2,14,ufc_329_moneyline_v1.csv,13,False,3,ufc_329_moneyline_v1.csv
+2026-07-18,UFC Fight Night: Du Plessis vs. Usman,12,ufc_okc_moneyline_v1.csv,12,True,3,ufc_okc_moneyline_v1.csv
+2026-07-25,UFC Fight Night: Ankalaev vs. Guskov,12,ufc_abu_dhabi_moneyline_web_v1.csv,12,True,2,ufc_abu_dhabi_moneyline_web_v1.csv
+2026-08-01,UFC Fight Night: Medic vs. Rodriguez,14,ufc_belgrade_moneyline_web_v1.csv,14,True,2,ufc_belgrade_moneyline_web_v1.csv
+2026-08-08,UFC Fight Night: Gamrot vs. Salkilld,12,,0,False,99,
+2026-08-15,UFC 330: Makhachev vs. Machado Garry,12,,0,False,99,
+2026-08-22,UFC Fight Night: Hernandez vs. Rodrigues,13,,0,False,99,
