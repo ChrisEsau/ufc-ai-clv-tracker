@@ -1,0 +1,55 @@
+name: Research 2026 Full Event Inventory
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-2026-full-event-inventory.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas pyarrow
+      - name: Export 2026 events
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import pandas as pd
+
+          p=Path('data/master/ufc_master.parquet')
+          df=pd.read_parquet(p).copy()
+          df['date']=pd.to_datetime(df['date'], errors='coerce')
+          d=df[(df['date'] >= '2026-01-01') & (df['date'] < '2027-01-01')].copy()
+          if d.empty:
+              raise RuntimeError('No 2026 rows found in master')
+
+          # Identify the best event-name field available.
+          candidates=['event_name','event','event_title','card','event_id']
+          event_col=next((c for c in candidates if c in d.columns), None)
+          if event_col is None:
+              raise RuntimeError(f'No event column found; columns={list(d.columns)}')
+
+          out=(d.groupby([d['date'].dt.strftime('%Y-%m-%d'), d[event_col].astype(str)], dropna=False)
+                 .size().reset_index(name='fights'))
+          out.columns=['date','event','fights']
+          out=out.sort_values(['date','event']).reset_index(drop=True)
+          dest=Path('data/research/prop_mispricing/full_2026_event_inventory.csv')
+          out.to_csv(dest,index=False)
+          print(out.to_string(index=False))
+          print(f'events={len(out)} fights={int(out.fights.sum())} start={out.date.min()} end={out.date.max()}')
+          PY
+      - name: Commit inventory
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -f data/research/prop_mispricing/full_2026_event_inventory.csv
+          git commit -m 'research: export full 2026 UFC event inventory' || echo No-changes
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
