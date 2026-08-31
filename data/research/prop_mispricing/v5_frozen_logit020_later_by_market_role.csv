@@ -1,0 +1,3 @@
+bets,wins,losses,profit_units,roi,max_drawdown_units,mean_abs_logit_residual,mean_fair_market_p,market_role
+88,71,17,7.620413893755153,0.08659561242903582,5.5,0.28245168868998627,0.7140887102310282,favorite
+32,13,19,4.7,0.146875,5.72,0.28220070194191205,0.3374392166595911,underdog

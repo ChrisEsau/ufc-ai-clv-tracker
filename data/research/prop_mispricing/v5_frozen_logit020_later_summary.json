@@ -1,0 +1,70 @@
+{
+  "experiment": "frozen_v5_abs_logit_residual_ge_0.20_later_validation_v1",
+  "rule": {
+    "abs_logit_residual_min": 0.2,
+    "stake_units": 1.0,
+    "cold_start_filter": false
+  },
+  "source": "xgboost_v5_exact_reproduction_test_predictions.csv",
+  "selection_note": "Threshold frozen from 2021-2024 development diagnostic before this later-period read; no later-period optimization.",
+  "date_min": "2025-01-11",
+  "date_max": "2026-03-21",
+  "overall": {
+    "bets": 120,
+    "wins": 84,
+    "losses": 36,
+    "profit_units": 12.320413893755155,
+    "roi": 0.10267011578129297,
+    "max_drawdown_units": 7.882266047225564,
+    "mean_abs_logit_residual": 0.2823847588904998,
+    "mean_fair_market_p": 0.6136488452786448
+  },
+  "by_year": [
+    {
+      "bets": 94,
+      "wins": 65,
+      "losses": 29,
+      "profit_units": 11.718422518083191,
+      "roi": 0.12466406934131054,
+      "max_drawdown_units": 7.882266047225564,
+      "mean_abs_logit_residual": 0.27651625992432705,
+      "mean_fair_market_p": 0.606212393374108,
+      "year": 2025
+    },
+    {
+      "bets": 26,
+      "wins": 19,
+      "losses": 7,
+      "profit_units": 0.6019913756719636,
+      "roi": 0.023153514448921678,
+      "max_drawdown_units": 3.0652777777777778,
+      "mean_abs_logit_residual": 0.3036016397682011,
+      "mean_fair_market_p": 0.6405344790873552,
+      "year": 2026
+    }
+  ],
+  "by_market_role": [
+    {
+      "bets": 88,
+      "wins": 71,
+      "losses": 17,
+      "profit_units": 7.620413893755153,
+      "roi": 0.08659561242903582,
+      "max_drawdown_units": 5.5,
+      "mean_abs_logit_residual": 0.28245168868998627,
+      "mean_fair_market_p": 0.7140887102310282,
+      "market_role": "favorite"
+    },
+    {
+      "bets": 32,
+      "wins": 13,
+      "losses": 19,
+      "profit_units": 4.7,
+      "roi": 0.146875,
+      "max_drawdown_units": 5.72,
+      "mean_abs_logit_residual": 0.28220070194191205,
+      "mean_fair_market_p": 0.3374392166595911,
+      "market_role": "underdog"
+    }
+  ]
+}
