@@ -1,0 +1,83 @@
+name: Research Method Cold-Start Identity Audit
+
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-method-cold-start-identity-audit.yml]
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11.16'
+      - run: pip install pandas==3.0.5 pyarrow==25.0.1 numpy==2.4.6
+      - name: Diagnose identity mapping
+        run: |
+          python - <<'PY'
+          import re
+          import pandas as pd
+
+          M='data/market/historical_market_outcomes.parquet'
+          F='data/features/moneyline_feature_view.parquet'
+          S='data/features/latest_fighter_state.parquet'
+          keys={'win_by_ko_tko_dq','win_by_submission','win_by_decision'}
+
+          m=pd.read_parquet(M)
+          m['date']=pd.to_datetime(m.date,errors='coerce').dt.normalize()
+          m=m[(m.bookmaker=='legacy_consensus') & m.market_key.isin(keys) & m.outcome_side.astype(str).isin(['red','blue'])].copy()
+          counts=m.groupby(['fight_id','outcome_side','market_key']).size().unstack(fill_value=0)
+          # exact six rows: one of each key for both sides
+          ids=[]
+          for fid,g in m.groupby('fight_id'):
+              ok=True
+              for side in ['red','blue']:
+                  for k in keys:
+                      if len(g[(g.outcome_side.astype(str)==side)&(g.market_key==k)]) != 1:
+                          ok=False
+              if ok: ids.append(fid)
+          mm=m[m.fight_id.isin(ids)].copy()
+          meta=mm.groupby('fight_id',as_index=False).first()[['fight_id','date']]
+          red=mm[mm.outcome_side.astype(str)=='red'].groupby('fight_id').outcome_label.first().rename('red_fighter')
+          blue=mm[mm.outcome_side.astype(str)=='blue'].groupby('fight_id').outcome_label.first().rename('blue_fighter')
+          meta=meta.merge(red,on='fight_id').merge(blue,on='fight_id')
+
+          fv=pd.read_parquet(F)
+          print('FEATURE COLUMNS CONTAINING fight/count/experience:')
+          print([c for c in fv.columns if any(t in c.lower() for t in ['fight','count','experience'])])
+          print('feature rows',len(fv),'unique fight ids',fv.fight_id.nunique())
+
+          st=pd.read_parquet(S)
+          st['date']=pd.to_datetime(st.date,errors='coerce').dt.normalize()
+          st['fight_id_s']=st.fight_id.astype(str)
+          meta['fight_id_s']=meta.fight_id.astype(str)
+          direct=meta.fight_id_s.isin(set(st.fight_id_s))
+          print('complete six-price fights',len(meta),'direct id matches',int(direct.sum()))
+
+          def norm(x):
+              return re.sub(r'[^a-z0-9]+','',str(x).casefold())
+          rows=[]
+          for (dt,fid),g in st.groupby(['date','fight_id_s']):
+              if len(g)!=2: continue
+              names=sorted(norm(x) for x in g.fighter_name.tolist())
+              vals=pd.to_numeric(g.fights,errors='coerce')
+              rows.append({'date':dt,'state_fight_id':fid,'pair':'|'.join(names),'min_fights':vals.min()})
+          sf=pd.DataFrame(rows)
+          if sf.duplicated(['date','pair']).any():
+              print('DUPLICATE DATE/PAIR STATE KEYS',int(sf.duplicated(['date','pair'],keep=False).sum()))
+          meta['pair']=meta.apply(lambda r:'|'.join(sorted([norm(r.red_fighter),norm(r.blue_fighter)])),axis=1)
+          z=meta.merge(sf[['date','pair','state_fight_id','min_fights']],on=['date','pair'],how='left')
+          pair_hit=z.state_fight_id.notna()
+          print('exact normalized date+fighter-pair matches',int(pair_hit.sum()),'of',len(z))
+          print('direct misses recovered by pair',int((~direct & pair_hit).sum()))
+          miss=z[~pair_hit][['date','fight_id','red_fighter','blue_fighter']]
+          print('pair misses',len(miss))
+          print(miss.head(50).to_string(index=False))
+          dev=z[z.date<=pd.Timestamp('2024-12-31')]
+          print('DEV <=2024 complete price fights',len(dev),'pair matches',int(dev.state_fight_id.notna().sum()),'misses',int(dev.state_fight_id.isna().sum()))
+          PY
