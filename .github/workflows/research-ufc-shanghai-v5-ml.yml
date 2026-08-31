@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11.16'
@@ -28,25 +28,22 @@ jobs:
           import pandas as pd
           target='2026-08-29'
           root=Path('data')
-          print('=== PARQUET/CVS WITH TARGET DATE ===')
+          print('=== FILES WITH TARGET DATE ===')
           for p in list(root.rglob('*.parquet'))+list(root.rglob('*.csv')):
               try:
-                  if p.suffix=='.parquet':
-                      df=pd.read_parquet(p)
+                  if p.suffix=='.parquet': df=pd.read_parquet(p)
                   else:
                       if p.stat().st_size>30_000_000: continue
                       df=pd.read_csv(p)
-                  hits=[]
                   for c in ['date','event_date','fight_date','commence_time','snapshot_timestamp']:
                       if c in df.columns:
                           s=pd.to_datetime(df[c],errors='coerce').dt.strftime('%Y-%m-%d')
                           n=int((s==target).sum())
-                          if n: hits.append((c,n))
-                  if hits:
-                      print(p, hits, 'cols=', list(df.columns)[:40])
-                      for c,n in hits[:1]:
-                          s=pd.to_datetime(df[c],errors='coerce').dt.strftime('%Y-%m-%d')
-                          print(df.loc[s.eq(target)].head(40).to_string(index=False))
-              except Exception as e:
+                          if n:
+                              print('\nFILE',p,'DATECOL',c,'ROWS',n)
+                              print('COLS',list(df.columns))
+                              print(df.loc[s.eq(target)].head(60).to_string(index=False))
+                              break
+              except Exception:
                   pass
           PY
