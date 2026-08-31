@@ -1,0 +1,207 @@
+{
+  "experiment": "frozen_v5_plus_sixway_method_market_v1",
+  "selection_objective": "2021-2024 chronological OOF log loss only; ROI not used",
+  "method_normalization": "normalize six legacy_consensus implied probabilities jointly across red/blue KO/TKO, submission, decision",
+  "method_features": [
+    "method_implied_red_win_p",
+    "method_vs_ml_red_gap",
+    "method_inside_distance_p",
+    "method_win_concentration_diff"
+  ],
+  "coverage": {
+    "all_rows": 6467,
+    "rows_with_complete_method": 5267
+  },
+  "models": {
+    "v5": {
+      "feature_count": 51,
+      "folds": [
+        {
+          "fold": "2021",
+          "train_n": 4220,
+          "validation_n": 469,
+          "validation_method_complete_n": 450,
+          "market": {
+            "n": 469,
+            "log_loss": 0.6302682759895004,
+            "brier": 0.22040143204863472,
+            "auc": 0.6891670350722074
+          },
+          "model": {
+            "n": 469,
+            "log_loss": 0.624153125480216,
+            "brier": 0.21747978488711597,
+            "auc": 0.7017757147067492
+          },
+          "delta_log_loss_vs_market": -0.006115150509284462
+        },
+        {
+          "fold": "2022",
+          "train_n": 4689,
+          "validation_n": 477,
+          "validation_method_complete_n": 432,
+          "market": {
+            "n": 477,
+            "log_loss": 0.6046745349039253,
+            "brier": 0.20882128815279644,
+            "auc": 0.7209038006910348
+          },
+          "model": {
+            "n": 477,
+            "log_loss": 0.6025058140395739,
+            "brier": 0.20774255293680402,
+            "auc": 0.7206037461356611
+          },
+          "delta_log_loss_vs_market": -0.002168720864351381
+        },
+        {
+          "fold": "2023",
+          "train_n": 5166,
+          "validation_n": 415,
+          "validation_method_complete_n": 378,
+          "market": {
+            "n": 415,
+            "log_loss": 0.5850894126885017,
+            "brier": 0.19978813448309007,
+            "auc": 0.7534827881323697
+          },
+          "model": {
+            "n": 415,
+            "log_loss": 0.58028432982816,
+            "brier": 0.197485126019986,
+            "auc": 0.7599372384937237
+          },
+          "delta_log_loss_vs_market": -0.004805082860341647
+        },
+        {
+          "fold": "2024",
+          "train_n": 5581,
+          "validation_n": 381,
+          "validation_method_complete_n": 335,
+          "market": {
+            "n": 381,
+            "log_loss": 0.5909368834797224,
+            "brier": 0.20222522792065598,
+            "auc": 0.753883495145631
+          },
+          "model": {
+            "n": 381,
+            "log_loss": 0.5923667393473763,
+            "brier": 0.2033544340946422,
+            "auc": 0.7492094313453538
+          },
+          "delta_log_loss_vs_market": 0.001429855867653873
+        }
+      ],
+      "oof": {
+        "n": 1742,
+        "log_loss": 0.600822510744624,
+        "brier": 0.2069607253451583,
+        "auc": 0.7318055391488311
+      },
+      "oof_complete_method_subset": {
+        "n": 1595,
+        "log_loss": 0.5974352925284908,
+        "brier": 0.20544264891574243,
+        "auc": 0.7376674012544499
+      }
+    },
+    "v5_plus_method": {
+      "feature_count": 55,
+      "folds": [
+        {
+          "fold": "2021",
+          "train_n": 4220,
+          "validation_n": 469,
+          "validation_method_complete_n": 450,
+          "market": {
+            "n": 469,
+            "log_loss": 0.6302682759895004,
+            "brier": 0.22040143204863472,
+            "auc": 0.6891670350722074
+          },
+          "model": {
+            "n": 469,
+            "log_loss": 0.6240190506535285,
+            "brier": 0.2173941596699546,
+            "auc": 0.7021256999705275
+          },
+          "delta_log_loss_vs_market": -0.006249225335971942
+        },
+        {
+          "fold": "2022",
+          "train_n": 4689,
+          "validation_n": 477,
+          "validation_method_complete_n": 432,
+          "market": {
+            "n": 477,
+            "log_loss": 0.6046745349039253,
+            "brier": 0.20882128815279644,
+            "auc": 0.7209038006910348
+          },
+          "model": {
+            "n": 477,
+            "log_loss": 0.6027975489490115,
+            "brier": 0.2078584003670162,
+            "auc": 0.7210401891252955
+          },
+          "delta_log_loss_vs_market": -0.0018769859549138124
+        },
+        {
+          "fold": "2023",
+          "train_n": 5166,
+          "validation_n": 415,
+          "validation_method_complete_n": 378,
+          "market": {
+            "n": 415,
+            "log_loss": 0.5850894126885017,
+            "brier": 0.19978813448309007,
+            "auc": 0.7534827881323697
+          },
+          "model": {
+            "n": 415,
+            "log_loss": 0.5800832732062302,
+            "brier": 0.19748416615506453,
+            "auc": 0.7596995055154051
+          },
+          "delta_log_loss_vs_market": -0.0050061394822714655
+        },
+        {
+          "fold": "2024",
+          "train_n": 5581,
+          "validation_n": 381,
+          "validation_method_complete_n": 335,
+          "market": {
+            "n": 381,
+            "log_loss": 0.5909368834797224,
+            "brier": 0.20222522792065598,
+            "auc": 0.753883495145631
+          },
+          "model": {
+            "n": 381,
+            "log_loss": 0.5923439611852935,
+            "brier": 0.20333243733960424,
+            "auc": 0.7490429958391123
+          },
+          "delta_log_loss_vs_market": 0.0014070777055711359
+        }
+      ],
+      "oof": {
+        "n": 1742,
+        "log_loss": 0.6008134174496934,
+        "brier": 0.20696435444375225,
+        "auc": 0.7317196275733202
+      },
+      "oof_complete_method_subset": {
+        "n": 1595,
+        "log_loss": 0.5973963604679128,
+        "brier": 0.2054379033899749,
+        "auc": 0.7375586524099064
+      }
+    }
+  },
+  "comparison": {
+    "v5_plus_method_minus_v5_log_loss": -9.093294930595519e-06,
+    "winner_by_oof_log_loss": "v5_plus_method"
+  }
+}
