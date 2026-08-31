@@ -1,0 +1,165 @@
+{
+  "experiment": "six_way_method_specialist_family_market_offset_v1",
+  "period": "chronological 2021-2024 OOF only",
+  "architecture": "six binary class specialists grouped KO/SUB/DEC; each learns log-odds residual vs normalized six-way market; six corrected scores combined by common softmax",
+  "candidate_selection": "none; direct architecture comparison to frozen FULL six-way baseline",
+  "reads_2025_plus": false,
+  "uses_roi": false,
+  "cold_start_filter": "OFF, matching frozen method experiment",
+  "features": 140,
+  "rounds_per_specialist": 300,
+  "pooled_market": {
+    "n": 1604,
+    "log_loss": 1.5469188028608722,
+    "brier": 0.747825229037831,
+    "top1_accuracy": 0.36845386533665836,
+    "winner_accuracy": 0.672069825436409,
+    "method_accuracy": 0.5249376558603491
+  },
+  "pooled_specialist": {
+    "n": 1604,
+    "log_loss": 1.5417424341858281,
+    "brier": 0.7467403475476301,
+    "top1_accuracy": 0.38154613466334164,
+    "winner_accuracy": 0.6826683291770573,
+    "method_accuracy": 0.5317955112219451
+  },
+  "delta_specialist_minus_market": {
+    "log_loss": -0.0051763686750441185,
+    "brier": -0.0010848814902009174,
+    "top1_accuracy": 0.013092269326683281,
+    "winner_accuracy": 0.010598503740648302,
+    "method_accuracy": 0.006857855361595999
+  },
+  "baseline_frozen_sixway_log_loss": 1.5364276221525495,
+  "delta_specialist_minus_frozen_sixway_log_loss": 0.00531481203327866,
+  "beats_frozen_sixway_on_primary_metric": false,
+  "folds": [
+    {
+      "fold": "2021",
+      "n": 450,
+      "market": {
+        "n": 450,
+        "log_loss": 1.5707128340472991,
+        "brier": 0.7579690207893608,
+        "top1_accuracy": 0.34444444444444444,
+        "winner_accuracy": 0.6422222222222222,
+        "method_accuracy": 0.5044444444444445
+      },
+      "specialist": {
+        "n": 450,
+        "log_loss": 1.5652275967314082,
+        "brier": 0.7576819466983226,
+        "top1_accuracy": 0.38666666666666666,
+        "winner_accuracy": 0.6711111111111111,
+        "method_accuracy": 0.5266666666666666
+      },
+      "delta_log_loss": -0.005485237315890901,
+      "features": 140
+    },
+    {
+      "fold": "2022",
+      "n": 433,
+      "market": {
+        "n": 433,
+        "log_loss": 1.5406912519128553,
+        "brier": 0.7480878742784635,
+        "top1_accuracy": 0.3625866050808314,
+        "winner_accuracy": 0.6766743648960739,
+        "method_accuracy": 0.5334872979214781
+      },
+      "specialist": {
+        "n": 433,
+        "log_loss": 1.534721910602788,
+        "brier": 0.7493775093526319,
+        "top1_accuracy": 0.3672055427251732,
+        "winner_accuracy": 0.6928406466512702,
+        "method_accuracy": 0.5288683602771362
+      },
+      "delta_log_loss": -0.005969341310067211,
+      "features": 140
+    },
+    {
+      "fold": "2023",
+      "n": 384,
+      "market": {
+        "n": 384,
+        "log_loss": 1.5792545876819555,
+        "brier": 0.7585459723317663,
+        "top1_accuracy": 0.3567708333333333,
+        "winner_accuracy": 0.6875,
+        "method_accuracy": 0.515625
+      },
+      "specialist": {
+        "n": 384,
+        "log_loss": 1.5787567274755565,
+        "brier": 0.7575562313138661,
+        "top1_accuracy": 0.3645833333333333,
+        "winner_accuracy": 0.6953125,
+        "method_accuracy": 0.5208333333333334
+      },
+      "delta_log_loss": -0.0004978602063989701,
+      "features": 140
+    },
+    {
+      "fold": "2024",
+      "n": 337,
+      "market": {
+        "n": 337,
+        "log_loss": 1.486302405695599,
+        "brier": 0.7217267213160105,
+        "top1_accuracy": 0.42136498516320475,
+        "winner_accuracy": 0.6884272997032641,
+        "method_accuracy": 0.5519287833827893
+      },
+      "specialist": {
+        "n": 337,
+        "log_loss": 1.4772263360929194,
+        "brier": 0.7164171723380988,
+        "top1_accuracy": 0.4124629080118694,
+        "winner_accuracy": 0.6706231454005934,
+        "method_accuracy": 0.5548961424332344
+      },
+      "delta_log_loss": -0.009076069602679482,
+      "features": 140
+    }
+  ],
+  "calibration": {
+    "RED_KO_TKO": {
+      "actual_count": 291,
+      "empirical_rate": 0.1814214463840399,
+      "mean_probability": 0.18553611022649188,
+      "brier_component": 0.13831758396626492
+    },
+    "RED_SUB": {
+      "actual_count": 164,
+      "empirical_rate": 0.10224438902743142,
+      "mean_probability": 0.09645886074425815,
+      "brier_component": 0.0816554590727156
+    },
+    "RED_DEC": {
+      "actual_count": 451,
+      "empirical_rate": 0.2811720698254364,
+      "mean_probability": 0.282636110640015,
+      "brier_component": 0.19027033882695096
+    },
+    "BLUE_KO_TKO": {
+      "actual_count": 235,
+      "empirical_rate": 0.14650872817955113,
+      "mean_probability": 0.16100293363487633,
+      "brier_component": 0.11797550357079355
+    },
+    "BLUE_SUB": {
+      "actual_count": 119,
+      "empirical_rate": 0.07418952618453865,
+      "mean_probability": 0.06468490721297093,
+      "brier_component": 0.06490953790263464
+    },
+    "BLUE_DEC": {
+      "actual_count": 344,
+      "empirical_rate": 0.2144638403990025,
+      "mean_probability": 0.20968107754138768,
+      "brier_component": 0.15361192420827038
+    }
+  }
+}
