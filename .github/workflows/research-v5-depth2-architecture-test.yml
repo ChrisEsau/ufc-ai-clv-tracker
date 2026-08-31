@@ -1,0 +1,46 @@
+name: Research V5 Depth2 Architecture Test
+
+on:
+  push:
+    paths:
+      - 'data/research/prop_mispricing/v5_depth2_architecture_test_trigger.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  compare:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11.16'
+      - run: |
+          python -m pip install --upgrade pip==26.2.1
+          pip install pandas==3.0.5 pyarrow==25.0.1 numpy==2.4.6 scikit-learn==1.9.0 scipy==1.17.1 xgboost==3.2.0 joblib==1.5.3 threadpoolctl==3.6.0 python-dateutil==2.9.0.post0
+      - name: Restore exact V5 data snapshot
+        run: |
+          git checkout 7df1b61126be1f4e036b256d1c774c531b8a281f -- \
+            data/market/historical_market_outcomes.parquet \
+            data/features/moneyline_feature_view.parquet
+      - name: Run V5 depth1 vs depth2 OOF test
+        run: python pipeline/research/v5_depth2_architecture_test.py
+      - name: Commit research outputs
+        run: |
+          git restore --source=HEAD -- data/market/historical_market_outcomes.parquet data/features/moneyline_feature_view.parquet
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f data/research/prop_mispricing/v5_depth1_vs_depth2_summary.json data/research/prop_mispricing/v5_depth1_vs_depth2_oof.csv
+          git diff --cached --quiet && exit 0
+          git commit -m "Add V5 depth1 vs depth2 OOF results"
+          for i in 1 2 3 4 5; do
+            git fetch origin research/ufc-prop-mispricing-xgboost-20260829
+            git rebase origin/research/ufc-prop-mispricing-xgboost-20260829 || { git rebase --abort; sleep 2; continue; }
+            git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829 && exit 0
+            sleep 3
+          done
+          exit 1
