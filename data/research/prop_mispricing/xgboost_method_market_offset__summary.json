@@ -1,0 +1,1310 @@
+{
+  "design": {
+    "name": "six_way_exact_method_market_offset_v1",
+    "classes": [
+      "red_ko_tko",
+      "red_sub",
+      "red_dec",
+      "blue_ko_tko",
+      "blue_sub",
+      "blue_dec"
+    ],
+    "market_prior": "six raw exact-method implied probabilities normalized within fight; log(probability) supplied as multiclass base_margin",
+    "features": "same leakage-screened signed *_diff family used by moneyline V4/V5; six-way market overround appended as a feature",
+    "architecture": {
+      "max_depth": 1,
+      "eta": 0.03,
+      "subsample": 0.8,
+      "colsample_bytree": 0.7,
+      "min_child_weight": 10,
+      "lambda": 8.0,
+      "alpha": 1.0,
+      "objective": "multi:softprob",
+      "num_class": 6,
+      "eval_metric": "mlogloss",
+      "seed": 42,
+      "nthread": 2,
+      "num_boost_round": 300
+    },
+    "feature_ranking": "multiclass gain from model trained only through 2020-12-31",
+    "candidate_selection": "strict minimum pooled chronological 2021-2024 OOF six-way log loss; exact tie -> fewer features",
+    "sealed_test": "2025+ is parquet-filtered out of development and scored only by separate --stage test after frozen candidate exists",
+    "roi_used_for_selection": false,
+    "betting_policy_used_for_selection": false,
+    "cold_start_note": "Probability-model selection only; no betting-eligibility rule is used to select/tune the model."
+  },
+  "development_coverage": {
+    "eligible_complete_six_way_fights_through_2024": 4754,
+    "date_min": "2012-05-05",
+    "date_max": "2024-12-14",
+    "signed_diff_feature_count": 140
+  },
+  "pre2021_ranked_features": [
+    "splm_diff",
+    "decision_win_rate_diff",
+    "td_avg_diff",
+    "recent_form_win_streak_diff",
+    "style_control_wrestler_score_diff",
+    "td_acc_diff",
+    "str_def_diff",
+    "ewm_finish_loss_rate_diff",
+    "ewm_kd_absorbed_avg_diff",
+    "reach_diff",
+    "pressure_striking_adv_diff",
+    "chin_risk_diff",
+    "experience_ratio_diff",
+    "recent_form_kd_absorbed_avg_diff",
+    "submission_dependency_diff",
+    "age_diff",
+    "aggression_index_diff",
+    "ewm_recent_avg_fight_time_diff",
+    "recent_form_worst_loss_elo_diff",
+    "recent_form_recent_avg_fight_time_diff",
+    "ewm_sapm_diff",
+    "ewm_td_acc_diff",
+    "ewm_decision_win_rate_diff",
+    "kd_absorbed_avg_diff",
+    "ewm_td_avg_diff",
+    "ewm_losses_diff",
+    "age_squared_diff",
+    "recent_form_losses_diff",
+    "ko_dependency_diff",
+    "sub_win_rate_diff",
+    "ewm_finish_rate_diff",
+    "str_acc_diff",
+    "ewm_ctrl_per_min_diff",
+    "ewm_loss_streak_diff",
+    "recent_form_decision_loss_rate_diff",
+    "recent_form_best_win_elo_diff",
+    "style_decision_technician_score_diff",
+    "age_x_career_ko_losses_diff",
+    "recent_form_ctrl_per_min_diff",
+    "recent_form_sub_avg_diff",
+    "ewm_td_def_diff",
+    "ewm_str_acc_diff",
+    "ewm_win_streak_diff",
+    "recent_form_ko_rate_diff",
+    "ewm_recent_td_avg_diff",
+    "style_all_round_finisher_score_diff",
+    "style_flexibility_score_diff",
+    "finish_dependency_diff",
+    "finish_loss_rate_diff",
+    "ewm_days_since_last_fight_diff",
+    "ewm_sub_avg_diff",
+    "recent_form_sub_win_rate_diff",
+    "recent_form_td_acc_diff",
+    "ewm_win_pct_diff",
+    "kd_avg_diff",
+    "ewm_ko_rate_diff",
+    "recent_form_finish_loss_rate_diff",
+    "recent_form_days_since_last_fight_diff",
+    "ewm_avg_fight_time_diff",
+    "decision_dependency_diff",
+    "recent_form_ctrl_against_per_min_diff",
+    "sapm_diff",
+    "victory_concentration_index_diff",
+    "recent_form_td_def_diff",
+    "style_score_spread_diff",
+    "submission_mismatch_diff",
+    "win_method_entropy_diff",
+    "win_pct_diff",
+    "ewm_recent_win_pct_diff",
+    "recent_avg_fight_time_diff",
+    "recent_form_wins_diff",
+    "recent_form_recent_sapm_diff",
+    "ewm_recent_splm_diff",
+    "style_ko_finisher_score_diff",
+    "recent_form_recent_td_avg_diff",
+    "sub_avg_diff",
+    "recent_form_sapm_diff",
+    "recent_form_td_avg_diff",
+    "recent_sapm_diff",
+    "losses_diff",
+    "avg_opponent_elo_diff",
+    "finish_rate_diff",
+    "best_win_elo_diff",
+    "ewm_recent_sapm_diff",
+    "career_ko_losses_diff",
+    "days_since_last_ko_loss_diff",
+    "ewm_decision_loss_rate_diff",
+    "recent_form_recent_splm_diff",
+    "days_since_last_fight_diff",
+    "recent_form_elo_diff",
+    "recent_form_kd_avg_diff",
+    "ewm_sub_win_rate_diff",
+    "style_submission_grappler_score_diff",
+    "recent_form_str_acc_diff",
+    "ewm_splm_diff",
+    "ewm_str_def_diff",
+    "ewm_kd_avg_diff",
+    "ewm_elo_diff",
+    "recent_form_avg_fight_time_diff",
+    "td_def_diff",
+    "recent_finish_rate_diff",
+    "height_diff",
+    "elo_diff",
+    "recent_form_splm_diff",
+    "style_primary_score_diff",
+    "decision_loss_rate_diff",
+    "recent_form_recent_win_pct_diff",
+    "recent_form_loss_streak_diff",
+    "avg_fight_time_diff",
+    "ctrl_against_per_min_diff",
+    "ewm_ctrl_against_per_min_diff",
+    "recent_form_avg_opponent_elo_diff",
+    "recent_form_decision_win_rate_diff",
+    "weight_diff",
+    "loss_streak_diff",
+    "recent_form_recent_finish_rate_diff",
+    "ctrl_per_min_diff",
+    "ewm_avg_opponent_elo_diff",
+    "ewm_best_win_elo_diff",
+    "ewm_fights_diff",
+    "ewm_recent_finish_rate_diff",
+    "ewm_wins_diff",
+    "ewm_worst_loss_elo_diff",
+    "fights_diff",
+    "ko_rate_diff",
+    "ko_win_concentration_diff",
+    "last_fight_ko_loss_diff",
+    "recent_form_fights_diff",
+    "recent_form_finish_rate_diff",
+    "recent_form_str_def_diff",
+    "recent_form_win_pct_diff",
+    "recent_ko_losses_3_diff",
+    "recent_splm_diff",
+    "recent_td_avg_diff",
+    "recent_win_pct_diff",
+    "submission_win_concentration_diff",
+    "win_streak_diff",
+    "wins_diff",
+    "worst_loss_elo_diff",
+    "wrestling_mismatch_diff"
+  ],
+  "candidates": {
+    "full_v5_signed": {
+      "feature_count": 141,
+      "folds": [
+        {
+          "fold": "2021",
+          "train_n": 3150,
+          "validation_n": 450,
+          "feature_count": 141,
+          "market": {
+            "n": 450,
+            "log_loss": 1.5707128340472991,
+            "brier": 0.7579690207893608,
+            "top1_accuracy": 0.34444444444444444,
+            "winner_accuracy": 0.6422222222222222,
+            "method_accuracy": 0.5044444444444445
+          },
+          "model": {
+            "n": 450,
+            "log_loss": 1.5600581747811646,
+            "brier": 0.7547398259478663,
+            "top1_accuracy": 0.37555555555555553,
+            "winner_accuracy": 0.6711111111111111,
+            "method_accuracy": 0.52
+          },
+          "delta_log_loss_vs_market": -0.010654659266134514,
+          "delta_brier_vs_market": -0.0032291948414945315
+        },
+        {
+          "fold": "2022",
+          "train_n": 3600,
+          "validation_n": 433,
+          "feature_count": 141,
+          "market": {
+            "n": 433,
+            "log_loss": 1.5406912519128553,
+            "brier": 0.7480878742784635,
+            "top1_accuracy": 0.3625866050808314,
+            "winner_accuracy": 0.6766743648960739,
+            "method_accuracy": 0.5334872979214781
+          },
+          "model": {
+            "n": 433,
+            "log_loss": 1.5281380981902362,
+            "brier": 0.7460779170729986,
+            "top1_accuracy": 0.3648960739030023,
+            "winner_accuracy": 0.6766743648960739,
+            "method_accuracy": 0.5334872979214781
+          },
+          "delta_log_loss_vs_market": -0.012553153722619115,
+          "delta_brier_vs_market": -0.0020099572054648185
+        },
+        {
+          "fold": "2023",
+          "train_n": 4033,
+          "validation_n": 384,
+          "feature_count": 141,
+          "market": {
+            "n": 384,
+            "log_loss": 1.5792545876819555,
+            "brier": 0.7585459723317663,
+            "top1_accuracy": 0.3567708333333333,
+            "winner_accuracy": 0.6875,
+            "method_accuracy": 0.515625
+          },
+          "model": {
+            "n": 384,
+            "log_loss": 1.5731032650055365,
+            "brier": 0.755649370901233,
+            "top1_accuracy": 0.375,
+            "winner_accuracy": 0.6953125,
+            "method_accuracy": 0.5260416666666666
+          },
+          "delta_log_loss_vs_market": -0.0061513226764189355,
+          "delta_brier_vs_market": -0.0028966014305333854
+        },
+        {
+          "fold": "2024",
+          "train_n": 4417,
+          "validation_n": 337,
+          "feature_count": 141,
+          "market": {
+            "n": 337,
+            "log_loss": 1.486302405695599,
+            "brier": 0.7217267213160105,
+            "top1_accuracy": 0.42136498516320475,
+            "winner_accuracy": 0.6884272997032641,
+            "method_accuracy": 0.5519287833827893
+          },
+          "model": {
+            "n": 337,
+            "log_loss": 1.4735474614608572,
+            "brier": 0.7154284713472351,
+            "top1_accuracy": 0.4332344213649852,
+            "winner_accuracy": 0.6824925816023739,
+            "method_accuracy": 0.5667655786350149
+          },
+          "delta_log_loss_vs_market": -0.01275494423474166,
+          "delta_brier_vs_market": -0.006298249968775371
+        }
+      ],
+      "market_oof": {
+        "n": 1604,
+        "log_loss": 1.5469188028608722,
+        "brier": 0.747825229037831,
+        "top1_accuracy": 0.36845386533665836,
+        "winner_accuracy": 0.672069825436409,
+        "method_accuracy": 0.5249376558603491
+      },
+      "model_oof": {
+        "n": 1604,
+        "log_loss": 1.5363884809490846,
+        "brier": 0.7443599831915461,
+        "top1_accuracy": 0.3846633416458853,
+        "winner_accuracy": 0.6807980049875312,
+        "method_accuracy": 0.5349127182044888
+      },
+      "delta_log_loss_vs_market": -0.010530321911787599,
+      "delta_brier_vs_market": -0.0034652458462849367,
+      "class_calibration": {
+        "red_ko_tko": {
+          "n": 1604,
+          "empirical_rate": 0.1814214463840399,
+          "mean_probability": 0.1906973040834571,
+          "brier_component": 0.13841037708664883
+        },
+        "red_sub": {
+          "n": 1604,
+          "empirical_rate": 0.10224438902743142,
+          "mean_probability": 0.10155087489776425,
+          "brier_component": 0.08128420039565586
+        },
+        "red_dec": {
+          "n": 1604,
+          "empirical_rate": 0.2811720698254364,
+          "mean_probability": 0.27011033857794026,
+          "brier_component": 0.1895630755258684
+        },
+        "blue_ko_tko": {
+          "n": 1604,
+          "empirical_rate": 0.14650872817955113,
+          "mean_probability": 0.16236797973810882,
+          "brier_component": 0.1173340564470161
+        },
+        "blue_sub": {
+          "n": 1604,
+          "empirical_rate": 0.07418952618453865,
+          "mean_probability": 0.06780990284456502,
+          "brier_component": 0.06480350945749735
+        },
+        "blue_dec": {
+          "n": 1604,
+          "empirical_rate": 0.2144638403990025,
+          "mean_probability": 0.20746359956959387,
+          "brier_component": 0.15296476427885944
+        }
+      }
+    },
+    "top_100_pre2021_gain": {
+      "feature_count": 101,
+      "folds": [
+        {
+          "fold": "2021",
+          "train_n": 3150,
+          "validation_n": 450,
+          "feature_count": 101,
+          "market": {
+            "n": 450,
+            "log_loss": 1.5707128340472991,
+            "brier": 0.7579690207893608,
+            "top1_accuracy": 0.34444444444444444,
+            "winner_accuracy": 0.6422222222222222,
+            "method_accuracy": 0.5044444444444445
+          },
+          "model": {
+            "n": 450,
+            "log_loss": 1.5606391635994152,
+            "brier": 0.7549402464416274,
+            "top1_accuracy": 0.38,
+            "winner_accuracy": 0.6733333333333333,
+            "method_accuracy": 0.5244444444444445
+          },
+          "delta_log_loss_vs_market": -0.010073670447883876,
+          "delta_brier_vs_market": -0.0030287743477334095
+        },
+        {
+          "fold": "2022",
+          "train_n": 3600,
+          "validation_n": 433,
+          "feature_count": 101,
+          "market": {
+            "n": 433,
+            "log_loss": 1.5406912519128553,
+            "brier": 0.7480878742784635,
+            "top1_accuracy": 0.3625866050808314,
+            "winner_accuracy": 0.6766743648960739,
+            "method_accuracy": 0.5334872979214781
+          },
+          "model": {
+            "n": 433,
+            "log_loss": 1.5311771669958378,
+            "brier": 0.7471141166121784,
+            "top1_accuracy": 0.36027713625866054,
+            "winner_accuracy": 0.6789838337182448,
+            "method_accuracy": 0.5219399538106235
+          },
+          "delta_log_loss_vs_market": -0.00951408491701744,
+          "delta_brier_vs_market": -0.0009737576662850467
+        },
+        {
+          "fold": "2023",
+          "train_n": 4033,
+          "validation_n": 384,
+          "feature_count": 101,
+          "market": {
+            "n": 384,
+            "log_loss": 1.5792545876819555,
+            "brier": 0.7585459723317663,
+            "top1_accuracy": 0.3567708333333333,
+            "winner_accuracy": 0.6875,
+            "method_accuracy": 0.515625
+          },
+          "model": {
+            "n": 384,
+            "log_loss": 1.5709473986954459,
+            "brier": 0.7553689821040193,
+            "top1_accuracy": 0.3697916666666667,
+            "winner_accuracy": 0.6979166666666666,
+            "method_accuracy": 0.5182291666666666
+          },
+          "delta_log_loss_vs_market": -0.008307188986509617,
+          "delta_brier_vs_market": -0.0031769902277470896
+        },
+        {
+          "fold": "2024",
+          "train_n": 4417,
+          "validation_n": 337,
+          "feature_count": 101,
+          "market": {
+            "n": 337,
+            "log_loss": 1.486302405695599,
+            "brier": 0.7217267213160105,
+            "top1_accuracy": 0.42136498516320475,
+            "winner_accuracy": 0.6884272997032641,
+            "method_accuracy": 0.5519287833827893
+          },
+          "model": {
+            "n": 337,
+            "log_loss": 1.4735247958892737,
+            "brier": 0.7160636592594823,
+            "top1_accuracy": 0.4332344213649852,
+            "winner_accuracy": 0.6884272997032641,
+            "method_accuracy": 0.5667655786350149
+          },
+          "delta_log_loss_vs_market": -0.012777609806325252,
+          "delta_brier_vs_market": -0.005663062056528112
+        }
+      ],
+      "market_oof": {
+        "n": 1604,
+        "log_loss": 1.5469188028608722,
+        "brier": 0.747825229037831,
+        "top1_accuracy": 0.36845386533665836,
+        "winner_accuracy": 0.672069825436409,
+        "method_accuracy": 0.5249376558603491
+      },
+      "model_oof": {
+        "n": 1604,
+        "log_loss": 1.5368509939168773,
+        "brier": 0.7447622604053582,
+        "top1_accuracy": 0.38341645885286785,
+        "winner_accuracy": 0.6839152119700748,
+        "method_accuracy": 0.5311720698254364
+      },
+      "delta_log_loss_vs_market": -0.01006780894399495,
+      "delta_brier_vs_market": -0.0030629686324727956,
+      "class_calibration": {
+        "red_ko_tko": {
+          "n": 1604,
+          "empirical_rate": 0.1814214463840399,
+          "mean_probability": 0.19065638566087756,
+          "brier_component": 0.1384208743556846
+        },
+        "red_sub": {
+          "n": 1604,
+          "empirical_rate": 0.10224438902743142,
+          "mean_probability": 0.10161654410960427,
+          "brier_component": 0.0813144586370935
+        },
+        "red_dec": {
+          "n": 1604,
+          "empirical_rate": 0.2811720698254364,
+          "mean_probability": 0.27000430043312973,
+          "brier_component": 0.1896871531617735
+        },
+        "blue_ko_tko": {
+          "n": 1604,
+          "empirical_rate": 0.14650872817955113,
+          "mean_probability": 0.16246701035639294,
+          "brier_component": 0.11755520974482701
+        },
+        "blue_sub": {
+          "n": 1604,
+          "empirical_rate": 0.07418952618453865,
+          "mean_probability": 0.06781602334149851,
+          "brier_component": 0.06484906193923716
+        },
+        "blue_dec": {
+          "n": 1604,
+          "empirical_rate": 0.2144638403990025,
+          "mean_probability": 0.20743973501737314,
+          "brier_component": 0.15293550256674246
+        }
+      }
+    },
+    "top_75_pre2021_gain": {
+      "feature_count": 76,
+      "folds": [
+        {
+          "fold": "2021",
+          "train_n": 3150,
+          "validation_n": 450,
+          "feature_count": 76,
+          "market": {
+            "n": 450,
+            "log_loss": 1.5707128340472991,
+            "brier": 0.7579690207893608,
+            "top1_accuracy": 0.34444444444444444,
+            "winner_accuracy": 0.6422222222222222,
+            "method_accuracy": 0.5044444444444445
+          },
+          "model": {
+            "n": 450,
+            "log_loss": 1.5622302589295065,
+            "brier": 0.755857874735976,
+            "top1_accuracy": 0.3688888888888889,
+            "winner_accuracy": 0.6622222222222223,
+            "method_accuracy": 0.5177777777777778
+          },
+          "delta_log_loss_vs_market": -0.008482575117792601,
+          "delta_brier_vs_market": -0.0021111460533848048
+        },
+        {
+          "fold": "2022",
+          "train_n": 3600,
+          "validation_n": 433,
+          "feature_count": 76,
+          "market": {
+            "n": 433,
+            "log_loss": 1.5406912519128553,
+            "brier": 0.7480878742784635,
+            "top1_accuracy": 0.3625866050808314,
+            "winner_accuracy": 0.6766743648960739,
+            "method_accuracy": 0.5334872979214781
+          },
+          "model": {
+            "n": 433,
+            "log_loss": 1.5319283361873666,
+            "brier": 0.7476719109943457,
+            "top1_accuracy": 0.36027713625866054,
+            "winner_accuracy": 0.6766743648960739,
+            "method_accuracy": 0.5219399538106235
+          },
+          "delta_log_loss_vs_market": -0.008762915725488707,
+          "delta_brier_vs_market": -0.0004159632841177485
+        },
+        {
+          "fold": "2023",
+          "train_n": 4033,
+          "validation_n": 384,
+          "feature_count": 76,
+          "market": {
+            "n": 384,
+            "log_loss": 1.5792545876819555,
+            "brier": 0.7585459723317663,
+            "top1_accuracy": 0.3567708333333333,
+            "winner_accuracy": 0.6875,
+            "method_accuracy": 0.515625
+          },
+          "model": {
+            "n": 384,
+            "log_loss": 1.5711471953224867,
+            "brier": 0.75532382103058,
+            "top1_accuracy": 0.375,
+            "winner_accuracy": 0.6953125,
+            "method_accuracy": 0.5234375
+          },
+          "delta_log_loss_vs_market": -0.008107392359468779,
+          "delta_brier_vs_market": -0.0032221513011863046
+        },
+        {
+          "fold": "2024",
+          "train_n": 4417,
+          "validation_n": 337,
+          "feature_count": 76,
+          "market": {
+            "n": 337,
+            "log_loss": 1.486302405695599,
+            "brier": 0.7217267213160105,
+            "top1_accuracy": 0.42136498516320475,
+            "winner_accuracy": 0.6884272997032641,
+            "method_accuracy": 0.5519287833827893
+          },
+          "model": {
+            "n": 337,
+            "log_loss": 1.4739135976731672,
+            "brier": 0.7160765993445551,
+            "top1_accuracy": 0.42433234421364985,
+            "winner_accuracy": 0.6795252225519288,
+            "method_accuracy": 0.5637982195845698
+          },
+          "delta_log_loss_vs_market": -0.012388808022431697,
+          "delta_brier_vs_market": -0.005650121971455313
+        }
+      ],
+      "market_oof": {
+        "n": 1604,
+        "log_loss": 1.5469188028608722,
+        "brier": 0.747825229037831,
+        "top1_accuracy": 0.36845386533665836,
+        "winner_accuracy": 0.672069825436409,
+        "method_accuracy": 0.5249376558603491
+      },
+      "model_oof": {
+        "n": 1604,
+        "log_loss": 1.5376296705156485,
+        "brier": 0.7451621835078546,
+        "top1_accuracy": 0.37967581047381543,
+        "winner_accuracy": 0.6776807980049875,
+        "method_accuracy": 0.529925187032419
+      },
+      "delta_log_loss_vs_market": -0.009289132345223772,
+      "delta_brier_vs_market": -0.0026630455299764266,
+      "class_calibration": {
+        "red_ko_tko": {
+          "n": 1604,
+          "empirical_rate": 0.1814214463840399,
+          "mean_probability": 0.190657885946064,
+          "brier_component": 0.13854744759083062
+        },
+        "red_sub": {
+          "n": 1604,
+          "empirical_rate": 0.10224438902743142,
+          "mean_probability": 0.10127658583165758,
+          "brier_component": 0.08143327617464292
+        },
+        "red_dec": {
+          "n": 1604,
+          "empirical_rate": 0.2811720698254364,
+          "mean_probability": 0.2701212129093465,
+          "brier_component": 0.18968624298493797
+        },
+        "blue_ko_tko": {
+          "n": 1604,
+          "empirical_rate": 0.14650872817955113,
+          "mean_probability": 0.16279079359572873,
+          "brier_component": 0.11765933980730682
+        },
+        "blue_sub": {
+          "n": 1604,
+          "empirical_rate": 0.07418952618453865,
+          "mean_probability": 0.06791130861469505,
+          "brier_component": 0.0649134106085727
+        },
+        "blue_dec": {
+          "n": 1604,
+          "empirical_rate": 0.2144638403990025,
+          "mean_probability": 0.20724221276690685,
+          "brier_component": 0.1529224663415635
+        }
+      }
+    },
+    "top_50_pre2021_gain": {
+      "feature_count": 51,
+      "folds": [
+        {
+          "fold": "2021",
+          "train_n": 3150,
+          "validation_n": 450,
+          "feature_count": 51,
+          "market": {
+            "n": 450,
+            "log_loss": 1.5707128340472991,
+            "brier": 0.7579690207893608,
+            "top1_accuracy": 0.34444444444444444,
+            "winner_accuracy": 0.6422222222222222,
+            "method_accuracy": 0.5044444444444445
+          },
+          "model": {
+            "n": 450,
+            "log_loss": 1.56462494726744,
+            "brier": 0.7570334802305274,
+            "top1_accuracy": 0.38,
+            "winner_accuracy": 0.6666666666666666,
+            "method_accuracy": 0.5266666666666666
+          },
+          "delta_log_loss_vs_market": -0.006087886779859053,
+          "delta_brier_vs_market": -0.0009355405588333809
+        },
+        {
+          "fold": "2022",
+          "train_n": 3600,
+          "validation_n": 433,
+          "feature_count": 51,
+          "market": {
+            "n": 433,
+            "log_loss": 1.5406912519128553,
+            "brier": 0.7480878742784635,
+            "top1_accuracy": 0.3625866050808314,
+            "winner_accuracy": 0.6766743648960739,
+            "method_accuracy": 0.5334872979214781
+          },
+          "model": {
+            "n": 433,
+            "log_loss": 1.5366626238281345,
+            "brier": 0.7490303835774016,
+            "top1_accuracy": 0.3510392609699769,
+            "winner_accuracy": 0.6674364896073903,
+            "method_accuracy": 0.5150115473441108
+          },
+          "delta_log_loss_vs_market": -0.00402862808472082,
+          "delta_brier_vs_market": 0.0009425092989381323
+        },
+        {
+          "fold": "2023",
+          "train_n": 4033,
+          "validation_n": 384,
+          "feature_count": 51,
+          "market": {
+            "n": 384,
+            "log_loss": 1.5792545876819555,
+            "brier": 0.7585459723317663,
+            "top1_accuracy": 0.3567708333333333,
+            "winner_accuracy": 0.6875,
+            "method_accuracy": 0.515625
+          },
+          "model": {
+            "n": 384,
+            "log_loss": 1.570922444633713,
+            "brier": 0.7559743348581701,
+            "top1_accuracy": 0.3776041666666667,
+            "winner_accuracy": 0.6953125,
+            "method_accuracy": 0.5338541666666666
+          },
+          "delta_log_loss_vs_market": -0.008332143048242369,
+          "delta_brier_vs_market": -0.0025716374735962333
+        },
+        {
+          "fold": "2024",
+          "train_n": 4417,
+          "validation_n": 337,
+          "feature_count": 51,
+          "market": {
+            "n": 337,
+            "log_loss": 1.486302405695599,
+            "brier": 0.7217267213160105,
+            "top1_accuracy": 0.42136498516320475,
+            "winner_accuracy": 0.6884272997032641,
+            "method_accuracy": 0.5519287833827893
+          },
+          "model": {
+            "n": 337,
+            "log_loss": 1.4740439089531958,
+            "brier": 0.7155393948288269,
+            "top1_accuracy": 0.4391691394658754,
+            "winner_accuracy": 0.6824925816023739,
+            "method_accuracy": 0.5756676557863502
+          },
+          "delta_log_loss_vs_market": -0.012258496742403091,
+          "delta_brier_vs_market": -0.006187326487183564
+        }
+      ],
+      "market_oof": {
+        "n": 1604,
+        "log_loss": 1.5469188028608722,
+        "brier": 0.747825229037831,
+        "top1_accuracy": 0.36845386533665836,
+        "winner_accuracy": 0.672069825436409,
+        "method_accuracy": 0.5249376558603491
+      },
+      "model_oof": {
+        "n": 1604,
+        "log_loss": 1.5395530912995656,
+        "brier": 0.7459015853089802,
+        "top1_accuracy": 0.38403990024937656,
+        "winner_accuracy": 0.6770573566084788,
+        "method_accuracy": 0.5355361596009975
+      },
+      "delta_log_loss_vs_market": -0.007365711561306609,
+      "delta_brier_vs_market": -0.001923643728850788,
+      "class_calibration": {
+        "red_ko_tko": {
+          "n": 1604,
+          "empirical_rate": 0.1814214463840399,
+          "mean_probability": 0.18989023497267776,
+          "brier_component": 0.13864314693106555
+        },
+        "red_sub": {
+          "n": 1604,
+          "empirical_rate": 0.10224438902743142,
+          "mean_probability": 0.10195095435614021,
+          "brier_component": 0.08163728716183472
+        },
+        "red_dec": {
+          "n": 1604,
+          "empirical_rate": 0.2811720698254364,
+          "mean_probability": 0.2703758967910287,
+          "brier_component": 0.19009166060074062
+        },
+        "blue_ko_tko": {
+          "n": 1604,
+          "empirical_rate": 0.14650872817955113,
+          "mean_probability": 0.16315165156976985,
+          "brier_component": 0.11774262282936152
+        },
+        "blue_sub": {
+          "n": 1604,
+          "empirical_rate": 0.07418952618453865,
+          "mean_probability": 0.0675364380642572,
+          "brier_component": 0.06495774398565497
+        },
+        "blue_dec": {
+          "n": 1604,
+          "empirical_rate": 0.2144638403990025,
+          "mean_probability": 0.20709482441073343,
+          "brier_component": 0.15282912380032276
+        }
+      }
+    },
+    "top_35_pre2021_gain": {
+      "feature_count": 36,
+      "folds": [
+        {
+          "fold": "2021",
+          "train_n": 3150,
+          "validation_n": 450,
+          "feature_count": 36,
+          "market": {
+            "n": 450,
+            "log_loss": 1.5707128340472991,
+            "brier": 0.7579690207893608,
+            "top1_accuracy": 0.34444444444444444,
+            "winner_accuracy": 0.6422222222222222,
+            "method_accuracy": 0.5044444444444445
+          },
+          "model": {
+            "n": 450,
+            "log_loss": 1.5594762291041964,
+            "brier": 0.7559162031738985,
+            "top1_accuracy": 0.37333333333333335,
+            "winner_accuracy": 0.6555555555555556,
+            "method_accuracy": 0.5266666666666666
+          },
+          "delta_log_loss_vs_market": -0.011236604943102746,
+          "delta_brier_vs_market": -0.002052817615462277
+        },
+        {
+          "fold": "2022",
+          "train_n": 3600,
+          "validation_n": 433,
+          "feature_count": 36,
+          "market": {
+            "n": 433,
+            "log_loss": 1.5406912519128553,
+            "brier": 0.7480878742784635,
+            "top1_accuracy": 0.3625866050808314,
+            "winner_accuracy": 0.6766743648960739,
+            "method_accuracy": 0.5334872979214781
+          },
+          "model": {
+            "n": 433,
+            "log_loss": 1.538053453367278,
+            "brier": 0.749527952393816,
+            "top1_accuracy": 0.3648960739030023,
+            "winner_accuracy": 0.6789838337182448,
+            "method_accuracy": 0.5219399538106235
+          },
+          "delta_log_loss_vs_market": -0.002637798545577219,
+          "delta_brier_vs_market": 0.0014400781153525166
+        },
+        {
+          "fold": "2023",
+          "train_n": 4033,
+          "validation_n": 384,
+          "feature_count": 36,
+          "market": {
+            "n": 384,
+            "log_loss": 1.5792545876819555,
+            "brier": 0.7585459723317663,
+            "top1_accuracy": 0.3567708333333333,
+            "winner_accuracy": 0.6875,
+            "method_accuracy": 0.515625
+          },
+          "model": {
+            "n": 384,
+            "log_loss": 1.5654166799157043,
+            "brier": 0.7542643698020696,
+            "top1_accuracy": 0.3645833333333333,
+            "winner_accuracy": 0.6848958333333334,
+            "method_accuracy": 0.5234375
+          },
+          "delta_log_loss_vs_market": -0.013837907766251156,
+          "delta_brier_vs_market": -0.004281602529696782
+        },
+        {
+          "fold": "2024",
+          "train_n": 4417,
+          "validation_n": 337,
+          "feature_count": 36,
+          "market": {
+            "n": 337,
+            "log_loss": 1.486302405695599,
+            "brier": 0.7217267213160105,
+            "top1_accuracy": 0.42136498516320475,
+            "winner_accuracy": 0.6884272997032641,
+            "method_accuracy": 0.5519287833827893
+          },
+          "model": {
+            "n": 337,
+            "log_loss": 1.4744714816965592,
+            "brier": 0.7161449711624337,
+            "top1_accuracy": 0.42729970326409494,
+            "winner_accuracy": 0.685459940652819,
+            "method_accuracy": 0.5667655786350149
+          },
+          "delta_log_loss_vs_market": -0.011830923999039733,
+          "delta_brier_vs_market": -0.005581750153576759
+        }
+      ],
+      "market_oof": {
+        "n": 1604,
+        "log_loss": 1.5469188028608722,
+        "brier": 0.747825229037831,
+        "top1_accuracy": 0.36845386533665836,
+        "winner_accuracy": 0.672069825436409,
+        "method_accuracy": 0.5249376558603491
+      },
+      "model_oof": {
+        "n": 1604,
+        "log_loss": 1.5372558247034231,
+        "brier": 0.7454403167708924,
+        "top1_accuracy": 0.3802992518703242,
+        "winner_accuracy": 0.6751870324189526,
+        "method_accuracy": 0.5330423940149626
+      },
+      "delta_log_loss_vs_market": -0.009662978157449098,
+      "delta_brier_vs_market": -0.002384912266938599,
+      "class_calibration": {
+        "red_ko_tko": {
+          "n": 1604,
+          "empirical_rate": 0.1814214463840399,
+          "mean_probability": 0.190496005316467,
+          "brier_component": 0.13840459007114847
+        },
+        "red_sub": {
+          "n": 1604,
+          "empirical_rate": 0.10224438902743142,
+          "mean_probability": 0.10215816345934448,
+          "brier_component": 0.08167057605441372
+        },
+        "red_dec": {
+          "n": 1604,
+          "empirical_rate": 0.2811720698254364,
+          "mean_probability": 0.2695896415146732,
+          "brier_component": 0.18986342660228664
+        },
+        "blue_ko_tko": {
+          "n": 1604,
+          "empirical_rate": 0.14650872817955113,
+          "mean_probability": 0.1629700471236001,
+          "brier_component": 0.11773620385855194
+        },
+        "blue_sub": {
+          "n": 1604,
+          "empirical_rate": 0.07418952618453865,
+          "mean_probability": 0.06748978245336831,
+          "brier_component": 0.06475027807870928
+        },
+        "blue_dec": {
+          "n": 1604,
+          "empirical_rate": 0.2144638403990025,
+          "mean_probability": 0.20729635969765875,
+          "brier_component": 0.1530152421057824
+        }
+      }
+    }
+  },
+  "selected_candidate": "full_v5_signed",
+  "selected_features": [
+    "age_diff",
+    "age_squared_diff",
+    "age_x_career_ko_losses_diff",
+    "aggression_index_diff",
+    "avg_fight_time_diff",
+    "avg_opponent_elo_diff",
+    "best_win_elo_diff",
+    "career_ko_losses_diff",
+    "chin_risk_diff",
+    "ctrl_against_per_min_diff",
+    "ctrl_per_min_diff",
+    "days_since_last_fight_diff",
+    "days_since_last_ko_loss_diff",
+    "decision_dependency_diff",
+    "decision_loss_rate_diff",
+    "decision_win_rate_diff",
+    "elo_diff",
+    "ewm_avg_fight_time_diff",
+    "ewm_avg_opponent_elo_diff",
+    "ewm_best_win_elo_diff",
+    "ewm_ctrl_against_per_min_diff",
+    "ewm_ctrl_per_min_diff",
+    "ewm_days_since_last_fight_diff",
+    "ewm_decision_loss_rate_diff",
+    "ewm_decision_win_rate_diff",
+    "ewm_elo_diff",
+    "ewm_fights_diff",
+    "ewm_finish_loss_rate_diff",
+    "ewm_finish_rate_diff",
+    "ewm_kd_absorbed_avg_diff",
+    "ewm_kd_avg_diff",
+    "ewm_ko_rate_diff",
+    "ewm_loss_streak_diff",
+    "ewm_losses_diff",
+    "ewm_recent_avg_fight_time_diff",
+    "ewm_recent_finish_rate_diff",
+    "ewm_recent_sapm_diff",
+    "ewm_recent_splm_diff",
+    "ewm_recent_td_avg_diff",
+    "ewm_recent_win_pct_diff",
+    "ewm_sapm_diff",
+    "ewm_splm_diff",
+    "ewm_str_acc_diff",
+    "ewm_str_def_diff",
+    "ewm_sub_avg_diff",
+    "ewm_sub_win_rate_diff",
+    "ewm_td_acc_diff",
+    "ewm_td_avg_diff",
+    "ewm_td_def_diff",
+    "ewm_win_pct_diff",
+    "ewm_win_streak_diff",
+    "ewm_wins_diff",
+    "ewm_worst_loss_elo_diff",
+    "experience_ratio_diff",
+    "fights_diff",
+    "finish_dependency_diff",
+    "finish_loss_rate_diff",
+    "finish_rate_diff",
+    "height_diff",
+    "kd_absorbed_avg_diff",
+    "kd_avg_diff",
+    "ko_dependency_diff",
+    "ko_rate_diff",
+    "ko_win_concentration_diff",
+    "last_fight_ko_loss_diff",
+    "loss_streak_diff",
+    "losses_diff",
+    "pressure_striking_adv_diff",
+    "reach_diff",
+    "recent_avg_fight_time_diff",
+    "recent_finish_rate_diff",
+    "recent_form_avg_fight_time_diff",
+    "recent_form_avg_opponent_elo_diff",
+    "recent_form_best_win_elo_diff",
+    "recent_form_ctrl_against_per_min_diff",
+    "recent_form_ctrl_per_min_diff",
+    "recent_form_days_since_last_fight_diff",
+    "recent_form_decision_loss_rate_diff",
+    "recent_form_decision_win_rate_diff",
+    "recent_form_elo_diff",
+    "recent_form_fights_diff",
+    "recent_form_finish_loss_rate_diff",
+    "recent_form_finish_rate_diff",
+    "recent_form_kd_absorbed_avg_diff",
+    "recent_form_kd_avg_diff",
+    "recent_form_ko_rate_diff",
+    "recent_form_loss_streak_diff",
+    "recent_form_losses_diff",
+    "recent_form_recent_avg_fight_time_diff",
+    "recent_form_recent_finish_rate_diff",
+    "recent_form_recent_sapm_diff",
+    "recent_form_recent_splm_diff",
+    "recent_form_recent_td_avg_diff",
+    "recent_form_recent_win_pct_diff",
+    "recent_form_sapm_diff",
+    "recent_form_splm_diff",
+    "recent_form_str_acc_diff",
+    "recent_form_str_def_diff",
+    "recent_form_sub_avg_diff",
+    "recent_form_sub_win_rate_diff",
+    "recent_form_td_acc_diff",
+    "recent_form_td_avg_diff",
+    "recent_form_td_def_diff",
+    "recent_form_win_pct_diff",
+    "recent_form_win_streak_diff",
+    "recent_form_wins_diff",
+    "recent_form_worst_loss_elo_diff",
+    "recent_ko_losses_3_diff",
+    "recent_sapm_diff",
+    "recent_splm_diff",
+    "recent_td_avg_diff",
+    "recent_win_pct_diff",
+    "sapm_diff",
+    "splm_diff",
+    "str_acc_diff",
+    "str_def_diff",
+    "style_all_round_finisher_score_diff",
+    "style_control_wrestler_score_diff",
+    "style_decision_technician_score_diff",
+    "style_flexibility_score_diff",
+    "style_ko_finisher_score_diff",
+    "style_primary_score_diff",
+    "style_score_spread_diff",
+    "style_submission_grappler_score_diff",
+    "sub_avg_diff",
+    "sub_win_rate_diff",
+    "submission_dependency_diff",
+    "submission_mismatch_diff",
+    "submission_win_concentration_diff",
+    "td_acc_diff",
+    "td_avg_diff",
+    "td_def_diff",
+    "victory_concentration_index_diff",
+    "weight_diff",
+    "win_method_entropy_diff",
+    "win_pct_diff",
+    "win_streak_diff",
+    "wins_diff",
+    "worst_loss_elo_diff",
+    "wrestling_mismatch_diff"
+  ],
+  "selected_oof": {
+    "n": 1604,
+    "log_loss": 1.5363884809490846,
+    "brier": 0.7443599831915461,
+    "top1_accuracy": 0.3846633416458853,
+    "winner_accuracy": 0.6807980049875312,
+    "method_accuracy": 0.5349127182044888
+  },
+  "selected_delta_log_loss_vs_market": -0.010530321911787599,
+  "test_status": "SCORED_ONCE_AFTER_FREEZE",
+  "final_test": {
+    "date_min": "2025-01-11",
+    "date_max": "2026-03-28",
+    "train_n": 4754,
+    "test_n": 489,
+    "feature_count": 141,
+    "market": {
+      "n": 489,
+      "log_loss": 1.548071383391046,
+      "brier": 0.7497591298437802,
+      "top1_accuracy": 0.38650306748466257,
+      "winner_accuracy": 0.6850715746421268,
+      "method_accuracy": 0.5439672801635992
+    },
+    "model": {
+      "n": 489,
+      "log_loss": 1.5482574111722391,
+      "brier": 0.7506226669279243,
+      "top1_accuracy": 0.38650306748466257,
+      "winner_accuracy": 0.7034764826175869,
+      "method_accuracy": 0.5357873210633947
+    },
+    "delta_log_loss_vs_market": 0.00018602778119314323,
+    "delta_brier_vs_market": 0.0008635370841441059,
+    "class_calibration": {
+      "red_ko_tko": {
+        "n": 489,
+        "empirical_rate": 0.18813905930470348,
+        "mean_probability": 0.14106486923421271,
+        "brier_component": 0.14518222207534995
+      },
+      "red_sub": {
+        "n": 489,
+        "empirical_rate": 0.0736196319018405,
+        "mean_probability": 0.07652832955647648,
+        "brier_component": 0.06262632156440877
+      },
+      "red_dec": {
+        "n": 489,
+        "empirical_rate": 0.2985685071574642,
+        "mean_probability": 0.3286924008546675,
+        "brier_component": 0.19138667923996056
+      },
+      "blue_ko_tko": {
+        "n": 489,
+        "empirical_rate": 0.14519427402862986,
+        "mean_probability": 0.12459393655252786,
+        "brier_component": 0.11576524420855326
+      },
+      "blue_sub": {
+        "n": 489,
+        "empirical_rate": 0.07157464212678936,
+        "mean_probability": 0.06018118904275031,
+        "brier_component": 0.06328280921673841
+      },
+      "blue_dec": {
+        "n": 489,
+        "empirical_rate": 0.2229038854805726,
+        "mean_probability": 0.26893927438036064,
+        "brier_component": 0.17237939062291344
+      }
+    },
+    "top_features_by_gain": [
+      {
+        "feature": "td_avg_diff",
+        "gain": 6.560105800628662
+      },
+      {
+        "feature": "style_control_wrestler_score_diff",
+        "gain": 6.5099778175354
+      },
+      {
+        "feature": "experience_ratio_diff",
+        "gain": 5.65544319152832
+      },
+      {
+        "feature": "recent_form_losses_diff",
+        "gain": 5.649587631225586
+      },
+      {
+        "feature": "ewm_finish_loss_rate_diff",
+        "gain": 5.449758052825928
+      },
+      {
+        "feature": "td_acc_diff",
+        "gain": 5.387223243713379
+      },
+      {
+        "feature": "ewm_kd_absorbed_avg_diff",
+        "gain": 5.326353073120117
+      },
+      {
+        "feature": "recent_form_recent_avg_fight_time_diff",
+        "gain": 5.192002296447754
+      },
+      {
+        "feature": "style_all_round_finisher_score_diff",
+        "gain": 5.1333699226379395
+      },
+      {
+        "feature": "recent_form_fights_diff",
+        "gain": 5.115616321563721
+      },
+      {
+        "feature": "ewm_td_avg_diff",
+        "gain": 5.11227560043335
+      },
+      {
+        "feature": "days_since_last_ko_loss_diff",
+        "gain": 5.1113739013671875
+      },
+      {
+        "feature": "ewm_sapm_diff",
+        "gain": 5.095273494720459
+      },
+      {
+        "feature": "age_squared_diff",
+        "gain": 5.025097846984863
+      },
+      {
+        "feature": "recent_form_elo_diff",
+        "gain": 4.845187187194824
+      },
+      {
+        "feature": "chin_risk_diff",
+        "gain": 4.805825710296631
+      },
+      {
+        "feature": "recent_sapm_diff",
+        "gain": 4.805209159851074
+      },
+      {
+        "feature": "recent_form_finish_loss_rate_diff",
+        "gain": 4.782092094421387
+      },
+      {
+        "feature": "recent_form_sub_win_rate_diff",
+        "gain": 4.761080265045166
+      },
+      {
+        "feature": "kd_absorbed_avg_diff",
+        "gain": 4.755733966827393
+      },
+      {
+        "feature": "reach_diff",
+        "gain": 4.736521244049072
+      },
+      {
+        "feature": "wrestling_mismatch_diff",
+        "gain": 4.734946250915527
+      },
+      {
+        "feature": "age_diff",
+        "gain": 4.7297797203063965
+      },
+      {
+        "feature": "recent_form_sub_avg_diff",
+        "gain": 4.722655773162842
+      },
+      {
+        "feature": "ewm_str_acc_diff",
+        "gain": 4.691898345947266
+      },
+      {
+        "feature": "str_acc_diff",
+        "gain": 4.684243679046631
+      },
+      {
+        "feature": "ewm_loss_streak_diff",
+        "gain": 4.68381404876709
+      },
+      {
+        "feature": "ewm_recent_finish_rate_diff",
+        "gain": 4.678725242614746
+      },
+      {
+        "feature": "recent_form_recent_sapm_diff",
+        "gain": 4.63611364364624
+      },
+      {
+        "feature": "ewm_finish_rate_diff",
+        "gain": 4.602051734924316
+      }
+    ],
+    "max_probability_sum_error": 7.450580596923828e-08
+  }
+}
