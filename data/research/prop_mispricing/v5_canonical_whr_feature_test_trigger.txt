@@ -1,0 +1,1 @@
+trigger 2026-08-31 canonical WHR w2=7.5625/day
