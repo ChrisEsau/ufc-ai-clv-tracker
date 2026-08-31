@@ -54,6 +54,9 @@ jobs:
         run: |
           python -m pipeline.research.xgboost_v5_draftkings_index_snapshots_v2
 
+      - name: Restore temporary runner patch
+        run: git restore pipeline/research/xgboost_v5_draftkings_index_snapshots_v2.py
+
       - name: Commit V5 index outputs
         run: |
           git config user.name "github-actions[bot]"
