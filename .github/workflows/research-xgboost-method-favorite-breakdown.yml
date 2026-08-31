@@ -1,0 +1,37 @@
+name: Research XGBoost Method Favorite Breakdown
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - pipeline/research/xgboost_method_favorite_breakdown.py
+      - .github/workflows/research-xgboost-method-favorite-breakdown.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  favorite-breakdown:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.16"
+      - run: pip install pandas==3.0.5
+      - name: Run breakdown
+        run: python -m pipeline.research.xgboost_method_favorite_breakdown
+      - name: Commit output
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f data/research/prop_mispricing/xgboost_method_market_offset__2025_2026_favorite_breakdown.csv
+          git diff --cached --quiet && exit 0
+          git commit -m "research: add method favorite breakdown results"
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
