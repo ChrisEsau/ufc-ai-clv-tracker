@@ -1,0 +1,226 @@
+{
+  "experiment": "six_way_method_family_specific_specialists_v1",
+  "period": "chronological 2021-2024 OOF only",
+  "reads_2025_plus": false,
+  "uses_roi": false,
+  "cold_start_filter": "OFF, matching frozen method experiment",
+  "feature_universe": 140,
+  "family_feature_ranking_cutoff": "2020-12-31",
+  "selection_metric": "pooled 2021-2024 OOF binary log loss within each family; no ROI",
+  "selection_note": "development selection is not nested; final comparison remains development OOF architecture research",
+  "grid": {
+    "feature_counts": [
+      140,
+      75,
+      35
+    ],
+    "capacity": [
+      {
+        "name": "d1_r150",
+        "max_depth": 1,
+        "rounds": 150
+      },
+      {
+        "name": "d1_r300",
+        "max_depth": 1,
+        "rounds": 300
+      },
+      {
+        "name": "d2_r150",
+        "max_depth": 2,
+        "rounds": 150
+      },
+      {
+        "name": "d2_r300",
+        "max_depth": 2,
+        "rounds": 300
+      }
+    ],
+    "candidates_per_family": 12
+  },
+  "selected": {
+    "KO_TKO": {
+      "family": "KO_TKO",
+      "feature_count_requested": 140,
+      "max_depth": 1,
+      "rounds": 150,
+      "binary_log_loss": 0.4148576744401692,
+      "market_binary_log_loss": 0.41666712571247827,
+      "delta_vs_market": -0.0018094512723090816,
+      "candidate": "KO_TKO_top140_d1_r150"
+    },
+    "SUB": {
+      "family": "SUB",
+      "feature_count_requested": 75,
+      "max_depth": 1,
+      "rounds": 150,
+      "binary_log_loss": 0.2612557859694171,
+      "market_binary_log_loss": 0.263205155764401,
+      "delta_vs_market": -0.0019493697949838906,
+      "candidate": "SUB_top75_d1_r150"
+    },
+    "DEC": {
+      "family": "DEC",
+      "feature_count_requested": 75,
+      "max_depth": 1,
+      "rounds": 150,
+      "binary_log_loss": 0.5179079785402642,
+      "market_binary_log_loss": 0.5221835594271522,
+      "delta_vs_market": -0.004275580886888064,
+      "candidate": "DEC_top75_d1_r150"
+    }
+  },
+  "pooled_market": {
+    "n": 1604,
+    "log_loss": 1.5469188028608722,
+    "brier": 0.747825229037831,
+    "top1_accuracy": 0.36845386533665836,
+    "winner_accuracy": 0.672069825436409,
+    "method_accuracy": 0.5249376558603491
+  },
+  "pooled_family_specific_specialist": {
+    "n": 1604,
+    "log_loss": 1.534599023864145,
+    "brier": 0.7442260732064914,
+    "top1_accuracy": 0.3846633416458853,
+    "winner_accuracy": 0.6826683291770573,
+    "method_accuracy": 0.5336658354114713
+  },
+  "delta_vs_market": {
+    "log_loss": -0.012319778996727315,
+    "brier": -0.003599155831339629,
+    "top1_accuracy": 0.016209476309226922,
+    "winner_accuracy": 0.010598503740648302,
+    "method_accuracy": 0.00872817955112215
+  },
+  "fixed_specialist_log_loss": 1.5417424341858281,
+  "delta_vs_fixed_specialist_log_loss": -0.007143410321683197,
+  "frozen_sixway_log_loss": 1.5364276221525495,
+  "delta_vs_frozen_sixway_log_loss": -0.001828598288404537,
+  "beats_fixed_specialist": true,
+  "beats_frozen_sixway_primary": true,
+  "folds": [
+    {
+      "fold": "2021",
+      "n": 450,
+      "market": {
+        "n": 450,
+        "log_loss": 1.5707128340472991,
+        "brier": 0.7579690207893608,
+        "top1_accuracy": 0.34444444444444444,
+        "winner_accuracy": 0.6422222222222222,
+        "method_accuracy": 0.5044444444444445
+      },
+      "family_specific_specialist": {
+        "n": 450,
+        "log_loss": 1.5560745018514177,
+        "brier": 0.754110426502017,
+        "top1_accuracy": 0.38666666666666666,
+        "winner_accuracy": 0.6711111111111111,
+        "method_accuracy": 0.5333333333333333
+      },
+      "delta_log_loss": -0.014638332195881398
+    },
+    {
+      "fold": "2022",
+      "n": 433,
+      "market": {
+        "n": 433,
+        "log_loss": 1.5406912519128553,
+        "brier": 0.7480878742784635,
+        "top1_accuracy": 0.3625866050808314,
+        "winner_accuracy": 0.6766743648960739,
+        "method_accuracy": 0.5334872979214781
+      },
+      "family_specific_specialist": {
+        "n": 433,
+        "log_loss": 1.529884188184508,
+        "brier": 0.7474906339559358,
+        "top1_accuracy": 0.371824480369515,
+        "winner_accuracy": 0.6882217090069284,
+        "method_accuracy": 0.5219399538106235
+      },
+      "delta_log_loss": -0.010807063728347277
+    },
+    {
+      "fold": "2023",
+      "n": 384,
+      "market": {
+        "n": 384,
+        "log_loss": 1.5792545876819555,
+        "brier": 0.7585459723317663,
+        "top1_accuracy": 0.3567708333333333,
+        "winner_accuracy": 0.6875,
+        "method_accuracy": 0.515625
+      },
+      "family_specific_specialist": {
+        "n": 384,
+        "log_loss": 1.5709992330885587,
+        "brier": 0.7549063446387029,
+        "top1_accuracy": 0.3619791666666667,
+        "winner_accuracy": 0.6927083333333334,
+        "method_accuracy": 0.515625
+      },
+      "delta_log_loss": -0.008255354593396769
+    },
+    {
+      "fold": "2024",
+      "n": 337,
+      "market": {
+        "n": 337,
+        "log_loss": 1.486302405695599,
+        "brier": 0.7217267213160105,
+        "top1_accuracy": 0.42136498516320475,
+        "winner_accuracy": 0.6884272997032641,
+        "method_accuracy": 0.5519287833827893
+      },
+      "family_specific_specialist": {
+        "n": 337,
+        "log_loss": 1.4705037075817564,
+        "brier": 0.7146630523831521,
+        "top1_accuracy": 0.42433234421364985,
+        "winner_accuracy": 0.6795252225519288,
+        "method_accuracy": 0.56973293768546
+      },
+      "delta_log_loss": -0.01579869811384249
+    }
+  ],
+  "calibration": {
+    "RED_KO_TKO": {
+      "actual_count": 291,
+      "empirical_rate": 0.1814214463840399,
+      "mean_probability": 0.18693240566311747,
+      "brier_component": 0.1385732130259683
+    },
+    "RED_SUB": {
+      "actual_count": 164,
+      "empirical_rate": 0.10224438902743142,
+      "mean_probability": 0.0974017480341719,
+      "brier_component": 0.08157038929118758
+    },
+    "RED_DEC": {
+      "actual_count": 451,
+      "empirical_rate": 0.2811720698254364,
+      "mean_probability": 0.2820164207955826,
+      "brier_component": 0.18961672072285976
+    },
+    "BLUE_KO_TKO": {
+      "actual_count": 235,
+      "empirical_rate": 0.14650872817955113,
+      "mean_probability": 0.1605348467509936,
+      "brier_component": 0.11718737136868664
+    },
+    "BLUE_SUB": {
+      "actual_count": 119,
+      "empirical_rate": 0.07418952618453865,
+      "mean_probability": 0.06445647789003801,
+      "brier_component": 0.0645435785015922
+    },
+    "BLUE_DEC": {
+      "actual_count": 344,
+      "empirical_rate": 0.2144638403990025,
+      "mean_probability": 0.20865810086609637,
+      "brier_component": 0.15273480029619674
+    }
+  }
+}
