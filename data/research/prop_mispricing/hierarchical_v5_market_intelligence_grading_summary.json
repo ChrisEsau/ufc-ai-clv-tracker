@@ -1,22 +1,134 @@
 {
-  "experiment": "grade_frozen_hierarchical_v5_market_intelligence_bets_v1",
+  "experiment": "grade_frozen_hierarchical_v5_market_intelligence_bets_v2",
   "bet_source": "data/research/prop_mispricing/hierarchical_v5_market_intelligence_bets.csv",
-  "result_source": "data/market/historical_market_outcomes.parquet",
+  "result_source": "data/features/moneyline_feature_view.parquet",
   "total_bets": 38,
-  "graded_bets": 0,
-  "ungraded_bets": 38,
-  "unique_historical_pair_matches": 0,
+  "graded_bets": 38,
+  "ungraded_bets": 0,
+  "ungraded_reasons": {},
   "pooled": {
-    "bets": 0,
-    "wins": 0,
-    "losses": 0,
-    "stake_units": 0.0,
-    "profit_units": 0.0,
-    "roi": null,
-    "hit_rate": null,
-    "fights_bet": 0
+    "bets": 38,
+    "wins": 13,
+    "losses": 25,
+    "stake_units": 38.0,
+    "profit_units": 2.9498316498316495,
+    "roi": 0.07762714867978025,
+    "hit_rate": 0.34210526315789475,
+    "fights_bet": 38
   },
-  "by_event": {},
-  "by_method": {},
-  "grading_rule": "normalized unordered fighter pair; only unique historical graded pair matches accepted"
+  "by_event": {
+    "UFC 329: McGregor vs. Holloway 2": {
+      "bets": 5,
+      "wins": 0,
+      "losses": 5,
+      "stake_units": 5.0,
+      "profit_units": -5.0,
+      "roi": -1.0,
+      "hit_rate": 0.0,
+      "fights_bet": 5
+    },
+    "UFC 330: Makhachev vs. Machado Garry": {
+      "bets": 2,
+      "wins": 2,
+      "losses": 0,
+      "stake_units": 2.0,
+      "profit_units": 5.2,
+      "roi": 2.6,
+      "hit_rate": 1.0,
+      "fights_bet": 2
+    },
+    "UFC Fight Night: Ankalaev vs. Guskov": {
+      "bets": 3,
+      "wins": 3,
+      "losses": 0,
+      "stake_units": 3.0,
+      "profit_units": 3.049831649831649,
+      "roi": 1.0166105499438831,
+      "hit_rate": 1.0,
+      "fights_bet": 3
+    },
+    "UFC Fight Night: Du Plessis vs. Usman": {
+      "bets": 6,
+      "wins": 2,
+      "losses": 4,
+      "stake_units": 6.0,
+      "profit_units": -1.5,
+      "roi": -0.25,
+      "hit_rate": 0.3333333333333333,
+      "fights_bet": 6
+    },
+    "UFC Fight Night: Fiziev vs. Torres": {
+      "bets": 6,
+      "wins": 1,
+      "losses": 5,
+      "stake_units": 6.0,
+      "profit_units": -1.5,
+      "roi": -0.25,
+      "hit_rate": 0.16666666666666666,
+      "fights_bet": 6
+    },
+    "UFC Fight Night: Gamrot vs. Salkilld": {
+      "bets": 5,
+      "wins": 3,
+      "losses": 2,
+      "stake_units": 5.0,
+      "profit_units": 4.4,
+      "roi": 0.8800000000000001,
+      "hit_rate": 0.6,
+      "fights_bet": 5
+    },
+    "UFC Fight Night: Hernandez vs. Rodrigues": {
+      "bets": 6,
+      "wins": 1,
+      "losses": 5,
+      "stake_units": 6.0,
+      "profit_units": 0.5,
+      "roi": 0.08333333333333333,
+      "hit_rate": 0.16666666666666666,
+      "fights_bet": 6
+    },
+    "UFC Fight Night: Medic vs. Rodriguez": {
+      "bets": 5,
+      "wins": 1,
+      "losses": 4,
+      "stake_units": 5.0,
+      "profit_units": -2.2,
+      "roi": -0.44000000000000006,
+      "hit_rate": 0.2,
+      "fights_bet": 5
+    }
+  },
+  "by_method": {
+    "blue_dec": {
+      "bets": 6,
+      "wins": 2,
+      "losses": 4,
+      "stake_units": 6.0,
+      "profit_units": 0.5,
+      "roi": 0.08333333333333333,
+      "hit_rate": 0.3333333333333333,
+      "fights_bet": 6
+    },
+    "red_dec": {
+      "bets": 29,
+      "wins": 9,
+      "losses": 20,
+      "stake_units": 29.0,
+      "profit_units": -3.3001683501683496,
+      "roi": -0.11379890862649482,
+      "hit_rate": 0.3103448275862069,
+      "fights_bet": 29
+    },
+    "red_ko": {
+      "bets": 3,
+      "wins": 2,
+      "losses": 1,
+      "stake_units": 3.0,
+      "profit_units": 5.75,
+      "roi": 1.9166666666666667,
+      "hit_rate": 0.6666666666666666,
+      "fights_bet": 3
+    }
+  },
+  "grading_rule": "canonical fight_id joined to moneyline_feature_view; realized winner + method mapped to six-way target"
 }
