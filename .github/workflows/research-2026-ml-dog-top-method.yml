@@ -1,0 +1,31 @@
+name: Research 2026 ML Dog Top Method
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths:
+      - 'pipeline/research/evaluate_2026_ml_dog_top_method.py'
+      - '.github/workflows/research-2026-ml-dog-top-method.yml'
+  workflow_dispatch:
+jobs:
+  evaluate:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install environment
+        run: pip install pandas pyarrow
+      - name: Evaluate dog top method
+        run: python pipeline/research/evaluate_2026_ml_dog_top_method.py
+      - name: Commit outputs
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add data/research/prop_mispricing/hierarchical_v5_ml_dog_top_method_2026_dk_ledger.csv data/research/prop_mispricing/hierarchical_v5_ml_dog_top_method_2026_dk_summary.json
+          git commit -m 'Add 2026 ML dog top-method results' || exit 0
+          git push
