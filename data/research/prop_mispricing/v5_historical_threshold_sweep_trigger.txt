@@ -1,0 +1,2 @@
+triggered_at=2026-08-30
+purpose=frozen_v5_2025_to_2026_03_28_threshold_sweep
