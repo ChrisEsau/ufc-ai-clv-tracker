@@ -21,8 +21,9 @@ OUT_CARD = ROOT / "xgboost_method_market_offset__2025_2026_roi_by_card.csv"
 
 START = pd.Timestamp("2025-01-01")
 END = pd.Timestamp("2026-12-31")
-# Descriptive only. 0.20 is included to mirror the frozen V5 moneyline rule.
+# Descriptive only. 0.30 is the gate selected using chronological 2021-2024 OOF only.
 LOGIT_THRESHOLDS = [0.00, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.40]
+PRIMARY_LOGIT_THRESHOLD = 0.30
 BUCKETS = [-np.inf, 0, .05, .10, .15, .20, .25, .30, .40, np.inf]
 BUCKET_LABELS = ["<0", "0-.05", ".05-.10", ".10-.15", ".15-.20", ".20-.25", ".25-.30", ".30-.40", ".40+"]
 
@@ -150,8 +151,8 @@ def main() -> None:
     thresholds_df = pd.DataFrame(threshold_rows)
     thresholds_df.to_csv(OUT_THRESH, index=False)
 
-    # Main committed ledger uses the frozen moneyline-comparable 0.20 logit gate.
-    base = _select_one_per_fight(all_bets, 0.20)
+    # Primary committed ledger uses the gate selected on chronological 2021-2024 OOF only.
+    base = _select_one_per_fight(all_bets, PRIMARY_LOGIT_THRESHOLD)
     base = base.sort_values(["date", "event_name", "fight_id"]).reset_index(drop=True)
     base["cum_profit_units"] = base["profit_units"].cumsum()
     base.to_csv(OUT_BETS, index=False)
@@ -161,7 +162,7 @@ def main() -> None:
     by_class = [{"class_name": c, **_roi(g)} for c, g in base.groupby("class_name")]
     pd.DataFrame(by_class).to_csv(OUT_CLASS, index=False)
 
-    # Chronological card-by-card report for the primary 0.20 rule.
+    # Chronological card-by-card report for the frozen OOF-selected primary rule.
     card_rows = []
     cumulative = 0.0
     for (date, event_name), g in base.groupby(["date", "event_name"], sort=True):
@@ -199,13 +200,13 @@ def main() -> None:
         "bet_pricing": "legacy_consensus raw implied probability is the offered-price proxy; decimal odds = 1/raw implied probability; flat 1-unit stake",
         "bet_eligibility": "model probability must exceed raw implied break-even probability AND signed logit(model)-logit(fair six-way market) must clear threshold",
         "one_bet_per_fight": "hard maximum one method bet per fight; choose eligible outcome with largest signed logit residual",
-        "primary_logit_threshold": 0.20,
-        "threshold_policy": "descriptive predeclared logit grid; 0.20 mirrors frozen V5 moneyline gate; no threshold tuned on 2025-2026",
+        "primary_logit_threshold": PRIMARY_LOGIT_THRESHOLD,
+        "threshold_policy": "primary 0.30 gate selected using chronological 2021-2024 OOF calibration/stability/selectivity only; no ROI/profit and no 2025-2026 data used for gate selection",
         "fights": int(len(preds)),
         "market_metrics": _metrics(y, market_p),
         "model_metrics": _metrics(y, model_p),
         "thresholds": threshold_rows,
-        "primary_020": _roi(base),
+        "primary_030": _roi(base),
         "cards_with_bets": int(len(card_rows)),
     }
     OUT_SUMMARY.write_text(json.dumps(summary, indent=2, default=str))
