@@ -13,6 +13,7 @@ h = h[(h['bookmaker'].eq('DraftKings')) & (h['market_key'].eq('moneyline'))].cop
 h['source_run_id'] = h['source_run_id'].astype(str)
 h = h[h['source_run_id'].isin(runs)].copy()
 
+sample_cols = [c for c in ['fight_id','event_name','fight_display','fighter_name','side','outcome_key','comparison_key','outcome_display','market_display','american_odds','source_run_id'] if c in h.columns]
 report = {
     'index_runs': int(idx['snapshot_run_id'].nunique()),
     'index_provider_events': int(idx['provider_event_id'].nunique()),
@@ -27,8 +28,9 @@ report = {
     'master_date_max': str(pd.to_datetime(master['date'], errors='coerce').max()) if 'date' in master else None,
     'history_master_fight_overlap': int(len(set(h['fight_id'].dropna().astype(str)) & set(master['fight_id'].dropna().astype(str)))),
     'history_side_values': h['side'].astype(str).value_counts(dropna=False).head(20).to_dict() if 'side' in h else None,
+    'history_outcome_key_values': h['outcome_key'].astype(str).value_counts(dropna=False).head(20).to_dict() if 'outcome_key' in h else None,
     'feature_name_columns': [c for c in ['r_name','b_name','red_fighter','blue_fighter','red_name','blue_name'] if c in fv.columns],
     'master_name_columns': [c for c in ['r_name','b_name','red_fighter','blue_fighter','red_name','blue_name'] if c in master.columns],
-    'history_sample': h[['fight_id','event_name','fight_display','fighter_name','side','american_odds','source_run_id']].drop_duplicates().head(20).to_dict('records'),
+    'history_sample': h[sample_cols].drop_duplicates().head(30).to_dict('records'),
 }
 print('V5_INDEX_OVERLAP=' + json.dumps(report, default=str, separators=(',', ':')), flush=True)
