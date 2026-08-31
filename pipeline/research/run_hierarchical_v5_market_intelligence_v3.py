@@ -23,7 +23,6 @@ def pair_key(a,b):
 def build_score_rows(chosen, fv):
     fv=fv.copy()
     fv['fight_id']=fv['fight_id'].astype(str)
-    # Canonical feature-view orientation.
     red_col='r_name' if 'r_name' in fv.columns else 'r_name_x'
     blue_col='b_name' if 'b_name' in fv.columns else 'b_name_x'
     fv['_pair']=fv.apply(lambda r: pair_key(r.get(red_col),r.get(blue_col)),axis=1)
@@ -36,7 +35,6 @@ def build_score_rows(chosen, fv):
     fmeta['_pair']=fmeta.apply(lambda r: pair_key(r['_a'],r['_b']),axis=1)
     fmeta['_event_norm']=fmeta['event_name'].astype(str).str.lower().str.replace(r'[^a-z0-9]+','',regex=True)
 
-    # First exact event+pair; fallback unique pair match.
     exact=fmeta.merge(fv,on=['_pair','_event_norm'],how='left',suffixes=('_market',''))
     rows=[]; skips=[]
     for _,m in fmeta.iterrows():
@@ -76,7 +74,7 @@ def build_score_rows(chosen, fv):
         out={'fight_id':canonical_fid,'market_fight_id':str(m['market_fight_id']),'event_name':m['event_name'],'fight_display':m['fight_display'],'refresh_timestamp':m['refresh_timestamp'],'red_fighter':red_name,'blue_fighter':blue_name,**raw}
         for j,slug in enumerate(base.SLUGS): out[f'market_{slug}']=float(mn[j])
         for c in fv.columns:
-            if c not in ['fight_id','_pair','_event_norm'] and c in r.index: out[c]=r[c]
+            if c not in ['fight_id','_pair','_event_norm','target'] and c in r.index: out[c]=r[c]
         rows.append(out)
     return pd.DataFrame(rows),pd.DataFrame(skips),red_col,blue_col
 
