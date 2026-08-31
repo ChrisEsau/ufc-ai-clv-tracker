@@ -1,0 +1,102 @@
+name: Research V5 Historical Threshold Sweep
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - data/research/prop_mispricing/v5_historical_threshold_sweep_trigger.txt
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -q pandas
+      - name: Run frozen V5 historical threshold sweep
+        run: |
+          python - <<'PY'
+          import pandas as pd
+          from pathlib import Path
+
+          src='data/research/prop_mispricing/xgboost_v5_exact_reproduction_test_predictions.csv'
+          out='data/research/prop_mispricing/v5_historical_2025_to_20260328_threshold_sweep.csv'
+          bets_out='data/research/prop_mispricing/v5_historical_2025_to_20260328_positive_edge_fights.csv'
+          df=pd.read_csv(src)
+          df['date']=pd.to_datetime(df['date'])
+          df=df[(df['date']>=pd.Timestamp('2025-01-01')) & (df['date']<=pd.Timestamp('2026-03-28'))].copy()
+          df=df[(df['market_key']=='moneyline') & (df['bookmaker']=='legacy_consensus') & (df['result_status']=='graded')].copy()
+          df['edge']=pd.to_numeric(df['edge'], errors='coerce')
+          df['profit_per_100']=pd.to_numeric(df['profit_per_100'], errors='coerce')
+          df['won']=pd.to_numeric(df['won'], errors='coerce')
+          df=df.dropna(subset=['edge','profit_per_100','won'])
+
+          # One bet candidate per fight: the fighter with the positive V5-minus-market edge.
+          # Since red/blue model probabilities are complements, side edges should be equal/opposite.
+          idx=df.groupby('fight_id')['edge'].idxmax()
+          sides=df.loc[idx].copy().sort_values(['date','fight_id']).reset_index(drop=True)
+          sides=sides[sides['edge']>=-1e-12].copy()
+          sides['edge']=sides['edge'].clip(lower=0)
+          sides['bet_win']=sides['won'].astype(int)
+          sides['profit_units']=sides.apply(lambda r: (float(r['profit_per_100'])/100.0) if int(r['bet_win'])==1 else -1.0, axis=1)
+          sides['period']=sides['date'].dt.year.map({2025:'2025', 2026:'2026_Jan_Mar'})
+          sides.to_csv(bets_out,index=False)
+
+          thresholds=[i/1000 for i in range(0,101,5)]
+          periods=[('2025_to_2026_03_28', sides), ('2025', sides[sides['date'].dt.year==2025]), ('2026_Jan_Mar', sides[sides['date'].dt.year==2026])]
+          rows=[]
+          for period_name, base in periods:
+              for t in thresholds:
+                  q=base[base['edge'] >= t-1e-15]
+                  n=len(q); wins=int(q['bet_win'].sum()); losses=n-wins
+                  profit=float(q['profit_units'].sum()) if n else 0.0
+                  rows.append({
+                      'period':period_name,
+                      'threshold':t,
+                      'threshold_pct':t*100,
+                      'bets':n,
+                      'wins':wins,
+                      'losses':losses,
+                      'win_rate':wins/n if n else None,
+                      'profit_units':profit,
+                      'roi':profit/n if n else None,
+                  })
+          res=pd.DataFrame(rows)
+          res.to_csv(out,index=False)
+          print('SOURCE_ROWS', len(df), 'UNIQUE_FIGHTS', df['fight_id'].nunique())
+          print('DATE_RANGE', sides['date'].min().date(), sides['date'].max().date())
+          for period_name in res['period'].unique():
+              print('\n===',period_name,'===')
+              r=res[res['period']==period_name]
+              print(r.to_string(index=False, formatters={
+                  'threshold_pct':lambda x:f'{x:.1f}%',
+                  'win_rate':lambda x:'' if pd.isna(x) else f'{x:.1%}',
+                  'profit_units':lambda x:f'{x:+.3f}',
+                  'roi':lambda x:'' if pd.isna(x) else f'{x:+.1%}',
+              }))
+          PY
+      - name: Commit sweep outputs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            data/research/prop_mispricing/v5_historical_2025_to_20260328_threshold_sweep.csv \
+            data/research/prop_mispricing/v5_historical_2025_to_20260328_positive_edge_fights.csv
+          git diff --cached --quiet && exit 0
+          git commit -m "Add frozen V5 2025-Mar2026 threshold sweep"
+          for i in 1 2 3 4 5; do
+            git fetch origin research/ufc-prop-mispricing-xgboost-20260829
+            git rebase origin/research/ufc-prop-mispricing-xgboost-20260829 || { git rebase --abort; sleep 2; continue; }
+            git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829 && exit 0
+            sleep 3
+          done
+          exit 1
