@@ -1,0 +1,93 @@
+{
+  "experiment": "frozen_hierarchical_v5_all_market_intelligence_events_v1",
+  "source": "data/market/market_intelligence_history.parquet",
+  "source_rows": 27557,
+  "draftkings_required_market_rows": 5370,
+  "unique_fights_in_source": 107,
+  "fights_with_complete_latest_snapshot": 105,
+  "fights_scored": 88,
+  "events_scored": 8,
+  "unscored_rows": 17,
+  "feature_orientation_columns": {
+    "red": "r_name",
+    "blue": "b_name"
+  },
+  "training_cutoff": "2024-12-31",
+  "selection_or_tuning_on_2025_plus": false,
+  "bet_rule": {
+    "winner_side_only": true,
+    "signed_logit_residual_threshold": 0.3,
+    "multiple_bets_per_fight_allowed": true,
+    "stake_units": 1.0
+  },
+  "bets": 38,
+  "graded_bets": 0,
+  "graded_profit_units": null,
+  "graded_roi": null,
+  "event_summary": [
+    {
+      "event_name": "UFC 329: McGregor vs. Holloway 2",
+      "fights_scored": 12,
+      "bets": 5,
+      "graded_bets": 0,
+      "profit_units": null,
+      "roi": null
+    },
+    {
+      "event_name": "UFC 330: Makhachev vs. Machado Garry",
+      "fights_scored": 11,
+      "bets": 2,
+      "graded_bets": 0,
+      "profit_units": null,
+      "roi": null
+    },
+    {
+      "event_name": "UFC Fight Night: Ankalaev vs. Guskov",
+      "fights_scored": 9,
+      "bets": 3,
+      "graded_bets": 0,
+      "profit_units": null,
+      "roi": null
+    },
+    {
+      "event_name": "UFC Fight Night: Du Plessis vs. Usman",
+      "fights_scored": 11,
+      "bets": 6,
+      "graded_bets": 0,
+      "profit_units": null,
+      "roi": null
+    },
+    {
+      "event_name": "UFC Fight Night: Fiziev vs. Torres",
+      "fights_scored": 13,
+      "bets": 6,
+      "graded_bets": 0,
+      "profit_units": null,
+      "roi": null
+    },
+    {
+      "event_name": "UFC Fight Night: Gamrot vs. Salkilld",
+      "fights_scored": 10,
+      "bets": 5,
+      "graded_bets": 0,
+      "profit_units": null,
+      "roi": null
+    },
+    {
+      "event_name": "UFC Fight Night: Hernandez vs. Rodrigues",
+      "fights_scored": 12,
+      "bets": 6,
+      "graded_bets": 0,
+      "profit_units": null,
+      "roi": null
+    },
+    {
+      "event_name": "UFC Fight Night: Medic vs. Rodriguez",
+      "fights_scored": 10,
+      "bets": 5,
+      "graded_bets": 0,
+      "profit_units": null,
+      "roi": null
+    }
+  ]
+}
