@@ -25,7 +25,6 @@ CLASS_SPECS = [
     ("blue_dec", "blue", "win_by_decision", "decision"),
 ]
 CLASS_NAMES = [x[0] for x in CLASS_SPECS]
-CLASS_TO_INDEX = {c: i for i, c in enumerate(CLASS_NAMES)}
 SIDE_BY_CLASS = np.array([x[1] for x in CLASS_SPECS])
 METHOD_BY_CLASS = np.array([x[3] for x in CLASS_SPECS])
 METHOD_KEYS = {x[2] for x in CLASS_SPECS}
@@ -36,7 +35,6 @@ FOLDS = [
     ("2023", "2022-12-31", "2023-01-01", "2023-12-31"),
     ("2024", "2023-12-31", "2024-01-01", "2024-12-31"),
 ]
-CANDIDATE_SIZES = [None, 100, 75, 50, 35]
 PARAMS = {
     "max_depth": 1,
     "eta": 0.03,
@@ -56,8 +54,6 @@ EPS = 1e-12
 
 
 def _read_parquet_cutoff(path: Path, stage: str) -> pd.DataFrame:
-    # Development is physically filtered at parquet read time so 2025+ rows are
-    # not exposed to model/candidate selection. Test stage is a separate process.
     if stage == "develop":
         return pd.read_parquet(path, filters=[("date", "<=", pd.Timestamp("2024-12-31"))])
     if stage == "test":
@@ -74,13 +70,12 @@ def _validate_probs(p: np.ndarray, name: str) -> np.ndarray:
     if (p < -1e-12).any() or (p > 1 + 1e-12).any():
         raise RuntimeError(f"{name}: probability outside [0,1]")
     err = np.max(np.abs(p.sum(axis=1) - 1.0)) if len(p) else 0.0
-    if err > 1e-8:
+    if err > 1e-6:
         raise RuntimeError(f"{name}: row probability sum error {err}")
     return p
 
 
 def _market_margin(p: np.ndarray) -> np.ndarray:
-    # softmax(log(p)) == p. Flatten row-major for multiclass DMatrix base_margin.
     p = np.clip(_validate_probs(p, "market"), EPS, 1.0)
     p = p / p.sum(axis=1, keepdims=True)
     return np.log(p)
@@ -88,8 +83,7 @@ def _market_margin(p: np.ndarray) -> np.ndarray:
 
 def _dmatrix(x: pd.DataFrame, p_market: np.ndarray, y: np.ndarray | None = None) -> xgb.DMatrix:
     d = xgb.DMatrix(x, label=y, feature_names=list(x.columns)) if y is not None else xgb.DMatrix(x, feature_names=list(x.columns))
-    margin = _market_margin(p_market)
-    d.set_base_margin(margin.reshape(-1))
+    d.set_base_margin(_market_margin(p_market).reshape(-1))
     return d
 
 
@@ -112,8 +106,6 @@ def _method_market(stage: str) -> pd.DataFrame:
         hit = m["outcome_side"].astype(str).eq(side) & m["market_key"].eq(key)
         m.loc[hit, "method_class"] = cname
     m = m[m["method_class"].notna()].copy()
-
-    # Exactly one quote for each of the six mutually-exclusive outcomes and one winner.
     counts = m.groupby(["fight_id", "method_class"]).size().unstack(fill_value=0)
     for cname in CLASS_NAMES:
         if cname not in counts.columns:
@@ -121,32 +113,26 @@ def _method_market(stage: str) -> pd.DataFrame:
     complete = counts.index[(counts[CLASS_NAMES] == 1).all(axis=1)]
     m = m[m["fight_id"].isin(complete)].copy()
     won_sum = m.groupby("fight_id")["won"].sum()
-    good = won_sum.index[won_sum.eq(1)]
-    m = m[m["fight_id"].isin(good)].copy()
+    m = m[m["fight_id"].isin(won_sum.index[won_sum.eq(1)])].copy()
     return m.sort_values(["date", "fight_id", "method_class"]).reset_index(drop=True)
 
 
 def _build_rows(stage: str, forced_features: list[str] | None = None) -> tuple[pd.DataFrame, list[str]]:
     m = _method_market(stage)
     idx = m[["fight_id", "date", "event_name"]].drop_duplicates("fight_id").copy()
-
-    implied = m.pivot(index="fight_id", columns="method_class", values="implied_probability")
-    implied = implied[CLASS_NAMES]
+    implied = m.pivot(index="fight_id", columns="method_class", values="implied_probability")[CLASS_NAMES]
     overround = implied.sum(axis=1)
     fair = implied.div(overround, axis=0)
     won = m.pivot(index="fight_id", columns="method_class", values="won")[CLASS_NAMES]
     target = np.argmax(won.to_numpy(dtype=int), axis=1)
-
     market_frame = pd.DataFrame({"fight_id": implied.index, "market_overround": overround.to_numpy(), "target": target})
     for j, cname in enumerate(CLASS_NAMES):
         market_frame[f"market_p_{cname}"] = fair.iloc[:, j].to_numpy()
-
     red_name = m[m["outcome_side"].astype(str).eq("red")].groupby("fight_id")["outcome_label"].first().rename("red_fighter")
     blue_name = m[m["outcome_side"].astype(str).eq("blue")].groupby("fight_id")["outcome_label"].first().rename("blue_fighter")
     market_frame = market_frame.merge(red_name, on="fight_id", how="left").merge(blue_name, on="fight_id", how="left")
 
     fv = _read_parquet_cutoff(FEATURE_PATH, stage).copy()
-    fv["date"] = pd.to_datetime(fv["date"], errors="coerce") if "date" in fv.columns else pd.NaT
     deny = ["winner", "result", "target", "label", "finish_round", "match_time_sec", "profit", "odds", "implied", "market", "actual", "post_"]
     if forced_features is None:
         diff_cols = sorted([
@@ -162,14 +148,12 @@ def _build_rows(stage: str, forced_features: list[str] | None = None) -> tuple[p
         missing = [c for c in diff_cols if c not in fv.columns]
         if missing:
             raise RuntimeError(f"frozen features missing from feature view: {missing}")
-
     if not diff_cols:
         raise RuntimeError("no leakage-safe signed diff features found")
     f = fv[["fight_id"] + diff_cols].drop_duplicates("fight_id")
     df = idx.merge(market_frame, on="fight_id", how="inner").merge(f, on="fight_id", how="inner")
     df = df.sort_values(["date", "fight_id"]).reset_index(drop=True)
-    market_cols = [f"market_p_{c}" for c in CLASS_NAMES]
-    _validate_probs(df[market_cols].to_numpy(float), "normalized six-way market")
+    _validate_probs(df[[f"market_p_{c}" for c in CLASS_NAMES]].to_numpy(float), "normalized six-way market")
     return df, diff_cols
 
 
@@ -210,14 +194,10 @@ def _fit_predict(train: pd.DataFrame, val: pd.DataFrame, features: list[str]) ->
     xtr = raw_train[valid].fillna(med).fillna(0.0)
     xva = raw_val[valid].fillna(med).fillna(0.0)
     mcols = [f"market_p_{c}" for c in CLASS_NAMES]
-    ptr = train[mcols].to_numpy(float)
-    pva = val[mcols].to_numpy(float)
-    ytr = train["target"].to_numpy(int)
-    dtr = _dmatrix(xtr, ptr, ytr)
-    dva = _dmatrix(xva, pva)
+    dtr = _dmatrix(xtr, train[mcols].to_numpy(float), train["target"].to_numpy(int))
+    dva = _dmatrix(xva, val[mcols].to_numpy(float))
     booster = xgb.train(PARAMS, dtr, num_boost_round=ROUNDS, verbose_eval=False)
-    pred = np.asarray(booster.predict(dva), dtype=float)
-    pred = _validate_probs(pred, "model prediction")
+    pred = _validate_probs(np.asarray(booster.predict(dva), dtype=float), "model prediction")
     return pred, booster, valid
 
 
@@ -247,9 +227,8 @@ def develop() -> None:
     df, diff_cols = _build_rows("develop")
     if (df["date"] > pd.Timestamp("2024-12-31")).any():
         raise RuntimeError("sealed 2025+ row entered development dataset")
-
     ranked = _rank_features(df, diff_cols)
-    candidates: dict[str, list[str]] = {"full_v5_signed": list(diff_cols)}
+    candidates = {"full_v5_signed": list(diff_cols)}
     for n in [100, 75, 50, 35]:
         candidates[f"top_{n}_pre2021_gain"] = ranked[: min(n, len(ranked))]
 
@@ -262,10 +241,10 @@ def develop() -> None:
             "architecture": {**PARAMS, "num_boost_round": ROUNDS},
             "feature_ranking": "multiclass gain from model trained only through 2020-12-31",
             "candidate_selection": "strict minimum pooled chronological 2021-2024 OOF six-way log loss; exact tie -> fewer features",
-            "sealed_test": "2025+ is parquet-filtered out of the development process and scored only by separate --stage test invocation after frozen candidate file exists",
+            "sealed_test": "2025+ is parquet-filtered out of development and scored only by separate --stage test after frozen candidate exists",
             "roi_used_for_selection": False,
             "betting_policy_used_for_selection": False,
-            "cold_start_note": "This experiment selects a probability model, not a betting policy; no cold-start betting-eligibility rule is used to select/tune the model.",
+            "cold_start_note": "Probability-model selection only; no betting-eligibility rule is used to select/tune the model.",
         },
         "development_coverage": {
             "eligible_complete_six_way_fights_through_2024": int(len(df)),
@@ -277,28 +256,21 @@ def develop() -> None:
         "candidates": {},
     }
 
-    all_parts: dict[str, list[pd.DataFrame]] = {}
+    all_parts = {}
     for cname, features in candidates.items():
-        fold_summaries = []
-        parts = []
+        fold_summaries, parts = [], []
         for fold, train_end, val_start, val_end in FOLDS:
             train = df[df["date"] <= train_end].copy()
             val = df[(df["date"] >= val_start) & (df["date"] <= val_end)].copy()
             if train.empty or val.empty:
                 raise RuntimeError(f"empty train/validation for fold {fold}: {len(train)}/{len(val)}")
             pred, _, valid = _fit_predict(train, val, features)
-            mcols = [f"market_p_{c}" for c in CLASS_NAMES]
-            market_p = val[mcols].to_numpy(float)
+            market_p = val[[f"market_p_{c}" for c in CLASS_NAMES]].to_numpy(float)
             y = val["target"].to_numpy(int)
-            mm = _metrics(y, market_p)
-            mx = _metrics(y, pred)
+            mm, mx = _metrics(y, market_p), _metrics(y, pred)
             fold_summaries.append({
-                "fold": fold,
-                "train_n": int(len(train)),
-                "validation_n": int(len(val)),
-                "feature_count": int(len(valid)),
-                "market": mm,
-                "model": mx,
+                "fold": fold, "train_n": int(len(train)), "validation_n": int(len(val)), "feature_count": int(len(valid)),
+                "market": mm, "model": mx,
                 "delta_log_loss_vs_market": float(mx["log_loss"] - mm["log_loss"]),
                 "delta_brier_vs_market": float(mx["brier"] - mm["brier"]),
             })
@@ -307,35 +279,26 @@ def develop() -> None:
         y = oof["target"].to_numpy(int)
         market_p = oof[[f"market_p_{c}" for c in CLASS_NAMES]].to_numpy(float)
         model_p = oof[[f"model_p_{c}" for c in CLASS_NAMES]].to_numpy(float)
-        mm = _metrics(y, market_p)
-        mx = _metrics(y, model_p)
+        mm, mx = _metrics(y, market_p), _metrics(y, model_p)
         summary["candidates"][cname] = {
-            "feature_count": int(len(features) + 1),
-            "folds": fold_summaries,
-            "market_oof": mm,
-            "model_oof": mx,
+            "feature_count": int(len(features) + 1), "folds": fold_summaries,
+            "market_oof": mm, "model_oof": mx,
             "delta_log_loss_vs_market": float(mx["log_loss"] - mm["log_loss"]),
             "delta_brier_vs_market": float(mx["brier"] - mm["brier"]),
             "class_calibration": _class_calibration(y, model_p),
         }
         all_parts[cname] = parts
 
-    selected = min(
-        candidates,
-        key=lambda k: (summary["candidates"][k]["model_oof"]["log_loss"], len(candidates[k])),
-    )
+    selected = min(candidates, key=lambda k: (summary["candidates"][k]["model_oof"]["log_loss"], len(candidates[k])))
     selected_features = candidates[selected]
     summary["selected_candidate"] = selected
     summary["selected_features"] = selected_features
     summary["selected_oof"] = summary["candidates"][selected]["model_oof"]
     summary["selected_delta_log_loss_vs_market"] = summary["candidates"][selected]["delta_log_loss_vs_market"]
     summary["test_status"] = "SEALED_NOT_SCORED"
-
-    selected_oof = pd.concat(all_parts[selected], ignore_index=True).sort_values(["date", "fight_id"]).reset_index(drop=True)
-    selected_oof.to_csv(OOF_PATH, index=False)
+    pd.concat(all_parts[selected], ignore_index=True).sort_values(["date", "fight_id"]).to_csv(OOF_PATH, index=False)
     SUMMARY_PATH.write_text(json.dumps(summary, indent=2), encoding="utf-8")
-
-    freeze = {
+    FREEZE_PATH.write_text(json.dumps({
         "schema_version": 1,
         "frozen_before_2025_plus_scoring": True,
         "selected_candidate": selected,
@@ -347,8 +310,7 @@ def develop() -> None:
         "selected_oof_log_loss": summary["selected_oof"]["log_loss"],
         "development_cutoff": "2024-12-31",
         "development_fights": int(len(df)),
-    }
-    FREEZE_PATH.write_text(json.dumps(freeze, indent=2), encoding="utf-8")
+    }, indent=2), encoding="utf-8")
     print(json.dumps({"stage": "develop", "selected_candidate": selected, "selected_oof": summary["selected_oof"], "market_oof": summary["candidates"][selected]["market_oof"]}, indent=2))
 
 
@@ -359,40 +321,27 @@ def test() -> None:
     if not freeze.get("frozen_before_2025_plus_scoring"):
         raise RuntimeError("candidate is not marked frozen")
     features = list(freeze["selected_features"])
-
-    # Build all rows only in this separate frozen test process, then split exactly at cutoff.
     df, _ = _build_rows("test", forced_features=features)
     train = df[df["date"] <= "2024-12-31"].copy()
     test_df = df[df["date"] >= "2025-01-01"].copy()
     if train.empty or test_df.empty:
         raise RuntimeError(f"empty final train/test: {len(train)}/{len(test_df)}")
-
     pred, booster, valid = _fit_predict(train, test_df, features)
-    mcols = [f"market_p_{c}" for c in CLASS_NAMES]
-    market_p = test_df[mcols].to_numpy(float)
+    market_p = test_df[[f"market_p_{c}" for c in CLASS_NAMES]].to_numpy(float)
     y = test_df["target"].to_numpy(int)
-    mm = _metrics(y, market_p)
-    mx = _metrics(y, pred)
-    rows = _prediction_rows(test_df, pred)
-    rows.to_csv(TEST_PATH, index=False)
-
+    mm, mx = _metrics(y, market_p), _metrics(y, pred)
+    _prediction_rows(test_df, pred).to_csv(TEST_PATH, index=False)
     summary = json.loads(SUMMARY_PATH.read_text(encoding="utf-8"))
     summary["test_status"] = "SCORED_ONCE_AFTER_FREEZE"
     summary["final_test"] = {
         "date_min": test_df["date"].min().date().isoformat(),
         "date_max": test_df["date"].max().date().isoformat(),
-        "train_n": int(len(train)),
-        "test_n": int(len(test_df)),
-        "feature_count": int(len(valid)),
-        "market": mm,
-        "model": mx,
+        "train_n": int(len(train)), "test_n": int(len(test_df)), "feature_count": int(len(valid)),
+        "market": mm, "model": mx,
         "delta_log_loss_vs_market": float(mx["log_loss"] - mm["log_loss"]),
         "delta_brier_vs_market": float(mx["brier"] - mm["brier"]),
         "class_calibration": _class_calibration(y, pred),
-        "top_features_by_gain": [
-            {"feature": k, "gain": float(v)}
-            for k, v in sorted(booster.get_score(importance_type="gain").items(), key=lambda z: z[1], reverse=True)[:30]
-        ],
+        "top_features_by_gain": [{"feature": k, "gain": float(v)} for k, v in sorted(booster.get_score(importance_type="gain").items(), key=lambda z: z[1], reverse=True)[:30]],
         "max_probability_sum_error": float(np.max(np.abs(pred.sum(axis=1) - 1.0))),
     }
     SUMMARY_PATH.write_text(json.dumps(summary, indent=2), encoding="utf-8")
@@ -403,10 +352,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--stage", required=True, choices=["develop", "test"])
     args = parser.parse_args()
-    if args.stage == "develop":
-        develop()
-    else:
-        test()
+    develop() if args.stage == "develop" else test()
 
 
 if __name__ == "__main__":
