@@ -1,0 +1,185 @@
+{
+  "experiment": "frozen_hierarchical_v5_top_method_on_v5_winner_2026_dk_v1",
+  "rule": "For every scored fight, choose V5 projected winner side and bet exactly one outcome: highest hierarchical KO/SUB/DEC probability on that side. No edge threshold.",
+  "max_bets_per_fight": 1,
+  "threshold": null,
+  "prediction_rows": 88,
+  "priced_bets": 85,
+  "price_match_skips": 3,
+  "graded_bets": 85,
+  "pooled": {
+    "bets": 85,
+    "wins": 45,
+    "losses": 40,
+    "stake_units": 85.0,
+    "profit_units": 19.010586758412842,
+    "roi": 0.2236539618636805,
+    "hit_rate": 0.5294117647058824,
+    "fights_bet": 85
+  },
+  "by_event": {
+    "UFC 329: McGregor vs. Holloway 2": {
+      "bets": 12,
+      "wins": 6,
+      "losses": 6,
+      "stake_units": 12.0,
+      "profit_units": -0.21203651421042724,
+      "roi": -0.017669709517535603,
+      "hit_rate": 0.5,
+      "fights_bet": 12
+    },
+    "UFC 330: Makhachev vs. Machado Garry": {
+      "bets": 11,
+      "wins": 7,
+      "losses": 4,
+      "stake_units": 11.0,
+      "profit_units": 7.223809523809525,
+      "roi": 0.6567099567099568,
+      "hit_rate": 0.6363636363636364,
+      "fights_bet": 11
+    },
+    "UFC Fight Night: Ankalaev vs. Guskov": {
+      "bets": 9,
+      "wins": 6,
+      "losses": 3,
+      "stake_units": 9.0,
+      "profit_units": 3.3403721903721904,
+      "roi": 0.37115246559691006,
+      "hit_rate": 0.6666666666666666,
+      "fights_bet": 9
+    },
+    "UFC Fight Night: Du Plessis vs. Usman": {
+      "bets": 10,
+      "wins": 7,
+      "losses": 3,
+      "stake_units": 10.0,
+      "profit_units": 7.2023809523809526,
+      "roi": 0.7202380952380952,
+      "hit_rate": 0.7,
+      "fights_bet": 10
+    },
+    "UFC Fight Night: Fiziev vs. Torres": {
+      "bets": 13,
+      "wins": 6,
+      "losses": 7,
+      "stake_units": 13.0,
+      "profit_units": 3.4666666666666672,
+      "roi": 0.2666666666666667,
+      "hit_rate": 0.46153846153846156,
+      "fights_bet": 13
+    },
+    "UFC Fight Night: Gamrot vs. Salkilld": {
+      "bets": 9,
+      "wins": 7,
+      "losses": 2,
+      "stake_units": 9.0,
+      "profit_units": 6.9114718614718615,
+      "roi": 0.7679413179413179,
+      "hit_rate": 0.7777777777777778,
+      "fights_bet": 9
+    },
+    "UFC Fight Night: Hernandez vs. Rodrigues": {
+      "bets": 12,
+      "wins": 3,
+      "losses": 9,
+      "stake_units": 12.0,
+      "profit_units": -5.8,
+      "roi": -0.48333333333333334,
+      "hit_rate": 0.25,
+      "fights_bet": 12
+    },
+    "UFC Fight Night: Medic vs. Rodriguez": {
+      "bets": 9,
+      "wins": 3,
+      "losses": 6,
+      "stake_units": 9.0,
+      "profit_units": -3.122077922077922,
+      "roi": -0.34689754689754687,
+      "hit_rate": 0.3333333333333333,
+      "fights_bet": 9
+    }
+  },
+  "by_method": {
+    "blue_dec": {
+      "bets": 14,
+      "wins": 5,
+      "losses": 9,
+      "stake_units": 14.0,
+      "profit_units": -1.2909090909090906,
+      "roi": -0.09220779220779218,
+      "hit_rate": 0.35714285714285715,
+      "fights_bet": 14
+    },
+    "blue_ko": {
+      "bets": 13,
+      "wins": 10,
+      "losses": 3,
+      "stake_units": 13.0,
+      "profit_units": 7.290476190476191,
+      "roi": 0.5608058608058608,
+      "hit_rate": 0.7692307692307693,
+      "fights_bet": 13
+    },
+    "blue_sub": {
+      "bets": 3,
+      "wins": 1,
+      "losses": 2,
+      "stake_units": 3.0,
+      "profit_units": -1.0476190476190477,
+      "roi": -0.34920634920634924,
+      "hit_rate": 0.3333333333333333,
+      "fights_bet": 3
+    },
+    "red_dec": {
+      "bets": 30,
+      "wins": 12,
+      "losses": 18,
+      "stake_units": 30.0,
+      "profit_units": 1.4498316498316492,
+      "roi": 0.04832772166105497,
+      "hit_rate": 0.4,
+      "fights_bet": 30
+    },
+    "red_ko": {
+      "bets": 19,
+      "wins": 13,
+      "losses": 6,
+      "stake_units": 19.0,
+      "profit_units": 7.908807056633144,
+      "roi": 0.4162530029806918,
+      "hit_rate": 0.6842105263157895,
+      "fights_bet": 19
+    },
+    "red_sub": {
+      "bets": 6,
+      "wins": 4,
+      "losses": 2,
+      "stake_units": 6.0,
+      "profit_units": 4.699999999999999,
+      "roi": 0.7833333333333332,
+      "hit_rate": 0.6666666666666666,
+      "fights_bet": 6
+    }
+  },
+  "skipped": [
+    {
+      "fight_id": "f425b7a527dd53aa",
+      "fight_display": "Dusko Todorovic vs Robert Valentin",
+      "bet_slug": "blue_ko",
+      "reason": "raw_price_rows=0"
+    },
+    {
+      "fight_id": "46d800ce45fdd3e6",
+      "fight_display": "Levi Rodrigues Jr. vs Felipe Franco",
+      "bet_slug": "red_ko",
+      "reason": "raw_price_rows=0"
+    },
+    {
+      "fight_id": "d5245f5b96b8afdf",
+      "fight_display": "Diego Ferreira vs Billy Quarantillo",
+      "bet_slug": "red_ko",
+      "reason": "raw_price_rows=0"
+    }
+  ],
+  "pricing_note": "ROI uses actual DraftKings American odds from the exact market_intelligence_history snapshot used for each prediction."
+}
