@@ -17,85 +17,95 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  six-way-method-market-offset:
-    runs-on: ubuntu-latest
+  six-way-method-market-offset-development:
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout research branch
         uses: actions/checkout@v4
         with:
           ref: research/ufc-prop-mispricing-xgboost-20260829
+          fetch-depth: 0
 
-      - name: Set up Python
+      - name: Set up exact Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.11.16"
 
-      - name: Install research dependencies
+      - name: Install exact frozen-V5 package environment
         run: |
-          python -m pip install --upgrade pip
-          pip install pandas pyarrow numpy scikit-learn xgboost
+          python -m pip install --upgrade pip==26.2.1
+          pip install \
+            pandas==3.0.5 \
+            pyarrow==25.0.1 \
+            numpy==2.4.6 \
+            scikit-learn==1.9.0 \
+            scipy==1.17.1 \
+            xgboost==3.2.0 \
+            joblib==1.5.3 \
+            threadpoolctl==3.6.0 \
+            python-dateutil==2.9.0.post0
 
       - name: Verify multiclass base-margin contract
         run: |
           python - <<'PY'
-          import numpy as np
-          import xgboost as xgb
-
-          p = np.array([
-              [0.30, 0.10, 0.15, 0.20, 0.05, 0.20],
-              [0.15, 0.05, 0.30, 0.10, 0.10, 0.30],
-          ], dtype=float)
-          d = xgb.DMatrix(np.zeros((2, 1)), label=np.array([0, 5]))
-          d.set_base_margin(np.log(p).reshape(-1))
-          params = {'objective': 'multi:softprob', 'num_class': 6, 'seed': 42}
-          booster = xgb.train(params, d, num_boost_round=0)
-          got = np.asarray(booster.predict(d), dtype=float)
-          max_err = np.max(np.abs(got - p)) if got.shape == p.shape else None
-          if got.shape != p.shape or max_err is None or max_err > 5e-8:
-              raise RuntimeError(f'multiclass base_margin contract failed: version={xgb.__version__} shape={got.shape} max_err={max_err}')
-          print(f'xgboost={xgb.__version__} multiclass base_margin verified; max_err={max_err:.3g}')
+          from pipeline.research.xgboost_method_market_offset import verify_base_margin_contract
+          print(verify_base_margin_contract())
           PY
 
-      - name: Development OOF and candidate freeze
+      - name: Audit coverage and eligibility
+        run: |
+          python pipeline/research/xgboost_method_market_offset.py --stage audit
+
+      - name: Run 2021-2024 OOF and freeze candidate
         run: |
           python pipeline/research/xgboost_method_market_offset.py --stage develop
 
-      - name: Verify freeze exists before opening sealed test
+      - name: Enforce sealed-test policy
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
-          p = Path('data/research/prop_mispricing/xgboost_method_market_offset__frozen_candidate.json')
-          if not p.exists():
-              raise SystemExit('frozen candidate artifact missing')
-          x = json.loads(p.read_text())
-          assert x['frozen_before_2025_plus_scoring'] is True
-          assert x['development_cutoff'] == '2024-12-31'
-          print('candidate frozen; 2025+ test may now be scored')
+          p=Path('data/research/prop_mispricing/xgboost_method_market_offset__frozen_candidate.json')
+          x=json.loads(p.read_text())
+          assert x['development_cutoff']=='2024-12-31'
+          assert x['selection_metric']=='pooled_2021_2024_betting_eligible_multiclass_log_loss'
+          print('freeze:', x['selected_candidate'], x['selected_oof_log_loss'])
+          print('holdout_integrity:', x['holdout_integrity'])
+          if x['holdout_integrity'] != 'PRISTINE':
+              print('2025+ scoring intentionally blocked: pre-compliance test artifact already existed before this freeze')
           PY
 
-      - name: Score sealed 2025+ once
-        run: |
-          python pipeline/research/xgboost_method_market_offset.py --stage test
-
-      - name: Upload research artifacts
+      - name: Upload development artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: xgboost-method-market-offset
+          name: xgboost-method-market-offset-development
           path: |
+            data/research/prop_mispricing/xgboost_method_market_offset__audit.json
             data/research/prop_mispricing/xgboost_method_market_offset__summary.json
             data/research/prop_mispricing/xgboost_method_market_offset__frozen_candidate.json
             data/research/prop_mispricing/xgboost_method_market_offset__oof_predictions.csv
-            data/research/prop_mispricing/xgboost_method_market_offset__test_predictions.csv
+            data/research/prop_mispricing/xgboost_method_market_offset__coverage.csv
+            data/research/prop_mispricing/xgboost_method_market_offset__feature_list.json
+            data/research/prop_mispricing/xgboost_method_market_offset__candidate_results.csv
 
-      - name: Commit research outputs
+      - name: Commit development outputs safely
         run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -f \
+            data/research/prop_mispricing/xgboost_method_market_offset__audit.json \
             data/research/prop_mispricing/xgboost_method_market_offset__summary.json \
             data/research/prop_mispricing/xgboost_method_market_offset__frozen_candidate.json \
             data/research/prop_mispricing/xgboost_method_market_offset__oof_predictions.csv \
-            data/research/prop_mispricing/xgboost_method_market_offset__test_predictions.csv
-          git commit -m "research: add six-way method market-offset results" || echo "No changes to commit"
-          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
+            data/research/prop_mispricing/xgboost_method_market_offset__coverage.csv \
+            data/research/prop_mispricing/xgboost_method_market_offset__feature_list.json \
+            data/research/prop_mispricing/xgboost_method_market_offset__candidate_results.csv
+          git diff --cached --quiet && exit 0
+          git commit -m "research: freeze compliant six-way method OOF candidate"
+          for i in 1 2 3 4 5; do
+            git fetch origin research/ufc-prop-mispricing-xgboost-20260829
+            git rebase origin/research/ufc-prop-mispricing-xgboost-20260829 || { git rebase --abort; sleep 2; continue; }
+            git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829 && exit 0
+            sleep 3
+          done
+          exit 1
