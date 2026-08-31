@@ -1,0 +1,110 @@
+{
+  "experiment": "frozen_v5_roi_meta_xgboost_v1",
+  "target": "realized 1-unit return of the V5-liked side",
+  "features": [
+    "fair_market_p",
+    "model_p",
+    "edge"
+  ],
+  "decision_rule": "bet iff predicted_return > 0; fixed a priori, not tuned",
+  "params": {
+    "objective": "reg:squarederror",
+    "eval_metric": "rmse",
+    "max_depth": 1,
+    "eta": 0.03,
+    "subsample": 0.8,
+    "colsample_bytree": 1.0,
+    "min_child_weight": 20,
+    "lambda": 10.0,
+    "alpha": 1.0,
+    "seed": 42,
+    "nthread": 2
+  },
+  "num_boost_round": 300,
+  "development_protocol": "expanding chronological year OOF: train 2021->test 2022; train 2021-22->test 2023; train 2021-23->test 2024",
+  "development_fights_available": 1742,
+  "development_meta_oof_fights": 1273,
+  "test_period": "2025-01-01 through 2026-03-28",
+  "test_fights": 505,
+  "development_results": [
+    {
+      "strategy": "roi_meta_predicted_return_gt_0",
+      "bets": 660,
+      "wins": 378,
+      "losses": 282,
+      "win_rate": 0.5727272727272728,
+      "profit_units": -6.05280623077663,
+      "roi": -0.009170918531479742,
+      "avg_v5_edge": 0.03823088780200449,
+      "avg_market_p": 0.5507209679290941,
+      "avg_predicted_return": 0.08857986330986023
+    },
+    {
+      "strategy": "v5_edge_ge_7_5pct",
+      "bets": 43,
+      "wins": 25,
+      "losses": 18,
+      "win_rate": 0.5813953488372093,
+      "profit_units": 2.4592267700861132,
+      "roi": 0.05719132023456077,
+      "avg_v5_edge": 0.10055077774138511,
+      "avg_market_p": 0.5506790162516413,
+      "avg_predicted_return": 0.24930089712142944
+    },
+    {
+      "strategy": "all_v5_liked_sides",
+      "bets": 1273,
+      "wins": 727,
+      "losses": 546,
+      "win_rate": 0.5710919088766693,
+      "profit_units": -30.955127584889325,
+      "roi": -0.024316675243432305,
+      "avg_v5_edge": 0.028006866219174916,
+      "avg_market_p": 0.5533334069629052,
+      "avg_predicted_return": -0.019784441217780113
+    }
+  ],
+  "untouched_test_results": [
+    {
+      "strategy": "roi_meta_predicted_return_gt_0",
+      "bets": 338,
+      "wins": 225,
+      "losses": 113,
+      "win_rate": 0.665680473372781,
+      "profit_units": 11.7570235875278,
+      "roi": 0.034784093454224264,
+      "avg_v5_edge": 0.034026146152790045,
+      "avg_market_p": 0.6144900589406703,
+      "avg_predicted_return": 0.04089559614658356
+    },
+    {
+      "strategy": "v5_edge_ge_7_5pct",
+      "bets": 17,
+      "wins": 10,
+      "losses": 7,
+      "win_rate": 0.5882352941176471,
+      "profit_units": 2.8934629666129785,
+      "roi": 0.1702037039184105,
+      "avg_v5_edge": 0.10078633894710472,
+      "avg_market_p": 0.49565117409412496,
+      "avg_predicted_return": 0.1474599838256836
+    },
+    {
+      "strategy": "all_v5_liked_sides",
+      "bets": 505,
+      "wins": 320,
+      "losses": 185,
+      "win_rate": 0.6336633663366337,
+      "profit_units": 42.21750022659983,
+      "roi": 0.08359901034970264,
+      "avg_v5_edge": 0.027846067397230844,
+      "avg_market_p": 0.5676227556609974,
+      "avg_predicted_return": -0.015535986982285976
+    }
+  ],
+  "feature_importance_gain": {
+    "fair_market_p": 3.994849443435669,
+    "model_p": 4.016225337982178,
+    "edge": 3.080974817276001
+  }
+}
