@@ -48,6 +48,7 @@ jobs:
             data/research/prop_mispricing/xgboost_method_market_offset__2025_2026_roi_by_year.csv
             data/research/prop_mispricing/xgboost_method_market_offset__2025_2026_roi_by_class.csv
             data/research/prop_mispricing/xgboost_method_market_offset__2025_2026_roi_edge_buckets.csv
+            data/research/prop_mispricing/xgboost_method_market_offset__2025_2026_roi_by_card.csv
 
       - name: Commit ROI outputs
         run: |
