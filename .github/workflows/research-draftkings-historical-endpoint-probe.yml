@@ -1,0 +1,23 @@
+name: Research DraftKings Historical Endpoint Probe
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - .github/workflows/research-draftkings-historical-endpoint-probe.yml
+      - pipeline/research/draftkings_historical_endpoint_probe.py
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11.16'
+      - run: pip install pandas==3.0.5 pyarrow==25.0.1 requests
+      - run: python -m pipeline.research.draftkings_historical_endpoint_probe
