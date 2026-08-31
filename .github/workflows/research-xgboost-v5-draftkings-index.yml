@@ -37,6 +37,19 @@ jobs:
           git show 7df1b61126be1f4e036b256d1c774c531b8a281f:data/market/historical_market_outcomes.parquet > /tmp/v5_frozen/historical_market_outcomes.parquet
           git show 7df1b61126be1f4e036b256d1c774c531b8a281f:data/features/moneyline_feature_view.parquet > /tmp/v5_frozen/moneyline_feature_view.parquet
 
+      - name: Fix indexed synthetic/canonical ID collision
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('pipeline/research/xgboost_v5_draftkings_index_snapshots_v2.py')
+          s = p.read_text()
+          old = 'h = h.merge(mapping, on="indexed_pair_id", how="inner", validate="many_to_one")'
+          new = 'h = h.drop(columns=["fight_id"]).merge(mapping, on="indexed_pair_id", how="inner", validate="many_to_one")'
+          if old not in s:
+              raise SystemExit('expected index mapping line not found')
+          p.write_text(s.replace(old, new, 1))
+          PY
+
       - name: Run frozen V5 on DraftKings index snapshots
         run: |
           python -m pipeline.research.xgboost_v5_draftkings_index_snapshots_v2
