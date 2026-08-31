@@ -1,2 +1,3 @@
-triggered_at=2026-08-30
+triggered_at=2026-08-31T00:05Z
 purpose=frozen_v5_on_draftkings_raw_index
+retry=1
