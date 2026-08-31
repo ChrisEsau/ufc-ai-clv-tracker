@@ -1,0 +1,45 @@
+name: Research V5 ROI Meta XGBoost
+
+on:
+  push:
+    paths:
+      - 'data/research/prop_mispricing/v5_roi_meta_xgboost_trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  roi-meta:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11.16'
+      - run: |
+          python -m pip install --upgrade pip==26.2.1
+          pip install pandas==3.0.5 numpy==2.4.6 xgboost==3.2.0
+      - name: Run frozen V5 ROI meta-model research
+        run: python pipeline/research/v5_roi_meta_xgboost.py
+      - name: Commit research outputs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            data/research/prop_mispricing/v5_roi_meta_xgboost_oof_predictions.csv \
+            data/research/prop_mispricing/v5_roi_meta_xgboost_2025_to_20260328_predictions.csv \
+            data/research/prop_mispricing/v5_roi_meta_xgboost_comparison.csv \
+            data/research/prop_mispricing/v5_roi_meta_xgboost_summary.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Add frozen V5 ROI meta-model results"
+          for i in 1 2 3 4 5; do
+            git fetch origin research/ufc-prop-mispricing-xgboost-20260829
+            git rebase origin/research/ufc-prop-mispricing-xgboost-20260829 || { git rebase --abort; sleep 2; continue; }
+            git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829 && exit 0
+            sleep 3
+          done
+          exit 1
