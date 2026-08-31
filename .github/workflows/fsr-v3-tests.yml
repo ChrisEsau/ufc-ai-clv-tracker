@@ -1,0 +1,33 @@
+name: FSR V3 Tests
+
+on:
+  push:
+    branches:
+      - "feature/fsr-v3"
+    paths:
+      - "pipeline/fsr_v3/**"
+      - "tests/fsr_v3/**"
+      - ".github/workflows/fsr-v3-tests.yml"
+  pull_request:
+    paths:
+      - "pipeline/fsr_v3/**"
+      - "tests/fsr_v3/**"
+      - ".github/workflows/fsr-v3-tests.yml"
+  workflow_dispatch:
+
+jobs:
+  validated-trait-replay-tests:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install focused test dependencies
+        run: python -m pip install --upgrade pip pytest numpy pandas scipy
+      - name: Compile FSR V3 modules
+        run: python -m py_compile pipeline/fsr_v3/*.py pipeline/fsr_v3/replay/*.py pipeline/fsr_v3/publish/*.py tests/fsr_v3/*.py
+      - name: Run FSR V3 tests
+        run: pytest -q tests/fsr_v3

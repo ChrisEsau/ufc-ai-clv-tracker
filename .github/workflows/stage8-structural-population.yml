@@ -1,0 +1,60 @@
+name: Stage 8 Structural Population Validation
+
+on:
+  push:
+    branches:
+      - refactor/event-clock-v2-brain-timeline
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  structural-population:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact branch head
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install diagnostic dependencies
+        run: python -m pip install --upgrade pip numpy pandas pyarrow
+
+      - name: Restore canonical FSR V3 artifact
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: data
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 32645607979
+
+      - name: Place and verify canonical FSR V3 artifact
+        run: |
+          test -f data/canonical-weight-class-state/fsr_v3/fsr_v3_prefight_snapshots.parquet
+          cp -a data/canonical-weight-class-state/. data/
+          test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
+          test -f data/fsr_v3/fsr_v3_latest.parquet
+          test -f data/fight_details/ufc_round_stats.parquet
+          test -f data/master/ufc_master.parquet
+
+      - name: Run Stage 8 structural population cohort
+        run: |
+          echo "GITHUB_SHA=${GITHUB_SHA}"
+          python -m pipeline.simulation.event_clock_mc_v2.diagnostics.stage8_structural_population \
+            --fights 25 \
+            --paths-per-fight 25 \
+            --seed-base 20260825 \
+            --output data/diagnostics/event_clock_mc_v2/stage8_structural_population.json
+
+      - name: Upload Stage 8 result
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage8-structural-population
+          path: data/diagnostics/event_clock_mc_v2/stage8_structural_population.json
+          if-no-files-found: error

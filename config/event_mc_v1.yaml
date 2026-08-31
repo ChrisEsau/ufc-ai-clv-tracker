@@ -1,0 +1,29 @@
+defaults:
+  shared: {legacy_interval_seconds: 10.0, calibration_interval_seconds: 30.0, rating_scale: 12.0, modifier_scale: 6.0, modifier_clip: 8.0}
+  distance: {clinch_base_30s: 0.04, td_attempt_base_30s: 0.16, strike_attempts_per_30s: 6.0, strike_accuracy: 0.40, td_success_logit_offset: -0.85, clinch_cap: 0.60, style_distance_clinch_weight: 0.50, style_distance_wrestling_weight: 0.50, style_clinch_distance_weight: 0.50, style_clinch_wrestling_weight: 0.50, style_wrestling_entry_weight: 0.75, style_control_weight: 0.25, style_wrestling_distance_weight: 0.50, style_wrestling_clinch_weight: 0.50}
+  clinch: {separation_base_30s: 0.25, td_attempt_base_30s: 0.24, strike_attempts_per_30s: 3.6, strike_accuracy: 0.68, separation_cap: 0.90, control_edge_multiplier: 0.15}
+  ground: {exit_base_30s: 0.20, strike_attempts_per_30s: 1.6, strike_accuracy: 0.70, reversal_share: 0.18, bottom_strike_multiplier: 0.20, exit_cap: 0.90, escape_edge_weight: 0.60, reversal_edge_weight: 0.40, exit_edge_clip: 1.50, reversal_sensitivity: 0.75}
+  submission_attempts: {base_30s: 0.045, bottom_multiplier: 1.00, modifier_scale: 10.0, probability_cap: 0.35}
+  fsr_v2_calibration:
+    standing_strike_rate_multiplier: 0.80
+    ground_strike_rate_multiplier: 1.00
+    takedown_rate_multiplier: 1.30
+    escape_rate_multiplier: 0.425
+    standing_accuracy_logit_offset: 0.22
+    ground_accuracy_logit_offset: 0.45
+  stamina:
+    action_costs: {strike: 0.70, clinch_strike: 0.70, ground_strike: 0.70, takedown: 3.00, clinch_takedown: 3.00, clinch_entry: 1.00, submission_attempt: 2.50, ground_escape: 1.50, ground_reversal: 2.50}
+    depletion_resistance_scale: 80.0
+    cost_multiplier_min: 0.65
+    cost_multiplier_max: 1.45
+    controller_cost_per_second: 0.025
+    clinch_resistance_cost_per_second: 0.030
+    ground_resistance_cost_per_second: 0.035
+    round_recovery_fraction: 0.40
+  dynamic_modifiers: {resilience_rating_min: 10.0, resilience_rating_range: 80.0, output_floor_low: 0.25, output_floor_high: 0.50, output_exponent_low: 1.40, output_exponent_high: 0.80, power_floor_low: 0.05, power_floor_high: 0.20, power_exponent_low: 2.20, power_exponent_high: 1.40}
+  damage: {base_shape: 1.0, base_scale: 2.0, tail_shape: 1.25, tail_scale: 4.8, tail_probability: 0.06, power_rating_scale: 55.0, impact_scale: 0.50, durability_scale: 40.0}
+  knockdown: {trauma_erosion_scale: 80.0, resistance_scale: 32.0, acute_erosion_scale: 1.0, slope: 2.0, midpoint_impact_ratio: 36.0, acute_increment: 0.50, acute_half_life_seconds: 30.0}
+  finish: {baseline_durability_weight: 0.50, baseline_knockdown_resistance_weight: 0.50, resistance_rating_scale: 32.0, trauma_erosion_scale: 120.0, acute_erosion_scale: 1.0, slope: 2.0, midpoint_impact_ratio: 36.0, knockdown_logit_bonus: 1.0}
+  submission_finish: {threat_conversion_weight: 0.75, threat_pressure_weight: 0.25, resistance_submission_weight: 0.75, resistance_control_weight: 0.25, rating_scale: 12.0, intercept: -0.60, fsr_v2_conversion_logit_offset: -0.25, top_position_bonus: 0.0, bottom_position_bonus: 0.0, stamina_edge_weight: 0.50, logit_clip: 20.0}
+  judging: {impact_weight: 0.0, landed_strike_weight: 1.0, knockdown_weight: 10.080282, submission_attempt_weight: 2.854417, submission_threat_weight: 0.0, takedown_weight: 2.021731, reversal_weight: 0.0, control_weight_per_second: 0.048904, primary_close_band: 0.0, aggression_close_band: 0.0, aggression_attempt_weight: 1.0, control_close_band_seconds: 0.0}
+weight_classes: {}

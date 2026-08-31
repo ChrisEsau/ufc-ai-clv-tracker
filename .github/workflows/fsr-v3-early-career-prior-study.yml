@@ -1,0 +1,63 @@
+name: FSR V3 Early Career Prior Study
+
+on:
+  push:
+    branches:
+      - "feature/fsr-v3"
+    paths:
+      - "pipeline/fsr_v3/research/early_career_prior_strength_study.py"
+      - "pipeline/fsr_v3/research/early_career_td_prior_refinement.py"
+      - ".github/workflows/fsr-v3-early-career-prior-study.yml"
+  pull_request:
+    paths:
+      - "pipeline/fsr_v3/research/early_career_prior_strength_study.py"
+      - "pipeline/fsr_v3/research/early_career_td_prior_refinement.py"
+      - ".github/workflows/fsr-v3-early-career-prior-study.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  early-career-prior-study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      PYTHONPATH: .
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install focused dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy pandas scipy scikit-learn pyarrow
+
+      - name: Compile studies
+        run: |
+          python -m py_compile pipeline/fsr_v3/research/early_career_prior_strength_study.py
+          python -m py_compile pipeline/fsr_v3/research/early_career_td_prior_refinement.py
+
+      - name: Run native-target prior-strength study
+        run: python -m pipeline.fsr_v3.research.early_career_prior_strength_study
+
+      - name: Run takedown fine-grid refinement
+        run: python -m pipeline.fsr_v3.research.early_career_td_prior_refinement
+
+      - name: Upload coarse study outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: fsr-v3-early-career-prior-study
+          path: data/diagnostics/fsr_v3_early_career_prior/*.csv
+          if-no-files-found: error
+
+      - name: Upload takedown refinement outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: fsr-v3-early-career-td-prior-refinement
+          path: data/diagnostics/fsr_v3_early_career_td_prior_refinement/*.csv
+          if-no-files-found: error

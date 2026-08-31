@@ -1,0 +1,191 @@
+version: 1
+name: fsr_age_modifiers_v1
+purpose: >-
+  External configuration for fight-night age modifiers applied to immutable stored
+  FSR values. The simulator must not contain trait-specific age constants.
+
+rating_bounds:
+  min: 10.0
+  max: 90.0
+
+defaults:
+  age_center: 30.0
+  min_adjustment: -40.0
+  max_adjustment: 40.0
+
+# Contract:
+#   x = age - age_center
+#   modifier = intercept + linear*x + quadratic*x^2 + cubic*x^3
+#   effective_fsr = clamp(stored_fsr + modifier, rating_bounds.min, rating_bounds.max)
+#
+# Only entries with BOTH enabled=true and calibrated=true are applied.
+# Candidate entries remain visible here but inert until population calibration is approved.
+traits:
+  distance_striking_precision:
+    enabled: false
+    calibrated: false
+    status: rejected_weak_age_signal
+
+  distance_striking_defense:
+    enabled: false
+    calibrated: false
+    status: retained_secondary_candidate
+    model: polynomial
+
+  wrestling_entry:
+    enabled: false
+    calibrated: false
+    status: rejected_weak_age_signal
+
+  wrestling_conversion:
+    enabled: false
+    calibrated: false
+    status: retained_primary_candidate
+    model: polynomial
+
+  td_defense:
+    enabled: false
+    calibrated: false
+    status: retained_primary_candidate
+    model: polynomial
+
+  control_imposition:
+    enabled: false
+    calibrated: false
+    status: retained_primary_candidate
+    model: polynomial
+
+  control_resistance:
+    enabled: false
+    calibrated: false
+    status: rejected_weak_age_signal
+
+  submission_pressure:
+    enabled: false
+    calibrated: false
+    status: retained_primary_candidate_provisional
+    model: polynomial
+
+  submission_conversion:
+    enabled: false
+    calibrated: false
+    status: retained_primary_candidate
+    model: polynomial
+
+  submission_resistance:
+    enabled: false
+    calibrated: false
+    status: retained_primary_candidate
+    model: polynomial
+
+  fatigue_accumulation_resistance:
+    enabled: false
+    calibrated: false
+    status: rejected_weak_age_signal
+
+  fatigue_performance_resilience:
+    enabled: false
+    calibrated: false
+    status: rejected_weak_age_signal
+
+  adversity_resistance:
+    enabled: false
+    calibrated: false
+    status: retained_secondary_candidate
+    model: polynomial
+
+  adversity_recovery:
+    enabled: false
+    calibrated: false
+    status: rejected_weak_age_signal
+
+  ground_striking_pressure:
+    enabled: false
+    calibrated: false
+    status: retained_secondary_candidate
+    model: polynomial
+
+  ground_striking_precision:
+    enabled: false
+    calibrated: false
+    status: rejected_weak_age_signal
+
+  ground_striking_defense:
+    enabled: false
+    calibrated: false
+    status: rejected_weak_age_signal
+
+  reversal_ability:
+    enabled: false
+    calibrated: false
+    status: retained_primary_candidate
+    model: polynomial
+
+  clinch_striking_pressure:
+    enabled: false
+    calibrated: false
+    status: rejected_weak_age_signal
+
+  clinch_striking_precision:
+    enabled: false
+    calibrated: false
+    status: retained_secondary_candidate
+    model: polynomial
+
+  clinch_striking_defense:
+    enabled: false
+    calibrated: false
+    status: retained_secondary_candidate
+    model: polynomial
+
+  distance_striking_pressure:
+    enabled: false
+    calibrated: false
+    status: retained_primary_candidate_provisional
+    model: polynomial
+
+  knockdown_resistance:
+    enabled: true
+    calibrated: true
+    status: legacy_locked_behavior_preserved
+    model: polynomial
+    age_center: 30.0
+    coefficients:
+      intercept: 0.0
+      linear: -2.0
+      quadratic: 0.0
+      cubic: 0.0
+    min_age: 30.0
+    min_adjustment: -40.0
+    max_adjustment: 0.0
+    source: legacy_locked_age_mechanic
+    notes: Exact migration of the prior hard-coded -2 FSR points/year after age 30 rule.
+
+  damage_durability:
+    enabled: true
+    calibrated: true
+    status: legacy_locked_behavior_preserved
+    model: polynomial
+    age_center: 30.0
+    coefficients:
+      intercept: 0.0
+      linear: -2.0
+      quadratic: 0.0
+      cubic: 0.0
+    min_age: 30.0
+    min_adjustment: -40.0
+    max_adjustment: 0.0
+    source: legacy_locked_age_mechanic
+    notes: Exact migration of the prior hard-coded -2 FSR points/year after age 30 rule.
+
+  striking_power:
+    enabled: false
+    calibrated: false
+    status: retained_special_candidate
+    model: power_residual_polynomial
+    age_center: 30.0
+    source: controlled_power_event_residual_v1
+    notes: >-
+      Stored striking_power is non-degrading. Activate only after the controlled
+      power-event residual has been converted from probability scale to FSR-point
+      scale and validated on held-out fights.
