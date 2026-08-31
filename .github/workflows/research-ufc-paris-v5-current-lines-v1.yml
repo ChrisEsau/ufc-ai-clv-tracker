@@ -1,0 +1,66 @@
+name: Research UFC Paris Frozen V5 Current Lines
+
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-ufc-paris-v5-current-lines-v1.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  score:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.16"
+      - name: Install exact V5 packages
+        run: |
+          python -m pip install --upgrade pip==26.2.1
+          pip install pandas==3.0.5 pyarrow==25.0.1 numpy==2.4.6 scikit-learn==1.9.0 scipy==1.17.1 xgboost==3.2.0 joblib==1.5.3 threadpoolctl==3.6.0 python-dateutil==2.9.0.post0
+      - name: Execute frozen V5 scorer with Aug 31 UFC lines
+        run: |
+          python - <<'PY'
+          import textwrap
+          from pathlib import Path
+          src=Path('.github/workflows/research-ufc-paris-v5-market-offset-v1.yml').read_text()
+          marker="          python - <<'PY'\n"
+          start=src.index(marker)+len(marker)
+          end=src.index("\n          PY",start)
+          code=textwrap.dedent(src[start:end])
+          repl={
+            "('Dan Hooker','Salahdine Parnasse',375,-500,'UFC')":"('Dan Hooker','Salahdine Parnasse',400,-550,'UFC 2026-08-31')",
+            "('Fares Ziam','Axel Sola',-150,125,'UFC')":"('Fares Ziam','Axel Sola',-160,135,'UFC 2026-08-31')",
+            "('Michael Page','Nursulton Ruziboev',-200,165,'UFC')":"('Michael Page','Nursulton Ruziboev',-170,140,'UFC 2026-08-31')",
+            "('Daniil Donchenko','Punahele Soriano',-215,172,'Oddschecker')":"('Daniil Donchenko','Punahele Soriano',-225,185,'UFC 2026-08-31')",
+            "('Morgan Charriere','Felipe Lima',170,-205,'UFC')":"('Morgan Charriere','Felipe Lima',155,-185,'UFC 2026-08-31')",
+            "('Losene Keita','Muhammad Naimov',-300,240,'UFC')":"('Losene Keita','Muhammad Naimov',-350,275,'UFC 2026-08-31')",
+            "('Oumar Sy','Modestas Bukauskas',-185,155,'UFC')":"('Oumar Sy','Modestas Bukauskas',-190,160,'UFC 2026-08-31')",
+            "('Nathaniel Wood','Mairon Santos',108,-134,'BestFightOdds')":"('Nathaniel Wood','Mairon Santos',110,-130,'UFC 2026-08-31')",
+            "('Matthieu Letho Duclos','Luis Felipe Dias',100,-120,'UFC')":"('Matthieu Letho Duclos','Luis Felipe Dias',-120,100,'UFC 2026-08-31')",
+            "('Delphine Benouaich','Sofia Montenegro',-160,135,'UFC')":"('Delphine Benouaich','Sofia Montenegro',-175,145,'UFC 2026-08-31')"
+          }
+          for old,new in repl.items():
+              if old not in code: raise RuntimeError(f'missing replacement target: {old}')
+              code=code.replace(old,new)
+          code=code.replace("ufc_paris_v5_market_offset_v1.csv","ufc_paris_v5_market_offset_current_20260831.csv")
+          exec(compile(code,'ufc_paris_v5_current.py','exec'),{})
+          PY
+      - name: Commit result
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f data/research/prop_mispricing/ufc_paris_v5_market_offset_current_20260831.csv
+          git commit -m "research: add UFC Paris frozen V5 scores at Aug 31 lines" || echo No-changes
+          for i in 1 2 3; do
+            git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
+            git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829 && exit 0
+            sleep 3
+          done
+          exit 1
