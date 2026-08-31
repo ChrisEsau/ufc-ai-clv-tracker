@@ -9,41 +9,22 @@ on:
 permissions:
   contents: read
 jobs:
-  inspect:
+  score:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11.16'
-      - run: |
+      - name: Install exact frozen V5 packages
+        run: |
           python -m pip install --upgrade pip==26.2.1
           pip install pandas==3.0.5 pyarrow==25.0.1 numpy==2.4.6 scikit-learn==1.9.0 scipy==1.17.1 xgboost==3.2.0 joblib==1.5.3 threadpoolctl==3.6.0 python-dateutil==2.9.0.post0
-      - name: Inspect Shanghai source coverage
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import pandas as pd
-          target='2026-08-29'
-          root=Path('data')
-          print('=== FILES WITH TARGET DATE ===')
-          for p in list(root.rglob('*.parquet'))+list(root.rglob('*.csv')):
-              try:
-                  if p.suffix=='.parquet': df=pd.read_parquet(p)
-                  else:
-                      if p.stat().st_size>30_000_000: continue
-                      df=pd.read_csv(p)
-                  for c in ['date','event_date','fight_date','commence_time','snapshot_timestamp']:
-                      if c in df.columns:
-                          s=pd.to_datetime(df[c],errors='coerce').dt.strftime('%Y-%m-%d')
-                          n=int((s==target).sum())
-                          if n:
-                              print('\nFILE',p,'DATECOL',c,'ROWS',n)
-                              print('COLS',list(df.columns))
-                              print(df.loc[s.eq(target)].head(60).to_string(index=False))
-                              break
-              except Exception:
-                  pass
-          PY
+      - name: Score UFC Shanghai with frozen V5
+        run: python -m pipeline.research.score_ufc_shanghai_v5_ml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ufc-shanghai-v5-moneyline-20260829
+          path: data/research/prop_mispricing/ufc_shanghai_v5_moneyline_20260829.csv
