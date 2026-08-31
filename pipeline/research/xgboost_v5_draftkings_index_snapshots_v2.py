@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import json
+import re
+import unicodedata
 from pathlib import Path
 
 import numpy as np
@@ -17,6 +19,7 @@ FROZEN_FEATURES = Path("/tmp/v5_frozen/moneyline_feature_view.parquet")
 CURRENT_FEATURES = Path("data/features/moneyline_feature_view.parquet")
 INDEX = Path("data/market/draftkings_raw_index.parquet")
 HISTORY = Path("data/market/market_intelligence_history.parquet")
+MASTER = Path("data/master/ufc_master.parquet")
 V5_SUMMARY = OUT / "xgboost_v5_exact_reproduction_summary.json"
 
 CFG = {
@@ -34,6 +37,11 @@ def clip_p(x):
 def logit(x):
     p = clip_p(x)
     return np.log(p / (1 - p))
+
+
+def norm_name(x):
+    s = unicodedata.normalize("NFKD", str(x)).encode("ascii", "ignore").decode("ascii").lower()
+    return re.sub(r"[^a-z0-9]+", "", s)
 
 
 def selected_features():
@@ -74,6 +82,33 @@ def train_v5(fs):
     return booster, med, cols, len(df), str(df.date.max().date())
 
 
+def orientation_table():
+    # Prefer the current moneyline feature view, because its signed *_diff columns
+    # define the exact red-minus-blue orientation consumed by V5.
+    fv = pd.read_parquet(CURRENT_FEATURES).copy()
+    candidates = [
+        ("r_name", "b_name"), ("red_fighter", "blue_fighter"),
+        ("red_name", "blue_name"), ("fighter_red", "fighter_blue"),
+    ]
+    for rcol, bcol in candidates:
+        if rcol in fv.columns and bcol in fv.columns:
+            return fv[["fight_id", rcol, bcol]].drop_duplicates("fight_id").rename(
+                columns={rcol: "red_name", bcol: "blue_name"}
+            )
+
+    # Fallback to master if the feature view intentionally omits names.
+    master = pd.read_parquet(MASTER).copy()
+    for rcol, bcol in candidates:
+        if rcol in master.columns and bcol in master.columns:
+            return master[["fight_id", rcol, bcol]].drop_duplicates("fight_id").rename(
+                columns={rcol: "red_name", bcol: "blue_name"}
+            )
+    raise RuntimeError(
+        "Could not locate RED/BLUE fighter-name columns in current feature view or master. "
+        f"feature columns sample={list(fv.columns)[:40]} master columns sample={list(master.columns)[:40]}"
+    )
+
+
 def indexed_moneylines():
     idx = pd.read_parquet(INDEX).copy()
     idx["snapshot_timestamp"] = pd.to_datetime(idx["snapshot_timestamp"], errors="coerce", utc=True)
@@ -97,13 +132,24 @@ def indexed_moneylines():
     h["implied_probability"] = pd.to_numeric(h["implied_probability"], errors="coerce")
     h = h.dropna(subset=["fight_id", "fighter_name", "american_odds", "implied_probability"]).copy()
 
-    # market_intelligence_history already has canonical side; use it directly.
-    h["orientation_side"] = h["side"].astype(str).str.lower().str.strip()
+    orient = orientation_table()
+    h = h.merge(orient, on="fight_id", how="left", validate="many_to_one")
+    h["fighter_norm"] = h["fighter_name"].map(norm_name)
+    h["red_norm"] = h["red_name"].map(norm_name)
+    h["blue_norm"] = h["blue_name"].map(norm_name)
+    h["orientation_side"] = np.where(
+        h.fighter_norm.eq(h.red_norm), "red",
+        np.where(h.fighter_norm.eq(h.blue_norm), "blue", None),
+    )
+    unmatched = h.orientation_side.isna()
+    if unmatched.any():
+        sample = h.loc[unmatched, ["fight_id", "fighter_name", "red_name", "blue_name"]].drop_duplicates().head(20)
+        print("UNMATCHED_FIGHTER_ORIENTATION_SAMPLE")
+        print(sample.to_string(index=False))
     h = h[h.orientation_side.isin(["red", "blue"])].copy()
     if h.empty:
-        raise RuntimeError("DraftKings indexed moneyline rows have no canonical red/blue side values")
+        raise RuntimeError("No DraftKings fighter names matched V5 RED/BLUE orientation metadata")
 
-    # One selection per side per indexed run/fight.
     h = h.sort_values("refresh_timestamp").drop_duplicates(
         ["run_id", "fight_id", "orientation_side"], keep="last"
     )
@@ -111,7 +157,7 @@ def indexed_moneylines():
     good = counts[counts.eq(2)].reset_index()[["run_id", "fight_id"]]
     h = h.merge(good, on=["run_id", "fight_id"], how="inner", validate="many_to_one")
     if h.empty:
-        raise RuntimeError("No complete two-sided DraftKings indexed moneyline snapshots")
+        raise RuntimeError("No complete two-sided DraftKings indexed moneyline snapshots after orientation matching")
 
     h["market_overround"] = h.groupby(["run_id", "fight_id"])["implied_probability"].transform("sum")
     h["fair_market_p"] = h["implied_probability"] / h["market_overround"]
@@ -179,7 +225,7 @@ def main():
         "positive_edges_ge_0_075": int((out.edge >= .075).sum()),
         "positive_edges_ge_0_10": int((out.edge >= .10).sum()),
         "latest_side_rows": int(len(latest)),
-        "notes": "Raw index defines eligible DraftKings snapshot runs; normalized moneyline rows come from market_intelligence_history. Frozen V5 architecture and selected features unchanged."
+        "notes": "Raw index defines eligible DraftKings snapshot runs; normalized moneyline rows come from market_intelligence_history; fighter names are aligned to the signed V5 RED/BLUE orientation. Frozen V5 architecture and selected features unchanged."
     }
     SUMMARY.write_text(json.dumps(s, indent=2), encoding="utf-8")
     print(json.dumps(s, indent=2))
