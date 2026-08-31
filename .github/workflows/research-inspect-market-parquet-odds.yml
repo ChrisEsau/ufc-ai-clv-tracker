@@ -4,6 +4,7 @@ on:
     branches: [research/ufc-prop-mispricing-xgboost-20260829]
     paths:
       - 'pipeline/research/inspect_market_parquet_odds.py'
+      - 'pipeline/research/inspect_market_intelligence_jul_aug.py'
       - '.github/workflows/research-inspect-market-parquet-odds.yml'
 permissions:
   contents: write
@@ -20,10 +21,11 @@ jobs:
       - run: |
           pip install pandas==3.0.5 pyarrow==25.0.1
           python -m pipeline.research.inspect_market_parquet_odds
+          python -m pipeline.research.inspect_market_intelligence_jul_aug
       - run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -f data/research/prop_mispricing/market_parquet_odds_inventory.json
+          git add -f data/research/prop_mispricing/market_parquet_odds_inventory.json data/research/prop_mispricing/market_intelligence_jul_aug_summary.json
           git diff --cached --quiet && exit 0
           git commit -m 'research: add market parquet odds inventory'
           git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
