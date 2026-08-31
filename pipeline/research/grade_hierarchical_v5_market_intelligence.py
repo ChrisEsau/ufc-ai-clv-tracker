@@ -3,19 +3,16 @@ from __future__ import annotations
 from pathlib import Path
 import json
 import re
-import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / 'data/research/prop_mispricing'
 BETS = OUT / 'hierarchical_v5_market_intelligence_bets.csv'
-PRED = OUT / 'hierarchical_v5_market_intelligence_predictions.csv'
 HIST = ROOT / 'data/market/historical_market_outcomes.parquet'
 LEDGER_OUT = OUT / 'hierarchical_v5_market_intelligence_graded_bets.csv'
 UNMATCHED_OUT = OUT / 'hierarchical_v5_market_intelligence_ungraded_bets.csv'
 SUMMARY_OUT = OUT / 'hierarchical_v5_market_intelligence_grading_summary.json'
 
-SLUGS = ['red_ko','red_sub','red_dec','blue_ko','blue_sub','blue_dec']
 CLASS_META = {
     'red_ko': ('red','win_by_ko_tko_dq',0),
     'red_sub': ('red','win_by_submission',1),
@@ -41,14 +38,11 @@ def summarize(d):
 
 def main():
     bets=pd.read_csv(BETS)
-    pred=pd.read_csv(PRED)
-    for d in [bets,pred]:
-        d['fight_id']=d['fight_id'].astype(str)
-        d['_pair']=d.apply(lambda r: pair_key(r['red_fighter'],r['blue_fighter']),axis=1)
+    bets['fight_id']=bets['fight_id'].astype(str)
+    bets['_pair']=bets.apply(lambda r: pair_key(r['red_fighter'],r['blue_fighter']),axis=1)
 
     h=pd.read_parquet(HIST).copy()
     h['fight_id']=h['fight_id'].astype(str)
-    # Build one graded exact-method target per historical fight.
     req=['win_by_ko_tko_dq','win_by_submission','win_by_decision']
     h=h[(h['result_status'].astype(str)=='graded') & h['market_key'].isin(req) & h['outcome_side'].astype(str).isin(['red','blue']) & h['won'].notna()].copy()
     h['won']=h['won'].astype(bool).astype(int)
@@ -58,8 +52,7 @@ def main():
         wins=[]
         for slug,(side,key,idx) in CLASS_META.items():
             z=g[(g['outcome_side'].astype(str)==side)&(g['market_key']==key)]
-            if len(z) and int(z.iloc[0]['won'])==1:
-                wins.append(idx)
+            if len(z) and int(z.iloc[0]['won'])==1: wins.append(idx)
         if len(wins)!=1: continue
         rname=''; bname=''; ev=''; date=pd.NaT
         for c in ['red_fighter','r_name','fighter_red']:
@@ -67,40 +60,36 @@ def main():
         for c in ['blue_fighter','b_name','fighter_blue']:
             if c in g.columns and g[c].notna().any(): bname=str(g.loc[g[c].notna(),c].iloc[0]); break
         if not rname or not bname:
-            # infer names from outcome labels by side if available
-            for side,var in [('red','r'),('blue','b')]:
+            for side in ['red','blue']:
                 z=g[g['outcome_side'].astype(str)==side]
                 for c in ['fighter_name','outcome_display']:
                     if c in z.columns and z[c].notna().any():
                         if side=='red': rname=str(z.loc[z[c].notna(),c].iloc[0])
                         else: bname=str(z.loc[z[c].notna(),c].iloc[0])
                         break
-        for c in ['event_name']:
-            if c in g.columns and g[c].notna().any(): ev=str(g.loc[g[c].notna(),c].iloc[0]); break
+        if 'event_name' in g.columns and g['event_name'].notna().any(): ev=str(g.loc[g['event_name'].notna(),'event_name'].iloc[0])
         for c in ['date','event_date']:
             if c in g.columns and g[c].notna().any(): date=pd.to_datetime(g.loc[g[c].notna(),c].iloc[0],errors='coerce'); break
         if rname and bname:
             targets.append({'historical_fight_id':fid,'_pair':pair_key(rname,bname),'hist_red_fighter':rname,'hist_blue_fighter':bname,'hist_event_name':ev,'hist_date':date,'target':wins[0]})
     t=pd.DataFrame(targets)
-
-    # Pair names are primary because market-intelligence and historical IDs use different namespaces.
-    # Require a unique historical pair to avoid accidental grading.
     unique=t.groupby('_pair').filter(lambda x: len(x)==1).copy() if len(t) else t
-    lookup={r._pair:r for r in unique.itertuples(index=False)}
+    lookup=unique.set_index('_pair').to_dict(orient='index') if len(unique) else {}
 
     rows=[]; misses=[]
-    for r in bets.itertuples(index=False):
-        tr=lookup.get(r._pair)
+    clean_cols=[c for c in bets.columns if not c.startswith('_')]
+    for _,r in bets.iterrows():
+        tr=lookup.get(r['_pair'])
         if tr is None:
-            misses.append({c:getattr(r,c) for c in bets.columns if not c.startswith('_')})
+            misses.append({c:r[c] for c in clean_cols})
             continue
-        slug=str(r.bet_slug); class_idx=CLASS_META[slug][2]
-        won=int(int(tr.target)==class_idx)
-        raw_p=float(r.raw_implied_probability)
-        dec=float(r.decimal_odds) if pd.notna(r.decimal_odds) else 1.0/raw_p
+        slug=str(r['bet_slug']); class_idx=CLASS_META[slug][2]
+        won=int(int(tr['target'])==class_idx)
+        raw_p=float(r['raw_implied_probability'])
+        dec=float(r['decimal_odds']) if pd.notna(r['decimal_odds']) else 1.0/raw_p
         profit=(dec-1.0) if won else -1.0
-        row={c:getattr(r,c) for c in bets.columns if not c.startswith('_')}
-        row.update({'historical_fight_id':tr.historical_fight_id,'historical_event_name':tr.hist_event_name,'target':int(tr.target),'won':won,'stake_units':1.0,'profit_units':profit})
+        row={c:r[c] for c in clean_cols}
+        row.update({'historical_fight_id':tr['historical_fight_id'],'historical_event_name':tr['hist_event_name'],'target':int(tr['target']),'won':won,'stake_units':1.0,'profit_units':profit})
         rows.append(row)
     graded=pd.DataFrame(rows); ungraded=pd.DataFrame(misses)
     graded.to_csv(LEDGER_OUT,index=False); ungraded.to_csv(UNMATCHED_OUT,index=False)
