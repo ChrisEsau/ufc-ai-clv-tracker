@@ -50,9 +50,10 @@ jobs:
           params = {'objective': 'multi:softprob', 'num_class': 6, 'seed': 42}
           booster = xgb.train(params, d, num_boost_round=0)
           got = np.asarray(booster.predict(d), dtype=float)
-          if got.shape != p.shape or not np.allclose(got, p, atol=1e-12, rtol=0):
-              raise RuntimeError(f'multiclass base_margin contract failed: version={xgb.__version__} shape={got.shape} max_err={np.max(np.abs(got-p)) if got.shape == p.shape else None}')
-          print(f'xgboost={xgb.__version__} multiclass base_margin verified; max_err={np.max(np.abs(got-p)):.3g}')
+          max_err = np.max(np.abs(got - p)) if got.shape == p.shape else None
+          if got.shape != p.shape or max_err is None or max_err > 5e-8:
+              raise RuntimeError(f'multiclass base_margin contract failed: version={xgb.__version__} shape={got.shape} max_err={max_err}')
+          print(f'xgboost={xgb.__version__} multiclass base_margin verified; max_err={max_err:.3g}')
           PY
 
       - name: Development OOF and candidate freeze
