@@ -1,0 +1,40 @@
+{
+  "experiment": "frozen_v5_logit020_no_cold_start_current_continuation_v1",
+  "rule": {
+    "abs_logit_residual_min": 0.2,
+    "stake_units": 1.0,
+    "cold_start_filter": false
+  },
+  "frozen_snapshot": "7df1b61126be1f4e036b256d1c774c531b8a281f",
+  "prior_cutoff": "2026-03-28",
+  "current_market_date_max": "2026-03-28",
+  "current_feature_date_max": "2026-08-22",
+  "post_cutoff_scored_fights": 0,
+  "reproduction_gates": {
+    "exact_snapshot_side_rows": 1010,
+    "exact_snapshot_max_abs_model_p_error": 1.1102230246251565e-16,
+    "current_overlap_side_rows": 1010,
+    "current_overlap_expected_rows": 1010,
+    "current_overlap_max_abs_model_p_error": 1.1102230246251565e-16,
+    "current_overlap_max_abs_fair_market_p_error": 1.1102230246251565e-16,
+    "passed": true
+  },
+  "continuation": {
+    "bets": 0,
+    "wins": 0,
+    "losses": 0,
+    "profit_units": 0.0,
+    "roi": null,
+    "max_drawdown_units": 0.0
+  },
+  "combined": {
+    "bets": 120,
+    "wins": 84,
+    "losses": 36,
+    "profit_units": 12.320413893755152,
+    "roi": 0.10267011578129294,
+    "max_drawdown_units": 7.882266047225564
+  },
+  "by_card": [],
+  "note": "No policy changes. Cold-start remains off. Threshold remains frozen at |logit residual| >= 0.20. Continuation is retrospective confirmation, not pristine prospective evidence."
+}
