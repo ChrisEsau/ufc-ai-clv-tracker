@@ -1,0 +1,100 @@
+name: Reproduce XGBoost Six-Way Method Market Offset OOF
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - .github/workflows/research-xgboost-method-market-offset-reproduction.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reproduce-oof-only:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout research branch
+        uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pinned research dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install \
+            pandas==3.0.5 \
+            pyarrow==25.0.1 \
+            numpy==2.4.6 \
+            scikit-learn==1.9.0 \
+            xgboost==3.2.0
+
+      - name: Verify multiclass market base-margin contract
+        run: |
+          python - <<'PY'
+          import numpy as np
+          import xgboost as xgb
+
+          p = np.array([
+              [0.30, 0.10, 0.15, 0.20, 0.05, 0.20],
+              [0.15, 0.05, 0.30, 0.10, 0.10, 0.30],
+          ], dtype=float)
+          d = xgb.DMatrix(np.zeros((2, 1)), label=np.array([0, 5]))
+          d.set_base_margin(np.log(p).reshape(-1))
+          booster = xgb.train({'objective': 'multi:softprob', 'num_class': 6, 'seed': 42}, d, num_boost_round=0)
+          got = np.asarray(booster.predict(d), dtype=float)
+          err = np.max(np.abs(got - p))
+          assert got.shape == p.shape
+          assert err <= 5e-8, (xgb.__version__, got.shape, err)
+          print(f'xgboost={xgb.__version__}; max base-margin probability error={err:.12g}')
+          PY
+
+      - name: Reproduce development OOF only
+        run: |
+          python pipeline/research/xgboost_method_market_offset.py --stage develop
+
+      - name: Assert frozen OOF result
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          summary = json.loads(Path('data/research/prop_mispricing/xgboost_method_market_offset__summary.json').read_text())
+          frozen = json.loads(Path('data/research/prop_mispricing/xgboost_method_market_offset__frozen_candidate.json').read_text())
+
+          expected_model_ll = 1.5363884809490846
+          expected_market_ll = 1.5469188028608722
+          expected_n = 1604
+          expected_candidate = 'full_v5_signed'
+
+          assert summary['test_status'] == 'SEALED_NOT_SCORED'
+          assert summary['selected_candidate'] == expected_candidate
+          assert frozen['selected_candidate'] == expected_candidate
+          assert summary['selected_oof']['n'] == expected_n
+          assert summary['candidates'][expected_candidate]['market_oof']['n'] == expected_n
+          assert abs(summary['selected_oof']['log_loss'] - expected_model_ll) <= 1e-12
+          assert abs(summary['candidates'][expected_candidate]['market_oof']['log_loss'] - expected_market_ll) <= 1e-12
+          assert abs(frozen['selected_oof_log_loss'] - expected_model_ll) <= 1e-12
+          assert frozen['development_cutoff'] == '2024-12-31'
+
+          print('Exact OOF reproduction gate passed')
+          print(f"candidate={expected_candidate}")
+          print(f"n={expected_n}")
+          print(f"market_log_loss={expected_market_ll:.15f}")
+          print(f"model_log_loss={expected_model_ll:.15f}")
+          PY
+
+      - name: Prove sealed test was not regenerated
+        run: |
+          git status --short
+          if git status --short | grep -q 'xgboost_method_market_offset__test_predictions.csv'; then
+            echo 'ERROR: reproduction workflow touched sealed test predictions'
+            exit 1
+          fi
+          echo 'Development-only reproduction confirmed; sealed test predictions untouched.'
