@@ -1,0 +1,79 @@
+name: Research V5 Historical Edge Buckets
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - data/research/prop_mispricing/v5_historical_edge_buckets_trigger.txt
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  buckets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -q pandas
+      - name: Run edge bucket diagnostic
+        run: |
+          python - <<'PY'
+          import pandas as pd
+
+          src='data/research/prop_mispricing/v5_historical_2025_to_20260328_positive_edge_fights.csv'
+          out='data/research/prop_mispricing/v5_historical_2025_to_20260328_edge_buckets.csv'
+          df=pd.read_csv(src)
+          df['date']=pd.to_datetime(df['date'])
+          df['edge']=pd.to_numeric(df['edge'])
+          df['fair_market_p']=pd.to_numeric(df['fair_market_p'])
+          df['model_p']=pd.to_numeric(df['model_p'])
+          df['profit_units']=pd.to_numeric(df['profit_units'])
+          df['bet_win']=pd.to_numeric(df['bet_win'])
+
+          bins=[0,.01,.02,.03,.04,.05,.06,.075,.10,float('inf')]
+          labels=['0-1%','1-2%','2-3%','3-4%','4-5%','5-6%','6-7.5%','7.5-10%','10%+']
+          df['edge_bucket']=pd.cut(df['edge'], bins=bins, labels=labels, right=False, include_lowest=True)
+          periods=[('2025_to_2026_03_28',df),('2025',df[df['date'].dt.year==2025]),('2026_Jan_Mar',df[df['date'].dt.year==2026])]
+          rows=[]
+          for period,base in periods:
+              for label in labels:
+                  q=base[base['edge_bucket']==label]
+                  n=len(q)
+                  wins=int(q['bet_win'].sum()) if n else 0
+                  profit=float(q['profit_units'].sum()) if n else 0.0
+                  rows.append({
+                      'period':period,'edge_bucket':label,'bets':n,'wins':wins,'losses':n-wins,
+                      'win_rate':wins/n if n else None,'profit_units':profit,'roi':profit/n if n else None,
+                      'avg_edge':float(q['edge'].mean()) if n else None,
+                      'avg_market_p':float(q['fair_market_p'].mean()) if n else None,
+                      'avg_v5_p':float(q['model_p'].mean()) if n else None,
+                  })
+          res=pd.DataFrame(rows)
+          res.to_csv(out,index=False)
+          for period in res['period'].unique():
+              print('\n===',period,'===')
+              r=res[res['period']==period]
+              print(r.to_string(index=False, formatters={
+                  'win_rate':lambda x:'' if pd.isna(x) else f'{x:.1%}',
+                  'profit_units':lambda x:f'{x:+.3f}',
+                  'roi':lambda x:'' if pd.isna(x) else f'{x:+.1%}',
+                  'avg_edge':lambda x:'' if pd.isna(x) else f'{x:.2%}',
+                  'avg_market_p':lambda x:'' if pd.isna(x) else f'{x:.1%}',
+                  'avg_v5_p':lambda x:'' if pd.isna(x) else f'{x:.1%}',
+              }))
+          PY
+      - name: Commit bucket output
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/research/prop_mispricing/v5_historical_2025_to_20260328_edge_buckets.csv
+          git diff --cached --quiet && exit 0
+          git commit -m "Add frozen V5 historical edge buckets"
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
