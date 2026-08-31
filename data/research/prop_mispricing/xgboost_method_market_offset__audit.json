@@ -1,8 +1,8 @@
 {
   "experiment_name": "six_way_exact_method_market_offset_compliant_oof",
   "branch": "research/ufc-prop-mispricing-xgboost-20260829",
-  "commit_sha": "b6cb485ee07e9f306051062d1a9efb11c29289bd",
-  "audit_timestamp": "2026-08-31T11:58:18.059792+00:00",
+  "commit_sha": "014961e76d367f3c8aa728d7e87a2b5f114bce3d",
+  "audit_timestamp": "2026-08-31T12:30:14.335747+00:00",
   "class_order": [
     "RED_KO_TKO",
     "RED_SUB",

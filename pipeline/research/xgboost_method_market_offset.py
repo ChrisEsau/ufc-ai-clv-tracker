@@ -403,7 +403,7 @@ def develop() -> None:
         for fold, train_end, val_start, val_end in FOLDS:
             train = df[df["date"] <= train_end].copy()
             val_all = df[(df["date"] >= val_start) & (df["date"] <= val_end)].copy()
-            val = val_all[val_all["betting_eligible"]].copy()
+            val = val_all.copy()
             if train.empty or val.empty:
                 raise RuntimeError(f"empty fold {fold}")
             pred, _, valid = _fit_predict(train, val, cols)
@@ -475,8 +475,8 @@ def develop() -> None:
         "num_boost_round": ROUNDS,
         "class_order": CLASS_ORDER,
         "market_probability_construction": "joint six-way normalization then log(p) base margin",
-        "cold_start_eligibility": "whole fight betting-ineligible if either prefight prior UFC fight count <2",
-        "selection_metric": "pooled_2021_2024_betting_eligible_multiclass_log_loss",
+        "cold_start_eligibility": "OFF for this experiment",
+        "selection_metric": "pooled_2021_2024_multiclass_log_loss",
         "selected_oof_log_loss": sr["pooled_oof_model"]["log_loss"],
         "selected_oof_market_log_loss": sr["pooled_oof_market"]["log_loss"],
         "development_cutoff": "2024-12-31",

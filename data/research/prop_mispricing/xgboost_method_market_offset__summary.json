@@ -1,8 +1,8 @@
 {
   "experiment_name": "six_way_exact_method_market_offset_compliant_oof",
   "branch": "research/ufc-prop-mispricing-xgboost-20260829",
-  "commit_sha": "b6cb485ee07e9f306051062d1a9efb11c29289bd",
-  "run_timestamp": "2026-08-31T11:58:20.921334+00:00",
+  "commit_sha": "014961e76d367f3c8aa728d7e87a2b5f114bce3d",
+  "run_timestamp": "2026-08-31T12:30:17.082601+00:00",
   "class_order": [
     "RED_KO_TKO",
     "RED_SUB",
@@ -220,805 +220,805 @@
     "FULL": {
       "feature_count": 140,
       "pooled_oof_market": {
-        "n": 1085,
-        "log_loss": 1.5411404799697135,
-        "brier": 0.7465134167799795,
-        "top1_accuracy": 0.3695852534562212,
-        "winner_accuracy": 0.6709677419354839,
-        "method_accuracy": 0.5262672811059907
+        "n": 1604,
+        "log_loss": 1.5469188028608722,
+        "brier": 0.747825229037831,
+        "top1_accuracy": 0.36845386533665836,
+        "winner_accuracy": 0.672069825436409,
+        "method_accuracy": 0.5249376558603491
       },
       "pooled_oof_model": {
-        "n": 1085,
-        "log_loss": 1.5330542420520807,
-        "brier": 0.7438810705764096,
-        "top1_accuracy": 0.3870967741935484,
-        "winner_accuracy": 0.6866359447004609,
-        "method_accuracy": 0.5382488479262673
+        "n": 1604,
+        "log_loss": 1.5364276221525495,
+        "brier": 0.7444621034024558,
+        "top1_accuracy": 0.38403990024937656,
+        "winner_accuracy": 0.6826683291770573,
+        "method_accuracy": 0.5317955112219451
       },
-      "delta_log_loss_vs_market": -0.008086237917632744,
-      "delta_brier_vs_market": -0.002632346203569891,
+      "delta_log_loss_vs_market": -0.010491180708322778,
+      "delta_brier_vs_market": -0.0033631256353752192,
       "per_fold_metrics": [
         {
           "fold": "2021",
           "train_n": 3150,
           "validation_n_all": 450,
-          "validation_n_betting_eligible": 303,
+          "validation_n_betting_eligible": 450,
           "cold_start_excluded": 147,
           "feature_count": 140,
           "market": {
-            "n": 303,
-            "log_loss": 1.5631098988725611,
-            "brier": 0.7547774370809459,
-            "top1_accuracy": 0.35313531353135313,
-            "winner_accuracy": 0.6435643564356436,
-            "method_accuracy": 0.5181518151815182
+            "n": 450,
+            "log_loss": 1.5707128340472991,
+            "brier": 0.7579690207893608,
+            "top1_accuracy": 0.34444444444444444,
+            "winner_accuracy": 0.6422222222222222,
+            "method_accuracy": 0.5044444444444445
           },
           "model": {
-            "n": 303,
-            "log_loss": 1.5554114887958819,
-            "brier": 0.7523731989080624,
-            "top1_accuracy": 0.38943894389438943,
-            "winner_accuracy": 0.6798679867986799,
-            "method_accuracy": 0.5313531353135313
+            "n": 450,
+            "log_loss": 1.5599555743100877,
+            "brier": 0.754924110075942,
+            "top1_accuracy": 0.3711111111111111,
+            "winner_accuracy": 0.6644444444444444,
+            "method_accuracy": 0.5155555555555555
           },
-          "delta_log_loss_vs_market": -0.007698410076679263
+          "delta_log_loss_vs_market": -0.010757259737211422
         },
         {
           "fold": "2022",
           "train_n": 3600,
           "validation_n_all": 433,
-          "validation_n_betting_eligible": 293,
+          "validation_n_betting_eligible": 433,
           "cold_start_excluded": 140,
           "feature_count": 140,
           "market": {
-            "n": 293,
-            "log_loss": 1.5390630117746908,
-            "brier": 0.7466751582736165,
-            "top1_accuracy": 0.3651877133105802,
-            "winner_accuracy": 0.6757679180887372,
-            "method_accuracy": 0.5290102389078498
+            "n": 433,
+            "log_loss": 1.5406912519128553,
+            "brier": 0.7480878742784635,
+            "top1_accuracy": 0.3625866050808314,
+            "winner_accuracy": 0.6766743648960739,
+            "method_accuracy": 0.5334872979214781
           },
           "model": {
-            "n": 293,
-            "log_loss": 1.5371259103005939,
-            "brier": 0.7470764573952042,
-            "top1_accuracy": 0.36177474402730375,
-            "winner_accuracy": 0.6791808873720137,
-            "method_accuracy": 0.5324232081911263
+            "n": 433,
+            "log_loss": 1.5289478926261404,
+            "brier": 0.7464509792708651,
+            "top1_accuracy": 0.3695150115473441,
+            "winner_accuracy": 0.6836027713625866,
+            "method_accuracy": 0.5334872979214781
           },
-          "delta_log_loss_vs_market": -0.0019371014740969805
+          "delta_log_loss_vs_market": -0.011743359286714883
         },
         {
           "fold": "2023",
           "train_n": 4033,
           "validation_n_all": 384,
-          "validation_n_betting_eligible": 244,
+          "validation_n_betting_eligible": 384,
           "cold_start_excluded": 140,
           "feature_count": 140,
           "market": {
-            "n": 244,
-            "log_loss": 1.5764050434110874,
-            "brier": 0.7586123606061871,
-            "top1_accuracy": 0.3442622950819672,
-            "winner_accuracy": 0.680327868852459,
-            "method_accuracy": 0.5081967213114754
+            "n": 384,
+            "log_loss": 1.5792545876819555,
+            "brier": 0.7585459723317663,
+            "top1_accuracy": 0.3567708333333333,
+            "winner_accuracy": 0.6875,
+            "method_accuracy": 0.515625
           },
           "model": {
-            "n": 244,
-            "log_loss": 1.570964872657735,
-            "brier": 0.7550179233911702,
-            "top1_accuracy": 0.3729508196721312,
-            "winner_accuracy": 0.7008196721311475,
-            "method_accuracy": 0.5204918032786885
+            "n": 384,
+            "log_loss": 1.5720829060747807,
+            "brier": 0.7553293690732502,
+            "top1_accuracy": 0.3776041666666667,
+            "winner_accuracy": 0.7005208333333334,
+            "method_accuracy": 0.5234375
           },
-          "delta_log_loss_vs_market": -0.005440170753352458
+          "delta_log_loss_vs_market": -0.00717168160717474
         },
         {
           "fold": "2024",
           "train_n": 4417,
           "validation_n_all": 337,
-          "validation_n_betting_eligible": 245,
+          "validation_n_betting_eligible": 337,
           "cold_start_excluded": 92,
           "feature_count": 140,
           "market": {
-            "n": 245,
-            "log_loss": 1.4813339933325032,
-            "brier": 0.7240500261578449,
-            "top1_accuracy": 0.4204081632653061,
-            "winner_accuracy": 0.689795918367347,
-            "method_accuracy": 0.5510204081632653
+            "n": 337,
+            "log_loss": 1.486302405695599,
+            "brier": 0.7217267213160105,
+            "top1_accuracy": 0.42136498516320475,
+            "winner_accuracy": 0.6884272997032641,
+            "method_accuracy": 0.5519287833827893
           },
           "model": {
-            "n": 245,
-            "log_loss": 1.462778983162424,
-            "brier": 0.7184657427837593,
-            "top1_accuracy": 0.42857142857142855,
-            "winner_accuracy": 0.689795918367347,
-            "method_accuracy": 0.5714285714285714
+            "n": 337,
+            "log_loss": 1.473992949713101,
+            "brier": 0.7155537465132124,
+            "top1_accuracy": 0.42729970326409494,
+            "winner_accuracy": 0.685459940652819,
+            "method_accuracy": 0.5608308605341247
           },
-          "delta_log_loss_vs_market": -0.0185550101700791
+          "delta_log_loss_vs_market": -0.012309455982497886
         }
       ],
       "per_class_calibration": {
         "RED_KO_TKO": {
-          "actual_count": 192,
-          "empirical_rate": 0.17695852534562212,
-          "mean_probability": 0.18203188291308792,
-          "brier_component": 0.13431925288866642
+          "actual_count": 291,
+          "empirical_rate": 0.1814214463840399,
+          "mean_probability": 0.19046675895301257,
+          "brier_component": 0.13849579656290348
         },
         "RED_SUB": {
-          "actual_count": 103,
-          "empirical_rate": 0.09493087557603687,
-          "mean_probability": 0.0959726360193046,
-          "brier_component": 0.07861507479617162
+          "actual_count": 164,
+          "empirical_rate": 0.10224438902743142,
+          "mean_probability": 0.10142878840614733,
+          "brier_component": 0.0812276841858176
         },
         "RED_DEC": {
-          "actual_count": 298,
-          "empirical_rate": 0.2746543778801843,
-          "mean_probability": 0.27206146758272903,
-          "brier_component": 0.1859745778166537
+          "actual_count": 451,
+          "empirical_rate": 0.2811720698254364,
+          "mean_probability": 0.2707000573042622,
+          "brier_component": 0.18970378948519925
         },
         "BLUE_KO_TKO": {
-          "actual_count": 153,
-          "empirical_rate": 0.14101382488479264,
-          "mean_probability": 0.16514454713168505,
-          "brier_component": 0.11405412540838179
+          "actual_count": 235,
+          "empirical_rate": 0.14650872817955113,
+          "mean_probability": 0.1622293558659176,
+          "brier_component": 0.11745929399675498
         },
         "BLUE_SUB": {
-          "actual_count": 89,
-          "empirical_rate": 0.08202764976958525,
-          "mean_probability": 0.06864154331969775,
-          "brier_component": 0.07062239919613648
+          "actual_count": 119,
+          "empirical_rate": 0.07418952618453865,
+          "mean_probability": 0.06783764304052063,
+          "brier_component": 0.06475223143316483
         },
         "BLUE_DEC": {
-          "actual_count": 250,
-          "empirical_rate": 0.2304147465437788,
-          "mean_probability": 0.21614792380945475,
-          "brier_component": 0.16029564047039957
+          "actual_count": 344,
+          "empirical_rate": 0.2144638403990025,
+          "mean_probability": 0.2073373969068328,
+          "brier_component": 0.15282330773861566
         }
       }
     },
     "TOP100": {
       "feature_count": 100,
       "pooled_oof_market": {
-        "n": 1085,
-        "log_loss": 1.5411404799697135,
-        "brier": 0.7465134167799795,
-        "top1_accuracy": 0.3695852534562212,
-        "winner_accuracy": 0.6709677419354839,
-        "method_accuracy": 0.5262672811059907
+        "n": 1604,
+        "log_loss": 1.5469188028608722,
+        "brier": 0.747825229037831,
+        "top1_accuracy": 0.36845386533665836,
+        "winner_accuracy": 0.672069825436409,
+        "method_accuracy": 0.5249376558603491
       },
       "pooled_oof_model": {
-        "n": 1085,
-        "log_loss": 1.5346809708641023,
-        "brier": 0.7445525364825475,
-        "top1_accuracy": 0.38525345622119817,
-        "winner_accuracy": 0.6820276497695853,
-        "method_accuracy": 0.5400921658986175
+        "n": 1604,
+        "log_loss": 1.5373450041823595,
+        "brier": 0.7448799654698941,
+        "top1_accuracy": 0.38154613466334164,
+        "winner_accuracy": 0.6783042394014963,
+        "method_accuracy": 0.5330423940149626
       },
-      "delta_log_loss_vs_market": -0.006459509105611216,
-      "delta_brier_vs_market": -0.0019608802974320216,
+      "delta_log_loss_vs_market": -0.009573798678512713,
+      "delta_brier_vs_market": -0.0029452635679368955,
       "per_fold_metrics": [
         {
           "fold": "2021",
           "train_n": 3150,
           "validation_n_all": 450,
-          "validation_n_betting_eligible": 303,
+          "validation_n_betting_eligible": 450,
           "cold_start_excluded": 147,
           "feature_count": 100,
           "market": {
-            "n": 303,
-            "log_loss": 1.5631098988725611,
-            "brier": 0.7547774370809459,
-            "top1_accuracy": 0.35313531353135313,
-            "winner_accuracy": 0.6435643564356436,
-            "method_accuracy": 0.5181518151815182
+            "n": 450,
+            "log_loss": 1.5707128340472991,
+            "brier": 0.7579690207893608,
+            "top1_accuracy": 0.34444444444444444,
+            "winner_accuracy": 0.6422222222222222,
+            "method_accuracy": 0.5044444444444445
           },
           "model": {
-            "n": 303,
-            "log_loss": 1.5589487746069808,
-            "brier": 0.7532023585088775,
-            "top1_accuracy": 0.39603960396039606,
-            "winner_accuracy": 0.6831683168316832,
-            "method_accuracy": 0.5379537953795379
+            "n": 450,
+            "log_loss": 1.5624277885617834,
+            "brier": 0.7555751014266896,
+            "top1_accuracy": 0.37777777777777777,
+            "winner_accuracy": 0.6666666666666666,
+            "method_accuracy": 0.5222222222222223
           },
-          "delta_log_loss_vs_market": -0.0041611242655803515
+          "delta_log_loss_vs_market": -0.008285045485515674
         },
         {
           "fold": "2022",
           "train_n": 3600,
           "validation_n_all": 433,
-          "validation_n_betting_eligible": 293,
+          "validation_n_betting_eligible": 433,
           "cold_start_excluded": 140,
           "feature_count": 100,
           "market": {
-            "n": 293,
-            "log_loss": 1.5390630117746908,
-            "brier": 0.7466751582736165,
-            "top1_accuracy": 0.3651877133105802,
-            "winner_accuracy": 0.6757679180887372,
-            "method_accuracy": 0.5290102389078498
+            "n": 433,
+            "log_loss": 1.5406912519128553,
+            "brier": 0.7480878742784635,
+            "top1_accuracy": 0.3625866050808314,
+            "winner_accuracy": 0.6766743648960739,
+            "method_accuracy": 0.5334872979214781
           },
           "model": {
-            "n": 293,
-            "log_loss": 1.539173831354739,
-            "brier": 0.7478511592159905,
-            "top1_accuracy": 0.3515358361774744,
-            "winner_accuracy": 0.6723549488054608,
-            "method_accuracy": 0.5221843003412969
+            "n": 433,
+            "log_loss": 1.5310657410606034,
+            "brier": 0.7472318738286483,
+            "top1_accuracy": 0.36027713625866054,
+            "winner_accuracy": 0.6766743648960739,
+            "method_accuracy": 0.5265588914549654
           },
-          "delta_log_loss_vs_market": 0.00011081958004810488
+          "delta_log_loss_vs_market": -0.009625510852251828
         },
         {
           "fold": "2023",
           "train_n": 4033,
           "validation_n_all": 384,
-          "validation_n_betting_eligible": 244,
+          "validation_n_betting_eligible": 384,
           "cold_start_excluded": 140,
           "feature_count": 100,
           "market": {
-            "n": 244,
-            "log_loss": 1.5764050434110874,
-            "brier": 0.7586123606061871,
-            "top1_accuracy": 0.3442622950819672,
-            "winner_accuracy": 0.680327868852459,
-            "method_accuracy": 0.5081967213114754
+            "n": 384,
+            "log_loss": 1.5792545876819555,
+            "brier": 0.7585459723317663,
+            "top1_accuracy": 0.3567708333333333,
+            "winner_accuracy": 0.6875,
+            "method_accuracy": 0.515625
           },
           "model": {
-            "n": 244,
-            "log_loss": 1.5723686974856181,
-            "brier": 0.7558033330692208,
-            "top1_accuracy": 0.36885245901639346,
-            "winner_accuracy": 0.6885245901639344,
-            "method_accuracy": 0.5286885245901639
+            "n": 384,
+            "log_loss": 1.571750786846943,
+            "brier": 0.7553882364145691,
+            "top1_accuracy": 0.3697916666666667,
+            "winner_accuracy": 0.6901041666666666,
+            "method_accuracy": 0.5260416666666666
           },
-          "delta_log_loss_vs_market": -0.004036345925469309
+          "delta_log_loss_vs_market": -0.007503800835012564
         },
         {
           "fold": "2024",
           "train_n": 4417,
           "validation_n_all": 337,
-          "validation_n_betting_eligible": 245,
+          "validation_n_betting_eligible": 337,
           "cold_start_excluded": 92,
           "feature_count": 100,
           "market": {
-            "n": 245,
-            "log_loss": 1.4813339933325032,
-            "brier": 0.7240500261578449,
-            "top1_accuracy": 0.4204081632653061,
-            "winner_accuracy": 0.689795918367347,
-            "method_accuracy": 0.5510204081632653
+            "n": 337,
+            "log_loss": 1.486302405695599,
+            "brier": 0.7217267213160105,
+            "top1_accuracy": 0.42136498516320475,
+            "winner_accuracy": 0.6884272997032641,
+            "method_accuracy": 0.5519287833827893
           },
           "model": {
-            "n": 245,
-            "log_loss": 1.4617611424824757,
-            "brier": 0.7187052430048945,
-            "top1_accuracy": 0.42857142857142855,
-            "winner_accuracy": 0.6857142857142857,
-            "method_accuracy": 0.5755102040816327
+            "n": 337,
+            "log_loss": 1.472715471297432,
+            "brier": 0.7156029223166189,
+            "top1_accuracy": 0.42729970326409494,
+            "winner_accuracy": 0.6824925816023739,
+            "method_accuracy": 0.5637982195845698
           },
-          "delta_log_loss_vs_market": -0.019572850850027468
+          "delta_log_loss_vs_market": -0.013586934398166939
         }
       ],
       "per_class_calibration": {
         "RED_KO_TKO": {
-          "actual_count": 192,
-          "empirical_rate": 0.17695852534562212,
-          "mean_probability": 0.1822078119860404,
-          "brier_component": 0.13426453634677205
+          "actual_count": 291,
+          "empirical_rate": 0.1814214463840399,
+          "mean_probability": 0.19033105543784407,
+          "brier_component": 0.13834429402406603
         },
         "RED_SUB": {
-          "actual_count": 103,
-          "empirical_rate": 0.09493087557603687,
-          "mean_probability": 0.09611161442791125,
-          "brier_component": 0.07868108306174654
+          "actual_count": 164,
+          "empirical_rate": 0.10224438902743142,
+          "mean_probability": 0.10168663948481703,
+          "brier_component": 0.08132087199062762
         },
         "RED_DEC": {
-          "actual_count": 298,
-          "empirical_rate": 0.2746543778801843,
-          "mean_probability": 0.27188900812498984,
-          "brier_component": 0.1861361395561352
+          "actual_count": 451,
+          "empirical_rate": 0.2811720698254364,
+          "mean_probability": 0.270642789150414,
+          "brier_component": 0.18979099671486438
         },
         "BLUE_KO_TKO": {
-          "actual_count": 153,
-          "empirical_rate": 0.14101382488479264,
-          "mean_probability": 0.16512006865256393,
-          "brier_component": 0.11418537258217501
+          "actual_count": 235,
+          "empirical_rate": 0.14650872817955113,
+          "mean_probability": 0.16239279567930578,
+          "brier_component": 0.11760229108594124
         },
         "BLUE_SUB": {
-          "actual_count": 89,
-          "empirical_rate": 0.08202764976958525,
-          "mean_probability": 0.06846660433362843,
-          "brier_component": 0.07079624351545641
+          "actual_count": 119,
+          "empirical_rate": 0.07418952618453865,
+          "mean_probability": 0.06772441332033392,
+          "brier_component": 0.06488025653950308
         },
         "BLUE_DEC": {
-          "actual_count": 250,
-          "empirical_rate": 0.2304147465437788,
-          "mean_probability": 0.21620489168688997,
-          "brier_component": 0.1604891614202624
+          "actual_count": 344,
+          "empirical_rate": 0.2144638403990025,
+          "mean_probability": 0.20722230648659076,
+          "brier_component": 0.1529412551148918
         }
       }
     },
     "TOP75": {
       "feature_count": 75,
       "pooled_oof_market": {
-        "n": 1085,
-        "log_loss": 1.5411404799697135,
-        "brier": 0.7465134167799795,
-        "top1_accuracy": 0.3695852534562212,
-        "winner_accuracy": 0.6709677419354839,
-        "method_accuracy": 0.5262672811059907
+        "n": 1604,
+        "log_loss": 1.5469188028608722,
+        "brier": 0.747825229037831,
+        "top1_accuracy": 0.36845386533665836,
+        "winner_accuracy": 0.672069825436409,
+        "method_accuracy": 0.5249376558603491
       },
       "pooled_oof_model": {
-        "n": 1085,
-        "log_loss": 1.5345538560301497,
-        "brier": 0.7449021190676033,
-        "top1_accuracy": 0.3870967741935484,
-        "winner_accuracy": 0.6820276497695853,
-        "method_accuracy": 0.5410138248847927
+        "n": 1604,
+        "log_loss": 1.5380131903197816,
+        "brier": 0.7451942170372089,
+        "top1_accuracy": 0.38341645885286785,
+        "winner_accuracy": 0.6795511221945137,
+        "method_accuracy": 0.5330423940149626
       },
-      "delta_log_loss_vs_market": -0.006586623939563774,
-      "delta_brier_vs_market": -0.001611297712376225,
+      "delta_log_loss_vs_market": -0.00890561254109068,
+      "delta_brier_vs_market": -0.0026310120006221016,
       "per_fold_metrics": [
         {
           "fold": "2021",
           "train_n": 3150,
           "validation_n_all": 450,
-          "validation_n_betting_eligible": 303,
+          "validation_n_betting_eligible": 450,
           "cold_start_excluded": 147,
           "feature_count": 75,
           "market": {
-            "n": 303,
-            "log_loss": 1.5631098988725611,
-            "brier": 0.7547774370809459,
-            "top1_accuracy": 0.35313531353135313,
-            "winner_accuracy": 0.6435643564356436,
-            "method_accuracy": 0.5181518151815182
+            "n": 450,
+            "log_loss": 1.5707128340472991,
+            "brier": 0.7579690207893608,
+            "top1_accuracy": 0.34444444444444444,
+            "winner_accuracy": 0.6422222222222222,
+            "method_accuracy": 0.5044444444444445
           },
           "model": {
-            "n": 303,
-            "log_loss": 1.5565415028847385,
-            "brier": 0.7536665700056967,
-            "top1_accuracy": 0.38613861386138615,
-            "winner_accuracy": 0.66996699669967,
-            "method_accuracy": 0.5379537953795379
+            "n": 450,
+            "log_loss": 1.5621451973581906,
+            "brier": 0.7561393651534215,
+            "top1_accuracy": 0.37555555555555553,
+            "winner_accuracy": 0.66,
+            "method_accuracy": 0.5244444444444445
           },
-          "delta_log_loss_vs_market": -0.006568395987822662
+          "delta_log_loss_vs_market": -0.008567636689108538
         },
         {
           "fold": "2022",
           "train_n": 3600,
           "validation_n_all": 433,
-          "validation_n_betting_eligible": 293,
+          "validation_n_betting_eligible": 433,
           "cold_start_excluded": 140,
           "feature_count": 75,
           "market": {
-            "n": 293,
-            "log_loss": 1.5390630117746908,
-            "brier": 0.7466751582736165,
-            "top1_accuracy": 0.3651877133105802,
-            "winner_accuracy": 0.6757679180887372,
-            "method_accuracy": 0.5290102389078498
+            "n": 433,
+            "log_loss": 1.5406912519128553,
+            "brier": 0.7480878742784635,
+            "top1_accuracy": 0.3625866050808314,
+            "winner_accuracy": 0.6766743648960739,
+            "method_accuracy": 0.5334872979214781
           },
           "model": {
-            "n": 293,
-            "log_loss": 1.5408828231093168,
-            "brier": 0.7484398571239586,
-            "top1_accuracy": 0.3583617747440273,
-            "winner_accuracy": 0.6791808873720137,
-            "method_accuracy": 0.5255972696245734
+            "n": 433,
+            "log_loss": 1.5325147427503896,
+            "brier": 0.7473718765921403,
+            "top1_accuracy": 0.3648960739030023,
+            "winner_accuracy": 0.6812933025404158,
+            "method_accuracy": 0.5265588914549654
           },
-          "delta_log_loss_vs_market": 0.0018198113346259426
+          "delta_log_loss_vs_market": -0.008176509162465706
         },
         {
           "fold": "2023",
           "train_n": 4033,
           "validation_n_all": 384,
-          "validation_n_betting_eligible": 244,
+          "validation_n_betting_eligible": 384,
           "cold_start_excluded": 140,
           "feature_count": 75,
           "market": {
-            "n": 244,
-            "log_loss": 1.5764050434110874,
-            "brier": 0.7586123606061871,
-            "top1_accuracy": 0.3442622950819672,
-            "winner_accuracy": 0.680327868852459,
-            "method_accuracy": 0.5081967213114754
+            "n": 384,
+            "log_loss": 1.5792545876819555,
+            "brier": 0.7585459723317663,
+            "top1_accuracy": 0.3567708333333333,
+            "winner_accuracy": 0.6875,
+            "method_accuracy": 0.515625
           },
           "model": {
-            "n": 244,
-            "log_loss": 1.568296648918504,
-            "brier": 0.7547344745147375,
-            "top1_accuracy": 0.3729508196721312,
-            "winner_accuracy": 0.6967213114754098,
-            "method_accuracy": 0.5245901639344263
+            "n": 384,
+            "log_loss": 1.5703037890265659,
+            "brier": 0.7550951336809272,
+            "top1_accuracy": 0.3723958333333333,
+            "winner_accuracy": 0.7005208333333334,
+            "method_accuracy": 0.5182291666666666
           },
-          "delta_log_loss_vs_market": -0.008108394492583493
+          "delta_log_loss_vs_market": -0.008950798655389614
         },
         {
           "fold": "2024",
           "train_n": 4417,
           "validation_n_all": 337,
-          "validation_n_betting_eligible": 245,
+          "validation_n_betting_eligible": 337,
           "cold_start_excluded": 92,
           "feature_count": 75,
           "market": {
-            "n": 245,
-            "log_loss": 1.4813339933325032,
-            "brier": 0.7240500261578449,
-            "top1_accuracy": 0.4204081632653061,
-            "winner_accuracy": 0.689795918367347,
-            "method_accuracy": 0.5510204081632653
+            "n": 337,
+            "log_loss": 1.486302405695599,
+            "brier": 0.7217267213160105,
+            "top1_accuracy": 0.42136498516320475,
+            "winner_accuracy": 0.6884272997032641,
+            "method_accuracy": 0.5519287833827893
           },
           "model": {
-            "n": 245,
-            "log_loss": 1.4661869751489474,
-            "brier": 0.7200397492151333,
-            "top1_accuracy": 0.43673469387755104,
-            "winner_accuracy": 0.6857142857142857,
-            "method_accuracy": 0.5795918367346938
+            "n": 337,
+            "log_loss": 1.4760601776398334,
+            "brier": 0.7164992756996161,
+            "top1_accuracy": 0.43026706231454004,
+            "winner_accuracy": 0.6795252225519288,
+            "method_accuracy": 0.56973293768546
           },
-          "delta_log_loss_vs_market": -0.015147018183555794
+          "delta_log_loss_vs_market": -0.010242228055765468
         }
       ],
       "per_class_calibration": {
         "RED_KO_TKO": {
-          "actual_count": 192,
-          "empirical_rate": 0.17695852534562212,
-          "mean_probability": 0.1823284119110091,
-          "brier_component": 0.13424985099382591
+          "actual_count": 291,
+          "empirical_rate": 0.1814214463840399,
+          "mean_probability": 0.19032474009417685,
+          "brier_component": 0.13834097796292397
         },
         "RED_SUB": {
-          "actual_count": 103,
-          "empirical_rate": 0.09493087557603687,
-          "mean_probability": 0.09577695334819468,
-          "brier_component": 0.07890622598058308
+          "actual_count": 164,
+          "empirical_rate": 0.10224438902743142,
+          "mean_probability": 0.10203605334790065,
+          "brier_component": 0.08152656381774924
         },
         "RED_DEC": {
-          "actual_count": 298,
-          "empirical_rate": 0.2746543778801843,
-          "mean_probability": 0.2718316342767483,
-          "brier_component": 0.18608642681366508
+          "actual_count": 451,
+          "empirical_rate": 0.2811720698254364,
+          "mean_probability": 0.27054316902352016,
+          "brier_component": 0.18975508886199144
         },
         "BLUE_KO_TKO": {
-          "actual_count": 153,
-          "empirical_rate": 0.14101382488479264,
-          "mean_probability": 0.16609295132797436,
-          "brier_component": 0.11436570629104809
+          "actual_count": 235,
+          "empirical_rate": 0.14650872817955113,
+          "mean_probability": 0.1625303639345187,
+          "brier_component": 0.11768168138219032
         },
         "BLUE_SUB": {
-          "actual_count": 89,
-          "empirical_rate": 0.08202764976958525,
-          "mean_probability": 0.0682937841527679,
-          "brier_component": 0.07069865887571587
+          "actual_count": 119,
+          "empirical_rate": 0.07418952618453865,
+          "mean_probability": 0.06782348474552692,
+          "brier_component": 0.06482255007023079
         },
         "BLUE_DEC": {
-          "actual_count": 250,
-          "empirical_rate": 0.2304147465437788,
-          "mean_probability": 0.21567626523223066,
-          "brier_component": 0.16059525011276535
+          "actual_count": 344,
+          "empirical_rate": 0.2144638403990025,
+          "mean_probability": 0.20674218905002734,
+          "brier_component": 0.15306735494212315
         }
       }
     },
     "TOP50": {
       "feature_count": 50,
       "pooled_oof_market": {
-        "n": 1085,
-        "log_loss": 1.5411404799697135,
-        "brier": 0.7465134167799795,
-        "top1_accuracy": 0.3695852534562212,
-        "winner_accuracy": 0.6709677419354839,
-        "method_accuracy": 0.5262672811059907
+        "n": 1604,
+        "log_loss": 1.5469188028608722,
+        "brier": 0.747825229037831,
+        "top1_accuracy": 0.36845386533665836,
+        "winner_accuracy": 0.672069825436409,
+        "method_accuracy": 0.5249376558603491
       },
       "pooled_oof_model": {
-        "n": 1085,
-        "log_loss": 1.5386702256303821,
-        "brier": 0.7460723302691636,
-        "top1_accuracy": 0.3935483870967742,
-        "winner_accuracy": 0.6838709677419355,
-        "method_accuracy": 0.543778801843318
+        "n": 1604,
+        "log_loss": 1.5403694508675443,
+        "brier": 0.7460989327345419,
+        "top1_accuracy": 0.3877805486284289,
+        "winner_accuracy": 0.6820448877805486,
+        "method_accuracy": 0.5349127182044888
       },
-      "delta_log_loss_vs_market": -0.002470254339331346,
-      "delta_brier_vs_market": -0.000441086510815869,
+      "delta_log_loss_vs_market": -0.0065493519933279565,
+      "delta_brier_vs_market": -0.001726296303289132,
       "per_fold_metrics": [
         {
           "fold": "2021",
           "train_n": 3150,
           "validation_n_all": 450,
-          "validation_n_betting_eligible": 303,
+          "validation_n_betting_eligible": 450,
           "cold_start_excluded": 147,
           "feature_count": 50,
           "market": {
-            "n": 303,
-            "log_loss": 1.5631098988725611,
-            "brier": 0.7547774370809459,
-            "top1_accuracy": 0.35313531353135313,
-            "winner_accuracy": 0.6435643564356436,
-            "method_accuracy": 0.5181518151815182
+            "n": 450,
+            "log_loss": 1.5707128340472991,
+            "brier": 0.7579690207893608,
+            "top1_accuracy": 0.34444444444444444,
+            "winner_accuracy": 0.6422222222222222,
+            "method_accuracy": 0.5044444444444445
           },
           "model": {
-            "n": 303,
-            "log_loss": 1.5639628591041155,
-            "brier": 0.7565452552577165,
-            "top1_accuracy": 0.3927392739273927,
-            "winner_accuracy": 0.6765676567656765,
-            "method_accuracy": 0.5412541254125413
+            "n": 450,
+            "log_loss": 1.566266848414512,
+            "brier": 0.7577621539941826,
+            "top1_accuracy": 0.38,
+            "winner_accuracy": 0.6666666666666666,
+            "method_accuracy": 0.5244444444444445
           },
-          "delta_log_loss_vs_market": 0.000852960231554345
+          "delta_log_loss_vs_market": -0.004445985632787197
         },
         {
           "fold": "2022",
           "train_n": 3600,
           "validation_n_all": 433,
-          "validation_n_betting_eligible": 293,
+          "validation_n_betting_eligible": 433,
           "cold_start_excluded": 140,
           "feature_count": 50,
           "market": {
-            "n": 293,
-            "log_loss": 1.5390630117746908,
-            "brier": 0.7466751582736165,
-            "top1_accuracy": 0.3651877133105802,
-            "winner_accuracy": 0.6757679180887372,
-            "method_accuracy": 0.5290102389078498
+            "n": 433,
+            "log_loss": 1.5406912519128553,
+            "brier": 0.7480878742784635,
+            "top1_accuracy": 0.3625866050808314,
+            "winner_accuracy": 0.6766743648960739,
+            "method_accuracy": 0.5334872979214781
           },
           "model": {
-            "n": 293,
-            "log_loss": 1.548445351368875,
-            "brier": 0.7514359290489433,
-            "top1_accuracy": 0.36177474402730375,
-            "winner_accuracy": 0.6689419795221843,
-            "method_accuracy": 0.5255972696245734
+            "n": 433,
+            "log_loss": 1.5386287368573626,
+            "brier": 0.7498215264248074,
+            "top1_accuracy": 0.3648960739030023,
+            "winner_accuracy": 0.674364896073903,
+            "method_accuracy": 0.5219399538106235
           },
-          "delta_log_loss_vs_market": 0.009382339594184108
+          "delta_log_loss_vs_market": -0.0020625150554927085
         },
         {
           "fold": "2023",
           "train_n": 4033,
           "validation_n_all": 384,
-          "validation_n_betting_eligible": 244,
+          "validation_n_betting_eligible": 384,
           "cold_start_excluded": 140,
           "feature_count": 50,
           "market": {
-            "n": 244,
-            "log_loss": 1.5764050434110874,
-            "brier": 0.7586123606061871,
-            "top1_accuracy": 0.3442622950819672,
-            "winner_accuracy": 0.680327868852459,
-            "method_accuracy": 0.5081967213114754
+            "n": 384,
+            "log_loss": 1.5792545876819555,
+            "brier": 0.7585459723317663,
+            "top1_accuracy": 0.3567708333333333,
+            "winner_accuracy": 0.6875,
+            "method_accuracy": 0.515625
           },
           "model": {
-            "n": 244,
-            "log_loss": 1.5722407229963238,
-            "brier": 0.7561332295884724,
-            "top1_accuracy": 0.38114754098360654,
-            "winner_accuracy": 0.7049180327868853,
-            "method_accuracy": 0.5286885245901639
+            "n": 384,
+            "log_loss": 1.5716973900645954,
+            "brier": 0.7562277633507731,
+            "top1_accuracy": 0.375,
+            "winner_accuracy": 0.7057291666666666,
+            "method_accuracy": 0.5234375
           },
-          "delta_log_loss_vs_market": -0.004164320414763667
+          "delta_log_loss_vs_market": -0.0075571976173600675
         },
         {
           "fold": "2024",
           "train_n": 4417,
           "validation_n_all": 337,
-          "validation_n_betting_eligible": 245,
+          "validation_n_betting_eligible": 337,
           "cold_start_excluded": 92,
           "feature_count": 50,
           "market": {
-            "n": 245,
-            "log_loss": 1.4813339933325032,
-            "brier": 0.7240500261578449,
-            "top1_accuracy": 0.4204081632653061,
-            "winner_accuracy": 0.689795918367347,
-            "method_accuracy": 0.5510204081632653
+            "n": 337,
+            "log_loss": 1.486302405695599,
+            "brier": 0.7217267213160105,
+            "top1_accuracy": 0.42136498516320475,
+            "winner_accuracy": 0.6884272997032641,
+            "method_accuracy": 0.5519287833827893
           },
           "model": {
-            "n": 245,
-            "log_loss": 1.4622662209723856,
-            "brier": 0.7166858398694975,
-            "top1_accuracy": 0.4448979591836735,
-            "winner_accuracy": 0.689795918367347,
-            "method_accuracy": 0.5836734693877551
+            "n": 337,
+            "log_loss": 1.4723278236230506,
+            "brier": 0.7142004057572239,
+            "top1_accuracy": 0.4421364985163205,
+            "winner_accuracy": 0.685459940652819,
+            "method_accuracy": 0.5786350148367952
           },
-          "delta_log_loss_vs_market": -0.019067772360117585
+          "delta_log_loss_vs_market": -0.013974582072548314
         }
       ],
       "per_class_calibration": {
         "RED_KO_TKO": {
-          "actual_count": 192,
-          "empirical_rate": 0.17695852534562212,
-          "mean_probability": 0.18103173340623555,
-          "brier_component": 0.13448095583891118
+          "actual_count": 291,
+          "empirical_rate": 0.1814214463840399,
+          "mean_probability": 0.18965559591309278,
+          "brier_component": 0.13853562263214114
         },
         "RED_SUB": {
-          "actual_count": 103,
-          "empirical_rate": 0.09493087557603687,
-          "mean_probability": 0.09578063420110172,
-          "brier_component": 0.07922659487423452
+          "actual_count": 164,
+          "empirical_rate": 0.10224438902743142,
+          "mean_probability": 0.10202852341676237,
+          "brier_component": 0.08165425987380387
         },
         "RED_DEC": {
-          "actual_count": 298,
-          "empirical_rate": 0.2746543778801843,
-          "mean_probability": 0.27259103937357804,
-          "brier_component": 0.1862374831004644
+          "actual_count": 451,
+          "empirical_rate": 0.2811720698254364,
+          "mean_probability": 0.2707219344315275,
+          "brier_component": 0.1900089397055992
         },
         "BLUE_KO_TKO": {
-          "actual_count": 153,
-          "empirical_rate": 0.14101382488479264,
-          "mean_probability": 0.16654563136913808,
-          "brier_component": 0.11456862988435068
+          "actual_count": 235,
+          "empirical_rate": 0.14650872817955113,
+          "mean_probability": 0.16304843563893043,
+          "brier_component": 0.11776933765771623
         },
         "BLUE_SUB": {
-          "actual_count": 89,
-          "empirical_rate": 0.08202764976958525,
-          "mean_probability": 0.0682726834098109,
-          "brier_component": 0.07115218293751274
+          "actual_count": 119,
+          "empirical_rate": 0.07418952618453865,
+          "mean_probability": 0.0677290648077394,
+          "brier_component": 0.06511806634549837
         },
         "BLUE_DEC": {
-          "actual_count": 250,
-          "empirical_rate": 0.2304147465437788,
-          "mean_probability": 0.21577827736460667,
-          "brier_component": 0.16040648363369017
+          "actual_count": 344,
+          "empirical_rate": 0.2144638403990025,
+          "mean_probability": 0.2068164447749828,
+          "brier_component": 0.15301270651978296
         }
       }
     },
     "TOP35": {
       "feature_count": 35,
       "pooled_oof_market": {
-        "n": 1085,
-        "log_loss": 1.5411404799697135,
-        "brier": 0.7465134167799795,
-        "top1_accuracy": 0.3695852534562212,
-        "winner_accuracy": 0.6709677419354839,
-        "method_accuracy": 0.5262672811059907
+        "n": 1604,
+        "log_loss": 1.5469188028608722,
+        "brier": 0.747825229037831,
+        "top1_accuracy": 0.36845386533665836,
+        "winner_accuracy": 0.672069825436409,
+        "method_accuracy": 0.5249376558603491
       },
       "pooled_oof_model": {
-        "n": 1085,
-        "log_loss": 1.5381250482435374,
-        "brier": 0.746304963828215,
-        "top1_accuracy": 0.38341013824884795,
-        "winner_accuracy": 0.6792626728110599,
-        "method_accuracy": 0.5373271889400921
+        "n": 1604,
+        "log_loss": 1.5391201168750053,
+        "brier": 0.7459602253042353,
+        "top1_accuracy": 0.3809226932668329,
+        "winner_accuracy": 0.6807980049875312,
+        "method_accuracy": 0.5305486284289277
       },
-      "delta_log_loss_vs_market": -0.003015431726176132,
-      "delta_brier_vs_market": -0.00020845295176452616,
+      "delta_log_loss_vs_market": -0.007798685985866971,
+      "delta_brier_vs_market": -0.0018650037335956604,
       "per_fold_metrics": [
         {
           "fold": "2021",
           "train_n": 3150,
           "validation_n_all": 450,
-          "validation_n_betting_eligible": 303,
+          "validation_n_betting_eligible": 450,
           "cold_start_excluded": 147,
           "feature_count": 35,
           "market": {
-            "n": 303,
-            "log_loss": 1.5631098988725611,
-            "brier": 0.7547774370809459,
-            "top1_accuracy": 0.35313531353135313,
-            "winner_accuracy": 0.6435643564356436,
-            "method_accuracy": 0.5181518151815182
+            "n": 450,
+            "log_loss": 1.5707128340472991,
+            "brier": 0.7579690207893608,
+            "top1_accuracy": 0.34444444444444444,
+            "winner_accuracy": 0.6422222222222222,
+            "method_accuracy": 0.5044444444444445
           },
           "model": {
-            "n": 303,
-            "log_loss": 1.5570613711517889,
-            "brier": 0.7553367170814325,
-            "top1_accuracy": 0.3795379537953795,
-            "winner_accuracy": 0.6600660066006601,
-            "method_accuracy": 0.5247524752475248
+            "n": 450,
+            "log_loss": 1.5593763948848174,
+            "brier": 0.7561090336832454,
+            "top1_accuracy": 0.3711111111111111,
+            "winner_accuracy": 0.66,
+            "method_accuracy": 0.5133333333333333
           },
-          "delta_log_loss_vs_market": -0.006048527720772245
+          "delta_log_loss_vs_market": -0.011336439162481726
         },
         {
           "fold": "2022",
           "train_n": 3600,
           "validation_n_all": 433,
-          "validation_n_betting_eligible": 293,
+          "validation_n_betting_eligible": 433,
           "cold_start_excluded": 140,
           "feature_count": 35,
           "market": {
-            "n": 293,
-            "log_loss": 1.5390630117746908,
-            "brier": 0.7466751582736165,
-            "top1_accuracy": 0.3651877133105802,
-            "winner_accuracy": 0.6757679180887372,
-            "method_accuracy": 0.5290102389078498
+            "n": 433,
+            "log_loss": 1.5406912519128553,
+            "brier": 0.7480878742784635,
+            "top1_accuracy": 0.3625866050808314,
+            "winner_accuracy": 0.6766743648960739,
+            "method_accuracy": 0.5334872979214781
           },
           "model": {
-            "n": 293,
-            "log_loss": 1.5549678724565101,
-            "brier": 0.7534466732928965,
-            "top1_accuracy": 0.34812286689419797,
-            "winner_accuracy": 0.6757679180887372,
-            "method_accuracy": 0.515358361774744
+            "n": 433,
+            "log_loss": 1.5429426341489583,
+            "brier": 0.7512375682507356,
+            "top1_accuracy": 0.3556581986143187,
+            "winner_accuracy": 0.6836027713625866,
+            "method_accuracy": 0.5173210161662818
           },
-          "delta_log_loss_vs_market": 0.01590486068181929
+          "delta_log_loss_vs_market": 0.0022513822361029945
         },
         {
           "fold": "2023",
           "train_n": 4033,
           "validation_n_all": 384,
-          "validation_n_betting_eligible": 244,
+          "validation_n_betting_eligible": 384,
           "cold_start_excluded": 140,
           "feature_count": 35,
           "market": {
-            "n": 244,
-            "log_loss": 1.5764050434110874,
-            "brier": 0.7586123606061871,
-            "top1_accuracy": 0.3442622950819672,
-            "winner_accuracy": 0.680327868852459,
-            "method_accuracy": 0.5081967213114754
+            "n": 384,
+            "log_loss": 1.5792545876819555,
+            "brier": 0.7585459723317663,
+            "top1_accuracy": 0.3567708333333333,
+            "winner_accuracy": 0.6875,
+            "method_accuracy": 0.515625
           },
           "model": {
-            "n": 244,
-            "log_loss": 1.5681368611232074,
-            "brier": 0.7545068118265355,
-            "top1_accuracy": 0.38114754098360654,
-            "winner_accuracy": 0.6885245901639344,
-            "method_accuracy": 0.5450819672131147
+            "n": 384,
+            "log_loss": 1.5683904562947142,
+            "brier": 0.7550692868884509,
+            "top1_accuracy": 0.3776041666666667,
+            "winner_accuracy": 0.6901041666666666,
+            "method_accuracy": 0.5364583333333334
           },
-          "delta_log_loss_vs_market": -0.008268182287880066
+          "delta_log_loss_vs_market": -0.010864131387241294
         },
         {
           "fold": "2024",
           "train_n": 4417,
           "validation_n_all": 337,
-          "validation_n_betting_eligible": 245,
+          "validation_n_betting_eligible": 337,
           "cold_start_excluded": 92,
           "feature_count": 35,
           "market": {
-            "n": 245,
-            "log_loss": 1.4813339933325032,
-            "brier": 0.7240500261578449,
-            "top1_accuracy": 0.4204081632653061,
-            "winner_accuracy": 0.689795918367347,
-            "method_accuracy": 0.5510204081632653
+            "n": 337,
+            "log_loss": 1.486302405695599,
+            "brier": 0.7217267213160105,
+            "top1_accuracy": 0.42136498516320475,
+            "winner_accuracy": 0.6884272997032641,
+            "method_accuracy": 0.5519287833827893
           },
           "model": {
-            "n": 245,
-            "log_loss": 1.4646738822099017,
-            "brier": 0.718425808642636,
-            "top1_accuracy": 0.4326530612244898,
-            "winner_accuracy": 0.6979591836734694,
-            "method_accuracy": 0.5714285714285714
+            "n": 337,
+            "log_loss": 1.4738076972275114,
+            "brier": 0.7152482581982175,
+            "top1_accuracy": 0.43026706231454004,
+            "winner_accuracy": 0.6943620178041543,
+            "method_accuracy": 0.5637982195845698
           },
-          "delta_log_loss_vs_market": -0.016660111122601462
+          "delta_log_loss_vs_market": -0.012494708468087534
         }
       ],
       "per_class_calibration": {
         "RED_KO_TKO": {
-          "actual_count": 192,
-          "empirical_rate": 0.17695852534562212,
-          "mean_probability": 0.18185139585475218,
-          "brier_component": 0.13463654845004536
+          "actual_count": 291,
+          "empirical_rate": 0.1814214463840399,
+          "mean_probability": 0.1896207014045346,
+          "brier_component": 0.13848237352997742
         },
         "RED_SUB": {
-          "actual_count": 103,
-          "empirical_rate": 0.09493087557603687,
-          "mean_probability": 0.09557884255003544,
-          "brier_component": 0.07921337836991993
+          "actual_count": 164,
+          "empirical_rate": 0.10224438902743142,
+          "mean_probability": 0.10203203351870922,
+          "brier_component": 0.08173130763165712
         },
         "RED_DEC": {
-          "actual_count": 298,
-          "empirical_rate": 0.2746543778801843,
-          "mean_probability": 0.2722185911876815,
-          "brier_component": 0.18636087860408773
+          "actual_count": 451,
+          "empirical_rate": 0.2811720698254364,
+          "mean_probability": 0.2709895557029512,
+          "brier_component": 0.1899949549413055
         },
         "BLUE_KO_TKO": {
-          "actual_count": 153,
-          "empirical_rate": 0.14101382488479264,
-          "mean_probability": 0.16622361549034645,
-          "brier_component": 0.11456244763018988
+          "actual_count": 235,
+          "empirical_rate": 0.14650872817955113,
+          "mean_probability": 0.16286589962167855,
+          "brier_component": 0.11773800243645138
         },
         "BLUE_SUB": {
-          "actual_count": 89,
-          "empirical_rate": 0.08202764976958525,
-          "mean_probability": 0.06784892390537921,
-          "brier_component": 0.07078275418492995
+          "actual_count": 119,
+          "empirical_rate": 0.07418952618453865,
+          "mean_probability": 0.0674752307433909,
+          "brier_component": 0.06481718616875919
         },
         "BLUE_DEC": {
-          "actual_count": 250,
-          "empirical_rate": 0.2304147465437788,
-          "mean_probability": 0.2162786307405629,
-          "brier_component": 0.16074895658904206
+          "actual_count": 344,
+          "empirical_rate": 0.2144638403990025,
+          "mean_probability": 0.20701657857355707,
+          "brier_component": 0.15319640059608464
         }
       }
     }
@@ -1172,25 +1172,25 @@
     "worst_loss_elo_diff",
     "wrestling_mismatch_diff"
   ],
-  "oof_fight_count": 1085,
+  "oof_fight_count": 1604,
   "oof_market_metrics": {
-    "n": 1085,
-    "log_loss": 1.5411404799697135,
-    "brier": 0.7465134167799795,
-    "top1_accuracy": 0.3695852534562212,
-    "winner_accuracy": 0.6709677419354839,
-    "method_accuracy": 0.5262672811059907
+    "n": 1604,
+    "log_loss": 1.5469188028608722,
+    "brier": 0.747825229037831,
+    "top1_accuracy": 0.36845386533665836,
+    "winner_accuracy": 0.672069825436409,
+    "method_accuracy": 0.5249376558603491
   },
   "oof_model_metrics": {
-    "n": 1085,
-    "log_loss": 1.5330542420520807,
-    "brier": 0.7438810705764096,
-    "top1_accuracy": 0.3870967741935484,
-    "winner_accuracy": 0.6866359447004609,
-    "method_accuracy": 0.5382488479262673
+    "n": 1604,
+    "log_loss": 1.5364276221525495,
+    "brier": 0.7444621034024558,
+    "top1_accuracy": 0.38403990024937656,
+    "winner_accuracy": 0.6826683291770573,
+    "method_accuracy": 0.5317955112219451
   },
-  "oof_delta_log_loss": -0.008086237917632744,
-  "oof_delta_brier": -0.002632346203569891,
+  "oof_delta_log_loss": -0.010491180708322778,
+  "oof_delta_brier": -0.0033631256353752192,
   "probability_validation_checks": {
     "finite": true,
     "within_0_1": true,
@@ -1370,17 +1370,17 @@
       "BLUE_DEC"
     ],
     "market_probability_construction": "joint six-way normalization then log(p) base margin",
-    "cold_start_eligibility": "whole fight betting-ineligible if either prefight prior UFC fight count <2",
-    "selection_metric": "pooled_2021_2024_betting_eligible_multiclass_log_loss",
-    "selected_oof_log_loss": 1.5330542420520807,
-    "selected_oof_market_log_loss": 1.5411404799697135,
+    "cold_start_eligibility": "OFF for this experiment",
+    "selection_metric": "pooled_2021_2024_multiclass_log_loss",
+    "selected_oof_log_loss": 1.5364276221525495,
+    "selected_oof_market_log_loss": 1.5469188028608722,
     "development_cutoff": "2024-12-31",
-    "frozen_at": "2026-08-31T11:58:38.244757+00:00",
-    "commit_sha": "b6cb485ee07e9f306051062d1a9efb11c29289bd",
+    "frozen_at": "2026-08-31T12:30:33.716506+00:00",
+    "commit_sha": "014961e76d367f3c8aa728d7e87a2b5f114bce3d",
     "holdout_integrity": "COMPROMISED_BY_PRECOMPLIANCE_RUN",
     "frozen_before_any_compliant_2025_plus_scoring": true,
     "reproduction_tolerance": 1e-12
   },
   "reproduction_tolerance": 1e-12,
-  "expected_oof_log_loss": 1.5330542420520807
+  "expected_oof_log_loss": 1.5364276221525495
 }
