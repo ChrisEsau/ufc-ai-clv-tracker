@@ -1,0 +1,84 @@
+{
+  "experiment": "hierarchical_v5_frozen_2025_2026_holdout_betting_v1",
+  "model": "new hierarchical V5 model only",
+  "training_cutoff": "2024-12-31",
+  "evaluation_period": "2025-01-11 through 2026-03-28",
+  "holdout_fights": 489,
+  "red_conditional_train_n": 2736,
+  "blue_conditional_train_n": 2018,
+  "feature_count": 140,
+  "rule": {
+    "winner_side": "red if frozen V5 P(red)>=0.5 else blue",
+    "eligible_methods": "KO/SUB/DEC on predicted winner side only",
+    "signed_logit_residual_threshold": 0.3,
+    "multiple_bets_per_fight_allowed": true,
+    "stake_per_bet_units": 1.0,
+    "payout_price": "raw legacy-consensus implied probability as decimal 1/p"
+  },
+  "model_metrics": {
+    "n": 489,
+    "log_loss": 1.5397232509244578,
+    "brier": 0.7490376395520354,
+    "top1_accuracy": 0.39059304703476483,
+    "winner_accuracy": 0.7075664621676891,
+    "method_accuracy": 0.5521472392638037
+  },
+  "model_metrics_by_year": {
+    "2025": {
+      "n": 376,
+      "log_loss": 1.5571153649964085,
+      "brier": 0.7556093477254967,
+      "top1_accuracy": 0.3776595744680851,
+      "winner_accuracy": 0.6941489361702128,
+      "method_accuracy": 0.5558510638297872
+    },
+    "2026": {
+      "n": 113,
+      "log_loss": 1.481852145693896,
+      "brier": 0.7271707167801643,
+      "top1_accuracy": 0.4336283185840708,
+      "winner_accuracy": 0.7522123893805309,
+      "method_accuracy": 0.5398230088495575
+    }
+  },
+  "pooled": {
+    "bets": 200,
+    "wins": 70,
+    "losses": 130,
+    "stake_units": 200.0,
+    "profit_units": 147.6882783882784,
+    "roi": 0.738441391941392,
+    "hit_rate": 0.35,
+    "fights_bet": 186,
+    "bets_per_fight": 1.075268817204301
+  },
+  "by_year": {
+    "2025": {
+      "bets": 138,
+      "wins": 45,
+      "losses": 93,
+      "stake_units": 138.0,
+      "profit_units": 98.457326007326,
+      "roi": 0.713458884111058,
+      "hit_rate": 0.32608695652173914,
+      "fights_bet": 127,
+      "bets_per_fight": 1.0866141732283465
+    },
+    "2026": {
+      "bets": 62,
+      "wins": 25,
+      "losses": 37,
+      "stake_units": 62.0,
+      "profit_units": 49.23095238095238,
+      "roi": 0.794047619047619,
+      "hit_rate": 0.4032258064516129,
+      "fights_bet": 59,
+      "bets_per_fight": 1.0508474576271187
+    }
+  },
+  "bet_count_distribution": {
+    "fights_with_1_bet": 174,
+    "fights_with_2_bets": 10,
+    "fights_with_3_bets": 2
+  }
+}
