@@ -1,4 +1,4 @@
-# trigger 2026-08-31
+# trigger 2026-08-31 v2
 name: Research UFC Paris Frozen V5 Current Lines
 
 on:
@@ -53,6 +53,23 @@ jobs:
           for old,new in repl.items():
               if old not in code: raise RuntimeError(f'missing replacement target: {old}')
               code=code.replace(old,new)
+
+          # Restore the six engineered inputs selected by frozen V5 that the
+          # lightweight live view builder does not materialize itself.
+          needle="livefv=build_moneyline_feature_view(prepared_fights_df=pd.DataFrame(prep_rows),fighter_state_history_df=pd.DataFrame(state_rows))"
+          engineered="""livefv=build_moneyline_feature_view(prepared_fights_df=pd.DataFrame(prep_rows),fighter_state_history_df=pd.DataFrame(state_rows))
+          def _num(c):
+              return pd.to_numeric(livefv[c],errors='coerce') if c in livefv.columns else pd.Series(np.nan,index=livefv.index)
+          def _rate(c):
+              s=_num(c); return pd.Series(np.where(s>1,s/100.0,s),index=livefv.index)
+          livefv['chin_risk_diff']=_num('r_pre_sapm')*(1-_rate('r_pre_str_def'))-_num('b_pre_sapm')*(1-_rate('b_pre_str_def'))
+          livefv['aggression_index_diff']=(_num('r_pre_splm')+_num('r_pre_td_avg'))-(_num('b_pre_splm')+_num('b_pre_td_avg'))
+          livefv['age_squared_diff']=_num('r_pre_age')**2-_num('b_pre_age')**2
+          livefv['wrestling_mismatch_diff']=_num('r_pre_td_avg')*(1-_rate('b_pre_td_def'))-_num('b_pre_td_avg')*(1-_rate('r_pre_td_def'))
+          livefv['pressure_striking_adv_diff']=_num('r_pre_splm')*(1-_rate('b_pre_str_def'))-_num('b_pre_splm')*(1-_rate('r_pre_str_def'))
+          livefv['age_x_career_ko_losses_diff']=_num('r_pre_age')*_num('r_pre_career_ko_losses')-_num('b_pre_age')*_num('b_pre_career_ko_losses')"""
+          if needle not in code: raise RuntimeError('live feature-view insertion point not found')
+          code=code.replace(needle,engineered)
           code=code.replace("ufc_paris_v5_market_offset_v1.csv","ufc_paris_v5_market_offset_current_20260831.csv")
           exec(compile(code,'ufc_paris_v5_current.py','exec'),{})
           PY
