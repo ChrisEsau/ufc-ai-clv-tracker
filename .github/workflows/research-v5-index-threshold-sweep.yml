@@ -1,0 +1,83 @@
+name: Research V5 Index Threshold Sweep
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - data/research/prop_mispricing/v5_index_threshold_sweep_trigger.txt
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -q pandas
+      - name: Run threshold sweep
+        run: |
+          python - <<'PY'
+          import pandas as pd
+          from pathlib import Path
+
+          src='data/research/prop_mispricing/v5_draftkings_index_fight_summary_actuals.csv'
+          out='data/research/prop_mispricing/v5_draftkings_index_threshold_sweep.csv'
+          df=pd.read_csv(src)
+
+          def norm(s):
+              return ''.join(ch.lower() for ch in str(s) if ch.isalnum())
+
+          rows=[]
+          thresholds=[i/1000 for i in range(0,101,5)]  # 0.0% to 10.0% by 0.5 pp
+          for t in thresholds:
+              q=df[df['v5_positive_edge'] >= t-1e-15].copy()
+              wins=0
+              profit=0.0
+              for _,r in q.iterrows():
+                  side=r['v5_positive_edge_side']
+                  if norm(side)==norm(r['fighter_1']): odds=float(r['odds_1'])
+                  elif norm(side)==norm(r['fighter_2']): odds=float(r['odds_2'])
+                  else: raise RuntimeError(f"edge side mismatch: {side}")
+                  won = norm(side)==norm(r['actual_winner'])
+                  if won:
+                      wins+=1
+                      profit += odds/100.0 if odds>0 else 100.0/abs(odds)
+                  else:
+                      profit -= 1.0
+              n=len(q)
+              losses=n-wins
+              rows.append({
+                  'threshold':t,
+                  'threshold_pct':t*100,
+                  'bets':n,
+                  'wins':wins,
+                  'losses':losses,
+                  'win_rate':wins/n if n else None,
+                  'profit_units':profit,
+                  'roi':profit/n if n else None,
+              })
+          res=pd.DataFrame(rows)
+          res.to_csv(out,index=False)
+          print(res.to_string(index=False, formatters={
+              'threshold_pct':lambda x:f'{x:.1f}%',
+              'win_rate':lambda x:'' if pd.isna(x) else f'{x:.1%}',
+              'profit_units':lambda x:f'{x:+.3f}',
+              'roi':lambda x:'' if pd.isna(x) else f'{x:+.1%}',
+          }))
+          PY
+      - name: Commit sweep output
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/research/prop_mispricing/v5_draftkings_index_threshold_sweep.csv
+          git diff --cached --quiet && exit 0
+          git commit -m "Add V5 DraftKings index threshold sweep"
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
