@@ -1,15 +1,13 @@
-# trigger 2026-08-31 v4
+# trigger 2026-08-31 availability
 name: Research UFC Paris Hierarchical V5 Methods Live
 
 on:
-  push:
-    branches: [research/ufc-prop-mispricing-xgboost-20260829]
-    paths: [.github/workflows/research-ufc-paris-hierarchical-v5-methods-live.yml]
   pull_request:
     branches: [research/ufc-prop-mispricing-xgboost-20260829]
     paths:
       - .github/workflows/research-ufc-paris-hierarchical-v5-methods-live.yml
       - pipeline/research/score_ufc_paris_hierarchical_v5_live.py
+      - pipeline/research/check_ufc_paris_dk_method_availability.py
   workflow_dispatch:
 
 permissions:
@@ -29,11 +27,14 @@ jobs:
         run: |
           python -m pip install --upgrade pip==26.2.1
           pip install pandas==3.0.5 pyarrow==25.0.1 numpy==2.4.6 scikit-learn==1.9.0 scipy==1.17.1 xgboost==3.2.0 joblib==1.5.3 threadpoolctl==3.6.0 python-dateutil==2.9.0.post0 requests==2.32.5
-      - name: Run live Paris hierarchical V5 method scorer
-        run: python -m pipeline.research.score_ufc_paris_hierarchical_v5_live
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ufc-paris-hierarchical-v5-methods-20260831
-          path: |
-            data/research/prop_mispricing/ufc_paris_hierarchical_v5_methods_20260831.csv
-            data/research/prop_mispricing/ufc_paris_draftkings_method_prices_20260831.csv
+      - name: Check all Paris DraftKings method markets
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('pipeline/market/providers/draftkings_public.py')
+          s=p.read_text()
+          s=s.replace('EVENT_SUBCATEGORY_MARKETS_ENDPOINT = "/controldata/league/eventSubcategory/v1/markets"','EVENT_SUBCATEGORY_MARKETS_ENDPOINT = "/controldata/event/eventSubcategory/v1/markets"')
+          s=s.replace('"templateVars": subcategory_id,','"templateVars": f"{event_id},{subcategory_id}",')
+          p.write_text(s)
+          PY
+          python -m pipeline.research.check_ufc_paris_dk_method_availability

@@ -24,7 +24,13 @@ def imp(v):
     ao=float(str(v).replace('−','-').replace('+','').strip()); return 100/(ao+100) if ao>0 else (-ao)/((-ao)+100)
 
 def fetch_events():
-    h={'Accept':'*/*','User-Agent':DEFAULT_USER_AGENT,'Origin':'https://sportsbook.draftkings.com','Referer':'https://sportsbook.draftkings.com/','X-Client-Name':'web'}
+    h={
+        'Accept':'*/*','Accept-Language':'en-US,en;q=0.9','Cache-Control':'no-cache',
+        'Content-Type':'application/json charset=utf-8','Origin':'https://sportsbook.draftkings.com',
+        'Pragma':'no-cache','Referer':'https://sportsbook.draftkings.com/','Sec-Fetch-Dest':'empty',
+        'Sec-Fetch-Mode':'cors','Sec-Fetch-Site':'same-site','User-Agent':DEFAULT_USER_AGENT,
+        'X-Client-Name':'web','X-Client-Version':'2624.1.1.11'
+    }
     r=requests.get(LEAGUE_NAV,headers=h,timeout=30); r.raise_for_status(); return r.json().get('events',[])
 
 def match_event(events,a,b):
