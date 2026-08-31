@@ -63,20 +63,18 @@ ml=ml[ml['fight_id'].isin(good)].copy()
 ml['market_overround']=ml.groupby('fight_id')['implied_probability'].transform('sum')
 ml['fair_market_p']=ml['implied_probability']/ml['market_overround']
 
-# Canonical red/blue fight table used by V5.
 red=ml[ml['outcome_side'].astype(str).eq('red')].copy()
 blue=ml[ml['outcome_side'].astype(str).eq('blue')][['fight_id','outcome_label','won']].rename(columns={'outcome_label':'blue_name','won':'blue_won'})
 red=red.merge(blue,on='fight_id',how='inner',validate='one_to_one').rename(columns={'outcome_label':'red_name'})
 red['red_name']=red['red_name'].astype(str)
 red['blue_name']=red['blue_name'].astype(str)
 
-# Leakage-safe WHR: for each event date, query all fights before adding any result from that date.
-# The package default prior/volatility is intentionally used without tuning.
+# Leakage-safe WHR: score every fight on a date before adding any outcomes from that date.
+# Use package defaults and zero handicap; no WHR hyperparameter tuning.
 whr = WHR()
 whr_p = {}
 first_date = red['date'].min().normalize()
 for date, day in red.sort_values(['date','fight_id']).groupby('date',sort=True):
-    # Query before today's games enter the history.
     for r in day.itertuples(index=False):
         try:
             p=float(whr.probability_future_match(r.red_name,r.blue_name))
@@ -84,15 +82,13 @@ for date, day in red.sort_values(['date','fight_id']).groupby('date',sort=True):
             p=0.5
         if not np.isfinite(p): p=0.5
         whr_p[r.fight_id]=float(np.clip(p,1e-6,1-1e-6))
-    # Add all same-date results only after every fight on that date has been queried.
     step=int((pd.Timestamp(date).normalize()-first_date).days)
     for r in day.itertuples(index=False):
         result='B' if int(r.won)==1 else 'W'
-        whr.create_game(r.red_name,r.blue_name,result,step)
+        whr.create_game(r.red_name,r.blue_name,result,step,0.0)
     try:
         whr.auto_iterate()
     except Exception:
-        # Preserve the last converged state; subsequent dates can continue receiving games.
         pass
 
 red['whr_p_red']=red['fight_id'].map(whr_p).fillna(0.5)
@@ -100,19 +96,15 @@ red['whr_logit_diff']=logit(red['whr_p_red'])
 
 fv=pd.read_parquet('data/features/moneyline_feature_view.parquet').copy()
 df=red.merge(fv[['fight_id']+[c for c in FEATURES if c!='market_overround']],on='fight_id',how='inner').sort_values(['date','fight_id']).copy()
-# market_overround comes from exact market construction above.
 Xraw=df[FEATURES+['whr_logit_diff']].replace([np.inf,-np.inf],np.nan)
 
-models={
-    'v5':FEATURES,
-    'v5_plus_whr':FEATURES+['whr_logit_diff'],
-}
+models={'v5':FEATURES,'v5_plus_whr':FEATURES+['whr_logit_diff']}
 summary={
     'experiment':'frozen_v5_plus_leakage_safe_whr_v1',
     'selection_objective':'2021-2024 chronological OOF log loss only; ROI not used',
     'whr_protocol':'same-date blocked expanding history: query each event date before adding any outcomes from that date; later outcomes never used for earlier predictions',
     'whr_package':'whole-history-rating==3.0.0',
-    'whr_config':'package defaults; no hyperparameter tuning',
+    'whr_config':'package defaults; zero handicap; no hyperparameter tuning',
     'new_feature':'whr_logit_diff = logit(prefight WHR P(red beats blue))',
     'models':{},
 }
@@ -132,26 +124,18 @@ for name,cols in models.items():
         dtr=xgb.DMatrix(Xtr,label=ytr,base_margin=mtr,feature_names=valid)
         dva=xgb.DMatrix(Xva,label=yva,base_margin=mva,feature_names=valid)
         model=xgb.train(PARAMS,dtr,num_boost_round=ROUNDS,verbose_eval=False)
-        margin=model.predict(dva,output_margin=True)
-        p=sigmoid(margin)
+        p=sigmoid(model.predict(dva,output_margin=True))
         mm=metrics(yva,sigmoid(mva)); mx=metrics(yva,p)
         folds_out.append({'fold':fold_name,'train_n':int(tr.sum()),'validation_n':int(va.sum()),'market':mm,'model':mx,'delta_log_loss_vs_market':float(mx['log_loss']-mm['log_loss'])})
-        z=pd.DataFrame({'fight_id':df.loc[va,'fight_id'].to_numpy(),'date':df.loc[va,'date'].to_numpy(),'won':yva,'market_p':sigmoid(mva),'model_p':p,'whr_p_red':df.loc[va,'whr_p_red'].to_numpy(),'whr_logit_diff':df.loc[va,'whr_logit_diff'].to_numpy()})
-        oof.append(z)
+        oof.append(pd.DataFrame({'fight_id':df.loc[va,'fight_id'].to_numpy(),'date':df.loc[va,'date'].to_numpy(),'won':yva,'market_p':sigmoid(mva),'model_p':p,'whr_p_red':df.loc[va,'whr_p_red'].to_numpy(),'whr_logit_diff':df.loc[va,'whr_logit_diff'].to_numpy()}))
     odf=pd.concat(oof,ignore_index=True)
-    om=metrics(odf['won'],odf['model_p'])
-    summary['models'][name]={'feature_count':len(cols),'folds':folds_out,'oof':om}
+    summary['models'][name]={'feature_count':len(cols),'folds':folds_out,'oof':metrics(odf['won'],odf['model_p'])}
     stores[name]=odf
 
 v5ll=summary['models']['v5']['oof']['log_loss']; wll=summary['models']['v5_plus_whr']['oof']['log_loss']
-summary['comparison']={
-    'v5_plus_whr_minus_v5_log_loss':float(wll-v5ll),
-    'winner_by_oof_log_loss':'v5_plus_whr' if wll<v5ll else 'v5',
-}
-# Standalone WHR diagnostic over the same OOF rows.
+summary['comparison']={'v5_plus_whr_minus_v5_log_loss':float(wll-v5ll),'winner_by_oof_log_loss':'v5_plus_whr' if wll<v5ll else 'v5'}
 base=stores['v5_plus_whr']
 summary['standalone_whr_oof']=metrics(base['won'],base['whr_p_red'])
-
 stores['v5_plus_whr'].to_csv(OUT/'v5_plus_whr_oof.csv',index=False)
 with open(OUT/'v5_plus_whr_summary.json','w',encoding='utf-8') as f: json.dump(summary,f,indent=2)
 print(json.dumps(summary,indent=2))
