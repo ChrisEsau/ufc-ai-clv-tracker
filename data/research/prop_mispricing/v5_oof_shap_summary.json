@@ -1,0 +1,198 @@
+{
+  "experiment": "frozen_v5_chronological_oof_shap",
+  "method": "XGBoost pred_contribs / TreeSHAP on each held-out chronological fold; market base_margin excluded from feature SHAP ranking",
+  "oof_n": 1742,
+  "top_20": [
+    {
+      "rank": 1,
+      "feature": "ewm_sapm_diff",
+      "mean_abs_shap": 0.048006809482310314,
+      "mean_shap": -0.002155465416480059,
+      "n": 1742
+    },
+    {
+      "rank": 2,
+      "feature": "reach_diff",
+      "mean_abs_shap": 0.046623216595513536,
+      "mean_shap": -0.03916308598595016,
+      "n": 1742
+    },
+    {
+      "rank": 3,
+      "feature": "age_squared_diff",
+      "mean_abs_shap": 0.02782450049546741,
+      "mean_shap": 0.0019666478431454287,
+      "n": 1742
+    },
+    {
+      "rank": 4,
+      "feature": "age_diff",
+      "mean_abs_shap": 0.026032607943615123,
+      "mean_shap": 0.001016220564985526,
+      "n": 1742
+    },
+    {
+      "rank": 5,
+      "feature": "ewm_td_acc_diff",
+      "mean_abs_shap": 0.02576148050412724,
+      "mean_shap": -0.0003322532007403364,
+      "n": 1742
+    },
+    {
+      "rank": 6,
+      "feature": "ewm_kd_avg_diff",
+      "mean_abs_shap": 0.016689188474196894,
+      "mean_shap": -0.00034705781108349156,
+      "n": 1742
+    },
+    {
+      "rank": 7,
+      "feature": "ewm_recent_sapm_diff",
+      "mean_abs_shap": 0.016519444593122542,
+      "mean_shap": -0.0007378448130138941,
+      "n": 1742
+    },
+    {
+      "rank": 8,
+      "feature": "recent_avg_fight_time_diff",
+      "mean_abs_shap": 0.01521975739514744,
+      "mean_shap": -0.00042917077085692927,
+      "n": 1742
+    },
+    {
+      "rank": 9,
+      "feature": "recent_form_avg_opponent_elo_diff",
+      "mean_abs_shap": 0.014864224630988595,
+      "mean_shap": -1.621249278346515e-05,
+      "n": 1742
+    },
+    {
+      "rank": 10,
+      "feature": "ewm_recent_splm_diff",
+      "mean_abs_shap": 0.014555115014823618,
+      "mean_shap": 0.0017969582578229871,
+      "n": 1742
+    },
+    {
+      "rank": 11,
+      "feature": "chin_risk_diff",
+      "mean_abs_shap": 0.014239317631663329,
+      "mean_shap": -0.001490139965424263,
+      "n": 1742
+    },
+    {
+      "rank": 12,
+      "feature": "recent_form_kd_absorbed_avg_diff",
+      "mean_abs_shap": 0.013792158938499529,
+      "mean_shap": -1.8111106992542027e-05,
+      "n": 1742
+    },
+    {
+      "rank": 13,
+      "feature": "win_pct_diff",
+      "mean_abs_shap": 0.012881737895685233,
+      "mean_shap": 0.0006975091666231936,
+      "n": 1742
+    },
+    {
+      "rank": 14,
+      "feature": "aggression_index_diff",
+      "mean_abs_shap": 0.01193181914223912,
+      "mean_shap": -0.0003001689996596278,
+      "n": 1742
+    },
+    {
+      "rank": 15,
+      "feature": "style_ko_finisher_score_diff",
+      "mean_abs_shap": 0.011369430648224979,
+      "mean_shap": -0.00023098356681413264,
+      "n": 1742
+    },
+    {
+      "rank": 16,
+      "feature": "td_avg_diff",
+      "mean_abs_shap": 0.011038914465064227,
+      "mean_shap": -0.0003146232072978754,
+      "n": 1742
+    },
+    {
+      "rank": 17,
+      "feature": "avg_opponent_elo_diff",
+      "mean_abs_shap": 0.009146267659138849,
+      "mean_shap": -0.0003300453844292027,
+      "n": 1742
+    },
+    {
+      "rank": 18,
+      "feature": "wrestling_mismatch_diff",
+      "mean_abs_shap": 0.007110506581114744,
+      "mean_shap": -4.3950717617949016e-05,
+      "n": 1742
+    },
+    {
+      "rank": 19,
+      "feature": "recent_form_td_acc_diff",
+      "mean_abs_shap": 0.006864963807475707,
+      "mean_shap": -0.0004478157799965694,
+      "n": 1742
+    },
+    {
+      "rank": 20,
+      "feature": "age_x_career_ko_losses_diff",
+      "mean_abs_shap": 0.006231533533205993,
+      "mean_shap": -0.0008538092649822475,
+      "n": 1742
+    }
+  ],
+  "elo_features": [
+    {
+      "rank": 9,
+      "feature": "recent_form_avg_opponent_elo_diff",
+      "mean_abs_shap": 0.014864224630988595,
+      "mean_shap": -1.621249278346515e-05,
+      "n": 1742
+    },
+    {
+      "rank": 17,
+      "feature": "avg_opponent_elo_diff",
+      "mean_abs_shap": 0.009146267659138849,
+      "mean_shap": -0.0003300453844292027,
+      "n": 1742
+    },
+    {
+      "rank": 23,
+      "feature": "recent_form_worst_loss_elo_diff",
+      "mean_abs_shap": 0.005356163730102791,
+      "mean_shap": -0.0004298791490349786,
+      "n": 1742
+    },
+    {
+      "rank": 33,
+      "feature": "elo_diff",
+      "mean_abs_shap": 0.0027944642155464357,
+      "mean_shap": -0.0002019553900281733,
+      "n": 1742
+    },
+    {
+      "rank": 34,
+      "feature": "ewm_elo_diff",
+      "mean_abs_shap": 0.0026085375046066674,
+      "mean_shap": -9.182706461240587e-05,
+      "n": 1742
+    },
+    {
+      "rank": 38,
+      "feature": "ewm_best_win_elo_diff",
+      "mean_abs_shap": 0.0018310758459513278,
+      "mean_shap": 6.510810434197297e-05,
+      "n": 1742
+    },
+    {
+      "rank": 47,
+      "feature": "recent_form_best_win_elo_diff",
+      "mean_abs_shap": 0.0006983143110528597,
+      "mean_shap": -2.920414222255901e-05,
+      "n": 1742
+    }
+  ]
+}
