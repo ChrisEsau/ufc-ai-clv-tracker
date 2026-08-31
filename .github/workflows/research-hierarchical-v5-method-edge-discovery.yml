@@ -1,0 +1,29 @@
+name: Research Hierarchical V5 Method Edge Discovery
+on:
+  pull_request:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths:
+      - 'pipeline/research/analyze_hierarchical_v5_method_edge_discovery.py'
+      - '.github/workflows/research-hierarchical-v5-method-edge-discovery.yml'
+jobs:
+  analyze:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11.16'}
+      - name: Install packages
+        run: pip install pandas==3.0.5 pyarrow==25.0.1 numpy==2.4.6
+      - name: Analyze 2021-2024 OOF structural method edges
+        run: python -m pipeline.research.analyze_hierarchical_v5_method_edge_discovery
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hierarchical-v5-method-edge-discovery
+          path: |
+            data/research/prop_mispricing/xgboost_method_hierarchical_v5_edge_candidates.csv
+            data/research/prop_mispricing/xgboost_method_hierarchical_v5_edge_signal_bins.csv
+            data/research/prop_mispricing/xgboost_method_hierarchical_v5_edge_interactions.csv
+            data/research/prop_mispricing/xgboost_method_hierarchical_v5_edge_rules.csv
+            data/research/prop_mispricing/xgboost_method_hierarchical_v5_edge_robustness.csv
+            data/research/prop_mispricing/xgboost_method_hierarchical_v5_edge_discovery_summary.json
