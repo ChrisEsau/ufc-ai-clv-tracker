@@ -1,0 +1,28 @@
+name: Research Inspect Abu Dhabi DK Method Snapshots
+on:
+  pull_request:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths:
+      - 'pipeline/research/inspect_abudhabi_dk_method_snapshots.py'
+      - 'pipeline/research/find_abudhabi_missing_dk_methods.py'
+      - '.github/workflows/research-inspect-abudhabi-dk-method-snapshots.yml'
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11.16'
+      - name: Install parquet packages
+        run: pip install pandas==3.0.5 pyarrow==25.0.1
+      - name: Inspect snapshots before 13:00 UTC card start
+        run: python -m pipeline.research.inspect_abudhabi_dk_method_snapshots
+      - name: Find final-card rows missing from event inventory
+        run: python -m pipeline.research.find_abudhabi_missing_dk_methods
+      - uses: actions/upload-artifact@v4
+        with:
+          name: abudhabi-dk-method-snapshot-inventory
+          path: data/research/prop_mispricing/abudhabi_dk_method_snapshot_inventory.csv

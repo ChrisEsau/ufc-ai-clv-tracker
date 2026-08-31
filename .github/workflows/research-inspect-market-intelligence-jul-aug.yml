@@ -1,0 +1,26 @@
+name: Research Inspect Market Intelligence Jul Aug
+on:
+  pull_request:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11.16'
+      - name: Install parquet inspection packages
+        run: pip install pandas==3.0.5 pyarrow==25.0.1
+      - name: Inspect market intelligence parquet
+        run: python -m pipeline.research.inspect_market_intelligence_jul_aug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: market-intelligence-jul-aug-summary
+          path: data/research/prop_mispricing/market_intelligence_jul_aug_summary.json
