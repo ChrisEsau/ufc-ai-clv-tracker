@@ -1,0 +1,67 @@
+name: Research 2026 Moneyline File Coverage
+on:
+  push:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths: [.github/workflows/research-2026-moneyline-file-coverage.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas pyarrow
+      - name: Map prediction files to 2026 events
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import pandas as pd
+
+          ROOT=Path('data/research/prop_mispricing')
+          master=pd.read_parquet('data/master/ufc_master.parquet').copy()
+          master['date']=pd.to_datetime(master['date'], errors='coerce').dt.strftime('%Y-%m-%d')
+          event_col=next((c for c in ['event_name','event','event_title','card','event_id'] if c in master.columns),None)
+          if event_col is None: raise RuntimeError('No event column')
+          meta=master[['fight_id','date',event_col]].copy()
+          meta['fight_id']=meta['fight_id'].astype(str)
+          meta=meta.drop_duplicates('fight_id')
+
+          rows=[]
+          for p in sorted(ROOT.glob('*.csv')):
+              try:
+                  d=pd.read_csv(p)
+              except Exception:
+                  continue
+              cols=set(d.columns)
+              if 'fight_id' not in cols or 'model_p' not in cols:
+                  continue
+              market_col='fair_market_p' if 'fair_market_p' in cols else ('market_fair_p' if 'market_fair_p' in cols else None)
+              odds_col='american_odds' if 'american_odds' in cols else ('odds' if 'odds' in cols else None)
+              fighter_col='fighter' if 'fighter' in cols else ('outcome_label' if 'outcome_label' in cols else None)
+              if not market_col or not odds_col or not fighter_col:
+                  continue
+              x=d[['fight_id']].copy(); x['fight_id']=x.fight_id.astype(str)
+              j=x.merge(meta,on='fight_id',how='left')
+              j=j[j.date.str.startswith('2026', na=False)]
+              if j.empty: continue
+              for (date,event),g in j.groupby(['date',event_col]):
+                  rows.append({'date':date,'event':str(event),'file':p.name,'rows_2026_event':len(g),'unique_fights':g.fight_id.nunique(),'total_rows_file':len(d)})
+
+          out=pd.DataFrame(rows).sort_values(['date','event','unique_fights','file']) if rows else pd.DataFrame(columns=['date','event','file','rows_2026_event','unique_fights','total_rows_file'])
+          dest=ROOT/'full_2026_moneyline_file_coverage.csv'; out.to_csv(dest,index=False)
+          print(out.to_string(index=False))
+          PY
+      - name: Commit coverage
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -f data/research/prop_mispricing/full_2026_moneyline_file_coverage.csv
+          git commit -m 'research: export 2026 moneyline file coverage' || echo No-changes
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829 || true
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
