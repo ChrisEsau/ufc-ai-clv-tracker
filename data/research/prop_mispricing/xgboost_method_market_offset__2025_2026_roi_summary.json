@@ -9,8 +9,8 @@
   "bet_pricing": "legacy_consensus raw implied probability is the offered-price proxy; decimal odds = 1/raw implied probability; flat 1-unit stake",
   "bet_eligibility": "model probability must exceed raw implied break-even probability AND signed logit(model)-logit(fair six-way market) must clear threshold",
   "one_bet_per_fight": "hard maximum one method bet per fight; choose eligible outcome with largest signed logit residual",
-  "primary_logit_threshold": 0.2,
-  "threshold_policy": "descriptive predeclared logit grid; 0.20 mirrors frozen V5 moneyline gate; no threshold tuned on 2025-2026",
+  "primary_logit_threshold": 0.3,
+  "threshold_policy": "primary 0.30 gate selected using chronological 2021-2024 OOF calibration/stability/selectivity only; no ROI/profit and no 2025-2026 data used for gate selection",
   "fights": 489,
   "market_metrics": {
     "n": 489,
@@ -118,15 +118,15 @@
       "avg_decimal_odds": 4.028598917202786
     }
   ],
-  "primary_020": {
-    "bets": 331,
-    "wins": 105,
-    "profit_units": 33.541360089186185,
-    "roi": 0.10133341416672563,
-    "avg_signed_logit_residual": 0.3079964306225299,
-    "avg_price_edge": 0.07529070444800622,
-    "avg_model_prob": 0.36191866940782147,
-    "avg_decimal_odds": 4.953042976232541
+  "primary_030": {
+    "bets": 165,
+    "wins": 64,
+    "profit_units": 51.55697780480389,
+    "roi": 0.3124665321503266,
+    "avg_signed_logit_residual": 0.36632725568734453,
+    "avg_price_edge": 0.07626736043288433,
+    "avg_model_prob": 0.3885546818827138,
+    "avg_decimal_odds": 4.420266708301532
   },
-  "cards_with_bets": 42
+  "cards_with_bets": 40
 }
