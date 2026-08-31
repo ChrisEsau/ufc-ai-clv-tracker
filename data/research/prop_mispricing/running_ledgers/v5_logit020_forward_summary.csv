@@ -1,0 +1,2 @@
+rule,cold_start_filter,flat_stake_units,start_date,end_date,cards,bets,wins,losses,profit_units,roi,max_drawdown_units
+positive_logit_residual_ge_0.20,False,1.0,2026-06-14,2026-08-01,7,40,29,11,2.6890620124180105,0.06722655031045026,4.03004891684137
