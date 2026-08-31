@@ -1,0 +1,2 @@
+triggered_at=2026-08-30
+purpose=frozen_v5_on_draftkings_raw_index
