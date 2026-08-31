@@ -2219,49 +2219,10 @@
       "workflow_file": "run-monday-reset-orchestrator.yml"
     }
   ],
-  "dispatched_runbooks": [
-    {
-      "catchup_grace_minutes": 2880,
-      "dispatch_key": "monday_reset_v1:2026-08-31T05:00:America/Chicago",
-      "dispatched_at": "2026-08-31T16:51:24.525991+00:00",
-      "display_name": "Monday Reset",
-      "dry_run": false,
-      "inputs": {
-        "auto_append": true,
-        "max_events": "all",
-        "mode": "production",
-        "skip_bankroll": false,
-        "skip_clv": false
-      },
-      "message": "Dispatched run-monday-reset-orchestrator.yml",
-      "minutes_late": 411.41,
-      "runbook_id": "monday_reset_v1",
-      "scheduled_at_local": "2026-08-31T05:00:00-05:00",
-      "scheduled_time": "05:00",
-      "workflow_file": "run-monday-reset-orchestrator.yml"
-    }
-  ],
-  "due_runbooks": [
-    {
-      "catchup_grace_minutes": 2880,
-      "dispatch_key": "monday_reset_v1:2026-08-31T05:00:America/Chicago",
-      "display_name": "Monday Reset",
-      "inputs": {
-        "auto_append": true,
-        "max_events": "all",
-        "mode": "production",
-        "skip_bankroll": false,
-        "skip_clv": false
-      },
-      "minutes_late": 411.41,
-      "runbook_id": "monday_reset_v1",
-      "scheduled_at_local": "2026-08-31T05:00:00-05:00",
-      "scheduled_time": "05:00",
-      "workflow_file": "run-monday-reset-orchestrator.yml"
-    }
-  ],
+  "dispatched_runbooks": [],
+  "due_runbooks": [],
   "errors": [],
-  "last_checked_at": "2026-08-31T16:51:24.525991+00:00",
+  "last_checked_at": "2026-08-31T21:47:41.887487+00:00",
   "next_due_runbook": {
     "catchup_grace_minutes": 1440,
     "display_name": "Market Refresh",
@@ -2270,8 +2231,27 @@
     "scheduled_time": "03:00",
     "workflow_file": "run-market-refresh-orchestrator.yml"
   },
-  "skipped_runbooks": [],
+  "skipped_runbooks": [
+    {
+      "catchup_grace_minutes": 2880,
+      "dispatch_key": "monday_reset_v1:2026-08-31T05:00:America/Chicago",
+      "display_name": "Monday Reset",
+      "inputs": {
+        "auto_append": true,
+        "max_events": "all",
+        "mode": "production",
+        "skip_bankroll": false,
+        "skip_clv": false
+      },
+      "minutes_late": 707.7,
+      "reason": "already_dispatched",
+      "runbook_id": "monday_reset_v1",
+      "scheduled_at_local": "2026-08-31T05:00:00-05:00",
+      "scheduled_time": "05:00",
+      "workflow_file": "run-monday-reset-orchestrator.yml"
+    }
+  ],
   "status": "completed",
   "timezone": "America/Chicago",
-  "updated_at": "2026-08-31T16:51:25.731186+00:00"
+  "updated_at": "2026-08-31T21:47:41.889336+00:00"
 }
