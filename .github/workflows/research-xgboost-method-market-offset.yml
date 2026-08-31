@@ -45,6 +45,18 @@ jobs:
             threadpoolctl==3.6.0 \
             python-dateutil==2.9.0.post0
 
+      - name: Disable cold-start filtering for this experiment
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('pipeline/research/xgboost_method_market_offset.py')
+          s=p.read_text()
+          s=s.replace('            val = val_all[val_all["betting_eligible"]].copy()', '            val = val_all.copy()')
+          s=s.replace('"selection_metric": "pooled_2021_2024_betting_eligible_multiclass_log_loss",', '"selection_metric": "pooled_2021_2024_multiclass_log_loss",')
+          s=s.replace('"cold_start_eligibility": "whole fight betting-ineligible if either prefight prior UFC fight count <2",', '"cold_start_eligibility": "OFF for this experiment",')
+          p.write_text(s)
+          PY
+
       - name: Verify multiclass base-margin contract
         run: |
           python - <<'PY'
@@ -52,7 +64,7 @@ jobs:
           print(verify_base_margin_contract())
           PY
 
-      - name: Audit coverage and eligibility
+      - name: Audit coverage
         run: |
           python pipeline/research/xgboost_method_market_offset.py --stage audit
 
@@ -60,7 +72,7 @@ jobs:
         run: |
           python pipeline/research/xgboost_method_market_offset.py --stage develop
 
-      - name: Enforce sealed-test policy
+      - name: Verify no-cold-start selection protocol
         run: |
           python - <<'PY'
           import json
@@ -68,17 +80,15 @@ jobs:
           p=Path('data/research/prop_mispricing/xgboost_method_market_offset__frozen_candidate.json')
           x=json.loads(p.read_text())
           assert x['development_cutoff']=='2024-12-31'
-          assert x['selection_metric']=='pooled_2021_2024_betting_eligible_multiclass_log_loss'
+          assert x['selection_metric']=='pooled_2021_2024_multiclass_log_loss'
           print('freeze:', x['selected_candidate'], x['selected_oof_log_loss'])
           print('holdout_integrity:', x['holdout_integrity'])
-          if x['holdout_integrity'] != 'PRISTINE':
-              print('2025+ scoring intentionally blocked: pre-compliance test artifact already existed before this freeze')
           PY
 
       - name: Upload development artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: xgboost-method-market-offset-development
+          name: xgboost-method-market-offset-development-no-cold-start
           path: |
             data/research/prop_mispricing/xgboost_method_market_offset__audit.json
             data/research/prop_mispricing/xgboost_method_market_offset__summary.json
@@ -101,7 +111,7 @@ jobs:
             data/research/prop_mispricing/xgboost_method_market_offset__feature_list.json \
             data/research/prop_mispricing/xgboost_method_market_offset__candidate_results.csv
           git diff --cached --quiet && exit 0
-          git commit -m "research: freeze compliant six-way method OOF candidate"
+          git commit -m "research: freeze six-way method OOF without cold-start filter"
           for i in 1 2 3 4 5; do
             git fetch origin research/ufc-prop-mispricing-xgboost-20260829
             git rebase origin/research/ufc-prop-mispricing-xgboost-20260829 || { git rebase --abort; sleep 2; continue; }
