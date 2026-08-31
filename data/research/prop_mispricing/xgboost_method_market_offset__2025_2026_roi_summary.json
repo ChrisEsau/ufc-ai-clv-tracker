@@ -127,5 +127,6 @@
     "avg_price_edge": 0.07529070444800622,
     "avg_model_prob": 0.36191866940782147,
     "avg_decimal_odds": 4.953042976232541
-  }
+  },
+  "cards_with_bets": 42
 }
