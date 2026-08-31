@@ -1,0 +1,80 @@
+{
+  "status": "CONTAMINATED_SECONDARY_HOLDOUT_ANALYSIS",
+  "warning": "2025+ was exposed by an earlier pre-compliance run; this is a chronological walk-forward ROI analysis, not a pristine holdout claim.",
+  "period": [
+    "2025-01-01",
+    "2026-12-31"
+  ],
+  "walk_forward_rule": "for each fight date, train only on graded fights strictly before that date; frozen FULL features/hyperparameters; cold start off",
+  "bet_pricing": "legacy_consensus raw implied probability converted to decimal odds as 1/p; flat 1-unit stake",
+  "threshold_policy": "descriptive predeclared price-edge grid; no threshold selected or tuned on 2025-2026",
+  "fights": 489,
+  "market_metrics": {
+    "n": 489,
+    "log_loss": 1.548071383391046,
+    "brier": 0.7497591298437802,
+    "top1_accuracy": 0.38650306748466257,
+    "winner_accuracy": 0.6850715746421268,
+    "method_accuracy": 0.5439672801635992
+  },
+  "model_metrics": {
+    "n": 489,
+    "log_loss": 1.547159201552964,
+    "brier": 0.7508533607454284,
+    "top1_accuracy": 0.3783231083844581,
+    "winner_accuracy": 0.6952965235173824,
+    "method_accuracy": 0.5378323108384458
+  },
+  "thresholds": [
+    {
+      "threshold": 0.0,
+      "bets": 1115,
+      "wins": 252,
+      "profit_units": 1030.5340272046792,
+      "roi": 0.9242457643091293,
+      "avg_price_edge": 0.05394696496120083,
+      "avg_model_prob": 0.22455239051810963,
+      "avg_decimal_odds": 15.615283154876337
+    },
+    {
+      "threshold": 0.025,
+      "bets": 518,
+      "wins": 153,
+      "profit_units": 460.4767996496257,
+      "roi": 0.8889513506749531,
+      "avg_price_edge": 0.10500843436485051,
+      "avg_model_prob": 0.33698267863639075,
+      "avg_decimal_odds": 7.958959586659533
+    },
+    {
+      "threshold": 0.05,
+      "bets": 361,
+      "wins": 107,
+      "profit_units": 223.04447364229975,
+      "roi": 0.6178517275409965,
+      "avg_price_edge": 0.13592254001635995,
+      "avg_model_prob": 0.38557609261485676,
+      "avg_decimal_odds": 6.189938354829618
+    },
+    {
+      "threshold": 0.075,
+      "bets": 268,
+      "wins": 82,
+      "profit_units": 105.13538273320881,
+      "roi": 0.3922962042283911,
+      "avg_price_edge": 0.16246442474290065,
+      "avg_model_prob": 0.4339561954752278,
+      "avg_decimal_odds": 5.467009907404482
+    },
+    {
+      "threshold": 0.1,
+      "bets": 229,
+      "wins": 72,
+      "profit_units": 68.79252559035169,
+      "roi": 0.300404041879265,
+      "avg_price_edge": 0.1753309199521353,
+      "avg_model_prob": 0.45778256752345237,
+      "avg_decimal_odds": 4.944203826849005
+    }
+  ]
+}
