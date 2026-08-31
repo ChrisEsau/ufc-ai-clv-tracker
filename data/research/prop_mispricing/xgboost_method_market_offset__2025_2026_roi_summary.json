@@ -6,8 +6,11 @@
     "2026-12-31"
   ],
   "walk_forward_rule": "for each fight date, train only on graded fights strictly before that date; frozen FULL features/hyperparameters; cold start off",
-  "bet_pricing": "legacy_consensus raw implied probability converted to decimal odds as 1/p; flat 1-unit stake",
-  "threshold_policy": "descriptive predeclared price-edge grid; no threshold selected or tuned on 2025-2026",
+  "bet_pricing": "legacy_consensus raw implied probability is the offered-price proxy; decimal odds = 1/raw implied probability; flat 1-unit stake",
+  "bet_eligibility": "model probability must exceed raw implied break-even probability AND signed logit(model)-logit(fair six-way market) must clear threshold",
+  "one_bet_per_fight": "hard maximum one method bet per fight; choose eligible outcome with largest signed logit residual",
+  "primary_logit_threshold": 0.2,
+  "threshold_policy": "descriptive predeclared logit grid; 0.20 mirrors frozen V5 moneyline gate; no threshold tuned on 2025-2026",
   "fights": 489,
   "market_metrics": {
     "n": 489,
@@ -27,54 +30,102 @@
   },
   "thresholds": [
     {
-      "threshold": 0.0,
-      "bets": 1115,
-      "wins": 252,
-      "profit_units": 1030.5340272046792,
-      "roi": 0.9242457643091293,
-      "avg_price_edge": 0.05394696496120083,
-      "avg_model_prob": 0.22455239051810963,
-      "avg_decimal_odds": 15.615283154876337
+      "logit_threshold": 0.0,
+      "bets": 428,
+      "wins": 132,
+      "profit_units": 79.35418060200669,
+      "roi": 0.1854069640233801,
+      "avg_signed_logit_residual": 0.2734554627859726,
+      "avg_price_edge": 0.08094045351131475,
+      "avg_model_prob": 0.35668365163815635,
+      "avg_decimal_odds": 5.223204480157158
     },
     {
-      "threshold": 0.025,
-      "bets": 518,
-      "wins": 153,
-      "profit_units": 460.4767996496257,
-      "roi": 0.8889513506749531,
-      "avg_price_edge": 0.10500843436485051,
-      "avg_model_prob": 0.33698267863639075,
-      "avg_decimal_odds": 7.958959586659533
+      "logit_threshold": 0.05,
+      "bets": 428,
+      "wins": 132,
+      "profit_units": 79.35418060200669,
+      "roi": 0.1854069640233801,
+      "avg_signed_logit_residual": 0.2734554627859726,
+      "avg_price_edge": 0.08094045351131475,
+      "avg_model_prob": 0.35668365163815635,
+      "avg_decimal_odds": 5.223204480157158
     },
     {
-      "threshold": 0.05,
-      "bets": 361,
-      "wins": 107,
-      "profit_units": 223.04447364229975,
-      "roi": 0.6178517275409965,
-      "avg_price_edge": 0.13592254001635995,
-      "avg_model_prob": 0.38557609261485676,
-      "avg_decimal_odds": 6.189938354829618
+      "logit_threshold": 0.1,
+      "bets": 416,
+      "wins": 125,
+      "profit_units": 61.64136008918618,
+      "roi": 0.148176346368236,
+      "avg_signed_logit_residual": 0.278855330249247,
+      "avg_price_edge": 0.08009697375542016,
+      "avg_model_prob": 0.35475987125223934,
+      "avg_decimal_odds": 5.237184367775104
     },
     {
-      "threshold": 0.075,
-      "bets": 268,
-      "wins": 82,
-      "profit_units": 105.13538273320881,
-      "roi": 0.3922962042283911,
-      "avg_price_edge": 0.16246442474290065,
-      "avg_model_prob": 0.4339561954752278,
-      "avg_decimal_odds": 5.467009907404482
+      "logit_threshold": 0.15,
+      "bets": 394,
+      "wins": 116,
+      "profit_units": 30.641360089186175,
+      "roi": 0.07776994946493954,
+      "avg_signed_logit_residual": 0.2870646853081905,
+      "avg_price_edge": 0.07811608883878345,
+      "avg_model_prob": 0.3527241982803278,
+      "avg_decimal_odds": 5.206513492492543
     },
     {
-      "threshold": 0.1,
-      "bets": 229,
-      "wins": 72,
-      "profit_units": 68.79252559035169,
-      "roi": 0.300404041879265,
-      "avg_price_edge": 0.1753309199521353,
-      "avg_model_prob": 0.45778256752345237,
-      "avg_decimal_odds": 4.944203826849005
+      "logit_threshold": 0.2,
+      "bets": 331,
+      "wins": 105,
+      "profit_units": 33.541360089186185,
+      "roi": 0.10133341416672563,
+      "avg_signed_logit_residual": 0.3079964306225299,
+      "avg_price_edge": 0.07529070444800622,
+      "avg_model_prob": 0.36191866940782147,
+      "avg_decimal_odds": 4.953042976232541
+    },
+    {
+      "logit_threshold": 0.25,
+      "bets": 242,
+      "wins": 81,
+      "profit_units": 31.435299483125565,
+      "roi": 0.12989793174845274,
+      "avg_signed_logit_residual": 0.33713455096318784,
+      "avg_price_edge": 0.07748540770902079,
+      "avg_model_prob": 0.3770403508250871,
+      "avg_decimal_odds": 4.562006867278544
+    },
+    {
+      "logit_threshold": 0.3,
+      "bets": 165,
+      "wins": 64,
+      "profit_units": 51.55697780480389,
+      "roi": 0.3124665321503266,
+      "avg_signed_logit_residual": 0.36632725568734453,
+      "avg_price_edge": 0.07626736043288433,
+      "avg_model_prob": 0.3885546818827138,
+      "avg_decimal_odds": 4.420266708301532
+    },
+    {
+      "logit_threshold": 0.4,
+      "bets": 41,
+      "wins": 14,
+      "profit_units": -1.119480519480521,
+      "roi": -0.02730440291415905,
+      "avg_signed_logit_residual": 0.44882166316107375,
+      "avg_price_edge": 0.09294825789204746,
+      "avg_model_prob": 0.4205023880775382,
+      "avg_decimal_odds": 4.028598917202786
     }
-  ]
+  ],
+  "primary_020": {
+    "bets": 331,
+    "wins": 105,
+    "profit_units": 33.541360089186185,
+    "roi": 0.10133341416672563,
+    "avg_signed_logit_residual": 0.3079964306225299,
+    "avg_price_edge": 0.07529070444800622,
+    "avg_model_prob": 0.36191866940782147,
+    "avg_decimal_odds": 4.953042976232541
+  }
 }
