@@ -1,0 +1,164 @@
+{
+  "data/market/historical_market_outcomes.parquet": {
+    "exists": true,
+    "rows": 57320,
+    "columns": [
+      "historical_market_run_id",
+      "historical_market_timestamp",
+      "fight_id",
+      "date",
+      "event_name",
+      "market_key",
+      "bookmaker",
+      "outcome_join_key",
+      "outcome_fighter_id",
+      "outcome_label",
+      "outcome_side",
+      "canonical_side",
+      "legacy_side",
+      "american_odds",
+      "implied_probability",
+      "profit_per_100",
+      "won",
+      "result_status",
+      "source",
+      "mapping_method",
+      "legacy_row_number",
+      "legacy_r_name",
+      "legacy_b_name",
+      "legacy_winner_side"
+    ],
+    "date_min": "2010-03-21 00:00:00",
+    "date_max": "2026-03-28 00:00:00",
+    "market_key_counts": {
+      "moneyline": 12988,
+      "win_by_decision": 11306,
+      "win_by_ko_tko_dq": 10844,
+      "win_by_submission": 10843,
+      "goes_distance": 5787,
+      "inside_distance": 5552
+    },
+    "bookmaker_counts": {
+      "legacy_consensus": 45981,
+      "synthetic_legacy_consensus": 11339
+    },
+    "source_counts": {
+      "ufc-master w odds.csv": 45981,
+      "synthetic_from_method_props": 11339
+    }
+  },
+  "data/market/market_intelligence_history.parquet": {
+    "exists": true,
+    "rows": 27557,
+    "columns": [
+      "refresh_id",
+      "refresh_timestamp",
+      "source_run_id",
+      "bookmaker",
+      "fight_id",
+      "event_name",
+      "fight_display",
+      "market_key",
+      "market_display",
+      "outcome_key",
+      "comparison_key",
+      "outcome_display",
+      "side",
+      "fighter_name",
+      "american_odds",
+      "implied_probability",
+      "decimal_odds",
+      "line",
+      "provider_event_id",
+      "provider_market_id",
+      "provider_selection_id",
+      "provider_market_type_name",
+      "snapshot_source_path"
+    ],
+    "market_key_counts": {
+      "round_method": 6637,
+      "point_spread": 5990,
+      "total_rounds": 4024,
+      "moneyline": 3852,
+      "exact_method": 2040,
+      "goes_distance": 1562,
+      "win_by_submission": 1156,
+      "win_by_decision": 1156,
+      "win_by_ko_tko_dq": 1140
+    },
+    "bookmaker_counts": {
+      "DraftKings": 25081,
+      "FanDuel": 2476
+    }
+  },
+  "data/market/draftkings_raw_index.parquet": {
+    "exists": true,
+    "rows": 1664,
+    "columns": [
+      "snapshot_run_id",
+      "snapshot_timestamp",
+      "source",
+      "bookmaker",
+      "provider_event_id",
+      "provider_subcategory_id",
+      "provider_subcategory_name",
+      "registry_family",
+      "request_url",
+      "raw_payload_path",
+      "diagnostic_rows",
+      "status",
+      "error"
+    ],
+    "bookmaker_counts": {
+      "DraftKings": 1664
+    },
+    "source_counts": {
+      "draftkings_public": 1664
+    }
+  },
+  "historical_method_detail": {
+    "method_like_rows": 32993,
+    "market_key_counts": {
+      "win_by_decision": 11306,
+      "win_by_ko_tko_dq": 10844,
+      "win_by_submission": 10843
+    },
+    "year_counts": {
+      "2012": 620,
+      "2013": 1957,
+      "2014": 2046,
+      "2015": 2547,
+      "2016": 2595,
+      "2017": 2396,
+      "2018": 2577,
+      "2019": 2706,
+      "2020": 2472,
+      "2021": 2768,
+      "2022": 2742,
+      "2023": 2424,
+      "2024": 2173,
+      "2025": 2289,
+      "2026": 681
+    },
+    "date_min": "2012-05-05 00:00:00",
+    "date_max": "2026-03-28 00:00:00",
+    "unique_fights": 5787,
+    "unique_fights_by_year": {
+      "2012": 170,
+      "2013": 346,
+      "2014": 425,
+      "2015": 432,
+      "2016": 437,
+      "2017": 405,
+      "2018": 438,
+      "2019": 458,
+      "2020": 416,
+      "2021": 471,
+      "2022": 481,
+      "2023": 424,
+      "2024": 386,
+      "2025": 384,
+      "2026": 114
+    }
+  }
+}
