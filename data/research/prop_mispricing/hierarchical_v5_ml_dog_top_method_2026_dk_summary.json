@@ -1,0 +1,22 @@
+{
+  "experiment": "2026_ml_bet_dog_then_top_method",
+  "requested_dogs": [
+    "Damian Rzepecki",
+    "Santiago Ponzinibbio",
+    "Brendson Ribeiro",
+    "Saygid Izagakhmaev",
+    "Tyrell Fortune",
+    "Alden Coria",
+    "Anna Melisano",
+    "Tabatha Ricci",
+    "Jean-Paul Lebosnoyani"
+  ],
+  "priced_bets": 9,
+  "skips": [],
+  "bets": 9,
+  "wins": 2,
+  "losses": 7,
+  "hit_rate": 0.2222222222222222,
+  "profit_units": 0.0,
+  "roi": 0.0
+}

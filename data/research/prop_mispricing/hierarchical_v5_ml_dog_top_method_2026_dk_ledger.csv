@@ -1,0 +1,10 @@
+fight_id,event_name,fight_display,dog_fighter,dog_side,v5_model_p_red,bet_slug,model_probability,american_odds,decimal_odds,actual_winner,actual_method,won,stake_units,profit_units
+4ace64aa144389c5,UFC Fight Night: Ankalaev vs. Guskov,Magomed Zaynukov vs Damian Rzepecki,Damian Rzepecki,blue,0.7321445692117894,blue_dec,0.1270728030995491,650.0,7.5,Magomed Zaynukov,Decision - Unanimous,0,1.0,-1.0
+307ea95ad7ebe466,UFC Fight Night: Du Plessis vs. Usman,Anna Melisano vs Dione Barbosa,Anna Melisano,red,0.2082557140522101,red_dec,0.1045950128396143,900.0,10.0,Dione Barbosa,Submission,0,1.0,-1.0
+410e6b9e01660b35,UFC Fight Night: Du Plessis vs. Usman,Alden Coria vs Stewart Nicoll,Alden Coria,red,0.902358988577186,red_dec,0.3472879557553826,200.0,3.0,Alden Coria,Decision - Unanimous,1,1.0,2.0
+3ac870d6e7d323b7,UFC Fight Night: Ankalaev vs. Guskov,Magomed Tuchalov vs Brendson Ribeiro,Brendson Ribeiro,blue,0.8846531964208141,blue_dec,0.046367023622439,1400.0,15.0,Magomed Tuchalov,Decision - Unanimous,0,1.0,-1.0
+f2eb569176e46edf,UFC Fight Night: Du Plessis vs. Usman,Jean-Paul Lebosnoyani vs Seokhyeon Ko,Jean-Paul Lebosnoyani,red,0.3763721927153802,red_dec,0.1484035787850663,500.0,6.0,Jean-Paul Lebosnoyani,Decision - Unanimous,1,1.0,5.0
+f6e6b004f07363e9,UFC Fight Night: Ankalaev vs. Guskov,Santiago Ponzinibbio vs Sam Patterson,Santiago Ponzinibbio,red,0.1996625933255373,red_ko,0.0911713451592923,650.0,7.5,Sam Patterson,KO/TKO,0,1.0,-1.0
+5ffb251c6ea48b65,UFC Fight Night: Ankalaev vs. Guskov,Rizvan Kuniev vs Tyrell Fortune,Tyrell Fortune,blue,0.7427144993037521,blue_dec,0.1742417964940485,500.0,6.0,Rizvan Kuniev,KO/TKO,0,1.0,-1.0
+52ddf20a10890b41,UFC Fight Night: Du Plessis vs. Usman,Tabatha Ricci vs Fatima Kline,Tabatha Ricci,red,0.1746585219567742,red_dec,0.1288814758888907,550.0,6.5,Fatima Kline,Decision - Unanimous,0,1.0,-1.0
+61280e5644189c61,UFC Fight Night: Ankalaev vs. Guskov,Abubakar Vagaev vs Saygid Izagakhmaev,Saygid Izagakhmaev,blue,0.6762941327781105,blue_sub,0.1360427271583261,400.0,5.0,Abubakar Vagaev,Decision - Unanimous,0,1.0,-1.0
