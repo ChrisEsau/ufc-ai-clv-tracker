@@ -17,6 +17,7 @@ OUT_THRESH = ROOT / "xgboost_method_market_offset__2025_2026_roi_thresholds.csv"
 OUT_YEAR = ROOT / "xgboost_method_market_offset__2025_2026_roi_by_year.csv"
 OUT_CLASS = ROOT / "xgboost_method_market_offset__2025_2026_roi_by_class.csv"
 OUT_BUCKET = ROOT / "xgboost_method_market_offset__2025_2026_roi_edge_buckets.csv"
+OUT_CARD = ROOT / "xgboost_method_market_offset__2025_2026_roi_by_card.csv"
 
 START = pd.Timestamp("2025-01-01")
 END = pd.Timestamp("2026-12-31")
@@ -143,24 +144,37 @@ def main() -> None:
     all_bets = pd.DataFrame(bet_rows).sort_values(["date", "fight_id", "class_slug"]).reset_index(drop=True)
 
     threshold_rows = []
-    ledgers = []
     for t in LOGIT_THRESHOLDS:
         g = _select_one_per_fight(all_bets, t)
-        g = g.copy()
-        g["logit_threshold"] = t
-        ledgers.append(g)
         threshold_rows.append({"logit_threshold": t, **_roi(g)})
     thresholds_df = pd.DataFrame(threshold_rows)
     thresholds_df.to_csv(OUT_THRESH, index=False)
 
     # Main committed ledger uses the frozen moneyline-comparable 0.20 logit gate.
     base = _select_one_per_fight(all_bets, 0.20)
+    base = base.sort_values(["date", "event_name", "fight_id"]).reset_index(drop=True)
+    base["cum_profit_units"] = base["profit_units"].cumsum()
     base.to_csv(OUT_BETS, index=False)
 
     by_year = [{"year": int(y), **_roi(g)} for y, g in base.groupby("year")]
     pd.DataFrame(by_year).to_csv(OUT_YEAR, index=False)
     by_class = [{"class_name": c, **_roi(g)} for c, g in base.groupby("class_name")]
     pd.DataFrame(by_class).to_csv(OUT_CLASS, index=False)
+
+    # Chronological card-by-card report for the primary 0.20 rule.
+    card_rows = []
+    cumulative = 0.0
+    for (date, event_name), g in base.groupby(["date", "event_name"], sort=True):
+        stats = _roi(g)
+        cumulative += stats["profit_units"]
+        card_rows.append({
+            "date": pd.Timestamp(date).date().isoformat(),
+            "year": int(pd.Timestamp(date).year),
+            "event_name": event_name,
+            **stats,
+            "cumulative_profit_units": cumulative,
+        })
+    pd.DataFrame(card_rows).to_csv(OUT_CARD, index=False)
 
     all_bets["logit_bucket"] = pd.cut(
         all_bets["signed_logit_residual"], bins=BUCKETS, labels=BUCKET_LABELS, right=False
@@ -192,9 +206,11 @@ def main() -> None:
         "model_metrics": _metrics(y, model_p),
         "thresholds": threshold_rows,
         "primary_020": _roi(base),
+        "cards_with_bets": int(len(card_rows)),
     }
     OUT_SUMMARY.write_text(json.dumps(summary, indent=2, default=str))
     print(json.dumps(summary, indent=2, default=str))
+    print("\nCARD BY CARD\n", pd.DataFrame(card_rows).to_string(index=False))
 
 
 if __name__ == "__main__":
