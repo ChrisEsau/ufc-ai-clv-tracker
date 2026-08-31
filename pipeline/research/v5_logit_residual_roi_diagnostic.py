@@ -7,7 +7,7 @@ import pandas as pd
 
 ROOT = Path('data/research/prop_mispricing')
 OOF = ROOT / 'v5_depth1_vs_depth2_oof.csv'
-FEAT = Path('data/features/moneyline_feature_view.parquet')
+MARKET = Path('data/market/historical_market_outcomes.parquet')
 
 
 def logit(p):
@@ -17,83 +17,48 @@ def logit(p):
 
 oof=pd.read_csv(OOF)
 oof['abs_logit_residual']=np.abs(logit(oof['depth1_p'])-logit(oof['market_p']))
-oof['model_side_red']=oof['depth1_p']>oof['market_p']
-oof['bet_won']=np.where(oof['model_side_red'],oof['won'].astype(int),1-oof['won'].astype(int))
+oof['bet_side']=np.where(oof['depth1_p']>oof['market_p'],'red','blue')
+oof['bet_won']=np.where(oof['bet_side'].eq('red'),oof['won'].astype(int),1-oof['won'].astype(int))
 
-feat=pd.read_parquet(FEAT)
-if 'fight_id' not in feat.columns or 'market_overround' not in feat.columns:
-    raise RuntimeError(f'feature view missing required columns; cols={list(feat.columns)}')
-mo=feat[['fight_id','market_overround']].copy()
-mo=mo.dropna(subset=['fight_id']).drop_duplicates('fight_id',keep='last')
-oof=oof.merge(mo,on='fight_id',how='left',validate='one_to_one')
-if oof['market_overround'].isna().any():
-    missing=int(oof['market_overround'].isna().sum())
-    raise RuntimeError(f'missing market_overround for {missing} OOF fights')
-
-# Recover the raw two-way implied probability for the side V5 favors.
-# V5 fair_market_p was defined as raw_implied_probability / market_overround.
-# Thus raw side p = fair side p * overround, and decimal payout = 1/raw side p.
-fair_side=np.where(oof['model_side_red'],oof['market_p'],1-oof['market_p'])
-raw_side_p=fair_side*oof['market_overround'].to_numpy(float)
+# Authoritative V5 market source: legacy_consensus graded two-way moneyline rows.
+m=pd.read_parquet(MARKET).copy()
+m['implied_probability']=pd.to_numeric(m['implied_probability'],errors='coerce')
+m=m[(m['bookmaker']=='legacy_consensus')&(m['result_status']=='graded')&(m['market_key']=='moneyline')].dropna(subset=['fight_id','outcome_side','implied_probability']).copy()
+m['outcome_side']=m['outcome_side'].astype(str)
+good=m.groupby('fight_id').size(); good=good[good==2].index
+m=m[m['fight_id'].isin(good)].copy()
+# Raw implied probability is the actual consensus price input before vig removal.
+quotes=m[['fight_id','outcome_side','implied_probability']].drop_duplicates(['fight_id','outcome_side'],keep='last')
+oof=oof.merge(quotes,left_on=['fight_id','bet_side'],right_on=['fight_id','outcome_side'],how='left',validate='one_to_one')
+if oof['implied_probability'].isna().any():
+    raise RuntimeError(f"missing moneyline quote for {int(oof['implied_probability'].isna().sum())} OOF bets")
+raw_side_p=oof['implied_probability'].to_numpy(float)
 if ((raw_side_p<=0)|(raw_side_p>=1)).any():
-    bad=int(((raw_side_p<=0)|(raw_side_p>=1)).sum())
-    raise RuntimeError(f'invalid recovered raw implied probabilities: {bad}')
-oof['bet_fair_market_p']=fair_side
+    raise RuntimeError('invalid raw implied probability encountered')
 oof['bet_raw_implied_p']=raw_side_p
 oof['bet_decimal_odds']=1.0/raw_side_p
 oof['profit_units']=np.where(oof['bet_won']==1,oof['bet_decimal_odds']-1.0,-1.0)
-
 oof['logit_decile']=pd.qcut(oof['abs_logit_residual'],10,labels=False,duplicates='drop')+1
 
 def summarize(g):
     n=len(g); prof=float(g['profit_units'].sum())
-    return pd.Series({
-        'n':n,
-        'wins':int(g['bet_won'].sum()),
-        'win_rate':float(g['bet_won'].mean()),
-        'mean_abs_logit_residual':float(g['abs_logit_residual'].mean()),
-        'mean_fair_market_p':float(g['bet_fair_market_p'].mean()),
-        'mean_decimal_odds':float(g['bet_decimal_odds'].mean()),
-        'profit_units':prof,
-        'roi':prof/n if n else np.nan,
-    })
+    return pd.Series({'n':n,'wins':int(g['bet_won'].sum()),'win_rate':float(g['bet_won'].mean()),'mean_abs_logit_residual':float(g['abs_logit_residual'].mean()),'mean_raw_implied_p':float(g['bet_raw_implied_p'].mean()),'mean_decimal_odds':float(g['bet_decimal_odds'].mean()),'profit_units':prof,'roi':prof/n if n else np.nan})
 
 dec=oof.groupby('logit_decile',observed=True).apply(summarize,include_groups=False).reset_index()
-# Cumulative top-tail portfolio: decile k means bet deciles k..10.
 tails=[]
 for k in range(1,11):
-    g=oof[oof['logit_decile']>=k]
-    s=summarize(g).to_dict(); s['min_decile']=k
-    tails.append(s)
+    g=oof[oof['logit_decile']>=k]; s=summarize(g).to_dict(); s['min_decile']=k; tails.append(s)
 tails=pd.DataFrame(tails)
-
-# Fixed, predeclared logit cutoffs for readability; measurement only, not selection.
 cutoffs=[0.05,0.10,0.15,0.20,0.25,0.30,0.40]
 rows=[]
 for c in cutoffs:
-    g=oof[oof['abs_logit_residual']>=c]
-    s=summarize(g).to_dict(); s['min_abs_logit_residual']=c
-    rows.append(s)
+    g=oof[oof['abs_logit_residual']>=c]; s=summarize(g).to_dict(); s['min_abs_logit_residual']=c; rows.append(s)
 thresholds=pd.DataFrame(rows)
-
-# Year stability for top quintile (deciles 9-10), a natural rank-based diagnostic not a tuned threshold.
 year=[]
 for y,g in oof[oof['logit_decile']>=9].groupby('fold'):
-    s=summarize(g).to_dict(); s['year']=int(y)
-    year.append(s)
+    s=summarize(g).to_dict(); s['year']=int(y); year.append(s)
 year=pd.DataFrame(year)
-
-summary={
-    'experiment':'v5_logit_residual_flat_bet_roi_diagnostic_v1',
-    'n':int(len(oof)),
-    'pricing_semantics':'flat 1u bets at recovered raw two-way consensus price used to construct V5 market input: raw side implied p = fair side p * market_overround; decimal odds = 1/raw side implied p',
-    'selection_note':'measurement only on 2021-2024 OOF; no threshold is promoted by this script',
-    'overall_if_bet_every_v5_direction':summarize(oof).to_dict(),
-    'top_decile':summarize(oof[oof.logit_decile==10]).to_dict(),
-    'top_two_deciles':summarize(oof[oof.logit_decile>=9]).to_dict(),
-    'top_three_deciles':summarize(oof[oof.logit_decile>=8]).to_dict(),
-}
-
+summary={'experiment':'v5_logit_residual_flat_bet_roi_diagnostic_v1','n':int(len(oof)),'pricing_semantics':'flat 1u bets at authoritative legacy_consensus raw implied moneyline probability from the exact V5 historical market snapshot; decimal odds = 1/raw implied probability','selection_note':'measurement only on 2021-2024 OOF; no threshold promoted','overall_if_bet_every_v5_direction':summarize(oof).to_dict(),'top_decile':summarize(oof[oof.logit_decile==10]).to_dict(),'top_two_deciles':summarize(oof[oof.logit_decile>=9]).to_dict(),'top_three_deciles':summarize(oof[oof.logit_decile>=8]).to_dict()}
 dec.to_csv(ROOT/'v5_logit_residual_roi_deciles.csv',index=False)
 tails.to_csv(ROOT/'v5_logit_residual_roi_top_tails.csv',index=False)
 thresholds.to_csv(ROOT/'v5_logit_residual_roi_thresholds.csv',index=False)
