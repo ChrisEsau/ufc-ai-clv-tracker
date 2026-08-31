@@ -1,0 +1,42 @@
+name: Research XGBoost Method Specialist Family OOF
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - pipeline/research/xgboost_method_specialist_family_oof.py
+      - .github/workflows/research-xgboost-method-specialist-family-oof.yml
+
+permissions:
+  contents: write
+
+jobs:
+  specialist-family-oof:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.16"
+      - name: Install frozen environment
+        run: |
+          python -m pip install --upgrade pip==26.2.1
+          pip install pandas==3.0.5 pyarrow==25.0.1 numpy==2.4.6 scikit-learn==1.9.0 scipy==1.17.1 xgboost==3.2.0 joblib==1.5.3 threadpoolctl==3.6.0 python-dateutil==2.9.0.post0
+      - name: Run specialist family OOF experiment
+        run: python -m pipeline.research.xgboost_method_specialist_family_oof
+      - name: Commit outputs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f \
+            data/research/prop_mispricing/xgboost_method_market_offset__specialist_family_oof_predictions.csv \
+            data/research/prop_mispricing/xgboost_method_market_offset__specialist_family_oof_summary.json
+          git diff --cached --quiet && exit 0
+          git commit -m "research: add specialist method-family OOF results"
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
