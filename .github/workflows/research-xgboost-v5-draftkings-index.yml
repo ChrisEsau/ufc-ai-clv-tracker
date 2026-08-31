@@ -39,7 +39,7 @@ jobs:
 
       - name: Run frozen V5 on DraftKings index snapshots
         run: |
-          python -m pipeline.research.xgboost_v5_draftkings_index_snapshots
+          python -m pipeline.research.xgboost_v5_draftkings_index_snapshots_v2
 
       - name: Commit V5 index outputs
         run: |
