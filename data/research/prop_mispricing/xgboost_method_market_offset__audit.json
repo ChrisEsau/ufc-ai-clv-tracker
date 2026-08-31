@@ -1,0 +1,42 @@
+{
+  "experiment_name": "six_way_exact_method_market_offset_compliant_oof",
+  "branch": "research/ufc-prop-mispricing-xgboost-20260829",
+  "commit_sha": "b6cb485ee07e9f306051062d1a9efb11c29289bd",
+  "audit_timestamp": "2026-08-31T11:58:18.059792+00:00",
+  "class_order": [
+    "RED_KO_TKO",
+    "RED_SUB",
+    "RED_DEC",
+    "BLUE_KO_TKO",
+    "BLUE_SUB",
+    "BLUE_DEC"
+  ],
+  "xgboost_version": "3.2.0",
+  "base_margin_contract": {
+    "xgboost_version": "3.2.0",
+    "shape": [
+      2,
+      6
+    ],
+    "max_abs_error": 1.1920928966180355e-08,
+    "tolerance": 5e-08
+  },
+  "market_construction": "normalize all six exact-method implied probabilities jointly",
+  "cold_start_rule": "whole fight betting-ineligible if either r_pre_fights or b_pre_fights < 2",
+  "cold_start_provenance": "moneyline_feature_view prefight counts; direct cross-check against available latest_fighter_state rows was 324/324 exact, 0 mismatches",
+  "development_rows_with_targets": 4754,
+  "development_betting_eligible": 3006,
+  "development_cold_start_exclusions": 1748,
+  "target_class_counts_through_2024": {
+    "RED_KO_TKO": 873,
+    "RED_SUB": 516,
+    "RED_DEC": 1347,
+    "BLUE_KO_TKO": 707,
+    "BLUE_SUB": 324,
+    "BLUE_DEC": 987
+  },
+  "feature_count": 140,
+  "excluded_leakage_columns": [],
+  "2025_plus_policy": "coverage counts only during audit; no compliant 2025+ performance may be claimed because a pre-compliance test artifact already exists",
+  "preexisting_test_artifact_detected": true
+}

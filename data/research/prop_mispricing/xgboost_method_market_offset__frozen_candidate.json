@@ -1,7 +1,6 @@
 {
-  "schema_version": 1,
-  "frozen_before_2025_plus_scoring": true,
-  "selected_candidate": "full_v5_signed",
+  "schema_version": 3,
+  "selected_candidate": "FULL",
   "selected_features": [
     "age_diff",
     "age_squared_diff",
@@ -144,14 +143,8 @@
     "worst_loss_elo_diff",
     "wrestling_mismatch_diff"
   ],
-  "class_names": [
-    "red_ko_tko",
-    "red_sub",
-    "red_dec",
-    "blue_ko_tko",
-    "blue_sub",
-    "blue_dec"
-  ],
+  "preprocessing": "fold-local training medians; all-null train columns excluded; residual missing values filled 0",
+  "xgboost_version": "3.2.0",
   "params": {
     "max_depth": 1,
     "eta": 0.03,
@@ -167,8 +160,23 @@
     "nthread": 2
   },
   "num_boost_round": 300,
-  "selection_metric": "pooled_2021_2024_multiclass_log_loss",
-  "selected_oof_log_loss": 1.5363884809490846,
+  "class_order": [
+    "RED_KO_TKO",
+    "RED_SUB",
+    "RED_DEC",
+    "BLUE_KO_TKO",
+    "BLUE_SUB",
+    "BLUE_DEC"
+  ],
+  "market_probability_construction": "joint six-way normalization then log(p) base margin",
+  "cold_start_eligibility": "whole fight betting-ineligible if either prefight prior UFC fight count <2",
+  "selection_metric": "pooled_2021_2024_betting_eligible_multiclass_log_loss",
+  "selected_oof_log_loss": 1.5330542420520807,
+  "selected_oof_market_log_loss": 1.5411404799697135,
   "development_cutoff": "2024-12-31",
-  "development_fights": 4754
+  "frozen_at": "2026-08-31T11:58:38.244757+00:00",
+  "commit_sha": "b6cb485ee07e9f306051062d1a9efb11c29289bd",
+  "holdout_integrity": "COMPROMISED_BY_PRECOMPLIANCE_RUN",
+  "frozen_before_any_compliant_2025_plus_scoring": true,
+  "reproduction_tolerance": 1e-12
 }
