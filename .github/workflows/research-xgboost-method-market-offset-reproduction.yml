@@ -1,4 +1,4 @@
-name: Reproduce XGBoost Six-Way Method Market Offset OOF
+name: Reproduce Compliant XGBoost Six-Way Method OOF
 
 on:
   push:
@@ -13,88 +13,92 @@ permissions:
 
 jobs:
   reproduce-oof-only:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout research branch
         uses: actions/checkout@v4
         with:
           ref: research/ufc-prop-mispricing-xgboost-20260829
+          fetch-depth: 0
 
-      - name: Set up Python
+      - name: Set up exact Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.11.16"
 
-      - name: Install pinned research dependencies
+      - name: Install exact frozen-V5 package environment
         run: |
-          python -m pip install --upgrade pip
+          python -m pip install --upgrade pip==26.2.1
           pip install \
             pandas==3.0.5 \
             pyarrow==25.0.1 \
             numpy==2.4.6 \
             scikit-learn==1.9.0 \
-            xgboost==3.2.0
+            scipy==1.17.1 \
+            xgboost==3.2.0 \
+            joblib==1.5.3 \
+            threadpoolctl==3.6.0 \
+            python-dateutil==2.9.0.post0
+
+      - name: Snapshot frozen expectations before rerun
+        run: |
+          cp data/research/prop_mispricing/xgboost_method_market_offset__frozen_candidate.json /tmp/expected_freeze.json
+          cp data/research/prop_mispricing/xgboost_method_market_offset__summary.json /tmp/expected_summary.json
+          sha256sum data/research/prop_mispricing/xgboost_method_market_offset__test_predictions.csv > /tmp/test_sha256.txt
 
       - name: Verify multiclass market base-margin contract
         run: |
           python - <<'PY'
-          import numpy as np
-          import xgboost as xgb
-
-          p = np.array([
-              [0.30, 0.10, 0.15, 0.20, 0.05, 0.20],
-              [0.15, 0.05, 0.30, 0.10, 0.10, 0.30],
-          ], dtype=float)
-          d = xgb.DMatrix(np.zeros((2, 1)), label=np.array([0, 5]))
-          d.set_base_margin(np.log(p).reshape(-1))
-          booster = xgb.train({'objective': 'multi:softprob', 'num_class': 6, 'seed': 42}, d, num_boost_round=0)
-          got = np.asarray(booster.predict(d), dtype=float)
-          err = np.max(np.abs(got - p))
-          assert got.shape == p.shape
-          assert err <= 5e-8, (xgb.__version__, got.shape, err)
-          print(f'xgboost={xgb.__version__}; max base-margin probability error={err:.12g}')
+          from pipeline.research.xgboost_method_market_offset import verify_base_margin_contract
+          print(verify_base_margin_contract())
           PY
 
       - name: Reproduce development OOF only
         run: |
           python pipeline/research/xgboost_method_market_offset.py --stage develop
 
-      - name: Assert frozen OOF result
+      - name: Assert exact compliant OOF reproduction
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
 
+          expected = json.loads(Path('/tmp/expected_freeze.json').read_text())
+          reproduced = json.loads(Path('data/research/prop_mispricing/xgboost_method_market_offset__frozen_candidate.json').read_text())
           summary = json.loads(Path('data/research/prop_mispricing/xgboost_method_market_offset__summary.json').read_text())
-          frozen = json.loads(Path('data/research/prop_mispricing/xgboost_method_market_offset__frozen_candidate.json').read_text())
 
-          expected_model_ll = 1.5363884809490846
-          expected_market_ll = 1.5469188028608722
-          expected_n = 1604
-          expected_candidate = 'full_v5_signed'
+          tol = float(expected['reproduction_tolerance'])
+          assert tol == 1e-12
+          assert expected['selected_candidate'] == 'FULL'
+          assert reproduced['selected_candidate'] == expected['selected_candidate']
+          assert reproduced['selected_features'] == expected['selected_features']
+          assert reproduced['class_order'] == expected['class_order']
+          assert reproduced['params'] == expected['params']
+          assert reproduced['num_boost_round'] == expected['num_boost_round']
+          assert reproduced['development_cutoff'] == '2024-12-31'
+          assert reproduced['selection_metric'] == 'pooled_2021_2024_betting_eligible_multiclass_log_loss'
+          assert reproduced['holdout_integrity'] == 'COMPROMISED_BY_PRECOMPLIANCE_RUN'
+          assert summary['test_status'] == 'BLOCKED_PREEXISTING_HOLDOUT_EXPOSURE'
+          assert summary['oof_fight_count'] == 1085
+          assert abs(reproduced['selected_oof_log_loss'] - expected['selected_oof_log_loss']) <= tol
+          assert abs(reproduced['selected_oof_market_log_loss'] - expected['selected_oof_market_log_loss']) <= tol
+          assert abs(summary['oof_model_metrics']['log_loss'] - expected['selected_oof_log_loss']) <= tol
+          assert abs(summary['oof_market_metrics']['log_loss'] - expected['selected_oof_market_log_loss']) <= tol
 
-          assert summary['test_status'] == 'SEALED_NOT_SCORED'
-          assert summary['selected_candidate'] == expected_candidate
-          assert frozen['selected_candidate'] == expected_candidate
-          assert summary['selected_oof']['n'] == expected_n
-          assert summary['candidates'][expected_candidate]['market_oof']['n'] == expected_n
-          assert abs(summary['selected_oof']['log_loss'] - expected_model_ll) <= 1e-12
-          assert abs(summary['candidates'][expected_candidate]['market_oof']['log_loss'] - expected_market_ll) <= 1e-12
-          assert abs(frozen['selected_oof_log_loss'] - expected_model_ll) <= 1e-12
-          assert frozen['development_cutoff'] == '2024-12-31'
-
-          print('Exact OOF reproduction gate passed')
-          print(f"candidate={expected_candidate}")
-          print(f"n={expected_n}")
-          print(f"market_log_loss={expected_market_ll:.15f}")
-          print(f"model_log_loss={expected_model_ll:.15f}")
+          print('Exact compliant OOF reproduction gate passed')
+          print('candidate=', reproduced['selected_candidate'])
+          print('n=', summary['oof_fight_count'])
+          print('market_log_loss=', f"{summary['oof_market_metrics']['log_loss']:.15f}")
+          print('model_log_loss=', f"{summary['oof_model_metrics']['log_loss']:.15f}")
+          print('delta=', f"{summary['oof_delta_log_loss']:.15f}")
+          print('holdout_integrity=', reproduced['holdout_integrity'])
           PY
 
-      - name: Prove sealed test was not regenerated
+      - name: Prove pre-existing 2025+ artifact was not touched
         run: |
-          git status --short
-          if git status --short | grep -q 'xgboost_method_market_offset__test_predictions.csv'; then
-            echo 'ERROR: reproduction workflow touched sealed test predictions'
+          sha256sum -c /tmp/test_sha256.txt
+          if git status --short | grep 'xgboost_method_market_offset__test_predictions.csv'; then
+            echo 'ERROR: reproduction touched the pre-existing holdout artifact'
             exit 1
           fi
-          echo 'Development-only reproduction confirmed; sealed test predictions untouched.'
+          echo 'OOF-only reproduction confirmed; pre-existing 2025+ artifact unchanged.'
