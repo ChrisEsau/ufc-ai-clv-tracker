@@ -1,0 +1,70 @@
+name: Method No Cold Start Patch V2
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - '.github/workflows/research-method-disable-cold-start-v2.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+          fetch-depth: 0
+      - name: Patch runner
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('pipeline/research/xgboost_method_market_offset.py')
+          s = p.read_text()
+          a = '''    aux = ["state_fight_id", "r_pre_fights", "b_pre_fights"]
+    missing_aux = [c for c in aux if c not in fv.columns]
+    if missing_aux:
+        raise RuntimeError(f"cold-start columns missing: {missing_aux}")
+    fr = fv[["fight_id"] + aux + features].drop_duplicates("fight_id")'''
+          b = '''    fr = fv[["fight_id"] + features].drop_duplicates("fight_id")'''
+          assert a in s
+          s = s.replace(a, b, 1)
+          a = '''    df["red_prior_ufc_fights"] = pd.to_numeric(df["r_pre_fights"], errors="coerce")
+    df["blue_prior_ufc_fights"] = pd.to_numeric(df["b_pre_fights"], errors="coerce")
+    if df[["red_prior_ufc_fights", "blue_prior_ufc_fights"]].isna().any(axis=None):
+        bad = df.loc[df[["red_prior_ufc_fights", "blue_prior_ufc_fights"]].isna().any(axis=1), "fight_id"].head(20).tolist()
+        raise RuntimeError(f"missing prefight prior-UFC-fight counts: {bad}")
+    df["min_prior_ufc_fights"] = df[["red_prior_ufc_fights", "blue_prior_ufc_fights"]].min(axis=1)
+    df["cold_start"] = df["min_prior_ufc_fights"] < MIN_PRIOR_UFC_FIGHTS
+    df["betting_eligible"] = ~df["cold_start"]'''
+          b = '''    df["cold_start"] = False
+    df["betting_eligible"] = True'''
+          assert a in s
+          s = s.replace(a, b, 1)
+          a = '''    cols = ["fight_id", "date", "event_name", "red_fighter", "blue_fighter", "target", "betting_eligible", "cold_start", "red_prior_ufc_fights", "blue_prior_ufc_fights", "min_prior_ufc_fights"]'''
+          b = '''    cols = ["fight_id", "date", "event_name", "red_fighter", "blue_fighter", "target", "betting_eligible", "cold_start"]'''
+          assert a in s
+          s = s.replace(a, b, 1)
+          s = s.replace('            val = val_all[val_all["betting_eligible"]].copy()', '            val = val_all.copy()')
+          s = s.replace('"validation_n_betting_eligible": int(len(val)),', '"validation_n_oof_eligible": int(len(val)),')
+          s = s.replace('"cold_start_excluded": int((~val_all["betting_eligible"]).sum()),', '"cold_start_excluded": 0,')
+          s = s.replace('"cold_start_rule": "whole fight betting-ineligible if either prefight r_pre_fights or b_pre_fights < 2",', '"cold_start_rule": "OFF for this experiment",')
+          s = s.replace('"cold_start_eligibility": "whole fight betting-ineligible if either prefight prior UFC fight count <2",', '"cold_start_eligibility": "OFF; no cold-start exclusion in this experiment",')
+          s = s.replace('"selection_metric": "pooled_2021_2024_betting_eligible_multiclass_log_loss",', '"selection_metric": "pooled_2021_2024_multiclass_log_loss",')
+          s = s.replace('"development_cold_start_exclusion_count": int(df["cold_start"].sum()),', '"development_cold_start_exclusion_count": 0,')
+          p.write_text(s)
+
+          w = Path('.github/workflows/research-xgboost-method-market-offset.yml')
+          z = w.read_text().replace("assert x['selection_metric']=='pooled_2021_2024_betting_eligible_multiclass_log_loss'", "assert x['selection_metric']=='pooled_2021_2024_multiclass_log_loss'")
+          w.write_text(z)
+          PY
+      - name: Commit and push
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add pipeline/research/xgboost_method_market_offset.py .github/workflows/research-xgboost-method-market-offset.yml
+          git commit -m 'research: keep cold start off in six-way method OOF'
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
