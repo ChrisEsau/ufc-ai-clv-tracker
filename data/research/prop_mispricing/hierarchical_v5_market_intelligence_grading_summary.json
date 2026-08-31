@@ -1,0 +1,22 @@
+{
+  "experiment": "grade_frozen_hierarchical_v5_market_intelligence_bets_v1",
+  "bet_source": "data/research/prop_mispricing/hierarchical_v5_market_intelligence_bets.csv",
+  "result_source": "data/market/historical_market_outcomes.parquet",
+  "total_bets": 38,
+  "graded_bets": 0,
+  "ungraded_bets": 38,
+  "unique_historical_pair_matches": 0,
+  "pooled": {
+    "bets": 0,
+    "wins": 0,
+    "losses": 0,
+    "stake_units": 0.0,
+    "profit_units": 0.0,
+    "roi": null,
+    "hit_rate": null,
+    "fights_bet": 0
+  },
+  "by_event": {},
+  "by_method": {},
+  "grading_rule": "normalized unordered fighter pair; only unique historical graded pair matches accepted"
+}
