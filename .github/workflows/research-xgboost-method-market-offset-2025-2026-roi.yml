@@ -34,7 +34,7 @@ jobs:
 
       - name: Run strict 2025-2026 chronological ROI walk-forward
         run: |
-          python pipeline/research/xgboost_method_market_offset_walkforward_roi.py
+          python -m pipeline.research.xgboost_method_market_offset_walkforward_roi
 
       - name: Upload ROI artifacts
         uses: actions/upload-artifact@v4
