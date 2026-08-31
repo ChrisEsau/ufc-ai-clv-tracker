@@ -115,11 +115,13 @@ def build_snapshot_market():
         raise RuntimeError("No DraftKings moneyline rows in market_intelligence_history match draftkings_raw_index snapshot_run_ids")
 
     hist = hist.merge(run_meta, left_on="source_run_id", right_on="snapshot_run_id", how="inner", validate="many_to_one")
+    # Normalize the indexed run key after merge. Some pandas versions/schemas can
+    # suffix/drop the left join key when an equivalent key is also present.
+    hist["source_run_id"] = hist["snapshot_run_id"].astype(str)
     hist["american_odds"] = pd.to_numeric(hist["american_odds"], errors="coerce")
     hist["implied_probability"] = pd.to_numeric(hist["implied_probability"], errors="coerce")
     hist = hist.dropna(subset=["fight_id", "fighter_name", "implied_probability", "american_odds"]).copy()
 
-    # Collapse duplicate refresh copies of the same indexed snapshot/selection.
     hist = hist.sort_values("refresh_timestamp").drop_duplicates(
         ["source_run_id", "fight_id", "comparison_key"], keep="last"
     )
