@@ -1,5 +1,6 @@
 name: Research XGBoost Six-Way Method 2025-2026 ROI Walk-Forward
 
+# Primary betting gate is frozen from chronological 2021-2024 OOF diagnostics.
 on:
   push:
     branches:
