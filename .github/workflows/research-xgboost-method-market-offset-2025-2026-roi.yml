@@ -1,0 +1,60 @@
+name: Research XGBoost Six-Way Method 2025-2026 ROI Walk-Forward
+
+on:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - .github/workflows/research-xgboost-method-market-offset-2025-2026-roi.yml
+      - pipeline/research/xgboost_method_market_offset_walkforward_roi.py
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  method-roi-walk-forward:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout research branch
+        uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+          fetch-depth: 0
+
+      - name: Set up exact Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.16"
+
+      - name: Install frozen environment
+        run: |
+          python -m pip install --upgrade pip==26.2.1
+          pip install pandas==3.0.5 pyarrow==25.0.1 numpy==2.4.6 scikit-learn==1.9.0 scipy==1.17.1 xgboost==3.2.0 joblib==1.5.3 threadpoolctl==3.6.0 python-dateutil==2.9.0.post0
+
+      - name: Run strict 2025-2026 chronological ROI walk-forward
+        run: |
+          python pipeline/research/xgboost_method_market_offset_walkforward_roi.py
+
+      - name: Upload ROI artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: xgboost-method-2025-2026-roi-walkforward
+          path: |
+            data/research/prop_mispricing/xgboost_method_market_offset__2025_2026_walkforward_predictions.csv
+            data/research/prop_mispricing/xgboost_method_market_offset__2025_2026_roi_bet_ledger.csv
+            data/research/prop_mispricing/xgboost_method_market_offset__2025_2026_roi_summary.json
+            data/research/prop_mispricing/xgboost_method_market_offset__2025_2026_roi_thresholds.csv
+            data/research/prop_mispricing/xgboost_method_market_offset__2025_2026_roi_by_year.csv
+            data/research/prop_mispricing/xgboost_method_market_offset__2025_2026_roi_by_class.csv
+            data/research/prop_mispricing/xgboost_method_market_offset__2025_2026_roi_edge_buckets.csv
+
+      - name: Commit ROI outputs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f data/research/prop_mispricing/xgboost_method_market_offset__2025_2026_*.csv data/research/prop_mispricing/xgboost_method_market_offset__2025_2026_*.json
+          git diff --cached --quiet && exit 0
+          git commit -m "research: add six-way method 2025-2026 ROI walk-forward results"
+          git pull --rebase origin research/ufc-prop-mispricing-xgboost-20260829
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
