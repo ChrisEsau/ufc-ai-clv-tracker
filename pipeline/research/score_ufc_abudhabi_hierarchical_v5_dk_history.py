@@ -34,8 +34,7 @@ CARD=[
 def norm(x):
     s=''.join(c for c in unicodedata.normalize('NFKD',str(x)) if not unicodedata.combining(c))
     s=re.sub(r'[^a-z0-9]+','',s.lower())
-    aliases={'ramazantemirov':'ramazonbektemirov'}
-    return aliases.get(s,s)
+    return s.replace('ramazantemirov','ramazonbektemirov')
 
 def main():
     OUT.mkdir(parents=True,exist_ok=True)
@@ -53,14 +52,13 @@ def main():
             raise RuntimeError(f'{red} vs {blue}: expected 6 final-snapshot rows, got {len(pair)}')
         rec={'fight_id':f'dkabu_{i:02d}','red_fighter':red,'blue_fighter':blue,'v5_p_red':pred,'target_slug':target,'snapshot_timestamp':pair.refresh_timestamp.iloc[0]}
         raw=[]
-        odds=[]
         for fighter,side in [(red,'red'),(blue,'blue')]:
             for meth in ['ko','sub','dec']:
                 z=pair[(pair.fighter_norm==norm(fighter))&(pair.meth==meth)]
                 if len(z)!=1: raise RuntimeError(f'{fighter} {meth}: {len(z)} rows')
                 rr=z.iloc[0]
                 rec[f'odds_{side}_{meth}']=float(rr.american_odds)
-                raw.append(float(rr.implied_probability)); odds.append(float(rr.american_odds))
+                raw.append(float(rr.implied_probability))
         raw=np.asarray(raw,float); fair=raw/raw.sum()
         for j,slug in enumerate(SLUGS): rec[f'market_{slug}']=fair[j]
         rows.append(rec)
@@ -90,8 +88,7 @@ def main():
         ps='red' if r.v5_p_red>=.5 else 'blue'
         for meth in ['ko','sub','dec']:
             s=f'{ps}_{meth}'; resid=float(r[f'residual_{s}'])
-            odds=float(r[f'odds_{s}'])
-            dec=decimal_from_american(odds)
+            odds=float(r[f'odds_{s}']); dec=decimal_from_american(odds)
             won=int(r.target_slug==s)
             br.append({'fight_id':r.fight_id,'red_fighter':r.red_fighter,'blue_fighter':r.blue_fighter,'projected_side':ps,'bet_fighter':r[f'{ps}_fighter'],'bet_method':meth.upper(),'american_odds':odds,'model_probability':float(r[f'hier_{s}']),'normalized_market_probability':float(r[f'market_{s}']),'signed_logit_residual':resid,'qualifies_030':resid>=THRESHOLD,'actual_slug':r.target_slug,'won':won,'profit_if_flat1':(dec-1 if won else -1),'snapshot_timestamp':r.snapshot_timestamp})
     diag=pd.DataFrame(br).sort_values('signed_logit_residual',ascending=False)
