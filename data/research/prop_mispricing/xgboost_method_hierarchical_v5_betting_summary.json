@@ -3,7 +3,7 @@
   "model": "new hierarchical V5 exact-method model only",
   "period": "chronological 2021-2024 OOF",
   "rule": {
-    "winner_side": "red if frozen V5 P(red)> =0.5 else blue",
+    "winner_side": "red if frozen V5 P(red) >= 0.5 else blue",
     "eligible_methods": "KO/SUB/DEC on predicted winner side only",
     "signed_logit_residual_threshold": 0.3,
     "multiple_bets_per_fight_allowed": true,
