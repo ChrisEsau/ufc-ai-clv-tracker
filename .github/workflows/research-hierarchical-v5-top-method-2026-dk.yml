@@ -1,0 +1,41 @@
+name: Research Hierarchical V5 Top Method 2026 DK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research/ufc-prop-mispricing-xgboost-20260829
+    paths:
+      - pipeline/research/evaluate_hierarchical_v5_top_method_2026_dk.py
+      - .github/workflows/research-hierarchical-v5-top-method-2026-dk.yml
+
+permissions:
+  contents: write
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/ufc-prop-mispricing-xgboost-20260829
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.16"
+      - name: Install environment
+        run: |
+          python -m pip install --upgrade pip==26.2.1
+          pip install pandas==3.0.5 pyarrow==25.0.1 numpy==2.4.6
+      - name: Evaluate top method policy
+        run: python -m pipeline.research.evaluate_hierarchical_v5_top_method_2026_dk
+      - name: Commit outputs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f \
+            data/research/prop_mispricing/hierarchical_v5_top_method_2026_dk_ledger.csv \
+            data/research/prop_mispricing/hierarchical_v5_top_method_2026_dk_summary.json
+          git diff --cached --quiet && exit 0
+          git commit -m "research: add top-method 2026 DK holdout results"
+          git push origin HEAD:research/ufc-prop-mispricing-xgboost-20260829
