@@ -19,7 +19,6 @@ FROZEN_FEATURES = Path("/tmp/v5_frozen/moneyline_feature_view.parquet")
 CURRENT_FEATURES = Path("data/features/moneyline_feature_view.parquet")
 INDEX = Path("data/market/draftkings_raw_index.parquet")
 HISTORY = Path("data/market/market_intelligence_history.parquet")
-MASTER = Path("data/master/ufc_master.parquet")
 V5_SUMMARY = OUT / "xgboost_v5_exact_reproduction_summary.json"
 
 CFG = {
@@ -39,9 +38,27 @@ def logit(x):
     return np.log(p / (1 - p))
 
 
-def norm_name(x):
+def norm_text(x):
     s = unicodedata.normalize("NFKD", str(x)).encode("ascii", "ignore").decode("ascii").lower()
     return re.sub(r"[^a-z0-9]+", "", s)
+
+
+def norm_name(x):
+    return norm_text(x)
+
+
+def token_name(x):
+    s = unicodedata.normalize("NFKD", str(x)).encode("ascii", "ignore").decode("ascii").lower()
+    toks = re.findall(r"[a-z0-9]+", s)
+    return "".join(sorted(toks))
+
+
+def pair_key(a, b):
+    return "||".join(sorted([norm_name(a), norm_name(b)]))
+
+
+def token_pair_key(a, b):
+    return "||".join(sorted([token_name(a), token_name(b)]))
 
 
 def selected_features():
@@ -82,34 +99,21 @@ def train_v5(fs):
     return booster, med, cols, len(df), str(df.date.max().date())
 
 
-def orientation_table():
-    # Prefer the current moneyline feature view, because its signed *_diff columns
-    # define the exact red-minus-blue orientation consumed by V5.
+def build_feature_lookup(fs):
     fv = pd.read_parquet(CURRENT_FEATURES).copy()
-    candidates = [
-        ("r_name", "b_name"), ("red_fighter", "blue_fighter"),
-        ("red_name", "blue_name"), ("fighter_red", "fighter_blue"),
-    ]
-    for rcol, bcol in candidates:
-        if rcol in fv.columns and bcol in fv.columns:
-            return fv[["fight_id", rcol, bcol]].drop_duplicates("fight_id").rename(
-                columns={rcol: "red_name", bcol: "blue_name"}
-            )
-
-    # Fallback to master if the feature view intentionally omits names.
-    master = pd.read_parquet(MASTER).copy()
-    for rcol, bcol in candidates:
-        if rcol in master.columns and bcol in master.columns:
-            return master[["fight_id", rcol, bcol]].drop_duplicates("fight_id").rename(
-                columns={rcol: "red_name", bcol: "blue_name"}
-            )
-    raise RuntimeError(
-        "Could not locate RED/BLUE fighter-name columns in current feature view or master. "
-        f"feature columns sample={list(fv.columns)[:40]} master columns sample={list(master.columns)[:40]}"
-    )
+    required = ["fight_id", "date", "event_name", "r_name", "b_name"] + fs
+    miss = [c for c in required if c not in fv.columns]
+    if miss:
+        raise RuntimeError(f"Current feature view missing required columns: {miss}")
+    fv = fv[required].drop_duplicates("fight_id").copy()
+    fv["date"] = pd.to_datetime(fv["date"], errors="coerce").dt.normalize()
+    fv["event_norm"] = fv["event_name"].map(norm_text)
+    fv["pair_key"] = [pair_key(a, b) for a, b in zip(fv.r_name, fv.b_name)]
+    fv["token_pair_key"] = [token_pair_key(a, b) for a, b in zip(fv.r_name, fv.b_name)]
+    return fv
 
 
-def indexed_moneylines():
+def indexed_moneylines(fs):
     idx = pd.read_parquet(INDEX).copy()
     idx["snapshot_timestamp"] = pd.to_datetime(idx["snapshot_timestamp"], errors="coerce", utc=True)
     idx = idx[idx.snapshot_timestamp.notna()].copy()
@@ -128,27 +132,61 @@ def indexed_moneylines():
         raise RuntimeError("No DraftKings moneyline history rows correspond to raw-index snapshot_run_ids")
     h = h.merge(meta, left_on="source_run_id", right_on="snapshot_run_id", how="inner", validate="many_to_one")
     h["run_id"] = h["snapshot_run_id"].astype(str)
+    h["indexed_pair_id"] = h["fight_id"].astype(str)
+    h["fighter_name"] = h["outcome_display"].astype("string")
     h["american_odds"] = pd.to_numeric(h["american_odds"], errors="coerce")
     h["implied_probability"] = pd.to_numeric(h["implied_probability"], errors="coerce")
-    h = h.dropna(subset=["fight_id", "fighter_name", "american_odds", "implied_probability"]).copy()
+    h = h.dropna(subset=["indexed_pair_id", "fight_display", "fighter_name", "american_odds", "implied_probability"]).copy()
 
-    orient = orientation_table()
-    h = h.merge(orient, on="fight_id", how="left", validate="many_to_one")
-    h["fighter_norm"] = h["fighter_name"].map(norm_name)
-    h["red_norm"] = h["red_name"].map(norm_name)
-    h["blue_norm"] = h["blue_name"].map(norm_name)
-    h["orientation_side"] = np.where(
-        h.fighter_norm.eq(h.red_norm), "red",
-        np.where(h.fighter_norm.eq(h.blue_norm), "blue", None),
+    # Build the fighter pair from the two moneyline outcomes rather than trusting the synthetic fight id.
+    pairs = (h.groupby(["indexed_pair_id", "event_name"], as_index=False)
+             .agg(pair_fighters=("fighter_name", lambda s: list(dict.fromkeys(str(x) for x in s if pd.notna(x))))))
+    pairs = pairs[pairs.pair_fighters.map(len).eq(2)].copy()
+    pairs["pair_key"] = pairs.pair_fighters.map(lambda x: pair_key(x[0], x[1]))
+    pairs["token_pair_key"] = pairs.pair_fighters.map(lambda x: token_pair_key(x[0], x[1]))
+    pairs["event_norm"] = pairs.event_name.map(norm_text)
+
+    fl = build_feature_lookup(fs)
+    exact = pairs.merge(
+        fl[["fight_id", "date", "event_name", "event_norm", "r_name", "b_name", "pair_key"]],
+        on=["event_norm", "pair_key"], how="left", suffixes=("_market", "_feature")
     )
-    unmatched = h.orientation_side.isna()
-    if unmatched.any():
-        sample = h.loc[unmatched, ["fight_id", "fighter_name", "red_name", "blue_name"]].drop_duplicates().head(20)
-        print("UNMATCHED_FIGHTER_ORIENTATION_SAMPLE")
-        print(sample.to_string(index=False))
+    exact_good = exact[exact.fight_id.notna()].copy()
+    exact_map = exact_good.sort_values("date").drop_duplicates("indexed_pair_id", keep="last")
+    mapped_ids = set(exact_map.indexed_pair_id)
+
+    # Token-order-insensitive fallback handles provider naming reversals such as Cong Wang / Wang Cong.
+    left = pairs[~pairs.indexed_pair_id.isin(mapped_ids)].copy()
+    tok = left.merge(
+        fl[["fight_id", "date", "event_name", "event_norm", "r_name", "b_name", "token_pair_key"]],
+        on=["event_norm", "token_pair_key"], how="left", suffixes=("_market", "_feature")
+    )
+    tok_good = tok[tok.fight_id.notna()].copy()
+    tok_map = tok_good.sort_values("date").drop_duplicates("indexed_pair_id", keep="last")
+
+    map_cols = ["indexed_pair_id", "fight_id", "date", "r_name", "b_name"]
+    mapping = pd.concat([exact_map[map_cols], tok_map[map_cols]], ignore_index=True).drop_duplicates("indexed_pair_id")
+    if mapping.empty:
+        raise RuntimeError("No indexed DraftKings fighter pairs matched canonical V5 feature fights by event + fighter pair")
+
+    unmatched_pairs = pairs[~pairs.indexed_pair_id.isin(set(mapping.indexed_pair_id))]
+    print(f"PAIR_MAPPING matched={len(mapping)} total={len(pairs)} unmatched={len(unmatched_pairs)}")
+    if not unmatched_pairs.empty:
+        print("UNMATCHED_PAIR_SAMPLE")
+        print(unmatched_pairs[["event_name", "pair_fighters"]].head(25).to_string(index=False))
+
+    h = h.merge(mapping, on="indexed_pair_id", how="inner", validate="many_to_one")
+    h["fighter_norm"] = h.fighter_name.map(norm_name)
+    h["fighter_token"] = h.fighter_name.map(token_name)
+    h["red_norm"] = h.r_name.map(norm_name)
+    h["blue_norm"] = h.b_name.map(norm_name)
+    h["red_token"] = h.r_name.map(token_name)
+    h["blue_token"] = h.b_name.map(token_name)
+    h["orientation_side"] = np.where(
+        h.fighter_norm.eq(h.red_norm) | h.fighter_token.eq(h.red_token), "red",
+        np.where(h.fighter_norm.eq(h.blue_norm) | h.fighter_token.eq(h.blue_token), "blue", None),
+    )
     h = h[h.orientation_side.isin(["red", "blue"])].copy()
-    if h.empty:
-        raise RuntimeError("No DraftKings fighter names matched V5 RED/BLUE orientation metadata")
 
     h = h.sort_values("refresh_timestamp").drop_duplicates(
         ["run_id", "fight_id", "orientation_side"], keep="last"
@@ -157,26 +195,22 @@ def indexed_moneylines():
     good = counts[counts.eq(2)].reset_index()[["run_id", "fight_id"]]
     h = h.merge(good, on=["run_id", "fight_id"], how="inner", validate="many_to_one")
     if h.empty:
-        raise RuntimeError("No complete two-sided DraftKings indexed moneyline snapshots after orientation matching")
+        raise RuntimeError("No complete two-sided indexed moneyline snapshots remained after canonical pair mapping")
 
     h["market_overround"] = h.groupby(["run_id", "fight_id"])["implied_probability"].transform("sum")
     h["fair_market_p"] = h["implied_probability"] / h["market_overround"]
-    return h
+    return h, len(pairs), len(mapping), len(unmatched_pairs)
 
 
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     fs = selected_features()
     booster, med, cols, train_n, train_end = train_v5(fs)
-    mk = indexed_moneylines()
+    mk, pair_total, pair_mapped, pair_unmatched = indexed_moneylines(fs)
 
-    fv = pd.read_parquet(CURRENT_FEATURES).copy()
-    miss = [c for c in fs if c not in fv.columns]
-    if miss:
-        raise RuntimeError(f"Current feature view missing V5 features: {miss}")
-    fv = fv[["fight_id"] + fs].drop_duplicates("fight_id")
-
-    red = mk[mk.orientation_side.eq("red")].merge(fv, on="fight_id", how="inner", validate="many_to_one")
+    fv = build_feature_lookup(fs)
+    feature_cols = ["fight_id"] + fs
+    red = mk[mk.orientation_side.eq("red")].merge(fv[feature_cols], on="fight_id", how="inner", validate="many_to_one")
     if red.empty:
         raise RuntimeError("No complete indexed moneyline snapshot has a current V5 feature row")
     X0 = red[fs].replace([np.inf, -np.inf], np.nan).copy()
@@ -198,7 +232,7 @@ def main():
     scored["abs_edge"] = scored.edge.abs()
 
     out_cols = [
-        "index_snapshot_timestamp", "run_id", "fight_id", "event_name", "fighter_name", "orientation_side",
+        "index_snapshot_timestamp", "run_id", "indexed_pair_id", "fight_id", "date", "event_name", "fighter_name", "orientation_side",
         "american_odds", "implied_probability", "market_overround", "fair_market_p", "v5_model_p", "edge", "abs_edge",
         "tree_correction_logit_red", "market_logit_red", "model_logit_red", "indexed_payloads", "indexed_events"
     ]
@@ -206,7 +240,7 @@ def main():
     out.to_csv(PRED, index=False)
     latest = (out.sort_values("index_snapshot_timestamp")
               .drop_duplicates(["fight_id", "fighter_name"], keep="last")
-              .sort_values(["fight_id", "orientation_side"]).reset_index(drop=True))
+              .sort_values(["date", "fight_id", "orientation_side"]).reset_index(drop=True))
     latest.to_csv(LATEST, index=False)
 
     s = {
@@ -214,10 +248,13 @@ def main():
         "training_source_commit": "7df1b61126be1f4e036b256d1c774c531b8a281f",
         "training_rows": int(train_n), "training_end_date": train_end, "feature_count": len(cols),
         "indexed_snapshot_runs_available": int(pd.read_parquet(INDEX)["snapshot_run_id"].nunique()),
+        "indexed_pairs_total": int(pair_total), "indexed_pairs_mapped": int(pair_mapped), "indexed_pairs_unmatched": int(pair_unmatched),
         "indexed_snapshot_runs_scored": int(out.run_id.nunique()),
         "indexed_fights_scored": int(out.fight_id.nunique()),
         "snapshot_fight_instances": int(out[["run_id", "fight_id"]].drop_duplicates().shape[0]),
         "snapshot_side_rows": int(len(out)),
+        "fight_date_min": str(pd.to_datetime(out.date).min().date()),
+        "fight_date_max": str(pd.to_datetime(out.date).max().date()),
         "snapshot_min": str(out.index_snapshot_timestamp.min()),
         "snapshot_max": str(out.index_snapshot_timestamp.max()),
         "mean_abs_edge": float(out.abs_edge.mean()), "max_abs_edge": float(out.abs_edge.max()),
@@ -225,7 +262,7 @@ def main():
         "positive_edges_ge_0_075": int((out.edge >= .075).sum()),
         "positive_edges_ge_0_10": int((out.edge >= .10).sum()),
         "latest_side_rows": int(len(latest)),
-        "notes": "Raw index defines eligible DraftKings snapshot runs; normalized moneyline rows come from market_intelligence_history; fighter names are aligned to the signed V5 RED/BLUE orientation. Frozen V5 architecture and selected features unchanged."
+        "notes": "Raw index defines eligible DraftKings snapshot runs. Synthetic market fight IDs are mapped to canonical V5 fights by normalized event + exact fighter pair, with token-order-insensitive fallback. Frozen V5 architecture and selected features unchanged."
     }
     SUMMARY.write_text(json.dumps(s, indent=2), encoding="utf-8")
     print(json.dumps(s, indent=2))
