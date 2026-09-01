@@ -6,6 +6,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+# Fixed-rule descriptive audit only: no threshold tuning in this script.
 FEATURE_PATH = Path("data/features/moneyline_feature_view.parquet")
 MARKET_PATH = Path("data/market/historical_market_outcomes.parquet")
 FREEZE_PATH = Path("data/research/prop_mispricing/ko_market_archetype_2026_freeze.json")
