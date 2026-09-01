@@ -5,6 +5,7 @@ on:
     branches: [research/ufc-prop-mispricing-xgboost-20260829]
     paths:
       - 'pipeline/research/analyze_ko_method_route_reallocation.py'
+      - 'pipeline/research/postprocess_ko_method_route_reallocation.py'
       - '.github/workflows/research-ko-method-route-reallocation-audit.yml'
   workflow_dispatch:
 
@@ -49,6 +50,9 @@ jobs:
       - name: Run winner-conditioned KO/SUB/DEC route reallocation audit
         run: python -m pipeline.research.analyze_ko_method_route_reallocation
 
+      - name: Run baseline and market-correct-winner interpretation controls
+        run: python -m pipeline.research.postprocess_ko_method_route_reallocation
+
       - name: Upload route reallocation artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -62,5 +66,8 @@ jobs:
             data/research/prop_mispricing/ko_method_route_reallocation_group_periods.csv
             data/research/prop_mispricing/ko_method_route_reallocation_group_summary.csv
             data/research/prop_mispricing/ko_method_route_reallocation_route_pairs.csv
+            data/research/prop_mispricing/ko_method_route_reallocation_baseline_adjusted_groups.csv
+            data/research/prop_mispricing/ko_method_route_reallocation_market_correct_winner_groups.csv
+            data/research/prop_mispricing/ko_method_route_reallocation_feature_extreme_deltas.csv
 
 # Research-only diagnostic. Do not merge PR #96 without explicit approval.
