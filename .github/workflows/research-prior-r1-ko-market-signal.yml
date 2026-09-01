@@ -1,0 +1,39 @@
+name: Research Prior R1 KO Market Signal
+
+on:
+  push:
+    branches:
+      - research/ko-method-edge-xgb-20260831
+    paths:
+      - 'pipeline/research/audit_prior_r1_ko_market_signal.py'
+      - '.github/workflows/research-prior-r1-ko-market-signal.yml'
+  workflow_dispatch:
+
+jobs:
+  prior-r1-ko-audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11.16'
+
+      - name: Install pinned research environment
+        run: |
+          python -m pip install --upgrade pip==26.2.1
+          pip install pandas==3.0.5 pyarrow==25.0.1 numpy==2.4.6 scikit-learn==1.9.0 scipy==1.17.1 xgboost==3.2.0
+
+      - name: Run prior R1 KO audit
+        run: python -m pipeline.research.audit_prior_r1_ko_market_signal
+
+      - name: Upload audit artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: prior-r1-ko-market-signal
+          path: |
+            data/research/prop_mispricing/prior_r1_ko_market_signal_summary.csv
+            data/research/prop_mispricing/prior_r1_ko_june_aug_2026_archetype.csv
+            data/research/prop_mispricing/prior_r1_ko_market_signal_rows.csv
