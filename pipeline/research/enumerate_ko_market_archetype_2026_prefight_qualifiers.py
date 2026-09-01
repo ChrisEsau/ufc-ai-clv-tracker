@@ -55,8 +55,8 @@ def main() -> None:
     cols = ["date", "fight_id", "side", "min_prior_ufc_fights"] + FEATURES
     q[cols].to_csv(OUT, index=False)
     SUMMARY.write_text(json.dumps({
-        "selection_used_outcomes": false,
-        "selection_used_market_prices": false,
+        "selection_used_outcomes": False,
+        "selection_used_market_prices": False,
         "feature_view_first_2026_date": df["date"].min().date().isoformat() if len(df) else None,
         "feature_view_last_2026_date": df["date"].max().date().isoformat() if len(df) else None,
         "feature_view_2026_fights": int(len(df)),
