@@ -1,0 +1,36 @@
+name: Research Frozen KO Archetype 2026 Prefight Enumeration
+
+on:
+  pull_request:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths:
+      - 'pipeline/research/enumerate_ko_market_archetype_2026_prefight_qualifiers.py'
+      - 'data/research/prop_mispricing/ko_market_archetype_2026_freeze.json'
+      - '.github/workflows/research-ko-market-archetype-2026-prefight-enumeration.yml'
+  workflow_dispatch:
+
+jobs:
+  enumerate-prefight-qualifiers:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11.16'
+      - name: Install data dependencies
+        run: |
+          python -m pip install --upgrade pip==26.2.1
+          pip install pandas==3.0.5 pyarrow==25.0.1 numpy==2.4.6
+      - name: Show freeze chronology
+        run: |
+          git log -1 --format='%H %s' -- data/research/prop_mispricing/ko_market_archetype_2026_freeze.json
+          git log -1 --format='%H %s' -- pipeline/research/enumerate_ko_market_archetype_2026_prefight_qualifiers.py
+      - name: Enumerate qualifiers using prefight features only
+        run: python -m pipeline.research.enumerate_ko_market_archetype_2026_prefight_qualifiers
+      - name: Upload enumeration artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ko-market-archetype-2026-prefight-enumeration
+          path: |
+            data/research/prop_mispricing/ko_market_archetype_2026_prefight_qualifiers.csv
+            data/research/prop_mispricing/ko_market_archetype_2026_prefight_qualifiers_summary.json
