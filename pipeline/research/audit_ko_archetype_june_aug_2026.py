@@ -8,7 +8,7 @@ import pandas as pd
 
 # Fixed-rule descriptive audit only: no threshold tuning in this script.
 FEATURE_PATH = Path("data/features/moneyline_feature_view.parquet")
-MARKET_PATH = Path("data/market/historical_market_outcomes.parquet")
+MASTER_PATH = Path("data/master/ufc_master.parquet")
 FREEZE_PATH = Path("data/research/prop_mispricing/ko_market_archetype_2026_freeze.json")
 OUT_ALL = Path("data/research/prop_mispricing/ko_archetype_june_aug_2026_all_sides.csv")
 OUT_NEAR = Path("data/research/prop_mispricing/ko_archetype_june_aug_2026_exact_and_near_misses.csv")
@@ -17,40 +17,17 @@ OUT_SUMMARY = Path("data/research/prop_mispricing/ko_archetype_june_aug_2026_sum
 START = pd.Timestamp("2026-06-01")
 END = pd.Timestamp("2026-08-22")
 FEATURES = ["height_diff", "ewm_str_acc_diff", "aggression_index_diff", "recent_form_win_streak_diff"]
-METHOD_MAP = {
-    "win_by_ko_tko_dq": "KO",
-    "win_by_submission": "SUB",
-    "win_by_decision": "DEC",
-}
 
 
-def _market_names_and_results() -> tuple[pd.DataFrame, pd.DataFrame]:
-    m = pd.read_parquet(MARKET_PATH, filters=[("date", ">=", START), ("date", "<=", END)]).copy()
-    m["date"] = pd.to_datetime(m["date"], errors="coerce")
-    m["fight_id"] = m["fight_id"].astype(str)
-
-    # Names are metadata only; do not use any price field for selection/ranking.
-    names = (
-        m[m["outcome_side"].astype(str).isin(["red", "blue"])]
-        .sort_values(["date", "fight_id"])
-        .groupby(["fight_id", "outcome_side"], as_index=False)
-        .agg(fighter=("outcome_label", "first"), event_name=("event_name", "first"))
-    )
-    red = names[names["outcome_side"].eq("red")][["fight_id", "fighter", "event_name"]].rename(columns={"fighter": "red_fighter"})
-    blue = names[names["outcome_side"].eq("blue")][["fight_id", "fighter"]].rename(columns={"fighter": "blue_fighter"})
-    fight_names = red.merge(blue, on="fight_id", how="outer")
-
-    # Outcome is attached only after feature-based selection is defined.
-    graded = m[(m["result_status"] == "graded") & m["won"].notna()].copy()
-    graded["won_bool"] = graded["won"].astype(bool)
-    won = graded[graded["won_bool"] & graded["market_key"].isin(METHOD_MAP)].copy()
-    won["win_method"] = won["market_key"].map(METHOD_MAP)
-    results = (
-        won.sort_values(["date", "fight_id"])
-        .groupby("fight_id", as_index=False)
-        .agg(winner_side=("outcome_side", "first"), win_method=("win_method", "first"))
-    )
-    return fight_names, results
+def _method_bucket(value: object) -> str | None:
+    text = str(value).upper()
+    if "KO" in text or "TKO" in text:
+        return "KO"
+    if "SUB" in text:
+        return "SUB"
+    if "DEC" in text:
+        return "DEC"
+    return None
 
 
 def main() -> None:
@@ -60,21 +37,28 @@ def main() -> None:
     df = pd.read_parquet(FEATURE_PATH, filters=[("date", ">=", START), ("date", "<=", END)]).copy()
     df["date"] = pd.to_datetime(df["date"], errors="coerce")
     df["fight_id"] = df["fight_id"].astype(str)
-    required = ["fight_id", "date", "r_pre_fights", "b_pre_fights"] + FEATURES
+    if "state_fight_id" not in df.columns:
+        df["state_fight_id"] = df["fight_id"]
+    df["state_fight_id"] = df["state_fight_id"].astype(str)
+    required = ["fight_id", "state_fight_id", "date", "r_id", "b_id", "r_pre_fights", "b_pre_fights"] + FEATURES
     missing = [c for c in required if c not in df.columns]
     if missing:
         raise RuntimeError(f"missing feature-view columns: {missing}")
     df = df[required].drop_duplicates("fight_id").sort_values(["date", "fight_id"]).reset_index(drop=True)
 
-    names, results = _market_names_and_results()
-    df = df.merge(names, on="fight_id", how="left")
+    master = pd.read_parquet(MASTER_PATH, filters=[("date", ">=", START), ("date", "<=", END)]).copy()
+    master["fight_id"] = master["fight_id"].astype(str)
+    keep = [c for c in ["fight_id", "event_name", "r_id", "b_id", "r_name", "b_name", "winner_id", "method", "division"] if c in master.columns]
+    master = master[keep].drop_duplicates("fight_id").rename(columns={"fight_id": "master_fight_id"})
+    df = df.merge(master, left_on="state_fight_id", right_on="master_fight_id", how="left", suffixes=("", "_master"))
 
     parts = []
     for side, sign in [("red", 1.0), ("blue", -1.0)]:
         x = df.copy()
         x["side"] = side
-        x["fighter"] = np.where(side == "red", x.get("red_fighter"), x.get("blue_fighter"))
-        x["opponent"] = np.where(side == "red", x.get("blue_fighter"), x.get("red_fighter"))
+        x["fighter"] = np.where(side == "red", x.get("r_name"), x.get("b_name"))
+        x["opponent"] = np.where(side == "red", x.get("b_name"), x.get("r_name"))
+        x["side_fighter_id"] = np.where(side == "red", x["r_id"].astype(str), x["b_id"].astype(str))
         for c in FEATURES:
             x[c] = pd.to_numeric(x[c], errors="coerce") * sign
         x["min_prior_ufc_fights"] = pd.concat([
@@ -107,23 +91,24 @@ def main() -> None:
     rows["aggression_margin"] = rows["aggression_index_diff"] - thresholds["aggression"][1]
     rows["streak_margin"] = rows["recent_form_win_streak_diff"] - thresholds["streak"][1]
 
-    # Attach outcomes only after all feature-based qualification columns are complete.
-    rows = rows.merge(results, on="fight_id", how="left")
+    # Outcome is descriptive and attached only after feature qualification is determined.
+    rows["winner_id_str"] = rows.get("winner_id").astype(str) if "winner_id" in rows.columns else np.nan
+    rows["win_method"] = rows.get("method").map(_method_bucket) if "method" in rows.columns else np.nan
     rows["actual_result"] = np.where(
-        rows["winner_side"].isna(),
+        rows["winner_id_str"].isin(["nan", "None"]),
         np.nan,
-        np.where(rows["side"].eq(rows["winner_side"]), "WIN_" + rows["win_method"].astype(str), "LOSS"),
+        np.where(rows["side_fighter_id"].eq(rows["winner_id_str"]), "WIN_" + rows["win_method"].astype(str), "LOSS"),
     )
 
     cols = [
-        "date", "event_name", "fight_id", "fighter", "opponent", "side",
-        "min_prior_ufc_fights", "conditions_passed", "exact_qualifier", "failed_conditions",
-        "actual_result",
+        "date", "event_name", "division", "fight_id", "state_fight_id", "fighter", "opponent", "side",
+        "min_prior_ufc_fights", "conditions_passed", "exact_qualifier", "failed_conditions", "actual_result",
         "height_diff", "height_margin", "pass_height",
         "ewm_str_acc_diff", "accuracy_margin", "pass_accuracy",
         "aggression_index_diff", "aggression_margin", "pass_aggression",
         "recent_form_win_streak_diff", "streak_margin", "pass_streak",
     ]
+    cols = [c for c in cols if c in rows.columns]
     all_rows = rows[cols].sort_values(["date", "fight_id", "side"]).reset_index(drop=True)
     near = all_rows[all_rows["conditions_passed"].ge(3)].copy()
     near = near.sort_values(["exact_qualifier", "conditions_passed", "date"], ascending=[False, False, True]).reset_index(drop=True)
@@ -138,9 +123,7 @@ def main() -> None:
         "eligible_fighter_sides": int(len(all_rows)),
         "exact_qualifiers": int(all_rows["exact_qualifier"].sum()),
         "three_of_four_near_misses": int((all_rows["conditions_passed"] == 3).sum()),
-        "near_miss_failed_condition_counts": (
-            all_rows.loc[all_rows["conditions_passed"].eq(3), "failed_conditions"].value_counts().to_dict()
-        ),
+        "near_miss_failed_condition_counts": all_rows.loc[all_rows["conditions_passed"].eq(3), "failed_conditions"].value_counts().to_dict(),
         "exact_rows": all_rows[all_rows["exact_qualifier"]].assign(date=lambda z: z["date"].astype(str)).to_dict(orient="records"),
     }
     OUT_SUMMARY.write_text(json.dumps(summary, indent=2, default=str))
