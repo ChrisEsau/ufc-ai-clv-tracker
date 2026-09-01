@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 FEATURE_PATH = Path("data/features/moneyline_feature_view.parquet")
@@ -24,7 +23,7 @@ def main() -> None:
 
     df = pd.read_parquet(FEATURE_PATH, filters=[("date", ">=", START), ("date", "<=", END)]).copy()
     df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    required = ["fight_id", "date", "r_fighter", "b_fighter", "r_pre_fights", "b_pre_fights"] + FEATURES
+    required = ["fight_id", "date", "r_pre_fights", "b_pre_fights"] + FEATURES
     missing = [c for c in required if c not in df.columns]
     if missing:
         raise RuntimeError(f"missing feature-view columns: {missing}")
@@ -32,10 +31,8 @@ def main() -> None:
 
     parts = []
     for side, sign in [("red", 1.0), ("blue", -1.0)]:
-        x = df[["fight_id", "date", "r_fighter", "b_fighter", "r_pre_fights", "b_pre_fights"] + FEATURES].copy()
+        x = df.copy()
         x["side"] = side
-        x["fighter"] = np.where(side == "red", x["r_fighter"], x["b_fighter"])
-        x["opponent"] = np.where(side == "red", x["b_fighter"], x["r_fighter"])
         for c in FEATURES:
             x[c] = pd.to_numeric(x[c], errors="coerce") * sign
         x["min_prior_ufc_fights"] = pd.concat([
@@ -55,9 +52,11 @@ def main() -> None:
     )
     q = rows.loc[mask].copy().sort_values(["date", "fight_id", "side"]).reset_index(drop=True)
 
-    cols = ["date", "fight_id", "fighter", "opponent", "side", "min_prior_ufc_fights"] + FEATURES
+    cols = ["date", "fight_id", "side", "min_prior_ufc_fights"] + FEATURES
     q[cols].to_csv(OUT, index=False)
     SUMMARY.write_text(json.dumps({
+        "selection_used_outcomes": false,
+        "selection_used_market_prices": false,
         "feature_view_first_2026_date": df["date"].min().date().isoformat() if len(df) else None,
         "feature_view_last_2026_date": df["date"].max().date().isoformat() if len(df) else None,
         "feature_view_2026_fights": int(len(df)),
