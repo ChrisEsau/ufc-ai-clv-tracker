@@ -1,0 +1,59 @@
+name: Research Frozen TOP50 KO 2025 Holdout
+
+on:
+  pull_request:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths:
+      - 'pipeline/research/xgboost_ko_projected_winner_top50_holdout_2025.py'
+      - 'data/research/prop_mispricing/xgboost_ko_projected_winner_top50_freeze.json'
+      - '.github/workflows/research-ko-projected-winner-top50-holdout-2025.yml'
+
+jobs:
+  frozen-top50-ko-2025:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout research branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up exact Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11.16'
+
+      - name: Install pinned V5 environment
+        run: |
+          python -m pip install --upgrade pip==26.2.1
+          pip install \
+            pandas==3.0.5 \
+            pyarrow==25.0.1 \
+            numpy==2.4.6 \
+            scikit-learn==1.9.0 \
+            scipy==1.17.1 \
+            xgboost==3.2.0 \
+            joblib==1.5.3 \
+            threadpoolctl==3.6.0 \
+            python-dateutil==2.9.0.post0
+
+      - name: Materialize exact frozen V5 snapshot inputs
+        run: |
+          git show 7df1b61126be1f4e036b256d1c774c531b8a281f:data/market/historical_market_outcomes.parquet > /tmp/v5_historical_market_outcomes.parquet
+          git show 7df1b61126be1f4e036b256d1c774c531b8a281f:data/features/moneyline_feature_view.parquet > /tmp/v5_moneyline_feature_view.parquet
+
+      - name: Run frozen TOP50 KO calendar-2025 holdout
+        run: |
+          python -m pipeline.research.xgboost_ko_projected_winner_top50_holdout_2025 \
+            --v5-market /tmp/v5_historical_market_outcomes.parquet \
+            --v5-features /tmp/v5_moneyline_feature_view.parquet
+
+      - name: Upload frozen TOP50 KO 2025 artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frozen-top50-ko-holdout-2025
+          path: |
+            data/research/prop_mispricing/xgboost_ko_projected_winner_top50_holdout_2025_predictions.csv
+            data/research/prop_mispricing/xgboost_ko_projected_winner_top50_holdout_2025_metrics.csv
+            data/research/prop_mispricing/xgboost_ko_projected_winner_top50_holdout_2025_edge_candidates.csv
+            data/research/prop_mispricing/xgboost_ko_projected_winner_top50_holdout_2025_edge_rules.csv
+            data/research/prop_mispricing/xgboost_ko_projected_winner_top50_holdout_2025_summary.json

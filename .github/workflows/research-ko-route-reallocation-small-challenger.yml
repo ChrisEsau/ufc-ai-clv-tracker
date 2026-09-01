@@ -1,0 +1,50 @@
+name: Research KO Route Reallocation Small Challenger
+
+on:
+  push:
+    branches: [research/ko-method-edge-xgb-20260831]
+    paths:
+      - 'pipeline/research/xgboost_ko_route_reallocation_small_challenger.py'
+      - '.github/workflows/research-ko-route-reallocation-small-challenger.yml'
+  workflow_dispatch:
+
+jobs:
+  ko-route-reallocation-small-challenger:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout research branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up exact Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11.16'
+
+      - name: Install pinned research environment
+        run: |
+          python -m pip install --upgrade pip==26.2.1
+          pip install \
+            pandas==3.0.5 \
+            pyarrow==25.0.1 \
+            numpy==2.4.6 \
+            scikit-learn==1.9.0 \
+            scipy==1.17.1 \
+            xgboost==3.2.0
+
+      - name: Run small winner-conditional KO market-offset challenger
+        run: python -m pipeline.research.xgboost_ko_route_reallocation_small_challenger
+
+      - name: Upload challenger artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ko-route-reallocation-small-challenger
+          path: |
+            data/research/prop_mispricing/xgboost_ko_route_reallocation_small_challenger_summary.json
+            data/research/prop_mispricing/xgboost_ko_route_reallocation_small_challenger_metrics.csv
+            data/research/prop_mispricing/xgboost_ko_route_reallocation_small_challenger_oof.csv
+            data/research/prop_mispricing/xgboost_ko_route_reallocation_small_challenger_2025_holdout.csv
+            data/research/prop_mispricing/xgboost_ko_route_reallocation_small_challenger_feature_importance.csv
+
+# Research only. No ROI selection. No 2026 reads. Do not merge PR #96 without explicit approval.

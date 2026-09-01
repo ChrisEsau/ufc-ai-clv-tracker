@@ -1,0 +1,39 @@
+{
+  "name": "ko_market_archetype_2026_freeze",
+  "purpose": "Pre-register the fixed interpretable KO method-market archetype before reading or scoring any 2026 qualifying fights.",
+  "frozen_before_2026_scoring": true,
+  "development_period": "2021-01-01 through 2024-12-31",
+  "posthoc_context": "The fourth condition (positive recent_form_win_streak_diff) was discovered during the 2025 hit/miss investigation, so 2025 is not treated as untouched validation for the finalized four-condition rule.",
+  "untouched_confirmation_period": "calendar 2026",
+  "rule": {
+    "height_diff_min_cm": 5.0800000000000125,
+    "ewm_str_acc_diff_min": 0.08503716030259571,
+    "aggression_index_diff_min": 2.563945,
+    "recent_form_win_streak_diff_min_exclusive": 0.0
+  },
+  "semantics": {
+    "height_diff": "priced fighter height minus opponent height, centimeters",
+    "ewm_str_acc_diff": "priced fighter EWM striking accuracy minus opponent",
+    "aggression_index_diff": "priced fighter aggression index minus opponent; aggression index is SPLM plus takedowns landed per 15 minutes",
+    "recent_form_win_streak_diff": "priced fighter recent-form/current win-streak feature minus opponent"
+  },
+  "locked_cold_start_rule": "Betting diagnostics exclude fights where either fighter has fewer than 2 prior UFC fights; probability/method allocation summaries may report all scored rows separately if needed.",
+  "selection_and_evaluation_rules": [
+    "Do not change thresholds after viewing 2026.",
+    "Do not add or remove features after viewing 2026.",
+    "Do not fit a model for this test.",
+    "Do not select on ROI.",
+    "Primary confirmation question: among qualifying fighter-side winners, is actual KO/TKO share higher than the sportsbook fair conditional KO share assigned to that fighter winning?",
+    "Secondary diagnostics: exact KO market probability, raw odds, favorite/underdog status, weight class, scheduled rounds, and realized flat-stake ROI.",
+    "All 2026 qualifiers must be enumerated chronologically with no post-outcome exclusions."
+  ],
+  "development_falsification_summary": {
+    "qualifiers_2021_2024": 11,
+    "wins": 11,
+    "ko_wins": 10,
+    "actual_ko_share_given_win": 0.9090909091,
+    "market_conditional_ko_share_given_win": 0.444,
+    "approx_conditional_residual_pp": 46.5,
+    "negative_control": "Positive recent-form win-streak outside the tall+accurate+aggressive archetype had negative conditional-KO residual in every development year."
+  }
+}

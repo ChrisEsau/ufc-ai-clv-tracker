@@ -1,0 +1,54 @@
+name: Research KO Method V5 ML Feature Ablation
+
+on:
+  push:
+    branches:
+      - research/ko-method-edge-xgb-20260831
+    paths:
+      - 'pipeline/research/analyze_ko_method_v5_ml_feature_ablation.py'
+      - '.github/workflows/research-ko-method-v5-ml-feature-ablation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  analyze:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11.16'
+
+      - name: Install research dependencies
+        run: pip install pandas==3.0.5 pyarrow==25.0.1 numpy==2.4.6 xgboost
+
+      - name: Run leakage-safe KO ML-feature ablation
+        run: python -m pipeline.research.analyze_ko_method_v5_ml_feature_ablation
+
+      - name: Upload research outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: ko-method-v5-ml-feature-ablation
+          path: |
+            data/research/prop_mispricing/xgboost_ko_method_v5_ml_feature_ablation_predictions.csv
+            data/research/prop_mispricing/xgboost_ko_method_v5_ml_feature_ablation_metrics.csv
+            data/research/prop_mispricing/xgboost_ko_method_v5_ml_feature_ablation_feature_importance.csv
+            data/research/prop_mispricing/xgboost_ko_method_v5_ml_feature_ablation_summary.json
+
+      - name: Commit research outputs to isolated branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/research/prop_mispricing/xgboost_ko_method_v5_ml_feature_ablation_predictions.csv \
+                  data/research/prop_mispricing/xgboost_ko_method_v5_ml_feature_ablation_metrics.csv \
+                  data/research/prop_mispricing/xgboost_ko_method_v5_ml_feature_ablation_feature_importance.csv \
+                  data/research/prop_mispricing/xgboost_ko_method_v5_ml_feature_ablation_summary.json
+          if git diff --cached --quiet; then
+            echo "No output changes to commit"
+          else
+            git commit -m "research: record KO V5 ML feature ablation results"
+            git push
+          fi

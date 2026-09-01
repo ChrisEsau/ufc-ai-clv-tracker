@@ -1,0 +1,55 @@
+name: Research Projected Winner KO Edge OOF
+
+on:
+  pull_request:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths:
+      - 'pipeline/research/xgboost_ko_projected_winner_edge_oof.py'
+      - '.github/workflows/research-ko-projected-winner-edge-oof.yml'
+
+jobs:
+  projected-winner-ko:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11.16'
+
+      - name: Install pinned V5 environment
+        run: |
+          python -m pip install --upgrade pip==26.2.1
+          pip install \
+            pandas==3.0.5 \
+            pyarrow==25.0.1 \
+            numpy==2.4.6 \
+            scikit-learn==1.9.0 \
+            scipy==1.17.1 \
+            xgboost==3.2.0 \
+            joblib==1.5.3 \
+            threadpoolctl==3.6.0 \
+            python-dateutil==2.9.0.post0
+
+      - name: Materialize exact frozen V5 snapshot inputs
+        run: |
+          git show 7df1b61126be1f4e036b256d1c774c531b8a281f:data/market/historical_market_outcomes.parquet > /tmp/v5_historical_market_outcomes.parquet
+          git show 7df1b61126be1f4e036b256d1c774c531b8a281f:data/features/moneyline_feature_view.parquet > /tmp/v5_moneyline_feature_view.parquet
+
+      - name: Run projected-winner exact-KO OOF
+        run: |
+          python -m pipeline.research.xgboost_ko_projected_winner_edge_oof \
+            --v5-market /tmp/v5_historical_market_outcomes.parquet \
+            --v5-features /tmp/v5_moneyline_feature_view.parquet
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: projected-winner-ko-edge-oof
+          path: |
+            data/research/prop_mispricing/xgboost_ko_projected_winner_edge_oof_predictions.csv
+            data/research/prop_mispricing/xgboost_ko_projected_winner_edge_metrics.csv
+            data/research/prop_mispricing/xgboost_ko_projected_winner_edge_rules.csv
+            data/research/prop_mispricing/xgboost_ko_projected_winner_edge_robustness.csv
+            data/research/prop_mispricing/xgboost_ko_projected_winner_edge_summary.json

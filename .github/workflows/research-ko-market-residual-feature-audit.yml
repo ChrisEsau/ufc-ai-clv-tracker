@@ -1,0 +1,48 @@
+name: Research KO Market Residual Feature Audit
+
+on:
+  pull_request:
+    branches: [research/ufc-prop-mispricing-xgboost-20260829]
+    paths:
+      - 'pipeline/research/analyze_ko_market_residual_features.py'
+      - '.github/workflows/research-ko-market-residual-feature-audit.yml'
+  workflow_dispatch:
+
+jobs:
+  ko-market-residual-audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout research branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11.16'
+
+      - name: Install pinned research environment
+        run: |
+          python -m pip install --upgrade pip==26.2.1
+          pip install \
+            pandas==3.0.5 \
+            pyarrow==25.0.1 \
+            numpy==2.4.6 \
+            scikit-learn==1.9.0 \
+            scipy==1.17.1 \
+            xgboost==3.2.0
+
+      - name: Run KO market residual feature audit
+        run: python -m pipeline.research.analyze_ko_market_residual_features
+
+      - name: Upload audit artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ko-market-residual-feature-audit
+          path: |
+            data/research/prop_mispricing/ko_market_residual_feature_audit_summary.json
+            data/research/prop_mispricing/ko_market_residual_feature_summary.csv
+            data/research/prop_mispricing/ko_market_residual_feature_bins.csv
+            data/research/prop_mispricing/ko_market_residual_feature_interactions.csv
+            data/research/prop_mispricing/ko_market_residual_side_rows.csv
