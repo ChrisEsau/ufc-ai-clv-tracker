@@ -17,6 +17,7 @@ OUT_SUMMARY = Path("data/research/prop_mispricing/ko_archetype_june_aug_2026_sum
 START = pd.Timestamp("2026-06-01")
 END = pd.Timestamp("2026-08-22")
 FEATURES = ["height_diff", "ewm_str_acc_diff", "aggression_index_diff", "recent_form_win_streak_diff"]
+GE_TOL = 1e-9  # numeric representation only; frozen thresholds are unchanged
 
 
 def _method_bucket(value: object) -> str | None:
@@ -46,11 +47,14 @@ def main() -> None:
         raise RuntimeError(f"missing feature-view columns: {missing}")
     df = df[required].drop_duplicates("fight_id").sort_values(["date", "fight_id"]).reset_index(drop=True)
 
-    master = pd.read_parquet(MASTER_PATH, filters=[("date", ">=", START), ("date", "<=", END)]).copy()
+    # Master stores date as text, so parse before applying the window rather than using parquet filters.
+    master = pd.read_parquet(MASTER_PATH).copy()
+    master["date"] = pd.to_datetime(master["date"], errors="coerce")
+    master = master[master["date"].between(START, END)].copy()
     master["fight_id"] = master["fight_id"].astype(str)
-    keep = [c for c in ["fight_id", "event_name", "r_id", "b_id", "r_name", "b_name", "winner_id", "method", "division"] if c in master.columns]
+    keep = [c for c in ["fight_id", "event_name", "r_name", "b_name", "winner_id", "method", "division"] if c in master.columns]
     master = master[keep].drop_duplicates("fight_id").rename(columns={"fight_id": "master_fight_id"})
-    df = df.merge(master, left_on="state_fight_id", right_on="master_fight_id", how="left", suffixes=("", "_master"))
+    df = df.merge(master, left_on="state_fight_id", right_on="master_fight_id", how="left")
 
     parts = []
     for side, sign in [("red", 1.0), ("blue", -1.0)]:
@@ -78,7 +82,10 @@ def main() -> None:
         "streak": ("recent_form_win_streak_diff", float(rule["recent_form_win_streak_diff_min_exclusive"]), "gt"),
     }
     for name, (col, threshold, op) in thresholds.items():
-        rows[f"pass_{name}"] = rows[col].ge(threshold) if op == "ge" else rows[col].gt(threshold)
+        if op == "ge":
+            rows[f"pass_{name}"] = rows[col].ge(threshold - GE_TOL)
+        else:
+            rows[f"pass_{name}"] = rows[col].gt(threshold)
     pass_cols = [f"pass_{x}" for x in thresholds]
     rows["conditions_passed"] = rows[pass_cols].sum(axis=1).astype(int)
     rows["exact_qualifier"] = rows["conditions_passed"].eq(4)
@@ -92,8 +99,8 @@ def main() -> None:
     rows["streak_margin"] = rows["recent_form_win_streak_diff"] - thresholds["streak"][1]
 
     # Outcome is descriptive and attached only after feature qualification is determined.
-    rows["winner_id_str"] = rows.get("winner_id").astype(str) if "winner_id" in rows.columns else np.nan
-    rows["win_method"] = rows.get("method").map(_method_bucket) if "method" in rows.columns else np.nan
+    rows["winner_id_str"] = rows["winner_id"].astype(str) if "winner_id" in rows.columns else np.nan
+    rows["win_method"] = rows["method"].map(_method_bucket) if "method" in rows.columns else np.nan
     rows["actual_result"] = np.where(
         rows["winner_id_str"].isin(["nan", "None"]),
         np.nan,
@@ -121,6 +128,8 @@ def main() -> None:
         "window_end": str(END.date()),
         "feature_fights": int(df["fight_id"].nunique()),
         "eligible_fighter_sides": int(len(all_rows)),
+        "ge_numeric_tolerance": GE_TOL,
+        "thresholds_unchanged": True,
         "exact_qualifiers": int(all_rows["exact_qualifier"].sum()),
         "three_of_four_near_misses": int((all_rows["conditions_passed"] == 3).sum()),
         "near_miss_failed_condition_counts": all_rows.loc[all_rows["conditions_passed"].eq(3), "failed_conditions"].value_counts().to_dict(),
