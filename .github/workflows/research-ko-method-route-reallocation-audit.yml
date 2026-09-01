@@ -49,3 +49,5 @@ jobs:
             data/research/prop_mispricing/ko_method_route_reallocation_group_periods.csv
             data/research/prop_mispricing/ko_method_route_reallocation_group_summary.csv
             data/research/prop_mispricing/ko_method_route_reallocation_route_pairs.csv
+
+# Research-only diagnostic. Do not merge PR #96 without explicit approval.
