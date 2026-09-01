@@ -33,6 +33,19 @@ jobs:
             scipy==1.17.1 \
             xgboost==3.2.0
 
+      - name: Apply parquet string-date compatibility fix
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('pipeline/research/analyze_ko_method_route_reallocation.py')
+          s = p.read_text()
+          old = 'pd.read_parquet(MASTER, filters=[("date", "<=", cutoff)]).copy()'
+          new = 'pd.read_parquet(MASTER, filters=[("date", "<=", cutoff.strftime("%Y-%m-%d"))]).copy()'
+          if old not in s:
+              raise RuntimeError('expected master parquet cutoff expression not found')
+          p.write_text(s.replace(old, new, 1))
+          PY
+
       - name: Run winner-conditioned KO/SUB/DEC route reallocation audit
         run: python -m pipeline.research.analyze_ko_method_route_reallocation
 
