@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 
@@ -94,11 +95,11 @@ def _v5_fit_predict(ml_df, xraw, feature_cols, train_mask, val_mask):
     return sigmoid(margin)
 
 
-def build_honest_v5_stack():
-    ml_df, xraw, signed = v5.build_v5_frame(method.MARKET_PATH, method.FEATURE_PATH)
+def build_honest_v5_stack(v5_market_path, v5_feature_path):
+    ml_df, xraw, signed = v5.build_v5_frame(v5_market_path, v5_feature_path)
     feature_cols = v5.frozen_feature_order(ml_df, xraw, signed)
 
-    canonical, canonical_features, canonical_ll = v5.generate_oof(method.MARKET_PATH, method.FEATURE_PATH)
+    canonical, canonical_features, canonical_ll = v5.generate_oof(v5_market_path, v5_feature_path)
     if list(canonical_features) != list(feature_cols):
         raise RuntimeError("V5 feature-order reproduction mismatch")
     if abs(canonical_ll - v5.EXPECTED_OOF_LOG_LOSS) > 1e-12:
@@ -350,14 +351,14 @@ def calibration_table(cand):
     return pd.DataFrame(rows)
 
 
-def run():
+def run(v5_market_path, v5_feature_path):
     OUT.mkdir(parents=True, exist_ok=True)
     df, safe_features, excluded = method._build_rows(True, True)
     df["date"] = pd.to_datetime(df["date"])
     if (df["date"] > "2024-12-31").any():
         raise RuntimeError("2025+ entered KO development frame")
 
-    ml_stack, v5_features, v5_ll = build_honest_v5_stack()
+    ml_stack, v5_features, v5_ll = build_honest_v5_stack(v5_market_path, v5_feature_path)
     ml_stack["fight_id"] = ml_stack["fight_id"].astype(str)
     df["fight_id"] = df["fight_id"].astype(str)
     df = df.merge(ml_stack[["fight_id", "model_p_red", "market_p_red", "ml_fold"]], on="fight_id", how="left")
@@ -489,4 +490,8 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--v5-market", required=True)
+    ap.add_argument("--v5-features", required=True)
+    args = ap.parse_args()
+    run(args.v5_market, args.v5_features)
