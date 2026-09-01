@@ -109,7 +109,7 @@ def archetype_2026(r1):
     x['p_aggr']=x.aggression_index_diff.ge(float(freeze['aggression_index_diff_min']))
     x['p_streak']=x.recent_form_win_streak_diff.gt(float(freeze['recent_form_win_streak_diff_min_exclusive']))
     x['conditions_passed']=x[['p_height','p_acc','p_aggr','p_streak']].sum(axis=1)
-    x=x[x.conditions_passed.ge(3)].merge(r1,on=['fight_id','side'],how='left')
+    x=x[x.conditions_passed.ge(3)].merge(r1.drop(columns=['date'], errors='ignore'),on=['fight_id','side'],how='left')
     # attach names/results from master only after selection
     m=pd.read_parquet(MASTER).copy(); m['fight_id']=m.fight_id.astype(str)
     m=m[['fight_id','r_name','b_name','r_id','b_id','winner_id','method','finish_round']].drop_duplicates('fight_id')
