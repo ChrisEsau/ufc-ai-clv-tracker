@@ -9,6 +9,9 @@ on:
       - '.github/workflows/research-ko-method-v5-ml-feature-ablation.yml'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   analyze:
     runs-on: ubuntu-24.04
@@ -35,4 +38,17 @@ jobs:
             data/research/prop_mispricing/xgboost_ko_method_v5_ml_feature_ablation_feature_importance.csv
             data/research/prop_mispricing/xgboost_ko_method_v5_ml_feature_ablation_summary.json
 
-# Triggered for the isolated 2021-2024 KO ML-feature ablation.
+      - name: Commit research outputs to isolated branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/research/prop_mispricing/xgboost_ko_method_v5_ml_feature_ablation_predictions.csv \
+                  data/research/prop_mispricing/xgboost_ko_method_v5_ml_feature_ablation_metrics.csv \
+                  data/research/prop_mispricing/xgboost_ko_method_v5_ml_feature_ablation_feature_importance.csv \
+                  data/research/prop_mispricing/xgboost_ko_method_v5_ml_feature_ablation_summary.json
+          if git diff --cached --quiet; then
+            echo "No output changes to commit"
+          else
+            git commit -m "research: record KO V5 ML feature ablation results"
+            git push
+          fi
