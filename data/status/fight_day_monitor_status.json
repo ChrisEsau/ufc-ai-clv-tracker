@@ -1,10 +1,10 @@
 {
-  "completed_at": "2026-09-13T00:41:27.510123+00:00",
+  "completed_at": "2026-09-13T00:42:37.403516+00:00",
   "current_step_id": "refresh_live_markets",
   "current_step_name": "Refresh Live Markets",
   "current_substep_id": "draftkings_matched_discovery",
   "current_substep_name": "Discover DraftKings Markets",
-  "error": "Command '['/opt/hostedtoolcache/Python/3.11.16/x64/bin/python', '-m', 'pipeline.market.run_draftkings_matched_discovery', '--sleep-seconds', '3']' died with <Signals.SIGABRT: 6>.",
+  "error": "Command '['/opt/hostedtoolcache/Python/3.11.16/x64/bin/python', '-m', 'pipeline.market.run_draftkings_matched_discovery', '--sleep-seconds', '3']' returned non-zero exit status 1.",
   "history": [
     {
       "event": "runbook_started",
@@ -13,7 +13,7 @@
       "step_name": null,
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-09-13T00:41:21.824156+00:00"
+      "timestamp": "2026-09-13T00:42:34.869628+00:00"
     },
     {
       "event": "step_started",
@@ -22,7 +22,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-09-13T00:41:21.824499+00:00"
+      "timestamp": "2026-09-13T00:42:34.870182+00:00"
     },
     {
       "event": "substep_started",
@@ -31,7 +31,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_event_index",
       "substep_name": "Build DraftKings Event Index",
-      "timestamp": "2026-09-13T00:41:21.824912+00:00"
+      "timestamp": "2026-09-13T00:42:34.870602+00:00"
     },
     {
       "event": "substep_completed",
@@ -40,7 +40,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_event_index",
       "substep_name": "Build DraftKings Event Index",
-      "timestamp": "2026-09-13T00:41:23.149433+00:00"
+      "timestamp": "2026-09-13T00:42:36.245802+00:00"
     },
     {
       "event": "substep_started",
@@ -49,7 +49,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_card_filter",
       "substep_name": "Match DraftKings Events To Card",
-      "timestamp": "2026-09-13T00:41:23.149797+00:00"
+      "timestamp": "2026-09-13T00:42:36.246262+00:00"
     },
     {
       "event": "substep_completed",
@@ -58,7 +58,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_card_filter",
       "substep_name": "Match DraftKings Events To Card",
-      "timestamp": "2026-09-13T00:41:23.533582+00:00"
+      "timestamp": "2026-09-13T00:42:36.865415+00:00"
     },
     {
       "event": "substep_started",
@@ -67,26 +67,26 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_matched_discovery",
       "substep_name": "Discover DraftKings Markets",
-      "timestamp": "2026-09-13T00:41:23.533940+00:00"
+      "timestamp": "2026-09-13T00:42:36.865934+00:00"
     },
     {
       "event": "runbook_failed",
-      "message": "Command '['/opt/hostedtoolcache/Python/3.11.16/x64/bin/python', '-m', 'pipeline.market.run_draftkings_matched_discovery', '--sleep-seconds', '3']' died with <Signals.SIGABRT: 6>.",
+      "message": "Command '['/opt/hostedtoolcache/Python/3.11.16/x64/bin/python', '-m', 'pipeline.market.run_draftkings_matched_discovery', '--sleep-seconds', '3']' returned non-zero exit status 1.",
       "step_id": "refresh_live_markets",
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_matched_discovery",
       "substep_name": "Discover DraftKings Markets",
-      "timestamp": "2026-09-13T00:41:27.510130+00:00"
+      "timestamp": "2026-09-13T00:42:37.403523+00:00"
     }
   ],
   "message": "Runbook failed",
   "mode": "production",
   "runbook_id": "fight_day_monitor_v1",
-  "started_at": "2026-09-13T00:41:21.824153+00:00",
+  "started_at": "2026-09-13T00:42:34.869623+00:00",
   "status": "failed",
   "step_index": 1,
   "step_total": 4,
   "substep_index": 3,
   "substep_total": 11,
-  "updated_at": "2026-09-13T00:41:27.510285+00:00"
+  "updated_at": "2026-09-13T00:42:37.403732+00:00"
 }
