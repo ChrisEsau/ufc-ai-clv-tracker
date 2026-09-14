@@ -2621,22 +2621,81 @@
       "scheduled_at_local": "2026-09-12T17:55:00-05:00",
       "scheduled_time": "17:55",
       "workflow_file": "run-fight-day-monitor.yml"
+    },
+    {
+      "catchup_grace_minutes": 2880,
+      "dispatch_key": "monday_reset_v1:2026-09-14T05:00:America/Chicago",
+      "dispatched_at": "2026-09-14T10:23:37.571559+00:00",
+      "display_name": "Monday Reset",
+      "dry_run": false,
+      "inputs": {
+        "auto_append": true,
+        "max_events": "all",
+        "mode": "production",
+        "skip_bankroll": false,
+        "skip_clv": false
+      },
+      "message": "Dispatched run-monday-reset-orchestrator.yml",
+      "minutes_late": 23.63,
+      "runbook_id": "monday_reset_v1",
+      "scheduled_at_local": "2026-09-14T05:00:00-05:00",
+      "scheduled_time": "05:00",
+      "workflow_file": "run-monday-reset-orchestrator.yml"
     }
   ],
-  "dispatched_runbooks": [],
-  "due_runbooks": [],
+  "dispatched_runbooks": [
+    {
+      "catchup_grace_minutes": 2880,
+      "dispatch_key": "monday_reset_v1:2026-09-14T05:00:America/Chicago",
+      "dispatched_at": "2026-09-14T10:23:37.571559+00:00",
+      "display_name": "Monday Reset",
+      "dry_run": false,
+      "inputs": {
+        "auto_append": true,
+        "max_events": "all",
+        "mode": "production",
+        "skip_bankroll": false,
+        "skip_clv": false
+      },
+      "message": "Dispatched run-monday-reset-orchestrator.yml",
+      "minutes_late": 23.63,
+      "runbook_id": "monday_reset_v1",
+      "scheduled_at_local": "2026-09-14T05:00:00-05:00",
+      "scheduled_time": "05:00",
+      "workflow_file": "run-monday-reset-orchestrator.yml"
+    }
+  ],
+  "due_runbooks": [
+    {
+      "catchup_grace_minutes": 2880,
+      "dispatch_key": "monday_reset_v1:2026-09-14T05:00:America/Chicago",
+      "display_name": "Monday Reset",
+      "inputs": {
+        "auto_append": true,
+        "max_events": "all",
+        "mode": "production",
+        "skip_bankroll": false,
+        "skip_clv": false
+      },
+      "minutes_late": 23.63,
+      "runbook_id": "monday_reset_v1",
+      "scheduled_at_local": "2026-09-14T05:00:00-05:00",
+      "scheduled_time": "05:00",
+      "workflow_file": "run-monday-reset-orchestrator.yml"
+    }
+  ],
   "errors": [],
-  "last_checked_at": "2026-09-14T04:28:18.168555+00:00",
+  "last_checked_at": "2026-09-14T10:23:37.571559+00:00",
   "next_due_runbook": {
-    "catchup_grace_minutes": 2880,
-    "display_name": "Monday Reset",
-    "runbook_id": "monday_reset_v1",
-    "scheduled_at_local": "2026-09-14T05:00:00-05:00",
-    "scheduled_time": "05:00",
-    "workflow_file": "run-monday-reset-orchestrator.yml"
+    "catchup_grace_minutes": 1440,
+    "display_name": "Market Refresh",
+    "runbook_id": "market_refresh_v2",
+    "scheduled_at_local": "2026-09-15T03:00:00-05:00",
+    "scheduled_time": "03:00",
+    "workflow_file": "run-market-refresh-orchestrator.yml"
   },
   "skipped_runbooks": [],
   "status": "completed",
   "timezone": "America/Chicago",
-  "updated_at": "2026-09-14T04:28:18.176693+00:00"
+  "updated_at": "2026-09-14T10:23:38.704000+00:00"
 }
