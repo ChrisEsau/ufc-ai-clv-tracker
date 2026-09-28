@@ -1,0 +1,151 @@
+name: Simulator Historical Component Replay
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/round-fight-simulator-v0
+    paths:
+      - ".github/workflows/run-simulation-historical-component-replay.yml"
+      - "pipeline/simulation/finish_hazard_provider.py"
+      - "pipeline/simulation/finish_hazard_holdout.py"
+      - "pipeline/simulation/component_provider_engine.py"
+      - "pipeline/simulation/historical_component_provider_replay.py"
+      - "pipeline/simulation/run_historical_component_provider_replay.py"
+      - "tests/test_simulation_finish_hazard_provider.py"
+
+permissions:
+  contents: read
+
+jobs:
+  historical-component-replay:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout simulator branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run component-provider tests
+        run: |
+          python -m unittest tests.test_simulation_finish_hazard_provider
+          python -m unittest tests.test_simulation_finish_hazard_model
+          python -m unittest tests.test_simulation_provider_engine
+          python -m unittest tests.test_simulation_historical_simulator_replay
+          python -m unittest tests.test_round_simulator
+          python -m unittest tests.test_simulation_terminal_round
+          python -m compileall -q pipeline/simulation
+
+      - name: Build leakage-safe fighter-round table
+        run: |
+          python -m pipeline.simulation.run_build_training_dataset
+
+      - name: Rebuild finish hazard calibration schedule
+        run: |
+          python -m pipeline.simulation.run_train_finish_hazard_model
+
+      - name: Replay all simulator component variants
+        run: |
+          python -m pipeline.simulation.run_historical_component_provider_replay \
+            --test-year 2026 \
+            --simulations-per-fight 500 \
+            --seed 91
+
+      - name: Publish component replay summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path(
+              "data/model_lab/simulation/historical_replay_v0/components/summary.json"
+          )
+          summary = json.loads(path.read_text(encoding="utf-8"))
+          ordered = [
+              "heuristic_simulator",
+              "absolute_strike_provider",
+              "finish_hazard_provider",
+              "strike_and_finish_providers",
+              "historical_baseline",
+          ]
+          labels = {
+              "heuristic_simulator": "Heuristic",
+              "absolute_strike_provider": "Strike provider",
+              "finish_hazard_provider": "Finish provider",
+              "strike_and_finish_providers": "Strike + finish",
+              "historical_baseline": "Historical baseline",
+          }
+
+          with Path("historical_component_replay_summary.md").open(
+              "w", encoding="utf-8"
+          ) as handle:
+              handle.write("# Historical simulator component replay\n\n")
+              handle.write(f"- Holdout fights: **{summary['fights']:,}**\n")
+              handle.write(
+                  f"- Monte Carlo paths per fight and variant: **{summary['simulations_per_fight']:,}**\n"
+              )
+              handle.write(
+                  f"- Counterfactual finish rows: **{summary['counterfactual_finish_rows']:,}**\n"
+              )
+              handle.write(
+                  f"- Finish calibration: **{summary['finish_calibration_source']}**\n\n"
+              )
+              handle.write("## Metrics\n\n")
+              handle.write(
+                  "| Model | Winner Brier | Winner accuracy | Method log loss | "
+                  "Method accuracy | Distance Brier | Time MAE | Strike MAE |\n"
+              )
+              handle.write("|---|---:|---:|---:|---:|---:|---:|---:|\n")
+              for name in ordered:
+                  row = summary["metrics"][name]
+                  handle.write(
+                      f"| {labels[name]} | {row['winner_brier']:.4f} | "
+                      f"{row['winner_accuracy']:.2%} | "
+                      f"{row['method_log_loss']:.4f} | "
+                      f"{row['method_accuracy']:.2%} | "
+                      f"{row['goes_distance_brier']:.4f} | "
+                      f"{row['fight_time_mae']:.1f} | "
+                      f"{row['fighter_sig_attempt_mae']:.2f} |\n"
+                  )
+              handle.write("\n## Aggregate behavior\n\n")
+              handle.write(
+                  "| Quantity | Actual | Heuristic | Strike | Finish | Both |\n"
+              )
+              handle.write("|---|---:|---:|---:|---:|---:|\n")
+              for row in summary["aggregate_comparison"]:
+                  handle.write(
+                      f"| {row['quantity']} | {row['actual']:.4f} | "
+                      f"{row['heuristic_simulator']:.4f} | "
+                      f"{row['absolute_strike_provider']:.4f} | "
+                      f"{row['finish_hazard_provider']:.4f} | "
+                      f"{row['strike_and_finish_providers']:.4f} |\n"
+                  )
+              handle.write("\n## Best variants\n\n")
+              for metric, variant in summary["best_variants"].items():
+                  handle.write(f"- {metric}: **{labels[variant]}**\n")
+          PY
+
+          cat historical_component_replay_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload component replay artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-historical-component-replay-v0
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6
+          path: |
+            data/model_lab/simulation/historical_replay_v0/components/**
+            data/model_lab/simulation/models/finish_hazard_prefight_v0/**
+            data/audits/simulation_fighter_round_training_audit.parquet
+            historical_component_replay_summary.md

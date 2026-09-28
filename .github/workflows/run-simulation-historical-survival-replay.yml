@@ -1,0 +1,241 @@
+name: Simulator Historical Survival Replay
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/round-fight-simulator-v0
+    paths:
+      - ".github/workflows/run-simulation-historical-survival-replay.yml"
+      - "pipeline/simulation/component_provider_engine.py"
+      - "pipeline/simulation/dynamic_strike_provider.py"
+      - "pipeline/simulation/finish_survival_calibration.py"
+      - "pipeline/simulation/historical_replay_evaluation.py"
+      - "pipeline/simulation/historical_survival_provider_replay.py"
+      - "pipeline/simulation/run_historical_survival_provider_replay.py"
+      - "pipeline/simulation/run_historical_simulator_replay.py"
+      - "tests/test_simulation_dynamic_strike_provider.py"
+      - "tests/test_simulation_finish_survival_calibration.py"
+      - "tests/test_simulation_historical_replay_evaluation.py"
+      - "tests/test_simulation_replay_label_time.py"
+
+permissions:
+  contents: read
+
+jobs:
+  historical-survival-replay:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout simulator branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run survival, dynamic strike, and cohort evaluation tests
+        run: |
+          python -m unittest tests.test_simulation_replay_label_time
+          python -m unittest tests.test_simulation_finish_survival_calibration
+          python -m unittest tests.test_simulation_dynamic_strike_provider
+          python -m unittest tests.test_simulation_historical_replay_evaluation
+          python -m unittest tests.test_simulation_finish_hazard_provider
+          python -m unittest tests.test_simulation_finish_hazard_model
+          python -m unittest tests.test_simulation_provider_engine
+          python -m unittest tests.test_simulation_historical_simulator_replay
+          python -m unittest tests.test_round_simulator
+          python -m unittest tests.test_simulation_terminal_round
+          python -m compileall -q pipeline/simulation
+
+      - name: Build leakage-safe fighter-round table
+        run: |
+          python -m pipeline.simulation.run_build_training_dataset
+
+      - name: Rebuild finish hazard walk-forward artifacts
+        run: |
+          python -m pipeline.simulation.run_train_finish_hazard_model
+
+      - name: Replay and evaluate historical cohort
+        run: |
+          python -m pipeline.simulation.run_historical_survival_provider_replay \
+            --test-year 2026 \
+            --simulations-per-fight 500 \
+            --seed 91 \
+            --group-prior-rows 200 \
+            --minimum-subgroup-fights 10 \
+            --bootstrap-samples 500
+
+      - name: Publish large-cohort replay summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          import pandas as pd
+
+          root = Path(
+              "data/model_lab/simulation/historical_replay_v0/"
+              "survival_components"
+          )
+          summary = json.loads((root / "summary.json").read_text(encoding="utf-8"))
+          bootstrap = pd.read_csv(root / "bootstrap_metrics.csv")
+          subgroup = pd.read_csv(root / "subgroup_metrics.csv")
+          paired = pd.read_csv(root / "paired_variant_deltas.csv")
+          calibration = pd.read_csv(root / "calibration_diagnostics.csv")
+
+          ordered = [
+              "heuristic_simulator",
+              "class_finish_hazard_provider",
+              "survival_finish_hazard_provider",
+              "strike_and_survival_finish_providers",
+              "dynamic_strike_and_survival_finish_providers",
+              "historical_baseline",
+          ]
+          labels = {
+              "heuristic_simulator": "Heuristic",
+              "class_finish_hazard_provider": "Class finish",
+              "survival_finish_hazard_provider": "Survival finish",
+              "strike_and_survival_finish_providers": "Static strike + survival (blocked)",
+              "dynamic_strike_and_survival_finish_providers": "Dynamic strike + survival",
+              "historical_baseline": "Historical baseline",
+          }
+          primary = [
+              "winner_brier",
+              "winner_accuracy",
+              "method_log_loss",
+              "goes_distance_brier",
+              "fight_time_mae",
+              "fighter_sig_attempt_mae",
+          ]
+
+          with Path("historical_survival_replay_summary.md").open(
+              "w", encoding="utf-8"
+          ) as handle:
+              handle.write("# Large-cohort historical simulator evaluation\n\n")
+              handle.write(f"- Decision unit: **{summary['decision_unit']}**\n")
+              handle.write(f"- Holdout fights: **{summary['fights']:,}**\n")
+              handle.write(
+                  f"- Paths per fight and variant: **{summary['simulations_per_fight']:,}**\n"
+              )
+              handle.write(
+                  f"- Bootstrap samples: **{summary['bootstrap_samples']:,}**\n"
+              )
+              handle.write(
+                  f"- Recommended variant before this ablation: **{summary['recommended_variant']}**\n"
+              )
+              handle.write("- Single-card replay role: **smoke test only**\n")
+              handle.write("- Static strike provider: **blocked comparison only**\n")
+              handle.write("- Dynamic strike provider: **shadow ablation under evaluation**\n")
+              handle.write("- Status: **shadow-only**\n\n")
+
+              handle.write("## Overall metrics with 95% bootstrap intervals\n\n")
+              handle.write(
+                  "| Model | Metric | Estimate | 95% interval | Direction |\n"
+              )
+              handle.write("|---|---|---:|---:|---|\n")
+              overall = bootstrap.loc[bootstrap["metric"].isin(primary)]
+              for name in ordered:
+                  rows = overall.loc[overall["variant"].eq(name)]
+                  for _, row in rows.iterrows():
+                      handle.write(
+                          f"| {labels[name]} | {row['metric']} | "
+                          f"{row['estimate']:.4f} | "
+                          f"[{row['ci_lower_95']:.4f}, {row['ci_upper_95']:.4f}] | "
+                          f"{row['direction']} |\n"
+                      )
+
+              handle.write("\n## Paired deltas: survival finish minus comparator\n\n")
+              handle.write(
+                  "Negative favors survival finish for lower-is-better metrics; "
+                  "positive favors it for higher-is-better metrics. The dynamic "
+                  "row therefore shows whether the new provider beats or trails "
+                  "the current selected variant.\n\n"
+              )
+              handle.write(
+                  "| Comparator | Metric | Delta | 95% interval | Favors survival | CI supports |\n"
+              )
+              handle.write("|---|---|---:|---:|---|---|\n")
+              selected_paired = paired.loc[paired["metric"].isin(primary)]
+              for _, row in selected_paired.iterrows():
+                  handle.write(
+                      f"| {labels.get(row['comparator_variant'], row['comparator_variant'])} | "
+                      f"{row['metric']} | {row['reference_minus_comparator']:.4f} | "
+                      f"[{row['ci_lower_95']:.4f}, {row['ci_upper_95']:.4f}] | "
+                      f"{'yes' if row['favors_reference'] else 'no'} | "
+                      f"{'yes' if row['confidence_interval_supports_reference'] else 'no'} |\n"
+                  )
+
+              handle.write("\n## Recommended variant by experience depth\n\n")
+              experience = subgroup.loc[
+                  subgroup["variant"].eq(summary["recommended_variant"])
+                  & subgroup["segment"].eq("experience")
+              ]
+              handle.write(
+                  "| Experience band | Fights | Winner Brier | Winner accuracy | Method log loss | Distance Brier |\n"
+              )
+              handle.write("|---|---:|---:|---:|---:|---:|\n")
+              for _, row in experience.iterrows():
+                  handle.write(
+                      f"| {row['subgroup']} | {int(row['fights'])} | "
+                      f"{row['winner_brier']:.4f} | {row['winner_accuracy']:.2%} | "
+                      f"{row['method_log_loss']:.4f} | "
+                      f"{row['goes_distance_brier']:.4f} |\n"
+                  )
+
+              handle.write("\n## Recommended winner-confidence calibration\n\n")
+              confidence = calibration.loc[
+                  calibration["variant"].eq(summary["recommended_variant"])
+                  & calibration["calibration_type"].eq(
+                      "predicted_winner_confidence"
+                  )
+              ]
+              handle.write(
+                  "| Confidence band | Fights | Mean confidence | Observed accuracy | Gap |\n"
+              )
+              handle.write("|---|---:|---:|---:|---:|\n")
+              for _, row in confidence.iterrows():
+                  handle.write(
+                      f"| {row['band']} | {int(row['fights'])} | "
+                      f"{row['mean_probability']:.2%} | "
+                      f"{row['observed_rate']:.2%} | "
+                      f"{row['absolute_gap']:.2%} |\n"
+                  )
+
+              handle.write("\n## Aggregate behavior\n\n")
+              handle.write(
+                  "| Quantity | Actual | Heuristic | Class finish | Survival finish | Static strike + survival | Dynamic strike + survival |\n"
+              )
+              handle.write("|---|---:|---:|---:|---:|---:|---:|\n")
+              for row in summary["aggregate_comparison"]:
+                  handle.write(
+                      f"| {row['quantity']} | {row['actual']:.4f} | "
+                      f"{row['heuristic_simulator']:.4f} | "
+                      f"{row['class_finish_hazard_provider']:.4f} | "
+                      f"{row['survival_finish_hazard_provider']:.4f} | "
+                      f"{row['strike_and_survival_finish_providers']:.4f} | "
+                      f"{row['dynamic_strike_and_survival_finish_providers']:.4f} |\n"
+                  )
+          PY
+
+          cat historical_survival_replay_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload survival replay artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-historical-survival-replay-v0
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6
+          path: |
+            data/model_lab/simulation/historical_replay_v0/survival_components/**
+            data/model_lab/simulation/models/finish_hazard_prefight_v0/**
+            data/audits/simulation_fighter_round_training_audit.parquet
+            historical_survival_replay_summary.md

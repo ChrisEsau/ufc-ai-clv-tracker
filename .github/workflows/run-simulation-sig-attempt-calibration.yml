@@ -1,0 +1,114 @@
+name: Simulator Strike Pace Calibration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/round-fight-simulator-v0
+    paths:
+      - ".github/workflows/run-simulation-sig-attempt-calibration.yml"
+      - "pipeline/simulation/sig_attempt_calibration.py"
+      - "pipeline/simulation/run_calibrate_sig_attempt_model.py"
+      - "pipeline/simulation/sig_attempt_model.py"
+      - "pipeline/simulation/run_train_sig_attempt_model.py"
+      - "pipeline/simulation/artifacts.py"
+      - "tests/test_simulation_sig_attempt_calibration.py"
+      - "tests/test_simulation_sig_attempt_model.py"
+
+permissions:
+  contents: read
+
+jobs:
+  calibrate-strike-pace:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout simulator branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run calibration tests
+        run: |
+          python -m unittest tests.test_simulation_sig_attempt_model
+          python -m unittest tests.test_simulation_sig_attempt_calibration
+          python -m unittest tests.test_simulation_terminal_round
+          python -m compileall -q pipeline/simulation
+
+      - name: Build leakage-safe fighter-round table
+        run: |
+          python -m pipeline.simulation.run_build_training_dataset
+
+      - name: Rebuild walk-forward strike benchmark
+        run: |
+          python -m pipeline.simulation.run_train_sig_attempt_model
+
+      - name: Calibrate strike pace distribution
+        run: |
+          python -m pipeline.simulation.run_calibrate_sig_attempt_model
+
+      - name: Publish calibration summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path(
+              "data/model_lab/simulation/models/sig_attempt_pace_v0/"
+              "calibration/calibration_summary.json"
+          )
+          summary = json.loads(path.read_text(encoding="utf-8"))
+
+          with Path("sig_attempt_calibration_summary.md").open("w", encoding="utf-8") as handle:
+              handle.write("# Significant-strike pace calibration\n\n")
+              handle.write(
+                  f"- Best calibrated model: **{summary['best_calibrated_model']}**\n"
+              )
+              handle.write(
+                  "- Best calibrated Poisson deviance: "
+                  f"**{summary['best_calibrated_count_poisson_deviance']:.4f}**\n\n"
+              )
+              handle.write("## Final distribution parameters\n\n")
+              handle.write("| Model | Mean factor | Gamma-Poisson alpha | Rows |\n")
+              handle.write("|---|---:|---:|---:|\n")
+              for row in summary["final_distribution_parameters"]:
+                  handle.write(
+                      f"| {row['model_name']} | "
+                      f"{row['mean_calibration_factor']:.4f} | "
+                      f"{row['gamma_poisson_overdispersion']:.4f} | "
+                      f"{row['calibration_rows']:,} |\n"
+                  )
+              handle.write("\n## Calibration metrics\n\n")
+              handle.write("| Model | Calibration | Poisson deviance | Bias | Improvement |\n")
+              handle.write("|---|---|---:|---:|---:|\n")
+              for row in summary["metrics"]:
+                  handle.write(
+                      f"| {row['model_name']} | {row['calibration']} | "
+                      f"{row['count_poisson_deviance']:.4f} | "
+                      f"{row['mean_count_bias']:.3f} | "
+                      f"{row['poisson_improvement_vs_raw']:.2%} |\n"
+                  )
+          PY
+
+          cat sig_attempt_calibration_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload strike calibration artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-sig-attempt-calibration-v0
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6
+          path: |
+            data/model_lab/simulation/models/sig_attempt_pace_v0/**
+            data/audits/simulation_fighter_round_training_audit.parquet
+            sig_attempt_calibration_summary.md

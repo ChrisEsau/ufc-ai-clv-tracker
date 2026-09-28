@@ -1,0 +1,125 @@
+name: Simulator Historical Experience Threshold
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/round-fight-simulator-v0
+    paths:
+      - ".github/workflows/run-simulation-historical-experience-threshold.yml"
+      - "pipeline/simulation/historical_experience_threshold_diagnostics.py"
+      - "pipeline/simulation/run_historical_experience_threshold_audit.py"
+      - "tests/test_simulation_historical_experience_threshold.py"
+
+permissions:
+  contents: read
+
+jobs:
+  historical-experience-threshold:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout simulator branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run experience threshold and replay tests
+        run: |
+          python -m unittest tests.test_simulation_historical_experience_threshold
+          python -m unittest tests.test_simulation_historical_replay_evaluation
+          python -m unittest tests.test_simulation_hierarchical_finish_hazard_model
+          python -m unittest tests.test_simulation_finish_survival_calibration
+          python -m unittest tests.test_simulation_replay_label_time
+          python -m compileall -q pipeline/simulation
+
+      - name: Build leakage-safe fighter-round table
+        run: |
+          python -m pipeline.simulation.run_build_training_dataset
+
+      - name: Rebuild current five-class finish artifacts
+        run: |
+          python -m pipeline.simulation.run_train_finish_hazard_model
+
+      - name: Train hierarchical finish artifacts
+        run: |
+          python -m pipeline.simulation.run_train_hierarchical_finish_hazard_model
+
+      - name: Rebuild hierarchical comparison replay
+        run: |
+          python -m pipeline.simulation.run_historical_hierarchical_finish_replay \
+            --test-year 2026 \
+            --simulations-per-fight 500 \
+            --seed 91 \
+            --group-prior-rows 200 \
+            --bootstrap-samples 500
+
+      - name: Flag low-experience fights and compare cohorts
+        run: |
+          python -m pipeline.simulation.run_historical_experience_threshold_audit \
+            --minimum-prior-fights 3
+
+      - name: Publish experience threshold summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          import pandas as pd
+
+          root = Path(
+              "data/model_lab/simulation/historical_replay_v0/"
+              "hierarchical_finish/experience_threshold"
+          )
+          summary = json.loads((root / "summary.json").read_text(encoding="utf-8"))
+          metrics = pd.read_csv(root / "metrics.csv")
+
+          with Path("historical_experience_threshold_summary.md").open(
+              "w", encoding="utf-8"
+          ) as handle:
+              handle.write("# Historical low-experience fight audit\n\n")
+              handle.write(f"- Flag rule: **{summary['flag_rule']}**\n")
+              handle.write(f"- Total fights: **{summary['total_fights']}**\n")
+              handle.write(
+                  f"- Flagged fights: **{summary['flagged_fights']} "
+                  f"({summary['flagged_rate']:.2%})**\n"
+              )
+              handle.write(
+                  f"- Experienced-only fights: **{summary['experienced_only_fights']}**\n"
+              )
+              handle.write("- Status: **evaluation-only**\n\n")
+              handle.write("| Cohort | Fights | Winner Brier | Winner accuracy | Method log loss | Method accuracy | Distance Brier | Distance accuracy | Time MAE | Strike MAE |\n")
+              handle.write("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
+              for _, row in metrics.iterrows():
+                  handle.write(
+                      f"| {row['cohort']} | {int(row['fights'])} | "
+                      f"{row['winner_brier']:.4f} | {row['winner_accuracy']:.2%} | "
+                      f"{row['method_log_loss']:.4f} | {row['method_accuracy']:.2%} | "
+                      f"{row['goes_distance_brier']:.4f} | "
+                      f"{row['goes_distance_accuracy']:.2%} | "
+                      f"{row['fight_time_mae']:.1f} sec | "
+                      f"{row['fighter_sig_attempt_mae']:.2f} |\n"
+                  )
+          PY
+
+          cat historical_experience_threshold_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload experience threshold artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-historical-experience-threshold-v0
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6
+          path: |
+            data/model_lab/simulation/historical_replay_v0/hierarchical_finish/experience_threshold/**
+            historical_experience_threshold_summary.md

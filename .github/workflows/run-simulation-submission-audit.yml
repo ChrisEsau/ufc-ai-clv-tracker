@@ -1,0 +1,191 @@
+name: Simulator Historical Submission Audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/round-fight-simulator-v0
+    paths:
+      - ".github/workflows/run-simulation-submission-audit.yml"
+      - "pipeline/simulation/historical_submission_diagnostics.py"
+      - "pipeline/simulation/run_historical_submission_diagnostics.py"
+      - "tests/test_simulation_historical_submission_diagnostics.py"
+
+permissions:
+  contents: read
+
+jobs:
+  historical-submission-audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout simulator branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run submission diagnostic and simulator tests
+        run: |
+          python -m unittest tests.test_simulation_historical_submission_diagnostics
+          python -m unittest tests.test_simulation_finish_survival_calibration
+          python -m unittest tests.test_simulation_historical_replay_evaluation
+          python -m unittest tests.test_simulation_replay_label_time
+          python -m unittest tests.test_simulation_finish_hazard_provider
+          python -m unittest tests.test_simulation_historical_simulator_replay
+          python -m compileall -q pipeline/simulation
+
+      - name: Build leakage-safe fighter-round table
+        run: |
+          python -m pipeline.simulation.run_build_training_dataset
+
+      - name: Rebuild finish hazard walk-forward artifacts
+        run: |
+          python -m pipeline.simulation.run_train_finish_hazard_model
+
+      - name: Rebuild full historical survival replay
+        run: |
+          python -m pipeline.simulation.run_historical_survival_provider_replay \
+            --test-year 2026 \
+            --simulations-per-fight 500 \
+            --seed 91 \
+            --group-prior-rows 200 \
+            --minimum-subgroup-fights 10 \
+            --bootstrap-samples 500
+
+      - name: Run submission and grappling failure audit
+        run: |
+          python -m pipeline.simulation.run_historical_submission_diagnostics \
+            --test-year 2026 \
+            --minimum-subgroup-fights 10
+
+      - name: Publish submission audit summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          import pandas as pd
+
+          root = Path(
+              "data/model_lab/simulation/historical_replay_v0/"
+              "survival_components"
+          )
+          summary = json.loads(
+              (root / "submission_audit_summary.json").read_text(
+                  encoding="utf-8"
+              )
+          )
+          errors = pd.read_csv(root / "submission_error_classes.csv")
+          calibration = pd.read_csv(root / "submission_calibration.csv")
+          subgroups = pd.read_csv(root / "submission_subgroup_metrics.csv")
+          metrics = summary["metrics"]
+
+          with Path("historical_submission_audit_summary.md").open(
+              "w", encoding="utf-8"
+          ) as handle:
+              handle.write("# Historical submission and grappling failure audit\n\n")
+              handle.write("- Status: **evaluation-only**\n")
+              handle.write(
+                  f"- Simulator variant: **{summary['simulator_variant']}**\n"
+              )
+              handle.write(
+                  f"- Cohort fights: **{metrics['cohort_fights']:,}**\n"
+              )
+              handle.write(
+                  f"- Actual submission fights: **{metrics['actual_submission_fights']:,}**\n"
+              )
+              handle.write(
+                  f"- Recommended next component: **{summary['recommended_next_component']}**\n"
+              )
+              handle.write(
+                  f"- Rationale: {summary['recommendation_rationale']}\n\n"
+              )
+
+              handle.write("## Primary diagnostics\n\n")
+              handle.write("| Metric | Value |\n")
+              handle.write("|---|---:|\n")
+              ordered = [
+                  "actual_submission_rate",
+                  "provider_mean_submission_probability",
+                  "provider_submission_brier",
+                  "provider_submission_binary_log_loss",
+                  "submission_method_detection_rate",
+                  "submission_side_accuracy",
+                  "submission_side_brier",
+                  "submission_side_binary_log_loss",
+                  "simulator_winner_accuracy_on_submissions",
+                  "submission_side_vs_simulator_winner_disagreement_rate",
+                  "provider_simulator_submission_probability_gap_mae",
+                  "expected_submission_round_mae",
+              ]
+              for name in ordered:
+                  handle.write(f"| {name} | {metrics[name]:.6f} |\n")
+
+              handle.write("\n## Submission error classes\n\n")
+              handle.write("| Error class | Fights | Rate |\n")
+              handle.write("|---|---:|---:|\n")
+              for _, row in errors.iterrows():
+                  handle.write(
+                      f"| {row['error_class']} | {int(row['fights'])} | "
+                      f"{row['rate']:.2%} |\n"
+                  )
+
+              handle.write("\n## Total submission calibration\n\n")
+              handle.write(
+                  "| Band | Fights | Mean probability | Observed rate | Gap |\n"
+              )
+              handle.write("|---|---:|---:|---:|---:|\n")
+              total = calibration.loc[
+                  calibration["calibration_type"].eq(
+                      "total_submission_probability"
+                  )
+              ]
+              for _, row in total.iterrows():
+                  handle.write(
+                      f"| {row['band']} | {int(row['fights'])} | "
+                      f"{row['mean_probability']:.2%} | "
+                      f"{row['observed_rate']:.2%} | "
+                      f"{row['absolute_gap']:.2%} |\n"
+                  )
+
+              handle.write("\n## Experience-depth diagnostics\n\n")
+              handle.write(
+                  "| Experience | Fights | Method detection | Side accuracy | Winner accuracy | Mean submission probability |\n"
+              )
+              handle.write("|---|---:|---:|---:|---:|---:|\n")
+              experience = subgroups.loc[
+                  subgroups["segment"].eq("experience_bucket")
+              ]
+              for _, row in experience.iterrows():
+                  handle.write(
+                      f"| {row['subgroup']} | {int(row['fights'])} | "
+                      f"{row['submission_method_detection_rate']:.2%} | "
+                      f"{row['submission_side_accuracy']:.2%} | "
+                      f"{row['simulator_winner_accuracy']:.2%} | "
+                      f"{row['mean_total_submission_probability']:.2%} |\n"
+                  )
+          PY
+
+          cat historical_submission_audit_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload submission audit artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-historical-submission-audit-v0
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6
+          path: |
+            data/model_lab/simulation/historical_replay_v0/survival_components/**
+            data/model_lab/simulation/models/finish_hazard_prefight_v0/**
+            data/audits/simulation_fighter_round_training_audit.parquet
+            historical_submission_audit_summary.md

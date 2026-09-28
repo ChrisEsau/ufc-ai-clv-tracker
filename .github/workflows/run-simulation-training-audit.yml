@@ -1,0 +1,347 @@
+name: Simulator Historical Training Audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/round-fight-simulator-v0
+    paths:
+      - ".github/workflows/run-simulation-training-audit.yml"
+      - "pipeline/simulation/**"
+      - "tests/test_round_simulator.py"
+      - "tests/test_simulation_*.py"
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout simulator branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verify authoritative inputs
+        run: |
+          test -f data/master/ufc_master.parquet || {
+            echo "Missing data/master/ufc_master.parquet"
+            exit 1
+          }
+          test -f data/fight_details/ufc_round_stats.parquet || {
+            echo "Missing data/fight_details/ufc_round_stats.parquet"
+            exit 1
+          }
+          echo "Master and round-stat inputs found."
+          find data/features -maxdepth 1 -type f -name 'round_*fighter*.parquet' -print || true
+
+      - name: Run simulator unit tests
+        run: |
+          python -m unittest discover -s tests -p 'test_round_simulator.py'
+          python -m unittest discover -s tests -p 'test_simulation_*.py'
+          python -m compileall -q pipeline/simulation
+
+      - name: Build real fighter-round training table
+        run: |
+          python -m pipeline.simulation.run_build_training_dataset
+
+      - name: Generate historical audit reports
+        run: |
+          python - <<'PY'
+          from __future__ import annotations
+
+          import json
+          from pathlib import Path
+
+          import pandas as pd
+
+          training_path = Path(
+              "data/model_lab/simulation/training/fighter_round_parameter_training.parquet"
+          )
+          validation_path = Path(
+              "data/audits/simulation_fighter_round_training_audit.parquet"
+          )
+          report_dir = Path("data/model_lab/simulation/audit_report")
+          report_dir.mkdir(parents=True, exist_ok=True)
+
+          df = pd.read_parquet(training_path)
+          validation = pd.read_parquet(validation_path)
+
+          target_columns = sorted(column for column in df if column.startswith("target_"))
+          rfs_columns = sorted(
+              column
+              for column in df
+              if column.startswith(("fighter_rfs_", "opponent_rfs_"))
+          )
+          coverage_columns = sorted(
+              column for column in df if column.endswith("_state_available")
+          )
+
+          date_series = pd.to_datetime(df.get("date"), errors="coerce")
+          years = date_series.dt.year
+
+          binary_targets = [
+              "target_fighter_ko_tko_finish",
+              "target_opponent_ko_tko_finish",
+              "target_fighter_submission_finish",
+              "target_opponent_submission_finish",
+              "target_any_stoppage",
+              "target_no_stoppage",
+              "target_fight_reaches_next_round",
+              "target_round_completed",
+          ]
+          count_targets = [
+              "target_sig_attempted",
+              "target_sig_landed",
+              "target_td_attempted",
+              "target_td_landed",
+              "target_control_seconds",
+              "target_knockdowns",
+              "target_submission_attempts",
+          ]
+
+          target_rows: list[dict[str, object]] = []
+          for column in binary_targets:
+              if column in df:
+                  values = pd.to_numeric(df[column], errors="coerce")
+                  target_rows.append(
+                      {
+                          "target": column,
+                          "kind": "binary",
+                          "non_null": int(values.notna().sum()),
+                          "mean": float(values.mean()),
+                          "std": float(values.std(ddof=0)),
+                          "zero_rate": float(values.eq(0).mean()),
+                          "positive_rate": float(values.eq(1).mean()),
+                          "p50": float(values.quantile(0.50)),
+                          "p90": float(values.quantile(0.90)),
+                          "p99": float(values.quantile(0.99)),
+                          "max": float(values.max()),
+                      }
+                  )
+          for column in count_targets:
+              if column in df:
+                  values = pd.to_numeric(df[column], errors="coerce")
+                  target_rows.append(
+                      {
+                          "target": column,
+                          "kind": "count_or_continuous",
+                          "non_null": int(values.notna().sum()),
+                          "mean": float(values.mean()),
+                          "std": float(values.std(ddof=0)),
+                          "zero_rate": float(values.eq(0).mean()),
+                          "positive_rate": float(values.gt(0).mean()),
+                          "p50": float(values.quantile(0.50)),
+                          "p90": float(values.quantile(0.90)),
+                          "p99": float(values.quantile(0.99)),
+                          "max": float(values.max()),
+                      }
+                  )
+          target_report = pd.DataFrame(target_rows)
+
+          missingness = pd.DataFrame(
+              {
+                  "column": df.columns,
+                  "missing_count": [int(df[column].isna().sum()) for column in df],
+                  "missing_rate": [float(df[column].isna().mean()) for column in df],
+                  "dtype": [str(df[column].dtype) for column in df],
+              }
+          ).sort_values(["missing_rate", "column"], ascending=[False, True])
+
+          coverage = pd.DataFrame(
+              [
+                  {
+                      "coverage_column": column,
+                      "coverage_rate": float(
+                          pd.to_numeric(df[column], errors="coerce").fillna(0).mean()
+                      ),
+                  }
+                  for column in coverage_columns
+              ]
+          )
+
+          by_round = (
+              df.groupby("round", dropna=False)
+              .agg(
+                  rows=("fight_id", "size"),
+                  fights=("fight_id", "nunique"),
+                  fighters=("fighter_id", "nunique"),
+                  stoppage_rate=("target_any_stoppage", "mean"),
+                  mean_sig_attempted=("target_sig_attempted", "mean"),
+                  mean_td_attempted=("target_td_attempted", "mean"),
+                  mean_control_seconds=("target_control_seconds", "mean"),
+              )
+              .reset_index()
+          )
+
+          by_year = (
+              df.assign(year=years)
+              .dropna(subset=["year"])
+              .groupby("year")
+              .agg(
+                  rows=("fight_id", "size"),
+                  fights=("fight_id", "nunique"),
+                  fighters=("fighter_id", "nunique"),
+                  stoppage_rate=("target_any_stoppage", "mean"),
+              )
+              .reset_index()
+          )
+          if not by_year.empty:
+              by_year["year"] = by_year["year"].astype(int)
+
+          duplicate_keys = int(df.duplicated(["fight_id", "fighter_id", "round"]).sum())
+          paired_rows_ok = bool(
+              df.groupby(["fight_id", "round"])["fighter_id"].nunique().eq(2).all()
+          )
+
+          forbidden_target_round_columns = {
+              "sig_str_landed",
+              "sig_str_attempted",
+              "total_str_landed",
+              "total_str_attempted",
+              "td_landed",
+              "td_attempted",
+              "control_seconds",
+              "ctrl_sec",
+              "ctrl_seconds",
+              "control_time",
+              "control_time_sec",
+              "control_time_seconds",
+              "kd",
+              "sub_att",
+              "ground_landed",
+              "ground_attempted",
+              "head_landed",
+              "head_attempted",
+              "body_landed",
+              "body_attempted",
+              "leg_landed",
+              "leg_attempted",
+              "distance_landed",
+              "distance_attempted",
+              "clinch_landed",
+              "clinch_attempted",
+          }
+          raw_current_round_columns = sorted(
+              forbidden_target_round_columns.intersection(df.columns)
+          )
+          source_only_columns = sorted(
+              column
+              for column in df.columns
+              if column.endswith("_url")
+              or column in {"event_date", "fight_order"}
+          )
+          realized_rfs_columns = sorted(
+              column
+              for column in rfs_columns
+              if "_fight_" in column
+          )
+
+          validation_pass = bool(
+              validation["passed"].fillna(False).astype(bool).all()
+          )
+          audit_pass = bool(
+              duplicate_keys == 0
+              and paired_rows_ok
+              and not raw_current_round_columns
+              and not source_only_columns
+              and not realized_rfs_columns
+              and validation_pass
+          )
+
+          summary = {
+              "training_path": str(training_path),
+              "validation_path": str(validation_path),
+              "rows": int(len(df)),
+              "columns": int(len(df.columns)),
+              "fights": int(df["fight_id"].nunique()),
+              "fighters": int(df["fighter_id"].nunique()),
+              "fighter_round_duplicate_keys": duplicate_keys,
+              "paired_fighter_rows_per_fight_round": paired_rows_ok,
+              "date_min": None if date_series.dropna().empty else date_series.min().date().isoformat(),
+              "date_max": None if date_series.dropna().empty else date_series.max().date().isoformat(),
+              "target_column_count": len(target_columns),
+              "rfs_feature_column_count": len(rfs_columns),
+              "rfs_coverage_column_count": len(coverage_columns),
+              "raw_current_round_predictor_columns": raw_current_round_columns,
+              "source_only_modeling_columns": source_only_columns,
+              "realized_target_fight_rfs_columns": realized_rfs_columns,
+              "validation_checks": validation.to_dict(orient="records"),
+              "target_positive_rates": {
+                  row["target"]: row["positive_rate"]
+                  for row in target_rows
+                  if row["kind"] == "binary"
+              },
+              "audit_pass": audit_pass,
+          }
+
+          target_report.to_csv(report_dir / "target_distributions.csv", index=False)
+          missingness.to_csv(report_dir / "column_missingness.csv", index=False)
+          coverage.to_csv(report_dir / "rfs_coverage.csv", index=False)
+          by_round.to_csv(report_dir / "coverage_by_round.csv", index=False)
+          by_year.to_csv(report_dir / "coverage_by_year.csv", index=False)
+          validation.to_csv(report_dir / "builder_validation_checks.csv", index=False)
+          (report_dir / "historical_training_summary.json").write_text(
+              json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8"
+          )
+
+          print(json.dumps(summary, indent=2, sort_keys=True))
+
+          with Path("simulation_audit_summary.md").open("w", encoding="utf-8") as handle:
+              handle.write("# Simulator historical training audit\n\n")
+              handle.write(f"- Rows: **{summary['rows']:,}**\n")
+              handle.write(f"- Fights: **{summary['fights']:,}**\n")
+              handle.write(f"- Fighters: **{summary['fighters']:,}**\n")
+              handle.write(f"- Columns: **{summary['columns']:,}**\n")
+              handle.write(f"- Date range: **{summary['date_min']} to {summary['date_max']}**\n")
+              handle.write(f"- RFS feature columns: **{summary['rfs_feature_column_count']}**\n")
+              handle.write(f"- Raw target-round leakage columns: **{len(raw_current_round_columns)}**\n")
+              handle.write(f"- Source-only modeling columns: **{len(source_only_columns)}**\n")
+              handle.write(f"- Audit pass: **{summary['audit_pass']}**\n\n")
+              handle.write("## Binary target rates\n\n")
+              for target, rate in summary["target_positive_rates"].items():
+                  handle.write(f"- `{target}`: {rate:.4%}\n")
+          PY
+
+          cat simulation_audit_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload simulator training artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-historical-training-audit
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6
+          path: |
+            data/model_lab/simulation/training/fighter_round_parameter_training.parquet
+            data/audits/simulation_fighter_round_training_audit.parquet
+            data/model_lab/simulation/audit_report/**
+            simulation_audit_summary.md
+
+      - name: Enforce historical audit gate
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          summary_path = Path(
+              "data/model_lab/simulation/audit_report/historical_training_summary.json"
+          )
+          summary = json.loads(summary_path.read_text(encoding="utf-8"))
+          if not summary.get("audit_pass"):
+              raise SystemExit(
+                  "Historical simulator training audit failed. Inspect the uploaded artifact."
+              )
+          print("Historical simulator training audit passed.")
+          PY
