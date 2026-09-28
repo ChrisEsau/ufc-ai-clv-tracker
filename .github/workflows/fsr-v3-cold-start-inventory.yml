@@ -1,0 +1,33 @@
+name: FSR V3 Cold Start Inventory
+
+on:
+  push:
+    branches:
+      - "feature/fsr-v3"
+    paths:
+      - "pipeline/fsr_v3/research/cold_start_data_inventory.py"
+      - ".github/workflows/fsr-v3-cold-start-inventory.yml"
+  pull_request:
+    paths:
+      - "pipeline/fsr_v3/research/cold_start_data_inventory.py"
+      - ".github/workflows/fsr-v3-cold-start-inventory.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install inventory dependencies
+        run: python -m pip install pandas pyarrow
+      - name: Run cold-start inventory
+        run: python -m pipeline.fsr_v3.research.cold_start_data_inventory

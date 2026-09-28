@@ -67,6 +67,12 @@ DEFAULT_RFS_FAMILY_CONFIGS: tuple[RfsFamilyConfig, ...] = (
         history_path=ROUND_FIGHTER_STATE_HISTORY_PATH,
     ),
     RfsFamilyConfig(
+        family_key="open",
+        feature_prefix="rfs_open_",
+        has_state_column="rfs_open_has_state",
+        history_path=ROUND_FIGHTER_STATE_HISTORY_PATH,
+    ),
+    RfsFamilyConfig(
         family_key="suppress",
         feature_prefix="rfs_suppress_",
         has_state_column="rfs_suppress_has_state",

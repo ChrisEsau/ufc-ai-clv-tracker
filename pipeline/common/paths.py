@@ -21,6 +21,10 @@ BANKROLL_DIR = DATA_DIR / "bankroll"
 MODEL_LAB_DIR = DATA_DIR / "model_lab"
 SNAPSHOTS_DIR = DATA_DIR / "snapshots"
 CLV_DIR = DATA_DIR / "clv"
+FSR_V2_DIR = DATA_DIR / "fsr_v2"
+FSR_V2_HISTORY_DIR = FSR_V2_DIR / "history"
+FSR_V2_CHECKPOINT_DIR = FSR_V2_DIR / "checkpoints"
+FSR_V2_DIAGNOSTICS_DIR = FSR_V2_DIR / "diagnostics"
 DOCS_DIR = ROOT_DIR / "docs"
 MARKET_CONFIG_DIR = CONFIGS_DIR / "market"
 
@@ -66,6 +70,8 @@ MONEYLINE_FAVDOG_MARKET_FEATURE_VIEW_PATH = FEATURES_DIR / "moneyline_favdog_mar
 MONEYLINE_FAVDOG_MARKET_FEATURE_VIEW_AUDIT_PATH = AUDITS_DIR / "moneyline_favdog_market_feature_view_validation.parquet"
 
 ROUND_STATS_PATH = FIGHT_DETAILS_DIR / "ufc_round_stats.parquet"
+FSR_V2_PREFIGHT_SNAPSHOTS_PATH = FSR_V2_DIR / "fsr_v2_prefight_snapshots.parquet"
+FSR_V2_LATEST_PATH = FSR_V2_DIR / "fsr_v2_latest.parquet"
 ROUND_FIGHTER_STATE_HISTORY_PATH = FEATURES_DIR / "round_fighter_state_history.parquet"
 ROUND_LATEST_FIGHTER_STATE_PATH = FEATURES_DIR / "round_latest_fighter_state.parquet"
 ROUND_FIGHTER_STATE_P0_1_VALIDATION_PATH = AUDITS_DIR / "round_fighter_state_p0_1_validation.parquet"
@@ -78,6 +84,7 @@ ROUND_FIGHTER_WRESTLING_P0_3_VALIDATION_PATH = AUDITS_DIR / "round_fighter_wrest
 ROUND_FIGHTER_DEFENSE_P1_4_HISTORY_PATH = FEATURES_DIR / "round_fighter_defense_p1_4_history.parquet"
 ROUND_LATEST_FIGHTER_DEFENSE_P1_4_PATH = FEATURES_DIR / "round_latest_fighter_defense_p1_4.parquet"
 ROUND_FIGHTER_DEFENSE_P1_4_VALIDATION_PATH = AUDITS_DIR / "round_fighter_defense_p1_4_validation.parquet"
+RFS_MC_V1_SUBMISSION_HISTORY_PATH = FEATURES_DIR / "rfs_mc_v1_submission_history.parquet"
 
 UPCOMING_EVENTS_PATH = CARDS_DIR / "ufcstats_upcoming_events.parquet"
 UPCOMING_FIGHTS_PATH = CARDS_DIR / "ufcstats_upcoming_fights.parquet"
@@ -178,6 +185,10 @@ def ensure_data_dirs() -> None:
         MODEL_LAB_DIR,
         SNAPSHOTS_DIR,
         CLV_DIR,
+        FSR_V2_DIR,
+        FSR_V2_HISTORY_DIR,
+        FSR_V2_CHECKPOINT_DIR,
+        FSR_V2_DIAGNOSTICS_DIR,
         MODELS_DIR,
         MODEL_DIR,
         DOCS_DIR,

@@ -1,0 +1,42 @@
+name: Event Clock V2 Physiology Translation Validation
+on:
+  workflow_dispatch:
+  push:
+    branches: [refactor/event-clock-v2-brain-timeline]
+permissions: {contents: read, actions: read}
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m pip install numpy pandas pyarrow pytest pyyaml scipy joblib scikit-learn
+      - name: Restore canonical historical FSR artifact
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 9494902022
+          path: data
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 32645607979
+      - name: Verify canonical payload
+        run: |
+          cp -a data/canonical-weight-class-state/. data/
+          test -f data/fsr_v3/fsr_v3_prefight_snapshots.parquet
+          test -f data/fsr_v3/fsr_v3_latest.parquet
+          echo 'source_artifact_digest=sha256:a6abd062322eaf0c4a47997f215d7fa82c01c7db2755089fad1a30420da7d639'
+      - run: python -m pytest tests/simulation/event_clock_mc_v2 -q
+      - name: Controlled physiology and frozen-V1 micro validation
+        run: python -m pipeline.simulation.event_clock_mc_v2.diagnostics.physiology_mechanics_validation --output data/diagnostics/event_clock_mc_v2/physiology_mechanics_validation.json
+      - name: Audit historical physiology traits
+        run: python -m pipeline.simulation.event_clock_mc_v2.diagnostics.physiology_trait_audit --output data/diagnostics/event_clock_mc_v2/physiology_trait_audit.json
+      - name: Neutral physiology baseline (100 fights x 20 paths)
+        run: python -m pipeline.simulation.event_clock_mc_v2.diagnostics.stage8_holdout_validation --fights 100 --paths-per-fight 20 --exclude-discovery-fights 125 --physiology neutral --output data/diagnostics/event_clock_mc_v2/physiology_neutral.json
+      - name: Canonical physiology (100 fights x 20 paths)
+        run: python -m pipeline.simulation.event_clock_mc_v2.diagnostics.stage8_holdout_validation --fights 100 --paths-per-fight 20 --exclude-discovery-fights 125 --physiology canonical --output data/diagnostics/event_clock_mc_v2/physiology_canonical.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: event-clock-v2-physiology-validation
+          path: data/diagnostics/event_clock_mc_v2/physiology_*.json
+          if-no-files-found: error

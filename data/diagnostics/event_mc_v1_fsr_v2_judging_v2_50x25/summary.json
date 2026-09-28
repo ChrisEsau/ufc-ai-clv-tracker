@@ -1,0 +1,310 @@
+{
+  "brier_score": 0.274496,
+  "by_scheduled_rounds": {
+    "3": {
+      "fights": 40,
+      "historical": {
+        "DEC": 0.65,
+        "KO_TKO": 0.275,
+        "SUB": 0.075
+      },
+      "simulated": {
+        "DEC": 0.738,
+        "KO_TKO": 0.219,
+        "SUB": 0.043
+      }
+    },
+    "5": {
+      "fights": 10,
+      "historical": {
+        "DEC": 0.3,
+        "KO_TKO": 0.6,
+        "SUB": 0.1
+      },
+      "simulated": {
+        "DEC": 0.572,
+        "KO_TKO": 0.41200000000000003,
+        "SUB": 0.016
+      }
+    }
+  },
+  "by_weight_class": {
+    "bantamweight": {
+      "fights": 4,
+      "historical": {
+        "DEC": 0.5,
+        "KO_TKO": 0.5,
+        "SUB": 0.0
+      },
+      "simulated": {
+        "DEC": 0.77,
+        "KO_TKO": 0.18999999999999997,
+        "SUB": 0.04
+      }
+    },
+    "featherweight": {
+      "fights": 6,
+      "historical": {
+        "DEC": 0.6666666666666666,
+        "KO_TKO": 0.3333333333333333,
+        "SUB": 0.0
+      },
+      "simulated": {
+        "DEC": 0.82,
+        "KO_TKO": 0.14666666666666664,
+        "SUB": 0.03333333333333333
+      }
+    },
+    "flyweight": {
+      "fights": 2,
+      "historical": {
+        "DEC": 0.5,
+        "KO_TKO": 0.5,
+        "SUB": 0.0
+      },
+      "simulated": {
+        "DEC": 0.88,
+        "KO_TKO": 0.1,
+        "SUB": 0.02
+      }
+    },
+    "heavyweight": {
+      "fights": 5,
+      "historical": {
+        "DEC": 0.4,
+        "KO_TKO": 0.4,
+        "SUB": 0.2
+      },
+      "simulated": {
+        "DEC": 0.384,
+        "KO_TKO": 0.5840000000000001,
+        "SUB": 0.032
+      }
+    },
+    "interim lightweight": {
+      "fights": 1,
+      "historical": {
+        "DEC": 0.0,
+        "KO_TKO": 1.0,
+        "SUB": 0.0
+      },
+      "simulated": {
+        "DEC": 0.36,
+        "KO_TKO": 0.64,
+        "SUB": 0.0
+      }
+    },
+    "light heavyweight": {
+      "fights": 5,
+      "historical": {
+        "DEC": 0.6,
+        "KO_TKO": 0.4,
+        "SUB": 0.0
+      },
+      "simulated": {
+        "DEC": 0.616,
+        "KO_TKO": 0.36,
+        "SUB": 0.024
+      }
+    },
+    "lightweight": {
+      "fights": 9,
+      "historical": {
+        "DEC": 0.4444444444444444,
+        "KO_TKO": 0.2222222222222222,
+        "SUB": 0.3333333333333333
+      },
+      "simulated": {
+        "DEC": 0.7155555555555555,
+        "KO_TKO": 0.24000000000000002,
+        "SUB": 0.044444444444444446
+      }
+    },
+    "middleweight": {
+      "fights": 2,
+      "historical": {
+        "DEC": 1.0,
+        "KO_TKO": 0.0,
+        "SUB": 0.0
+      },
+      "simulated": {
+        "DEC": 0.76,
+        "KO_TKO": 0.24,
+        "SUB": 0.0
+      }
+    },
+    "welterweight": {
+      "fights": 8,
+      "historical": {
+        "DEC": 0.625,
+        "KO_TKO": 0.375,
+        "SUB": 0.0
+      },
+      "simulated": {
+        "DEC": 0.63,
+        "KO_TKO": 0.3,
+        "SUB": 0.07
+      }
+    },
+    "women's bantamweight": {
+      "fights": 2,
+      "historical": {
+        "DEC": 1.0,
+        "KO_TKO": 0.0,
+        "SUB": 0.0
+      },
+      "simulated": {
+        "DEC": 0.94,
+        "KO_TKO": 0.06,
+        "SUB": 0.0
+      }
+    },
+    "women's flyweight": {
+      "fights": 4,
+      "historical": {
+        "DEC": 0.75,
+        "KO_TKO": 0.25,
+        "SUB": 0.0
+      },
+      "simulated": {
+        "DEC": 0.8899999999999999,
+        "KO_TKO": 0.05,
+        "SUB": 0.060000000000000005
+      }
+    },
+    "women's strawweight": {
+      "fights": 2,
+      "historical": {
+        "DEC": 0.5,
+        "KO_TKO": 0.5,
+        "SUB": 0.0
+      },
+      "simulated": {
+        "DEC": 0.84,
+        "KO_TKO": 0.16,
+        "SUB": 0.0
+      }
+    }
+  },
+  "calibration_bins": [
+    {
+      "actual_red_rate": 0.5,
+      "bin": "(-0.001, 0.1]",
+      "fights": 2,
+      "mean_predicted_red": 0.08
+    },
+    {
+      "actual_red_rate": 0.8,
+      "bin": "(0.1, 0.2]",
+      "fights": 5,
+      "mean_predicted_red": 0.176
+    },
+    {
+      "actual_red_rate": 0.5,
+      "bin": "(0.2, 0.3]",
+      "fights": 4,
+      "mean_predicted_red": 0.27
+    },
+    {
+      "actual_red_rate": 0.5714285714285714,
+      "bin": "(0.3, 0.4]",
+      "fights": 7,
+      "mean_predicted_red": 0.3485714285714286
+    },
+    {
+      "actual_red_rate": 0.25,
+      "bin": "(0.4, 0.5]",
+      "fights": 4,
+      "mean_predicted_red": 0.45999999999999996
+    },
+    {
+      "actual_red_rate": 0.6666666666666666,
+      "bin": "(0.5, 0.6]",
+      "fights": 9,
+      "mean_predicted_red": 0.5688888888888889
+    },
+    {
+      "actual_red_rate": 0.6666666666666666,
+      "bin": "(0.6, 0.7]",
+      "fights": 3,
+      "mean_predicted_red": 0.68
+    },
+    {
+      "actual_red_rate": 0.75,
+      "bin": "(0.7, 0.8]",
+      "fights": 8,
+      "mean_predicted_red": 0.755
+    },
+    {
+      "actual_red_rate": 0.8,
+      "bin": "(0.8, 0.9]",
+      "fights": 5,
+      "mean_predicted_red": 0.8560000000000001
+    },
+    {
+      "actual_red_rate": 0.6666666666666666,
+      "bin": "(0.9, 1.0]",
+      "fights": 3,
+      "mean_predicted_red": 0.9466666666666667
+    }
+  ],
+  "fights": 50,
+  "fights_per_second": 0.8656071353845655,
+  "historical_finish_round_shares": {
+    "1": 0.42857142857142855,
+    "2": 0.38095238095238093,
+    "3": 0.14285714285714285,
+    "4": 0.0,
+    "5": 0.047619047619047616
+  },
+  "historical_finish_time_mean": 382.4761904761905,
+  "historical_finish_time_median": 366.0,
+  "historical_kd_per_15_minutes": 0.42580429700545475,
+  "historical_kd_per_fight": 0.34,
+  "historical_method_shares": {
+    "DEC": 0.58,
+    "KO_TKO": 0.34,
+    "SUB": 0.08
+  },
+  "historical_multi_kd_share": 0.02,
+  "historical_share_with_submission_attempt": 0.36,
+  "historical_submission_attempts_per_fight": 0.6,
+  "historical_zero_kd_share": 0.68,
+  "log_loss": 0.7786702954875717,
+  "mean_probability_actual_winner": 0.5392,
+  "paths_per_fight": 25,
+  "paths_per_second": 21.64017838461414,
+  "runtime_seconds": 57.76292495300004,
+  "simulated_finish_round_shares": {
+    "1": 0.5365853658536586,
+    "2": 0.24932249322493225,
+    "3": 0.15718157181571815,
+    "4": 0.037940379403794036,
+    "5": 0.018970189701897018
+  },
+  "simulated_finish_time_mean": 347.3280816754776,
+  "simulated_kd_per_15_minutes": 0.37721080161847126,
+  "simulated_kd_per_path": 0.33760000000000007,
+  "simulated_method_shares": {
+    "DEC": 0.7048000000000001,
+    "KO_TKO": 0.2576,
+    "SUB": 0.0376
+  },
+  "simulated_multi_kd_share": 0.055200000000000006,
+  "simulated_only_flow_diagnostics": {
+    "ground_residence_seconds_per_path": 99.54878219118561,
+    "ground_residence_share": 0.12358766433148934,
+    "standing_residence_seconds_per_path": 705.9424675194153,
+    "standing_residence_share": 0.8764123356685107,
+    "strike_attempts_per_path": 203.916,
+    "strikes_landed_per_path": 80.9136,
+    "submission_attempts_per_path": 0.2728,
+    "takedown_attempts_per_path": 5.3704,
+    "takedowns_landed_per_path": 1.8680000000000003
+  },
+  "simulated_share_with_submission_attempt": 0.1992,
+  "simulated_submission_attempts_per_path": 0.2728,
+  "simulated_zero_kd_share": 0.7344000000000002,
+  "total_paths": 1250,
+  "winner_accuracy": 0.6
+}
