@@ -3262,7 +3262,7 @@
   "dispatched_runbooks": [],
   "due_runbooks": [],
   "errors": [],
-  "last_checked_at": "2026-10-04T22:54:44.144744+00:00",
+  "last_checked_at": "2026-10-05T01:44:16.260902+00:00",
   "next_due_runbook": {
     "catchup_grace_minutes": 2880,
     "display_name": "Monday Reset",
@@ -3274,5 +3274,5 @@
   "skipped_runbooks": [],
   "status": "completed",
   "timezone": "America/Chicago",
-  "updated_at": "2026-10-04T22:54:44.155284+00:00"
+  "updated_at": "2026-10-05T01:44:16.267057+00:00"
 }
