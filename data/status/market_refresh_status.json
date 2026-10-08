@@ -1,5 +1,5 @@
 {
-  "completed_at": "2026-10-07T20:39:26.972557+00:00",
+  "completed_at": "2026-10-08T15:34:37.965006+00:00",
   "current_step_id": "capture_snapshots",
   "current_step_name": "Capture Snapshots",
   "current_substep_id": "build_market_signals",
@@ -13,7 +13,7 @@
       "step_name": null,
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-10-07T20:30:35.146798+00:00"
+      "timestamp": "2026-10-08T15:25:39.580620+00:00"
     },
     {
       "event": "step_started",
@@ -22,7 +22,7 @@
       "step_name": "Get Market Odds",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-10-07T20:30:35.147404+00:00"
+      "timestamp": "2026-10-08T15:25:39.581396+00:00"
     },
     {
       "event": "substep_started",
@@ -31,7 +31,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "draftkings_event_index",
       "substep_name": "Build DraftKings Event Index",
-      "timestamp": "2026-10-07T20:30:35.147833+00:00"
+      "timestamp": "2026-10-08T15:25:39.581769+00:00"
     },
     {
       "event": "substep_completed",
@@ -40,7 +40,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "draftkings_event_index",
       "substep_name": "Build DraftKings Event Index",
-      "timestamp": "2026-10-07T20:30:36.243058+00:00"
+      "timestamp": "2026-10-08T15:25:41.281662+00:00"
     },
     {
       "event": "substep_started",
@@ -49,7 +49,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "draftkings_card_filter",
       "substep_name": "Match DraftKings Events To Card",
-      "timestamp": "2026-10-07T20:30:36.243609+00:00"
+      "timestamp": "2026-10-08T15:25:41.282804+00:00"
     },
     {
       "event": "substep_completed",
@@ -58,7 +58,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "draftkings_card_filter",
       "substep_name": "Match DraftKings Events To Card",
-      "timestamp": "2026-10-07T20:30:36.721749+00:00"
+      "timestamp": "2026-10-08T15:25:41.876621+00:00"
     },
     {
       "event": "substep_started",
@@ -67,7 +67,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "draftkings_matched_discovery",
       "substep_name": "Discover DraftKings Markets",
-      "timestamp": "2026-10-07T20:30:36.722298+00:00"
+      "timestamp": "2026-10-08T15:25:41.877158+00:00"
     },
     {
       "event": "substep_completed",
@@ -76,7 +76,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "draftkings_matched_discovery",
       "substep_name": "Discover DraftKings Markets",
-      "timestamp": "2026-10-07T20:39:05.484802+00:00"
+      "timestamp": "2026-10-08T15:34:16.320327+00:00"
     },
     {
       "event": "substep_started",
@@ -85,7 +85,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "draftkings_normalize_markets",
       "substep_name": "Normalize DraftKings Markets",
-      "timestamp": "2026-10-07T20:39:05.485394+00:00"
+      "timestamp": "2026-10-08T15:34:16.320875+00:00"
     },
     {
       "event": "substep_completed",
@@ -94,7 +94,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "draftkings_normalize_markets",
       "substep_name": "Normalize DraftKings Markets",
-      "timestamp": "2026-10-07T20:39:05.895698+00:00"
+      "timestamp": "2026-10-08T15:34:16.819076+00:00"
     },
     {
       "event": "substep_started",
@@ -103,7 +103,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "fanduel_event_index",
       "substep_name": "Build FanDuel Event Index",
-      "timestamp": "2026-10-07T20:39:05.896259+00:00"
+      "timestamp": "2026-10-08T15:34:16.819597+00:00"
     },
     {
       "event": "substep_completed",
@@ -112,7 +112,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "fanduel_event_index",
       "substep_name": "Build FanDuel Event Index",
-      "timestamp": "2026-10-07T20:39:06.697892+00:00"
+      "timestamp": "2026-10-08T15:34:17.474756+00:00"
     },
     {
       "event": "substep_started",
@@ -121,7 +121,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "fanduel_card_filter",
       "substep_name": "Match FanDuel Events To Card",
-      "timestamp": "2026-10-07T20:39:06.698687+00:00"
+      "timestamp": "2026-10-08T15:34:17.475304+00:00"
     },
     {
       "event": "substep_completed",
@@ -130,7 +130,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "fanduel_card_filter",
       "substep_name": "Match FanDuel Events To Card",
-      "timestamp": "2026-10-07T20:39:07.144111+00:00"
+      "timestamp": "2026-10-08T15:34:18.057678+00:00"
     },
     {
       "event": "substep_started",
@@ -139,7 +139,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "fanduel_matched_discovery",
       "substep_name": "Discover FanDuel Markets",
-      "timestamp": "2026-10-07T20:39:07.144717+00:00"
+      "timestamp": "2026-10-08T15:34:18.058227+00:00"
     },
     {
       "event": "substep_completed",
@@ -148,7 +148,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "fanduel_matched_discovery",
       "substep_name": "Discover FanDuel Markets",
-      "timestamp": "2026-10-07T20:39:21.553432+00:00"
+      "timestamp": "2026-10-08T15:34:31.245905+00:00"
     },
     {
       "event": "substep_started",
@@ -157,7 +157,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "fanduel_normalize_markets",
       "substep_name": "Normalize FanDuel Markets",
-      "timestamp": "2026-10-07T20:39:21.554045+00:00"
+      "timestamp": "2026-10-08T15:34:31.246490+00:00"
     },
     {
       "event": "substep_completed",
@@ -166,7 +166,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "fanduel_normalize_markets",
       "substep_name": "Normalize FanDuel Markets",
-      "timestamp": "2026-10-07T20:39:21.901494+00:00"
+      "timestamp": "2026-10-08T15:34:31.658860+00:00"
     },
     {
       "event": "substep_started",
@@ -175,7 +175,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "merge_market_catalogs",
       "substep_name": "Merge Provider Market Catalogs",
-      "timestamp": "2026-10-07T20:39:21.902336+00:00"
+      "timestamp": "2026-10-08T15:34:31.659428+00:00"
     },
     {
       "event": "substep_completed",
@@ -184,7 +184,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "merge_market_catalogs",
       "substep_name": "Merge Provider Market Catalogs",
-      "timestamp": "2026-10-07T20:39:22.247500+00:00"
+      "timestamp": "2026-10-08T15:34:32.072926+00:00"
     },
     {
       "event": "substep_started",
@@ -193,7 +193,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "update_target_event_commence_time",
       "substep_name": "Update Target Event Commence Time",
-      "timestamp": "2026-10-07T20:39:22.248332+00:00"
+      "timestamp": "2026-10-08T15:34:32.073805+00:00"
     },
     {
       "event": "substep_completed",
@@ -202,7 +202,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "update_target_event_commence_time",
       "substep_name": "Update Target Event Commence Time",
-      "timestamp": "2026-10-07T20:39:22.579779+00:00"
+      "timestamp": "2026-10-08T15:34:32.482665+00:00"
     },
     {
       "event": "substep_started",
@@ -211,7 +211,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "match_markets",
       "substep_name": "Match Merged Markets To Live Card",
-      "timestamp": "2026-10-07T20:39:22.580787+00:00"
+      "timestamp": "2026-10-08T15:34:32.483926+00:00"
     },
     {
       "event": "substep_completed",
@@ -220,7 +220,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "match_markets",
       "substep_name": "Match Merged Markets To Live Card",
-      "timestamp": "2026-10-07T20:39:25.630651+00:00"
+      "timestamp": "2026-10-08T15:34:36.478843+00:00"
     },
     {
       "event": "step_completed",
@@ -229,7 +229,7 @@
       "step_name": "Get Market Odds",
       "substep_id": "match_markets",
       "substep_name": "Match Merged Markets To Live Card",
-      "timestamp": "2026-10-07T20:39:25.631327+00:00"
+      "timestamp": "2026-10-08T15:34:36.479483+00:00"
     },
     {
       "event": "step_started",
@@ -238,7 +238,7 @@
       "step_name": "Capture Snapshots",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-10-07T20:39:25.631924+00:00"
+      "timestamp": "2026-10-08T15:34:36.480127+00:00"
     },
     {
       "event": "substep_started",
@@ -247,7 +247,7 @@
       "step_name": "Capture Snapshots",
       "substep_id": "capture_market_intelligence_history",
       "substep_name": "Capture Market Intelligence History",
-      "timestamp": "2026-10-07T20:39:25.757693+00:00"
+      "timestamp": "2026-10-08T15:34:36.480687+00:00"
     },
     {
       "event": "substep_completed",
@@ -256,7 +256,7 @@
       "step_name": "Capture Snapshots",
       "substep_id": "capture_market_intelligence_history",
       "substep_name": "Capture Market Intelligence History",
-      "timestamp": "2026-10-07T20:39:26.156963+00:00"
+      "timestamp": "2026-10-08T15:34:36.978635+00:00"
     },
     {
       "event": "substep_started",
@@ -265,7 +265,7 @@
       "step_name": "Capture Snapshots",
       "substep_id": "build_market_signals",
       "substep_name": "Build Market Signals",
-      "timestamp": "2026-10-07T20:39:26.157664+00:00"
+      "timestamp": "2026-10-08T15:34:36.979437+00:00"
     },
     {
       "event": "substep_completed",
@@ -274,7 +274,7 @@
       "step_name": "Capture Snapshots",
       "substep_id": "build_market_signals",
       "substep_name": "Build Market Signals",
-      "timestamp": "2026-10-07T20:39:26.908333+00:00"
+      "timestamp": "2026-10-08T15:34:37.963618+00:00"
     },
     {
       "event": "step_completed",
@@ -283,7 +283,7 @@
       "step_name": "Capture Snapshots",
       "substep_id": "build_market_signals",
       "substep_name": "Build Market Signals",
-      "timestamp": "2026-10-07T20:39:26.909058+00:00"
+      "timestamp": "2026-10-08T15:34:37.964426+00:00"
     },
     {
       "event": "runbook_completed",
@@ -292,17 +292,17 @@
       "step_name": "Capture Snapshots",
       "substep_id": "build_market_signals",
       "substep_name": "Build Market Signals",
-      "timestamp": "2026-10-07T20:39:26.972561+00:00"
+      "timestamp": "2026-10-08T15:34:37.965010+00:00"
     }
   ],
   "message": "Market Refresh completed",
   "mode": "production",
   "runbook_id": "market_refresh_v2",
-  "started_at": "2026-10-07T20:30:35.146794+00:00",
+  "started_at": "2026-10-08T15:25:39.580616+00:00",
   "status": "completed",
   "step_index": 2,
   "step_total": 2,
   "substep_index": 2,
   "substep_total": 2,
-  "updated_at": "2026-10-07T20:39:26.972694+00:00"
+  "updated_at": "2026-10-08T15:34:37.965096+00:00"
 }
