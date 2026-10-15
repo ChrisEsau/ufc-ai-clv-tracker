@@ -1,0 +1,244 @@
+name: Weight Class Audit - Men's Flyweight
+
+on:
+  push:
+    branches:
+      - "research/weight-class-audit-flyweight-20260823"
+    paths:
+      - ".github/workflows/weight-class-audit-flyweight.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install focused dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy pandas scipy scikit-learn statsmodels joblib pyarrow pyyaml pytest
+
+      - name: Build frozen FSR V2 source histories
+        run: python -m pipeline.fsr_v2.build --all
+
+      - name: Publish frozen FSR V2 source snapshots
+        run: python -m pipeline.fsr_v2.publish
+
+      - name: Build final canonical FSR V3
+        run: python -m pipeline.fsr_v3.build_canonical
+
+      - name: Fit frozen Event Clock V1 parent bundle
+        run: python -m pipeline.simulation.event_clock_mc_v1.fit_event_clock_bundle
+
+      - name: Fit Event Clock V2 direct bundle
+        run: python -m pipeline.simulation.event_clock_mc_v2.fit_event_clock_bundle
+
+      - name: Run men's flyweight audit
+        run: |
+          set -o pipefail
+          python - <<'PY' 2>&1 | tee /tmp/flyweight_audit.log
+          from pathlib import Path
+          import numpy as np
+          import pandas as pd
+
+          from pipeline.common.paths import MASTER_PATH
+          from pipeline.fsr_v3.paths import FSR_V3_PREFIGHT_SNAPSHOTS_PATH
+          from pipeline.simulation.event_clock_mc_v1.prototype_stage2 import CUTOFF
+          from pipeline.simulation.event_mc_v1.diagnostics.population_validation import METHODS, normalize_method
+          from pipeline.simulation.event_clock_mc_v2.diagnostics.canonical_c_validation import _simulate_c
+          from pipeline.simulation.event_clock_mc_v2.diagnostics.method_market_abc_validation import _prior_ufc_counts, _fight_bucket
+
+          DIVISION = "flyweight"
+          TARGET_N = 100
+          PATHS = 500
+          SEED = 20260823
+          OUT = Path("data/diagnostics/event_clock_mc_v2/weight_class_audit/flyweight")
+          OUT.mkdir(parents=True, exist_ok=True)
+
+          master = pd.read_parquet(MASTER_PATH).drop_duplicates("fight_id").copy()
+          master["fight_id"] = master["fight_id"].astype(str)
+          master["event_date"] = pd.to_datetime(master["date"], errors="coerce").dt.normalize()
+          master["division_norm"] = master["division"].astype(str).str.strip().str.lower()
+
+          fsr = pd.read_parquet(FSR_V3_PREFIGHT_SNAPSHOTS_PATH).copy()
+          fsr["fight_id"] = fsr["fight_id"].astype(str)
+          valid = fsr.groupby("fight_id").size()
+          valid_fsr_ids = set(valid[valid == 2].index.astype(str))
+
+          supported = []
+          for _, row in master.iterrows():
+              method = normalize_method(row["method"])
+              ok = (
+                  row["division_norm"] == DIVISION
+                  and pd.notna(row["event_date"])
+                  and row["event_date"] > pd.Timestamp(CUTOFF).normalize()
+                  and row["winner"] in {row["r_name"], row["b_name"]}
+                  and method in METHODS
+                  and pd.notna(row["total_rounds"])
+                  and int(row["total_rounds"]) in {3, 5}
+                  and pd.notna(row["match_time_sec"])
+                  and str(row["fight_id"]) in valid_fsr_ids
+              )
+              if ok:
+                  supported.append(row)
+
+          eligible = pd.DataFrame(supported)
+          if eligible.empty:
+              raise RuntimeError("No eligible post-cutoff men's flyweight fights")
+
+          # Most recent out-of-sample fights, then restore chronological order for replay.
+          cohort = (
+              eligible.sort_values(["event_date", "fight_id"], ascending=[False, False])
+              .head(TARGET_N)
+              .sort_values(["event_date", "fight_id"])
+              .reset_index(drop=True)
+          )
+
+          prior = _prior_ufc_counts(master)
+          cohort["red_prior_ufc_fights"] = [
+              prior.get((str(r.fight_id), str(r.r_id)), 0) for r in cohort.itertuples(index=False)
+          ]
+          cohort["blue_prior_ufc_fights"] = [
+              prior.get((str(r.fight_id), str(r.b_id)), 0) for r in cohort.itertuples(index=False)
+          ]
+          cohort["fight_evidence_bucket"] = [
+              _fight_bucket(rp, bp)
+              for rp, bp in zip(cohort["red_prior_ufc_fights"], cohort["blue_prior_ufc_fights"])
+          ]
+
+          print("=" * 120)
+          print("EVENT CLOCK MC V2 — MEN'S FLYWEIGHT WEIGHT-CLASS AUDIT")
+          print("=" * 120)
+          print(f"training cutoff: {pd.Timestamp(CUTOFF).date()} | eligible post-cutoff: {len(eligible)} | selected: {len(cohort)} | paths/fight: {PATHS}")
+          print(f"date range: {cohort['event_date'].min().date()} through {cohort['event_date'].max().date()}")
+          print("NO TUNING / NO OVERRIDES / CURRENT CANONICAL C ONLY")
+
+          summary = _simulate_c(cohort, PATHS, SEED)
+
+          y_red = summary["actual_winner"].eq("red").astype(float).to_numpy()
+          p_red = summary["p_red_win"].to_numpy(float)
+          actual_winner_p = np.where(y_red > .5, p_red, 1.0 - p_red)
+          ml_brier = float(np.mean((p_red - y_red) ** 2))
+          ml_logloss = float(-np.mean(np.log(np.clip(actual_winner_p, 1e-9, 1.0))))
+
+          method_cols = {"DEC":"p_fight_dec", "KO_TKO":"p_fight_ko_tko", "SUB":"p_fight_sub"}
+          method_loss = []
+          method_brier_rows = []
+          for row in summary.itertuples(index=False):
+              probs = np.array([getattr(row, method_cols[m]) for m in ("DEC","KO_TKO","SUB")], dtype=float)
+              yi = np.array([1.0 if row.actual_method == m else 0.0 for m in ("DEC","KO_TKO","SUB")])
+              method_loss.append(-np.log(max(probs[list(("DEC","KO_TKO","SUB")).index(row.actual_method)], 1e-9)))
+              method_brier_rows.append(float(np.sum((probs - yi) ** 2)))
+
+          headline = pd.DataFrame([{
+              "division": DIVISION,
+              "n_fights": len(summary),
+              "paths_per_fight": PATHS,
+              "first_event_date": str(cohort["event_date"].min().date()),
+              "last_event_date": str(cohort["event_date"].max().date()),
+              "ml_accuracy": float(summary["ml_correct"].mean()),
+              "ml_brier": ml_brier,
+              "ml_logloss": ml_logloss,
+              "mean_actual_winner_probability": float(actual_winner_p.mean()),
+              "method_accuracy": float(summary["method_correct"].mean()),
+              "method_brier": float(np.mean(method_brier_rows)),
+              "method_logloss": float(np.mean(method_loss)),
+          }])
+
+          method_rows = []
+          for method, col in method_cols.items():
+              actual = float(summary["actual_method"].eq(method).mean())
+              simulated = float(summary[col].mean())
+              method_rows.append({"method":method, "actual_share":actual, "simulated_share":simulated, "bias_sim_minus_actual":simulated-actual})
+          method_share = pd.DataFrame(method_rows)
+
+          mechanic_specs = [
+              ("sig_attempted", "sim_red_sig_attempted", "sim_blue_sig_attempted", "hist_red_sig_attempted", "hist_blue_sig_attempted"),
+              ("sig_landed", "sim_red_sig_landed", "sim_blue_sig_landed", "hist_red_sig_landed", "hist_blue_sig_landed"),
+              ("td_attempted", "sim_red_td_attempted", "sim_blue_td_attempted", "hist_red_td_attempted", "hist_blue_td_attempted"),
+              ("td_landed", "sim_red_td_landed", "sim_blue_td_landed", "hist_red_td_landed", "hist_blue_td_landed"),
+              ("knockdowns", "sim_red_kd", "sim_blue_kd", "hist_red_kd", "hist_blue_kd"),
+              ("sub_attempts", "sim_red_sub_attempts", "sim_blue_sub_attempts", "hist_red_sub_attempts", "hist_blue_sub_attempts"),
+              ("control_seconds", "sim_red_control_seconds", "sim_blue_control_seconds", "hist_red_control_seconds", "hist_blue_control_seconds"),
+          ]
+          mechanics = []
+          for name, sr, sb, hr, hb in mechanic_specs:
+              sim = float((summary[sr] + summary[sb]).mean())
+              hist = float((summary[hr] + summary[hb]).mean())
+              mechanics.append({
+                  "metric": name,
+                  "historical_mean_per_fight": hist,
+                  "simulated_mean_per_fight": sim,
+                  "absolute_bias": sim-hist,
+                  "relative_bias": (sim-hist)/hist if abs(hist) > 1e-12 else np.nan,
+              })
+          hist_elapsed = float(summary["actual_elapsed"].mean())
+          sim_elapsed = float(summary["sim_mean_elapsed"].mean())
+          mechanics.append({"metric":"elapsed_seconds", "historical_mean_per_fight":hist_elapsed, "simulated_mean_per_fight":sim_elapsed, "absolute_bias":sim_elapsed-hist_elapsed, "relative_bias":(sim_elapsed-hist_elapsed)/hist_elapsed})
+          mechanics = pd.DataFrame(mechanics)
+
+          # Fight-level bootstrap intervals for the main calibration quantities.
+          rng = np.random.default_rng(2026082301)
+          n = len(summary)
+          boot = []
+          for _ in range(2000):
+              idx = rng.integers(0, n, n)
+              sy = y_red[idx]
+              sp = p_red[idx]
+              swp = np.where(sy > .5, sp, 1-sp)
+              rec = {
+                  "ml_brier": float(np.mean((sp-sy)**2)),
+                  "ml_logloss": float(-np.mean(np.log(np.clip(swp, 1e-9, 1)))),
+              }
+              sub = summary.iloc[idx]
+              for method, col in method_cols.items():
+                  rec[f"{method}_bias"] = float(sub[col].mean() - sub["actual_method"].eq(method).mean())
+              boot.append(rec)
+          boot = pd.DataFrame(boot)
+          ci_rows = []
+          for col in boot.columns:
+              ci_rows.append({"metric":col, "ci_2_5":float(boot[col].quantile(.025)), "ci_97_5":float(boot[col].quantile(.975))})
+          bootstrap = pd.DataFrame(ci_rows)
+
+          cohort.to_csv(OUT / "cohort.csv", index=False)
+          summary.to_csv(OUT / "summary.csv", index=False)
+          headline.to_csv(OUT / "headline.csv", index=False)
+          method_share.to_csv(OUT / "method_share.csv", index=False)
+          mechanics.to_csv(OUT / "mechanics.csv", index=False)
+          bootstrap.to_csv(OUT / "bootstrap_ci.csv", index=False)
+
+          print("\nHEADLINE")
+          print(headline.to_string(index=False, float_format=lambda x: f"{x:.5f}"))
+          print("\nMETHOD CALIBRATION")
+          print(method_share.to_string(index=False, float_format=lambda x: f"{x:.4f}"))
+          print("\nMECHANICS")
+          print(mechanics.to_string(index=False, float_format=lambda x: f"{x:.4f}"))
+          print("\nBOOTSTRAP 95% CI")
+          print(bootstrap.to_string(index=False, float_format=lambda x: f"{x:.5f}"))
+          PY
+
+      - name: Print audit tail
+        if: always()
+        run: |
+          if [ -f /tmp/flyweight_audit.log ]; then
+            tail -n 160 /tmp/flyweight_audit.log
+          fi
+
+      - name: Upload audit outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: weight-class-audit-flyweight
+          path: data/diagnostics/event_clock_mc_v2/weight_class_audit/flyweight/*.csv
+          if-no-files-found: warn

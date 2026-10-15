@@ -1,0 +1,384 @@
+"""Path-specific dynamic state updates for RFS Monte Carlo V1.
+
+This module updates mutable simulation state from generated segment activity.
+
+Implemented:
+- workload-driven energy cost
+- head, body, and leg damage accumulation
+- knockdown shock
+- defensive deterioration
+- chin-integrity reduction
+- recovery-reserve usage
+- cumulative activity
+- segment and between-round recovery
+
+Not implemented:
+- finish probability
+- submission termination
+- scoring
+- calibration-final coefficients
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+import numpy as np
+
+from pipeline.simulation.rfs_mc_v1.contracts import (
+    DynamicFighterState,
+    FighterSimulationProfile,
+)
+from pipeline.simulation.rfs_mc_v1.segment_engine import SegmentActivity
+
+
+@dataclass(frozen=True)
+class DynamicStateParameters:
+    """Coefficients governing dynamic-state updates."""
+
+    strike_attempt_energy_cost: float = 0.0015
+    landed_strike_energy_cost: float = 0.0010
+    takedown_attempt_energy_cost: float = 0.0080
+    takedown_landed_energy_cost: float = 0.0060
+    control_second_energy_cost: float = 0.0004
+    ground_attempt_energy_cost: float = 0.0020
+    submission_attempt_energy_cost: float = 0.0150
+
+    head_damage_per_sig_landed: float = 0.010
+    body_damage_per_sig_landed: float = 0.004
+    leg_damage_per_sig_landed: float = 0.003
+    ground_damage_per_landed: float = 0.008
+    knockdown_head_damage: float = 0.120
+
+    defensive_decay_per_head_damage: float = 0.25
+    defensive_decay_per_energy_loss: float = 0.12
+    chin_decay_per_head_damage: float = 0.20
+    knockdown_chin_decay: float = 0.10
+
+    segment_energy_recovery: float = 0.008
+    round_energy_recovery: float = 0.075
+    round_defense_recovery: float = 0.025
+    round_chin_recovery: float = 0.010
+
+    def __post_init__(self) -> None:
+        for name, value in vars(self).items():
+            if value < 0:
+                raise ValueError(f"{name} cannot be negative")
+
+
+DEFAULT_DYNAMIC_STATE_PARAMETERS = DynamicStateParameters()
+
+
+def _profile_value(
+    profile: FighterSimulationProfile,
+    name: str,
+    *,
+    default: float,
+) -> float:
+    """Read a finite profile parameter or return a default."""
+
+    estimate = profile.parameters.get(name)
+    if estimate is None:
+        return default
+
+    value = float(estimate.value)
+
+    if not np.isfinite(value):
+        raise ValueError(f"Profile parameter {name!r} must be finite")
+
+    return value
+
+
+def initialize_dynamic_state(
+    profile: FighterSimulationProfile,
+) -> DynamicFighterState:
+    """Initialize one fighter's path-specific state.
+
+    Historical profile values remain fixed. They only influence the initial
+    latent-state levels and later update sensitivity.
+    """
+
+    defensive_deterioration = _profile_value(
+        profile,
+        "defensive_deterioration",
+        default=0.0,
+    )
+    knockdowns_absorbed = _profile_value(
+        profile,
+        "knockdowns_absorbed",
+        default=0.0,
+    )
+    late_sig_output_ratio = _profile_value(
+        profile,
+        "late_sig_output_ratio",
+        default=1.0,
+    )
+
+    defensive_stability = float(
+        np.clip(
+            1.0 - 0.03 * max(defensive_deterioration, 0.0),
+            0.55,
+            1.0,
+        )
+    )
+
+    chin_integrity = float(
+        np.clip(
+            1.0 - 0.025 * max(knockdowns_absorbed, 0.0),
+            0.55,
+            1.0,
+        )
+    )
+
+    recovery_reserve = float(
+        np.clip(
+            0.75 + 0.15 * late_sig_output_ratio,
+            0.40,
+            1.0,
+        )
+    )
+
+    state = DynamicFighterState(
+        defensive_stability=defensive_stability,
+        chin_integrity=chin_integrity,
+        recovery_reserve=recovery_reserve,
+    )
+    state.validate()
+
+    return state
+
+
+def calculate_energy_cost(
+    activity: SegmentActivity,
+    parameters: DynamicStateParameters = DEFAULT_DYNAMIC_STATE_PARAMETERS,
+) -> float:
+    """Calculate workload-driven energy expenditure for one segment."""
+
+    energy_cost = (
+        activity.sig_str_attempted
+        * parameters.strike_attempt_energy_cost
+        + activity.sig_str_landed
+        * parameters.landed_strike_energy_cost
+        + activity.td_attempted
+        * parameters.takedown_attempt_energy_cost
+        + activity.td_landed
+        * parameters.takedown_landed_energy_cost
+        + activity.control_seconds
+        * parameters.control_second_energy_cost
+        + activity.ground_str_attempted
+        * parameters.ground_attempt_energy_cost
+        + activity.submission_attempts
+        * parameters.submission_attempt_energy_cost
+    )
+
+    return float(max(energy_cost, 0.0))
+
+
+def calculate_received_damage(
+    opponent_activity: SegmentActivity,
+) -> tuple[float, float, float]:
+    """Convert opponent activity into preliminary body-region damage.
+
+    Target-specific head/body/leg event fields are not yet generated by the
+    segment engine, so V1 currently uses conservative allocation proxies.
+    """
+
+    standing_landed = opponent_activity.sig_str_landed
+    ground_landed = opponent_activity.ground_str_landed
+
+    head_damage = (
+        standing_landed * 0.010
+        + ground_landed * 0.008
+        + opponent_activity.knockdowns * 0.120
+    )
+    body_damage = standing_landed * 0.004
+    leg_damage = standing_landed * 0.003
+
+    return (
+        float(head_damage),
+        float(body_damage),
+        float(leg_damage),
+    )
+
+
+def update_dynamic_state(
+    *,
+    state: DynamicFighterState,
+    own_activity: SegmentActivity,
+    opponent_activity: SegmentActivity,
+    profile: FighterSimulationProfile,
+    parameters: DynamicStateParameters = DEFAULT_DYNAMIC_STATE_PARAMETERS,
+) -> DynamicFighterState:
+    """Update one fighter's dynamic state after a shared segment."""
+
+    state.validate()
+
+    energy_cost = calculate_energy_cost(
+        own_activity,
+        parameters,
+    )
+
+    head_damage, body_damage, leg_damage = (
+        calculate_received_damage(opponent_activity)
+    )
+
+    defensive_deterioration = max(
+        _profile_value(
+            profile,
+            "defensive_deterioration",
+            default=0.0,
+        ),
+        0.0,
+    )
+
+    recovery_modifier = float(
+        np.clip(
+            state.recovery_reserve,
+            0.0,
+            1.0,
+        )
+    )
+
+    previous_energy = state.energy
+    new_energy = float(
+        np.clip(
+            previous_energy
+            - energy_cost
+            + parameters.segment_energy_recovery
+            * recovery_modifier,
+            0.0,
+            1.0,
+        )
+    )
+
+    energy_loss = max(previous_energy - new_energy, 0.0)
+
+    state.energy = new_energy
+
+    state.head_damage += head_damage
+    state.body_damage += body_damage
+    state.leg_damage += leg_damage
+
+    defense_loss = (
+        head_damage
+        * parameters.defensive_decay_per_head_damage
+        * (1.0 + 0.05 * defensive_deterioration)
+        + energy_loss
+        * parameters.defensive_decay_per_energy_loss
+    )
+
+    state.defensive_stability = float(
+        np.clip(
+            state.defensive_stability - defense_loss,
+            0.0,
+            1.0,
+        )
+    )
+
+    chin_loss = (
+        head_damage * parameters.chin_decay_per_head_damage
+        + opponent_activity.knockdowns
+        * parameters.knockdown_chin_decay
+    )
+
+    state.chin_integrity = float(
+        np.clip(
+            state.chin_integrity - chin_loss,
+            0.0,
+            1.0,
+        )
+    )
+
+    recovery_usage = float(
+        np.clip(
+            energy_cost * 0.25
+            + head_damage * 0.20
+            + opponent_activity.knockdowns * 0.08,
+            0.0,
+            1.0,
+        )
+    )
+
+    state.recovery_reserve = float(
+        np.clip(
+            state.recovery_reserve - recovery_usage,
+            0.0,
+            1.0,
+        )
+    )
+
+    state.current_phase = own_activity.phase
+    state.control_position = float(
+        np.clip(
+            own_activity.control_seconds / 30.0,
+            0.0,
+            1.0,
+        )
+    )
+    state.submission_danger = float(
+        np.clip(
+            opponent_activity.submission_attempts * 0.20
+            + opponent_activity.control_seconds / 150.0,
+            0.0,
+            1.0,
+        )
+    )
+
+    state.cumulative_strike_activity += (
+        own_activity.sig_str_attempted
+        + own_activity.ground_str_attempted
+    )
+    state.cumulative_wrestling_activity += (
+        own_activity.td_attempted
+        + own_activity.submission_attempts
+    )
+    state.knockdowns += own_activity.knockdowns
+
+    state.validate()
+    return state
+
+
+def apply_between_round_recovery(
+    state: DynamicFighterState,
+    parameters: DynamicStateParameters = DEFAULT_DYNAMIC_STATE_PARAMETERS,
+) -> DynamicFighterState:
+    """Apply bounded recovery between completed rounds."""
+
+    state.validate()
+
+    reserve = state.recovery_reserve
+
+    state.energy = float(
+        np.clip(
+            state.energy
+            + parameters.round_energy_recovery * reserve,
+            0.0,
+            1.0,
+        )
+    )
+
+    state.defensive_stability = float(
+        np.clip(
+            state.defensive_stability
+            + parameters.round_defense_recovery * reserve,
+            0.0,
+            1.0,
+        )
+    )
+
+    state.chin_integrity = float(
+        np.clip(
+            state.chin_integrity
+            + parameters.round_chin_recovery * reserve,
+            0.0,
+            1.0,
+        )
+    )
+
+    state.control_position = 0.0
+    state.submission_danger = float(
+        np.clip(state.submission_danger * 0.40, 0.0, 1.0)
+    )
+
+    state.validate()
+    return state

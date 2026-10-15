@@ -1,0 +1,66 @@
+name: FSR V3 Power Research
+
+on:
+  push:
+    branches:
+      - "feature/fsr-v3"
+    paths:
+      - "pipeline/fsr_v3/research/power_structural_study.py"
+      - "pipeline/fsr_v3/research/power_sequential_shrinkage_study.py"
+      - "pipeline/fsr_v3/research/power_consequence_validation.py"
+      - ".github/workflows/fsr-v3-power-study.yml"
+  pull_request:
+    paths:
+      - "pipeline/fsr_v3/research/power_structural_study.py"
+      - "pipeline/fsr_v3/research/power_sequential_shrinkage_study.py"
+      - "pipeline/fsr_v3/research/power_consequence_validation.py"
+      - ".github/workflows/fsr-v3-power-study.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  power-study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install focused dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy pandas scipy scikit-learn pyarrow joblib pyyaml
+
+      - name: Compile studies
+        run: |
+          python -m py_compile pipeline/fsr_v3/research/power_structural_study.py
+          python -m py_compile pipeline/fsr_v3/research/power_sequential_shrinkage_study.py
+          python -m py_compile pipeline/fsr_v3/research/power_consequence_validation.py
+
+      - name: Build frozen FSR V2 snapshots for comparison
+        run: |
+          python -m pipeline.fsr_v2.build --all
+          python -m pipeline.fsr_v2.publish
+
+      - name: Run power structural study
+        run: python -m pipeline.fsr_v3.research.power_structural_study
+
+      - name: Run sequential shrinkage study
+        run: python -m pipeline.fsr_v3.research.power_sequential_shrinkage_study
+
+      - name: Run final consequence validation
+        run: python -m pipeline.fsr_v3.research.power_consequence_validation
+
+      - name: Upload power study outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: fsr-v3-power-research
+          path: data/diagnostics/fsr_v3_power/*.csv
+          if-no-files-found: error
