@@ -1,0 +1,111 @@
+"""Shadow-only artifact paths for the simulator research workspace."""
+
+from pipeline.common.paths import AUDITS_DIR, MODEL_LAB_DIR
+
+SIMULATION_DIR = MODEL_LAB_DIR / "simulation"
+SIMULATION_TRAINING_DIR = SIMULATION_DIR / "training"
+SIMULATION_MODELS_DIR = SIMULATION_DIR / "models"
+
+SIMULATION_TRAINING_DATASET_PATH = (
+    SIMULATION_TRAINING_DIR / "fighter_round_parameter_training.parquet"
+)
+SIMULATION_TRAINING_AUDIT_PATH = (
+    AUDITS_DIR / "simulation_fighter_round_training_audit.parquet"
+)
+SIMULATION_LATEST_SUMMARY_PATH = SIMULATION_DIR / "latest_round_simulation_summary.json"
+
+SIG_ATTEMPT_MODEL_DIR = SIMULATION_MODELS_DIR / "sig_attempt_pace_v0"
+SIG_ATTEMPT_FOLD_METRICS_PATH = SIG_ATTEMPT_MODEL_DIR / "fold_metrics.csv"
+SIG_ATTEMPT_AGGREGATE_METRICS_PATH = SIG_ATTEMPT_MODEL_DIR / "aggregate_metrics.csv"
+SIG_ATTEMPT_PREDICTIONS_PATH = SIG_ATTEMPT_MODEL_DIR / "walk_forward_predictions.parquet"
+SIG_ATTEMPT_FEATURE_IMPORTANCE_PATH = SIG_ATTEMPT_MODEL_DIR / "feature_importance.csv"
+SIG_ATTEMPT_MODEL_BUNDLE_PATH = SIG_ATTEMPT_MODEL_DIR / "holdout_model_bundle.joblib"
+SIG_ATTEMPT_SUMMARY_PATH = SIG_ATTEMPT_MODEL_DIR / "benchmark_summary.json"
+SIG_ATTEMPT_MODEL_CARD_PATH = SIG_ATTEMPT_MODEL_DIR / "model_card.md"
+
+SIG_ATTEMPT_CALIBRATION_DIR = SIG_ATTEMPT_MODEL_DIR / "calibration"
+SIG_ATTEMPT_CALIBRATION_SCHEDULE_PATH = (
+    SIG_ATTEMPT_CALIBRATION_DIR / "sequential_calibration_schedule.csv"
+)
+SIG_ATTEMPT_CALIBRATED_PREDICTIONS_PATH = (
+    SIG_ATTEMPT_CALIBRATION_DIR / "calibrated_walk_forward_predictions.parquet"
+)
+SIG_ATTEMPT_CALIBRATION_METRICS_PATH = (
+    SIG_ATTEMPT_CALIBRATION_DIR / "calibration_metrics.csv"
+)
+SIG_ATTEMPT_FINAL_PARAMETERS_PATH = (
+    SIG_ATTEMPT_CALIBRATION_DIR / "final_distribution_parameters.csv"
+)
+SIG_ATTEMPT_CALIBRATION_SUMMARY_PATH = (
+    SIG_ATTEMPT_CALIBRATION_DIR / "calibration_summary.json"
+)
+
+SIG_ATTEMPT_REPLAY_DIR = SIG_ATTEMPT_MODEL_DIR / "replay"
+SIG_ATTEMPT_REPLAY_AGGREGATE_PATH = SIG_ATTEMPT_REPLAY_DIR / "aggregate_metrics.csv"
+SIG_ATTEMPT_REPLAY_INTERVAL_PATH = SIG_ATTEMPT_REPLAY_DIR / "interval_coverage.csv"
+SIG_ATTEMPT_REPLAY_BY_YEAR_PATH = SIG_ATTEMPT_REPLAY_DIR / "metrics_by_year.csv"
+SIG_ATTEMPT_REPLAY_BY_ROUND_PATH = SIG_ATTEMPT_REPLAY_DIR / "metrics_by_round.csv"
+SIG_ATTEMPT_REPLAY_DECILES_PATH = SIG_ATTEMPT_REPLAY_DIR / "calibration_deciles.csv"
+SIG_ATTEMPT_REPLAY_PAIR_DIAGNOSTICS_PATH = (
+    SIG_ATTEMPT_REPLAY_DIR / "pair_diagnostics.csv"
+)
+SIG_ATTEMPT_REPLAY_ROWS_PATH = SIG_ATTEMPT_REPLAY_DIR / "replay_rows.parquet"
+SIG_ATTEMPT_REPLAY_SUMMARY_PATH = SIG_ATTEMPT_REPLAY_DIR / "replay_summary.json"
+
+SIG_ATTEMPT_JOINT_REPLAY_DIR = SIG_ATTEMPT_MODEL_DIR / "joint_replay"
+SIG_ATTEMPT_JOINT_SCHEDULE_PATH = (
+    SIG_ATTEMPT_JOINT_REPLAY_DIR / "dependence_schedule.csv"
+)
+SIG_ATTEMPT_JOINT_CORRELATION_PATH = (
+    SIG_ATTEMPT_JOINT_REPLAY_DIR / "correlation_metrics.csv"
+)
+SIG_ATTEMPT_JOINT_INTERVAL_PATH = (
+    SIG_ATTEMPT_JOINT_REPLAY_DIR / "total_interval_coverage.csv"
+)
+SIG_ATTEMPT_JOINT_FINAL_DEPENDENCE_PATH = (
+    SIG_ATTEMPT_JOINT_REPLAY_DIR / "final_dependence.csv"
+)
+SIG_ATTEMPT_JOINT_SUMMARY_PATH = (
+    SIG_ATTEMPT_JOINT_REPLAY_DIR / "joint_replay_summary.json"
+)
+
+SIG_ATTEMPT_STABILITY_DIR = SIG_ATTEMPT_MODEL_DIR / "stability"
+SIG_ATTEMPT_STABILITY_RAW_PREDICTIONS_PATH = (
+    SIG_ATTEMPT_STABILITY_DIR / "raw_walk_forward_predictions.parquet"
+)
+SIG_ATTEMPT_STABILITY_CALIBRATED_PREDICTIONS_PATH = (
+    SIG_ATTEMPT_STABILITY_DIR / "calibrated_walk_forward_predictions.parquet"
+)
+SIG_ATTEMPT_STABILITY_FOLD_METRICS_PATH = (
+    SIG_ATTEMPT_STABILITY_DIR / "fold_metrics.csv"
+)
+SIG_ATTEMPT_STABILITY_AGGREGATE_METRICS_PATH = (
+    SIG_ATTEMPT_STABILITY_DIR / "aggregate_metrics.csv"
+)
+SIG_ATTEMPT_STABILITY_SUBGROUP_METRICS_PATH = (
+    SIG_ATTEMPT_STABILITY_DIR / "subgroup_metrics.csv"
+)
+SIG_ATTEMPT_STABILITY_FEATURE_IMPORTANCE_PATH = (
+    SIG_ATTEMPT_STABILITY_DIR / "feature_importance.csv"
+)
+SIG_ATTEMPT_STABILITY_FEATURE_MANIFEST_PATH = (
+    SIG_ATTEMPT_STABILITY_DIR / "feature_manifest.csv"
+)
+SIG_ATTEMPT_STABILITY_GATES_PATH = SIG_ATTEMPT_STABILITY_DIR / "stability_gates.csv"
+SIG_ATTEMPT_STABILITY_SUMMARY_PATH = SIG_ATTEMPT_STABILITY_DIR / "summary.json"
+
+
+def ensure_simulation_dirs() -> None:
+    """Create generated-artifact folders used only by simulator research."""
+    for path in (
+        SIMULATION_DIR,
+        SIMULATION_TRAINING_DIR,
+        SIMULATION_MODELS_DIR,
+        SIG_ATTEMPT_MODEL_DIR,
+        SIG_ATTEMPT_CALIBRATION_DIR,
+        SIG_ATTEMPT_REPLAY_DIR,
+        SIG_ATTEMPT_JOINT_REPLAY_DIR,
+        SIG_ATTEMPT_STABILITY_DIR,
+        SIMULATION_TRAINING_AUDIT_PATH.parent,
+    ):
+        path.mkdir(parents=True, exist_ok=True)

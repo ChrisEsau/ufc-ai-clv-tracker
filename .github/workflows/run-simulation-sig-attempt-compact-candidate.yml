@@ -1,0 +1,157 @@
+name: Simulator Compact Strike Candidate Replay
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/round-fight-simulator-v0
+    paths:
+      - ".github/workflows/run-simulation-sig-attempt-compact-candidate.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  replay-compact-candidate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout simulator branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run candidate validation tests
+        run: |
+          python -m unittest tests.test_simulation_sig_attempt_model
+          python -m unittest tests.test_simulation_sig_attempt_calibration
+          python -m unittest tests.test_simulation_sig_attempt_stability
+          python -m unittest tests.test_simulation_sig_attempt_replay
+          python -m unittest tests.test_simulation_sig_attempt_joint_replay
+          python -m compileall -q pipeline/simulation
+
+      - name: Build leakage-safe fighter-round table
+        run: |
+          python -m pipeline.simulation.run_build_training_dataset
+
+      - name: Rebuild reference strike benchmark
+        run: |
+          python -m pipeline.simulation.run_train_sig_attempt_model
+
+      - name: Build compact recent candidate predictions
+        run: |
+          python -m pipeline.simulation.run_sig_attempt_stability
+
+      - name: Replay compact recent marginal distribution
+        run: |
+          python -m pipeline.simulation.run_replay_sig_attempt_distribution \
+            --input data/model_lab/simulation/models/sig_attempt_pace_v0/stability/calibrated_walk_forward_predictions.parquet \
+            --model xgb_context_rfs_compact_recent
+
+      - name: Replay compact recent joint distribution
+        run: |
+          python -m pipeline.simulation.run_replay_joint_sig_attempt_distribution \
+            --input data/model_lab/simulation/models/sig_attempt_pace_v0/stability/calibrated_walk_forward_predictions.parquet \
+            --model xgb_context_rfs_compact_recent
+
+      - name: Publish compact candidate summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path("data/model_lab/simulation/models/sig_attempt_pace_v0")
+          stability = json.loads((root / "stability/summary.json").read_text())
+          replay = json.loads((root / "replay/replay_summary.json").read_text())
+          joint = json.loads((root / "joint_replay/joint_replay_summary.json").read_text())
+
+          gamma = next(
+              row for row in replay["aggregate_metrics"]
+              if row["distribution"] == "calibrated_gamma_poisson"
+          )
+          coverage = {
+              row["nominal_coverage"]: row
+              for row in replay["interval_coverage"]
+              if row["distribution"] == "calibrated_gamma_poisson"
+          }
+          joint_coverage = {
+              row["nominal_coverage"]: row
+              for row in joint["total_interval_summary"]
+              if row["joint_model"] == "gaussian_copula"
+          }
+
+          summary = {
+              "status": "shadow_only",
+              "model_name": "xgb_context_rfs_compact_recent",
+              "stability_gate": stability["best_compact_gate_status"],
+              "poisson_deviance": gamma["count_poisson_deviance"],
+              "mean_bias": gamma["mean_bias"],
+              "variance_ratio": gamma["variance_ratio_predicted_to_actual"],
+              "marginal_coverage": {
+                  str(level): coverage[level]["empirical_coverage"]
+                  for level in sorted(coverage)
+              },
+              "copula_rho": joint["final_gaussian_copula_rho"],
+              "correlation_error_improvement": joint[
+                  "correlation_error_improvement"
+              ],
+              "joint_total_coverage": {
+                  str(level): joint_coverage[level]["weighted_empirical_coverage"]
+                  for level in sorted(joint_coverage)
+              },
+          }
+          Path("compact_candidate_replay_summary.json").write_text(
+              json.dumps(summary, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+
+          with Path("compact_candidate_replay_summary.md").open(
+              "w", encoding="utf-8"
+          ) as handle:
+              handle.write("# Compact recent strike candidate replay\n\n")
+              handle.write(f"- Stability gate: **{summary['stability_gate']}**\n")
+              handle.write(
+                  f"- Poisson deviance: **{summary['poisson_deviance']:.4f}**\n"
+              )
+              handle.write(f"- Mean bias: **{summary['mean_bias']:.3f}**\n")
+              handle.write(
+                  f"- Predicted/actual variance ratio: **{summary['variance_ratio']:.3f}**\n"
+              )
+              handle.write(
+                  f"- Final Gaussian copula rho: **{summary['copula_rho']:.4f}**\n"
+              )
+              handle.write(
+                  "- Correlation error improvement: "
+                  f"**{summary['correlation_error_improvement']:.2%}**\n\n"
+              )
+              handle.write("## Marginal interval coverage\n\n")
+              for level, value in summary["marginal_coverage"].items():
+                  handle.write(f"- {float(level):.0%}: {value:.2%}\n")
+              handle.write("\n## Joint total interval coverage\n\n")
+              for level, value in summary["joint_total_coverage"].items():
+                  handle.write(f"- {float(level):.0%}: {value:.2%}\n")
+          PY
+
+          cat compact_candidate_replay_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload compact candidate artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-sig-attempt-compact-candidate-v0
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6
+          path: |
+            data/model_lab/simulation/models/sig_attempt_pace_v0/**
+            data/audits/simulation_fighter_round_training_audit.parquet
+            compact_candidate_replay_summary.json
+            compact_candidate_replay_summary.md

@@ -1,0 +1,189 @@
+name: Simulator Experienced Model Comparison
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/round-fight-simulator-v0
+    paths:
+      - ".github/workflows/run-simulation-experienced-model-comparison.yml"
+      - "pipeline/simulation/historical_experienced_model_comparison.py"
+      - "pipeline/simulation/run_historical_experienced_model_comparison.py"
+      - "tests/test_simulation_historical_experienced_model_comparison.py"
+
+permissions:
+  contents: read
+
+jobs:
+  experienced-model-comparison:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout simulator branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run experienced comparison and replay regression tests
+        run: |
+          python -m unittest tests.test_simulation_historical_experienced_model_comparison
+          python -m unittest tests.test_simulation_historical_experience_threshold
+          python -m unittest tests.test_simulation_historical_replay_evaluation
+          python -m unittest tests.test_simulation_hierarchical_finish_hazard_model
+          python -m unittest tests.test_simulation_dynamic_strike_provider
+          python -m unittest tests.test_simulation_finish_survival_calibration
+          python -m unittest tests.test_simulation_replay_label_time
+          python -m compileall -q pipeline/simulation
+
+      - name: Build leakage-safe fighter-round table
+        run: |
+          python -m pipeline.simulation.run_build_training_dataset
+
+      - name: Rebuild current five-class finish artifacts
+        run: |
+          python -m pipeline.simulation.run_train_finish_hazard_model
+
+      - name: Train hierarchical finish artifacts
+        run: |
+          python -m pipeline.simulation.run_train_hierarchical_finish_hazard_model
+
+      - name: Replay current and strike-provider variants
+        run: |
+          python -m pipeline.simulation.run_historical_survival_provider_replay \
+            --test-year 2026 \
+            --simulations-per-fight 500 \
+            --seed 91 \
+            --group-prior-rows 200 \
+            --minimum-subgroup-fights 10 \
+            --bootstrap-samples 200
+
+      - name: Replay hierarchical finish variants
+        run: |
+          python -m pipeline.simulation.run_historical_hierarchical_finish_replay \
+            --test-year 2026 \
+            --simulations-per-fight 500 \
+            --seed 91 \
+            --group-prior-rows 200 \
+            --minimum-subgroup-fights 10 \
+            --bootstrap-samples 200
+
+      - name: Compare candidates on experienced-only cohort
+        run: |
+          python -m pipeline.simulation.run_historical_experienced_model_comparison \
+            --minimum-prior-fights 3 \
+            --bootstrap-samples 500 \
+            --seed 211
+
+      - name: Publish experienced-only summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          import pandas as pd
+
+          root = Path(
+              "data/model_lab/simulation/historical_replay_v0/"
+              "experienced_model_comparison"
+          )
+          summary = json.loads((root / "summary.json").read_text(encoding="utf-8"))
+          metrics = pd.read_csv(root / "metrics.csv")
+          paired = pd.read_csv(root / "paired_deltas.csv")
+
+          labels = {
+              "survival_finish_hazard_provider": "Current survival finish",
+              "class_finish_hazard_provider": "Class finish",
+              "strike_and_survival_finish_providers": "Static strike + survival",
+              "dynamic_strike_and_survival_finish_providers": "Dynamic strike + survival",
+              "hierarchical_class_finish_hazard_provider": "Hierarchical class",
+              "hierarchical_survival_finish_hazard_provider": "Hierarchical survival",
+              "heuristic_simulator": "Heuristic",
+              "historical_baseline": "Historical baseline",
+          }
+          primary = [
+              "winner_brier",
+              "winner_accuracy",
+              "winner_log_loss",
+              "method_log_loss",
+              "method_accuracy",
+              "goes_distance_brier",
+              "goes_distance_accuracy",
+              "fight_time_mae",
+              "fighter_sig_attempt_mae",
+          ]
+
+          with Path("historical_experienced_model_comparison.md").open(
+              "w", encoding="utf-8"
+          ) as handle:
+              handle.write("# Experienced-only simulator model comparison\n\n")
+              handle.write(
+                  f"- Eligibility: **both fighters have at least "
+                  f"{summary['minimum_prior_fights']} completed prior fights**\n"
+              )
+              handle.write(f"- Eligible fights: **{summary['eligible_fights']}**\n")
+              handle.write(
+                  "- Low-experience fights: **reported separately and excluded "
+                  "from model-selection metrics**\n"
+              )
+              handle.write(f"- Bootstrap samples: **{summary['bootstrap_samples']}**\n")
+              handle.write("- Status: **evaluation-only**\n\n")
+
+              handle.write("## Experienced-only point metrics\n\n")
+              handle.write(
+                  "| Variant | Winner Brier | Winner accuracy | Winner log loss | "
+                  "Method log loss | Method accuracy | Distance Brier | "
+                  "Distance accuracy | Time MAE | Strike MAE |\n"
+              )
+              handle.write("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
+              for _, row in metrics.iterrows():
+                  handle.write(
+                      f"| {labels.get(row['variant'], row['variant'])} | "
+                      f"{row['winner_brier']:.4f} | {row['winner_accuracy']:.2%} | "
+                      f"{row['winner_log_loss']:.4f} | {row['method_log_loss']:.4f} | "
+                      f"{row['method_accuracy']:.2%} | {row['goes_distance_brier']:.4f} | "
+                      f"{row['goes_distance_accuracy']:.2%} | "
+                      f"{row['fight_time_mae']:.1f} sec | "
+                      f"{row['fighter_sig_attempt_mae']:.2f} |\n"
+                  )
+
+              handle.write("\n## Paired deltas versus current survival finish\n\n")
+              handle.write(
+                  "Candidate minus reference. Negative is better for loss/error "
+                  "metrics; positive is better for accuracy metrics.\n\n"
+              )
+              handle.write(
+                  "| Candidate | Metric | Delta | 95% interval | Point favors candidate | CI supports candidate |\n"
+              )
+              handle.write("|---|---|---:|---:|---|---|\n")
+              selected = paired.loc[paired["metric"].isin(primary)]
+              for _, row in selected.iterrows():
+                  handle.write(
+                      f"| {labels.get(row['candidate_variant'], row['candidate_variant'])} | "
+                      f"{row['metric']} | {row['candidate_minus_reference']:.6f} | "
+                      f"[{row['ci_lower_95']:.6f}, {row['ci_upper_95']:.6f}] | "
+                      f"{'yes' if row['favors_candidate'] else 'no'} | "
+                      f"{'yes' if row['confidence_interval_supports_candidate'] else 'no'} |\n"
+                  )
+          PY
+
+          cat historical_experienced_model_comparison.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload experienced-only comparison artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-experienced-model-comparison-v0
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6
+          path: |
+            data/model_lab/simulation/historical_replay_v0/experienced_model_comparison/**
+            historical_experienced_model_comparison.md

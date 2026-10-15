@@ -1,0 +1,123 @@
+name: Simulator Latest Completed Card Replay
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/round-fight-simulator-v0
+    paths:
+      - ".github/workflows/run-simulation-latest-completed-card.yml"
+      - "pipeline/simulation/run_latest_completed_card_replay.py"
+      - "tests/test_simulation_latest_completed_card_replay.py"
+
+permissions:
+  contents: read
+
+jobs:
+  latest-completed-card:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout simulator branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run latest-card and component tests
+        run: |
+          python -m unittest tests.test_simulation_latest_completed_card_replay
+          python -m unittest tests.test_simulation_finish_hazard_model
+          python -m unittest tests.test_simulation_provider_engine
+          python -m unittest tests.test_simulation_historical_simulator_replay
+          python -m compileall -q pipeline/simulation
+
+      - name: Build leakage-safe fighter-round table
+        run: |
+          python -m pipeline.simulation.run_build_training_dataset
+
+      - name: Train competing-risk finish hazards
+        run: |
+          python -m pipeline.simulation.run_train_finish_hazard_model
+
+      - name: Run latest completed card replay
+        run: |
+          python -m pipeline.simulation.run_latest_completed_card_replay \
+            --simulations-per-fight 5000 \
+            --seed 91
+
+      - name: Publish card report
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+
+          root = Path(
+              "data/model_lab/simulation/latest_completed_card_replay_v0"
+          )
+          summary = json.loads((root / "summary.json").read_text(encoding="utf-8"))
+          report = pd.read_csv(root / "fight_report.csv")
+
+          with Path("latest_completed_card_summary.md").open(
+              "w", encoding="utf-8"
+          ) as handle:
+              handle.write(f"# {summary['event_name']} simulator replay\n\n")
+              handle.write(f"- Event date: **{summary['event_date']}**\n")
+              handle.write(f"- Fights: **{summary['fights']}**\n")
+              handle.write(
+                  f"- Paths per fight: **{summary['simulations_per_fight']:,}**\n"
+              )
+              handle.write(
+                  f"- Winner accuracy: **{summary['winner_accuracy']:.2%}**\n"
+              )
+              handle.write(
+                  f"- Method accuracy: **{summary['method_accuracy']:.2%}**\n"
+              )
+              handle.write(
+                  f"- Distance accuracy: **{summary['distance_accuracy']:.2%}**\n"
+              )
+              handle.write(
+                  "- Fight-time MAE: "
+                  f"**{summary['fight_time_mae_seconds']:.1f} sec**\n\n"
+              )
+              handle.write(
+                  "| Matchup | Pick | Probability | Actual winner | Winner | "
+                  "Method pick | Actual method | Method |\n"
+              )
+              handle.write("|---|---|---:|---|---|---|---|---|\n")
+              for _, row in report.iterrows():
+                  matchup = f"{row['red_fighter_name']} vs {row['blue_fighter_name']}"
+                  winner_mark = "✅" if bool(row['winner_correct']) else "❌"
+                  method_mark = "✅" if bool(row['method_correct']) else "❌"
+                  handle.write(
+                      f"| {matchup} | {row['predicted_winner_name']} | "
+                      f"{row['predicted_winner_probability']:.1%} | "
+                      f"{row['actual_winner_name']} | {winner_mark} | "
+                      f"{row['predicted_method']} | {row['actual_method']} | "
+                      f"{method_mark} |\n"
+                  )
+          PY
+
+          cat latest_completed_card_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload latest-card artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-latest-completed-card-v0
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6
+          path: |
+            data/model_lab/simulation/latest_completed_card_replay_v0/**
+            data/model_lab/simulation/models/finish_hazard_prefight_v0/**
+            data/audits/simulation_fighter_round_training_audit.parquet
+            latest_completed_card_summary.md

@@ -1,0 +1,188 @@
+name: Simulator Strike Candidate Validation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/round-fight-simulator-v0
+    paths:
+      - ".github/workflows/run-simulation-sig-attempt-candidate-validation.yml"
+      - "pipeline/simulation/sig_attempt_stability.py"
+      - "pipeline/simulation/run_sig_attempt_stability.py"
+      - "pipeline/simulation/sig_attempt_replay.py"
+      - "pipeline/simulation/run_replay_sig_attempt_distribution.py"
+      - "pipeline/simulation/sig_attempt_joint_replay.py"
+      - "pipeline/simulation/run_replay_joint_sig_attempt_distribution.py"
+      - "pipeline/simulation/artifacts.py"
+      - "tests/test_simulation_sig_attempt_stability.py"
+      - "tests/test_simulation_sig_attempt_replay.py"
+      - "tests/test_simulation_sig_attempt_joint_replay.py"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-compact-recency-candidate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout simulator branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run candidate validation tests
+        run: |
+          python -m unittest tests.test_simulation_sig_attempt_stability
+          python -m unittest tests.test_simulation_sig_attempt_replay
+          python -m unittest tests.test_simulation_sig_attempt_joint_replay
+          python -m compileall -q pipeline/simulation
+
+      - name: Build leakage-safe fighter-round table
+        run: |
+          python -m pipeline.simulation.run_build_training_dataset
+
+      - name: Rebuild reference strike benchmark
+        run: |
+          python -m pipeline.simulation.run_train_sig_attempt_model
+
+      - name: Run compact RFS stability experiment
+        run: |
+          python -m pipeline.simulation.run_sig_attempt_stability
+
+      - name: Replay compact-recency marginal distribution
+        run: |
+          python -m pipeline.simulation.run_replay_sig_attempt_distribution \
+            --input data/model_lab/simulation/models/sig_attempt_pace_v0/stability/calibrated_walk_forward_predictions.parquet \
+            --model xgb_context_rfs_compact_recent
+
+      - name: Replay compact-recency joint distribution
+        run: |
+          python -m pipeline.simulation.run_replay_joint_sig_attempt_distribution \
+            --input data/model_lab/simulation/models/sig_attempt_pace_v0/stability/calibrated_walk_forward_predictions.parquet \
+            --model xgb_context_rfs_compact_recent
+
+      - name: Publish candidate summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          model_dir = Path(
+              "data/model_lab/simulation/models/sig_attempt_pace_v0"
+          )
+          stability = json.loads(
+              (model_dir / "stability/summary.json").read_text(encoding="utf-8")
+          )
+          marginal = json.loads(
+              (model_dir / "replay/replay_summary.json").read_text(encoding="utf-8")
+          )
+          joint = json.loads(
+              (model_dir / "joint_replay/joint_replay_summary.json").read_text(
+                  encoding="utf-8"
+              )
+          )
+          candidate = stability["best_compact_model"]
+          if candidate != "xgb_context_rfs_compact_recent":
+              raise SystemExit(
+                  f"Unexpected best compact candidate: {candidate}"
+              )
+          if stability["best_compact_gate_status"] != "pass":
+              raise SystemExit("Compact-recency stability gate did not pass")
+          if marginal["model_name"] != candidate or joint["model_name"] != candidate:
+              raise SystemExit("Replay model does not match stability candidate")
+
+          summary = {
+              "status": "shadow_only_candidate",
+              "candidate_model": candidate,
+              "feature_count": stability["feature_counts"][candidate],
+              "stability_gate": stability["best_compact_gate_status"],
+              "calibrated_poisson_deviance": stability[
+                  "best_compact_poisson_deviance"
+              ],
+              "marginal_best_distribution": marginal[
+                  "best_distribution_by_nll"
+              ],
+              "marginal_best_nll": marginal[
+                  "best_mean_negative_log_likelihood"
+              ],
+              "gamma_poisson_nll_improvement": marginal[
+                  "gamma_poisson_nll_improvement_vs_calibrated_poisson"
+              ],
+              "paired_residual_correlation": marginal[
+                  "paired_residual_correlation"
+              ],
+              "final_gaussian_copula_rho": joint[
+                  "final_gaussian_copula_rho"
+              ],
+              "joint_correlation_error_improvement": joint[
+                  "correlation_error_improvement"
+              ],
+              "joint_total_interval_summary": joint[
+                  "total_interval_summary"
+              ],
+          }
+          (model_dir / "candidate_validation_summary.json").write_text(
+              json.dumps(summary, indent=2, sort_keys=True),
+              encoding="utf-8",
+          )
+
+          with Path("sig_attempt_candidate_validation_summary.md").open(
+              "w", encoding="utf-8"
+          ) as handle:
+              handle.write("# Strike pace candidate validation\n\n")
+              handle.write(f"- Candidate: **{candidate}**\n")
+              handle.write(
+                  f"- Feature count: **{summary['feature_count']}**\n"
+              )
+              handle.write(
+                  f"- Stability gate: **{summary['stability_gate']}**\n"
+              )
+              handle.write(
+                  "- Calibrated Poisson deviance: "
+                  f"**{summary['calibrated_poisson_deviance']:.4f}**\n"
+              )
+              handle.write(
+                  "- Marginal best distribution: "
+                  f"**{summary['marginal_best_distribution']}**\n"
+              )
+              handle.write(
+                  "- Marginal NLL: "
+                  f"**{summary['marginal_best_nll']:.4f}**\n"
+              )
+              handle.write(
+                  "- Gamma-Poisson NLL improvement: "
+                  f"**{summary['gamma_poisson_nll_improvement']:.2%}**\n"
+              )
+              handle.write(
+                  "- Final copula rho: "
+                  f"**{summary['final_gaussian_copula_rho']:.4f}**\n"
+              )
+              handle.write(
+                  "- Joint correlation-error improvement: "
+                  f"**{summary['joint_correlation_error_improvement']:.2%}**\n"
+              )
+          PY
+
+          cat sig_attempt_candidate_validation_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload candidate validation artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-sig-attempt-candidate-validation-v0
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6
+          path: |
+            data/model_lab/simulation/models/sig_attempt_pace_v0/**
+            data/audits/simulation_fighter_round_training_audit.parquet
+            sig_attempt_candidate_validation_summary.md
