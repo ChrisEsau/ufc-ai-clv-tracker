@@ -1,0 +1,2 @@
+cohort_fights,paths_per_fight,historical_sub_rate,simulated_sub_rate,neutral_submission_finish_probability,historical_submission_attempts_per_fight,simulated_submission_attempts_per_path,historical_any_submission_attempt_rate,simulated_any_submission_attempt_rate,status
+1565,10,0.1623,0.1649,0.34,0.5655,0.4994,0.3502,0.3508,materialized frozen existing diagnostic observations; no physics changes
