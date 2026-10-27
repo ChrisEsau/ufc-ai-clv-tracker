@@ -3898,7 +3898,7 @@
   "dispatched_runbooks": [],
   "due_runbooks": [],
   "errors": [],
-  "last_checked_at": "2026-10-26T21:28:24.326331+00:00",
+  "last_checked_at": "2026-10-27T01:16:38.680269+00:00",
   "next_due_runbook": {
     "catchup_grace_minutes": 1440,
     "display_name": "Market Refresh",
@@ -3919,7 +3919,7 @@
         "skip_bankroll": false,
         "skip_clv": false
       },
-      "minutes_late": 688.41,
+      "minutes_late": 916.64,
       "reason": "already_dispatched",
       "runbook_id": "monday_reset_v1",
       "scheduled_at_local": "2026-10-26T05:00:00-05:00",
@@ -3929,5 +3929,5 @@
   ],
   "status": "completed",
   "timezone": "America/Chicago",
-  "updated_at": "2026-10-26T21:28:24.328479+00:00"
+  "updated_at": "2026-10-27T01:16:38.687393+00:00"
 }
