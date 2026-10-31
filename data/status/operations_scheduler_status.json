@@ -4050,7 +4050,7 @@
   "dispatched_runbooks": [],
   "due_runbooks": [],
   "errors": [],
-  "last_checked_at": "2026-10-31T06:46:09.188162+00:00",
+  "last_checked_at": "2026-10-31T13:26:33.044272+00:00",
   "next_due_runbook": {
     "catchup_grace_minutes": 180,
     "display_name": "Fight Day Monitor",
@@ -4062,23 +4062,6 @@
   "skipped_runbooks": [
     {
       "catchup_grace_minutes": 1440,
-      "dispatch_key": "market_refresh_v2:2026-10-30T03:00:America/Chicago",
-      "display_name": "Market Refresh",
-      "inputs": {
-        "max_draftkings_events": "all",
-        "mode": "production",
-        "model_mode": "production",
-        "snapshot_model_mode": "production"
-      },
-      "minutes_late": 1366.15,
-      "reason": "already_dispatched",
-      "runbook_id": "market_refresh_v2",
-      "scheduled_at_local": "2026-10-30T03:00:00-05:00",
-      "scheduled_time": "03:00",
-      "workflow_file": "run-market-refresh-orchestrator.yml"
-    },
-    {
-      "catchup_grace_minutes": 1440,
       "dispatch_key": "market_refresh_v2:2026-10-30T15:00:America/Chicago",
       "display_name": "Market Refresh",
       "inputs": {
@@ -4087,7 +4070,7 @@
         "model_mode": "production",
         "snapshot_model_mode": "production"
       },
-      "minutes_late": 646.15,
+      "minutes_late": 1046.55,
       "reason": "already_dispatched",
       "runbook_id": "market_refresh_v2",
       "scheduled_at_local": "2026-10-30T15:00:00-05:00",
@@ -4097,5 +4080,5 @@
   ],
   "status": "completed",
   "timezone": "America/Chicago",
-  "updated_at": "2026-10-31T06:46:09.195421+00:00"
+  "updated_at": "2026-10-31T13:26:33.051195+00:00"
 }
