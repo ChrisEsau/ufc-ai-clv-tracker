@@ -1,10 +1,10 @@
 {
-  "completed_at": "2026-11-04T17:06:02.282243+00:00",
+  "completed_at": "2026-11-04T23:24:59.694096+00:00",
   "current_step_id": "get_market_odds",
   "current_step_name": "Get Market Odds",
   "current_substep_id": "draftkings_event_index",
   "current_substep_name": "Build DraftKings Event Index",
-  "error": "Command '['/opt/hostedtoolcache/Python/3.11.17/x64/bin/python', '-m', 'pipeline.market.run_draftkings_event_index']' returned non-zero exit status 1.",
+  "error": "Command '['/opt/hostedtoolcache/Python/3.11.18/x64/bin/python', '-m', 'pipeline.market.run_draftkings_event_index']' returned non-zero exit status 1.",
   "history": [
     {
       "event": "runbook_started",
@@ -13,7 +13,7 @@
       "step_name": null,
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-11-04T17:06:01.463426+00:00"
+      "timestamp": "2026-11-04T23:24:58.581654+00:00"
     },
     {
       "event": "step_started",
@@ -22,7 +22,7 @@
       "step_name": "Get Market Odds",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-11-04T17:06:01.464049+00:00"
+      "timestamp": "2026-11-04T23:24:58.582314+00:00"
     },
     {
       "event": "substep_started",
@@ -31,26 +31,26 @@
       "step_name": "Get Market Odds",
       "substep_id": "draftkings_event_index",
       "substep_name": "Build DraftKings Event Index",
-      "timestamp": "2026-11-04T17:06:01.464468+00:00"
+      "timestamp": "2026-11-04T23:24:58.582776+00:00"
     },
     {
       "event": "runbook_failed",
-      "message": "Command '['/opt/hostedtoolcache/Python/3.11.17/x64/bin/python', '-m', 'pipeline.market.run_draftkings_event_index']' returned non-zero exit status 1.",
+      "message": "Command '['/opt/hostedtoolcache/Python/3.11.18/x64/bin/python', '-m', 'pipeline.market.run_draftkings_event_index']' returned non-zero exit status 1.",
       "step_id": "get_market_odds",
       "step_name": "Get Market Odds",
       "substep_id": "draftkings_event_index",
       "substep_name": "Build DraftKings Event Index",
-      "timestamp": "2026-11-04T17:06:02.282247+00:00"
+      "timestamp": "2026-11-04T23:24:59.694102+00:00"
     }
   ],
   "message": "Runbook failed",
   "mode": "production",
   "runbook_id": "market_refresh_v2",
-  "started_at": "2026-11-04T17:06:01.463422+00:00",
+  "started_at": "2026-11-04T23:24:58.581649+00:00",
   "status": "failed",
   "step_index": 1,
   "step_total": 2,
   "substep_index": 1,
   "substep_total": 11,
-  "updated_at": "2026-11-04T17:06:02.282383+00:00"
+  "updated_at": "2026-11-04T23:24:59.694259+00:00"
 }
