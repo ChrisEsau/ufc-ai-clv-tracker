@@ -1,5 +1,5 @@
 {
-  "completed_at": "2026-11-08T00:17:53.197000+00:00",
+  "completed_at": "2026-11-08T00:18:58.305019+00:00",
   "current_step_id": "refresh_live_markets",
   "current_step_name": "Refresh Live Markets",
   "current_substep_id": "draftkings_event_index",
@@ -13,7 +13,7 @@
       "step_name": null,
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-11-08T00:17:51.948419+00:00"
+      "timestamp": "2026-11-08T00:18:57.622119+00:00"
     },
     {
       "event": "step_started",
@@ -22,7 +22,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-11-08T00:17:51.949031+00:00"
+      "timestamp": "2026-11-08T00:18:57.622593+00:00"
     },
     {
       "event": "substep_started",
@@ -31,7 +31,7 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_event_index",
       "substep_name": "Build DraftKings Event Index",
-      "timestamp": "2026-11-08T00:17:51.949500+00:00"
+      "timestamp": "2026-11-08T00:18:57.623012+00:00"
     },
     {
       "event": "runbook_failed",
@@ -40,17 +40,17 @@
       "step_name": "Refresh Live Markets",
       "substep_id": "draftkings_event_index",
       "substep_name": "Build DraftKings Event Index",
-      "timestamp": "2026-11-08T00:17:53.197006+00:00"
+      "timestamp": "2026-11-08T00:18:58.305023+00:00"
     }
   ],
   "message": "Runbook failed",
   "mode": "production",
   "runbook_id": "fight_day_monitor_v1",
-  "started_at": "2026-11-08T00:17:51.948416+00:00",
+  "started_at": "2026-11-08T00:18:57.622115+00:00",
   "status": "failed",
   "step_index": 1,
   "step_total": 4,
   "substep_index": 1,
   "substep_total": 11,
-  "updated_at": "2026-11-08T00:17:53.197140+00:00"
+  "updated_at": "2026-11-08T00:18:58.305121+00:00"
 }
