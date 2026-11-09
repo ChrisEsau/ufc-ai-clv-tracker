@@ -1,10 +1,10 @@
 {
-  "completed_at": "2026-11-02T18:16:56.382978+00:00",
-  "current_step_id": "refresh_platform_status",
-  "current_step_name": "Refresh Platform Status",
+  "completed_at": "2026-11-09T15:38:21.723623+00:00",
+  "current_step_id": "process_completed_events",
+  "current_step_name": "Process Completed Events",
   "current_substep_id": null,
   "current_substep_name": null,
-  "error": "Command '['/opt/hostedtoolcache/Python/3.11.17/x64/bin/python', '-m', 'pipeline.operations.run_market_refresh', '--mode', 'production']' returned non-zero exit status 1.",
+  "error": "No UFCStats completed events scraped.",
   "history": [
     {
       "event": "runbook_started",
@@ -13,7 +13,7 @@
       "step_name": null,
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-11-02T18:00:43.844612+00:00"
+      "timestamp": "2026-11-09T15:38:12.300649+00:00"
     },
     {
       "event": "step_started",
@@ -22,80 +22,26 @@
       "step_name": "Process Completed Events",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-11-02T18:00:43.845014+00:00"
+      "timestamp": "2026-11-09T15:38:12.306783+00:00"
     },
     {
-      "event": "step_completed",
-      "message": "Completed Process Completed Events",
+      "event": "runbook_failed",
+      "message": "No UFCStats completed events scraped.",
       "step_id": "process_completed_events",
       "step_name": "Process Completed Events",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-11-02T18:06:12.477257+00:00"
-    },
-    {
-      "event": "step_started",
-      "message": "Started step: Update Master Dataset",
-      "step_id": "update_master_dataset",
-      "step_name": "Update Master Dataset",
-      "substep_id": null,
-      "substep_name": null,
-      "timestamp": "2026-11-02T18:06:12.477646+00:00"
-    },
-    {
-      "event": "step_completed",
-      "message": "Completed Update Master Dataset",
-      "step_id": "update_master_dataset",
-      "step_name": "Update Master Dataset",
-      "substep_id": null,
-      "substep_name": null,
-      "timestamp": "2026-11-02T18:06:12.478654+00:00"
-    },
-    {
-      "event": "step_started",
-      "message": "Started step: Ingest Completed Round Stats",
-      "step_id": "ingest_completed_round_stats",
-      "step_name": "Ingest Completed Round Stats",
-      "substep_id": null,
-      "substep_name": null,
-      "timestamp": "2026-11-02T18:06:12.479020+00:00"
-    },
-    {
-      "event": "step_completed",
-      "message": "Completed Ingest Completed Round Stats and refreshed RFS state",
-      "step_id": "ingest_completed_round_stats",
-      "step_name": "Ingest Completed Round Stats",
-      "substep_id": null,
-      "substep_name": null,
-      "timestamp": "2026-11-02T18:16:38.358035+00:00"
-    },
-    {
-      "event": "step_started",
-      "message": "Started step: Refresh Platform Status",
-      "step_id": "refresh_platform_status",
-      "step_name": "Refresh Platform Status",
-      "substep_id": null,
-      "substep_name": null,
-      "timestamp": "2026-11-02T18:16:38.358568+00:00"
-    },
-    {
-      "event": "runbook_failed",
-      "message": "Command '['/opt/hostedtoolcache/Python/3.11.17/x64/bin/python', '-m', 'pipeline.operations.run_market_refresh', '--mode', 'production']' returned non-zero exit status 1.",
-      "step_id": "refresh_platform_status",
-      "step_name": "Refresh Platform Status",
-      "substep_id": null,
-      "substep_name": null,
-      "timestamp": "2026-11-02T18:16:56.382983+00:00"
+      "timestamp": "2026-11-09T15:38:21.723628+00:00"
     }
   ],
   "message": "Runbook failed",
   "mode": "production",
   "runbook_id": "monday_reset_v1",
-  "started_at": "2026-11-02T18:00:43.844607+00:00",
+  "started_at": "2026-11-09T15:38:12.300644+00:00",
   "status": "failed",
-  "step_index": 4,
+  "step_index": 1,
   "step_total": 6,
   "substep_index": null,
   "substep_total": 1,
-  "updated_at": "2026-11-02T18:16:56.383092+00:00"
+  "updated_at": "2026-11-09T15:38:21.723767+00:00"
 }
