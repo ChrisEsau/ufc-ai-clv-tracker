@@ -1,5 +1,5 @@
 {
-  "completed_at": "2026-11-09T15:38:21.723623+00:00",
+  "completed_at": "2026-11-16T20:05:24.249218+00:00",
   "current_step_id": "process_completed_events",
   "current_step_name": "Process Completed Events",
   "current_substep_id": null,
@@ -13,7 +13,7 @@
       "step_name": null,
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-11-09T15:38:12.300649+00:00"
+      "timestamp": "2026-11-16T20:05:13.666810+00:00"
     },
     {
       "event": "step_started",
@@ -22,7 +22,7 @@
       "step_name": "Process Completed Events",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-11-09T15:38:12.306783+00:00"
+      "timestamp": "2026-11-16T20:05:13.667238+00:00"
     },
     {
       "event": "runbook_failed",
@@ -31,17 +31,17 @@
       "step_name": "Process Completed Events",
       "substep_id": null,
       "substep_name": null,
-      "timestamp": "2026-11-09T15:38:21.723628+00:00"
+      "timestamp": "2026-11-16T20:05:24.249224+00:00"
     }
   ],
   "message": "Runbook failed",
   "mode": "production",
   "runbook_id": "monday_reset_v1",
-  "started_at": "2026-11-09T15:38:12.300644+00:00",
+  "started_at": "2026-11-16T20:05:13.666805+00:00",
   "status": "failed",
   "step_index": 1,
   "step_total": 6,
   "substep_index": null,
   "substep_total": 1,
-  "updated_at": "2026-11-09T15:38:21.723767+00:00"
+  "updated_at": "2026-11-16T20:05:24.249336+00:00"
 }
